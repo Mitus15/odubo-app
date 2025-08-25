@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 export const runtime = 'edge';
-import jwt from 'jsonwebtoken';
+import * as jose from 'jose';
 import { getAuthTokenFromRequest, getJwtSecret } from '@/lib/auth';
 
 export async function POST(req: NextRequest) {
@@ -16,8 +16,9 @@ export async function POST(req: NextRequest) {
     if (!token) token = getAuthTokenFromRequest(req) || undefined;
     if (!token) return NextResponse.json({ success: false, error: 'Token not provided' }, { status: 400 });
 
-    const decoded = jwt.verify(token, JWT_SECRET);
-    return NextResponse.json({ success: true, decoded });
+    const secret = new TextEncoder().encode(JWT_SECRET);
+    const { payload } = await jose.jwtVerify(token, secret);
+    return NextResponse.json({ success: true, decoded: payload });
   } catch (error: any) {
     console.error('Token verification failed:', error);
     return NextResponse.json({ success: false, error: error.message || 'Invalid token' }, { status: 401 });
