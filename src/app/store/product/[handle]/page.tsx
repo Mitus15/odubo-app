@@ -4,6 +4,8 @@ import ScrollContainer from '@/components/ui/ScrollContainer';
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 
+export const runtime = 'edge';
+
 interface ShopifyProduct {
   id: string;
   title: string;

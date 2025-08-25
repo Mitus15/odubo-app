@@ -2,6 +2,8 @@ import { notFound } from 'next/navigation';
 import { queryDatabase } from '@/lib/db';
 import AlbumEditClient from '@/components/AlbumEditClient';
 
+export const runtime = 'edge';
+
 async function getAlbumWithTracks(albumId: string) {
   try {
     // Get album data

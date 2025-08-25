@@ -5,6 +5,8 @@ import { Album, Track } from '@/types/music';
 import AlbumPlayer from '@/components/AlbumPlayer';
 import Image from 'next/image';
 
+export const runtime = 'edge';
+
 interface AlbumPageProps {
   params: Promise<{
     albumId: string;

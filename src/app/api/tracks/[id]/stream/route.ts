@@ -2,6 +2,8 @@ import { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import { queryDatabase } from '@/lib/db';
 
+export const runtime = 'edge';
+
 // Enhanced audio streaming proxy with robust error handling and caching
 // Supports byte-range requests for smooth audio streaming
 

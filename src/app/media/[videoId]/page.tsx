@@ -4,6 +4,8 @@ import { Video } from "../types";
 import VideoPlayerClient from "../../../components/VideoPlayerClient";
 import Image from 'next/image';
 
+export const runtime = 'edge';
+
 interface VideoPageProps {
   params: Promise<{ videoId: string }>;
 }
