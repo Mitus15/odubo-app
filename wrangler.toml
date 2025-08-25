@@ -32,5 +32,6 @@ preview_bucket_name = "odubo-studio-media"
 # wrangler pages secret put NEXT_PUBLIC_SHOPIFY_API_KEY --project-name=odubo-app
 
 # Separate Node-compatible worker for media transcoding (to be wired up)
-[env.production.services]
-node_transcoder = { binding = "NODE_TRANSCODER", service = "odubo-transcoder" }
+[[env.production.services]]
+binding = "NODE_TRANSCODER"
+service = "odubo-transcoder"
