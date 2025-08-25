@@ -1,5 +1,6 @@
 import { getUserFromRequest, isAdminUser } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
+export const runtime = 'edge';
 import { uploadFileOrganized } from "@/worker/upload";
 import { VideoType } from "@/lib/fileOrganization";
 import CloudflareStreamAPI from "@/lib/cloudflareStream";

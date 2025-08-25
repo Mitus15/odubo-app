@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+export const runtime = 'edge';
 
 const STORE_URL = process.env.SHOPIFY_STORE_URL || 'https://odubostudio.myshopify.com';
 const PUBLIC_TOKEN = process.env.NEXT_PUBLIC_SHOPIFY_API_KEY || '';

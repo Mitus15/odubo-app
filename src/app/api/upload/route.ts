@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+export const runtime = 'edge';
 import { uploadFile, uploadFileOrganized } from '@/worker/upload';
 import { FileOrganizationOptions, validateFileType, FileType } from '@/lib/fileOrganization';
 import ffmpegPath from 'ffmpeg-static';

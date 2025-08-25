@@ -1,5 +1,6 @@
 import { getUserByEmail } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
+export const runtime = 'edge';
 import CloudflareStreamAPI from "@/lib/cloudflareStream";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 

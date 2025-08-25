@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+export const runtime = 'edge';
 import { executeQuery, queryDatabase } from '@/lib/db';
 import { getUserFromRequest, isAdminUser } from '@/lib/auth';
 import crypto from 'crypto';

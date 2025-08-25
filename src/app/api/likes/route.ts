@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+export const runtime = 'edge';
 import { queryDatabase, executeQuery } from '@/lib/db';
 import { getUserFromRequest } from '@/lib/auth';
 import { rateLimit } from '@/lib/rateLimit';

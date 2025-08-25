@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+export const runtime = 'edge';
 import jwt from 'jsonwebtoken';
 import { getAuthTokenFromRequest, getJwtSecret } from '@/lib/auth';
 

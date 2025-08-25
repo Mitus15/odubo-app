@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+export const runtime = 'edge';
 import { setupLikesSystem } from '@/lib/setupLikes';
 
 export async function POST(req: NextRequest) {

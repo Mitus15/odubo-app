@@ -2,6 +2,7 @@ import { executeQuery, queryDatabase } from '@/lib/db';
 import { getUserFromRequest, isAdminUser } from '@/lib/auth';
 import crypto from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
+export const runtime = 'edge';
 import { deleteFile } from '@/worker/upload';
 
 export async function GET() {

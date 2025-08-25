@@ -17,6 +17,7 @@ import {
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import { NextRequest, NextResponse } from 'next/server';
+export const runtime = 'edge';
 import { getAuthTokenFromRequest, getJwtSecret } from '@/lib/auth';
 import { rateLimit } from '@/lib/rateLimit';
 
