@@ -2,11 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 export const runtime = 'edge';
 import { uploadFile, uploadFileOrganized } from '@/worker/upload';
 import { FileOrganizationOptions, validateFileType, FileType } from '@/lib/fileOrganization';
-import ffmpegPath from 'ffmpeg-static';
-import os from 'node:os';
-import path from 'node:path';
-import { promises as fs } from 'node:fs';
-import { spawn } from 'node:child_process';
+// Note: Node-specific modules (ffmpeg-static, os, path, fs, child_process)
+// are not available in the Edge runtime. Transcoding is handled by a
+// separate Node-compatible worker/service. This endpoint only uploads.
 
 export async function POST(req: NextRequest) {
   try {
@@ -56,63 +54,13 @@ export async function POST(req: NextRequest) {
         ...(videoType && { videoType: videoType as 'music-video' | 'short-film' | 'feature' })
       };
 
-      // If uploading a track, transcode to a web-safe AAC variant immediately
-      if (fileType === 'track') {
-        if (!ffmpegPath) {
-          console.warn('ffmpeg-static not available; uploading original track file');
-          uploadResult = await uploadFileOrganized(
-            uint8Array,
-            file.name,
-            file.type,
-            organizationOptions
-          );
-        } else {
-          // Write input to temp file
-          const inPath = path.join(os.tmpdir(), `upload_in_${Date.now()}_${file.name}`);
-          const baseName = path.parse(file.name).name.replace(/\.web$/i, '');
-          const outPath = path.join(os.tmpdir(), `upload_out_${Date.now()}_${baseName}.web.m4a`);
-          await fs.writeFile(inPath, Buffer.from(uint8Array));
-
-          await new Promise<void>((resolve, reject) => {
-            const args = [
-              '-y',
-              '-i', inPath,
-              '-vn',
-              '-acodec', 'aac',
-              '-profile:a', 'aac_low',
-              '-b:a', '256k',
-              '-ar', '44100',
-              '-ac', '2',
-              '-movflags', '+faststart',
-              outPath,
-            ];
-            const p = spawn(ffmpegPath as string, args, { stdio: 'inherit' });
-            p.on('error', reject);
-            p.on('exit', (code) => code === 0 ? resolve() : reject(new Error(`ffmpeg exited with ${code}`)));
-          });
-
-          const webData = await fs.readFile(outPath);
-
-          // Upload the web variant only
-          uploadResult = await uploadFileOrganized(
-            new Uint8Array(webData.buffer, webData.byteOffset, webData.byteLength),
-            `${baseName}.web.m4a`,
-            'audio/mp4',
-            organizationOptions
-          );
-
-          // Cleanup temp files
-          fs.unlink(inPath).catch(() => {});
-          fs.unlink(outPath).catch(() => {});
-        }
-      } else {
-        uploadResult = await uploadFileOrganized(
-          uint8Array,
-          file.name,
-          file.type,
-          organizationOptions
-        );
-      }
+      // Direct upload only. Transcoding is deferred to a Node worker.
+      uploadResult = await uploadFileOrganized(
+        uint8Array,
+        file.name,
+        file.type,
+        organizationOptions
+      );
     } else {
       // Fall back to legacy system
       uploadResult = await uploadFile(
