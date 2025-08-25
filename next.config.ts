@@ -8,6 +8,7 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   images: {
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: 'https',
@@ -21,12 +22,7 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**',
       },
-      {
-        protocol: 'https',
-        hostname: '*.r2.cloudflarestorage.com',
-        port: '',
-        pathname: '/**',
-      },
+      // Wildcards are not supported in hostname; add explicit pattern for your account if needed
     ],
   },
   serverExternalPackages: ['@aws-sdk/client-s3'],
