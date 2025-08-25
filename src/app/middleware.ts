@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import jwt from 'jsonwebtoken';
+import { jwtVerify } from 'jose';
 import { getJwtSecret } from '@/lib/auth';
 
 const protectedRoutes = ['/account'];
 const adminRoutes = ['/admin'];
-const JWT_SECRET = getJwtSecret();
+const getSecret = () => new TextEncoder().encode(getJwtSecret());
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Check for protected routes (logged-in users only)
@@ -20,8 +20,9 @@ export function middleware(request: NextRequest) {
     // Check for admin routes (admin users only)
     if (adminRoutes.some(route => pathname.startsWith(route))) {
       try {
-        const decoded = jwt.verify(token, JWT_SECRET) as { is_admin: boolean };
-        if (!decoded.is_admin) {
+        const { payload } = await jwtVerify(token, getSecret());
+        const isAdmin = (payload as any).is_admin;
+        if (!isAdmin) {
           const homeUrl = new URL('/', request.url);
           return NextResponse.redirect(homeUrl); // Redirect non-admins from admin pages
         }

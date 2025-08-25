@@ -14,17 +14,16 @@ import {
   verifyEmailToken,
   isEmailVerified
 } from '../../../lib/db';
-import crypto from 'crypto';
-import jwt from 'jsonwebtoken';
 import { NextRequest, NextResponse } from 'next/server';
 export const runtime = 'edge';
 import { getAuthTokenFromRequest, getJwtSecret } from '@/lib/auth';
 import { rateLimit } from '@/lib/rateLimit';
+import { SignJWT, jwtVerify } from 'jose';
 
 // Resend integration
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const RESEND_FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'noreply@odubo.studio';
-const JWT_SECRET = getJwtSecret();
+const getSecret = () => new TextEncoder().encode(getJwtSecret());
 
 import { Resend } from 'resend';
 
@@ -197,7 +196,8 @@ export async function POST(req: NextRequest) {
     try {
       const token = getAuthTokenFromRequest(req);
       if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-      const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
+      const { payload: decoded } = await jwtVerify(token, getSecret());
+      const { userId } = decoded as any;
       const { firstName, lastName } = rest;
       await updateUser(decoded.userId, { first_name: firstName, last_name: lastName });
       return NextResponse.json({ message: 'Profile updated successfully' });
@@ -211,7 +211,8 @@ export async function POST(req: NextRequest) {
     try {
       const token = getAuthTokenFromRequest(req);
       if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-      const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
+      const { payload: decoded } = await jwtVerify(token, getSecret());
+      const { userId } = decoded as any;
       const { email } = rest;
       await updateUser(decoded.userId, { email });
       return NextResponse.json({ message: 'Email updated successfully' });
@@ -224,9 +225,10 @@ export async function POST(req: NextRequest) {
     try {
       const token = getAuthTokenFromRequest(req);
       if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-      const decoded = jwt.verify(token, JWT_SECRET) as { userId: string; email: string };
+      const { payload: decoded } = await jwtVerify(token, getSecret());
+      const { userId, email } = decoded as any;
       const { currentPassword, newPassword } = rest;
-      const user = await getUserByEmail(decoded.email);
+      const user = await getUserByEmail(email);
       if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
       const valid = await bcrypt.compare(currentPassword, user.password_hash);
       if (!valid) return NextResponse.json({ error: 'Invalid current password' }, { status: 401 });
@@ -379,7 +381,11 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ message: 'If that email exists, a reset link has been sent.' });
       }
       
-      const resetToken = crypto.randomBytes(32).toString('hex');
+      const resetToken = (function genHex(bytes: number) {
+        const arr = new Uint8Array(bytes);
+        globalThis.crypto.getRandomValues(arr);
+        return Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('');
+      })(32);
       const resetTokenHash = await bcrypt.hash(resetToken, 10);
       const resetTokenExpiry = Date.now() + 1000 * 60 * 30; // 30 min expiry
 
@@ -514,13 +520,18 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      const token = jwt.sign({ 
-        userId: user.id, 
-        email: user.email, 
-        is_admin: user.is_admin || false, 
-        firstName: user.first_name, 
-        lastName: user.last_name 
-      }, JWT_SECRET, { expiresIn: '7d' });
+      const secret = getSecret();
+      const token = await new SignJWT({
+        userId: user.id,
+        email: user.email,
+        is_admin: user.is_admin || false,
+        firstName: user.first_name,
+        lastName: user.last_name,
+      })
+        .setProtectedHeader({ alg: 'HS256' })
+        .setIssuedAt()
+        .setExpirationTime('7d')
+        .sign(secret);
       
       const res = NextResponse.json({ 
         message: 'Login successful', 
@@ -747,8 +758,9 @@ export async function DELETE(req: NextRequest) {
   try {
     const token = getAuthTokenFromRequest(req);
     if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
-    await deleteUser(decoded.userId);
+    const { payload: decoded } = await jwtVerify(token, getSecret());
+    const { userId } = decoded as any;
+    await deleteUser(userId);
     return NextResponse.json({ message: 'Account deleted successfully' });
   } catch (error) {
     return NextResponse.json({ error: 'Failed to delete account' }, { status: 500 });

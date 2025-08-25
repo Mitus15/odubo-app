@@ -1,6 +1,5 @@
 import { executeQuery, queryDatabase } from '@/lib/db';
 import { getUserFromRequest, isAdminUser } from '@/lib/auth';
-import crypto from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 export const runtime = 'edge';
 import { deleteFile } from '@/worker/upload';
@@ -107,7 +106,7 @@ export async function POST(req: NextRequest) {
       `INSERT INTO videos (id, title, description, video_url, poster_url, duration, status, created_at)
        VALUES (?, ?, ?, ?, ?, ?, 'draft', datetime('now'))`,
       [
-        crypto.randomUUID(),
+        globalThis.crypto.randomUUID(),
         title,
         description || '',
         video_url,

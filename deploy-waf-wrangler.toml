@@ -1,0 +1,20 @@
+name = "odubo-waf-rules"
+main = "waf-worker.js"
+compatibility_date = "2024-01-01"
+
+[env.production]
+name = "odubo-waf-production"
+
+[env.staging]
+name = "odubo-waf-staging"
+
+# WAF Rules Configuration
+[env.production.vars]
+WAF_MODE = "block"
+RATE_LIMIT_ENABLED = "true"
+BOT_PROTECTION = "true"
+
+[env.staging.vars]
+WAF_MODE = "challenge"
+RATE_LIMIT_ENABLED = "true"
+BOT_PROTECTION = "false"

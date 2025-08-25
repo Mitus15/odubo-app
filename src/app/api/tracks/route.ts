@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export const runtime = 'edge';
 import { executeQuery, queryDatabase } from '@/lib/db';
 import { getUserFromRequest, isAdminUser } from '@/lib/auth';
-import crypto from 'crypto';
+// Use Web Crypto API for Edge compatibility
 
 export async function GET(req: NextRequest) {
   try {
@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
       `INSERT INTO tracks (id, title, album_id, track_number, audio_url, duration, status, created_at)
        VALUES (?, ?, ?, ?, ?, ?, 'draft', datetime('now'))`,
       [
-        crypto.randomUUID(),
+        globalThis.crypto.randomUUID(),
         title,
         album_id,
         track_number,

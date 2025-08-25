@@ -1,0 +1,23 @@
+User-agent: *
+Allow: /
+
+# Disallow admin and private areas
+Disallow: /admin/
+Disallow: /studio/
+Disallow: /api/
+Disallow: /_next/
+Disallow: /private/
+
+# Allow important pages
+Allow: /
+Allow: /music/
+Allow: /media/
+Allow: /store/
+Allow: /search/
+Allow: /legal/
+
+# Sitemap location
+Sitemap: https://odubo.studio/sitemap.xml
+
+# Crawl delay (optional, for rate limiting)
+Crawl-delay: 1

@@ -1,0 +1,116 @@
+{
+  "name": "odubo-studio-waf-rules",
+  "description": "Comprehensive WAF rules for Odubo Studio - Enterprise Security",
+  "rules": [
+    {
+      "id": "sql-injection-protection",
+      "description": "Block SQL injection attempts",
+      "expression": "(http.request.uri.query contains \"'\" or http.request.uri.query contains \"--\" or http.request.uri.query contains \"/*\" or http.request.uri.query contains \"*/\" or http.request.uri.query contains \"xp_\" or http.request.uri.query contains \"sp_\" or http.request.uri.query contains \"@@\" or http.request.uri.query contains \"char(\" or http.request.uri.query contains \"nchar(\" or http.request.uri.query contains \"varchar(\" or http.request.uri.query contains \"nvarchar(\" or http.request.uri.query contains \"alter\" or http.request.uri.query contains \"begin\" or http.request.uri.query contains \"cast\" or http.request.uri.query contains \"create\" or http.request.uri.query contains \"cursor\" or http.request.uri.query contains \"declare\" or http.request.uri.query contains \"delete\" or http.request.uri.query contains \"drop\" or http.request.uri.query contains \"exec\" or http.request.uri.query contains \"execute\" or http.request.uri.query contains \"fetch\" or http.request.uri.query contains \"insert\" or http.request.uri.query contains \"kill\" or http.request.uri.query contains \"select\" or http.request.uri.query contains \"sys\" or http.request.uri.query contains \"sysobjects\" or http.request.uri.query contains \"syscolumns\" or http.request.uri.query contains \"table\" or http.request.uri.query contains \"update\")",
+      "action": "block",
+      "enabled": true
+    },
+    {
+      "id": "xss-protection",
+      "description": "Block XSS attempts",
+      "expression": "(http.request.uri.query contains \"<script\" or http.request.uri.query contains \"javascript:\" or http.request.uri.query contains \"vbscript:\" or http.request.uri.query contains \"onload=\" or http.request.uri.query contains \"onerror=\" or http.request.uri.query contains \"onclick=\" or http.request.uri.query contains \"onmouseover=\" or http.request.uri.query contains \"<iframe\" or http.request.uri.query contains \"<object\" or http.request.uri.query contains \"<embed\" or http.request.uri.query contains \"<form\" or http.request.uri.query contains \"<input\" or http.request.uri.query contains \"<textarea\" or http.request.uri.query contains \"<select\" or http.request.uri.query contains \"<button\" or http.request.uri.query contains \"<link\" or http.request.uri.query contains \"<meta\" or http.request.uri.query contains \"<style\" or http.request.uri.query contains \"<title\" or http.request.uri.query contains \"<base\" or http.request.uri.query contains \"<bgsound\" or http.request.uri.query contains \"<link\" or http.request.uri.query contains \"<meta\" or http.request.uri.query contains \"<style\" or http.request.uri.query contains \"<title\" or http.request.uri.query contains \"<base\" or http.request.uri.query contains \"<bgsound\")",
+      "action": "block",
+      "enabled": true
+    },
+    {
+      "id": "path-traversal-protection",
+      "description": "Block path traversal attempts",
+      "expression": "(http.request.uri.path contains \"../\" or http.request.uri.path contains \"..\\\" or http.request.uri.path contains \"./\" or http.request.uri.path contains \".\\\" or http.request.uri.path contains \"%2e%2e%2f\" or http.request.uri.path contains \"%2e%2e%5c\" or http.request.uri.path contains \"%2e%2e%2f\" or http.request.uri.path contains \"%2e%2e%5c\")",
+      "action": "block",
+      "enabled": true
+    },
+    {
+      "id": "command-injection-protection",
+      "description": "Block command injection attempts",
+      "expression": "(http.request.uri.query contains \"|\" or http.request.uri.query contains \";\" or http.request.uri.query contains \"&\" or http.request.uri.query contains \"&&\" or http.request.uri.query contains \"||\" or http.request.uri.query contains \"`\" or http.request.uri.query contains \"$(\" or http.request.uri.query contains \"${\" or http.request.uri.query contains \"%3b\" or http.request.uri.query contains \"%7c\" or http.request.uri.query contains \"%26\" or http.request.uri.query contains \"%60\" or http.request.uri.query contains \"%24%28\" or http.request.uri.query contains \"%24%7b\")",
+      "action": "block",
+      "enabled": true
+    },
+    {
+      "id": "file-inclusion-protection",
+      "description": "Block file inclusion attempts",
+      "expression": "(http.request.uri.query contains \"file://\" or http.request.uri.query contains \"php://\" or http.request.uri.query contains \"data://\" or http.request.uri.query contains \"expect://\" or http.request.uri.query contains \"input://\" or http.request.uri.query contains \"filter://\" or http.request.uri.query contains \"zip://\" or http.request.uri.query contains \"phar://\" or http.request.uri.query contains \"glob://\" or http.request.uri.query contains \"rar://\" or http.request.uri.query contains \"ogg://\" or http.request.uri.query contains \"audio://\" or http.request.uri.query contains \"video://\" or http.request.uri.query contains \"image://\" or http.request.uri.query contains \"text://\" or http.request.uri.query contains \"http://\" or http.request.uri.query contains \"https://\" or http.request.uri.query contains \"ftp://\" or http.request.uri.query contains \"ftps://\" or http.request.uri.query contains \"sftp://\" or http.request.uri.query contains \"ssh2://\" or http.request.uri.query contains \"ssh2.shell://\" or http.request.uri.query contains \"ssh2.exec://\" or http.request.uri.query contains \"ssh2.tunnel://\" or http.request.uri.query contains \"ssh2.sftp://\" or http.request.uri.query contains \"ssh2.scp://\" or http.request.uri.query contains \"ssh2.shell://\" or http.request.uri.query contains \"ssh2.exec://\" or http.request.uri.query contains \"ssh2.tunnel://\" or http.request.uri.query contains \"ssh2.sftp://\" or http.request.uri.query contains \"ssh2.scp://\")",
+      "action": "block",
+      "enabled": true
+    },
+    {
+      "id": "rate-limiting-enforcement",
+      "description": "Enforce rate limiting for API endpoints",
+      "expression": "(http.request.uri.path contains \"/api/\" and (http.request.uri.path contains \"/users\" or http.request.uri.path contains \"/videos\" or http.request.uri.path contains \"/likes\" or http.request.uri.path contains \"/albums\" or http.request.uri.path contains \"/tracks\"))",
+      "action": "challenge",
+      "enabled": true,
+      "rate_limit": {
+        "requests_per_period": 100,
+        "period_seconds": 60
+      }
+    },
+    {
+      "id": "bot-protection",
+      "description": "Challenge suspicious bot activity",
+      "expression": "(http.user_agent contains \"bot\" or http.user_agent contains \"crawler\" or http.user_agent contains \"spider\" or http.user_agent contains \"scraper\" or http.user_agent contains \"curl\" or http.user_agent contains \"wget\" or http.user_agent contains \"python\" or http.user_agent contains \"java\" or http.user_agent contains \"perl\" or http.user_agent contains \"ruby\" or http.user_agent contains \"php\" or http.user_agent contains \"go\" or http.user_agent contains \"node\" or http.user_agent contains \"dotnet\" or http.user_agent contains \"powershell\" or http.user_agent contains \"bash\" or http.user_agent contains \"sh\" or http.user_agent contains \"zsh\" or http.user_agent contains \"fish\" or http.user_agent contains \"tcsh\" or http.user_agent contains \"ksh\" or http.user_agent contains \"dash\" or http.user_agent contains \"busybox\" or http.user_agent contains \"wget\" or http.user_agent contains \"curl\" or http.user_agent contains \"lynx\" or http.user_agent contains \"links\" or http.user_agent contains \"elinks\" or http.user_agent contains \"w3m\" or http.user_agent contains \"links2\" or http.user_agent contains \"elinks\" or http.user_agent contains \"w3m\" or http.user_agent contains \"links2\")",
+      "action": "challenge",
+      "enabled": true
+    },
+    {
+      "id": "admin-endpoint-protection",
+      "description": "Protect admin endpoints",
+      "expression": "(http.request.uri.path contains \"/admin\" or http.request.uri.path contains \"/studio\" or http.request.uri.path contains \"/api/admin\")",
+      "action": "challenge",
+      "enabled": true,
+      "additional_settings": {
+        "require_authentication": true,
+        "ip_whitelist": []
+      }
+    },
+    {
+      "id": "sensitive-data-protection",
+      "description": "Block access to sensitive files",
+      "expression": "(http.request.uri.path contains \".env\" or http.request.uri.path contains \".git\" or http.request.uri.path contains \".svn\" or http.request.uri.path contains \".htaccess\" or http.request.uri.path contains \"wp-config.php\" or http.request.uri.path contains \"config.php\" or http.request.uri.path contains \"database.yml\" or http.request.uri.path contains \"web.config\" or http.request.uri.path contains \"robots.txt\" or http.request.uri.path contains \"sitemap.xml\" or http.request.uri.path contains \".well-known\" or http.request.uri.path contains \"crossdomain.xml\" or http.request.uri.path contains \"clientaccesspolicy.xml\" or http.request.uri.path contains \"favicon.ico\" or http.request.uri.path contains \"apple-touch-icon.png\" or http.request.uri.path contains \"android-chrome-192x192.png\" or http.request.uri.path contains \"android-chrome-512x512.png\" or http.request.uri.path contains \"mstile-150x150.png\" or http.request.uri.path contains \"safari-pinned-tab.svg\" or http.request.uri.path contains \"browserconfig.xml\" or http.request.uri.path contains \"manifest.json\" or http.request.uri.path contains \"service-worker.js\" or http.request.uri.path contains \"sw.js\" or http.request.uri.path contains \"worker.js\" or http.request.uri.path contains \"sw.js.map\" or http.request.uri.path contains \"worker.js.map\" or http.request.uri.path contains \"sw.js.map\" or http.request.uri.path contains \"worker.js.map\")",
+      "action": "block",
+      "enabled": true
+    },
+    {
+      "id": "http-method-restriction",
+      "description": "Restrict HTTP methods for sensitive endpoints",
+      "expression": "(http.request.method eq \"DELETE\" or http.request.method eq \"PUT\" or http.request.method eq \"PATCH\") and (http.request.uri.path contains \"/api/\" or http.request.uri.path contains \"/admin\" or http.request.uri.path contains \"/studio\")",
+      "action": "challenge",
+      "enabled": true
+    },
+    {
+      "id": "content-type-validation",
+      "description": "Validate content types for file uploads",
+      "expression": "(http.request.method eq \"POST\" and http.request.uri.path contains \"/api/\" and http.request.uri.path contains \"/upload\") and not (http.request.headers[\"content-type\"] contains \"multipart/form-data\" or http.request.headers[\"content-type\"] contains \"application/json\" or http.request.headers[\"content-type\"] contains \"text/plain\")",
+      "action": "block",
+      "enabled": true
+    }
+  ],
+  "settings": {
+    "mode": "on",
+    "default_action": "log",
+    "log_level": "high",
+    "block_page": "custom",
+    "custom_block_page": "https://odubo.studio/blocked",
+    "challenge_page": "custom",
+    "custom_challenge_page": "https://odubo.studio/challenge",
+    "rate_limiting": {
+      "enabled": true,
+      "requests_per_period": 1000,
+      "period_seconds": 60,
+      "action": "challenge"
+    },
+    "logging": {
+      "enabled": true,
+      "log_level": "high",
+      "retention_days": 30
+    },
+    "monitoring": {
+      "enabled": true,
+      "alert_threshold": 10,
+      "alert_email": "security@odubo.studio"
+    }
+  }
+}

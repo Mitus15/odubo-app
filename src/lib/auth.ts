@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import jwt from 'jsonwebtoken';
+import { jwtVerify, SignJWT, JWTPayload } from 'jose';
 
 export type AuthTokenPayload = {
   userId: string;
@@ -32,9 +32,39 @@ export function getUserFromRequest(req: NextRequest): AuthTokenPayload | null {
   try {
     const token = getAuthTokenFromRequest(req);
     if (!token) return null;
-    const decoded = jwt.verify(token, getJwtSecret()) as AuthTokenPayload;
-    if (!decoded || !decoded.userId || !decoded.email) return null;
-    return decoded;
+    const payload = decodeWithoutVerify(token) as AuthTokenPayload | null;
+    return payload && payload.userId && payload.email ? payload : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function verifyUserFromRequest(req: NextRequest): Promise<AuthTokenPayload | null> {
+  try {
+    const token = getAuthTokenFromRequest(req);
+    if (!token) return null;
+    const secret = new TextEncoder().encode(getJwtSecret());
+    const { payload } = await jwtVerify(token, secret);
+    const auth = payload as AuthTokenPayload;
+    if (!auth?.userId || !auth?.email) return null;
+    return auth;
+  } catch {
+    return null;
+  }
+}
+
+function decodeWithoutVerify(token: string): JWTPayload | null {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const padLen = (4 - (base64.length % 4)) % 4;
+    const padded = base64 + '='.repeat(padLen);
+    const binary = typeof atob === 'function' ? atob(padded) : globalThis.atob!(padded);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    const json = new TextDecoder().decode(bytes);
+    return JSON.parse(json) as JWTPayload;
   } catch {
     return null;
   }

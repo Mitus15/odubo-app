@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scroll Behavior Test</title>
+    <style>
+        /* Simulate current app styles */
+        html, body {
+            overflow: hidden;
+            height: 100%;
+            position: fixed;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: system-ui;
+        }
+        
+        .app-container {
+            height: 100vh;
+            overflow: hidden;
+            background: linear-gradient(to bottom right, #302927, #171616, #302927);
+            color: #ede8df;
+        }
+        
+        .header {
+            padding: 16px;
+            background: rgba(48, 41, 39, 0.8);
+            border-bottom: 1px solid rgba(80, 45, 38, 0.2);
+        }
+        
+        .main-content {
+            flex: 1 1 auto;
+            min-height: 0;
+            margin-bottom: 80px; /* Prevent overlap with bottom nav */
+        }
+        
+        .filter-pills {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding: 16px;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior-x: contain;
+        }
+        
+        .pill {
+            padding: 6px 12px;
+            background: rgba(48, 41, 39, 0.4);
+            border: 1px solid rgba(80, 45, 38, 0.3);
+            border-radius: 20px;
+            white-space: nowrap;
+            font-size: 12px;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            padding: 16px;
+        }
+        
+        .album-card {
+            background: rgba(23, 22, 22, 0.4);
+            border-radius: 8px;
+            padding: 8px;
+            transition: transform 0.3s;
+        }
+        
+        .album-card:hover {
+            transform: scale(1.02);
+        }
+        
+        .album-cover {
+            aspect-ratio: 1;
+            background: linear-gradient(45deg, #502d26, #302927);
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+        
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 80px;
+            background: rgba(48, 41, 39, 0.95);
+            backdrop-filter: blur(12px);
+            border-top: 1px solid rgba(80, 45, 38, 0.3);
+        }
+        
+        /* Test issues */
+        .scroll-test {
+            padding: 20px;
+            margin: 20px 0;
+            background: rgba(132, 60, 45, 0.1);
+            border: 1px solid rgba(132, 60, 45, 0.3);
+            border-radius: 8px;
+        }
+        
+        @media (max-width: 640px) {
+            .grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div class="header">
+            <h1>Scroll Test - Music Library</h1>
+        </div>
+        
+        <div class="main-content">
+            <div class="scroll-test">
+                <h3>Test 1: Horizontal Filter Scroll</h3>
+                <div class="filter-pills">
+                    <div class="pill">All</div>
+                    <div class="pill">Albums</div>
+                    <div class="pill">Singles</div>
+                    <div class="pill">EPs</div>
+                    <div class="pill">Compilations</div>
+                    <div class="pill">Hip Hop</div>
+                    <div class="pill">R&B</div>
+                    <div class="pill">Jazz</div>
+                    <div class="pill">Electronic</div>
+                    <div class="pill">Pop</div>
+                </div>
+                <p>Try scrolling horizontally on mobile - check for conflicts with back gesture</p>
+            </div>
+            
+            <div class="scroll-test">
+                <h3>Test 2: Dense Grid Scroll Performance</h3>
+                <div class="grid">
+                    <!-- Generate many items to test performance -->
+                    <script>
+                        for (let i = 1; i <= 100; i++) {
+                            document.write(`
+                                <div class="album-card">
+                                    <div class="album-cover"></div>
+                                    <div style="font-size: 12px;">Album ${i}</div>
+                                    <div style="font-size: 10px; opacity: 0.7;">Artist ${i}</div>
+                                </div>
+                            `);
+                        }
+                    </script>
+                </div>
+                <p>Scroll through this grid - check for:</p>
+                <ul style="font-size: 12px; opacity: 0.8;">
+                    <li>Smooth scrolling on mobile</li>
+                    <li>Momentum scrolling behavior</li>
+                    <li>Frame drops during scroll</li>
+                    <li>Touch responsiveness</li>
+                </ul>
+            </div>
+            
+            <div class="scroll-test">
+                <h3>Test 3: Nested Scroll Conflicts</h3>
+                <div style="height: 200px; overflow-y: auto; background: rgba(0,0,0,0.2); padding: 10px;">
+                    <p>This is a nested scrollable area inside the main scroll container.</p>
+                    <p>Try scrolling here and see if it conflicts with the main scroll.</p>
+                    <div style="height: 500px; background: linear-gradient(to bottom, transparent, rgba(132, 60, 45, 0.1));">
+                        <p>Tall content to enable scrolling...</p>
+                        <p style="margin-top: 300px;">More content...</p>
+                        <p style="margin-top: 100px;">End of nested scroll area</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bottom-nav"></div>
+    </div>
+    
+    <script>
+        // Test for scroll issues
+        console.log('Testing scroll behavior...');
+        
+        // Check viewport height changes
+        let initialHeight = window.innerHeight;
+        window.addEventListener('resize', () => {
+            console.log(`Viewport height changed: ${initialHeight} -> ${window.innerHeight}`);
+        });
+        
+        // Monitor scroll performance
+        let isScrolling = false;
+        const mainContent = document.querySelector('.main-content');
+        
+        mainContent.addEventListener('scroll', () => {
+            if (!isScrolling) {
+                console.log('Scroll started');
+                isScrolling = true;
+            }
+            
+            clearTimeout(window.scrollTimer);
+            window.scrollTimer = setTimeout(() => {
+                console.log('Scroll ended');
+                isScrolling = false;
+            }, 100);
+        });
+        
+        // Test touch events
+        mainContent.addEventListener('touchstart', (e) => {
+            console.log('Touch start:', e.touches.length);
+        });
+        
+        mainContent.addEventListener('touchmove', (e) => {
+            console.log('Touch move');
+        });
+        
+        // Check for scroll conflicts
+        const filterPills = document.querySelector('.filter-pills');
+        filterPills.addEventListener('scroll', () => {
+            console.log('Horizontal scroll detected');
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "shell",
+			"label": "Run D1 migration for is_admin column",
+			"command": "npx wrangler d1 migrations apply odubo --remote",
+			"group": "build",
+			"isBackground": false
+		}
+	]
+}
