@@ -11,6 +11,8 @@ import GDPRConsent from "../components/GDPRConsent";
 import PerformanceMonitor from "../components/PerformanceMonitor";
 // import AccessibilityEnhancer from "./components/AccessibilityEnhancer";
 
+export const runtime = 'edge';
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],

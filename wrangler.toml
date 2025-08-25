@@ -5,19 +5,6 @@ compatibility_flags = ["nodejs_compat"]
 # Pages configuration
 pages_build_output_dir = ".vercel/output"
 
-[[d1_databases]]
-binding = "DB"
-database_name = "odubo"
-database_id = "c63953e2-82b5-407f-b10d-831fc7e5e85e"
-
-migrations_dir = "./database/migrations"
-
-[[r2_buckets]]
-binding = "MEDIA_BUCKET"
-bucket_name = "odubo-studio-media"
-preview_bucket_name = "odubo-studio-media"
-
-# Production environment variables
 [env.production]
 [env.production.vars]
 NODE_ENV = "production"
@@ -25,9 +12,21 @@ NEXT_PUBLIC_SITE_URL = "https://odubo.studio"
 CLOUDFLARE_R2_PUBLIC_URL = "https://media.odubo.studio"
 CLOUDFLARE_R2_BUCKET_NAME = "odubo-studio-media"
 
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "odubo"
+database_id = "c63953e2-82b5-407f-b10d-831fc7e5e85e"
+
+migrations_dir = "./database/migrations"
+
+[[env.production.r2_buckets]]
+binding = "MEDIA_BUCKET"
+bucket_name = "odubo-studio-media"
+preview_bucket_name = "odubo-studio-media"
+
 # Secrets are set via dashboard or CLI:
-# wrangler secret put JWT_SECRET
-# wrangler secret put CLOUDFLARE_R2_ACCESS_KEY_ID  
-# wrangler secret put CLOUDFLARE_R2_SECRET_ACCESS_KEY
-# wrangler secret put SHOPIFY_STORE_URL
-# wrangler secret put NEXT_PUBLIC_SHOPIFY_API_KEY
+# wrangler pages secret put JWT_SECRET --project-name=odubo-app
+# wrangler pages secret put CLOUDFLARE_R2_ACCESS_KEY_ID  --project-name=odubo-app
+# wrangler pages secret put CLOUDFLARE_R2_SECRET_ACCESS_KEY --project-name=odubo-app
+# wrangler pages secret put SHOPIFY_STORE_URL --project-name=odubo-app
+# wrangler pages secret put NEXT_PUBLIC_SHOPIFY_API_KEY --project-name=odubo-app
