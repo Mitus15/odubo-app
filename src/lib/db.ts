@@ -27,8 +27,12 @@ export type User = {
 // Cloudflare D1 database client for Next.js API routes
 // Using HTTP API approach with proper environment variable names
 
-// Import crypto for token generation
-import crypto from 'crypto';
+// Use Web Crypto API for token generation (Edge-compatible)
+function generateRandomHexString(byteLength: number): string {
+  const array = new Uint8Array(byteLength);
+  crypto.getRandomValues(array);
+  return Array.from(array, (byte) => byte.toString(16).padStart(2, '0')).join('');
+}
 
 // Database helper functions
 export async function executeQuery(sql: string, params: any[] = []) {
@@ -387,7 +391,7 @@ export async function generateEmailVerificationToken(email: string): Promise<{ t
     
     // For now, just generate a token (we'll store it in memory or use a different approach)
     // Since we don't have the token fields in the database yet
-    const token = crypto.randomBytes(32).toString('hex');
+    const token = generateRandomHexString(32);
     const expiry = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
     
     // TODO: Store token in database when we add the fields
