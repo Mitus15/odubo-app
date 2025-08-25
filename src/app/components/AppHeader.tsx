@@ -1,0 +1,134 @@
+"use client";
+import { useState } from "react";
+// import { useAuth } from "@/contexts/AuthContext";
+
+export default function AppHeader() {
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [navMenuOpen, setNavMenuOpen] = useState(false);
+  // const { isAuthenticated, user, logout } = useAuth();
+  const isAuthenticated = false;
+  const user: any = null;
+  const logout = () => {};
+
+  return (
+    <>
+      {/* Liquid Glass Header */}
+      <header className="w-full h-14 px-4 flex items-center justify-between glass-surface fixed top-0 left-0 right-0 z-40 border-b border-[#502d26]/30 overflow-hidden safe-area-header">
+        {/* Ambient background gradient */}
+        <div className="absolute inset-0 bg-gradient-to-br from-[#843c2d]/5 via-transparent to-[#502d26]/5"></div>
+        
+        {/* Profile Menu - Left Side */}
+        <div className="relative z-10">
+          {isAuthenticated ? (
+            <button
+              className="w-8 h-8 rounded-full bg-gradient-to-br from-[#843c2d] to-[#502d26] flex items-center justify-center text-[#ede8df] text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#843c2d]/50 shadow-lg glass-card hover:scale-105 transition-all duration-200"
+              onClick={() => setProfileMenuOpen(!profileMenuOpen)}
+              aria-label="Profile menu"
+            >
+              {user?.firstName ? user.firstName.charAt(0).toUpperCase() : 'U'}
+            </button>
+          ) : (
+            <img 
+              src="/odubo_logo_emboss.png" 
+              alt="Odubo Studio" 
+              className="w-8 h-8 object-contain"
+            />
+          )}
+        </div>
+
+        {/* Desktop Navigation - Center/Right */}
+        <nav className="hidden md:flex items-center gap-6 relative z-10">
+          <a href="/" className="text-[#ede8df] hover:text-[#b2a491] transition-colors">Home</a>
+          <a href="/music" className="text-[#ede8df] hover:text-[#b2a491] transition-colors">Music</a>
+          <a href="/media" className="text-[#ede8df] hover:text-[#b2a491] transition-colors">Video</a>
+          <a href="/store" className="text-[#ede8df] hover:text-[#b2a491] transition-colors">Store</a>
+        </nav>
+
+        {/* Mobile Navigation button - Right Side */}
+        <div className="md:hidden relative z-10">
+          <button
+            className="w-9 h-9 flex items-center justify-center text-[#ede8df] focus:outline-none rounded-lg hover:bg-[#843c2d]/10 hover:scale-105 transition-all duration-200"
+            aria-label="Open navigation menu"
+            onClick={() => setNavMenuOpen(!navMenuOpen)}
+          >
+            {/* Hamburger icon */}
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      {/* Liquid Glass Mobile Nav Menu */}
+      {navMenuOpen && (
+        <div className="fixed inset-0 z-50 md:hidden flex items-center justify-center">
+          {/* Enhanced Backdrop */}
+          <div 
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm" 
+            onClick={() => setNavMenuOpen(false)} 
+          />
+          
+          {/* Navigation Menu Panel */}
+          <div className="relative w-full max-w-sm mx-4">
+            <div className="glass-surface rounded-3xl shadow-2xl border border-[#502d26]/30 overflow-hidden">
+              {/* Navigation Links */}
+              <div className="relative p-8 space-y-6">
+                <div className="text-center mb-8">
+                  <h2 className="text-2xl font-bold text-[#ede8df] mb-2">Navigation</h2>
+                  <p className="text-[#b2a491] text-sm">Explore Odubo Studio</p>
+                </div>
+                
+                <nav className="space-y-4">
+                  <a 
+                    href="/" 
+                    className="block w-full p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-all duration-200 text-center text-[#ede8df] font-medium hover:scale-105"
+                    onClick={() => setNavMenuOpen(false)}
+                  >
+                    Home
+                  </a>
+                  <a 
+                    href="/music" 
+                    className="block w-full p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-all duration-200 text-center text-[#ede8df] font-medium hover:scale-105"
+                    onClick={() => setNavMenuOpen(false)}
+                  >
+                    Music
+                  </a>
+                  <a 
+                    href="/media" 
+                    className="block w-full p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-all duration-200 text-center text-[#ede8df] font-medium hover:scale-105"
+                    onClick={() => setNavMenuOpen(false)}
+                  >
+                    Video
+                  </a>
+                  <a 
+                    href="/store" 
+                    className="block w-full p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-all duration-200 text-center text-[#ede8df] font-medium hover:scale-105"
+                    onClick={() => setNavMenuOpen(false)}
+                  >
+                    Store
+                  </a>
+                </nav>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Profile Menu Dropdown */}
+      {profileMenuOpen && (
+        <div className="fixed top-16 left-4 z-50">
+          <div className="glass-surface rounded-2xl shadow-2xl border border-[#502d26]/30 overflow-hidden">
+            <div className="p-4 space-y-2">
+              <button
+                onClick={logout}
+                className="w-full px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors text-[#ede8df] text-left"
+              >
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}

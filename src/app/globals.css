@@ -1,1 +1,424 @@
 @import "tailwindcss";
+
+/* Liquid Glass Effects */
+@keyframes liquid-float {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-10px) rotate(2deg); }
+}
+
+@keyframes glass-shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+@keyframes liquid-pulse {
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.05); }
+}
+
+@keyframes liquid-wave {
+  0%, 100% { 
+    transform: rotate(0deg) scale(1); 
+    opacity: 0.4; 
+  }
+  25% { 
+    transform: rotate(90deg) scale(1.1); 
+    opacity: 0.6; 
+  }
+  50% { 
+    transform: rotate(180deg) scale(0.9); 
+    opacity: 0.3; 
+  }
+  75% { 
+    transform: rotate(270deg) scale(1.05); 
+    opacity: 0.5; 
+  }
+}
+
+@keyframes glass-flow {
+  0% { 
+    transform: translateY(0) translateX(0) rotate(0deg);
+    opacity: 0.2;
+  }
+  25% { 
+    transform: translateY(-20px) translateX(10px) rotate(45deg);
+    opacity: 0.4;
+  }
+  50% { 
+    transform: translateY(-10px) translateX(-15px) rotate(90deg);
+    opacity: 0.3;
+  }
+  75% { 
+    transform: translateY(5px) translateX(5px) rotate(135deg);
+    opacity: 0.5;
+  }
+  100% { 
+    transform: translateY(0) translateX(0) rotate(180deg);
+    opacity: 0.2;
+  }
+}
+
+.liquid-glass {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.liquid-glass::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, 
+    transparent, 
+    rgba(255, 255, 255, 0.1), 
+    transparent
+  );
+  animation: glass-shimmer 3s infinite;
+}
+
+.glass-morphism {
+  background: rgba(48, 41, 39, 0.3);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(80, 45, 38, 0.2);
+}
+
+.glass-card {
+  background: linear-gradient(135deg, 
+    rgba(48, 41, 39, 0.4) 0%, 
+    rgba(23, 22, 22, 0.2) 50%, 
+    rgba(48, 41, 39, 0.4) 100%
+  );
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(80, 45, 38, 0.3);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.glass-surface {
+  background: linear-gradient(135deg, 
+    rgba(48, 41, 39, 0.25) 0%, 
+    rgba(23, 22, 22, 0.15) 30%, 
+    rgba(80, 45, 38, 0.2) 60%,
+    rgba(48, 41, 39, 0.3) 100%
+  );
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(132, 60, 45, 0.2);
+  box-shadow: 
+    0 12px 40px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(237, 232, 223, 0.08),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.glass-surface::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, 
+    transparent, 
+    rgba(237, 232, 223, 0.3), 
+    transparent
+  );
+}
+
+.liquid-float {
+  animation: liquid-float 6s ease-in-out infinite;
+}
+
+.liquid-pulse {
+  animation: liquid-pulse 4s ease-in-out infinite;
+}
+
+.liquid-wave {
+  animation: liquid-wave 8s ease-in-out infinite;
+}
+
+.liquid-flow {
+  animation: glass-flow 12s ease-in-out infinite;
+}
+
+.liquid-orb {
+  animation: liquid-wave 8s ease-in-out infinite;
+}
+
+/* Respect reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .liquid-float,
+  .liquid-pulse,
+  .liquid-wave,
+  .liquid-flow,
+  .liquid-orb,
+  .hover-transform {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* Automatic reduction on low-end devices */
+.reduced-effects .glass-morphism,
+.reduced-effects .glass-card,
+.reduced-effects .glass-surface {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow: none !important;
+}
+.reduced-effects .liquid-float,
+.reduced-effects .liquid-pulse,
+.reduced-effects .liquid-wave,
+.reduced-effects .liquid-flow,
+.reduced-effects .liquid-orb {
+  animation: none !important;
+}
+
+/* Optimized root styles for single-screen app feel */
+html,
+body,
+#__next {
+  height: 100%;
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden; /* Prevent page-level scroll */
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: none;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  /* Brand typography */
+  font-family: Baskerville, "Times New Roman", Times, Georgia, serif;
+}
+
+/* Main layout container: fill dynamic viewport height */
+.main-layout-container {
+  height: 100vh; /* Fallback */
+  height: 100dvh; /* Dynamic viewport height */
+  min-height: 0;
+}
+
+/* Match Chrome's suggested rule exactly for the class combination */
+.h-full.w-full.flex.flex-col {
+  height: 100dvh;
+  min-height: 0;
+}
+
+/* Title typography: ensure Baskerville on all headings */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.font-title {
+  font-family: Baskerville, "Times New Roman", Times, Georgia, serif;
+}
+
+/* Hide scrollbars but allow scrolling in containers */
+::-webkit-scrollbar {
+  display: none;
+}
+
+/* Scrollbar hide utility */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Optimized scrollable containers */
+.scrollable-container {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  scroll-behavior: smooth;
+  /* Ensure smooth scrolling on iOS */
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  contain: layout style paint;
+}
+
+/* Prevent rubber-band/scroll-bounce on specific regions when needed */
+.overscroll-none {
+  overscroll-behavior: none;
+}
+
+/* Strong stationary scroll container: no horizontal pan, no bounce */
+.scroll-stationary {
+  overscroll-behavior: none;
+  overscroll-behavior-y: none;
+  overscroll-behavior-x: none;
+  touch-action: pan-y;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: auto; /* reduce iOS momentum/bounce */
+}
+
+/* Mobile viewport adjustments */
+.mobile-viewport {
+  min-height: 100vh;
+  min-height: 100dvh;
+  min-height: -webkit-fill-available;
+}
+
+/* Viewport-constrained containers - Remove fixed heights */
+.viewport-constrained {
+  min-height: 100vh;
+  min-height: 100dvh;
+  min-height: -webkit-fill-available;
+}
+
+/* Safe-area utilities */
+.safe-area-header {
+  padding-top: max(env(safe-area-inset-top), 0px);
+}
+
+.safe-area-bottom {
+  padding-bottom: max(env(safe-area-inset-bottom), 0px);
+}
+
+/* Remove fixed height constraints from library */
+.library-container {
+  min-height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  min-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+}
+
+/* Safe area aware containers */
+.safe-area-container {
+  padding-top: max(env(safe-area-inset-top), 0px);
+  padding-bottom: max(env(safe-area-inset-bottom), 0px);
+  padding-left: max(env(safe-area-inset-left), 0px);
+  padding-right: max(env(safe-area-inset-right), 0px);
+}
+
+/* iOS Safari specific fixes */
+@supports (-webkit-touch-callout: none) {
+  .mobile-viewport {
+    height: -webkit-fill-available;
+  }
+  
+  .ios-scroll-fix {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: none;
+  }
+}
+
+/* Horizontal scroll optimizations */
+.horizontal-scroll {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  overscroll-behavior-y: none;
+  touch-action: pan-x; /* Only allow horizontal panning */
+}
+
+/* Performance optimized transforms */
+.hover-transform {
+  will-change: transform;
+  transition: transform 0.2s ease-out;
+}
+
+.hover-transform:hover {
+  transform: scale(1.02);
+}
+
+/* Prevent scroll conflicts */
+.scroll-lock {
+  touch-action: none;
+}
+
+/* Custom utilities for text truncation */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Scroll indicator for horizontal scrollable areas */
+.scroll-indicator::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 20px;
+  background: linear-gradient(to left, rgba(23, 22, 22, 0.8), transparent);
+  pointer-events: none;
+}
+
+/* Accessibility Enhancements */
+.high-contrast {
+  --tw-bg-opacity: 1;
+  --tw-text-opacity: 1;
+}
+
+.high-contrast * {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+  border-color: #ffffff !important;
+}
+
+.large-text {
+  font-size: 1.2em;
+}
+
+.large-text * {
+  font-size: 1.2em;
+}
+
+.focus-visible *:focus {
+  outline: 3px solid #3b82f6 !important;
+  outline-offset: 2px !important;
+}
+
+.reduced-motion * {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+
+.screen-reader-optimized .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Screen reader only class */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

@@ -1,0 +1,422 @@
+// Cloudflare Stream API utilities
+// For uploading and managing videos with Cloudflare Stream
+
+interface StreamUploadResponse {
+  result: {
+    uid: string;
+    watermark?: {
+      uid: string;
+    };
+    created: string;
+    modified: string;
+    size: number;
+    preview: string;
+    allowedOrigins: string[];
+    requireSignedURLs: boolean;
+    uploaded: string;
+    uploadExpiry: string | null;
+    maxSizeBytes: number;
+    maxDurationSeconds: number;
+    duration: number;
+    input: {
+      width: number;
+      height: number;
+    };
+    playback: {
+      hls: string;
+      dash: string;
+    };
+    thumbnail: string;
+    thumbnailTimestampPct: number;
+    readyToStream: boolean;
+    status: {
+      state: 'pendingupload' | 'downloading' | 'queued' | 'inprogress' | 'ready' | 'error';
+      pctComplete: string;
+      errorReasonCode?: string;
+      errorReasonText?: string;
+    };
+    meta: Record<string, any>;
+    clippedFrom?: {
+      uid: string;
+      startTimeSeconds: number;
+      endTimeSeconds: number;
+    };
+  };
+  success: boolean;
+  errors: any[];
+  messages: any[];
+}
+
+interface StreamVideoDetails {
+  result: {
+    uid: string;
+    created: string;
+    modified: string;
+    size: number;
+    preview: string;
+    allowedOrigins: string[];
+    requireSignedURLs: boolean;
+    uploaded: string;
+    uploadExpiry: string | null;
+    maxSizeBytes: number;
+    maxDurationSeconds: number;
+    duration: number;
+    input: {
+      width: number;
+      height: number;
+    };
+    playback: {
+      hls: string;
+      dash: string;
+    };
+    thumbnail: string;
+    thumbnailTimestampPct: number;
+    readyToStream: boolean;
+    status: {
+      state: 'pendingupload' | 'downloading' | 'queued' | 'inprogress' | 'ready' | 'error';
+      pctComplete: string;
+      errorReasonCode?: string;
+      errorReasonText?: string;
+    };
+    meta: Record<string, any>;
+  };
+  success: boolean;
+  errors: any[];
+  messages: any[];
+}
+
+class CloudflareStreamAPI {
+  private accountId: string;
+  private apiToken: string;
+  private baseUrl: string;
+
+  constructor() {
+    this.accountId = process.env.CLOUDFLARE_ACCOUNT_ID || '';
+    // Prefer a dedicated stream token if provided, fall back to generic API token
+    this.apiToken = process.env.CLOUDFLARE_STREAM_API_TOKEN || process.env.CLOUDFLARE_API_TOKEN || '';
+    this.baseUrl = `https://api.cloudflare.com/client/v4/accounts/${this.accountId}/stream`;
+
+    if (!this.accountId || !this.apiToken) {
+      throw new Error('Cloudflare Stream credentials not configured');
+    }
+  }
+
+  private async makeRequest<T = any>(endpoint: string, options: RequestInit = {}): Promise<T> {
+    const response = await fetch(`${this.baseUrl}${endpoint}`, {
+      ...options,
+      headers: {
+        'Authorization': `Bearer ${this.apiToken}`,
+        ...options.headers,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(`Stream API error: ${response.status} - ${JSON.stringify(errorData)}`);
+    }
+
+    return response.json() as T;
+  }
+
+  /**
+   * Upload a video file directly to Cloudflare Stream
+   * @param file - The video file to upload
+   * @param metadata - Optional metadata for the video
+   */
+  async uploadVideo(
+    file: File, 
+    metadata: {
+      name?: string;
+      requireSignedURLs?: boolean;
+      allowedOrigins?: string[];
+      thumbnailTimestampPct?: number;
+      watermark?: string;
+      meta?: Record<string, any>;
+    } = {}
+  ): Promise<StreamUploadResponse> {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    // Add metadata
+    if (metadata.name) formData.append('name', metadata.name);
+    if (metadata.requireSignedURLs !== undefined) {
+      formData.append('requireSignedURLs', metadata.requireSignedURLs.toString());
+    }
+    if (metadata.allowedOrigins) {
+      formData.append('allowedOrigins', JSON.stringify(metadata.allowedOrigins));
+    }
+    if (metadata.thumbnailTimestampPct !== undefined) {
+      formData.append('thumbnailTimestampPct', metadata.thumbnailTimestampPct.toString());
+    }
+    if (metadata.watermark) {
+      formData.append('watermark', metadata.watermark);
+    }
+    if (metadata.meta) {
+      formData.append('meta', JSON.stringify(metadata.meta));
+    }
+
+    return this.makeRequest<StreamUploadResponse>('', {
+      method: 'POST',
+      body: formData,
+    });
+  }
+
+  /**
+   * Upload via direct upload URL (for large files)
+   * This creates an upload URL that can be used for resumable uploads
+   */
+  async createUploadUrl(
+    maxDurationSeconds?: number,
+    metadata: {
+      name?: string;
+      requireSignedURLs?: boolean;
+      allowedOrigins?: string[];
+      thumbnailTimestampPct?: number;
+      watermark?: string;
+      meta?: Record<string, any>;
+    } = {}
+  ): Promise<{
+    result: {
+      uploadURL: string;
+      uid: string;
+    };
+    success: boolean;
+  }> {
+    const body: any = {};
+    
+    if (maxDurationSeconds) body.maxDurationSeconds = maxDurationSeconds;
+    if (metadata.name) body.name = metadata.name;
+    if (metadata.requireSignedURLs !== undefined) body.requireSignedURLs = metadata.requireSignedURLs;
+    if (metadata.allowedOrigins) body.allowedOrigins = metadata.allowedOrigins;
+    if (metadata.thumbnailTimestampPct !== undefined) body.thumbnailTimestampPct = metadata.thumbnailTimestampPct;
+    if (metadata.watermark) body.watermark = metadata.watermark;
+    if (metadata.meta) body.meta = metadata.meta;
+
+    return this.makeRequest<{
+      result: {
+        uploadURL: string;
+        uid: string;
+      };
+      success: boolean;
+    }>('/direct_upload', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+  }
+
+  /**
+   * Get video details by UID
+   */
+  async getVideo(uid: string): Promise<StreamVideoDetails> {
+    return this.makeRequest<StreamVideoDetails>(`/${uid}`);
+  }
+
+  /**
+   * Delete a video from Stream
+   */
+  async deleteVideo(uid: string): Promise<{ success: boolean }> {
+    return this.makeRequest<{ success: boolean }>(`/${uid}`, {
+      method: 'DELETE',
+    });
+  }
+
+  /**
+   * List all videos in the account
+   */
+  async listVideos(options: {
+    search?: string;
+    creator?: string;
+    includeCounts?: boolean;
+    start?: string;
+    end?: string;
+    asc?: boolean;
+    status?: 'pendingupload' | 'downloading' | 'queued' | 'inprogress' | 'ready' | 'error';
+    type?: 'live' | 'on-demand';
+  } = {}) {
+    const params = new URLSearchParams();
+    
+    Object.entries(options).forEach(([key, value]) => {
+      if (value !== undefined) {
+        params.append(key, value.toString());
+      }
+    });
+
+    const query = params.toString();
+    return this.makeRequest(`${query ? `?${query}` : ''}`);
+  }
+
+  /**
+   * Update video metadata
+   */
+  async updateVideo(
+    uid: string,
+    updates: {
+      name?: string;
+      requireSignedURLs?: boolean;
+      allowedOrigins?: string[];
+      thumbnailTimestampPct?: number;
+      meta?: Record<string, any>;
+    }
+  ): Promise<StreamVideoDetails> {
+    return this.makeRequest<StreamVideoDetails>(`/${uid}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(updates),
+    });
+  }
+
+  /**
+   * Get embed code for a video
+   */
+  getEmbedUrl(uid: string, options: {
+    autoplay?: boolean;
+    muted?: boolean;
+    loop?: boolean;
+    controls?: boolean;
+    preload?: 'auto' | 'metadata' | 'none';
+    poster?: string;
+    primaryColor?: string;
+    letterboxColor?: string;
+    startTime?: string;
+  } = {}): string {
+    const params = new URLSearchParams();
+    
+    Object.entries(options).forEach(([key, value]) => {
+      if (value !== undefined) {
+        params.append(key, value.toString());
+      }
+    });
+
+    const query = params.toString();
+    return `https://iframe.videodelivery.net/${uid}${query ? `?${query}` : ''}`;
+  }
+
+  /**
+   * Get HLS manifest URL for a video
+   */
+  getHlsUrl(uid: string): string {
+    return `https://videodelivery.net/${uid}/manifest/video.m3u8`;
+  }
+
+  /**
+   * Get DASH manifest URL for a video
+   */
+  getDashUrl(uid: string): string {
+    return `https://videodelivery.net/${uid}/manifest/video.mpd`;
+  }
+
+  /**
+   * Get thumbnail URL for a video
+   */
+  getThumbnailUrl(uid: string, options: {
+    time?: string; // timestamp in format like "1m2s" or "62s"
+    width?: number;
+    height?: number;
+    fit?: 'clip' | 'crop' | 'pad' | 'scale';
+  } = {}): string {
+    const params = new URLSearchParams();
+    
+    Object.entries(options).forEach(([key, value]) => {
+      if (value !== undefined) {
+        params.append(key, value.toString());
+      }
+    });
+
+    const query = params.toString();
+    return `https://videodelivery.net/${uid}/thumbnails/thumbnail.jpg${query ? `?${query}` : ''}`;
+  }
+
+  /**
+   * Upload a video from URL
+   */
+  async uploadFromUrl(
+    url: string,
+    metadata: {
+      name?: string;
+      requireSignedURLs?: boolean;
+      allowedOrigins?: string[];
+      thumbnailTimestampPct?: number;
+      watermark?: string;
+      meta?: Record<string, any>;
+    } = {}
+  ): Promise<StreamUploadResponse> {
+    const body: any = { url };
+    
+    if (metadata.name) body.name = metadata.name;
+    if (metadata.requireSignedURLs !== undefined) body.requireSignedURLs = metadata.requireSignedURLs;
+    if (metadata.allowedOrigins) body.allowedOrigins = metadata.allowedOrigins;
+    if (metadata.thumbnailTimestampPct !== undefined) body.thumbnailTimestampPct = metadata.thumbnailTimestampPct;
+    if (metadata.watermark) body.watermark = metadata.watermark;
+    if (metadata.meta) body.meta = metadata.meta;
+
+    return this.makeRequest<StreamUploadResponse>('/copy', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+  }
+
+  /**
+   * Check if video is ready for streaming
+   */
+  async isVideoReady(uid: string): Promise<boolean> {
+    try {
+      const video = await this.getVideo(uid);
+      return video.result.readyToStream && video.result.status.state === 'ready';
+    } catch (error) {
+      console.error('Error checking video status:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Wait for video to be ready (with polling)
+   */
+  async waitForVideoReady(
+    uid: string, 
+    options: { 
+      maxWaitTime?: number; // milliseconds
+      pollInterval?: number; // milliseconds
+      onProgress?: (status: string, pctComplete: string) => void;
+    } = {}
+  ): Promise<boolean> {
+    const { maxWaitTime = 600000, pollInterval = 5000, onProgress } = options; // 10 minutes max wait
+    const startTime = Date.now();
+
+    while (Date.now() - startTime < maxWaitTime) {
+      try {
+        const video = await this.getVideo(uid);
+        const { status, readyToStream } = video.result;
+
+        onProgress?.(status.state, status.pctComplete);
+
+        if (readyToStream && status.state === 'ready') {
+          return true;
+        }
+
+        if (status.state === 'error') {
+          console.error('Video processing failed:', status.errorReasonText);
+          return false;
+        }
+
+        // Wait before next poll
+        await new Promise(resolve => setTimeout(resolve, pollInterval));
+      } catch (error) {
+        console.error('Error polling video status:', error);
+        await new Promise(resolve => setTimeout(resolve, pollInterval));
+      }
+    }
+
+    return false;
+  }
+}
+
+export default CloudflareStreamAPI;
+export type { StreamUploadResponse, StreamVideoDetails };
