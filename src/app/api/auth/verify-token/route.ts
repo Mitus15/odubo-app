@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import { getAuthTokenFromRequest, getJwtSecret } from '@/lib/auth';
-const JWT_SECRET = getJwtSecret();
 
 export async function POST(req: NextRequest) {
   try {
+    // Resolve secret at request time to avoid build-time env checks
+    const JWT_SECRET = getJwtSecret();
     let token: string | undefined;
     try {
       const body = await req.json() as { token?: string };
