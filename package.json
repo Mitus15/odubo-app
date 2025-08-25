@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build --no-lint",
-    "build:deploy": "next build --no-lint",
+    "build:deploy": "npx --yes @cloudflare/next-on-pages",
     "start": "next start",
     "lint": "next lint",
     "test:performance": "node scripts/test-performance.js",
@@ -55,6 +55,7 @@
     "zod": "^4.0.14"
   },
   "devDependencies": {
+    "@cloudflare/next-on-pages": "^1.13.14",
     "@cloudflare/workers-types": "^4.20250801.0",
     "@eslint/eslintrc": "^3",
     "@types/busboy": "^1.5.4",
