@@ -2,8 +2,8 @@ name = "odubo-app"
 compatibility_date = "2025-01-15"
 compatibility_flags = ["nodejs_compat"]
 
-# Pages configuration
-pages_build_output_dir = ".vercel/output"
+# Pages configuration (must point to static so _worker.js is at root)
+pages_build_output_dir = ".vercel/output/static"
 
 [env.production]
 [env.production.vars]
