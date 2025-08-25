@@ -6,7 +6,6 @@ import CloudflareStreamAPI from "@/lib/cloudflareStream";
 import { rateLimit } from "@/lib/rateLimit";
 
 // Configure larger request size limit for video uploads
-export const runtime = 'edge';
 export const maxDuration = 900; // 15 minutes timeout for 20GB uploads
 export const dynamic = 'force-dynamic';
 

@@ -4,7 +4,6 @@ import CloudflareStreamAPI from "@/lib/cloudflareStream";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 
 // Configure larger request size limit for video uploads
-export const runtime = 'edge';
 export const maxDuration = 900; // 15 minutes timeout for 20GB uploads
 export const dynamic = 'force-dynamic';
 
