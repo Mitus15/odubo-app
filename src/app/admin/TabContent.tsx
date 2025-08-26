@@ -6,30 +6,23 @@ import dynamic from 'next/dynamic';
 
 const OverviewTab = dynamic(() => import('./tabs/OverviewTab'));
 const AnalyticsTab = dynamic(() => import('./tabs/AnalyticsTab'));
-// const LibraryManager = dynamic(() => import('@/components/LibraryManager'));
+const LibraryManager = dynamic(() => import('@/components/LibraryManager'));
 
-interface TabContentProps {
-  activeTab: 'overview' | 'music-library' | 'video-library' | 'analytics';
-}
+type AdminTab = 'overview' | 'music-library' | 'video-library' | 'analytics';
 
-export default function TabContent({ activeTab }: { activeTab: string }) {
+export default function TabContent({ activeTab }: { activeTab: AdminTab }) {
   switch (activeTab) {
     case 'overview':
       return (
-        <div className="p-6">
-          <h2 className="text-2xl font-bold mb-4">Overview</h2>
-          <p>Welcome to the admin dashboard.</p>
-        </div>
+        <Suspense fallback={<div className="p-6">Loading Overview…</div>}>
+          <OverviewTab />
+        </Suspense>
       );
     case 'music-library':
       return (
-        <div className="w-full">
-          {/* <LibraryManager contentType="albums" /> */}
-          <div className="p-6">
-            <h2 className="text-2xl font-bold mb-4">Music Library</h2>
-            <p>Music library management coming soon...</p>
-          </div>
-        </div>
+        <Suspense fallback={<div className="p-6">Loading Music Library…</div>}>
+          <LibraryManager />
+        </Suspense>
       );
     case 'video-library':
       return (
@@ -43,10 +36,9 @@ export default function TabContent({ activeTab }: { activeTab: string }) {
       );
     case 'analytics':
       return (
-        <div className="p-6">
-          <h2 className="text-2xl font-bold mb-4">Analytics</h2>
-          <p>Analytics dashboard coming soon...</p>
-        </div>
+        <Suspense fallback={<div className="p-6">Loading Analytics…</div>}>
+          <AnalyticsTab />
+        </Suspense>
       );
     default:
       return null;

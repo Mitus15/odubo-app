@@ -199,7 +199,7 @@ export async function POST(req: NextRequest) {
       const { payload: decoded } = await jwtVerify(token, getSecret());
       const { userId } = decoded as any;
       const { firstName, lastName } = rest;
-      await updateUser(decoded.userId, { first_name: firstName, last_name: lastName });
+      await updateUser(userId as string, { first_name: firstName, last_name: lastName });
       return NextResponse.json({ message: 'Profile updated successfully' });
     } catch (error) {
       return NextResponse.json({ error: 'Failed to update profile' }, { status: 500 });
@@ -214,7 +214,7 @@ export async function POST(req: NextRequest) {
       const { payload: decoded } = await jwtVerify(token, getSecret());
       const { userId } = decoded as any;
       const { email } = rest;
-      await updateUser(decoded.userId, { email });
+      await updateUser(userId as string, { email });
       return NextResponse.json({ message: 'Email updated successfully' });
     } catch (error) {
       return NextResponse.json({ error: 'Failed to update email' }, { status: 500 });
@@ -233,7 +233,7 @@ export async function POST(req: NextRequest) {
       const valid = await bcrypt.compare(currentPassword, user.password_hash);
       if (!valid) return NextResponse.json({ error: 'Invalid current password' }, { status: 401 });
       const hashedPassword = await bcrypt.hash(newPassword, 10);
-      await updateUser(decoded.userId, { password_hash: hashedPassword });
+      await updateUser(userId as string, { password_hash: hashedPassword });
       return NextResponse.json({ message: 'Password changed successfully' });
     } catch (error) {
       return NextResponse.json({ error: 'Failed to change password' }, { status: 500 });

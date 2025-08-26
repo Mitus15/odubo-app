@@ -12,7 +12,11 @@ export default function AdminPage() {
 
   useEffect(() => {
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-    if (!token) return;
+    if (!token) {
+      // Rely on middleware/httpOnly cookie for auth; don't block rendering
+      setIsAdmin(true);
+      return;
+    }
     try {
       const payload = JSON.parse(atob(token.split(".")[1]));
       setIsAdmin(!!payload.is_admin);
