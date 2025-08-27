@@ -101,7 +101,15 @@ export default function AlbumCreationWizard() {
         coverArtFormData.append('file', coverArtFile);
         coverArtFormData.append('fileType', 'album-cover');
         coverArtFormData.append('albumId', createdAlbumId);
-        await fetch('/api/upload', { method: 'POST', body: coverArtFormData });
+        const coverUploadRes = await fetch('/api/upload', { method: 'POST', body: coverArtFormData });
+        const coverUploadJson = await coverUploadRes.json() as { success: boolean; url?: string; key?: string };
+        if (coverUploadJson.success && coverUploadJson.url && coverUploadJson.key) {
+          await fetch(`/api/albums/${createdAlbumId}/update-cover`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ cover_art_url: coverUploadJson.url, cover_art_key: coverUploadJson.key })
+          });
+        }
       }
 
       for (let i = 0; i < trackUploads.length; i++) {
@@ -112,7 +120,7 @@ export default function AlbumCreationWizard() {
         trackFormData.append('fileType', 'track');
         trackFormData.append('albumId', createdAlbumId);
         const audioUploadResponse = await fetch('/api/upload', { method: 'POST', body: trackFormData });
-        const audioUploadResult = await audioUploadResponse.json() as any;
+        const audioUploadResult = await audioUploadResponse.json() as { success: boolean; url?: string };
 
         const trackPayload = {
           ...track,
@@ -171,7 +179,7 @@ export default function AlbumCreationWizard() {
         {currentStep === 5 && <ReviewStep formData={formData} trackUploads={trackUploads} coverArtPreview={coverArtPreview} />}
       </div>
 
-      <div className="flex-shrink-0 px-4 sm:px-6 py-4 sm:py-6 border-t border-[#502d26]/40 bg-[#1a1513]/80 backdrop-blur-sm">
+      <div className="flex-shrink-0 sticky bottom-0 z-20 px-4 sm:px-6 py-4 sm:py-6 border-t border-[#502d26]/40 bg-[#1a1513]/80 backdrop-blur-sm">
         <div className="flex justify-between items-center gap-4">
           <button onClick={prevStep} disabled={currentStep === 1} className="px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg sm:rounded-xl font-medium transition-all duration-200 text-sm sm:text-base bg-[#302927]/50 border border-[#502d26]/40 text-[#b2a491] hover:bg-[#502d26]/60 hover:text-[#ede8df] disabled:cursor-not-allowed disabled:opacity-50">
             Previous

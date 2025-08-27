@@ -64,25 +64,47 @@ export default function UploadTracksStep({ trackUploads, setTrackUploads, artist
 
   return (
     <WizardStep title="Upload Your Tracks" description="Add your audio files. You can reorder them and edit titles here.">
-      <div className="mb-6">
-        <div className="border-2 border-dashed border-[#502d26]/40 rounded-xl p-6 sm:p-8 text-center hover:border-[#843c2d]/60 transition-colors">
-          <input
-            type="file"
-            ref={trackFilesRef}
-            multiple
-            accept="audio/*"
-            onChange={handleTrackFilesChange}
-            className="hidden"
-            id="track-files-upload"
-          />
-          <label htmlFor="track-files-upload" className="cursor-pointer">
-            <span className="text-3xl sm:text-4xl block mb-2">🎶</span>
-            <span className="text-[#ede8df] block text-base sm:text-lg font-medium">Drop audio files here</span>
-            <span className="text-[#726d6c] text-sm mt-1 block">or click to browse</span>
-            <span className="text-[#b2a491] text-xs mt-2 block">MP3, M4A, WAV, FLAC, AAC supported • Multiple files allowed</span>
-          </label>
+      {trackUploads.length === 0 ? (
+        <div className="mb-4">
+          <div className="border-2 border-dashed border-[#502d26]/40 rounded-xl p-4 sm:p-6 text-center hover:border-[#843c2d]/60 transition-colors">
+            <input
+              type="file"
+              ref={trackFilesRef}
+              multiple
+              accept="audio/*"
+              onChange={handleTrackFilesChange}
+              className="hidden"
+              id="track-files-upload"
+            />
+            <label htmlFor="track-files-upload" className="cursor-pointer">
+              <span className="text-2xl sm:text-3xl block mb-2">🎶</span>
+              <span className="text-[#ede8df] block text-sm sm:text-base font-medium">Drop audio files here</span>
+              <span className="text-[#726d6c] text-xs mt-1 block">or click to browse</span>
+            </label>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="mb-3 flex items-center justify-between">
+          <span className="text-[#b2a491] text-xs sm:text-sm">Add more tracks</span>
+          <div>
+            <input
+              type="file"
+              ref={trackFilesRef}
+              multiple
+              accept="audio/*"
+              onChange={handleTrackFilesChange}
+              className="hidden"
+              id="track-files-upload"
+            />
+            <label
+              htmlFor="track-files-upload"
+              className="cursor-pointer px-3 py-2 rounded-md text-xs sm:text-sm bg-[#302927] border border-[#502d26]/40 text-[#ede8df] hover:bg-[#502d26]/60"
+            >
+              + Add Files
+            </label>
+          </div>
+        </div>
+      )}
 
       {trackUploads.length > 0 && (
         <div className="space-y-3">
@@ -90,7 +112,7 @@ export default function UploadTracksStep({ trackUploads, setTrackUploads, artist
             <h5 className="text-[#ede8df] font-medium text-sm sm:text-base">Uploaded Tracks</h5>
             <span className="text-[#b2a491] text-xs sm:text-sm">{trackUploads.length} track{trackUploads.length !== 1 ? 's' : ''}</span>
           </div>
-          <div className="space-y-2 max-h-64 overflow-y-auto scrollable-container">
+          <div className="space-y-2 max-h-[50vh] md:max-h-[55vh] lg:max-h-[60vh] overflow-y-auto pr-2 pb-56 scroll-pb-56">
             {trackUploads.map((track, index) => (
               <div key={index} className="flex items-center justify-between p-3 bg-[#171616]/50 rounded-xl">
                 <div className="flex items-center space-x-2 sm:space-x-3 flex-1 min-w-0">

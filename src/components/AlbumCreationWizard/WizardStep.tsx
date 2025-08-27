@@ -16,7 +16,7 @@ export default function WizardStep({ title, description, children }: WizardStepP
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.3 }}
-      className="h-full overflow-y-auto scrollable-container px-4 sm:px-6 py-4 sm:py-6"
+      className="min-h-[60vh] overflow-y-visible px-4 sm:px-6 py-4 sm:py-6 pb-28"
     >
       <div className="max-w-4xl mx-auto">
         <div className="bg-[#302927]/60 border border-[#502d26]/40 rounded-xl sm:rounded-2xl p-4 sm:p-6 backdrop-blur-sm">
