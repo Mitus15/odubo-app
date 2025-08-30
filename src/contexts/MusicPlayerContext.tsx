@@ -539,6 +539,7 @@ interface MusicPlayerProviderProps {
 export const MusicPlayerProvider: React.FC<MusicPlayerProviderProps> = ({ children }) => {
   const [state, dispatch] = useReducer(playerReducer, initialState);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const hlsRef = useRef<any>(null);
 
 
 
@@ -773,19 +774,21 @@ export const MusicPlayerProvider: React.FC<MusicPlayerProviderProps> = ({ childr
           
           console.log('Track stream info received:', streamInfo);
           
-          // Check if audio is ready for streaming
+          // If status is not ready, continue but warn – rely on actual stream accessibility
           if (streamInfo.audio_status !== 'ready') {
-            dispatch({ type: 'SET_ERROR', payload: `Audio not ready (status: ${streamInfo.audio_status})` });
-            return;
+            console.warn(`Audio status is ${streamInfo.audio_status}, proceeding to test stream accessibility`);
           }
-          
+
           // Test stream accessibility
           console.log('Testing stream accessibility:', streamInfo.streamUrl);
           const isAccessible = await testAudioStream(streamInfo.streamUrl);
           console.log('Stream accessibility result:', isAccessible);
           if (!isAccessible) {
             console.error('Stream not accessible:', streamInfo.streamUrl);
-            dispatch({ type: 'SET_ERROR', payload: 'Audio stream is not accessible' });
+            const statusMsg = streamInfo.audio_status && streamInfo.audio_status !== 'ready' 
+              ? ` (status: ${streamInfo.audio_status})` 
+              : '';
+            dispatch({ type: 'SET_ERROR', payload: `Audio stream is not accessible${statusMsg}` });
             return;
           }
           
@@ -804,18 +807,75 @@ export const MusicPlayerProvider: React.FC<MusicPlayerProviderProps> = ({ childr
           // Set up audio element for streaming
           audio.crossOrigin = 'anonymous';
           audio.preload = 'metadata';
-          audio.src = streamInfo.streamUrl;
-          
-          // Add comprehensive event listeners
-          audio.addEventListener('error', handleLoadError);
-          audio.addEventListener('canplay', handleCanPlay);
-          audio.addEventListener('loadstart', handleLoadStart);
-          audio.addEventListener('progress', handleProgress);
-          
-          console.log(`Loading audio directly: ${streamInfo.streamUrl}`);
-          
-          // Load the audio
-          audio.load();
+
+          const tryProgressive = () => {
+            // Fallback to progressive stream
+            audio.src = streamInfo.streamUrl;
+            audio.addEventListener('error', handleLoadError);
+            audio.addEventListener('canplay', handleCanPlay);
+            audio.addEventListener('loadstart', handleLoadStart);
+            audio.addEventListener('progress', handleProgress);
+            console.log(`Loading audio progressively: ${streamInfo.streamUrl}`);
+            audio.load();
+          };
+
+          // Prefer HLS if available
+          if (streamInfo.hlsUrl) {
+            const hlsUrl = streamInfo.hlsUrl;
+            const canPlayNativeHls = audio.canPlayType('application/vnd.apple.mpegurl');
+            if (canPlayNativeHls === 'probably' || canPlayNativeHls === 'maybe') {
+              audio.src = hlsUrl;
+              audio.addEventListener('error', handleLoadError);
+              audio.addEventListener('canplay', handleCanPlay);
+              audio.addEventListener('loadstart', handleLoadStart);
+              audio.addEventListener('progress', handleProgress);
+              console.log(`Loading audio via native HLS: ${hlsUrl}`);
+              audio.load();
+            } else {
+              try {
+                const HlsModule = await import('hls.js');
+                const Hls = HlsModule.default;
+                if (Hls && Hls.isSupported()) {
+                  if (hlsRef.current) {
+                    try { hlsRef.current.destroy(); } catch {}
+                    hlsRef.current = null;
+                  }
+                  const hls = new Hls({
+                    enableWorker: true,
+                    backBufferLength: 30,
+                  });
+                  hlsRef.current = hls;
+
+                  hls.on(Hls.Events.ERROR, (_evt: any, data: any) => {
+                    console.warn('HLS error:', data);
+                    if (data?.fatal) {
+                      try { hls.destroy(); } catch {}
+                      hlsRef.current = null;
+                      tryProgressive();
+                    }
+                  });
+
+                  hls.loadSource(hlsUrl);
+                  hls.attachMedia(audio);
+
+                  // Attach basic listeners on the audio element as well
+                  audio.addEventListener('error', handleLoadError);
+                  audio.addEventListener('canplay', handleCanPlay);
+                  audio.addEventListener('loadstart', handleLoadStart);
+                  audio.addEventListener('progress', handleProgress);
+
+                  console.log(`Loading audio via hls.js: ${hlsUrl}`);
+                } else {
+                  tryProgressive();
+                }
+              } catch (e) {
+                console.warn('Failed to load hls.js, falling back to progressive', e);
+                tryProgressive();
+              }
+            }
+          } else {
+            tryProgressive();
+          }
           
           // Auto-play will be handled by the canplay event if needed
           
@@ -847,6 +907,10 @@ export const MusicPlayerProvider: React.FC<MusicPlayerProviderProps> = ({ childr
       return () => {
         audio.removeEventListener('error', handleLoadError);
         audio.removeEventListener('canplay', handleCanPlay);
+        if (hlsRef.current) {
+          try { hlsRef.current.destroy(); } catch {}
+          hlsRef.current = null;
+        }
       };
     }
   }, [state.currentTrack?.id]);

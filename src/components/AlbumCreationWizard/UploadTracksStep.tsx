@@ -52,7 +52,7 @@ export default function UploadTracksStep({ trackUploads, setTrackUploads, artist
     setTrackUploads(trackUploads.filter((_, i) => i !== index));
   };
 
-  const moveTrack = (fromIndex: number, toIndex: number) => {
+  const moveTrack: (fromIndex: number, toIndex: number) => void = (fromIndex: number, toIndex: number) => {
     const updated = [...trackUploads];
     const [moved] = updated.splice(fromIndex, 1);
     updated.splice(toIndex, 0, moved);

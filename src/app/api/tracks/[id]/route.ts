@@ -19,11 +19,34 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     }
     
     const track = (tracks as any[])[0];
+
+    // Compute optional HLS manifest URL based on audio_url convention
+    // Example: https://media/.../song.web.m4a -> https://media/.../song.hls/master.m3u8
+    const deriveHlsUrl = (audioUrl: string | null | undefined): string | null => {
+      if (!audioUrl || typeof audioUrl !== 'string') return null;
+      try {
+        const url = new URL(audioUrl);
+        const path = url.pathname; // /dir/song.web.m4a
+        const lastSlash = path.lastIndexOf('/');
+        const dir = lastSlash >= 0 ? path.slice(0, lastSlash) : '';
+        const file = lastSlash >= 0 ? path.slice(lastSlash + 1) : path;
+        const dot = file.lastIndexOf('.');
+        const nameNoExt = dot >= 0 ? file.slice(0, dot) : file;
+        const baseName = nameNoExt.endsWith('.web') ? nameNoExt.slice(0, -4) : nameNoExt;
+        const hlsPath = `${dir}/${baseName}.hls/master.m3u8`;
+        url.pathname = hlsPath;
+        return url.toString();
+      } catch {
+        return null;
+      }
+    };
+
+    const hls_url = deriveHlsUrl((track as any).audio_url);
     
     // Add cache headers for track metadata
     const response = NextResponse.json({ 
       success: true, 
-      track 
+      track: { ...track, hls_url }
     });
     
     response.headers.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');

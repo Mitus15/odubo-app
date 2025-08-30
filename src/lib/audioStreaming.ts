@@ -10,6 +10,7 @@ export interface TrackStreamInfo {
   audio_status: 'pending' | 'ready' | 'error';
   duration: number;
   streamUrl: string;
+  hlsUrl?: string;
 }
 
 /**
@@ -43,7 +44,8 @@ export async function fetchTrackStreamInfo(trackId: string): Promise<TrackStream
       audio_url: track.audio_url,
       audio_status: track.audio_status,
       duration: track.duration,
-      streamUrl: `/api/tracks/${track.id}/stream`
+      streamUrl: `/api/tracks/${track.id}/stream`,
+      hlsUrl: track.hls_url || undefined
     };
   } catch (error) {
     console.error(`Error fetching track stream info for ${trackId}:`, error);
