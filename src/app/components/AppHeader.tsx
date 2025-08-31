@@ -74,8 +74,7 @@ export default function AppHeader() {
               {/* Navigation Links */}
               <div className="relative p-8 space-y-6">
                 <div className="text-center mb-8">
-                  <h2 className="text-2xl font-bold text-[#ede8df] mb-2">Navigation</h2>
-                  <p className="text-[#b2a491] text-sm">Explore Odubo Studio</p>
+                  <h2 className="text-2xl font-bold text-[#ede8df] mb-2">Explore</h2>
                 </div>
                 
                 <nav className="space-y-4">

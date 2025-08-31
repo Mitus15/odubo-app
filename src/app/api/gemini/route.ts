@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 export const runtime = 'edge';
+import { executeQuery, queryDatabase } from '@/lib/db';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent';
@@ -40,6 +41,33 @@ export async function POST(request: NextRequest) {
     switch (action) {
       case 'getVerse':
         isVerseRequest = true;
+        // Server-side cache check: use Cloudflare D1 to store a verse per calendar day
+        try {
+          // Ensure cache table exists
+          await executeQuery(`CREATE TABLE IF NOT EXISTS gemini_cache (cache_key TEXT PRIMARY KEY, cache_value TEXT, timestamp INTEGER)`);
+
+          // Build a date-key in the configured timezone (defaults to UTC)
+          const tz = process.env.GEMINI_CACHE_TZ || 'UTC';
+          const now = new Date();
+          const parts = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
+          // en-CA format is YYYY-MM-DD
+          const dateKey = `verse_${parts}`;
+
+          // Attempt to read cached verse for today's date key
+          const rows = await queryDatabase(`SELECT cache_value, timestamp FROM gemini_cache WHERE cache_key = ? LIMIT 1`, [dateKey]);
+          if (rows && rows.length > 0) {
+            const row = rows[0] as any;
+            try {
+              const cached = JSON.parse(row.cache_value);
+              return NextResponse.json(cached, { headers: { 'Cache-Control': 'public, max-age=86400' } });
+            } catch (e) {
+              // ignore parse errors and continue to generate a new verse
+              console.warn('Failed to parse cached gemini verse, regenerating', e);
+            }
+          }
+        } catch (dbErr) {
+          console.warn('Gemini cache DB error (continuing without cache):', dbErr);
+        }
         // Create more variety using timestamp and requestId
         const timestampSeed = parseInt(timestamp || '0') % 31;
         const requestSeed = requestId ? requestId.charCodeAt(0) % 31 : 0;
@@ -211,8 +239,24 @@ export async function POST(request: NextRequest) {
             note: 'Returned non-Proverbs verse'
           }, { headers: { 'Cache-Control': 'no-store' } });
         }
-        
-        return NextResponse.json(verseData, { headers: { 'Cache-Control': 'no-store' } });
+
+        // Upsert into D1 cache for today's date key
+        try {
+          const tz = process.env.GEMINI_CACHE_TZ || 'UTC';
+          const now = new Date();
+          const parts = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
+          const dateKey = `verse_${parts}`;
+
+          const payload = JSON.stringify({ text: verseData.text, reference: verseData.reference, note: verseData.note || null });
+          const ts = Date.now();
+          // Try insert; if conflict, replace
+          await executeQuery(`INSERT INTO gemini_cache (cache_key, cache_value, timestamp) VALUES (?, ?, ?)
+            ON CONFLICT(cache_key) DO UPDATE SET cache_value = ?, timestamp = ?`, [dateKey, payload, ts, payload, ts]);
+        } catch (cacheErr) {
+          console.warn('Failed to write gemini cache:', cacheErr);
+        }
+
+        return NextResponse.json(verseData, { headers: { 'Cache-Control': 'public, max-age=86400' } });
       } catch (parseError) {
         console.error('JSON parsing error:', parseError);
         console.log('Failed to parse:', generatedText);
@@ -223,18 +267,41 @@ export async function POST(request: NextRequest) {
         
         if (textMatch && refMatch) {
           console.log('Extracted manually:', { text: textMatch[1], reference: refMatch[1] });
+          try {
+            const tz = process.env.GEMINI_CACHE_TZ || 'UTC';
+            const now = new Date();
+            const parts = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
+            const dateKey = `verse_${parts}`;
+            const payload = JSON.stringify({ text: textMatch[1], reference: refMatch[1], note: null });
+            const ts = Date.now();
+            await executeQuery(`INSERT INTO gemini_cache (cache_key, cache_value, timestamp) VALUES (?, ?, ?)
+              ON CONFLICT(cache_key) DO UPDATE SET cache_value = ?, timestamp = ?`, [dateKey, payload, ts, payload, ts]);
+          } catch (cacheErr) {
+            console.warn('Failed to write gemini cache (manual extract):', cacheErr);
+          }
           return NextResponse.json({
             text: textMatch[1],
             reference: refMatch[1]
-          }, { headers: { 'Cache-Control': 'no-store' } });
+          }, { headers: { 'Cache-Control': 'public, max-age=86400' } });
         }
         
         // If all parsing fails, return a fallback structure
+        try {
+          const tz = process.env.GEMINI_CACHE_TZ || 'UTC';
+          const now = new Date();
+          const parts = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
+          const dateKey = `verse_${parts}`;
+          const payload = JSON.stringify({ text: "Trust in the Lord with all your heart and lean not on your own understanding.", reference: "Proverbs 3:5", note: "AI response could not be parsed, showing fallback verse" });
+          const ts = Date.now();
+          await executeQuery(`INSERT INTO gemini_cache (cache_key, cache_value, timestamp) VALUES (?, ?, ?)
+            ON CONFLICT(cache_key) DO UPDATE SET cache_value = ?, timestamp = ?`, [dateKey, payload, ts, payload, ts]);
+        } catch (cacheErr) { }
+
         return NextResponse.json({
           text: "Trust in the Lord with all your heart and lean not on your own understanding.",
           reference: "Proverbs 3:5",
           note: "AI response could not be parsed, showing fallback verse"
-        }, { headers: { 'Cache-Control': 'no-store' } });
+        }, { headers: { 'Cache-Control': 'public, max-age=86400' } });
       }
     }
 

@@ -14,6 +14,8 @@ export default function HomePage() {
 
   // Real-time clock state
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
+  // Mobile available height (window.innerHeight - fixed header)
+  const [mobileAvailableHeight, setMobileAvailableHeight] = useState<number | null>(null);
 
   // Fetch verse from Gemini
   const fetchVerse = async (attempt: number = 1, lastRef?: string) => {
@@ -68,12 +70,14 @@ export default function HomePage() {
         return;
       }
       // Fallback to a default verse after retries
-      setVerseOfTheDay(prev => ({
+      const fallback = {
         text: "Trust in the Lord with all your heart and lean not on your own understanding.",
         reference: "Proverbs 3:5",
         loading: false,
-        error: prev.error || "Unable to fetch today's verse. Showing a timeless favorite."
-      }));
+        error: (verseOfTheDay.error || "Unable to fetch today's verse. Showing a timeless favorite.")
+      };
+
+      setVerseOfTheDay(fallback);
     }
   };
 
@@ -105,16 +109,44 @@ export default function HomePage() {
   };
 
   useEffect(() => {
+    // On mount, always fetch verse from server-side cache (date-keyed D1 cache)
     const t = setTimeout(() => {
       fetchVerse();
     }, 0);
     return () => clearTimeout(t);
   }, []);
 
+  // Compute mobile available height so we can perfectly center content beneath the fixed header
+  useEffect(() => {
+    const headerHeight = 56; // px - keep in sync with header height
+
+    function updateHeight() {
+      if (typeof window === 'undefined') return;
+      const width = window.innerWidth;
+      // apply only for small viewports (mobile)
+      if (width < 768) {
+        setMobileAvailableHeight(window.innerHeight - headerHeight);
+      } else {
+        setMobileAvailableHeight(null);
+      }
+    }
+
+    updateHeight();
+    window.addEventListener('resize', updateHeight);
+    window.addEventListener('orientationchange', updateHeight);
+    return () => {
+      window.removeEventListener('resize', updateHeight);
+      window.removeEventListener('orientationchange', updateHeight);
+    };
+  }, []);
+
   return (
     <div className="h-screen bg-gradient-to-br from-[#302927] via-[#171616] to-[#302927] overflow-hidden">
       {/* Main Container - Centered content */}
-      <div className="h-full flex flex-col justify-center items-center p-8">
+  <div
+    className="flex flex-col justify-center items-center p-8 md:h-full"
+    style={mobileAvailableHeight ? { height: `${mobileAvailableHeight}px` } : undefined}
+  >
         
         {/* The Words - Bible Verse Widget */}
         <div className="max-w-2xl mx-auto text-center">
@@ -152,7 +184,7 @@ export default function HomePage() {
           </div>
           
           {/* The Light Button - Links to Music */}
-          <Link href="/music" className="block">
+          <Link href="/store" className="block">
             <div className="relative group">
               {/* Glowing background effect */}
               <div className="absolute inset-0 bg-gradient-to-r from-[#ede8df]/20 via-[#b2a491]/30 to-[#ede8df]/20 rounded-2xl blur-xl group-hover:blur-2xl transition-all duration-500 opacity-0 group-hover:opacity-100"></div>
@@ -163,7 +195,7 @@ export default function HomePage() {
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
                 
                 {/* Text with subtle shadow */}
-                <span className="relative z-10 drop-shadow-sm">The Light</span>
+                <span className="relative z-10 drop-shadow-sm">Store</span>
               </div>
               
               {/* Floating particles around the button */}

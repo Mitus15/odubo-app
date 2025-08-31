@@ -136,8 +136,8 @@ export default function AlbumPlayer({ album, tracks }: AlbumPlayerProps) {
     if (typeof window !== 'undefined' && window.innerWidth < 1280) {
       // Mobile/Tablet: header(3.5rem) + album_info(16rem) + controls(4rem) + paddings(6rem) + bottom_player(6rem when playing)
       const mobileHeight = state.currentTrack 
-        ? 'calc(100vh - 29rem)' // When music playing - increased from 32.5rem
-        : 'calc(100vh - 26.5rem)'; // When no music
+        ? 'calc(100vh - 32.5rem)' // When music playing - increased from 32.5rem
+        : 'calc(100vh - 27rem)'; // When no music
       return mobileHeight;
     } else {
       // Desktop: Fixed height regardless of music playing state

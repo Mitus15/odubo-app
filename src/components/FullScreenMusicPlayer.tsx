@@ -2,6 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { useMusicPlayer } from '@/contexts/MusicPlayerContext';
+import dynamic from 'next/dynamic';
+
+// Lazy load StemPlayer to keep initial bundle small
+const StemPlayerWrapper = dynamic(() => import('./StemPlayer'), { ssr: false });
 
 interface FullScreenMusicPlayerProps {
   isOpen: boolean;
@@ -23,6 +27,7 @@ export default function FullScreenMusicPlayer({ isOpen, onClose }: FullScreenMus
 
   const [isDragging, setIsDragging] = useState(false);
   const [showQueue, setShowQueue] = useState(false);
+  const [showStemMixer, setShowStemMixer] = useState(false);
 
   // Format time helper
   const formatTime = (seconds: number): string => {
@@ -238,6 +243,18 @@ export default function FullScreenMusicPlayer({ isOpen, onClose }: FullScreenMus
                   </span>
                 )}
               </button>
+              {/* Stem Mixer */}
+              {state.currentTrack?.vocal_stem_url && state.currentTrack?.drum_stem_url && state.currentTrack?.bass_stem_url && state.currentTrack?.other_stem_url && (
+                <button
+                  onClick={() => setShowStemMixer(true)}
+                  className="p-3 rounded-full bg-black/20 text-[#b2a491] hover:text-[#ede8df] transition-colors"
+                  title="Stem Mixer"
+                >
+                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h4v7H3zM9 3h4v14H9zM15 7h6v10h-6z" />
+                  </svg>
+                </button>
+              )}
             </div>
 
             {/* Secondary Controls */}
@@ -307,6 +324,18 @@ export default function FullScreenMusicPlayer({ isOpen, onClose }: FullScreenMus
                     </div>
                   ))}
                 </div>
+              </div>
+            </div>
+          )}
+          {/* Stem Mixer Modal */}
+          {showStemMixer && state.currentTrack && (
+            <div className="absolute inset-0 flex items-center justify-center z-60">
+              <div className="absolute inset-0 bg-black/70" onClick={() => setShowStemMixer(false)} />
+              <div className="relative w-full max-w-3xl p-4">
+                {/* Lazy load StemPlayer to keep bundle small */}
+                <React.Suspense fallback={<div className="text-[#b2a491]">Loading stem mixer…</div>}>
+                  <StemPlayerWrapper track={state.currentTrack} onClose={() => setShowStemMixer(false)} />
+                </React.Suspense>
               </div>
             </div>
           )}

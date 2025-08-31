@@ -32,11 +32,28 @@ export default function ProductDetailPage() {
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
   const [selectedVariantId, setSelectedVariantId] = useState<string>('');
   const [qty, setQty] = useState<number>(1);
+  const [hasCartItems, setHasCartItems] = useState<boolean>(false);
+  const [justAdded, setJustAdded] = useState<boolean>(false);
 
   useEffect(() => {
     if (!params?.handle) return;
     fetchShopifyProduct(params.handle, process.env.NEXT_PUBLIC_SHOPIFY_API_KEY || '').then(setProduct);
   }, [params?.handle]);
+
+  // Initialize cart presence from localStorage
+  useEffect(() => {
+    try {
+      const raw = typeof window !== 'undefined' ? localStorage.getItem('cart') : null;
+      if (raw) {
+        const cart = JSON.parse(raw) as Array<any>;
+        setHasCartItems(Array.isArray(cart) && cart.length > 0);
+      } else {
+        setHasCartItems(false);
+      }
+    } catch (e) {
+      setHasCartItems(false);
+    }
+  }, []);
 
   // Initialize default selections when product loads
   useEffect(() => {
@@ -76,7 +93,7 @@ export default function ProductDetailPage() {
       <ScrollContainer>
         <div className="w-full mx-auto p-4 grid grid-cols-1 lg:grid-cols-2 gap-6 xl:gap-10" style={{maxWidth: 'min(1280px, 92vw)'}}>
           {/* Media */}
-          <div className="rounded-2xl overflow-hidden border border-[#502d26]/30 aspect-square bg-[#302927]/60">
+          <div className="rounded-2xl overflow-hidden border border-transparent aspect-square bg-transparent">
             {(() => {
               const v = product?.variants?.find(v => v.id === selectedVariantId);
               const src = v?.image?.src || product?.images?.[0]?.src;
@@ -166,28 +183,38 @@ export default function ProductDetailPage() {
                     alert('Please select options');
                     return;
                   }
-                  const cartRaw = localStorage.getItem('cart') || '[]';
-                  const cart = JSON.parse(cartRaw) as Array<{ variantId: string; qty: number; title: string; price: number; image?: string }>;
-                  const v = product?.variants?.find(v => v.id === variantId);
-                  if (!v) return;
-                  const existing = cart.find(c => c.variantId === variantId);
-                  if (existing) existing.qty += qty; else cart.push({ variantId: variantId, qty, title: `${product?.title} — ${v.title}`, price: parseFloat(String(v.price)), image: v.image?.src || product?.images?.[0]?.src });
-                  localStorage.setItem('cart', JSON.stringify(cart));
+                  try {
+                    const cartRaw = localStorage.getItem('cart') || '[]';
+                    const cart = JSON.parse(cartRaw) as Array<{ variantId: string; qty: number; title: string; price: number; image?: string }>;
+                    const v = product?.variants?.find(v => v.id === variantId);
+                    if (!v) return;
+                    const existing = cart.find(c => c.variantId === variantId);
+                    if (existing) existing.qty += qty; else cart.push({ variantId: variantId, qty, title: `${product?.title} — ${v.title}`, price: parseFloat(String(v.price)), image: v.image?.src || product?.images?.[0]?.src });
+                    localStorage.setItem('cart', JSON.stringify(cart));
+                    // update UI state
+                    setHasCartItems(true);
+                    setJustAdded(true);
+                    setTimeout(() => setJustAdded(false), 1000);
+                  } catch (e) {
+                    console.warn('Failed to update cart', e);
+                  }
                 }}
                 className={`px-4 py-2 rounded-xl ${ (selectedVariantId || (product?.variants?.length === 1)) ? 'bg-[#843c2d] hover:bg-[#a0472f]' : 'bg-[#502d26]/60 hover:bg-[#502d26]/70'} text-[#ede8df] transition-colors`}
               >
-                Add to cart
+                {justAdded ? 'Added' : 'Add to cart'}
               </button>
             </div>
 
-            <div className="mt-2">
-              <a
-                href="/store/cart"
-                className="inline-block px-4 py-2 rounded-xl border border-[#502d26]/40 text-[#ede8df] hover:border-[#843c2d]/60 transition-colors"
-              >
-                View cart
-              </a>
-            </div>
+            {hasCartItems && (
+              <div className="mt-2">
+                <a
+                  href="/store/cart"
+                  className="inline-block px-4 py-2 rounded-xl border border-[#502d26]/40 text-[#ede8df] hover:border-[#843c2d]/60 transition-colors"
+                >
+                  View cart
+                </a>
+              </div>
+            )}
           </div>
         </div>
       </ScrollContainer>

@@ -44,6 +44,11 @@ export interface Track {
   updated_at?: string;
   credits?: TrackCredit[];
   genres?: TrackGenre[];
+  vocal_stem_url?: string;
+  drum_stem_url?: string;
+  bass_stem_url?: string;
+  other_stem_url?: string;
+  processing_status: 'pending' | 'processing' | 'complete' | 'failed';
 }
 
 export interface TrackCredit {
