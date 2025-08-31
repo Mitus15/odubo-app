@@ -22,7 +22,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Odubo - Music & Video Platform",
+  title: "Odubo Studio",
   description: "Professional music and video content management platform",
   appleWebApp: {
     capable: true,

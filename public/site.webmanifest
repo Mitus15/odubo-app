@@ -1,7 +1,7 @@
 {
   "name": "Odubo Studio",
   "short_name": "Odubo",
-  "description": "Professional music and video content management platform",
+  "description": "Professional music and video content management & e-commerce platform",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#302927",

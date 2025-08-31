@@ -17,7 +17,7 @@ interface SEOOptimizerProps {
 }
 
 export default function SEOOptimizer({
-  title = "Odubo Studio - Music & Video Platform",
+  title = "Odubo Studio",
   description = "Professional music and video content management platform. Create, share, and discover amazing content.",
   keywords = ["music", "video", "content", "platform", "studio", "creative"],
   image = "https://odubo.studio/og-image.jpg",
