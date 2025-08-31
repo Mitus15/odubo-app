@@ -29,7 +29,7 @@ export default function SEOOptimizer({
   section,
   tags = []
 }: SEOOptimizerProps) {
-  const fullTitle = title === "Odubo Studio - Music & Video Platform" ? title : `${title} | Odubo Studio`;
+  const fullTitle = title === "Odubo Studio" ? title : `${title} | Odubo Studio`;
   const fullDescription = description.length > 160 ? description.substring(0, 157) + '...' : description;
   const fullKeywords = [...keywords, "odubo", "studio", "music", "video", "content", "platform"].join(', ');
 
@@ -82,10 +82,10 @@ export default function SEOOptimizer({
       <meta name="apple-mobile-web-app-title" content="Odubo Studio" />
       
       {/* Favicon and App Icons */}
-      <link rel="icon" href="/favicon.ico" />
-      <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-      <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
-      <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+  <link rel="icon" href="/Danceman_Logo_Red.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/Danceman_Logo_Red.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/Danceman_Logo_Red.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/Danceman_Logo_Red.png" />
       <link rel="manifest" href="/site.webmanifest" />
       
       {/* Preconnect to external domains for performance */}
