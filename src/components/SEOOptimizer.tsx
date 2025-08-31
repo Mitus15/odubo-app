@@ -81,11 +81,11 @@ export default function SEOOptimizer({
       <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       <meta name="apple-mobile-web-app-title" content="Odubo Studio" />
       
-      {/* Favicon and App Icons */}
-  <link rel="icon" href="/Danceman_Logo_Red.png" />
-  <link rel="apple-touch-icon" sizes="180x180" href="/Danceman_Logo_Red.png" />
-  <link rel="icon" type="image/png" sizes="32x32" href="/Danceman_Logo_Red.png" />
-  <link rel="icon" type="image/png" sizes="16x16" href="/Danceman_Logo_Red.png" />
+  {/* Favicon and App Icons (explicit generated files) */}
+  <link rel="icon" href="/favicon.ico" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/favicon-180x180.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
       <link rel="manifest" href="/site.webmanifest" />
       
       {/* Preconnect to external domains for performance */}

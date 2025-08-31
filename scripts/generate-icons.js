@@ -1,10 +1,14 @@
 #!/usr/bin/env node
 // Generate favicon PNGs and ICO from public/Danceman_Logo_Red.png
-// Usage: node scripts/generate-icons.js
+// Usage: npm run generate-icons
 
-const fs = require('fs');
-const path = require('path');
-const sharp = require('sharp');
+import fs from 'fs';
+import path from 'path';
+import sharp from 'sharp';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const input = path.join(__dirname, '..', 'public', 'Danceman_Logo_Red.png');
 const out = path.join(__dirname, '..', 'public');
@@ -22,17 +26,26 @@ async function run() {
     console.log('Wrote', outFile);
   }
 
-  // Create ico (contains 16,32,48)
+  // Create ico (contains 16,32,48) - prefer png-to-ico when available
   const icoOut = path.join(out, 'favicon.ico');
-  await sharp(input).resize(48,48).png().toBuffer().then(buf48 => {
-    return sharp(input).resize(32,32).png().toBuffer().then(buf32 => {
-      return sharp(input).resize(16,16).png().toBuffer().then(buf16 => {
-        // Sharp doesn't write ICO directly, use png-to-ico dependency normally; fallback: write 48 png as ico placeholder
-        fs.writeFileSync(icoOut, buf48);
-        console.log('Wrote', icoOut, '(placeholder - consider installing png-to-ico for proper multi-size ICO)');
-      });
-    });
-  });
+
+  try {
+    // Dynamically import png-to-ico if the user has installed it
+    const pngToIco = (await import('png-to-ico')).default;
+
+    const buf16 = await sharp(input).resize(16, 16).png().toBuffer();
+    const buf32 = await sharp(input).resize(32, 32).png().toBuffer();
+    const buf48 = await sharp(input).resize(48, 48).png().toBuffer();
+
+    const icoBuf = await pngToIco([buf16, buf32, buf48]);
+    await fs.promises.writeFile(icoOut, icoBuf);
+    console.log('Wrote', icoOut, '(multi-size ICO via png-to-ico)');
+  } catch (err) {
+    // Fallback: write 48px PNG as placeholder .ico
+    const buf48 = await sharp(input).resize(48, 48).png().toBuffer();
+    await fs.promises.writeFile(icoOut, buf48);
+    console.log('Wrote', icoOut, '(placeholder - install png-to-ico for proper multi-size ICO)');
+  }
 }
 
 run().catch(err => {

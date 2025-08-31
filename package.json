@@ -31,9 +31,9 @@
     "audio:cleanup": "tsx --env-file=.env.local scripts/cleanup_unused_audio_files.ts",
     "audio:hls:track": "tsx --env-file=.env.local scripts/transcode_audio_to_hls.ts --track",
     "audio:hls:album": "tsx --env-file=.env.local scripts/transcode_audio_to_hls.ts --album",
-    "audio:hls:all": "tsx --env-file=.env.local scripts/transcode_audio_to_hls.ts --all"
+    "audio:hls:all": "tsx --env-file=.env.local scripts/transcode_audio_to_hls.ts --all",
+    "generate-icons": "node ./scripts/generate-icons.js"
   },
-  "generate-icons": "node ./scripts/generate-icons.js",
   "dependencies": {
     "@aws-sdk/client-s3": "^3.858.0",
     "@cloudflare/kv-asset-handler": "^0.4.0",
@@ -55,6 +55,7 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "resend": "^4.7.0",
+    "sharp": "^0.34.3",
     "tailwindcss": "^4.1.11",
     "uuid": "^11.1.0",
     "wrangler": "^4.27.0",

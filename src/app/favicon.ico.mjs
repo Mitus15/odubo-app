@@ -1,2 +1,2 @@
-import src from '/Danceman_Logo_Red.png';
+import src from '/favicon.ico';
 export default { src, width: 256, height: 256 };
