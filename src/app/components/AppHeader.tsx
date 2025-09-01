@@ -29,7 +29,7 @@ export default function AppHeader() {
             </button>
           ) : (
             <img 
-              src="/brand-logos/odubo-emboss.png" 
+              src="/odubo_logo_emboss.png" 
               alt="Odubo Studio" 
               className="w-8 h-8 object-contain"
             />
