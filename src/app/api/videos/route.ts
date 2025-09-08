@@ -3,6 +3,7 @@ import { getUserFromRequest, isAdminUser } from '@/lib/auth';
 import { NextRequest, NextResponse } from 'next/server';
 export const runtime = 'edge';
 import { deleteFile } from '@/worker/upload';
+import { z } from 'zod';
 
 export async function GET() {
   try {
@@ -12,14 +13,24 @@ export async function GET() {
       videos = await queryDatabase(
         `SELECT 
           id,
+          COALESCE(uid, '') as uid,
           title,
           COALESCE(artist_name, '') as artist_name,
           description,
+          url,
           url as video_url,
+          poster_url,
           poster_url as thumbnail_url,
+          thumbnail,
           duration,
           category,
+          is_public,
+          type,
+          mood,
+          credits,
+          related_projects,
           COALESCE(status, 'published') as status,
+          COALESCE(stream_video_id, '') as stream_video_id,
           created_at,
           COALESCE(updated_at, created_at) as updated_at
         FROM videos 
@@ -31,6 +42,7 @@ export async function GET() {
       videos = await queryDatabase(
         `SELECT 
           id,
+          uid,
           title,
           description,
           url as video_url,
@@ -53,6 +65,7 @@ export async function GET() {
         ...video,
         artist_name: video.artist_name || '',
         status: video.status || 'published',
+        stream_video_id: video.stream_video_id || '',
         updated_at: video.updated_at || video.created_at || new Date().toISOString(),
         thumbnail_url: video.thumbnail_url || video.poster_url || video.thumbnail || ''
       }));
@@ -79,46 +92,81 @@ export async function GET() {
   }
 }
 
+const videoCreateSchema = z.object({
+  title: z.string().min(1),
+  artist_name: z.string().optional().default(''),
+  description: z.string().optional().default(''),
+  url: z.string().min(1),
+  poster_url: z.string().optional().default(''),
+  thumbnail: z.string().optional().default(''),
+  duration: z.union([z.string(), z.number()]).optional().default(''),
+  category: z.string().optional().default(''),
+  is_public: z.union([z.boolean(), z.number(), z.string()]).optional().default(false),
+  type: z.string().optional().default(''),
+  mood: z.string().optional().default(''),
+  credits: z.union([z.string(), z.array(z.any())]).optional().default('[]'),
+  related_projects: z.union([z.string(), z.array(z.any())]).optional().default('[]'),
+  status: z.string().optional().default('draft'),
+});
+
 export async function POST(req: NextRequest) {
   try {
     const user = getUserFromRequest(req);
     if (!isAdminUser(user)) {
       return NextResponse.json({ error: 'Forbidden: Admins only' }, { status: 403 });
     }
-    const body = await req.json() as {
-      title: string;
-      description?: string;
-      video_url: string;
-      poster_url?: string;
-      duration?: number;
-    };
-    
-    const { title, description, video_url, poster_url, duration } = body;
+    const json = await req.json();
+    const parse = videoCreateSchema.safeParse(json);
+    if (!parse.success) {
+      return NextResponse.json({ error: 'Invalid body', details: parse.error.flatten() }, { status: 400 });
+    }
+    const body = parse.data as z.infer<typeof videoCreateSchema>;
 
-    if (!title || !video_url) {
+    const title = body.title.trim();
+    const artist_name = body.artist_name || '';
+    const description = body.description || '';
+    const url = (body as any).url || (body as any).video_url || '';
+    const poster_url = (body as any).poster_url || (body as any).thumbnail_url || '';
+    const thumbnail = body.thumbnail || '';
+    const duration = body.duration ?? '';
+    const category = body.category || '';
+    const is_public = body.is_public === true || body.is_public === 1 || body.is_public === '1' || body.is_public === 'true' ? 1 : 0;
+    const type = body.type || '';
+    const mood = body.mood || '';
+    const credits = typeof body.credits === 'string' ? body.credits : JSON.stringify(body.credits || []);
+    const related_projects = typeof body.related_projects === 'string' ? body.related_projects : JSON.stringify(body.related_projects || []);
+    const status = (body.status || 'draft').trim();
+
+    if (!title || !url) {
       return NextResponse.json(
-        { error: 'Title and video URL are required' },
+        { error: 'Title and url are required' },
         { status: 400 }
       );
     }
 
-    const result = await executeQuery(
-      `INSERT INTO videos (id, title, description, video_url, poster_url, duration, status, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, 'draft', datetime('now'))`,
+    await executeQuery(
+      `INSERT INTO videos (
+        title, artist_name, description, url, poster_url, thumbnail, duration, category, is_public, type, mood, credits, related_projects, status, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
       [
-        globalThis.crypto.randomUUID(),
         title,
-        description || '',
-        video_url,
-        poster_url || '',
-        duration || 0
+        artist_name,
+        description,
+        url,
+        poster_url,
+        thumbnail,
+        String(duration),
+        category,
+        is_public,
+        type,
+        mood,
+        credits,
+        related_projects,
+        status || 'draft'
       ]
     );
 
-    return NextResponse.json(
-      { success: true, id: result.meta?.last_row_id },
-      { status: 201 }
-    );
+    return NextResponse.json({ success: true }, { status: 201 });
   } catch (error) {
     console.error('Error creating video:', error);
     return NextResponse.json(

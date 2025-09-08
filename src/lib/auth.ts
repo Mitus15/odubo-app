@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { jwtVerify, SignJWT, JWTPayload } from 'jose';
+import { getUserByEmail } from '@/lib/db';
 
 export type AuthTokenPayload = {
   userId: string;
@@ -9,6 +10,8 @@ export type AuthTokenPayload = {
   lastName?: string;
   exp?: number;
 };
+
+export type Role = 'admin' | 'editor' | 'viewer';
 
 export function getJwtSecret(): string {
   const secret = process.env.JWT_SECRET;
@@ -72,6 +75,30 @@ function decodeWithoutVerify(token: string): JWTPayload | null {
 
 export function isAdminUser(user: AuthTokenPayload | null | undefined): boolean {
   return !!user?.is_admin;
+}
+
+export async function getUserRoleFromRequest(req: NextRequest): Promise<Role | null> {
+  try {
+    const token = getAuthTokenFromRequest(req);
+    if (!token) return null;
+    const payload = decodeWithoutVerify(token) as AuthTokenPayload | null;
+    if (!payload?.email) return null;
+    const dbUser = await getUserByEmail(payload.email);
+    if (!dbUser) return null;
+    if (dbUser.is_admin) return 'admin';
+    const role = (dbUser as any).role as string | undefined;
+    if (role === 'editor') return 'editor';
+    return 'viewer';
+  } catch {
+    return null;
+  }
+}
+
+export async function userHasAnyRole(req: NextRequest, allowed: Role[]): Promise<boolean> {
+  const role = await getUserRoleFromRequest(req);
+  if (!role) return false;
+  if (role === 'admin') return true;
+  return allowed.includes(role);
 }
 
 

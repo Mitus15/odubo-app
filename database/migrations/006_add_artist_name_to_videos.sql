@@ -7,5 +7,8 @@ ALTER TABLE videos ADD COLUMN status TEXT DEFAULT 'published';
 -- Add missing fields for better compatibility
 ALTER TABLE videos ADD COLUMN updated_at TEXT DEFAULT '';
 
+-- Add stream_video_id for Cloudflare Stream tracking if not present
+ALTER TABLE videos ADD COLUMN stream_video_id TEXT;
+
 -- Update existing records to have proper timestamps
 UPDATE videos SET updated_at = created_at WHERE updated_at = '' OR updated_at IS NULL;

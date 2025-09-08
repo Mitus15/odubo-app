@@ -9,7 +9,7 @@ const getSecret = () => new TextEncoder().encode(getJwtSecret());
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Admin routes: require auth and admin flag
+  // Admin routes: require auth and admin role/flag
   if (adminRoutes.some(route => pathname.startsWith(route))) {
     const token = request.cookies.get('token')?.value || request.headers.get('authorization')?.replace('Bearer ', '') || '';
     if (!token) {
@@ -19,7 +19,8 @@ export async function middleware(request: NextRequest) {
     try {
       const { payload } = await jwtVerify(token, getSecret());
       const isAdmin = (payload as any).is_admin;
-      if (!isAdmin) {
+      const role = (payload as any).role;
+      if (!(isAdmin || role === 'admin')) {
         const homeUrl = new URL('/', request.url);
         return NextResponse.redirect(homeUrl);
       }

@@ -7,6 +7,8 @@ import dynamic from 'next/dynamic';
 const OverviewTab = dynamic(() => import('./tabs/OverviewTab'));
 const AnalyticsTab = dynamic(() => import('./tabs/AnalyticsTab'));
 const LibraryManager = dynamic(() => import('@/components/LibraryManager'));
+const AdminVideosPage = dynamic(() => import('./videos/page'));
+const AdminUsersPage = dynamic(() => import('./users/page'));
 
 type AdminTab = 'overview' | 'music-library' | 'video-library' | 'analytics';
 
@@ -26,18 +28,21 @@ export default function TabContent({ activeTab }: { activeTab: AdminTab }) {
       );
     case 'video-library':
       return (
-        <div className="w-full">
-          {/* <LibraryManager contentType="videos" /> */}
-          <div className="p-6">
-            <h2 className="text-2xl font-bold mb-4">Video Library</h2>
-            <p>Video library management coming soon...</p>
-          </div>
-        </div>
+        <Suspense fallback={<div className="p-6">Loading Video Library…</div>}>
+          <AdminVideosPage />
+        </Suspense>
       );
     case 'analytics':
       return (
         <Suspense fallback={<div className="p-6">Loading Analytics…</div>}>
           <AnalyticsTab />
+        </Suspense>
+      );
+    // Temporary route to access users management (could be moved to separate tab later)
+    case 'users' as any:
+      return (
+        <Suspense fallback={<div className="p-6">Loading Users…</div>}>
+          <AdminUsersPage />
         </Suspense>
       );
     default:

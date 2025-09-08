@@ -1,2 +1,0 @@
-import src from '/favicon.ico';
-export default { src, width: 256, height: 256 };

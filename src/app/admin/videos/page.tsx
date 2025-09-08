@@ -12,19 +12,23 @@ type Credit = {
 };
 
 type Video = {
-  id: number; // Changed from string to match database INTEGER PRIMARY KEY
+  id: number;
   title: string;
+  artist_name?: string;
   description: string;
   url: string;
-  thumbnail: string;
+  poster_url?: string;
+  thumbnail?: string;
   duration: string;
   category: string;
-  is_public: boolean;
-  type: "music video" | "short film" | "feature";
-  mood: "outgoing" | "introspective" | "neutral";
-  credits: Credit[];
-  related_projects: string[];
+  is_public: boolean | number;
+  type?: string;
+  mood?: string;
+  credits?: Credit[] | string;
+  related_projects?: string[] | string;
+  status?: string;
   created_at?: string;
+  updated_at?: string;
 };
 
 type FormState = {
@@ -34,8 +38,8 @@ type FormState = {
   duration: string;
   category: string;
   is_public: boolean;
-  type: "music video" | "short film" | "feature";
-  mood: "outgoing" | "introspective" | "neutral";
+  type: string;
+  mood: string;
   credits: Credit[];
   related_projects: string[];
   file: File | null;
@@ -51,7 +55,7 @@ export default function AdminVideosPage() {
     duration: "",
     category: "",
     is_public: true,
-    type: "music video",
+    type: "music-video",
     mood: "neutral",
     credits: [],
     related_projects: [],
@@ -65,18 +69,29 @@ export default function AdminVideosPage() {
   // Fetch videos (Read)
   useEffect(() => {
     fetch("/api/videos")
-      .then((res) => res.json() as Promise<{ videos: Video[] }>)
+      .then((res) => res.json() as Promise<{ videos: any[] }>)
       .then((data) => {
-        console.log('Fetched videos:', data); // Debug log
-        const videos = data.videos || [];
-        // Filter out any invalid videos and ensure all required fields exist
-        const validVideos = videos.filter(video => 
-          video && 
-          typeof video.id !== 'undefined' && 
-          typeof video.title === 'string' &&
-          video.title.trim() !== ''
-        );
-        setVideos(validVideos);
+        const raw = data.videos || [];
+        const normalized: Video[] = raw.map((v: any) => ({
+          id: Number(v.id),
+          title: v.title || '',
+          artist_name: v.artist_name || '',
+          description: v.description || '',
+          url: v.url || v.video_url || '',
+          poster_url: v.poster_url || v.thumbnail_url || '',
+          thumbnail: v.thumbnail || v.thumbnail_url || '',
+          duration: String(v.duration || ''),
+          category: v.category || '',
+          is_public: v.is_public === 1 || v.is_public === true,
+          type: v.type || '',
+          mood: v.mood || '',
+          credits: Array.isArray(v.credits) ? v.credits : (() => { try { return JSON.parse(v.credits || '[]'); } catch { return []; } })(),
+          related_projects: Array.isArray(v.related_projects) ? v.related_projects : (() => { try { return JSON.parse(v.related_projects || '[]'); } catch { return []; } })(),
+          status: v.status || 'published',
+          created_at: v.created_at,
+          updated_at: v.updated_at,
+        })).filter((v: Video) => v && typeof v.id !== 'undefined' && typeof v.title === 'string' && v.title.trim() !== '');
+        setVideos(normalized);
       })
       .catch(console.error);
   }, []);
@@ -129,11 +144,12 @@ export default function AdminVideosPage() {
       const endpoint = editingId ? `/api/videos/${editingId}` : "/api/videos/upload";
       let body: FormData | string;
       let headers: Record<string, string> = {};
-      if (form.file || form.poster) {
+      if (!editingId && (form.file || form.poster)) {
         body = new FormData();
         if (form.file) body.append("file", form.file);
         if (form.poster) body.append("poster", form.poster);
         body.append("title", form.title);
+        body.append("artist_name", "");
         body.append("description", form.description);
         body.append("thumbnail", form.thumbnail);
         body.append("duration", form.duration);
@@ -144,7 +160,15 @@ export default function AdminVideosPage() {
         body.append("credits", JSON.stringify(form.credits));
         body.append("related_projects", JSON.stringify(form.related_projects));
       } else {
-        body = JSON.stringify({ ...form, file: undefined, poster: undefined });
+        // Metadata-only create/update (no file changes)
+        const payload: any = { ...form } as any;
+        delete payload.file;
+        delete payload.poster;
+        // Normalize booleans and arrays
+        (payload as any).is_public = !!payload.is_public;
+        (payload as any).credits = form.credits;
+        (payload as any).related_projects = form.related_projects;
+        body = JSON.stringify(payload);
         headers["Content-Type"] = "application/json";
       }
       const res = await fetch(endpoint, {
@@ -168,13 +192,29 @@ export default function AdminVideosPage() {
         body,
       } as any);
       if (!res.ok) throw new Error("Failed to save video");
-      const data = await res.json() as { video: Video };
-      setVideos((prev) => {
-        if (editingId) {
-          return prev.map((v) => (v.id === editingId ? data.video : v));
-        } else {
-          return [data.video, ...prev];
-        }
+      // Reload list to ensure consistency across schema variants
+      await fetch("/api/videos").then(r => r.json()).then((d: any) => {
+        const list = (d.videos || []) as any[];
+        const normalized: Video[] = list.map((v: any) => ({
+          id: Number(v.id),
+          title: v.title || '',
+          artist_name: v.artist_name || '',
+          description: v.description || '',
+          url: v.url || v.video_url || '',
+          poster_url: v.poster_url || v.thumbnail_url || '',
+          thumbnail: v.thumbnail || v.thumbnail_url || '',
+          duration: String(v.duration || ''),
+          category: v.category || '',
+          is_public: v.is_public === 1 || v.is_public === true,
+          type: v.type || '',
+          mood: v.mood || '',
+          credits: Array.isArray(v.credits) ? v.credits : (() => { try { return JSON.parse(v.credits || '[]'); } catch { return []; } })(),
+          related_projects: Array.isArray(v.related_projects) ? v.related_projects : (() => { try { return JSON.parse(v.related_projects || '[]'); } catch { return []; } })(),
+          status: v.status || 'published',
+          created_at: v.created_at,
+          updated_at: v.updated_at,
+        }));
+        setVideos(normalized);
       });
       setForm({
         title: "",
@@ -203,14 +243,14 @@ export default function AdminVideosPage() {
     setForm({
       title: video.title,
       description: video.description,
-      thumbnail: video.thumbnail,
+      thumbnail: video.thumbnail || video.poster_url || '',
       duration: video.duration,
       category: video.category,
-      is_public: video.is_public,
-      type: video.type,
-      mood: video.mood,
-      credits: video.credits || [],
-      related_projects: video.related_projects || [],
+      is_public: (video.is_public as any) === true || (video.is_public as any) === 1,
+      type: String(video.type || '').toLowerCase().replace(/\s+/g, '-') || "music-video",
+      mood: (video.mood as any) || "",
+      credits: (Array.isArray(video.credits) ? video.credits : (() => { try { return JSON.parse((video.credits as any) || '[]'); } catch { return []; } })()),
+      related_projects: (Array.isArray(video.related_projects) ? video.related_projects : (() => { try { return JSON.parse((video.related_projects as any) || '[]'); } catch { return []; } })()),
       file: null,
       poster: null,
     });
@@ -235,54 +275,114 @@ export default function AdminVideosPage() {
   return (
     <ScreenLayout>
       <ScrollContainer>
-    <div className="max-w-3xl mx-auto mt-4 p-2 sm:p-6 bg-white rounded shadow">
-      <h1 className="text-2xl font-bold mb-6">Manage Videos</h1>
-      <form onSubmit={handleSubmit} className="space-y-4 mb-8" encType="multipart/form-data">
-        <label className="block text-base font-medium mb-1">Title
-          <input name="title" value={form.title} onChange={handleChange} placeholder="Title" className="w-full px-3 py-2 border rounded text-base" required />
-        </label>
-        <label className="block text-base font-medium mb-1">Description
-          <textarea name="description" value={form.description} onChange={handleChange} placeholder="Description" className="w-full px-3 py-2 border rounded text-base" />
-        </label>
-        <label className="block text-base font-medium mb-1">Video File
-          <input type="file" name="file" accept="video/*" onChange={handleChange} className="w-full px-3 py-2 border rounded text-base" required={!editingId} />
-        </label>
-        <label className="block text-base font-medium mb-1">Poster Image
-          <input type="file" name="poster" accept="image/jpeg,image/png" onChange={handleChange} className="w-full px-3 py-2 border rounded text-base" required={!editingId} />
-        </label>
-        <label className="block text-base font-medium mb-1">Thumbnail URL
-          <input name="thumbnail" value={form.thumbnail} onChange={handleChange} placeholder="Thumbnail URL" className="w-full px-3 py-2 border rounded text-base" />
-        </label>
-        <label className="block text-base font-medium mb-1">Duration (e.g. 1:23:45)
-          <input name="duration" value={form.duration} onChange={handleChange} placeholder="Duration (e.g. 1:23:45)" className="w-full px-3 py-2 border rounded text-base" />
-        </label>
-        <label className="block text-base font-medium mb-1">Category
-          <input name="category" value={form.category} onChange={handleChange} placeholder="Category" className="w-full px-3 py-2 border rounded text-base" />
-        </label>
-        <label className="block text-base font-medium mb-1">Type
-          <input name="type" value={form.type} onChange={handleChange} placeholder="Type" className="w-full px-3 py-2 border rounded text-base" />
-        </label>
-        <label className="block text-base font-medium mb-1">Mood
-          <input name="mood" value={form.mood} onChange={handleChange} placeholder="Mood" className="w-full px-3 py-2 border rounded text-base" />
-        </label>
-        <label className="block text-base font-medium mb-1">Credits (JSON)
-          <input name="credits" value={JSON.stringify(form.credits)} onChange={handleChange} placeholder="Credits (JSON)" className="w-full px-3 py-2 border rounded text-base" />
-        </label>
-        <label className="block text-base font-medium mb-1">Related Projects (comma separated)
-          <input name="related_projects" value={form.related_projects.join(", ")} onChange={handleRelatedProjectsChange} placeholder="Related Projects (comma separated)" className="w-full px-3 py-2 border rounded text-base" />
-        </label>
-        <label className="flex items-center gap-2 text-base">
-          <input type="checkbox" name="is_public" checked={form.is_public} onChange={handleChange} className="w-4 h-4" />
-          <span>Public</span>
+    <div className="max-w-5xl mx-auto mt-6 p-3 sm:p-8 bg-[#302927]/60 border border-[#b2a491]/20 rounded-2xl shadow-lg text-[#ede8df]">
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold tracking-wide">Manage Videos</h1>
+      </div>
+      <form onSubmit={handleSubmit} className="space-y-6 mb-10" encType="multipart/form-data">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <label className="block text-sm font-medium">Title
+            <input name="title" value={form.title} onChange={handleChange} placeholder="Enter title" className="mt-1 w-full px-3 py-2 rounded-md bg-[#171616] border border-[#b2a491]/20 text-[#ede8df] placeholder-[#b2a491] focus:outline-none focus:ring-1 focus:ring-[#ede8df]" required />
+          </label>
+          <label className="block text-sm font-medium">Category
+            <input name="category" value={form.category} onChange={handleChange} placeholder="Category or tag" className="mt-1 w-full px-3 py-2 rounded-md bg-[#171616] border border-[#b2a491]/20 text-[#ede8df] placeholder-[#b2a491] focus:outline-none focus:ring-1 focus:ring-[#ede8df]" />
+          </label>
+          <label className="block text-sm font-medium sm:col-span-2">Description
+            <textarea name="description" value={form.description} onChange={handleChange} placeholder="Write a short description…" className="mt-1 w-full px-3 py-2 rounded-md bg-[#171616] border border-[#b2a491]/20 text-[#ede8df] placeholder-[#b2a491] focus:outline-none focus:ring-1 focus:ring-[#ede8df]" />
+          </label>
+          <label className="block text-sm font-medium">Type
+            <select name="type" value={form.type} onChange={handleChange} className="mt-1 w-full px-3 py-2 rounded-md bg-[#171616] border border-[#b2a491]/20 text-[#ede8df] focus:outline-none focus:ring-1 focus:ring-[#ede8df]">
+              <option value="music-video">Music Video</option>
+              <option value="short-film">Short Film</option>
+              <option value="feature">Feature</option>
+            </select>
+          </label>
+          <label className="block text-sm font-medium">Mood
+            <input name="mood" value={form.mood} onChange={handleChange} placeholder="e.g. introspective, hyped" className="mt-1 w-full px-3 py-2 rounded-md bg-[#171616] border border-[#b2a491]/20 text-[#ede8df] placeholder-[#b2a491] focus:outline-none focus:ring-1 focus:ring-[#ede8df]" />
+          </label>
+          <label className="block text-sm font-medium">Duration
+            <input name="duration" value={form.duration} onChange={handleChange} placeholder="1:23:45" className="mt-1 w-full px-3 py-2 rounded-md bg-[#171616] border border-[#b2a491]/20 text-[#ede8df] placeholder-[#b2a491] focus:outline-none focus:ring-1 focus:ring-[#ede8df]" />
+          </label>
+          <label className="block text-sm font-medium">Thumbnail URL
+            <input name="thumbnail" value={form.thumbnail} onChange={handleChange} placeholder="https://…" className="mt-1 w-full px-3 py-2 rounded-md bg-[#171616] border border-[#b2a491]/20 text-[#ede8df] placeholder-[#b2a491] focus:outline-none focus:ring-1 focus:ring-[#ede8df]" />
+          </label>
+          <div className="flex items-center gap-3 sm:col-span-2 pt-1">
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" name="is_public" checked={form.is_public} onChange={handleChange} className="w-4 h-4 rounded border-[#b2a491]/30 bg-[#171616] text-[#ede8df] focus:ring-[#ede8df]" />
+              <span>Public</span>
+            </label>
+          </div>
+          <label className="block text-sm font-medium sm:col-span-2">Video File
+            <input type="file" name="file" accept="video/*" onChange={handleChange} className="mt-1 w-full px-3 py-2 rounded-md bg-[#171616] border border-[#b2a491]/20 text-[#ede8df] file:mr-3 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-[#302927] file:text-[#b2a491]" required={!editingId} />
+          </label>
+          <label className="block text-sm font-medium sm:col-span-2">Poster Image
+            <input type="file" name="poster" accept="image/jpeg,image/png" onChange={handleChange} className="mt-1 w-full px-3 py-2 rounded-md bg-[#171616] border border-[#b2a491]/20 text-[#ede8df] file:mr-3 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-[#302927] file:text-[#b2a491]" required={!editingId} />
+          </label>
+        </div>
+        <div className="block text-sm font-medium mb-1">
+          <div className="mb-2">Credits</div>
+          <div className="space-y-2">
+            {form.credits.map((c, idx) => (
+              <div key={idx} className="flex gap-2">
+                <input
+                  value={c.name}
+                  onChange={(e) => handleCreditChange(idx, 'name', e.target.value)}
+                  placeholder="Name"
+                  className="flex-1 px-3 py-2 rounded-md bg-[#171616] border border-[#b2a491]/20 text-[#ede8df] placeholder-[#b2a491] focus:outline-none focus:ring-1 focus:ring-[#ede8df]"
+                />
+                <select
+                  value={c.role}
+                  onChange={(e) => handleCreditChange(idx, 'role', e.target.value)}
+                  className="w-48 px-3 py-2 rounded-md bg-[#171616] border border-[#b2a491]/20 text-[#ede8df] focus:outline-none focus:ring-1 focus:ring-[#ede8df]"
+                >
+                  <option value="">Role…</option>
+                  <option value="director">Director</option>
+                  <option value="producer">Producer</option>
+                  <option value="writer">Writer</option>
+                  <option value="cinematographer">Cinematographer</option>
+                  <option value="editor">Editor</option>
+                  <option value="composer">Composer</option>
+                  <option value="artist">Artist</option>
+                  <option value="featured-artist">Featured Artist</option>
+                  <option value="songwriter">Songwriter</option>
+                  <option value="vfx">VFX</option>
+                  <option value="other">Other</option>
+                </select>
+                <button type="button" className="px-3 py-2 rounded-md bg-[#302927] text-[#b2a491] hover:bg-[#502d26]/60" onClick={() => removeCredit(idx)}>Remove</button>
+              </div>
+            ))}
+            <button type="button" className="px-3 py-2 rounded-md bg-[#302927] text-[#b2a491] hover:bg-[#502d26]/60" onClick={addCredit}>+ Add credit</button>
+          </div>
+        </div>
+        <label className="block text-sm font-medium mb-1">Related Projects (comma separated)
+          <input name="related_projects" value={form.related_projects.join(", ")} onChange={handleRelatedProjectsChange} placeholder="IDs or names, separated by commas" className="mt-1 w-full px-3 py-2 rounded-md bg-[#171616] border border-[#b2a491]/20 text-[#ede8df] placeholder-[#b2a491] focus:outline-none focus:ring-1 focus:ring-[#ede8df]" />
         </label>
         {error && <div className="text-red-600">{error}</div>}
-        <button type="submit" className="py-2 px-4 bg-blue-600 text-white rounded hover:bg-blue-700 w-full sm:w-auto" disabled={loading}>
+        <button type="submit" className="py-2 px-4 rounded-md bg-[#ede8df] text-[#171616] hover:bg-[#d9d3c9] w-full sm:w-auto" disabled={loading}>
           {editingId ? (loading ? "Saving..." : "Update Video") : loading ? "Creating..." : "Create Video"}
+        </button>
+        <button
+          type="button"
+          className="ml-0 sm:ml-2 mt-2 sm:mt-0 py-2 px-4 rounded-md bg-[#302927] text-[#b2a491] hover:bg-[#502d26]/60 w-full sm:w-auto"
+          onClick={async () => {
+            try {
+              setLoading(true);
+              await fetch('/api/videos/sync-all', { method: 'POST' });
+              alert('Requested Stream metadata sync for all videos');
+            } catch (e) {
+              console.error(e);
+              alert('Sync-all failed');
+            } finally {
+              setLoading(false);
+            }
+          }}
+        >
+          Sync All to Stream
         </button>
         {editingId && (
           <button
             type="button"
-            className="ml-0 sm:ml-2 mt-2 sm:mt-0 py-2 px-4 bg-gray-300 rounded w-full sm:w-auto"
+            className="ml-0 sm:ml-2 mt-2 sm:mt-0 py-2 px-4 rounded-md bg-[#302927] text-[#b2a491] hover:bg-[#502d26]/60 w-full sm:w-auto"
             onClick={() => {
               setForm({
                 title: "",
@@ -291,7 +391,7 @@ export default function AdminVideosPage() {
                 duration: "",
                 category: "",
                 is_public: true,
-                type: "music video",
+                type: "music-video",
                 mood: "neutral",
                 credits: [],
                 related_projects: [],
@@ -312,58 +412,76 @@ export default function AdminVideosPage() {
           {videos
             .filter(video => video && video.title) // Extra safety check
             .map((video) => (
-            <div key={video.id} className="border rounded p-3 shadow-sm bg-gray-50">
+            <div key={video.id} className="border border-[#b2a491]/20 rounded p-3 shadow-sm bg-[#302927]/60 text-[#ede8df]">
               <div className="font-bold text-base mb-1">{video.title}</div>
-              <div className="text-xs text-gray-600 mb-1">Category: <span className="font-medium text-gray-800">{video.category || 'N/A'}</span></div>
-              <div className="text-xs text-gray-600 mb-1">Type: <span className="font-medium text-gray-800">{video.type || 'N/A'}</span></div>
-              <div className="text-xs text-gray-600 mb-1">Mood: <span className="font-medium text-gray-800">{video.mood || 'N/A'}</span></div>
-              <div className="text-xs text-gray-600 mb-1">Credits:
+              <div className="text-xs text-[#b2a491] mb-1">Category: <span className="font-medium text-[#ede8df]">{video.category || 'N/A'}</span></div>
+              <div className="text-xs text-[#b2a491] mb-1">Type: <span className="font-medium text-[#ede8df]">{video.type || 'N/A'}</span></div>
+              <div className="text-xs text-[#b2a491] mb-1">Mood: <span className="font-medium text-[#ede8df]">{video.mood || 'N/A'}</span></div>
+              <div className="text-xs text-[#b2a491] mb-1">Credits:
                 <ul className="ml-2 list-disc">
                   {(video.credits || []).map((c, i) => (
-                    <li key={i}>{c?.name || 'Unknown'} ({c?.role || 'Unknown'})</li>
+                    <li key={i} className="text-[#ede8df]">{c?.name || 'Unknown'} ({c?.role || 'Unknown'})</li>
                   ))}
                 </ul>
               </div>
-              <div className="text-xs text-gray-600 mb-1">Related Projects: <span className="font-medium text-gray-800">{(video.related_projects || []).join(", ") || 'None'}</span></div>
-              <div className="text-xs text-gray-600 mb-1">Public: <span className="font-medium text-gray-800">{video.is_public ? "Yes" : "No"}</span></div>
+              <div className="text-xs text-[#b2a491] mb-1">Related Projects: <span className="font-medium text-[#ede8df]">{(video.related_projects || []).join(", ") || 'None'}</span></div>
+              <div className="text-xs text-[#b2a491] mb-1">Public: <span className="font-medium text-[#ede8df]">{video.is_public ? "Yes" : "No"}</span></div>
               <div className="flex gap-2 mt-2">
-                <button className="flex-1 py-2 px-3 bg-yellow-400 rounded text-xs font-semibold" onClick={() => handleEdit(video)}>Edit</button>
-                <button className="flex-1 py-2 px-3 bg-red-500 text-white rounded text-xs font-semibold" onClick={() => handleDelete(video.id)}>Delete</button>
+                <button className="flex-1 py-2 px-3 rounded text-xs font-semibold bg-[#ede8df] text-[#171616]" onClick={() => handleEdit(video)}>Edit</button>
+                <button className="flex-1 py-2 px-3 rounded text-xs font-semibold bg-red-500 text-white" onClick={() => handleDelete(video.id)}>Delete</button>
               </div>
             </div>
           ))}
         </div>
         <div className="hidden sm:block overflow-x-auto">
-          <table className="w-full text-left border text-sm sm:text-base">
+          <table className="w-full text-left border border-[#b2a491]/20 text-sm sm:text-base text-[#ede8df]">
             <thead>
-              <tr className="bg-gray-100">
-                <th className="p-2">Title</th>
-                <th className="p-2">Category</th>
-                <th className="p-2">Type</th>
-                <th className="p-2">Mood</th>
-                <th className="p-2">Credits</th>
-                <th className="p-2">Related Projects</th>
-                <th className="p-2">Public</th>
-                <th className="p-2">Actions</th>
+              <tr className="bg-[#302927]">
+                <th className="p-3">Title</th>
+                <th className="p-3">Category</th>
+                <th className="p-3">Type</th>
+                <th className="p-3">Mood</th>
+                <th className="p-3">Credits</th>
+                <th className="p-3">Related Projects</th>
+                <th className="p-3">Public</th>
+                <th className="p-3">Actions</th>
               </tr>
             </thead>
             <tbody>
               {videos.map((video) => (
-                <tr key={video.id} className="border-t">
-                  <td className="p-2 align-top break-words max-w-[120px] sm:max-w-none">{video.title}</td>
-                  <td className="p-2 align-top break-words max-w-[100px] sm:max-w-none">{video.category}</td>
-                  <td className="p-2 align-top">{video.type}</td>
-                  <td className="p-2 align-top">{video.mood}</td>
-                  <td className="p-2 align-top">
+                <tr key={video.id} className="border-t border-[#b2a491]/20">
+                  <td className="p-3 align-top break-words max-w-[160px] sm:max-w-none">{video.title}</td>
+                  <td className="p-3 align-top break-words max-w-[140px] sm:max-w-none text-[#b2a491]">{video.category}</td>
+                  <td className="p-3 align-top">{video.type}</td>
+                  <td className="p-3 align-top">{video.mood}</td>
+                  <td className="p-3 align-top">
                     {video.credits?.map((c, i) => (
                       <div key={i}>{c.name} ({c.role})</div>
                     ))}
                   </td>
-                  <td className="p-2 align-top break-words max-w-[120px] sm:max-w-none">{video.related_projects?.join(", ")}</td>
-                  <td className="p-2 align-top">{video.is_public ? "Yes" : "No"}</td>
-                  <td className="p-2 flex flex-col sm:flex-row gap-2">
-                    <button className="py-1 px-3 bg-yellow-400 rounded text-xs sm:text-base" onClick={() => handleEdit(video)}>Edit</button>
-                    <button className="py-1 px-3 bg-red-500 text-white rounded text-xs sm:text-base" onClick={() => handleDelete(video.id)}>Delete</button>
+                  <td className="p-3 align-top break-words max-w-[200px] sm:max-w-none text-[#b2a491]">{video.related_projects?.join(", ")}</td>
+                  <td className="p-3 align-top">{video.is_public ? "Yes" : "No"}</td>
+                  <td className="p-3 flex flex-col sm:flex-row gap-2">
+                    <button className="py-1 px-3 rounded text-xs sm:text-base bg-[#ede8df] text-[#171616]" onClick={() => handleEdit(video)}>Edit</button>
+                    <button className="py-1 px-3 rounded text-xs sm:text-base bg-red-500 text-white" onClick={() => handleDelete(video.id)}>Delete</button>
+                    <button
+                      className="py-1 px-3 rounded text-xs sm:text-base bg-[#302927] text-[#b2a491] hover:bg-[#502d26]/60"
+                      onClick={async () => {
+                        try {
+                          setLoading(true);
+                          const res = await fetch(`/api/videos/${video.id}/sync`, { method: 'POST' });
+                          if (!res.ok) throw new Error('Sync failed');
+                          alert('Synced to Stream');
+                        } catch (e) {
+                          console.error(e);
+                          alert('Sync failed');
+                        } finally {
+                          setLoading(false);
+                        }
+                      }}
+                    >
+                      Sync to Stream
+                    </button>
                   </td>
                 </tr>
               ))}

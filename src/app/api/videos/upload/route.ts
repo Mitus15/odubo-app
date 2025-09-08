@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
 
     console.log("Received video upload:", { title, type, category, videoFileName: videoFile.name });
 
-    // Generate video ID for organization
+    // Generate stable UID for this video (used for storage and DB)
     const videoId = `video_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
     // Map type to our video type system
@@ -111,12 +111,14 @@ export async function POST(req: NextRequest) {
     try {
       if (process.env.CLOUDFLARE_ACCOUNT_ID && (process.env.CLOUDFLARE_STREAM_API_TOKEN || process.env.CLOUDFLARE_API_TOKEN)) {
         const streamAPI = new CloudflareStreamAPI();
+        const siteOrigin = process.env.NEXT_PUBLIC_SITE_URL ? [process.env.NEXT_PUBLIC_SITE_URL] : undefined;
         const copyRes = await streamAPI.uploadFromUrl(videoUrl, {
           name: title || videoFile.name,
           requireSignedURLs: !(is_public === 1),
-          // allowedOrigins: process.env.NEXT_PUBLIC_SITE_URL ? [process.env.NEXT_PUBLIC_SITE_URL] : undefined,
+          allowedOrigins: siteOrigin,
           meta: {
             title: title || videoFile.name,
+            creator: artist_name || '',
             artist_name,
             description,
             category,
@@ -124,6 +126,7 @@ export async function POST(req: NextRequest) {
             mood,
             credits,
             related_projects,
+            tags: [category, type, mood].filter(Boolean).join(','),
             uploadedAt: new Date().toISOString(),
           },
         });
@@ -140,12 +143,13 @@ export async function POST(req: NextRequest) {
     }
 
     // Insert video metadata into D1 videos table
-    // Try with artist_name first, fall back if column doesn't exist
+    // Try with extended schema first (including artist_name, status, stream_video_id), fall back if columns don't exist
     let sql, params;
     
-    // First attempt with new schema including artist_name and status
-    sql = `INSERT INTO videos (title, artist_name, description, url, poster_url, thumbnail, duration, category, is_public, type, mood, credits, related_projects, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'published', ?)`;
+    // First attempt with new schema including uid, artist_name, status and stream_video_id
+    sql = `INSERT INTO videos (uid, title, artist_name, description, url, poster_url, thumbnail, duration, category, is_public, type, mood, credits, related_projects, status, stream_video_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'published', ?, ?)`;
     params = [
+      videoId,
       title || videoFile.name,
       artist_name,
       description,
@@ -159,6 +163,7 @@ export async function POST(req: NextRequest) {
       mood,
       credits,
       related_projects,
+      streamVideoId,
       new Date().toISOString()
     ];
 
@@ -182,7 +187,7 @@ export async function POST(req: NextRequest) {
     if (!d1Response.ok || d1Data.success === false) {
       console.log('First attempt failed, trying fallback schema without artist_name and status...');
       
-      // Fall back to original schema without artist_name, status
+      // Fall back to original schema without uid, artist_name, status, stream_video_id
       sql = `INSERT INTO videos (title, description, url, poster_url, thumbnail, duration, category, is_public, type, mood, credits, related_projects, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
       params = [
         title || videoFile.name,
@@ -216,9 +221,26 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ 
-      message: "Video uploaded to R2 and recorded in D1.", 
-      videoUrl, 
-      posterUrl: posterUrl || null
+      success: true,
+      message: "Video uploaded and recorded.",
+      video: {
+        uid: videoId,
+        title: title || videoFile.name,
+        artist_name,
+        description,
+        url: videoUrl,
+        poster_url: posterUrl || '',
+        thumbnail: thumbnail || posterUrl || '',
+        duration,
+        category,
+        is_public,
+        type,
+        mood,
+        credits,
+        related_projects,
+        status: 'published',
+        created_at: new Date().toISOString()
+      }
     }, { status: 200 });
 
   } catch (err) {

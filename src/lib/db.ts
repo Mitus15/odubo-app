@@ -8,6 +8,7 @@ export type User = {
   first_name?: string;
   last_name?: string;
   is_admin?: boolean;
+  role?: string;
   reset_token_hash?: string | null;
   reset_token_expiry?: number | null;
   // Account lockout fields (will be added later)
@@ -241,52 +242,34 @@ export async function getUserByEmail(email: string): Promise<User | null> {
 }
 
 export async function updateUser(id: string, updates: Partial<Omit<User, 'id' | 'username'>>) {
-  try {
-    const databaseUrl = process.env.DATABASE_URL;
-    const apiToken = process.env.CLOUDFLARE_D1_API_TOKEN;
-    
-    if (!databaseUrl) {
-      throw new Error('DATABASE_URL environment variable is not set');
-    }
-    
-    if (!apiToken) {
-      throw new Error('CLOUDFLARE_D1_API_TOKEN environment variable is not set');
-    }
-    
-    // For now, handle specific updates directly since D1 UPDATE might not work
-    if (updates.is_admin !== undefined) {
-      // Try using a direct SQL query approach
-      const sql = `SELECT * FROM users WHERE id = ?`;
-      const params = [id];
-      console.log('Fetching user before update with sql:', sql, 'params:', params);
-      
-      const response = await fetch(`${databaseUrl}/query`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiToken}`
-        },
-        body: JSON.stringify({ sql, params }),
-      });
-      
-      const data = await response.json() as { success?: boolean; [key: string]: any };
-      console.log('Fetch user response:', data);
-      
-      if (response.ok && data.result && data.result.length > 0) {
-        console.log('User found, attempting to update...');
-        // For now, just return success since we can't UPDATE
-        // TODO: Implement proper UPDATE when D1 supports it
-        return { success: true, message: 'User found, but UPDATE not yet supported in D1 HTTP API' };
-      } else {
-        throw new Error('User not found: ' + JSON.stringify(data));
-      }
-    }
-    
-    return { success: true, message: 'No supported updates provided' };
-  } catch (error) {
-    console.error('Update user error:', error);
-    throw error;
-  }
+  // Convert updates into a dynamic UPDATE statement
+  const fields: string[] = [];
+  const params: any[] = [];
+  const set = (col: string, val: any) => { if (val !== undefined) { fields.push(`${col} = ?`); params.push(val); } };
+
+  set('email', (updates as any).email);
+  set('password_hash', (updates as any).password_hash);
+  set('first_name', updates.first_name);
+  set('last_name', updates.last_name);
+  set('is_admin', updates.is_admin !== undefined ? (updates.is_admin ? 1 : 0) : undefined);
+  set('role', (updates as any).role);
+  set('email_verified', (updates as any).email_verified !== undefined ? ((updates as any).email_verified ? 1 : 0) : undefined);
+  set('email_verification_token_hash', (updates as any).email_verification_token_hash);
+  set('email_verification_expiry', (updates as any).email_verification_expiry);
+  set('reset_token_hash', (updates as any).reset_token_hash);
+  set('reset_token_expiry', (updates as any).reset_token_expiry);
+  set('invite_token_hash', (updates as any).invite_token_hash);
+  set('invite_token_expiry', (updates as any).invite_token_expiry);
+  set('failed_login_attempts', (updates as any).failed_login_attempts);
+  set('account_locked_until', (updates as any).account_locked_until);
+  set('last_failed_login', (updates as any).last_failed_login);
+
+  if (fields.length === 0) return { success: true, message: 'No updates' };
+
+  const sql = `UPDATE users SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`;
+  params.push(id);
+  await executeQuery(sql, params);
+  return { success: true };
 }
 
 // Account lockout functions

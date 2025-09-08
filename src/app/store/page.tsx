@@ -4,6 +4,9 @@ import ScrollContainer from '@/components/ui/ScrollContainer';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
+// Temporary storefront gate – keeps all logic intact but shows a placeholder
+const STORE_OPEN = false;
+
 interface ProductCard {
   id: string;
   title: string;
@@ -13,6 +16,28 @@ interface ProductCard {
 }
 
 export default function StorePage() {
+  if (!STORE_OPEN) {
+    return (
+      <ScreenLayout>
+        <div className="fixed inset-0 -z-10 bg-gradient-to-br from-stone-950 via-stone-900 to-red-950" />
+        <ScrollContainer>
+          <div className="max-w-3xl mx-auto px-6 py-20 text-center">
+            <div className="glass-surface rounded-3xl border border-[#502d26]/30 p-10">
+              <h1 className="text-3xl sm:text-4xl font-bold text-[#ede8df] mb-3">Store Opening Soon</h1>
+              <p className="text-[#b2a491] mb-6">
+                We’re putting the final touches on an elevated shopping experience. Sign up to be notified when the store goes live.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <Link href="/" className="px-5 py-3 rounded-xl bg-[#302927] text-[#b2a491] hover:bg-[#502d26]/60">
+                  Return Home
+                </Link>
+              </div>
+            </div>
+          </div>
+        </ScrollContainer>
+      </ScreenLayout>
+    );
+  }
   const [activeTab, setActiveTab] = useState<'clothes' | 'items'>('clothes');
   const [products, setProducts] = useState<ProductCard[]>([]);
   const [loading, setLoading] = useState(false);

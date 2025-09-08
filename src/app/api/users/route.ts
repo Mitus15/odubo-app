@@ -15,7 +15,7 @@ import {
   isEmailVerified
 } from '../../../lib/db';
 import { NextRequest, NextResponse } from 'next/server';
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 import { getAuthTokenFromRequest, getJwtSecret } from '@/lib/auth';
 import { rateLimit } from '@/lib/rateLimit';
 import { SignJWT, jwtVerify } from 'jose';

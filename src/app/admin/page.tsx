@@ -12,18 +12,15 @@ export default function AdminPage() {
 
   useEffect(() => {
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-    if (!token) {
-      // Rely on middleware/httpOnly cookie for auth; don't block rendering
-      setIsAdmin(true);
-      return;
-    }
+    if (!token) { setIsAdmin(false); router.replace("/login"); return; }
     try {
       const payload = JSON.parse(atob(token.split(".")[1]));
-      setIsAdmin(!!payload.is_admin);
-      if (!payload.is_admin) router.replace("/");
+      const ok = !!payload.is_admin || payload.role === 'admin';
+      setIsAdmin(ok);
+      if (!ok) router.replace("/");
     } catch {
       setIsAdmin(false);
-      router.replace("/");
+      router.replace("/login");
     }
   }, [router]);
 
