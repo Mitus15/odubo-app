@@ -16,17 +16,72 @@ interface ProductCard {
 }
 
 export default function StorePage() {
+  const [timeLeft, setTimeLeft] = useState({
+    weeks: 0,
+    days: 0,
+    hours: 0,
+    minutes: 0,
+    seconds: 0
+  });
+
+  useEffect(() => {
+    const targetDate = new Date('2026-03-14T00:00:00').getTime();
+    
+    const updateCountdown = () => {
+      const now = new Date().getTime();
+      const difference = targetDate - now;
+      
+      if (difference > 0) {
+        const weeks = Math.floor(difference / (1000 * 60 * 60 * 24 * 7));
+        const days = Math.floor((difference % (1000 * 60 * 60 * 24 * 7)) / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((difference % (1000 * 60)) / 1000);
+        
+        setTimeLeft({ weeks, days, hours, minutes, seconds });
+      } else {
+        setTimeLeft({ weeks: 0, days: 0, hours: 0, minutes: 0, seconds: 0 });
+      }
+    };
+
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000);
+    
+    return () => clearInterval(interval);
+  }, []);
+
   if (!STORE_OPEN) {
     return (
       <ScreenLayout>
         <div className="fixed inset-0 -z-10 bg-gradient-to-br from-stone-950 via-stone-900 to-red-950" />
         <ScrollContainer>
-          <div className="max-w-3xl mx-auto px-6 py-20 text-center">
+          <div className="max-w-4xl mx-auto px-6 py-20 text-center">
             <div className="glass-surface rounded-3xl border border-[#502d26]/30 p-10">
-              <h1 className="text-3xl sm:text-4xl font-bold text-[#ede8df] mb-3">Store Opening Soon</h1>
-              <p className="text-[#b2a491] mb-6">
-                We’re putting the final touches on an elevated shopping experience. Sign up to be notified when the store goes live.
-              </p>
+              <h1 className="text-3xl sm:text-4xl font-bold text-[#ede8df] mb-8">Store Opening Soon</h1>
+              
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-8">
+                <div className="glass-surface rounded-2xl border border-[#502d26]/20 p-4">
+                  <div className="text-3xl sm:text-4xl font-bold text-[#ede8df]">{timeLeft.weeks}</div>
+                  <div className="text-sm text-[#b2a491] mt-1">Weeks</div>
+                </div>
+                <div className="glass-surface rounded-2xl border border-[#502d26]/20 p-4">
+                  <div className="text-3xl sm:text-4xl font-bold text-[#ede8df]">{timeLeft.days}</div>
+                  <div className="text-sm text-[#b2a491] mt-1">Days</div>
+                </div>
+                <div className="glass-surface rounded-2xl border border-[#502d26]/20 p-4">
+                  <div className="text-3xl sm:text-4xl font-bold text-[#ede8df]">{timeLeft.hours}</div>
+                  <div className="text-sm text-[#b2a491] mt-1">Hours</div>
+                </div>
+                <div className="glass-surface rounded-2xl border border-[#502d26]/20 p-4">
+                  <div className="text-3xl sm:text-4xl font-bold text-[#ede8df]">{timeLeft.minutes}</div>
+                  <div className="text-sm text-[#b2a491] mt-1">Minutes</div>
+                </div>
+                <div className="glass-surface rounded-2xl border border-[#502d26]/20 p-4">
+                  <div className="text-3xl sm:text-4xl font-bold text-[#ede8df]">{timeLeft.seconds}</div>
+                  <div className="text-sm text-[#b2a491] mt-1">Seconds</div>
+                </div>
+              </div>
+              
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 <Link href="/" className="px-5 py-3 rounded-xl bg-[#302927] text-[#b2a491] hover:bg-[#502d26]/60">
                   Return Home
