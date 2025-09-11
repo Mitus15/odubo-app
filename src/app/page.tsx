@@ -7,8 +7,8 @@ async function getVerse() {
     const requestId = Math.random().toString(36).substring(7);
 
     // Resolve a robust base URL for server environments (Vercel/local)
-    // Fetch the data directly on the server (relative path resolves correctly on Vercel and locally)
-    const response = await fetch(`/api/gemini`, {
+    // First try: relative path (internal routing)
+    let response = await fetch(`/api/gemini`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -18,11 +18,34 @@ async function getVerse() {
         timestamp,
         requestId,
       }),
-      // Important: avoid POST caching at the framework layer; the API route handles its own caching
       cache: 'no-store'
     });
 
+    // Fallback: build absolute URL if relative failed
     if (!response.ok) {
+      try {
+        const hdrs = await import('next/headers').then(m => m.headers());
+        const proto = hdrs.get('x-forwarded-proto') || 'https';
+        const host = hdrs.get('host');
+        const envUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL || '';
+        const normalizedEnvUrl = envUrl ? (envUrl.startsWith('http') ? envUrl : `https://${envUrl}`) : '';
+        const baseUrl = normalizedEnvUrl || (host ? `${proto}://${host}` : (process.env.PORT ? `http://localhost:${process.env.PORT}` : 'http://localhost:3000'));
+        response = await fetch(`${baseUrl}/api/gemini`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'getVerse', timestamp, requestId }),
+          cache: 'no-store'
+        });
+      } catch (e) {
+        console.error('Absolute fetch attempt failed:', e);
+      }
+    }
+
+    if (!response.ok) {
+      try {
+        const txt = await response.text();
+        console.error('Gemini fetch failed:', response.status, response.statusText, txt);
+      } catch {}
       throw new Error('Failed to fetch verse');
     }
 
@@ -37,6 +60,7 @@ async function getVerse() {
       error: data.note || null
     };
   } catch (error) {
+    console.error('getVerse error:', error);
     return {
       text: "Trust in the Lord with all your heart and lean not on your own understanding.",
       reference: "Proverbs 3:5",
