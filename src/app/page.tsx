@@ -8,14 +8,20 @@ async function getVerse() {
     const requestId = Math.random().toString(36).substring(7);
 
     // Resolve a robust base URL for server environments (Vercel/local)
-    const hdrs = headers();
-    const forwardedProto = hdrs.get('x-forwarded-proto') || 'https';
-    const host = hdrs.get('host');
+    // Prefer static env-derived origin for optimal caching; fallback to request headers or localhost
     const envUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL || '';
     const normalizedEnvUrl = envUrl
       ? (envUrl.startsWith('http') ? envUrl : `https://${envUrl}`)
       : '';
-    const baseUrl = normalizedEnvUrl || (host ? `${forwardedProto}://${host}` : 'http://localhost:3000');
+    let baseUrl = normalizedEnvUrl;
+    if (!baseUrl) {
+      // Only touch headers if needed (keeps route more cache-friendly)
+      const hdrs = await headers();
+      const forwardedProto = hdrs.get('x-forwarded-proto') || 'https';
+      const host = hdrs.get('host');
+      const portBase = process.env.PORT ? `http://localhost:${process.env.PORT}` : 'http://localhost:3000';
+      baseUrl = host ? `${forwardedProto}://${host}` : portBase;
+    }
 
     // Fetch the data directly on the server
     const response = await fetch(`${baseUrl}/api/gemini`, {
