@@ -60,7 +60,7 @@ export async function GET(req: NextRequest) {
         'X-Shopify-Storefront-Access-Token': PUBLIC_TOKEN,
       },
       body: JSON.stringify({ query, variables }),
-      cache: 'no-store',
+      next: { revalidate: 300 }, // Revalidate every 5 minutes
     });
 
     if (!res.ok) {
@@ -85,7 +85,7 @@ export async function GET(req: NextRequest) {
           'X-Shopify-Storefront-Access-Token': PUBLIC_TOKEN,
         },
         body: JSON.stringify({ query: findQuery }),
-        cache: 'no-store',
+        next: { revalidate: 300 }, // Revalidate every 5 minutes
       });
       const findData = await findRes.json() as any;
       const edgesC = findData?.data?.collections?.edges || [];
@@ -102,7 +102,7 @@ export async function GET(req: NextRequest) {
           'X-Shopify-Storefront-Access-Token': PUBLIC_TOKEN,
         },
         body: JSON.stringify({ query, variables: retryVars }),
-        cache: 'no-store',
+        next: { revalidate: 300 }, // Revalidate every 5 minutes
       });
       const retryData = await retryRes.json() as any;
       const retryEdges = retryData?.data?.collectionByHandle?.products?.edges || [];
@@ -113,7 +113,13 @@ export async function GET(req: NextRequest) {
         image: e.node.images?.edges?.[0]?.node?.url || null,
         price: e.node.priceRange?.minVariantPrice?.amount || null,
       }));
-      return NextResponse.json({ products }, { headers: { 'Cache-Control': 'no-store' } });
+      return NextResponse.json({ products }, { 
+        headers: { 
+          'Cache-Control': 'public, max-age=300, s-maxage=600', // 5 min client cache, 10 min CDN cache
+          'CDN-Cache-Control': 'public, max-age=600',
+          'Vary': 'Accept-Encoding'
+        } 
+      });
     }
     const edges = collectionHandle
       ? data?.data?.collectionByHandle?.products?.edges
@@ -127,7 +133,13 @@ export async function GET(req: NextRequest) {
       price: e.node.priceRange?.minVariantPrice?.amount || null,
     }));
 
-    return NextResponse.json({ products }, { headers: { 'Cache-Control': 'no-store' } });
+    return NextResponse.json({ products }, { 
+      headers: { 
+        'Cache-Control': 'public, max-age=300, s-maxage=600', // 5 min client cache, 10 min CDN cache
+        'CDN-Cache-Control': 'public, max-age=600',
+        'Vary': 'Accept-Encoding'
+      } 
+    });
   } catch (e) {
     const errorMsg = e instanceof Error ? e.message : 'Unexpected error';
     return NextResponse.json({ error: 'Unexpected error', detail: errorMsg }, { status: 500 });

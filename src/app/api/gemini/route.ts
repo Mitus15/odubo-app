@@ -59,7 +59,13 @@ export async function POST(request: NextRequest) {
             const row = rows[0] as any;
             try {
               const cached = JSON.parse(row.cache_value);
-              return NextResponse.json(cached, { headers: { 'Cache-Control': 'public, max-age=86400' } });
+              return NextResponse.json(cached, { 
+                headers: { 
+                  'Cache-Control': 'public, max-age=86400, s-maxage=86400', // 24 hours cache
+                  'CDN-Cache-Control': 'public, max-age=86400',
+                  'Vary': 'Accept-Encoding'
+                } 
+              });
             } catch (e) {
               // ignore parse errors and continue to generate a new verse
               console.warn('Failed to parse cached gemini verse, regenerating', e);
@@ -256,7 +262,13 @@ export async function POST(request: NextRequest) {
           console.warn('Failed to write gemini cache:', cacheErr);
         }
 
-        return NextResponse.json(verseData, { headers: { 'Cache-Control': 'public, max-age=86400' } });
+        return NextResponse.json(verseData, { 
+          headers: { 
+            'Cache-Control': 'public, max-age=86400, s-maxage=86400', // 24 hours cache
+            'CDN-Cache-Control': 'public, max-age=86400',
+            'Vary': 'Accept-Encoding'
+          } 
+        });
       } catch (parseError) {
         console.error('JSON parsing error:', parseError);
         console.log('Failed to parse:', generatedText);
@@ -282,7 +294,13 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({
             text: textMatch[1],
             reference: refMatch[1]
-          }, { headers: { 'Cache-Control': 'public, max-age=86400' } });
+          }, { 
+            headers: { 
+              'Cache-Control': 'public, max-age=86400, s-maxage=86400', // 24 hours cache
+              'CDN-Cache-Control': 'public, max-age=86400',
+              'Vary': 'Accept-Encoding'
+            } 
+          });
         }
         
         // If all parsing fails, return a fallback structure
@@ -301,7 +319,13 @@ export async function POST(request: NextRequest) {
           text: "Trust in the Lord with all your heart and lean not on your own understanding.",
           reference: "Proverbs 3:5",
           note: "AI response could not be parsed, showing fallback verse"
-        }, { headers: { 'Cache-Control': 'public, max-age=86400' } });
+        }, { 
+          headers: { 
+            'Cache-Control': 'public, max-age=86400, s-maxage=86400', // 24 hours cache
+            'CDN-Cache-Control': 'public, max-age=86400',
+            'Vary': 'Accept-Encoding'
+          } 
+        });
       }
     }
 
