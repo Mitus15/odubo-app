@@ -1,4 +1,5 @@
 import HomePageClient from '@/app/HomePageClient';
+import { headers } from 'next/headers';
 
 // Server-side verse fetching function
 async function getVerse() {
@@ -6,8 +7,18 @@ async function getVerse() {
     const timestamp = Date.now().toString();
     const requestId = Math.random().toString(36).substring(7);
 
+    // Resolve a robust base URL for server environments (Vercel/local)
+    const hdrs = headers();
+    const forwardedProto = hdrs.get('x-forwarded-proto') || 'https';
+    const host = hdrs.get('host');
+    const envUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL || '';
+    const normalizedEnvUrl = envUrl
+      ? (envUrl.startsWith('http') ? envUrl : `https://${envUrl}`)
+      : '';
+    const baseUrl = normalizedEnvUrl || (host ? `${forwardedProto}://${host}` : 'http://localhost:3000');
+
     // Fetch the data directly on the server
-    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/gemini`, {
+    const response = await fetch(`${baseUrl}/api/gemini`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
