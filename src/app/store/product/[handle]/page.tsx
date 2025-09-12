@@ -25,7 +25,9 @@ interface ShopifyProduct {
 async function fetchShopifyProduct(handle: string): Promise<ShopifyProduct | null> {
   try {
     // We fetch from the internal API route, which in turn calls Shopify
-    const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/shopify/product?handle=${encodeURIComponent(handle)}`, {
+  const getBaseUrl = (await import('@/lib/getBaseUrl')).default;
+  const baseUrl = getBaseUrl();
+  const res = await fetch(`${baseUrl}/api/shopify/product?handle=${encodeURIComponent(handle)}`, {
       next: { revalidate: 300 } // Revalidate every 5 minutes
     });
     if (!res.ok) return null;

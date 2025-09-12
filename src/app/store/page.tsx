@@ -17,7 +17,10 @@ interface ProductCard {
 // Server-side product fetching function
 async function loadProducts(type: 'clothes' | 'items'): Promise<ProductCard[]> {
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/shopify/collections?type=${type}`, { 
+  // Resolve a robust base URL so server-side renders use the current host when possible
+  const getBaseUrl = (await import('@/lib/getBaseUrl')).default;
+  const baseUrl = getBaseUrl();
+  const res = await fetch(`${baseUrl}/api/shopify/collections?type=${type}`, { 
       next: { revalidate: 300 } // Revalidate every 5 minutes
     });
     if (!res.ok) {

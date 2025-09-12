@@ -6,50 +6,40 @@ async function getVerse() {
     const timestamp = Date.now().toString();
     const requestId = Math.random().toString(36).substring(7);
 
-    // Resolve a robust base URL for server environments (Vercel/local)
-    // First try: relative path (internal routing)
-    let response = await fetch(`/api/gemini`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        action: 'getVerse',
-        timestamp,
-        requestId,
-      }),
-      cache: 'no-store'
-    });
-
-    // Fallback: build absolute URL if relative failed
-    if (!response.ok) {
-      try {
-        const hdrs = await import('next/headers').then(m => m.headers());
-        const proto = hdrs.get('x-forwarded-proto') || 'https';
-        const host = hdrs.get('host');
-        const envUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL || '';
-        const normalizedEnvUrl = envUrl ? (envUrl.startsWith('http') ? envUrl : `https://${envUrl}`) : '';
-        const baseUrl = normalizedEnvUrl || (host ? `${proto}://${host}` : (process.env.PORT ? `http://localhost:${process.env.PORT}` : 'http://localhost:3000'));
-        response = await fetch(`${baseUrl}/api/gemini`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'getVerse', timestamp, requestId }),
-          cache: 'no-store'
-        });
-      } catch (e) {
-        console.error('Absolute fetch attempt failed:', e);
-      }
+    // Use absolute URL resolved from headers/env to avoid server-relative fetch issues
+    const getBaseUrl = (await import('@/lib/getBaseUrl')).default;
+    const hdrs = await import('next/headers').then(m => m.headers());
+    const baseUrl = getBaseUrl(hdrs as any);
+    let response: Response | null = null;
+    try {
+      response = await fetch(`${baseUrl}/api/gemini`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ action: 'getVerse', timestamp, requestId }),
+        cache: 'no-store'
+      });
+    } catch (err) {
+      console.error('Absolute /api/gemini fetch threw:', err, 'baseUrl:', baseUrl);
+      response = null;
     }
 
-    if (!response.ok) {
+    if (!response || !response.ok) {
       try {
-        const txt = await response.text();
-        console.error('Gemini fetch failed:', response.status, response.statusText, txt);
-      } catch {}
+        if (response) {
+          const txt = await response.text().catch(() => '<unreadable>');
+          console.error('Gemini fetch failed:', response.status, response.statusText, txt);
+        } else {
+          console.error('Gemini fetch failed: no response received from /api/gemini');
+        }
+      } catch (logErr) {
+        console.error('Error while logging Gemini fetch failure:', logErr);
+      }
       throw new Error('Failed to fetch verse');
     }
 
-    const data = await response.json() as {
+  const data = await response.json() as {
       text?: string;
       reference?: string;
       note?: string;
@@ -60,7 +50,16 @@ async function getVerse() {
       error: data.note || null
     };
   } catch (error) {
-    console.error('getVerse error:', error);
+    // Improved diagnostics: log type, message (if any), and stack when available
+    try {
+      const errType = error === null ? 'null' : typeof error;
+      const errMessage = (error && (error as any).message) ? (error as any).message : String(error);
+      const errStack = (error && (error as any).stack) ? (error as any).stack : 'no-stack';
+      console.error('getVerse error:', { errType, errMessage, errStack });
+    } catch (logErr) {
+      console.error('getVerse logging failure:', logErr);
+    }
+
     return {
       text: "Trust in the Lord with all your heart and lean not on your own understanding.",
       reference: "Proverbs 3:5",

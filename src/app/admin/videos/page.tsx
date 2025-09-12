@@ -272,6 +272,27 @@ export default function AdminVideosPage() {
     }
   }
 
+  // Helpers to safely parse credits and related projects which may be stored as strings
+  function parseCredits(c: Video["credits"]): Credit[] {
+    if (!c) return [];
+    if (Array.isArray(c)) return c;
+    try {
+      return JSON.parse(String(c));
+    } catch {
+      return [];
+    }
+  }
+  function parseRelated(r: Video["related_projects"]): string[] {
+    if (!r) return [];
+    if (Array.isArray(r)) return r;
+    try {
+      return JSON.parse(String(r));
+    } catch {
+      // fallback to comma-separated string
+      return String(r).split(",").map((s) => s.trim()).filter(Boolean);
+    }
+  }
+
   return (
     <ScreenLayout>
       <ScrollContainer>
@@ -419,12 +440,12 @@ export default function AdminVideosPage() {
               <div className="text-xs text-[#b2a491] mb-1">Mood: <span className="font-medium text-[#ede8df]">{video.mood || 'N/A'}</span></div>
               <div className="text-xs text-[#b2a491] mb-1">Credits:
                 <ul className="ml-2 list-disc">
-                  {(video.credits || []).map((c, i) => (
+                  {parseCredits(video.credits).map((c: Credit, i: number) => (
                     <li key={i} className="text-[#ede8df]">{c?.name || 'Unknown'} ({c?.role || 'Unknown'})</li>
                   ))}
                 </ul>
               </div>
-              <div className="text-xs text-[#b2a491] mb-1">Related Projects: <span className="font-medium text-[#ede8df]">{(video.related_projects || []).join(", ") || 'None'}</span></div>
+              <div className="text-xs text-[#b2a491] mb-1">Related Projects: <span className="font-medium text-[#ede8df]">{parseRelated(video.related_projects).join(", ") || 'None'}</span></div>
               <div className="text-xs text-[#b2a491] mb-1">Public: <span className="font-medium text-[#ede8df]">{video.is_public ? "Yes" : "No"}</span></div>
               <div className="flex gap-2 mt-2">
                 <button className="flex-1 py-2 px-3 rounded text-xs font-semibold bg-[#ede8df] text-[#171616]" onClick={() => handleEdit(video)}>Edit</button>
@@ -455,11 +476,11 @@ export default function AdminVideosPage() {
                   <td className="p-3 align-top">{video.type}</td>
                   <td className="p-3 align-top">{video.mood}</td>
                   <td className="p-3 align-top">
-                    {video.credits?.map((c, i) => (
+                    {parseCredits(video.credits).map((c: Credit, i: number) => (
                       <div key={i}>{c.name} ({c.role})</div>
                     ))}
                   </td>
-                  <td className="p-3 align-top break-words max-w-[200px] sm:max-w-none text-[#b2a491]">{video.related_projects?.join(", ")}</td>
+                  <td className="p-3 align-top break-words max-w-[200px] sm:max-w-none text-[#b2a491]">{parseRelated(video.related_projects).join(", ")}</td>
                   <td className="p-3 align-top">{video.is_public ? "Yes" : "No"}</td>
                   <td className="p-3 flex flex-col sm:flex-row gap-2">
                     <button className="py-1 px-3 rounded text-xs sm:text-base bg-[#ede8df] text-[#171616]" onClick={() => handleEdit(video)}>Edit</button>
