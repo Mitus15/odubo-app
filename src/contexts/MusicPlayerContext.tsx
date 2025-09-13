@@ -30,6 +30,9 @@ export interface PlayerState {
   currentIndex: number;
   isShuffled: boolean;
   repeatMode: 'none' | 'one' | 'all';
+  // Shuffle management
+  shuffledOrder: number[]; // indices referencing originalQueue
+  shuffledPointer: number; // current position within shuffledOrder
   
   // Auto-play and library modes
   autoPlay: boolean;
@@ -86,6 +89,8 @@ const initialState: PlayerState = {
   currentIndex: -1,
   isShuffled: false,
   repeatMode: 'none',
+  shuffledOrder: [],
+  shuffledPointer: -1,
   autoPlay: true, // Enable autoplay by default
   isLibraryShuffleMode: false,
   libraryTracks: [],
@@ -110,6 +115,18 @@ const playerReducer = (state: PlayerState, action: PlayerAction): PlayerState =>
       const { track, album, queue, index } = action.payload;
       const newQueue = queue || [track];
       const trackIndex = index !== undefined ? index : newQueue.findIndex(t => t.id === track.id);
+      // When playing a specific track, regenerate shuffledOrder relative to original order if shuffled
+      let shuffledOrder = state.shuffledOrder;
+      let shuffledPointer = state.shuffledPointer;
+      if (state.isShuffled) {
+        const baseOrder = newQueue.map((_, i) => i).filter(i => i !== trackIndex);
+        for (let i = baseOrder.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [baseOrder[i], baseOrder[j]] = [baseOrder[j], baseOrder[i]];
+        }
+        shuffledOrder = [trackIndex, ...baseOrder];
+        shuffledPointer = 0;
+      }
       
       return {
         ...state,
@@ -124,6 +141,8 @@ const playerReducer = (state: PlayerState, action: PlayerAction): PlayerState =>
         isPlayerVisible: true,
         isLibraryShuffleMode: false, // Exit library mode when playing specific track
         error: null,
+        shuffledOrder,
+        shuffledPointer,
       };
     }
     
@@ -168,54 +187,97 @@ const playerReducer = (state: PlayerState, action: PlayerAction): PlayerState =>
     
     case 'NEXT_TRACK': {
       if (state.queue.length === 0) return state;
-      
-      let nextIndex = state.currentIndex + 1;
-      
-      // Handle repeat modes
-      if (state.repeatMode === 'one') {
-        nextIndex = state.currentIndex;
-      } else if (nextIndex >= state.queue.length) {
-        if (state.repeatMode === 'all') {
-          nextIndex = 0;
-        } else {
-          // End of queue/album reached
-          if (state.autoPlay && state.libraryTracks.length > 0) {
-            // Enter library shuffle mode - get random track from library
-            const availableLibraryTracks = state.libraryTracks.filter(
-              track => track.audio_url && track.id !== state.currentTrack?.id
-            );
-            
-            if (availableLibraryTracks.length > 0) {
-              const randomTrack = availableLibraryTracks[Math.floor(Math.random() * availableLibraryTracks.length)];
-              
-              return {
-                ...state,
-                currentTrack: randomTrack,
-                currentAlbum: null, // Clear album context when in library mode
-                queue: [randomTrack],
-                currentIndex: 0,
-                isLibraryShuffleMode: true,
-                isLoading: true,
-                currentTime: 0,
-              };
+      // Handle shuffled order
+      if (state.isShuffled && state.shuffledOrder.length > 0) {
+        let pointer = state.shuffledPointer + 1;
+        if (pointer >= state.shuffledOrder.length) {
+          if (state.repeatMode === 'all') {
+            // Reshuffle maintaining current track first
+            const currentIdx = state.currentIndex;
+            const base = state.originalQueue.map((_, i) => i).filter(i => i !== currentIdx);
+            for (let i = base.length - 1; i > 0; i--) {
+              const j = Math.floor(Math.random() * (i + 1));
+              [base[i], base[j]] = [base[j], base[i]];
             }
+            pointer = 0;
+            const newOrder = [currentIdx, ...base];
+            return {
+              ...state,
+              shuffledOrder: newOrder,
+              shuffledPointer: 0,
+              currentTrack: state.queue[currentIdx],
+              currentIndex: currentIdx,
+              isLoading: true,
+              currentTime: 0,
+            };
+          } else {
+            // End reached
+            if (state.autoPlay && state.libraryTracks.length > 0) {
+              const availableLibraryTracks = state.libraryTracks.filter(
+                track => track.audio_url && track.id !== state.currentTrack?.id
+              );
+              if (availableLibraryTracks.length > 0) {
+                const randomTrack = availableLibraryTracks[Math.floor(Math.random() * availableLibraryTracks.length)];
+                return {
+                  ...state,
+                  currentTrack: randomTrack,
+                  currentAlbum: null,
+                  queue: [randomTrack],
+                  currentIndex: 0,
+                  isLibraryShuffleMode: true,
+                  isLoading: true,
+                  currentTime: 0,
+                };
+              }
+            }
+            return { ...state, isPlaying: false, isPaused: true };
           }
-          
-          // No autoplay or no library tracks available
-          return { ...state, isPlaying: false, isPaused: true };
         }
+        const nextIndex = state.shuffledOrder[pointer];
+        const nextTrack = state.queue[nextIndex];
+        if (!nextTrack) return state;
+        return {
+          ...state,
+          currentTrack: nextTrack,
+          currentIndex: nextIndex,
+          shuffledPointer: pointer,
+          isLoading: true,
+          currentTime: 0,
+          isLibraryShuffleMode: false,
+        };
       }
-      
+
+      let nextIndex = state.currentIndex + 1;
+      if (state.repeatMode === 'all' && nextIndex >= state.queue.length) nextIndex = 0;
+      if (nextIndex >= state.queue.length) {
+        if (state.autoPlay && state.libraryTracks.length > 0) {
+          const availableLibraryTracks = state.libraryTracks.filter(
+            track => track.audio_url && track.id !== state.currentTrack?.id
+          );
+          if (availableLibraryTracks.length > 0) {
+            const randomTrack = availableLibraryTracks[Math.floor(Math.random() * availableLibraryTracks.length)];
+            return {
+              ...state,
+              currentTrack: randomTrack,
+              currentAlbum: null,
+              queue: [randomTrack],
+              currentIndex: 0,
+              isLibraryShuffleMode: true,
+              isLoading: true,
+              currentTime: 0,
+            };
+          }
+        }
+        return { ...state, isPlaying: false, isPaused: true };
+      }
       const nextTrack = state.queue[nextIndex];
       if (!nextTrack) return state;
-      
       return {
         ...state,
         currentTrack: nextTrack,
         currentIndex: nextIndex,
         isLoading: true,
         currentTime: 0,
-        // Exit library shuffle mode if we had a regular queue
         isLibraryShuffleMode: false,
       };
     }
@@ -231,20 +293,33 @@ const playerReducer = (state: PlayerState, action: PlayerAction): PlayerState =>
           isLoading: true,
         };
       }
-      
-      let prevIndex = state.currentIndex - 1;
-      
-      if (prevIndex < 0) {
-        if (state.repeatMode === 'all') {
-          prevIndex = state.queue.length - 1;
-        } else {
-          return state;
+      if (state.isShuffled && state.shuffledOrder.length > 0) {
+        let pointer = state.shuffledPointer - 1;
+        if (pointer < 0) {
+          if (state.repeatMode === 'all') {
+            pointer = state.shuffledOrder.length - 1;
+          } else {
+            return state;
+          }
         }
+        const prevIndex = state.shuffledOrder[pointer];
+        const prevTrack = state.queue[prevIndex];
+        if (!prevTrack) return state;
+        return {
+          ...state,
+          currentTrack: prevTrack,
+            currentIndex: prevIndex,
+          shuffledPointer: pointer,
+          isLoading: true,
+          currentTime: 0,
+        };
       }
-      
+      let prevIndex = state.currentIndex - 1;
+      if (prevIndex < 0) {
+        if (state.repeatMode === 'all') prevIndex = state.queue.length - 1; else return state;
+      }
       const prevTrack = state.queue[prevIndex];
       if (!prevTrack) return state;
-      
       return {
         ...state,
         currentTrack: prevTrack,
@@ -280,28 +355,31 @@ const playerReducer = (state: PlayerState, action: PlayerAction): PlayerState =>
       const newShuffled = !state.isShuffled;
       
       if (newShuffled) {
-        // Enable shuffle: create shuffled queue but keep current track at current position
-        const currentTrack = state.currentTrack;
-        const otherTracks = state.queue.filter(track => track.id !== currentTrack?.id);
-        const shuffledOthers = shuffleArray(otherTracks);
-        const newQueue = currentTrack ? [currentTrack, ...shuffledOthers] : shuffledOthers;
-        
+        // Generate shuffled order referencing originalQueue indices
+        const base = state.queue.map((_, i) => i);
+        const currentIdx = state.currentIndex >= 0 ? state.currentIndex : 0;
+        const others = base.filter(i => i !== currentIdx);
+        for (let i = others.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [others[i], others[j]] = [others[j], others[i]];
+        }
+        const shuffledOrder = [currentIdx, ...others];
         return {
           ...state,
           isShuffled: true,
-          queue: newQueue,
-          currentIndex: 0,
+          shuffledOrder,
+          shuffledPointer: 0,
           originalQueue: state.originalQueue.length > 0 ? state.originalQueue : state.queue,
         };
       } else {
-        // Disable shuffle: restore original queue
+        // Disable shuffle: queue already holds track objects; ensure currentIndex points to correct track
         const currentTrack = state.currentTrack;
-        const originalIndex = state.originalQueue.findIndex(track => track.id === currentTrack?.id);
-        
+        const originalIndex = currentTrack ? state.queue.findIndex(t => t.id === currentTrack.id) : 0;
         return {
           ...state,
           isShuffled: false,
-          queue: state.originalQueue,
+          shuffledOrder: [],
+          shuffledPointer: -1,
           currentIndex: originalIndex >= 0 ? originalIndex : 0,
         };
       }
@@ -354,16 +432,24 @@ const playerReducer = (state: PlayerState, action: PlayerAction): PlayerState =>
     }
     
     case 'ADD_TO_QUEUE': {
+      // Always update originalQueue as the canonical unshuffled order (dedup by id at append time)
+      const appended = action.payload.filter(t => !state.originalQueue.some(o => o.id === t.id));
+      const newOriginal = [...state.originalQueue, ...appended];
       return {
         ...state,
-        queue: [...state.queue, ...action.payload],
-        originalQueue: state.isShuffled ? state.originalQueue : [...state.queue, ...action.payload],
+        queue: [...state.queue, ...appended],
+        originalQueue: newOriginal,
       };
     }
     
     case 'REMOVE_FROM_QUEUE': {
       const indexToRemove = action.payload;
       const newQueue = state.queue.filter((_, index) => index !== indexToRemove);
+      const removedTrack = state.queue[indexToRemove];
+      // Remove by id (so unshuffling won't resurrect it later)
+      const newOriginalQueue = removedTrack
+        ? state.originalQueue.filter(t => t.id !== removedTrack.id)
+        : state.originalQueue;
       
       // Adjust current index if necessary
       let newCurrentIndex = state.currentIndex;
@@ -384,6 +470,7 @@ const playerReducer = (state: PlayerState, action: PlayerAction): PlayerState =>
       return {
         ...state,
         queue: newQueue,
+        originalQueue: newOriginalQueue,
         currentIndex: newCurrentIndex,
       };
     }
@@ -596,6 +683,17 @@ export const MusicPlayerProvider: React.FC<MusicPlayerProviderProps> = ({ childr
     };
 
     const handleEnded = () => {
+      // Repeat one: restart current track immediately
+      if (state.repeatMode === 'one' && state.currentTrack) {
+        audio.currentTime = 0;
+        // Force play again (will trigger play listener)
+        const p = audio.play();
+        if (p && typeof p.catch === 'function') {
+          p.catch(err => console.warn('Repeat-one replay blocked:', err));
+        }
+        return;
+      }
+
       // In library shuffle mode, get another random track
       if (state.isLibraryShuffleMode && state.autoPlay && state.libraryTracks.length > 0) {
         const availableLibraryTracks = state.libraryTracks.filter(
@@ -616,8 +714,8 @@ export const MusicPlayerProvider: React.FC<MusicPlayerProviderProps> = ({ childr
         }
       }
       
-      // Normal next track behavior
-      dispatch({ type: 'NEXT_TRACK' });
+  // Normal next track behavior
+  dispatch({ type: 'NEXT_TRACK' });
     };
 
     const handlePlay = () => {

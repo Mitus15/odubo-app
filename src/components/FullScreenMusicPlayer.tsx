@@ -259,9 +259,9 @@ export default function FullScreenMusicPlayer({ isOpen, onClose }: FullScreenMus
 
             {/* Secondary Controls */}
             <div className="flex items-center gap-4 sm:gap-6 w-full max-w-md lg:max-w-lg">
-              {/* Volume Control */}
+              {/* Mute Button (volume slider removed) */}
               <div className="flex items-center gap-3 flex-1">
-                <button onClick={toggleMute} className="text-[#b2a491] hover:text-[#ede8df] transition-colors">
+                <button onClick={toggleMute} className="text-[#b2a491] hover:text-[#ede8df] transition-colors" title="Toggle mute">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     {state.isMuted || state.volume === 0 ? (
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
@@ -270,15 +270,6 @@ export default function FullScreenMusicPlayer({ isOpen, onClose }: FullScreenMus
                     )}
                   </svg>
                 </button>
-                <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.01"
-                  value={state.isMuted ? 0 : state.volume}
-                  onChange={handleVolumeChange}
-                  className="flex-1 h-1 bg-[#502d26]/50 rounded-lg appearance-none cursor-pointer slider"
-                />
               </div>
             </div>
           </div>
@@ -343,26 +334,6 @@ export default function FullScreenMusicPlayer({ isOpen, onClose }: FullScreenMus
       </div>
 
       <style jsx>{`
-        .slider::-webkit-slider-thumb {
-          appearance: none;
-          width: 16px;
-          height: 16px;
-          border-radius: 50%;
-          background: #ede8df;
-          cursor: pointer;
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-        }
-        
-        .slider::-moz-range-thumb {
-          width: 16px;
-          height: 16px;
-          border-radius: 50%;
-          background: #ede8df;
-          cursor: pointer;
-          border: none;
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-        }
-        
         .line-clamp-2 {
           display: -webkit-box;
           -webkit-line-clamp: 2;

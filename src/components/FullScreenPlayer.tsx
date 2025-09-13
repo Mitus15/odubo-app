@@ -25,7 +25,6 @@ export default function FullScreenPlayer({ isVisible, onClose }: FullScreenPlaye
   } = useMusicPlayer();
 
   const [showQueue, setShowQueue] = useState(false);
-  const [showVolume, setShowVolume] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
 
   // Close player with Escape key
@@ -283,15 +282,14 @@ export default function FullScreenPlayer({ isVisible, onClose }: FullScreenPlaye
               </button>
             </div>
 
-            {/* Secondary Controls */}
+            {/* Secondary Controls (volume slider removed) */}
             <div className="flex items-center justify-center space-x-4">
-              {/* Volume */}
+              {/* Mute Button */}
               <div className="relative">
                 <button
-                  onClick={() => setShowVolume(!showVolume)}
-                  onMouseEnter={() => setShowVolume(true)}
+                  onClick={toggleMute}
                   className="w-10 h-10 flex items-center justify-center rounded-full bg-[#302927]/50 text-[#ede8df] hover:bg-[#502d26]/60 transition-colors"
-                  title="Volume"
+                  title="Toggle mute"
                 >
                   {state.isMuted || state.volume === 0 ? (
                     <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
@@ -307,30 +305,6 @@ export default function FullScreenPlayer({ isVisible, onClose }: FullScreenPlaye
                     </svg>
                   )}
                 </button>
-
-                {/* Volume Slider */}
-                {showVolume && (
-                  <div 
-                    className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 p-3 bg-[#302927]/90 backdrop-blur-sm rounded-lg shadow-xl"
-                    onMouseLeave={() => setShowVolume(false)}
-                  >
-                    <div className="flex flex-col items-center space-y-2">
-                      <input
-                        type="range"
-                        min="0"
-                        max="1"
-                        step="0.01"
-                        value={state.isMuted ? 0 : state.volume}
-                        onChange={(e) => setVolume(parseFloat(e.target.value))}
-                        className="w-20 h-1 bg-[#502d26]/40 rounded-lg appearance-none cursor-pointer accent-[#843c2d] transform rotate-90"
-                        style={{ height: '80px' }}
-                      />
-                      <span className="text-xs text-[#b2a491]">
-                        {Math.round((state.isMuted ? 0 : state.volume) * 100)}%
-                      </span>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           </div>
