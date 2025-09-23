@@ -627,6 +627,7 @@ export const MusicPlayerProvider: React.FC<MusicPlayerProviderProps> = ({ childr
   const [state, dispatch] = useReducer(playerReducer, initialState);
   const audioRef = useRef<HTMLAudioElement>(null);
   const hlsRef = useRef<any>(null);
+  const advancingRef = useRef(false);
 
 
 
@@ -702,6 +703,11 @@ export const MusicPlayerProvider: React.FC<MusicPlayerProviderProps> = ({ childr
         
         if (availableLibraryTracks.length > 0) {
           const randomTrack = availableLibraryTracks[Math.floor(Math.random() * availableLibraryTracks.length)];
+          // mark advancing so pause handlers ignore transient pauses
+          advancingRef.current = true;
+          try { audio.pause(); } catch {}
+          try { audio.currentTime = 0; } catch {}
+          try { audio.src = ''; } catch {}
           dispatch({ 
             type: 'PLAY_TRACK', 
             payload: { 
@@ -714,15 +720,24 @@ export const MusicPlayerProvider: React.FC<MusicPlayerProviderProps> = ({ childr
         }
       }
       
-  // Normal next track behavior
+  // Normal next track behavior - mark advancing to avoid pause race
+  advancingRef.current = true;
+  try { audio.pause(); } catch {}
+  try { audio.currentTime = 0; } catch {}
+  try { audio.src = ''; } catch {}
   dispatch({ type: 'NEXT_TRACK' });
     };
 
     const handlePlay = () => {
+      // Clear advancing flag when playback begins
+      advancingRef.current = false;
       dispatch({ type: 'SET_LOADING', payload: false });
     };
 
     const handlePause = () => {
+      // Ignore pause events that are part of an advance/track-change flow
+      if (advancingRef.current) return;
+
       // Only update state if it wasn't manually paused
       if (state.isPlaying) {
         dispatch({ type: 'PLAY_PAUSE' });
@@ -734,6 +749,8 @@ export const MusicPlayerProvider: React.FC<MusicPlayerProviderProps> = ({ childr
     };
 
     const handleCanPlay = () => {
+      // Clear advancing flag when new audio can play
+      advancingRef.current = false;
       dispatch({ type: 'SET_LOADING', payload: false });
     };
 
@@ -1075,10 +1092,24 @@ export const MusicPlayerProvider: React.FC<MusicPlayerProviderProps> = ({ childr
 
   // Convenience methods
   const playTrack = (track: Track, album?: Album, queue?: Track[], index?: number) => {
+    const audio = audioRef.current;
+    if (audio) {
+      advancingRef.current = true;
+      try { audio.pause(); } catch {}
+      try { audio.currentTime = 0; } catch {}
+      try { audio.src = ''; } catch {}
+    }
     dispatch({ type: 'PLAY_TRACK', payload: { track, album, queue, index } });
   };
 
   const playAlbum = (album: Album, tracks: Track[], startIndex?: number) => {
+    const audio = audioRef.current;
+    if (audio) {
+      advancingRef.current = true;
+      try { audio.pause(); } catch {}
+      try { audio.currentTime = 0; } catch {}
+      try { audio.src = ''; } catch {}
+    }
     dispatch({ type: 'PLAY_ALBUM', payload: { album, tracks, startIndex } });
   };
 
@@ -1087,10 +1118,24 @@ export const MusicPlayerProvider: React.FC<MusicPlayerProviderProps> = ({ childr
   };
 
   const nextTrack = () => {
+    const audio = audioRef.current;
+    if (audio) {
+      advancingRef.current = true;
+      try { audio.pause(); } catch {}
+      try { audio.currentTime = 0; } catch {}
+      try { audio.src = ''; } catch {}
+    }
     dispatch({ type: 'NEXT_TRACK' });
   };
 
   const previousTrack = () => {
+    const audio = audioRef.current;
+    if (audio) {
+      advancingRef.current = true;
+      try { audio.pause(); } catch {}
+      try { audio.currentTime = 0; } catch {}
+      try { audio.src = ''; } catch {}
+    }
     dispatch({ type: 'PREVIOUS_TRACK' });
   };
 
@@ -1126,6 +1171,13 @@ export const MusicPlayerProvider: React.FC<MusicPlayerProviderProps> = ({ childr
   };
 
   const playFromQueue = (index: number) => {
+    const audio = audioRef.current;
+    if (audio) {
+      advancingRef.current = true;
+      try { audio.pause(); } catch {}
+      try { audio.currentTime = 0; } catch {}
+      try { audio.src = ''; } catch {}
+    }
     dispatch({ type: 'PLAY_FROM_QUEUE', payload: index });
   };
 
