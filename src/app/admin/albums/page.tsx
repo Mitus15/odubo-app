@@ -1,5 +1,5 @@
 import AdminNavigation from '@/components/AdminNavigation';
-import AlbumsClient from '@/components/AlbumsClient';
+import AlbumsClientWrapper from './AlbumsClientWrapper';
 import { queryDatabase } from '@/lib/db';
 
 async function getAlbums() {
@@ -25,7 +25,7 @@ export default async function AdminAlbumsPage() {
           <p className="text-gray-400">Create albums and upload tracks in one workflow</p>
         </div>
         
-        <AlbumsClient albums={albums} />
+        <AlbumsClientWrapper albums={albums} />
       </div>
     </div>
   );

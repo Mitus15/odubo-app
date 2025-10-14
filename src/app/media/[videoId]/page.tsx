@@ -1,7 +1,7 @@
 import { queryDatabase } from '@/lib/db';
 import { notFound } from "next/navigation";
 import { Video } from "../types";
-import VideoPlayerClient from "../../../components/VideoPlayerClient";
+import VideoPlayerClientWrapper from './VideoPlayerClientWrapper';
 import Image from 'next/image';
 
 export const runtime = 'edge';
@@ -104,7 +104,7 @@ export default async function VideoPage({ params }: VideoPageProps) {
           <div className="absolute inset-0 bg-gradient-to-br from-[#171616]/80 via-[#171616]/90 to-[#302927]/80" />
         </div>
       )}
-      <VideoPlayerClient 
+      <VideoPlayerClientWrapper 
         video={video} 
         relatedVideos={relatedVideos}
       />

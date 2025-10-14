@@ -81,7 +81,9 @@ export async function GET() {
     }));
 
     const res = NextResponse.json({ success: true, videos: transformedVideos });
-    res.headers.set('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=600');
+    res.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');
+    res.headers.set('CDN-Cache-Control', 'public, max-age=300');
+    res.headers.set('Vary', 'Accept-Encoding');
     return res;
   } catch (error) {
     console.error('Error fetching videos:', error);

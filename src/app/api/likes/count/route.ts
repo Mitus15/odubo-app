@@ -50,7 +50,9 @@ export async function GET(req: NextRequest) {
       success: true,
       count: result[0]?.count || 0
     });
-    res.headers.set('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=600');
+    res.headers.set('Cache-Control', 'public, max-age=15, s-maxage=60, stale-while-revalidate=120');
+    res.headers.set('CDN-Cache-Control', 'public, max-age=60');
+    res.headers.set('Vary', 'Accept-Encoding');
     return res;
   } catch (error) {
     console.error('Error fetching like count:', error);

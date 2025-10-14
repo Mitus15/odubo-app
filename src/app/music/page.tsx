@@ -1,6 +1,8 @@
 import { queryDatabase } from '@/lib/db';
-import MusicLibrary from '@/components/MusicLibrary';
+import MusicLibraryClientWrapper from './MusicLibraryClientWrapper';
 import { Album } from '@/types/music';
+
+export const revalidate = 300; // 5 minutes
 
 async function getAlbums(): Promise<Album[]> {
   try {
@@ -30,7 +32,7 @@ export default async function MusicPage() {
       <div className="relative z-10 flex-1 overflow-hidden">
         {/* Removed test audio player in production */}
         <div className="h-full pt-3 sm:pt-4">
-          <MusicLibrary albums={albums} />
+          <MusicLibraryClientWrapper albums={albums} />
         </div>
       </div>
     </div>

@@ -1,7 +1,6 @@
 import { notFound } from 'next/navigation';
 import { queryDatabase } from '@/lib/db';
 import { Album, Track } from '@/types/music';
-// import AlbumPlayer from '@/components/AlbumPlayer';
 import AlbumPlayer from '@/components/AlbumPlayer';
 import Image from 'next/image';
 

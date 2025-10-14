@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import AlbumsClient from './AlbumsClient';
-import TracksClient from './TracksClient';
+import dynamic from 'next/dynamic';
+const AlbumsClient = dynamic(() => import('./AlbumsClient'));
+const TracksClient = dynamic(() => import('./TracksClient'));
 import { Album, Track } from '@/types/music';
 
 type LibraryTab = 'albums' | 'tracks';

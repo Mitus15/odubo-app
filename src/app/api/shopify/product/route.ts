@@ -9,74 +9,46 @@ export async function GET(req: NextRequest) {
     const handle = req.nextUrl.searchParams.get('handle');
     if (!handle) return NextResponse.json({ error: 'Missing handle' }, { status: 400 });
 
-    // Use Storefront API to fetch product by handle
+    const endpoint = `${STORE_URL}/api/2024-07/graphql.json`;
     const query = `#graphql
       query ProductByHandle($handle: String!) {
         productByHandle(handle: $handle) {
           id
           title
-          handle
           description
-          images(first: 10) { edges { node { src: url } } }
-          options { name values }
-          variants(first: 100) {
-            edges {
-              node {
-                id
-                title
-                availableForSale
-                quantityAvailable
-                price: priceV2 { amount currencyCode }
-                image { src: url }
-                selectedOptions { name value }
-              }
-            }
+          handle
+          images(first: 4) { edges { node { url } } }
+          variants(first: 10) {
+            edges { node { id title price currencyCode availableForSale quantityAvailable image { url } } }
           }
         }
       }
     `;
-
-    const res = await fetch(`${STORE_URL}/api/2024-10/graphql.json`, {
+    const res = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'X-Shopify-Storefront-Access-Token': PUBLIC_TOKEN,
       },
       body: JSON.stringify({ query, variables: { handle } }),
-      cache: 'no-store',
+      next: { revalidate: 300 },
     });
-
     if (!res.ok) {
       const txt = await res.text();
       return NextResponse.json({ error: `Shopify error ${res.status}`, detail: txt }, { status: 500 });
     }
-
     const data = await res.json() as any;
-    const p = data?.data?.productByHandle;
-    if (!p) return NextResponse.json({ error: 'Product not found' }, { status: 404 });
-
-    const product = {
-      id: p.id,
-      title: p.title,
-      handle: p.handle,
-      description: p.description,
-      images: (p.images?.edges || []).map((e: any) => ({ src: e.node.src })),
-      options: (p.options || []).map((o: any) => ({ name: o.name, values: o.values })),
-      variants: (p.variants?.edges || []).map((e: any) => ({
-        id: e.node.id,
-        title: e.node.title,
-        available: e.node.availableForSale,
-        quantityAvailable: e.node.quantityAvailable,
-        price: e.node.price.amount,
-        currency: e.node.price.currencyCode,
-        image: e.node.image ? { src: e.node.image.src } : null,
-        selectedOptions: Object.fromEntries((e.node.selectedOptions || []).map((so: any) => [so.name, so.value]))
-      }))
-    };
-
-    return NextResponse.json(product, { headers: { 'Cache-Control': 'no-store' } });
+    const product = data?.data?.productByHandle || null;
+    return NextResponse.json(product, {
+      headers: {
+        'Cache-Control': 'public, max-age=300, s-maxage=600',
+        'CDN-Cache-Control': 'public, max-age=600',
+        'Vary': 'Accept-Encoding'
+      }
+    });
   } catch (e) {
-    return NextResponse.json({ error: 'Unexpected error' }, { status: 500 });
+    const errorMsg = e instanceof Error ? e.message : 'Unexpected error';
+    return NextResponse.json({ error: 'Unexpected error', detail: errorMsg }, { status: 500 });
   }
 }
 

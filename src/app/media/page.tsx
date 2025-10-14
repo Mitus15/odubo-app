@@ -1,5 +1,7 @@
 import { queryDatabase } from '@/lib/db';
-import VideoLibrary from '@/components/VideoLibrary';
+import VideoLibraryClientWrapper from './VideoLibraryClientWrapper';
+
+export const revalidate = 300; // 5 minutes
 
 interface Video {
   id: number;
@@ -37,7 +39,7 @@ export default async function MediaPage() {
     <div className="flex flex-col h-full min-h-0">
       <div className="fixed inset-0 -z-10 bg-gradient-to-br from-stone-950 via-stone-900 to-red-950" />
       <div className="relative z-10 flex-1 min-h-0 overflow-hidden p-4">
-        <VideoLibrary videos={videos} />
+        <VideoLibraryClientWrapper videos={videos} />
       </div>
     </div>
   );

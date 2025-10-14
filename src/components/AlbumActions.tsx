@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { Album } from '@/types/music';
-import AlbumModal from './AlbumModal';
+import dynamic from 'next/dynamic';
+const AlbumModal = dynamic(() => import('./AlbumModal'));
 
 interface AlbumActionsProps {
   album: Album;

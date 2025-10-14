@@ -2,7 +2,12 @@
 
 import { useState } from 'react';
 import NowPlayingBar from './NowPlayingBar';
-import FullScreenMusicPlayer from '@/components/FullScreenMusicPlayer';
+import dynamic from 'next/dynamic';
+
+const FullScreenMusicPlayer = dynamic(() => import('@/components/FullScreenMusicPlayer'), {
+  ssr: false,
+  loading: () => null,
+});
 
 export default function MusicPlayerLayout() {
   const [isFullScreenOpen, setIsFullScreenOpen] = useState(false);
