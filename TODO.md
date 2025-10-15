@@ -40,5 +40,17 @@ This document tracks issues, features, and technical debt to revisit later.
   // TODO: Add UI for changing password when logged in
   // TODO: Add error boundary or global error handling for auth flows
   // TODO: Add 2FA or advanced security features if required
-  
+
+## New Feature: Event Gallery (Moments)
+- [ ] Product spec drafted in `docs/product-gallery-moments-spec.md`
+- [ ] DB: galleries, gallery_photos tables + indexes
+- [ ] API: create gallery, resolve by code, upload photo, list photos, admin moderation
+- [ ] Client: Join (code/QR), Capture (camera + compression), Live Feed grid, Admin moderation UI
+- [ ] Real-time: polling MVP; evaluate SSE/WebSocket later
+- [ ] Storage: R2 objects + thumbnails, CDN cache headers
+- [ ] Security: time window enforcement, rate limits, consent, EXIF strip, moderation
+- [ ] UX: QR sharing, time-left indicator, slideshow/live wall optional
+- [ ] Performance: client compression, lazy thumbs, ETag polling
+- [ ] Open questions: visibility default, retention, watermark, attendee identity, live wall scope
+
 Add more items as needed!
