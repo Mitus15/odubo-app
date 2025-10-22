@@ -6,7 +6,7 @@
 export default {
   async fetch(request: Request, env: any) {
     try {
-      const payload = await request.json().catch(() => null);
+      const payload: any = await request.json().catch(() => null);
       if (!payload) return new Response('no payload', { status: 400 });
 
       // Expecting a record structure similar to S3/R2 notifications with Records array

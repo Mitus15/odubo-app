@@ -1,15 +1,16 @@
 import HomePageClient from '@/app/HomePageClient';
 
+export const revalidate = 86400; // refresh once per day (24h)
+
 // Server-side verse fetching function
 async function getVerse() {
   try {
     const timestamp = Date.now().toString();
     const requestId = Math.random().toString(36).substring(7);
 
-    // Use absolute URL resolved from headers/env to avoid server-relative fetch issues
-    const getBaseUrl = (await import('@/lib/getBaseUrl')).default;
-    const hdrs = await import('next/headers').then(m => m.headers());
-    const baseUrl = getBaseUrl(hdrs as any);
+    // Resolve base URL from environment only to avoid request-scoped APIs during SSG
+    const envBase = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+    const baseUrl = String(envBase).replace(/\/$/, '');
     let response: Response | null = null;
     try {
       response = await fetch(`${baseUrl}/api/gemini`, {
@@ -18,7 +19,8 @@ async function getVerse() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ action: 'getVerse', timestamp, requestId }),
-        cache: 'no-store'
+        // Let Next.js cache this fetch for the ISR period declared above
+        next: { revalidate: 86400 }
       });
     } catch (err) {
       console.error('Absolute /api/gemini fetch threw:', err, 'baseUrl:', baseUrl);
@@ -39,7 +41,7 @@ async function getVerse() {
       throw new Error('Failed to fetch verse');
     }
 
-  const data = await response.json() as {
+    const data = await response.json() as {
       text?: string;
       reference?: string;
       note?: string;
