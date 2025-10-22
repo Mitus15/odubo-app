@@ -1,10 +1,9 @@
 import { getUserFromRequest, isAdminUser } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
-export const runtime = 'edge';
-import { uploadFileOrganized } from "@/worker/upload";
-import { VideoType } from "@/lib/fileOrganization";
+export const runtime = 'nodejs';
 import CloudflareStreamAPI from "@/lib/cloudflareStream";
 import { rateLimit } from "@/lib/rateLimit";
+import { executeQuery } from "@/lib/db";
 
 // Configure larger request size limit for video uploads
 export const maxDuration = 900; // 15 minutes timeout for 20GB uploads
@@ -23,139 +22,72 @@ export async function POST(req: NextRequest) {
   try {
     // Get the request body as FormData
     const formData = await req.formData();
-    
+
     // Extract files
     const videoFile = formData.get("file") as File | null;
-    const posterFile = formData.get("poster") as File | null;
-    
     if (!videoFile) {
       return NextResponse.json({ error: "Missing video file" }, { status: 400 });
     }
 
     // Extract metadata fields
-    const title = formData.get("title") as string || "";
-    const artist_name = formData.get("artist_name") as string || "";
-    const description = formData.get("description") as string || "";
-    const thumbnail = formData.get("thumbnail") as string || "";
-    const duration = formData.get("duration") as string || "";
-    const category = formData.get("category") as string || "";
+    const title = (formData.get("title") as string) || "";
+    const artist_name = (formData.get("artist_name") as string) || "";
+    const description = (formData.get("description") as string) || "";
+    const category = (formData.get("category") as string) || "";
     const is_public = formData.get("is_public") === "true" || formData.get("is_public") === "1" ? 1 : 0;
-    const type = formData.get("type") as string || "";
-    const mood = formData.get("mood") as string || "";
-    const credits = formData.get("credits") as string || "";
-    const related_projects = formData.get("related_projects") as string || "";
+    const type = (formData.get("type") as string) || "";
+    const mood = (formData.get("mood") as string) || "";
+    const credits = (formData.get("credits") as string) || "";
+    const related_projects = (formData.get("related_projects") as string) || "";
 
-    console.log("Received video upload:", { title, type, category, videoFileName: videoFile.name });
+    // Upload directly to Cloudflare Stream
+    const streamAPI = new CloudflareStreamAPI();
+    const siteOrigin = process.env.NEXT_PUBLIC_SITE_URL ? [process.env.NEXT_PUBLIC_SITE_URL] : undefined;
 
-    // Generate stable UID for this video (used for storage and DB)
-    const videoId = `video_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
-    // Map type to our video type system
-    const videoType: VideoType = type === 'music-video' ? 'music-video' : 
-                                 type === 'short-film' ? 'short-film' : 
-                                 'feature';
+    const uploadResult = await streamAPI.uploadVideo(videoFile, {
+      name: title || videoFile.name,
+      requireSignedURLs: !(is_public === 1),
+      allowedOrigins: siteOrigin,
+      meta: {
+        title: title || videoFile.name,
+        creator: artist_name || '',
+        artist_name,
+        description,
+        category,
+        type,
+        mood,
+        credits,
+        related_projects,
+        tags: [category, type, mood].filter(Boolean).join(','),
+        uploadedAt: new Date().toISOString(),
+      },
+    });
 
-    // Upload video file using organized system
-    const videoArrayBuffer = await videoFile.arrayBuffer();
-    const videoUint8Array = new Uint8Array(videoArrayBuffer);
-    
-    const videoUploadResult = await uploadFileOrganized(
-      videoUint8Array,
-      videoFile.name,
-      videoFile.type,
-      {
-        fileType: 'video',
-        videoId,
-        videoType,
-        fileName: videoFile.name
-      }
-    );
+    const streamVideoId = uploadResult.result.uid;
 
-    if (!videoUploadResult.success) {
-      return NextResponse.json(
-        { error: `Video upload failed: ${videoUploadResult.error}` },
-        { status: 500 }
-      );
-    }
+    // Prefer Stream embed URL (or HLS if you use custom player)
+    const embedUrl = streamAPI.getEmbedUrl(streamVideoId);
+    const posterUrl = streamAPI.getThumbnailUrl(streamVideoId);
 
-    let videoUrl = videoUploadResult.url!;
-    let posterUrl = "";
-    let streamVideoId: string | null = null;
+    // Duration as mm:ss if available
+    const seconds = Number(uploadResult.result.duration || 0);
+    const duration = seconds > 0 ? `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}` : '';
 
-    // Upload poster if provided
-    if (posterFile) {
-      console.log("Uploading poster file:", posterFile.name);
-      
-      const posterArrayBuffer = await posterFile.arrayBuffer();
-      const posterUint8Array = new Uint8Array(posterArrayBuffer);
-      
-      const posterUploadResult = await uploadFileOrganized(
-        posterUint8Array,
-        posterFile.name,
-        posterFile.type,
-        {
-          fileType: 'video-poster',
-          videoId,
-          fileName: posterFile.name
-        }
-      );
+    // Insert video metadata into D1 videos table (consolidated)
+    const sql = `INSERT INTO videos (
+      uid, title, artist_name, description, url, poster_url, thumbnail, duration,
+      category, is_public, type, mood, credits, related_projects, status, stream_video_id,
+      created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'published', ?, datetime('now'), datetime('now'))`;
 
-      if (posterUploadResult.success) {
-        posterUrl = posterUploadResult.url!;
-      } else {
-        console.warn(`Poster upload failed: ${posterUploadResult.error}`);
-      }
-    }
-
-    // If Cloudflare Stream credentials are present, ingest the uploaded R2 video into Stream
-    try {
-      if (process.env.CLOUDFLARE_ACCOUNT_ID && (process.env.CLOUDFLARE_STREAM_API_TOKEN || process.env.CLOUDFLARE_API_TOKEN)) {
-        const streamAPI = new CloudflareStreamAPI();
-        const siteOrigin = process.env.NEXT_PUBLIC_SITE_URL ? [process.env.NEXT_PUBLIC_SITE_URL] : undefined;
-        const copyRes = await streamAPI.uploadFromUrl(videoUrl, {
-          name: title || videoFile.name,
-          requireSignedURLs: !(is_public === 1),
-          allowedOrigins: siteOrigin,
-          meta: {
-            title: title || videoFile.name,
-            creator: artist_name || '',
-            artist_name,
-            description,
-            category,
-            type,
-            mood,
-            credits,
-            related_projects,
-            tags: [category, type, mood].filter(Boolean).join(','),
-            uploadedAt: new Date().toISOString(),
-          },
-        });
-        streamVideoId = copyRes.result.uid;
-        // Prefer Stream embed URL so the player auto-detects Stream
-        videoUrl = `https://iframe.videodelivery.net/${streamVideoId}`;
-        // If no explicit poster provided later, we can use Stream's thumbnail
-        if (!posterFile) {
-          posterUrl = `https://videodelivery.net/${streamVideoId}/thumbnails/thumbnail.jpg`;
-        }
-      }
-    } catch (streamErr) {
-      console.error("Cloudflare Stream ingestion failed, keeping R2 URL:", streamErr);
-    }
-
-    // Insert video metadata into D1 videos table
-    // Try with extended schema first (including artist_name, status, stream_video_id), fall back if columns don't exist
-    let sql, params;
-    
-    // First attempt with new schema including uid, artist_name, status and stream_video_id
-    sql = `INSERT INTO videos (uid, title, artist_name, description, url, poster_url, thumbnail, duration, category, is_public, type, mood, credits, related_projects, status, stream_video_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'published', ?, ?)`;
-    params = [
-      videoId,
+    const params = [
+      streamVideoId, // use Stream UID as our uid
       title || videoFile.name,
       artist_name,
       description,
-      videoUrl,
+      embedUrl,
       posterUrl,
-      thumbnail,
+      posterUrl, // thumbnail
       duration,
       category,
       is_public,
@@ -164,73 +96,21 @@ export async function POST(req: NextRequest) {
       credits,
       related_projects,
       streamVideoId,
-      new Date().toISOString()
     ];
 
-    const dbUrl = process.env.DATABASE_URL;
-    if (!dbUrl) {
-      return NextResponse.json({ error: "DATABASE_URL is not set" }, { status: 500 });
-    }
+    await executeQuery(sql, params);
 
-    let d1Response = await fetch(`${dbUrl}/execute`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(process.env.CLOUDFLARE_D1_API_TOKEN ? { "Authorization": `Bearer ${process.env.CLOUDFLARE_D1_API_TOKEN}` } : {})
-      },
-      body: JSON.stringify({ sql, params }),
-    });
-
-    let d1Data = await d1Response.json() as { success?: boolean; [key: string]: any };
-    
-    // If the first attempt fails (likely due to missing columns), try fallback schema
-    if (!d1Response.ok || d1Data.success === false) {
-      console.log('First attempt failed, trying fallback schema without artist_name and status...');
-      
-      // Fall back to original schema without uid, artist_name, status, stream_video_id
-      sql = `INSERT INTO videos (title, description, url, poster_url, thumbnail, duration, category, is_public, type, mood, credits, related_projects, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-      params = [
-        title || videoFile.name,
-        description,
-        videoUrl,
-        posterUrl,
-        thumbnail,
-        duration,
-        category,
-        is_public,
-        type,
-        mood,
-        credits,
-        related_projects,
-        new Date().toISOString()
-      ];
-
-      d1Response = await fetch(`${dbUrl}/execute`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(process.env.CLOUDFLARE_D1_API_TOKEN ? { "Authorization": `Bearer ${process.env.CLOUDFLARE_D1_API_TOKEN}` } : {})
-        },
-        body: JSON.stringify({ sql, params }),
-      });
-
-      d1Data = await d1Response.json() as { success?: boolean; [key: string]: any };
-    }
-    if (!d1Response.ok || d1Data.success === false) {
-      return NextResponse.json({ error: "Files uploaded but DB insert failed", details: d1Data }, { status: 500 });
-    }
-
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
-      message: "Video uploaded and recorded.",
+      message: "Video uploaded to Cloudflare Stream and recorded.",
       video: {
-        uid: videoId,
+        uid: streamVideoId,
         title: title || videoFile.name,
         artist_name,
         description,
-        url: videoUrl,
-        poster_url: posterUrl || '',
-        thumbnail: thumbnail || posterUrl || '',
+        url: embedUrl,
+        poster_url: posterUrl,
+        thumbnail: posterUrl,
         duration,
         category,
         is_public,
@@ -239,6 +119,7 @@ export async function POST(req: NextRequest) {
         credits,
         related_projects,
         status: 'published',
+        stream_video_id: streamVideoId,
         created_at: new Date().toISOString()
       }
     }, { status: 200 });

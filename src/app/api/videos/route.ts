@@ -1,7 +1,7 @@
 import { executeQuery, queryDatabase } from '@/lib/db';
 import { getUserFromRequest, isAdminUser } from '@/lib/auth';
 import { NextRequest, NextResponse } from 'next/server';
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 import { deleteFile } from '@/worker/upload';
 import { z } from 'zod';
 
@@ -31,6 +31,7 @@ export async function GET() {
           related_projects,
           COALESCE(status, 'published') as status,
           COALESCE(stream_video_id, '') as stream_video_id,
+          COALESCE(publication_status, 'archived') as publication_status,
           created_at,
           COALESCE(updated_at, created_at) as updated_at
         FROM videos 
@@ -66,6 +67,7 @@ export async function GET() {
         artist_name: video.artist_name || '',
         status: video.status || 'published',
         stream_video_id: video.stream_video_id || '',
+        publication_status: video.publication_status || 'archived',
         updated_at: video.updated_at || video.created_at || new Date().toISOString(),
         thumbnail_url: video.thumbnail_url || video.poster_url || video.thumbnail || ''
       }));
@@ -109,6 +111,7 @@ const videoCreateSchema = z.object({
   credits: z.union([z.string(), z.array(z.any())]).optional().default('[]'),
   related_projects: z.union([z.string(), z.array(z.any())]).optional().default('[]'),
   status: z.string().optional().default('draft'),
+  publication_status: z.enum(['live','archived']).optional().default('archived'),
 });
 
 export async function POST(req: NextRequest) {
@@ -138,6 +141,7 @@ export async function POST(req: NextRequest) {
     const credits = typeof body.credits === 'string' ? body.credits : JSON.stringify(body.credits || []);
     const related_projects = typeof body.related_projects === 'string' ? body.related_projects : JSON.stringify(body.related_projects || []);
     const status = (body.status || 'draft').trim();
+    const publication_status: 'live' | 'archived' = (body.publication_status || 'archived') as any;
 
     if (!title || !url) {
       return NextResponse.json(
@@ -148,8 +152,8 @@ export async function POST(req: NextRequest) {
 
     await executeQuery(
       `INSERT INTO videos (
-        title, artist_name, description, url, poster_url, thumbnail, duration, category, is_public, type, mood, credits, related_projects, status, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
+        title, artist_name, description, url, poster_url, thumbnail, duration, category, is_public, type, mood, credits, related_projects, status, publication_status, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
       [
         title,
         artist_name,
@@ -164,7 +168,8 @@ export async function POST(req: NextRequest) {
         mood,
         credits,
         related_projects,
-        status || 'draft'
+        status || 'draft',
+        publication_status
       ]
     );
 

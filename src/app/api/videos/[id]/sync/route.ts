@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromRequest, isAdminUser } from '@/lib/auth';
 import { queryDatabase } from '@/lib/db';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 function buildStreamMeta(row: any): Record<string, any> {
   const credits = row.credits ? (typeof row.credits === 'string' ? row.credits : JSON.stringify(row.credits)) : '';

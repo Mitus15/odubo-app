@@ -1,14 +1,19 @@
 import { getUserByEmail } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 import CloudflareStreamAPI from "@/lib/cloudflareStream";
+import { getUserFromRequest, isAdminUser } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
-  // Authenticate user
-  const email = req.headers.get("x-user-email") || req.headers.get("X-User-Email");
-  const user = await getUserByEmail(email || "");
-  if (!user) {
-    return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+  // Authenticate user (prefer token)
+  const authUser = getUserFromRequest(req);
+  if (!isAdminUser(authUser)) {
+    // fallback to legacy header
+    const email = req.headers.get("x-user-email") || req.headers.get("X-User-Email");
+    const user = await getUserByEmail(email || "");
+    if (!user) {
+      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+    }
   }
 
   try {
@@ -20,7 +25,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Check if Cloudflare Stream is configured
-    if (!process.env.CLOUDFLARE_ACCOUNT_ID || !process.env.CLOUDFLARE_API_TOKEN) {
+    if (!process.env.CLOUDFLARE_ACCOUNT_ID || !(process.env.CLOUDFLARE_STREAM_API_TOKEN || process.env.CLOUDFLARE_API_TOKEN)) {
       return NextResponse.json({ error: "Cloudflare Stream not configured" }, { status: 500 });
     }
 

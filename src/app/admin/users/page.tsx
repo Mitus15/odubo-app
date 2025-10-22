@@ -5,6 +5,11 @@ import ScrollContainer from '@/components/ui/ScrollContainer';
 
 type UserRow = { id: string; email: string; username: string; role?: string; is_admin?: number | boolean; email_verified?: number | boolean; created_at?: string };
 
+// API response types
+type UsersResponse = { users: UserRow[] };
+type ErrorResponse = { error: string };
+type InviteResponse = { invite: { token: string } } | ErrorResponse;
+
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<UserRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -16,9 +21,12 @@ export default function AdminUsersPage() {
     setLoading(true); setError(null);
     try {
       const res = await fetch('/api/admin/users', { cache: 'no-store' });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || 'Failed');
-      setUsers(data.users || []);
+      const data = (await res.json()) as UsersResponse | ErrorResponse;
+      if (!res.ok) {
+        const msg = (data as ErrorResponse).error || 'Failed';
+        throw new Error(msg);
+      }
+      setUsers((data as UsersResponse).users || []);
     } catch (e: any) {
       setError(e.message || 'Failed to load users');
     } finally {
@@ -32,7 +40,11 @@ export default function AdminUsersPage() {
     setLoading(true);
     try {
       const res = await fetch('/api/admin/users', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId, role }) });
-      if (!res.ok) throw new Error('Role update failed');
+      const data = (await res.json()) as UsersResponse | ErrorResponse;
+      if (!res.ok) {
+        const msg = (data as ErrorResponse).error || 'Role update failed';
+        throw new Error(msg);
+      }
       await load();
     } catch (e) { alert((e as any).message || 'Failed'); } finally { setLoading(false); }
   };
@@ -41,9 +53,16 @@ export default function AdminUsersPage() {
     setInviteResult(null);
     try {
       const res = await fetch('/api/admin/invite', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: inviteEmail }) });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || 'Invite failed');
-      setInviteResult(`Invite created. Token: ${data.invite.token}`);
+      const data = (await res.json()) as InviteResponse;
+      if (!res.ok) {
+        const msg = (data as ErrorResponse).error || 'Invite failed';
+        throw new Error(msg);
+      }
+      if ('invite' in data && data.invite?.token) {
+        setInviteResult(`Invite created. Token: ${data.invite.token}`);
+      } else {
+        setInviteResult('Invite created');
+      }
     } catch (e: any) {
       setInviteResult(`Error: ${e.message}`);
     }

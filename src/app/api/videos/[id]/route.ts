@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { getUserFromRequest, isAdminUser } from '@/lib/auth';
 import { deleteFile } from '@/worker/upload';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 function toIntBoolean(value: any): number | null {
   if (value === undefined || value === null || value === '') return null;

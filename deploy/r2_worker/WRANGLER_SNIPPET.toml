@@ -1,0 +1,16 @@
+name = "odubo-r2-event-worker"
+compatibility_date = "2025-01-15"
+
+[[r2_buckets]]
+binding = "MEDIA_BUCKET"
+bucket_name = "odubo-studio-media"
+
+[vars]
+SITE_ORIGIN = "https://odubo.studio"
+THUMBNAIL_JOB_SECRET = "replace-with-secret"
+
+[bindings]
+# No KV or D1 bindings required here; the worker simply forwards notifications to your Next app
+
+# Example to deploy with wrangler:
+# wrangler publish --env production

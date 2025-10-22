@@ -46,6 +46,8 @@ type FormState = {
   poster: File | null;
 };
 
+type Candidate = { id: number; url: string; pct: number; rank: number; rationale?: string };
+
 export default function AdminVideosPage() {
   const [videos, setVideos] = useState<Video[]>([]);
   const [form, setForm] = useState<FormState>({
@@ -65,6 +67,18 @@ export default function AdminVideosPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [phase, setPhase] = useState<'form' | 'uploading' | 'analyzing' | 'awaiting_choice' | 'finalizing'>('form');
+  const [sessionId, setSessionId] = useState<number | null>(null);
+  const [candidates, setCandidates] = useState<Candidate[]>([]);
+  const [choicePct, setChoicePct] = useState<number | null>(null);
+  const [publicationStatus, setPublicationStatus] = useState<'live' | 'archived'>('archived');
+  
+  // Enhanced progress tracking
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [progressMessage, setProgressMessage] = useState('');
+  const [retryCount, setRetryCount] = useState(0);
+  const [pollingActive, setPollingActive] = useState(false);
+  const [sessionStatus, setSessionStatus] = useState<'created' | 'uploaded' | 'analyzing' | 'ready' | 'completed' | 'error'>('created');
 
   // Fetch videos (Read)
   useEffect(() => {
@@ -134,65 +148,204 @@ export default function AdminVideosPage() {
     setForm((f) => ({ ...f, related_projects: value.split(",").map((s) => s.trim()).filter(Boolean) }));
   }
 
+  // Enhanced polling function with better progress tracking
+  async function pollSessionStatus(sessionId: number, maxAttempts = 30, intervalMs = 2000): Promise<boolean> {
+    setPollingActive(true);
+    setRetryCount(0);
+    
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        setRetryCount(attempt);
+        setProgressMessage(`Checking thumbnail progress... (${attempt}/${maxAttempts})`);
+        
+        const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+        const authHeaders: Record<string, string> = {};
+        if (token) {
+          try {
+            JSON.parse(atob(token.split(".")[1]));
+            authHeaders["Authorization"] = `Bearer ${token}`;
+          } catch {}
+        }
+
+        // Check session status
+        const statusRes = await fetch(`/api/videos/upload-session/status?sessionId=${sessionId}`, {
+          headers: authHeaders
+        });
+        
+        if (statusRes.ok) {
+          const statusData = await statusRes.json() as any;
+          setSessionStatus(statusData.status || 'created');
+          
+          if (statusData.status === 'error') {
+            throw new Error(statusData.message || 'Session processing failed');
+          }
+        }
+
+        // Check for candidates
+        const candRes = await fetch(`/api/videos/thumbnail/candidates?sessionId=${sessionId}`, { 
+          headers: authHeaders 
+        });
+        
+        if (candRes.ok) {
+          const data = await candRes.json() as any;
+          const candidateList = (data.candidates || []) as any[];
+          
+          if (candidateList.length > 0) {
+            const mappedCandidates = candidateList.map((c: any) => ({ 
+              id: Number(c.id), 
+              url: c.url, 
+              pct: Number(c.pct ?? 0.5), 
+              rank: Number(c.rank ?? 0), 
+              rationale: c.rationale 
+            }));
+            
+            setCandidates(mappedCandidates);
+            setSessionStatus('ready');
+            setProgressMessage(`Found ${candidateList.length} thumbnail candidates!`);
+            setPollingActive(false);
+            return true;
+          }
+        }
+        
+        // Update progress based on attempt number
+        const progressPercent = Math.min((attempt / maxAttempts) * 80, 80); // Cap at 80% until completion
+        setUploadProgress(progressPercent);
+        
+        if (attempt < maxAttempts) {
+          await new Promise(resolve => setTimeout(resolve, intervalMs));
+        }
+        
+      } catch (error: any) {
+        console.error(`Polling attempt ${attempt} failed:`, error);
+        setProgressMessage(`Error on attempt ${attempt}: ${error.message}`);
+        
+        if (attempt === maxAttempts) {
+          throw error;
+        }
+        
+        // Exponential backoff for retries
+        const backoffMs = Math.min(intervalMs * Math.pow(1.5, attempt - 1), 10000);
+        await new Promise(resolve => setTimeout(resolve, backoffMs));
+      }
+    }
+    
+    setPollingActive(false);
+    throw new Error(`Timeout: No thumbnail candidates found after ${maxAttempts} attempts`);
+  }
+
   // Create or Update video
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError("");
+    
+    // Reset progress states
+    setUploadProgress(0);
+    setProgressMessage('');
+    setRetryCount(0);
+    setSessionStatus('created');
+    
     try {
       const method = editingId ? "PUT" : "POST";
-      const endpoint = editingId ? `/api/videos/${editingId}` : "/api/videos/upload";
-      let body: FormData | string;
-      let headers: Record<string, string> = {};
-      if (!editingId && (form.file || form.poster)) {
-        body = new FormData();
-        if (form.file) body.append("file", form.file);
-        if (form.poster) body.append("poster", form.poster);
-        body.append("title", form.title);
-        body.append("artist_name", "");
-        body.append("description", form.description);
-        body.append("thumbnail", form.thumbnail);
-        body.append("duration", form.duration);
-        body.append("category", form.category);
-        body.append("is_public", String(form.is_public));
-        body.append("type", form.type);
-        body.append("mood", form.mood);
-        body.append("credits", JSON.stringify(form.credits));
-        body.append("related_projects", JSON.stringify(form.related_projects));
-      } else {
-        // Metadata-only create/update (no file changes)
-        const payload: any = { ...form } as any;
-        delete payload.file;
-        delete payload.poster;
-        // Normalize booleans and arrays
-        (payload as any).is_public = !!payload.is_public;
-        (payload as any).credits = form.credits;
-        (payload as any).related_projects = form.related_projects;
-        body = JSON.stringify(payload);
-        headers["Content-Type"] = "application/json";
-      }
-      const res = await fetch(endpoint, {
-        method,
-        headers: {
-          ...headers,
-          // Add user email from token for authentication
-          ...((() => {
-            const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-            if (token) {
-              try {
-                const payload = JSON.parse(atob(token.split(".")[1]));
-                return { "x-user-email": payload.email };
-              } catch (e) {
-                console.error("Failed to decode token:", e);
+
+      // If creating with a file, prefer direct-to-Stream flow for progress and resilience
+      if (!editingId && form.file) {
+        setPhase('uploading');
+        // 1) Request a Stream direct upload URL with metadata
+        const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+        const authHeaders: Record<string, string> = {};
+        if (token) {
+          try {
+            JSON.parse(atob(token.split(".")[1]));
+            authHeaders["Authorization"] = `Bearer ${token}`;
+          } catch {}
+        }
+
+        const metaPayload = {
+          title: form.title,
+          artist_name: "",
+          description: form.description,
+          category: form.category,
+          is_public: form.is_public,
+          type: form.type,
+          mood: form.mood,
+          credits: form.credits,
+          related_projects: form.related_projects,
+        };
+        const duRes = await fetch('/api/videos/stream/direct-upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...authHeaders },
+          body: JSON.stringify(metaPayload),
+        });
+        if (!duRes.ok) throw new Error('Failed to create Stream upload URL');
+        const duJson = await duRes.json() as any;
+        const uploadURL = duJson.uploadURL as string;
+        const uid = duJson.uid as string;
+
+        // 2) Upload file directly to Stream
+        const uploadForm = new FormData();
+        uploadForm.append('file', form.file);
+        await fetch(uploadURL, { method: 'POST', body: uploadForm });
+
+        // 3) Create an upload session (no DB video row yet)
+        const createRes = await fetch('/api/videos/upload-session/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...authHeaders },
+          body: JSON.stringify({ uid, meta: metaPayload }),
+        });
+        if (!createRes.ok) throw new Error('Failed to create upload session');
+        const { sessionId } = await createRes.json() as any;
+        setSessionId(sessionId);
+
+        // 4) Trigger thumbnail suggestion job (stubbed for now)
+        setPhase('analyzing');
+        const suggestRes = await fetch('/api/videos/thumbnail/suggest', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...authHeaders },
+          body: JSON.stringify({ sessionId }),
+        });
+        if (!suggestRes.ok) throw new Error('Failed to start thumbnail suggestion');
+
+        // 5) Poll for candidates
+        const poll = async () => {
+          for (let i = 0; i < 15; i++) { // ~15 * 1s = 15s max
+            const candRes = await fetch(`/api/videos/thumbnail/candidates?sessionId=${sessionId}`, { headers: { ...authHeaders } });
+            if (candRes.ok) {
+              const data = await candRes.json() as any;
+              const list = (data.candidates || []) as any[];
+              if (list.length > 0) {
+                setCandidates(list.map((c: any) => ({ id: Number(c.id), url: c.url, pct: Number(c.pct ?? 0.5), rank: Number(c.rank ?? 0), rationale: c.rationale })));
+                setPhase('awaiting_choice');
+                return;
               }
             }
-            return {};
-          })())
-        },
-        body,
-      } as any);
+            await new Promise(r => setTimeout(r, 1000));
+          }
+          throw new Error('Timed out waiting for thumbnail candidates');
+        };
+        await poll();
+        setLoading(false);
+        return; // stop here; user must choose thumbnail then finalize below
+      }
+
+      // Fallback to existing paths (metadata-only create or update)
+      const endpoint = editingId ? `/api/videos/${editingId}` : "/api/videos";
+      let body: FormData | string;
+      let headers: Record<string, string> = {};
+      // Metadata-only create/update
+      const payload: any = { ...form } as any;
+      delete payload.file;
+      delete payload.poster;
+      (payload as any).is_public = !!payload.is_public;
+      (payload as any).credits = form.credits;
+      (payload as any).related_projects = form.related_projects;
+      payload.publication_status = publicationStatus;
+      body = JSON.stringify(payload);
+      headers["Content-Type"] = "application/json";
+
+      const res = await fetch(endpoint, { method, headers, body } as any);
       if (!res.ok) throw new Error("Failed to save video");
-      // Reload list to ensure consistency across schema variants
+      // Reload list
       await fetch("/api/videos").then(r => r.json()).then((d: any) => {
         const list = (d.videos || []) as any[];
         const normalized: Video[] = list.map((v: any) => ({
@@ -223,7 +376,7 @@ export default function AdminVideosPage() {
         duration: "",
         category: "",
         is_public: true,
-        type: "music video",
+        type: "music-video",
         mood: "neutral",
         credits: [],
         related_projects: [],
@@ -238,6 +391,75 @@ export default function AdminVideosPage() {
     }
   }
 
+  async function handleFinalize() {
+    if (!sessionId) return;
+    setLoading(true);
+    setPhase('finalizing');
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      const authHeaders: Record<string, string> = {};
+      if (token) {
+        try { JSON.parse(atob(token.split(".")[1])); authHeaders["Authorization"] = `Bearer ${token}`; } catch {}
+      }
+      const res = await fetch('/api/videos/finalize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
+        body: JSON.stringify({ sessionId, selectedTimestampPct: choicePct ?? undefined, publication_status: publicationStatus }),
+      });
+      if (!res.ok) throw new Error('Failed to finalize video');
+
+      // Refresh list and reset UI
+      await fetch("/api/videos").then(r => r.json()).then((d: any) => {
+        const list = (d.videos || []) as any[];
+        const normalized: Video[] = list.map((v: any) => ({
+          id: Number(v.id),
+          title: v.title || '',
+          artist_name: v.artist_name || '',
+          description: v.description || '',
+          url: v.url || v.video_url || '',
+          poster_url: v.poster_url || v.thumbnail_url || '',
+          thumbnail: v.thumbnail || v.thumbnail_url || '',
+          duration: String(v.duration || ''),
+          category: v.category || '',
+          is_public: v.is_public === 1 || v.is_public === true,
+          type: v.type || '',
+          mood: v.mood || '',
+          credits: Array.isArray(v.credits) ? v.credits : (() => { try { return JSON.parse(v.credits || '[]'); } catch { return []; } })(),
+          related_projects: Array.isArray(v.related_projects) ? v.related_projects : (() => { try { return JSON.parse(v.related_projects || '[]'); } catch { return []; } })(),
+          status: v.status || 'published',
+          created_at: v.created_at,
+          updated_at: v.updated_at,
+        }));
+        setVideos(normalized);
+      });
+
+      // Reset wizard
+      setForm({
+        title: "",
+        description: "",
+        thumbnail: "",
+        duration: "",
+        category: "",
+        is_public: true,
+        type: "music-video",
+        mood: "neutral",
+        credits: [],
+        related_projects: [],
+        file: null,
+        poster: null,
+      });
+      setSessionId(null);
+      setCandidates([]);
+      setChoicePct(null);
+      setPublicationStatus('archived');
+      setPhase('form');
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   // Edit video
   function handleEdit(video: Video) {
     setForm({
@@ -247,24 +469,29 @@ export default function AdminVideosPage() {
       duration: video.duration,
       category: video.category,
       is_public: (video.is_public as any) === true || (video.is_public as any) === 1,
-      type: String(video.type || '').toLowerCase().replace(/\s+/g, '-') || "music-video",
-      mood: (video.mood as any) || "",
+      type: String(video.type || '').toLowerCase().replace(/\s+/g, '-') || 'music-video',
+      mood: (video.mood as any) || '',
       credits: (Array.isArray(video.credits) ? video.credits : (() => { try { return JSON.parse((video.credits as any) || '[]'); } catch { return []; } })()),
       related_projects: (Array.isArray(video.related_projects) ? video.related_projects : (() => { try { return JSON.parse((video.related_projects as any) || '[]'); } catch { return []; } })()),
       file: null,
       poster: null,
     });
     setEditingId(video.id);
+    // Reset wizard phases when editing existing
+    setPhase('form');
+    setSessionId(null);
+    setCandidates([]);
+    setChoicePct(null);
   }
 
   // Delete video
   async function handleDelete(id: number) {
-    if (!confirm("Delete this video?")) return;
+    if (!confirm('Delete this video?')) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/videos/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Failed to delete video");
-      setVideos((prev) => prev.filter((v) => v.id !== id));
+      const res = await fetch(`/api/videos/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed to delete video');
+      setVideos(prev => prev.filter(v => v.id !== id));
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -300,6 +527,16 @@ export default function AdminVideosPage() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold tracking-wide">Manage Videos</h1>
       </div>
+
+      {/* Publication status selector (applies to metadata-only flow and finalize step) */}
+      <div className="mb-4">
+        <label className="block text-sm font-medium">Publication Status</label>
+        <select value={publicationStatus} onChange={(e) => setPublicationStatus(e.target.value as 'live' | 'archived')} className="mt-1 w-full px-3 py-2 rounded-md bg-[#171616] border border-[#b2a491]/20 text-[#ede8df] focus:outline-none focus:ring-1 focus:ring-[#ede8df] max-w-xs">
+          <option value="archived">Archived</option>
+          <option value="live">Live</option>
+        </select>
+      </div>
+
       <form onSubmit={handleSubmit} className="space-y-6 mb-10" encType="multipart/form-data">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <label className="block text-sm font-medium">Title
@@ -337,7 +574,7 @@ export default function AdminVideosPage() {
             <input type="file" name="file" accept="video/*" onChange={handleChange} className="mt-1 w-full px-3 py-2 rounded-md bg-[#171616] border border-[#b2a491]/20 text-[#ede8df] file:mr-3 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-[#302927] file:text-[#b2a491]" required={!editingId} />
           </label>
           <label className="block text-sm font-medium sm:col-span-2">Poster Image
-            <input type="file" name="poster" accept="image/jpeg,image/png" onChange={handleChange} className="mt-1 w-full px-3 py-2 rounded-md bg-[#171616] border border-[#b2a491]/20 text-[#ede8df] file:mr-3 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-[#302927] file:text-[#b2a491]" required={!editingId} />
+            <input type="file" name="poster" accept="image/jpeg,image/png" onChange={handleChange} className="mt-1 w-full px-3 py-2 rounded-md bg-[#171616] border border-[#b2a491]/20 text-[#ede8df] file:mr-3 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-[#302927] file:text-[#b2a491]" required={false} />
           </label>
         </div>
         <div className="block text-sm font-medium mb-1">
@@ -426,6 +663,87 @@ export default function AdminVideosPage() {
           </button>
         )}
       </form>
+
+      {/* Progress / Thumbnail workflow */}
+      <div className="mt-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold">Upload & Thumbnail Workflow</h2>
+          <div className="text-sm text-[#b2a491]">Session ID: {sessionId ?? '—'}</div>
+        </div>
+
+        {/* Progress bar & status */}
+        {(phase === 'uploading' || phase === 'analyzing' || pollingActive || phase === 'finalizing') && (
+          <div className="mt-3 p-4 rounded-md bg-[#171616] border border-[#b2a491]/20">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-3">
+                <span className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${sessionStatus === 'error' ? 'bg-red-600 text-white' : sessionStatus === 'ready' ? 'bg-green-600 text-white' : 'bg-[#b2a491]/20 text-[#ede8df]'}`}>{sessionStatus.toUpperCase()}</span>
+                <div className="text-sm text-[#ede8df]">{progressMessage || (phase === 'uploading' ? 'Uploading…' : phase === 'analyzing' ? 'Analyzing…' : 'Working…')}</div>
+              </div>
+              <div className="text-sm text-[#b2a491]">Attempts: {retryCount}</div>
+            </div>
+
+            <div className="w-full h-3 bg-[#302927] rounded overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-[#6ee7b7] to-[#60a5fa] transition-all" style={{ width: `${uploadProgress}%` }}></div>
+            </div>
+
+            <div className="mt-3 flex gap-2">
+              {pollingActive && (
+                <button className="px-3 py-2 rounded bg-red-600 text-white" onClick={() => { setPollingActive(false); setProgressMessage('Polling cancelled by user'); setSessionStatus('error'); }}>
+                  Cancel
+                </button>
+              )}
+              {!pollingActive && sessionStatus === 'error' && (
+                <button className="px-3 py-2 rounded bg-yellow-500 text-[#171616]" onClick={async () => {
+                  if (!sessionId) return; setProgressMessage('Retrying polling...'); try { await pollSessionStatus(sessionId); } catch (e:any) { setProgressMessage(e.message); }
+                }}>
+                  Retry
+                </button>
+              )}
+            </div>
+
+            <div className="mt-2 text-xs text-[#b2a491]">Tip: Uploads are resilient — you can close this panel and return later to finalize.</div>
+          </div>
+        )}
+
+        {/* Thumbnail selection phase */}
+        {phase === 'awaiting_choice' && (
+          <div className="mt-4 p-4 border border-[#b2a491]/20 rounded-xl bg-[#302927]/40">
+            <h3 className="text-md font-semibold mb-2">Choose a thumbnail</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {candidates.length === 0 && (
+                <div className="col-span-3 text-sm text-[#b2a491]">No candidates yet — try waiting a bit or uploading a longer sample.</div>
+              )}
+              {candidates.map((c) => (
+                <div key={c.id} className={`p-2 rounded-md border ${choicePct === c.pct ? 'border-[#60a5fa]' : 'border-[#b2a491]/20'} bg-[#171616]`}> 
+                  <div className="aspect-w-16 aspect-h-9 bg-black rounded overflow-hidden">
+                    <img src={c.url} alt={`thumb-${c.rank}`} className="w-full h-full object-cover" />
+                  </div>
+                  <div className="mt-2 flex items-center justify-between">
+                    <div className="text-xs text-[#b2a491]">Rank {c.rank}</div>
+                    <div className="text-xs text-[#b2a491]">Score {(c.pct*100).toFixed(0)}%</div>
+                  </div>
+                  {c.rationale && <div className="mt-1 text-xs text-[#b2a491]">{c.rationale}</div>}
+                  <div className="mt-2 flex gap-2">
+                    <button className={`flex-1 py-2 rounded ${choicePct === c.pct ? 'bg-[#60a5fa] text-white' : 'bg-[#302927] text-[#b2a491]'}`} onClick={() => setChoicePct(c.pct)}>Select</button>
+                    <button className="py-2 px-3 rounded bg-[#302927] text-[#b2a491]" onClick={() => setChoicePct(c.pct)}>Preview</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-4 flex gap-2">
+              <button type="button" onClick={handleFinalize} className="py-2 px-4 rounded-md bg-[#ede8df] text-[#171616] hover:bg-[#d9d3c9]" disabled={loading}>{loading ? 'Finalizing…' : 'Finalize and Create'}</button>
+              <button type="button" onClick={() => { setChoicePct(null); handleFinalize(); }} className="py-2 px-4 rounded-md bg-[#302927] text-[#b2a491] hover:bg-[#502d26]/60">Skip (use best)</button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Progress hints */}
+      {phase === 'uploading' && <div className="mt-4 text-sm text-[#b2a491]">Uploading to Stream…</div>}
+      {phase === 'analyzing' && <div className="mt-4 text-sm text-[#b2a491]">Analyzing and preparing thumbnail candidates…</div>}
+      {phase === 'finalizing' && <div className="mt-4 text-sm text-[#b2a491]">Finalizing…</div>}
+
       <div>
         <h2 className="text-lg font-semibold mb-2">All Videos</h2>
         {/* Card/List layout for mobile, table for sm+ */}

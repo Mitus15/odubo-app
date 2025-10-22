@@ -18,9 +18,11 @@ Object.defineProperty(window, 'performance', {
 
 // Mock PerformanceObserver
 global.PerformanceObserver = class PerformanceObserver {
+  static supportedEntryTypes: string[] = ['resource', 'mark', 'measure'];
   constructor(callback: any) {}
   observe() {}
   disconnect() {}
+  takeRecords() { return []; }
 };
 
 describe('PerformanceMonitor', () => {
