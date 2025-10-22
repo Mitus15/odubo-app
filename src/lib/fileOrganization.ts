@@ -74,3 +74,49 @@ export function sanitizeFileName(name: string) {
     .replace(/_+/g, '_')
     .replace(/^[_.-]+|[_.-]+$/g, '');
 }
+
+// Determine if a file extension is valid for a given expected type/category
+export function validateFileType(fileName: string | undefined, expectedType: string) {
+  if (!fileName) return false;
+  const ext = (fileName.split('.').pop() || '').toLowerCase();
+  const audioExts = ['mp3', 'm4a', 'aac', 'wav', 'flac', 'ogg', 'webm'];
+  const videoExts = ['mp4', 'mov', 'avi', 'mkv', 'webm', 'm4v'];
+  const imageExts = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg'];
+  const docExts = ['pdf', 'txt', 'csv'];
+
+  const type = (expectedType || '').toLowerCase();
+  if (['track', 'audio', 'song'].includes(type)) return audioExts.includes(ext);
+  if (['video', 'music-video', 'movie', 'short-film', 'feature'].includes(type)) return videoExts.includes(ext);
+  if (['album-cover', 'cover', 'poster', 'image', 'photo', 'thumbnail'].includes(type)) return imageExts.includes(ext);
+  if (['pdf', 'document', 'doc', 'txt', 'csv'].includes(type)) return docExts.includes(ext);
+  if (['gallery-photo', 'gallery-video', 'gallery'].includes(type)) {
+    return imageExts.includes(ext) || videoExts.includes(ext);
+  }
+  // Fallback: allow common media types
+  return audioExts.includes(ext) || videoExts.includes(ext) || imageExts.includes(ext) || docExts.includes(ext);
+}
+
+// Lightweight parser for known organized paths (used by migration/tests)
+export function parseFilePath(path: string) {
+  if (!path) return null;
+  const normalized = path.replace(/^\/+/, '');
+  const parts = normalized.split('/');
+  // Simple heuristics
+  if (parts[0] === 'music' && parts[1] === 'albums') {
+    const albumId = parts[2];
+    const filename = parts.slice(4).join('/');
+    return { type: 'album-track', albumId, filename };
+  }
+  if (parts[0] === 'videos') {
+    const videoType = parts[1];
+    const filename = parts.slice(2).join('/');
+    return { type: 'video', videoType, filename };
+  }
+  if (parts[0] === 'galleries') {
+    const galleryId = parts[1];
+    const kind = parts[2];
+    const filename = parts.slice(3).join('/');
+    return { type: `gallery-${kind}`, galleryId, filename };
+  }
+  return { type: 'unknown', path: normalized };
+}

@@ -6,7 +6,7 @@ import { rateLimit } from "@/lib/rateLimit";
 import { executeQuery } from "@/lib/db";
 
 // Configure larger request size limit for video uploads
-export const maxDuration = 900; // 15 minutes timeout for 20GB uploads
+export const maxDuration = 300; // 5 minutes timeout (adjusted for Vercel hobby limits)
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
