@@ -46,3 +46,31 @@ export function getMimeType(fileName: string | undefined) {
     mp4: 'video/mp4',
     webm: 'video/webm',
     mov: 'video/quicktime',
+    m4v: 'video/x-m4v',
+    avi: 'video/x-msvideo',
+    mkv: 'video/x-matroska',
+    mp3: 'audio/mpeg',
+    m4a: 'audio/mp4',
+    wav: 'audio/wav',
+    ogg: 'audio/ogg',
+    flac: 'audio/flac',
+    pdf: 'application/pdf',
+    txt: 'text/plain',
+    csv: 'text/csv',
+    svg: 'image/svg+xml'
+  };
+
+  if (!ext) return undefined;
+  return map[ext] || 'application/octet-stream';
+}
+
+// Simple filename sanitizer used by generateFilePath
+export function sanitizeFileName(name: string) {
+  // Normalize whitespace, remove control chars, and replace unsafe chars with underscore
+  return name
+    .trim()
+    .replace(/\s+/g, '_')
+    .replace(/[^a-zA-Z0-9._-]/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^[_.-]+|[_.-]+$/g, '');
+}
