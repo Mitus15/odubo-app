@@ -11,6 +11,7 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [error, setError] = useState('');
   const [mediaBlob, setMediaBlob] = useState<Blob | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   // We only support photos for now
   const [mediaType] = useState<'photo'>('photo');
   const [uploading, setUploading] = useState(false);
@@ -27,6 +28,24 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
     const u8arr = new Uint8Array(n);
     while (n--) u8arr[n] = bstr.charCodeAt(n);
     return new Blob([u8arr], { type: mime });
+  }
+
+  // Create a robust preview URL (object URL with dataURL fallback)
+  async function createPreviewURLFromBlob(blob: Blob): Promise<string> {
+    try {
+      const url = URL.createObjectURL(blob);
+      // quick sanity check via size; many failures throw, but we keep a fallback
+      if (blob.size > 0) return url;
+      URL.revokeObjectURL(url);
+    } catch {}
+    // Fallback to data URL
+    const reader = new FileReader();
+    const p = new Promise<string>((resolve) => {
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.onerror = () => resolve('');
+    });
+    reader.readAsDataURL(blob);
+    return p;
   }
 
   async function waitForVideoReady(video: HTMLVideoElement) {
@@ -154,6 +173,7 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
       maybeToBlob((blob) => {
         if (blob) {
           setMediaBlob(blob);
+          createPreviewURLFromBlob(blob).then((url) => setPreviewUrl(url || null));
           // Auto-scroll preview into view
           setTimeout(() => document.getElementById('capture-preview')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
         } else {
@@ -161,6 +181,7 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
           const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
           const blob2 = dataURLToBlob(dataUrl);
           setMediaBlob(blob2);
+          createPreviewURLFromBlob(blob2).then((url) => setPreviewUrl(url || null));
           setTimeout(() => document.getElementById('capture-preview')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
         }
       }, 'image/jpeg', 0.9);
@@ -168,6 +189,7 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
       const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
       const blob2 = dataURLToBlob(dataUrl);
       setMediaBlob(blob2);
+      createPreviewURLFromBlob(blob2).then((url) => setPreviewUrl(url || null));
       setTimeout(() => document.getElementById('capture-preview')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
     }
   }
@@ -280,7 +302,7 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
           <button onClick={takePhoto} className="px-4 py-2 rounded bg-[#ede8df] text-[#171616] hover:bg-[#d6cfc0] transition-colors">
             📸 Take Photo
           </button>
-          <button onClick={() => { setMediaBlob(null); setProgress(0); }} className="px-4 py-2 rounded bg-gray-700 hover:bg-gray-600 transition-colors">
+          <button onClick={() => { setMediaBlob(null); setPreviewUrl(null); setProgress(0); }} className="px-4 py-2 rounded bg-gray-700 hover:bg-gray-600 transition-colors">
             🗑️ Reset
           </button>
           <button 
@@ -297,7 +319,11 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
       {mediaBlob && (
         <div id="capture-preview" className="mb-3">
           <h3 className="font-semibold">Preview</h3>
-          <img src={URL.createObjectURL(mediaBlob)} alt="preview" className="mt-2 rounded max-h-96" />
+          {previewUrl ? (
+            <img src={previewUrl} alt="preview image" className="mt-2 rounded max-h-96" />
+          ) : (
+            <div className="mt-2 text-sm opacity-70">Generating preview…</div>
+          )}
         </div>
       )}
       </div>
