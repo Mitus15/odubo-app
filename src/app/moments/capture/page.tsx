@@ -16,19 +16,74 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
   const [progress, setProgress] = useState(0);
   const [cameraStarted, setCameraStarted] = useState(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
+  const [recording, setRecording] = useState(false);
+
+  function hasMediaRecorder() {
+    return typeof window !== 'undefined' && typeof (window as any).MediaRecorder !== 'undefined';
+  }
+
+  function getSupportedVideoMimeType() {
+    if (!hasMediaRecorder()) return null;
+    const candidates = [
+      'video/webm;codecs=vp9',
+      'video/webm;codecs=vp8',
+      'video/webm',
+      'video/mp4;codecs=avc1', // some Safari versions
+      'video/mp4',
+    ];
+    // @ts-ignore
+    const isTypeSupported = (window.MediaRecorder && window.MediaRecorder.isTypeSupported) ? window.MediaRecorder.isTypeSupported.bind(window.MediaRecorder) : () => false;
+    for (const t of candidates) {
+      try {
+        if (isTypeSupported(t)) return t;
+      } catch {}
+    }
+    return null;
+  }
+
+  async function waitForVideoReady(video: HTMLVideoElement) {
+    // Wait until metadata is loaded and sizes are non-zero
+    if (video.readyState >= 2 && video.videoWidth > 0 && video.videoHeight > 0) return;
+    await new Promise<void>((resolve) => {
+      const onCanPlay = () => {
+        if (video.videoWidth > 0 && video.videoHeight > 0) {
+          video.removeEventListener('loadedmetadata', onCanPlay);
+          video.removeEventListener('canplay', onCanPlay);
+          resolve();
+        }
+      };
+      video.addEventListener('loadedmetadata', onCanPlay);
+      video.addEventListener('canplay', onCanPlay);
+      // Fallback timeout just in case
+      setTimeout(() => {
+        video.removeEventListener('loadedmetadata', onCanPlay);
+        video.removeEventListener('canplay', onCanPlay);
+        resolve();
+      }, 2500);
+    });
+  }
 
   // Start the camera
   async function startCamera() {
     try {
+      if (typeof window !== 'undefined' && !window.isSecureContext) {
+        setError('Camera requires HTTPS (or localhost). Please use a secure origin.');
+        return;
+      }
+
       // Check if modern API is available
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
         const mediaStream = await navigator.mediaDevices.getUserMedia({ 
-          video: { facingMode: 'environment' },
+          video: { facingMode: { ideal: 'environment' } },
           audio: false 
         });
         
         if (videoRef.current) {
           videoRef.current.srcObject = mediaStream;
+          try {
+            await waitForVideoReady(videoRef.current);
+            await videoRef.current.play();
+          } catch {}
           setStream(mediaStream);
           setCameraStarted(true);
           setError('');
@@ -52,6 +107,10 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
         
         if (videoRef.current) {
           videoRef.current.srcObject = mediaStream;
+          try {
+            await waitForVideoReady(videoRef.current);
+            await videoRef.current.play();
+          } catch {}
           setStream(mediaStream);
           setCameraStarted(true);
           setError('');
@@ -70,13 +129,20 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
   // Take a photo
   function takePhoto() {
     if (!videoRef.current || !canvasRef.current) return;
+    if (!cameraStarted) { setError('Camera not started'); return; }
     
     const video = videoRef.current;
     const canvas = canvasRef.current;
     
     // Set canvas size to match video
-    canvas.width = video.videoWidth || 1280;
-    canvas.height = video.videoHeight || 720;
+    const vw = video.videoWidth;
+    const vh = video.videoHeight;
+    if (!vw || !vh) {
+      setError('Camera is not ready yet. Please wait a moment and try again.');
+      return;
+    }
+    canvas.width = vw;
+    canvas.height = vh;
     
     // Draw current video frame onto canvas
     const context = canvas.getContext('2d');
@@ -96,20 +162,33 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
   // Record short video
   function recordShortVideo() {
     if (!stream) return setError('No camera stream available');
+    const mimeType = getSupportedVideoMimeType();
+    if (!mimeType) {
+      setError('Video recording is not supported in this browser. You can still take photos.');
+      return;
+    }
     
     setMediaType('video');
     setMediaBlob(null);
 
-    const recorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9' });
+    let recorder: MediaRecorder;
+    try {
+      recorder = new MediaRecorder(stream, { mimeType });
+    } catch (e: any) {
+      setError('Failed to start recorder: ' + (e?.message || String(e)));
+      return;
+    }
     const chunks: Blob[] = [];
     
     recorder.ondataavailable = (ev) => chunks.push(ev.data);
     recorder.onstop = () => {
-      const blob = new Blob(chunks, { type: 'video/webm' });
+      const blob = new Blob(chunks, { type: mimeType });
       setMediaBlob(blob);
+      setRecording(false);
     };
 
     recorder.start();
+    setRecording(true);
     // Auto-stop after 7 seconds
     setTimeout(() => {
       if (recorder.state === 'recording') recorder.stop();
@@ -222,8 +301,8 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
           <button onClick={takePhoto} className="px-4 py-2 rounded bg-[#ede8df] text-[#171616] hover:bg-[#d6cfc0] transition-colors">
             📸 Take Photo
           </button>
-          <button onClick={recordShortVideo} className="px-4 py-2 rounded bg-[#60a5fa] text-white hover:bg-[#3b82f6] transition-colors">
-            🎥 Record Video (≤7s)
+          <button onClick={recordShortVideo} className="px-4 py-2 rounded bg-[#60a5fa] text-white hover:bg-[#3b82f6] transition-colors disabled:opacity-50" disabled={!getSupportedVideoMimeType() || recording}>
+            {recording ? '⏺️ Recording…' : '🎥 Record Video (≤7s)'}
           </button>
           <button onClick={() => { setMediaBlob(null); setProgress(0); }} className="px-4 py-2 rounded bg-gray-700 hover:bg-gray-600 transition-colors">
             🗑️ Reset
