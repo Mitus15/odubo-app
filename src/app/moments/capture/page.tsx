@@ -11,34 +11,22 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [error, setError] = useState('');
   const [mediaBlob, setMediaBlob] = useState<Blob | null>(null);
-  const [mediaType, setMediaType] = useState<'photo' | 'video'>('photo');
+  // We only support photos for now
+  const [mediaType] = useState<'photo'>('photo');
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [cameraStarted, setCameraStarted] = useState(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
-  const [recording, setRecording] = useState(false);
-
-  function hasMediaRecorder() {
-    return typeof window !== 'undefined' && typeof (window as any).MediaRecorder !== 'undefined';
-  }
-
-  function getSupportedVideoMimeType() {
-    if (!hasMediaRecorder()) return null;
-    const candidates = [
-      'video/webm;codecs=vp9',
-      'video/webm;codecs=vp8',
-      'video/webm',
-      'video/mp4;codecs=avc1', // some Safari versions
-      'video/mp4',
-    ];
-    // @ts-ignore
-    const isTypeSupported = (window.MediaRecorder && window.MediaRecorder.isTypeSupported) ? window.MediaRecorder.isTypeSupported.bind(window.MediaRecorder) : () => false;
-    for (const t of candidates) {
-      try {
-        if (isTypeSupported(t)) return t;
-      } catch {}
-    }
-    return null;
+  // Helper: dataURL -> Blob (for Safari toBlob fallback)
+  function dataURLToBlob(dataURL: string) {
+    const parts = dataURL.split(',');
+    const mimeMatch = parts[0].match(/:(.*?);/);
+    const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+    const bstr = atob(parts[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) u8arr[n] = bstr.charCodeAt(n);
+    return new Blob([u8arr], { type: mime });
   }
 
   async function waitForVideoReady(video: HTMLVideoElement) {
@@ -150,50 +138,31 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
     
     context.drawImage(video, 0, 0, canvas.width, canvas.height);
     
-    // Convert canvas to blob
-    canvas.toBlob((blob) => {
-      if (blob) {
-        setMediaBlob(blob);
-        setMediaType('photo');
-      }
-    }, 'image/jpeg', 0.9);
+    // Convert canvas to blob with Safari fallback
+    const maybeToBlob = (canvas as HTMLCanvasElement).toBlob?.bind(canvas);
+    if (maybeToBlob) {
+      maybeToBlob((blob) => {
+        if (blob) {
+          setMediaBlob(blob);
+          // Auto-scroll preview into view
+          setTimeout(() => document.getElementById('capture-preview')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+        } else {
+          // Fallback to dataURL
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+          const blob2 = dataURLToBlob(dataUrl);
+          setMediaBlob(blob2);
+          setTimeout(() => document.getElementById('capture-preview')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+        }
+      }, 'image/jpeg', 0.9);
+    } else {
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+      const blob2 = dataURLToBlob(dataUrl);
+      setMediaBlob(blob2);
+      setTimeout(() => document.getElementById('capture-preview')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+    }
   }
 
-  // Record short video
-  function recordShortVideo() {
-    if (!stream) return setError('No camera stream available');
-    const mimeType = getSupportedVideoMimeType();
-    if (!mimeType) {
-      setError('Video recording is not supported in this browser. You can still take photos.');
-      return;
-    }
-    
-    setMediaType('video');
-    setMediaBlob(null);
-
-    let recorder: MediaRecorder;
-    try {
-      recorder = new MediaRecorder(stream, { mimeType });
-    } catch (e: any) {
-      setError('Failed to start recorder: ' + (e?.message || String(e)));
-      return;
-    }
-    const chunks: Blob[] = [];
-    
-    recorder.ondataavailable = (ev) => chunks.push(ev.data);
-    recorder.onstop = () => {
-      const blob = new Blob(chunks, { type: mimeType });
-      setMediaBlob(blob);
-      setRecording(false);
-    };
-
-    recorder.start();
-    setRecording(true);
-    // Auto-stop after 7 seconds
-    setTimeout(() => {
-      if (recorder.state === 'recording') recorder.stop();
-    }, 7000);
-  }
+  // Video recording removed for now (photos only)
 
   // Check if uploads are allowed now
   function canUploadNow() {
@@ -301,9 +270,6 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
           <button onClick={takePhoto} className="px-4 py-2 rounded bg-[#ede8df] text-[#171616] hover:bg-[#d6cfc0] transition-colors">
             📸 Take Photo
           </button>
-          <button onClick={recordShortVideo} className="px-4 py-2 rounded bg-[#60a5fa] text-white hover:bg-[#3b82f6] transition-colors disabled:opacity-50" disabled={!getSupportedVideoMimeType() || recording}>
-            {recording ? '⏺️ Recording…' : '🎥 Record Video (≤7s)'}
-          </button>
           <button onClick={() => { setMediaBlob(null); setProgress(0); }} className="px-4 py-2 rounded bg-gray-700 hover:bg-gray-600 transition-colors">
             🗑️ Reset
           </button>
@@ -319,13 +285,9 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
       
       {/* Media Preview */}
       {mediaBlob && (
-        <div className="mb-3">
+        <div id="capture-preview" className="mb-3">
           <h3 className="font-semibold">Preview</h3>
-          {mediaType === 'photo' ? (
-            <img src={URL.createObjectURL(mediaBlob)} alt="preview" className="mt-2 rounded max-h-96" />
-          ) : (
-            <video controls src={URL.createObjectURL(mediaBlob)} className="mt-2 rounded max-h-96" />
-          )}
+          <img src={URL.createObjectURL(mediaBlob)} alt="preview" className="mt-2 rounded max-h-96" />
         </div>
       )}
       </div>
