@@ -188,7 +188,9 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
   }, [stream]);
 
   return (
-    <div className="p-6 max-w-2xl mx-auto">
+    // Make this page independently scrollable on mobile to avoid controls being cut off
+    <div className="min-h-[100dvh] overflow-y-auto">
+      <div className="p-6 max-w-2xl mx-auto pb-24">
       <h1 className="text-2xl font-bold mb-4">Capture Moment</h1>
       <div className="text-sm text-[#b2a491] mb-3">Event window: {startsAt ? startsAt.toLocaleString() : 'N/A'} — {endsAt ? endsAt.toLocaleString() : 'N/A'}</div>
       
@@ -247,6 +249,7 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
           )}
         </div>
       )}
+      </div>
     </div>
   );
 }
