@@ -20,6 +20,10 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
   const [currentDeviceId, setCurrentDeviceId] = useState<string | null>(null);
+  const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
+  const [preferredFrontId, setPreferredFrontId] = useState<string | null>(null);
+  const [preferredBackId, setPreferredBackId] = useState<string | null>(null);
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string | 'auto'>('auto');
   // Helper: dataURL -> Blob (for Safari toBlob fallback)
   function dataURLToBlob(dataURL: string) {
     const parts = dataURL.split(',');
@@ -72,6 +76,59 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
     });
   }
 
+  function classifySideFromLabel(label: string): 'front' | 'back' | 'unknown' {
+    const l = label.toLowerCase();
+    if (/back|rear|world|environment/.test(l)) return 'back';
+    if (/front|user|facetime|true\s*depth/.test(l)) return 'front';
+    return 'unknown';
+  }
+
+  async function refreshDevicesAndPersist(currentId?: string) {
+    try {
+      if (!navigator.mediaDevices?.enumerateDevices) return;
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videos = devices.filter((d) => d.kind === 'videoinput');
+      setVideoDevices(videos);
+
+      // Try to determine front/back from labels
+      let back: string | null = preferredBackId || null;
+      let front: string | null = preferredFrontId || null;
+
+      for (const v of videos) {
+        const side = classifySideFromLabel(v.label || '');
+        if (side === 'back' && !back) back = v.deviceId;
+        if (side === 'front' && !front) front = v.deviceId;
+      }
+
+      // If labels were inconclusive but there are exactly two, assume index 0 = front, 1 = back (common on mobile)
+      if ((!front || !back) && videos.length === 2) {
+        front = front || videos[0].deviceId;
+        back = back || videos[1].deviceId;
+      }
+
+      // If we know which one is currently active, infer opposite when unknowns remain
+      if (currentId && (!front || !back)) {
+        const current = videos.find((v) => v.deviceId === currentId);
+        if (current) {
+          const side = classifySideFromLabel(current.label || '');
+          if (side === 'front' && !front) front = current.deviceId;
+          if (side === 'back' && !back) back = current.deviceId;
+        }
+      }
+
+      if (front) {
+        setPreferredFrontId(front);
+        try { localStorage.setItem('cameraFrontId', front); } catch {}
+      }
+      if (back) {
+        setPreferredBackId(back);
+        try { localStorage.setItem('cameraBackId', back); } catch {}
+      }
+    } catch (e) {
+      console.warn('enumerateDevices failed or blocked', e);
+    }
+  }
+
   function stopStream() {
     try {
       if (stream) {
@@ -96,10 +153,22 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
 
       // Check if modern API is available
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        // If no explicit deviceId provided, try using persisted preference
+        let desiredDeviceId = opts?.deviceId || null;
+        const desiredMode = opts?.mode || facingMode;
+        try {
+          if (!desiredDeviceId) {
+            const savedFront = preferredFrontId || localStorage.getItem('cameraFrontId');
+            const savedBack = preferredBackId || localStorage.getItem('cameraBackId');
+            if (desiredMode === 'environment' && savedBack) desiredDeviceId = savedBack;
+            if (desiredMode === 'user' && savedFront) desiredDeviceId = savedFront;
+          }
+        } catch {}
+
         const constraints: MediaStreamConstraints = {
-          video: opts?.deviceId
-            ? { deviceId: { exact: opts.deviceId } as any }
-            : { facingMode: { ideal: opts?.mode || facingMode } as any },
+          video: desiredDeviceId
+            ? { deviceId: { exact: desiredDeviceId } as any }
+            : { facingMode: { ideal: desiredMode } as any },
           audio: false,
         };
         const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -120,6 +189,11 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
             } catch {}
             if (opts?.mode) setFacingMode(opts.mode);
             setError('');
+            // Refresh device list and persist front/back hints
+            try {
+              const settings = mediaStream.getVideoTracks?.()[0]?.getSettings?.();
+              await refreshDevicesAndPersist(settings?.deviceId || undefined);
+            } catch {}
           } catch (playErr: any) {
             console.error('Failed to start video play()', playErr);
             setError(`Failed to start camera video: ${playErr?.message || playErr}`);
@@ -155,6 +229,10 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
               if (settings?.deviceId) setCurrentDeviceId(settings.deviceId);
             } catch {}
             setError('');
+            try {
+              const settings = mediaStream.getVideoTracks?.()[0]?.getSettings?.();
+              await refreshDevicesAndPersist(settings?.deviceId || undefined);
+            } catch {}
           } catch (playErr: any) {
             console.error('Failed to start legacy getUserMedia video', playErr);
             setError(`Failed to start camera video: ${playErr?.message || playErr}`);
@@ -174,19 +252,35 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
   async function switchCamera() {
     try {
       setError('');
-      // If we have permission and devices, try rotating through deviceIds
-      if (navigator.mediaDevices?.enumerateDevices) {
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        const videoInputs = devices.filter((d) => d.kind === 'videoinput');
-        if (videoInputs.length >= 2) {
-          // pick next device different from current
-          const idx = videoInputs.findIndex((d) => d.deviceId === currentDeviceId);
-          const next = videoInputs[(idx + 1 + videoInputs.length) % videoInputs.length];
-          await startCamera({ deviceId: next.deviceId });
+      // Prefer deterministic front/back if we have preferences
+      const front = preferredFrontId || (typeof window !== 'undefined' ? localStorage.getItem('cameraFrontId') : null);
+      const back = preferredBackId || (typeof window !== 'undefined' ? localStorage.getItem('cameraBackId') : null);
+      if (currentDeviceId && front && back) {
+        if (currentDeviceId === back) {
+          await startCamera({ deviceId: front });
+          setFacingMode('user');
+          return;
+        }
+        if (currentDeviceId === front) {
+          await startCamera({ deviceId: back });
+          setFacingMode('environment');
           return;
         }
       }
-      // Fallback: toggle facingMode between environment and user
+
+      // If we have multiple devices, pick the other one deterministically
+      if (videoDevices.length >= 2) {
+        const idx = videoDevices.findIndex((d) => d.deviceId === currentDeviceId);
+        const next = videoDevices[(idx + 1 + videoDevices.length) % videoDevices.length];
+        await startCamera({ deviceId: next.deviceId });
+        // Update facing mode guess based on label
+        const side = classifySideFromLabel(next.label || '');
+        if (side === 'front') setFacingMode('user');
+        if (side === 'back') setFacingMode('environment');
+        return;
+      }
+
+      // Final fallback: toggle facingMode between environment and user
       const nextMode = facingMode === 'environment' ? 'user' : 'environment';
       await startCamera({ mode: nextMode });
     } catch (e: any) {
@@ -293,12 +387,25 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
 
   // Cleanup effect
   useEffect(() => {
+    // Load persisted preferences early
+    try {
+      const f = localStorage.getItem('cameraFrontId');
+      const b = localStorage.getItem('cameraBackId');
+      if (f) setPreferredFrontId(f);
+      if (b) setPreferredBackId(b);
+    } catch {}
     return () => {
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
       }
     };
   }, [stream]);
+
+  // When camera starts, keep device selector in sync
+  useEffect(() => {
+    if (!cameraStarted) return;
+    refreshDevicesAndPersist(currentDeviceId || undefined);
+  }, [cameraStarted, currentDeviceId]);
 
   return (
     // Make this page independently scrollable within the App layout's main area
@@ -332,13 +439,49 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
       
       {/* Controls */}
       {cameraStarted && (
-        <div className="flex gap-3 mb-3">
+        <div className="flex flex-wrap items-center gap-3 mb-3">
           <button onClick={takePhoto} className="px-4 py-2 rounded bg-[#ede8df] text-[#171616] hover:bg-[#d6cfc0] transition-colors">
             📸 Take Photo
           </button>
           <button onClick={switchCamera} className="px-4 py-2 rounded bg-[#60a5fa] text-white hover:bg-[#3b82f6] transition-colors">
             🔄 Switch Camera
           </button>
+          {videoDevices.length > 0 && (
+            <label className="text-sm flex items-center gap-2">
+              <span className="opacity-70">Device:</span>
+              <select
+                className="bg-[#1f1e1d] border border-[#3b3733] rounded px-2 py-1 text-sm"
+                value={selectedDeviceId}
+                onChange={async (e) => {
+                  const val = e.target.value as string;
+                  setSelectedDeviceId(val as any);
+                  if (val !== 'auto') {
+                    await startCamera({ deviceId: val });
+                    // Update preferred sides if we can infer
+                    const dev = videoDevices.find((d) => d.deviceId === val);
+                    const side = classifySideFromLabel(dev?.label || '');
+                    if (side === 'front') {
+                      setFacingMode('user');
+                      setPreferredFrontId(val);
+                      try { localStorage.setItem('cameraFrontId', val); } catch {}
+                    }
+                    if (side === 'back') {
+                      setFacingMode('environment');
+                      setPreferredBackId(val);
+                      try { localStorage.setItem('cameraBackId', val); } catch {}
+                    }
+                  }
+                }}
+              >
+                <option value="auto">Auto</option>
+                {videoDevices.map((d) => (
+                  <option key={d.deviceId} value={d.deviceId}>
+                    {d.label || `Camera (${d.deviceId.slice(0,6)}…)`}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <button onClick={() => { setMediaBlob(null); setPreviewUrl(null); setProgress(0); }} className="px-4 py-2 rounded bg-gray-700 hover:bg-gray-600 transition-colors">
             🗑️ Reset
           </button>
