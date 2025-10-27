@@ -69,12 +69,18 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
         if (videoRef.current) {
           videoRef.current.srcObject = mediaStream;
           try {
+            // Ensure muted before play for mobile autoplay policies
+            videoRef.current.muted = true;
             await waitForVideoReady(videoRef.current);
             await videoRef.current.play();
-          } catch {}
-          setStream(mediaStream);
-          setCameraStarted(true);
-          setError('');
+            // Only mark camera started if play() succeeded
+            setStream(mediaStream);
+            setCameraStarted(true);
+            setError('');
+          } catch (playErr: any) {
+            console.error('Failed to start video play()', playErr);
+            setError(`Failed to start camera video: ${playErr?.message || playErr}`);
+          }
         }
         return;
       }
@@ -96,12 +102,16 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
         if (videoRef.current) {
           videoRef.current.srcObject = mediaStream;
           try {
+            videoRef.current.muted = true;
             await waitForVideoReady(videoRef.current);
             await videoRef.current.play();
-          } catch {}
-          setStream(mediaStream);
-          setCameraStarted(true);
-          setError('');
+            setStream(mediaStream);
+            setCameraStarted(true);
+            setError('');
+          } catch (playErr: any) {
+            console.error('Failed to start legacy getUserMedia video', playErr);
+            setError(`Failed to start camera video: ${playErr?.message || playErr}`);
+          }
         }
         return;
       }
