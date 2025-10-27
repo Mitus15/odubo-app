@@ -94,3 +94,11 @@ This document tracks issues, features, and technical debt to revisit later.
 - [ ] Improve moderation UI (filters, pagination, bulk actions) — basic bulk actions implemented
 
 Add more items as needed!
+
+### Moments Mobile Capture UX (2025-10)
+
+- [x] Enable scroll on capture page (prevent controls from being cut off on mobile)
+- [x] Simplify capture to photos-only with reliable preview (canvas dataURL + Blob)
+- [x] Add camera front/back switch (toggle with facingMode/deviceId)
+- [x] Deterministic camera toggle with named devices and persistence (localStorage) + device dropdown
+- [x] Staging/Preview documentation for mobile HTTPS testing (`docs/STAGING.md`)
