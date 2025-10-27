@@ -165,33 +165,15 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
     const context = canvas.getContext('2d');
     if (!context) return;
     
+    // Use a deterministic dataURL for preview, then convert to Blob for upload.
+    // This avoids Safari object URL quirks and guarantees a visible preview.
     context.drawImage(video, 0, 0, canvas.width, canvas.height);
-    
-    // Convert canvas to blob with Safari fallback
-    const maybeToBlob = (canvas as HTMLCanvasElement).toBlob?.bind(canvas);
-    if (maybeToBlob) {
-      maybeToBlob((blob) => {
-        if (blob) {
-          setMediaBlob(blob);
-          createPreviewURLFromBlob(blob).then((url) => setPreviewUrl(url || null));
-          // Auto-scroll preview into view
-          setTimeout(() => document.getElementById('capture-preview')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
-        } else {
-          // Fallback to dataURL
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
-          const blob2 = dataURLToBlob(dataUrl);
-          setMediaBlob(blob2);
-          createPreviewURLFromBlob(blob2).then((url) => setPreviewUrl(url || null));
-          setTimeout(() => document.getElementById('capture-preview')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
-        }
-      }, 'image/jpeg', 0.9);
-    } else {
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
-      const blob2 = dataURLToBlob(dataUrl);
-      setMediaBlob(blob2);
-      createPreviewURLFromBlob(blob2).then((url) => setPreviewUrl(url || null));
-      setTimeout(() => document.getElementById('capture-preview')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
-    }
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+    setPreviewUrl(dataUrl);
+    const blob = dataURLToBlob(dataUrl);
+    setMediaBlob(blob);
+    // Auto-scroll preview into view
+    setTimeout(() => document.getElementById('capture-preview')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
   }
 
   // Video recording removed for now (photos only)
