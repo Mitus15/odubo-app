@@ -18,6 +18,8 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
   const [progress, setProgress] = useState(0);
   const [cameraStarted, setCameraStarted] = useState(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
+  const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
+  const [currentDeviceId, setCurrentDeviceId] = useState<string | null>(null);
   // Helper: dataURL -> Blob (for Safari toBlob fallback)
   function dataURLToBlob(dataURL: string) {
     const parts = dataURL.split(',');
@@ -70,20 +72,37 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
     });
   }
 
-  // Start the camera
-  async function startCamera() {
+  function stopStream() {
+    try {
+      if (stream) {
+        stream.getTracks().forEach((t) => t.stop());
+      }
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+      }
+    } catch {}
+  }
+
+  // Start the camera (optionally with specific facingMode or deviceId)
+  async function startCamera(opts?: { mode?: 'environment' | 'user'; deviceId?: string }) {
     try {
       if (typeof window !== 'undefined' && !window.isSecureContext) {
         setError('Camera requires HTTPS (or localhost). Please use a secure origin.');
         return;
       }
 
+      // Stop any prior stream before (re)starting
+      stopStream();
+
       // Check if modern API is available
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        const mediaStream = await navigator.mediaDevices.getUserMedia({ 
-          video: { facingMode: { ideal: 'environment' } },
-          audio: false 
-        });
+        const constraints: MediaStreamConstraints = {
+          video: opts?.deviceId
+            ? { deviceId: { exact: opts.deviceId } as any }
+            : { facingMode: { ideal: opts?.mode || facingMode } as any },
+          audio: false,
+        };
+        const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
         
         if (videoRef.current) {
           videoRef.current.srcObject = mediaStream;
@@ -95,6 +114,11 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
             // Only mark camera started if play() succeeded
             setStream(mediaStream);
             setCameraStarted(true);
+            try {
+              const settings = mediaStream.getVideoTracks?.()[0]?.getSettings?.();
+              if (settings?.deviceId) setCurrentDeviceId(settings.deviceId);
+            } catch {}
+            if (opts?.mode) setFacingMode(opts.mode);
             setError('');
           } catch (playErr: any) {
             console.error('Failed to start video play()', playErr);
@@ -126,6 +150,10 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
             await videoRef.current.play();
             setStream(mediaStream);
             setCameraStarted(true);
+            try {
+              const settings = mediaStream.getVideoTracks?.()[0]?.getSettings?.();
+              if (settings?.deviceId) setCurrentDeviceId(settings.deviceId);
+            } catch {}
             setError('');
           } catch (playErr: any) {
             console.error('Failed to start legacy getUserMedia video', playErr);
@@ -140,6 +168,29 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
     } catch (err: any) {
       console.error("Error accessing the camera: ", err);
       setError(`Camera error: ${err.message}`);
+    }
+  }
+
+  async function switchCamera() {
+    try {
+      setError('');
+      // If we have permission and devices, try rotating through deviceIds
+      if (navigator.mediaDevices?.enumerateDevices) {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoInputs = devices.filter((d) => d.kind === 'videoinput');
+        if (videoInputs.length >= 2) {
+          // pick next device different from current
+          const idx = videoInputs.findIndex((d) => d.deviceId === currentDeviceId);
+          const next = videoInputs[(idx + 1 + videoInputs.length) % videoInputs.length];
+          await startCamera({ deviceId: next.deviceId });
+          return;
+        }
+      }
+      // Fallback: toggle facingMode between environment and user
+      const nextMode = facingMode === 'environment' ? 'user' : 'environment';
+      await startCamera({ mode: nextMode });
+    } catch (e: any) {
+      setError(e?.message || String(e));
     }
   }
 
@@ -262,11 +313,12 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
       {!cameraStarted && (
         <div className="mb-3 p-3 bg-blue-900/20 border border-blue-600 rounded">
           <button 
-            onClick={startCamera}
+            onClick={() => startCamera()}
             className="px-4 py-2 rounded bg-[#ede8df] text-[#171616] hover:bg-[#d6cfc0] transition-colors font-semibold"
           >
             📷 Start Camera
           </button>
+          <div className="mt-2 text-xs opacity-70">Default: {facingMode === 'environment' ? 'Back' : 'Front'} camera</div>
         </div>
       )}
       
@@ -283,6 +335,9 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
         <div className="flex gap-3 mb-3">
           <button onClick={takePhoto} className="px-4 py-2 rounded bg-[#ede8df] text-[#171616] hover:bg-[#d6cfc0] transition-colors">
             📸 Take Photo
+          </button>
+          <button onClick={switchCamera} className="px-4 py-2 rounded bg-[#60a5fa] text-white hover:bg-[#3b82f6] transition-colors">
+            🔄 Switch Camera
           </button>
           <button onClick={() => { setMediaBlob(null); setPreviewUrl(null); setProgress(0); }} className="px-4 py-2 rounded bg-gray-700 hover:bg-gray-600 transition-colors">
             🗑️ Reset
