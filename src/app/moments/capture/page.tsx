@@ -83,6 +83,14 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
     return 'unknown';
   }
 
+  function isFrontActive(): boolean {
+    if (facingMode === 'user') return true;
+    if (!currentDeviceId) return false;
+    const dev = videoDevices.find((d) => d.deviceId === currentDeviceId);
+    const side = classifySideFromLabel(dev?.label || '');
+    return side === 'front';
+  }
+
   async function refreshDevicesAndPersist(currentId?: string) {
     try {
       if (!navigator.mediaDevices?.enumerateDevices) return;
@@ -309,10 +317,20 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
     // Draw current video frame onto canvas
     const context = canvas.getContext('2d');
     if (!context) return;
-    
+    const mirror = isFrontActive();
+    if (mirror) {
+      // Mirror horizontally for front camera so the saved image matches the preview
+      context.save();
+      context.translate(canvas.width, 0);
+      context.scale(-1, 1);
+    }
+
     // Use a deterministic dataURL for preview, then convert to Blob for upload.
     // This avoids Safari object URL quirks and guarantees a visible preview.
     context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    if (mirror) {
+      context.restore();
+    }
     const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
     setPreviewUrl(dataUrl);
     const blob = dataURLToBlob(dataUrl);
@@ -431,7 +449,14 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
       
       {/* Camera Feed */}
       <div className="bg-black rounded overflow-hidden mb-3">
-        <video ref={videoRef} autoPlay playsInline muted className="w-full h-auto" />
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          muted
+          className="w-full h-auto"
+          style={{ transform: isFrontActive() ? 'scaleX(-1)' as any : 'none', transformOrigin: 'center' }}
+        />
       </div>
       
       {/* Hidden canvas for photo capture */}
