@@ -8,7 +8,7 @@ import TabContent from "./TabContent";
 export default function AdminPage() {
   const router = useRouter();
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'music-library' | 'video-library' | 'analytics'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'music-library' | 'video-library' | 'moments' | 'analytics'>('overview');
 
   useEffect(() => {
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
@@ -37,6 +37,7 @@ export default function AdminPage() {
     { id: 'overview', label: 'Overview', icon: '📊' },
     { id: 'music-library', label: 'Music Library', icon: '🎶' },
     { id: 'video-library', label: 'Video Library', icon: '📹' },
+    { id: 'moments', label: 'Moments', icon: '📸' },
     { id: 'analytics', label: 'Analytics', icon: '📈' }
   ];
 
@@ -65,7 +66,7 @@ export default function AdminPage() {
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id as 'overview' | 'music-library' | 'video-library' | 'analytics')}
+                  onClick={() => setActiveTab(tab.id as 'overview' | 'music-library' | 'video-library' | 'moments' | 'analytics')}
                   className={`px-3 sm:px-4 py-2 rounded-2xl text-xs sm:text-sm font-medium whitespace-nowrap transition-all flex items-center space-x-1 sm:space-x-2 flex-shrink-0 ${
                     activeTab === tab.id
                       ? 'bg-[#ede8df] text-[#171616] shadow-lg'
