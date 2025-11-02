@@ -4,12 +4,25 @@ import { NextRequest, NextResponse } from 'next/server';
 export const runtime = 'nodejs';
 import { deleteFile } from '@/worker/upload';
 import { z } from 'zod';
+import { writeAuditLog } from '@/lib/audit';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const url = new URL(req.url);
+    const limit = Math.max(0, Math.min(200, Number(url.searchParams.get('limit') || '50')));
+    const offset = Math.max(0, Number(url.searchParams.get('offset') || '0'));
+    const publicationStatus = url.searchParams.get('publication_status');
+    const hasFilter = publicationStatus === 'live' || publicationStatus === 'archived';
+
     // Try with full schema first, fallback to basic schema if columns don't exist
     let videos;
     try {
+      const where = hasFilter ? 'WHERE COALESCE(publication_status,\'archived\') = ?' : '';
+      const paramsFull: any[] = [];
+      if (hasFilter) paramsFull.push(publicationStatus);
+      paramsFull.push(limit);
+      paramsFull.push(offset);
+
       videos = await queryDatabase(
         `SELECT 
           id,
@@ -35,11 +48,15 @@ export async function GET() {
           created_at,
           COALESCE(updated_at, created_at) as updated_at
         FROM videos 
-        ORDER BY created_at DESC`
+        ${where}
+        ORDER BY created_at DESC
+        LIMIT ? OFFSET ?`,
+        paramsFull
       );
     } catch (schemaError) {
       // Fallback to basic schema if new columns don't exist
       console.log('Using fallback query for videos table');
+      const paramsBasic: any[] = [limit, offset];
       videos = await queryDatabase(
         `SELECT 
           id,
@@ -58,7 +75,9 @@ export async function GET() {
           related_projects,
           created_at
         FROM videos 
-        ORDER BY created_at DESC`
+        ORDER BY created_at DESC
+        LIMIT ? OFFSET ?`,
+        paramsBasic
       );
       
       // Add missing fields for compatibility
@@ -81,6 +100,13 @@ export async function GET() {
       created_at: video.created_at || new Date().toISOString(),
       updated_at: video.updated_at || video.created_at || new Date().toISOString(),
     }));
+
+    // Audit (non-blocking)
+    await writeAuditLog(req, getUserFromRequest(req), 'videos.list', `count=${transformedVideos.length}`, {
+      limit,
+      offset,
+      publication_status: hasFilter ? publicationStatus : 'any',
+    });
 
     const res = NextResponse.json({ success: true, videos: transformedVideos });
     res.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');
@@ -172,6 +198,8 @@ export async function POST(req: NextRequest) {
         publication_status
       ]
     );
+    // Audit
+    await writeAuditLog(req, user, 'videos.create', title, { publication_status });
 
     return NextResponse.json({ success: true }, { status: 201 });
   } catch (error) {
@@ -203,7 +231,8 @@ export async function PATCH(req: NextRequest) {
       'UPDATE videos SET status = ? WHERE id = ?',
       [status, id]
     );
-
+    // Audit
+    await writeAuditLog(req, user, 'videos.update_status', String(id), { status });
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error updating video status:', error);
@@ -298,7 +327,8 @@ export async function DELETE(req: NextRequest) {
 
     // Delete video from database
     await executeQuery('DELETE FROM videos WHERE id = ?', [id]);
-
+    // Audit
+    await writeAuditLog(req, user, 'videos.delete', String(id));
     return NextResponse.json({ 
       success: true,
       message: 'Video and associated files deleted successfully'

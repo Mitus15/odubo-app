@@ -3,6 +3,7 @@ export const runtime = 'nodejs';
 import { getUserFromRequest, isAdminUser } from '@/lib/auth';
 import { executeQuery } from '@/lib/db';
 import { rateLimit } from '@/lib/rateLimit';
+import { writeAuditLog } from '@/lib/audit';
 
 export async function POST(req: NextRequest) {
   const user = getUserFromRequest(req);
@@ -27,6 +28,7 @@ export async function POST(req: NextRequest) {
     ) as any;
 
     const sessionId = res?.result?.[0]?.meta?.last_row_id || null;
+    try { await writeAuditLog(req, user, 'videos.upload_session.create', String(sessionId || uid), { uid }); } catch {}
     return NextResponse.json({ success: true, sessionId, uid });
   } catch (error) {
     console.error('create upload session error:', error);

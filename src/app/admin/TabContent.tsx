@@ -5,11 +5,12 @@ import dynamic from 'next/dynamic';
 
 const OverviewTab = dynamic(() => import('./tabs/OverviewTab'));
 const AnalyticsTab = dynamic(() => import('./tabs/AnalyticsTab'));
+const MomentsTab = dynamic(() => import('./tabs/MomentsTab'));
 const LibraryManager = dynamic(() => import('@/components/LibraryManager'));
 const AdminVideosPage = dynamic(() => import('./videos/page'));
 const AdminUsersPage = dynamic(() => import('./users/page'));
 
-type AdminTab = 'overview' | 'music-library' | 'video-library' | 'analytics';
+type AdminTab = 'overview' | 'music-library' | 'video-library' | 'moments' | 'analytics';
 
 export default function TabContent({ activeTab }: { activeTab: AdminTab }) {
   switch (activeTab) {
@@ -29,6 +30,12 @@ export default function TabContent({ activeTab }: { activeTab: AdminTab }) {
       return (
         <Suspense fallback={<div className="p-6">Loading Video Library…</div>}>
           <AdminVideosPage />
+        </Suspense>
+      );
+    case 'moments':
+      return (
+        <Suspense fallback={<div className="p-6">Loading Moments…</div>}>
+          <MomentsTab />
         </Suspense>
       );
     case 'analytics':

@@ -3,6 +3,7 @@ export const runtime = 'nodejs';
 import { getUserFromRequest, isAdminUser } from '@/lib/auth';
 import CloudflareStreamAPI from '@/lib/cloudflareStream';
 import { rateLimit } from '@/lib/rateLimit';
+import { writeAuditLog } from '@/lib/audit';
 
 export async function POST(req: NextRequest) {
   // Admin only
@@ -48,7 +49,9 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    return NextResponse.json({ success: true, uploadURL: res.result.uploadURL, uid: res.result.uid });
+    const json = { success: true, uploadURL: res.result.uploadURL, uid: res.result.uid } as const;
+    try { await writeAuditLog(req, user, 'videos.stream_direct_upload_url', res.result.uid, { title, is_public }); } catch {}
+    return NextResponse.json(json);
   } catch (error) {
     console.error('Direct upload URL error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';

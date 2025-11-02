@@ -69,6 +69,27 @@ export default function OverviewTab() {
         ))}
       </div>
 
+      {/* Quick Actions */}
+      <div className="bg-[#302927]/60 border border-[#502d26]/40 rounded-xl sm:rounded-2xl p-4 sm:p-6 backdrop-blur-sm mb-6">
+        <h3 className="text-base sm:text-lg font-bold text-[#ede8df] mb-3 sm:mb-4">Quick Actions</h3>
+        <div className="flex flex-wrap gap-3">
+          <a
+            href="/featured/manage"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#ede8df] text-[#171616] font-semibold hover:bg-white/90 transition"
+          >
+            <span>⭐</span>
+            <span>Manage Featured</span>
+          </a>
+          <a
+            href="/featured/manage/new"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#302927] border border-[#502d26]/40 text-[#ede8df] hover:bg-[#502d26]/40 transition"
+          >
+            <span>➕</span>
+            <span>New Featured Project</span>
+          </a>
+        </div>
+      </div>
+
       {/* Recent Activity */}
       <div className="bg-[#302927]/60 border border-[#502d26]/40 rounded-xl sm:rounded-2xl p-4 sm:p-6 backdrop-blur-sm mb-6">
         <h3 className="text-base sm:text-lg font-bold text-[#ede8df] mb-3 sm:mb-4">Recent Activity</h3>

@@ -46,6 +46,7 @@
     "formdata-node": "^6.0.3",
     "formidable": "^3.5.4",
     "framer-motion": "^12.23.12",
+  "gsap": "^3.12.5",
     "hls.js": "^1.5.15",
     "jose": "^5.2.0",
     "jwt-decode": "^4.0.0",

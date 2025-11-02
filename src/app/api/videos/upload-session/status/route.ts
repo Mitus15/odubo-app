@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export const runtime = 'nodejs';
 import { getUserFromRequest, isAdminUser } from '@/lib/auth';
 import { queryDatabase } from '@/lib/db';
+import { writeAuditLog } from '@/lib/audit';
 
 export async function GET(req: NextRequest) {
   const user = getUserFromRequest(req);
@@ -17,7 +18,7 @@ export async function GET(req: NextRequest) {
     const s = sessions[0];
     const counts = await queryDatabase('SELECT COUNT(*) as cnt FROM videos_thumbnail_candidates WHERE session_id = ?', [sessionId]);
     const count = Number(counts?.[0]?.cnt || 0);
-
+    try { await writeAuditLog(req, user, 'videos.upload_session.status', String(sessionId), { candidatesCount: count, status: s.status }); } catch {}
     return NextResponse.json({ success: true, session: s, candidatesCount: count });
   } catch (error) {
     console.error('upload-session status error:', error);

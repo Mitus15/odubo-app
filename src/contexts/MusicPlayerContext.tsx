@@ -628,6 +628,8 @@ export const MusicPlayerProvider: React.FC<MusicPlayerProviderProps> = ({ childr
   const audioRef = useRef<HTMLAudioElement>(null);
   const hlsRef = useRef<any>(null);
   const advancingRef = useRef(false);
+  const playRetryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const playRetryCountRef = useRef(0);
 
 
 
@@ -734,6 +736,12 @@ export const MusicPlayerProvider: React.FC<MusicPlayerProviderProps> = ({ childr
       dispatch({ type: 'SET_LOADING', payload: false });
     };
 
+    const handlePlaying = () => {
+      // When media is actually rendering frames, ensure loading is cleared
+      advancingRef.current = false;
+      dispatch({ type: 'SET_LOADING', payload: false });
+    };
+
     const handlePause = () => {
       // Ignore pause events that are part of an advance/track-change flow
       if (advancingRef.current) return;
@@ -748,10 +756,40 @@ export const MusicPlayerProvider: React.FC<MusicPlayerProviderProps> = ({ childr
       dispatch({ type: 'SET_LOADING', payload: true });
     };
 
-    const handleCanPlay = () => {
+    const handleCanPlay = async () => {
       // Clear advancing flag when new audio can play
       advancingRef.current = false;
       dispatch({ type: 'SET_LOADING', payload: false });
+      // If user intended to play, ensure we kick playback now
+      try {
+        if (state.isPlaying && audio.paused) {
+          // prefer to play now that we can
+          await playAudioWithRetry(audio);
+        }
+      } catch (err) {
+        console.warn('Error attempting play on canplay:', err);
+      }
+    };
+
+    const handleLoadedMetadata = async () => {
+      // Update duration as soon as it's known
+      dispatch({
+        type: 'UPDATE_TIME',
+        payload: { currentTime: audio.currentTime, duration: audio.duration || 0 },
+      });
+      // Some browsers fire loadedmetadata before canplay and require an explicit play()
+      try {
+        if (state.isPlaying && audio.paused) {
+          await playAudioWithRetry(audio);
+        }
+      } catch (err) {
+        console.warn('Error attempting play on loadedmetadata:', err);
+      }
+    };
+
+    const handleWaiting = () => {
+      // Buffering started or stalled
+      dispatch({ type: 'SET_LOADING', payload: true });
     };
 
     const handleError = () => {
@@ -785,6 +823,9 @@ export const MusicPlayerProvider: React.FC<MusicPlayerProviderProps> = ({ childr
     audio.addEventListener('loadstart', handleLoadStart);
     audio.addEventListener('canplay', handleCanPlay);
     audio.addEventListener('error', handleError);
+    audio.addEventListener('loadedmetadata', handleLoadedMetadata);
+    audio.addEventListener('waiting', handleWaiting);
+    audio.addEventListener('playing', handlePlaying);
 
     return () => {
       audio.removeEventListener('timeupdate', handleTimeUpdate);
@@ -794,6 +835,9 @@ export const MusicPlayerProvider: React.FC<MusicPlayerProviderProps> = ({ childr
       audio.removeEventListener('loadstart', handleLoadStart);
       audio.removeEventListener('canplay', handleCanPlay);
       audio.removeEventListener('error', handleError);
+      audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      audio.removeEventListener('waiting', handleWaiting);
+      audio.removeEventListener('playing', handlePlaying);
     };
   }, [state.isPlaying, state.isLibraryShuffleMode, state.autoPlay, state.libraryTracks, state.currentTrack?.id]);
 
@@ -830,8 +874,8 @@ export const MusicPlayerProvider: React.FC<MusicPlayerProviderProps> = ({ childr
     };
 
     const handleLoadError = (event: Event) => {
-      const streamUrl = `/api/tracks/${state.currentTrack?.id}/stream`;
-      console.error('Failed to load audio stream:', streamUrl);
+      const currentSrc = (audio as any).currentSrc || audio.src;
+      console.error('Failed to load audio source:', currentSrc);
       console.error('Original audio_url:', state.currentTrack?.audio_url);
       console.error('Audio element error event:', event);
       console.error('Audio element error:', audio.error);
@@ -839,6 +883,7 @@ export const MusicPlayerProvider: React.FC<MusicPlayerProviderProps> = ({ childr
         console.error('Audio error code:', audio.error.code);
         console.error('Audio error message:', audio.error.message);
       }
+      // Fallbacks are handled below in strategy switchers; if we reach here without a switch, set an error
       dispatch({ type: 'SET_ERROR', payload: 'Audio stream could not be loaded' });
     };
 
@@ -923,8 +968,20 @@ export const MusicPlayerProvider: React.FC<MusicPlayerProviderProps> = ({ childr
           audio.crossOrigin = 'anonymous';
           audio.preload = 'metadata';
 
+          // Loading strategies and fallback sequencing
+          const hlsUrl = streamInfo.hlsUrl;
+          let usedStrategy: 'none' | 'hlsjs' | 'native' | 'progressive' = 'none';
+
+          const detachAudioListeners = () => {
+            audio.removeEventListener('error', handleLoadError);
+            audio.removeEventListener('canplay', handleCanPlay);
+            audio.removeEventListener('loadstart', handleLoadStart);
+            audio.removeEventListener('progress', handleProgress);
+          };
+
           const tryProgressive = () => {
-            // Fallback to progressive stream
+            usedStrategy = 'progressive';
+            detachAudioListeners();
             audio.src = streamInfo.streamUrl;
             audio.addEventListener('error', handleLoadError);
             audio.addEventListener('canplay', handleCanPlay);
@@ -934,57 +991,92 @@ export const MusicPlayerProvider: React.FC<MusicPlayerProviderProps> = ({ childr
             audio.load();
           };
 
-          // Prefer HLS if available
-          if (streamInfo.hlsUrl) {
-            const hlsUrl = streamInfo.hlsUrl;
-            const canPlayNativeHls = audio.canPlayType('application/vnd.apple.mpegurl');
-            if (canPlayNativeHls === 'probably' || canPlayNativeHls === 'maybe') {
-              audio.src = hlsUrl;
-              audio.addEventListener('error', handleLoadError);
-              audio.addEventListener('canplay', handleCanPlay);
-              audio.addEventListener('loadstart', handleLoadStart);
-              audio.addEventListener('progress', handleProgress);
-              console.log(`Loading audio via native HLS: ${hlsUrl}`);
-              audio.load();
-            } else {
+          const tryNativeHls = () => {
+            if (!hlsUrl) { tryProgressive(); return; }
+            usedStrategy = 'native';
+            detachAudioListeners();
+            audio.src = hlsUrl;
+            audio.addEventListener('error', async (evt) => {
+              // If native failed, attempt hls.js if available, else progressive
+              console.warn('Native HLS error, attempting hls.js or progressive');
+              detachAudioListeners();
               try {
                 const HlsModule = await import('hls.js');
-                const Hls = HlsModule.default;
+                const Hls = HlsModule.default as any;
                 if (Hls && Hls.isSupported()) {
-                  if (hlsRef.current) {
-                    try { hlsRef.current.destroy(); } catch {}
-                    hlsRef.current = null;
-                  }
-                  const hls = new Hls({
-                    enableWorker: true,
-                    backBufferLength: 30,
-                  });
-                  hlsRef.current = hls;
-
-                  hls.on(Hls.Events.ERROR, (_evt: any, data: any) => {
-                    console.warn('HLS error:', data);
-                    if (data?.fatal) {
-                      try { hls.destroy(); } catch {}
-                      hlsRef.current = null;
-                      tryProgressive();
-                    }
-                  });
-
-                  hls.loadSource(hlsUrl);
-                  hls.attachMedia(audio);
-
-                  // Attach basic listeners on the audio element as well
-                  audio.addEventListener('error', handleLoadError);
-                  audio.addEventListener('canplay', handleCanPlay);
-                  audio.addEventListener('loadstart', handleLoadStart);
-                  audio.addEventListener('progress', handleProgress);
-
-                  console.log(`Loading audio via hls.js: ${hlsUrl}`);
-                } else {
-                  tryProgressive();
+                  tryHlsJs();
+                  return;
                 }
-              } catch (e) {
-                console.warn('Failed to load hls.js, falling back to progressive', e);
+              } catch {}
+              tryProgressive();
+              // still pass through to general handler for logging
+              handleLoadError(evt);
+            }, { once: true });
+            audio.addEventListener('canplay', handleCanPlay);
+            audio.addEventListener('loadstart', handleLoadStart);
+            audio.addEventListener('progress', handleProgress);
+            console.log(`Loading audio via native HLS: ${hlsUrl}`);
+            audio.load();
+          };
+
+          const tryHlsJs = async () => {
+            if (!hlsUrl) { tryProgressive(); return; }
+            usedStrategy = 'hlsjs';
+            detachAudioListeners();
+            try {
+              const HlsModule = await import('hls.js');
+              const Hls: any = HlsModule.default;
+              if (Hls && Hls.isSupported()) {
+                if (hlsRef.current) {
+                  try { hlsRef.current.destroy(); } catch {}
+                  hlsRef.current = null;
+                }
+                const hls = new Hls({ enableWorker: true, backBufferLength: 30 });
+                hlsRef.current = hls;
+                hls.on(Hls.Events.ERROR, (_evt: any, data: any) => {
+                  console.warn('HLS.js error:', data);
+                  if (data?.fatal) {
+                    try { hls.destroy(); } catch {}
+                    hlsRef.current = null;
+                    // fall back to progressive if fatal
+                    tryProgressive();
+                  }
+                });
+                hls.loadSource(hlsUrl);
+                hls.attachMedia(audio);
+
+                // Attach listeners on the audio element as well
+                audio.addEventListener('error', handleLoadError);
+                audio.addEventListener('canplay', handleCanPlay);
+                audio.addEventListener('loadstart', handleLoadStart);
+                audio.addEventListener('progress', handleProgress);
+                console.log(`Loading audio via hls.js: ${hlsUrl}`);
+              } else {
+                tryNativeHls();
+              }
+            } catch (e) {
+              console.warn('Failed to initialize hls.js, trying native/progressive', e);
+              tryNativeHls();
+            }
+          };
+
+          // Prefer hls.js when supported; otherwise try native (Safari), else progressive
+          if (hlsUrl) {
+            try {
+              const HlsModule = await import('hls.js');
+              const Hls = HlsModule.default as any;
+              if (Hls && Hls.isSupported()) {
+                await tryHlsJs();
+              } else if (audio.canPlayType('application/vnd.apple.mpegurl')) {
+                tryNativeHls();
+              } else {
+                tryProgressive();
+              }
+            } catch {
+              // If import fails (e.g., network), try native then progressive
+              if (audio.canPlayType('application/vnd.apple.mpegurl')) {
+                tryNativeHls();
+              } else {
                 tryProgressive();
               }
             }
@@ -1040,7 +1132,20 @@ export const MusicPlayerProvider: React.FC<MusicPlayerProviderProps> = ({ childr
         try {
           // Check if audio source is loaded
           if (audio.readyState < 2) {
-            console.log('Audio not ready, waiting for canplay event');
+            console.log('Audio not ready, waiting briefly before retrying play');
+            // escalate preload to encourage buffering
+            try { audio.preload = 'auto'; } catch {}
+            // set a short retry if not already scheduled
+            if (playRetryTimeoutRef.current) clearTimeout(playRetryTimeoutRef.current);
+            if (playRetryCountRef.current < 3) {
+              playRetryCountRef.current += 1;
+              playRetryTimeoutRef.current = setTimeout(() => {
+                // re-invoke play path if still intended to play
+                if (audio.readyState >= 2 && state.isPlaying) {
+                  audio.play().catch(err => console.warn('Deferred play failed:', err));
+                }
+              }, 800 * playRetryCountRef.current);
+            }
             return;
           }
           
@@ -1069,6 +1174,15 @@ export const MusicPlayerProvider: React.FC<MusicPlayerProviderProps> = ({ childr
     } else if (!state.isPlaying && !audio.paused) {
       audio.pause();
     }
+
+    return () => {
+      // clear any pending retry when deps change
+      if (playRetryTimeoutRef.current) {
+        clearTimeout(playRetryTimeoutRef.current);
+        playRetryTimeoutRef.current = null;
+      }
+      playRetryCountRef.current = 0;
+    };
   }, [state.isPlaying, state.isLoading]);
 
   // Handle volume changes

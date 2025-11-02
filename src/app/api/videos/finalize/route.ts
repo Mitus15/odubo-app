@@ -3,6 +3,7 @@ export const runtime = 'nodejs';
 import { getUserFromRequest, isAdminUser } from '@/lib/auth';
 import { executeQuery, queryDatabase } from '@/lib/db';
 import CloudflareStreamAPI from '@/lib/cloudflareStream';
+import { writeAuditLog } from '@/lib/audit';
 
 export async function POST(req: NextRequest) {
   const user = getUserFromRequest(req);
@@ -47,9 +48,9 @@ export async function POST(req: NextRequest) {
       `INSERT INTO videos (
         uid, title, artist_name, description, url, poster_url, thumbnail, duration,
         category, is_public, type, mood, credits, related_projects, status, stream_video_id,
-        publication_status,
+        publication_status, thumbnail_timestamp_pct,
         created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'published', ?, ?, datetime('now'), datetime('now'))`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'published', ?, ?, ?, datetime('now'), datetime('now'))`,
       [
         uid,
         (meta.title || uid),
@@ -67,11 +68,20 @@ export async function POST(req: NextRequest) {
         typeof meta.related_projects === 'string' ? meta.related_projects : JSON.stringify(meta.related_projects || []),
         uid,
         publication_status,
+        typeof chosenPct === 'number' ? chosenPct : null,
       ]
     );
 
+    // Prune candidates for this session after finalize
+    try {
+      await executeQuery(`DELETE FROM videos_thumbnail_candidates WHERE session_id = ?`, [sessionId]);
+    } catch (e) {
+      console.warn('Prune candidates failed (non-fatal):', e);
+    }
+
     await executeQuery(`UPDATE video_upload_sessions SET status = 'done', updated_at = datetime('now') WHERE id = ?`, [sessionId]);
 
+    try { await writeAuditLog(req, user, 'videos.finalize', String(sessionId), { uid, publication_status }); } catch {}
     return NextResponse.json({ success: true, uid, url: embedUrl });
   } catch (error) {
     console.error('finalize video error:', error);

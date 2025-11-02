@@ -20,7 +20,7 @@ export default function JoinMomentsPage() {
 
   return (
     <div className="max-w-2xl mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-4">Join Moments</h1>
+      <h1 className="text-2xl font-bold mb-4">Moments Gallery</h1>
       <div className="mb-4">
         <label className="block text-sm">Enter gallery code</label>
         <input value={code} onChange={(e) => setCode(e.target.value)} className="mt-1 w-full px-3 py-2 rounded bg-[#171616] text-[#ede8df]" />
@@ -36,7 +36,7 @@ export default function JoinMomentsPage() {
           <div className="mt-3">
             <a
               href={`/moments/capture?galleryId=${gallery.id}&starts_at=${encodeURIComponent(gallery.starts_at || '')}&ends_at=${encodeURIComponent(gallery.ends_at || '')}`}
-              className="px-4 py-2 rounded bg-[#60a5fa] text-white"
+              className="px-4 py-2 rounded bg-[#502d26] text-[#ede8df] hover:bg-[#6b4c3b] transition-colors"
             >
               Open Camera
             </a>

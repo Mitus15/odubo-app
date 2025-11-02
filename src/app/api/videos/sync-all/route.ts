@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromRequest, isAdminUser } from '@/lib/auth';
 import { queryDatabase } from '@/lib/db';
+import { writeAuditLog } from '@/lib/audit';
 
 export const runtime = 'edge';
 export const maxDuration = 300;
@@ -51,6 +52,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    try { await writeAuditLog(req, user, 'videos.sync_all', 'videos', { updated }); } catch {}
     return NextResponse.json({ success: true, updated });
   } catch (error) {
     console.error('Sync-all to Stream failed:', error);
