@@ -6,16 +6,10 @@ export default function FeaturedHeroClient({ config }: { config: FeaturedConfig 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [fg, setFg] = useState<string>('#ede8df'); // default light text
   const [veil, setVeil] = useState<number>(0.30);   // default veil strength
-  // Start without CORS to avoid SSR/CSR hydration mismatches in dev.
-  // Enable CORS after mount in production domains only.
+  // Force no-CORS for video by default to guarantee playback on all devices
+  // regardless of R2 CORS headers. We can re-enable CORS later once headers
+  // are confirmed stable to support pixel sampling.
   const [useCors, setUseCors] = useState<boolean>(false);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const host = window.location.hostname;
-      setUseCors(/odubo\.studio$/.test(host));
-    }
-  }, []);
 
   // Periodically sample background video brightness to pick a contrasting foreground color
   useEffect(() => {
