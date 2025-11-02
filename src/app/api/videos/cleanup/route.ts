@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 export const runtime = 'edge';
 import { S3Client, ListObjectsV2Command, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { queryDatabase } from '@/lib/db';
+import { writeAuditLog } from '@/lib/audit';
+import { getUserFromRequest } from '@/lib/auth';
 
 // Cloudflare R2 configuration
 const s3Client = new S3Client({
@@ -114,6 +116,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    try { await writeAuditLog(req, getUserFromRequest(req), 'videos.cleanup', 'r2', { orphaned: deleteResults.successful, failed: deleteResults.failed }); } catch {}
     return NextResponse.json({
       success: true,
       message: 'R2 cleanup completed',
@@ -211,6 +214,7 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    try { await writeAuditLog(req, getUserFromRequest(req), 'videos.cleanup.preview', 'r2', { orphaned: orphanedFiles.length, valid: validFiles.length }); } catch {}
     return NextResponse.json({
       preview: true,
       summary: {

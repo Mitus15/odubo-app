@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { queryDatabase } from '@/lib/db';
+import { verifyUserFromRequest, isAdminUser } from '@/lib/auth';
+import { rateLimit } from '@/lib/rateLimit';
 
 export async function GET(req: Request) {
   try {
@@ -7,8 +9,22 @@ export async function GET(req: Request) {
     const galleryId = url.searchParams.get('galleryId');
     const limit = Number(url.searchParams.get('limit') || '50');
     const offset = Number(url.searchParams.get('offset') || '0');
+    const code = url.searchParams.get('code');
 
     if (!galleryId) return NextResponse.json({ error: 'Missing galleryId' }, { status: 400 });
+
+    // Security: require admin OR a matching join code for this gallery
+    const user = await verifyUserFromRequest(req as any);
+    const isAdmin = isAdminUser(user);
+    if (!isAdmin) {
+      if (!code) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      const match = await queryDatabase('SELECT id FROM galleries WHERE id = ? AND code = ? LIMIT 1', [galleryId, code]);
+      if (!match[0]) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const rlKey = isAdmin ? `moments:list:admin:${user!.userId}` : `moments:list:${galleryId}:${code || 'anon'}`;
+    const rl = await rateLimit({ key: rlKey, limit: 300, windowMs: 60_000 });
+    if (!rl.allowed) return NextResponse.json({ error: 'Rate limited' }, { status: 429 });
 
     const rows = await queryDatabase('SELECT id, uid, r2_key, thumbnail_key, user_name, moderated, created_at, media_type, original_filename FROM gallery_photos WHERE gallery_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?', [galleryId, limit, offset]);
     const publicBase = process.env.CLOUDFLARE_R2_PUBLIC_URL;

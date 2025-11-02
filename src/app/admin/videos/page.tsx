@@ -50,6 +50,9 @@ type Candidate = { id: number; url: string; pct: number; rank: number; rationale
 
 export default function AdminVideosPage() {
   const [videos, setVideos] = useState<Video[]>([]);
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(20);
+  const [filterPublication, setFilterPublication] = useState<'all' | 'live' | 'archived'>('all');
   const [form, setForm] = useState<FormState>({
     title: "",
     description: "",
@@ -80,9 +83,13 @@ export default function AdminVideosPage() {
   const [pollingActive, setPollingActive] = useState(false);
   const [sessionStatus, setSessionStatus] = useState<'created' | 'uploaded' | 'analyzing' | 'ready' | 'completed' | 'error'>('created');
 
-  // Fetch videos (Read)
+  // Fetch videos (Read) with pagination and optional publication filter
   useEffect(() => {
-    fetch("/api/videos")
+    const params = new URLSearchParams();
+    params.set('limit', String(pageSize));
+    params.set('offset', String(page * pageSize));
+    if (filterPublication !== 'all') params.set('publication_status', filterPublication);
+    fetch(`/api/videos?${params.toString()}`)
       .then((res) => res.json() as Promise<{ videos: any[] }>)
       .then((data) => {
         const raw = data.videos || [];
@@ -107,8 +114,8 @@ export default function AdminVideosPage() {
         })).filter((v: Video) => v && typeof v.id !== 'undefined' && typeof v.title === 'string' && v.title.trim() !== '');
         setVideos(normalized);
       })
-      .catch(console.error);
-  }, []);
+    .catch(console.error);
+  }, [page, pageSize, filterPublication]);
 
   // Handle input changes
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) {
@@ -528,6 +535,29 @@ export default function AdminVideosPage() {
         <h1 className="text-2xl font-bold tracking-wide">Manage Videos</h1>
       </div>
 
+      {/* Filters & pagination controls */}
+      <div className="mb-4 flex flex-col sm:flex-row gap-3 sm:items-end">
+        <label className="block text-sm font-medium">
+          Publication
+          <select value={filterPublication} onChange={(e) => { setPage(0); setFilterPublication(e.target.value as any); }} className="mt-1 w-full px-3 py-2 rounded-md bg-[#171616] border border-[#b2a491]/20 text-[#ede8df] focus:outline-none focus:ring-1 focus:ring-[#ede8df]">
+            <option value="all">All</option>
+            <option value="live">Live</option>
+            <option value="archived">Archived</option>
+          </select>
+        </label>
+        <label className="block text-sm font-medium">
+          Page size
+          <select value={pageSize} onChange={(e) => { setPage(0); setPageSize(Number(e.target.value)); }} className="mt-1 w-full px-3 py-2 rounded-md bg-[#171616] border border-[#b2a491]/20 text-[#ede8df] focus:outline-none focus:ring-1 focus:ring-[#ede8df] max-w-[120px]">
+            {[10,20,50,100].map(n => <option key={n} value={n}>{n}</option>)}
+          </select>
+        </label>
+        <div className="flex gap-2 ml-auto">
+          <button type="button" className="px-3 py-2 rounded-md bg-[#302927] text-[#b2a491] disabled:opacity-50" onClick={() => setPage(p => Math.max(0, p-1))} disabled={page === 0}>&larr; Prev</button>
+          <div className="px-2 py-2 text-sm text-[#b2a491]">Page {page + 1}</div>
+          <button type="button" className="px-3 py-2 rounded-md bg-[#302927] text-[#b2a491]" onClick={() => setPage(p => p+1)}>Next &rarr;</button>
+        </div>
+      </div>
+
       {/* Publication status selector (applies to metadata-only flow and finalize step) */}
       <div className="mb-4">
         <label className="block text-sm font-medium">Publication Status</label>
@@ -821,6 +851,53 @@ export default function AdminVideosPage() {
                     >
                       Sync to Stream
                     </button>
+                    {/* Manual thumbnail upload */}
+                    <label className="inline-flex items-center gap-2 py-1 px-3 rounded text-xs sm:text-base bg-[#302927] text-[#b2a491] hover:bg-[#502d26]/60 cursor-pointer">
+                      <input type="file" accept="image/jpeg,image/png" className="hidden" onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        try {
+                          setLoading(true);
+                          const fd = new FormData();
+                          fd.append('file', file);
+                          fd.append('videoId', String(video.id));
+                          const res = await fetch('/api/videos/thumbnail/upload', { method: 'POST', body: fd });
+                          if (!res.ok) throw new Error('Upload failed');
+                          await fetch(`/api/videos?limit=${pageSize}&offset=${page*pageSize}${filterPublication !== 'all' ? `&publication_status=${filterPublication}` : ''}`)
+                            .then(r => r.json()).then((d: any) => {
+                              const list = (d.videos || []) as any[];
+                              const normalized: Video[] = list.map((v: any) => ({
+                                id: Number(v.id),
+                                title: v.title || '',
+                                artist_name: v.artist_name || '',
+                                description: v.description || '',
+                                url: v.url || v.video_url || '',
+                                poster_url: v.poster_url || v.thumbnail_url || '',
+                                thumbnail: v.thumbnail || v.thumbnail_url || '',
+                                duration: String(v.duration || ''),
+                                category: v.category || '',
+                                is_public: v.is_public === 1 || v.is_public === true,
+                                type: v.type || '',
+                                mood: v.mood || '',
+                                credits: Array.isArray(v.credits) ? v.credits : (() => { try { return JSON.parse(v.credits || '[]'); } catch { return []; } })(),
+                                related_projects: Array.isArray(v.related_projects) ? v.related_projects : (() => { try { return JSON.parse(v.related_projects || '[]'); } catch { return []; } })(),
+                                status: v.status || 'published',
+                                created_at: v.created_at,
+                                updated_at: v.updated_at,
+                              }));
+                              setVideos(normalized);
+                            });
+                          alert('Thumbnail updated');
+                        } catch (err) {
+                          console.error(err);
+                          alert('Thumbnail upload failed');
+                        } finally {
+                          setLoading(false);
+                          (e.target as HTMLInputElement).value = '';
+                        }
+                      }} />
+                      <span>Upload Poster</span>
+                    </label>
                   </td>
                 </tr>
               ))}

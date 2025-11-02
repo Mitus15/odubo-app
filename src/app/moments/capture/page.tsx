@@ -468,7 +468,7 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
           <button onClick={takePhoto} className="px-4 py-2 rounded bg-[#ede8df] text-[#171616] hover:bg-[#d6cfc0] transition-colors">
             📸 Take Photo
           </button>
-          <button onClick={switchCamera} className="px-4 py-2 rounded bg-[#60a5fa] text-white hover:bg-[#3b82f6] transition-colors">
+          <button onClick={switchCamera} className="px-4 py-2 rounded bg-[#502d26] text-[#ede8df] hover:bg-[#6b4c3b] transition-colors">
             🔄 Switch Camera
           </button>
           {videoDevices.length > 0 && (

@@ -1,5 +1,6 @@
 // Distributed rate limiter using Cloudflare D1 for production use
 // Provides better security and works across multiple instances
+import { executeQuery as d1Execute } from '@/lib/db';
 
 type RateLimitConfig = {
   key: string;
@@ -47,28 +48,7 @@ async function cleanupExpiredRateLimits() {
 }
 
 // Execute database query (using your existing db.ts pattern)
-async function executeQuery(sql: string, params: any[] = []) {
-  const dbUrl = process.env.DATABASE_URL;
-  if (!dbUrl) {
-    throw new Error('DATABASE_URL is not set');
-  }
-
-  const response = await fetch(`${dbUrl}/execute`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(process.env.CLOUDFLARE_D1_API_TOKEN ? { 'Authorization': `Bearer ${process.env.CLOUDFLARE_D1_API_TOKEN}` } : {})
-    },
-    body: JSON.stringify({ sql, params }),
-  });
-
-  if (!response.ok) {
-    const data = await response.json();
-    throw new Error('Database query failed: ' + JSON.stringify(data));
-  }
-
-  return response.json();
-}
+const executeQuery = d1Execute;
 
 export async function rateLimit({ key, limit, windowMs }: RateLimitConfig): Promise<RateLimitResult> {
   try {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export const runtime = 'nodejs';
 import { getUserFromRequest, isAdminUser } from '@/lib/auth';
 import { queryDatabase } from '@/lib/db';
+import { writeAuditLog } from '@/lib/audit';
 
 export async function GET(req: NextRequest) {
   const user = getUserFromRequest(req);
@@ -16,7 +17,7 @@ export async function GET(req: NextRequest) {
       `SELECT id, url, pct, ai_score, rank, rationale FROM videos_thumbnail_candidates WHERE session_id = ? ORDER BY rank ASC LIMIT 3`,
       [sessionId]
     );
-
+    try { await writeAuditLog(req, user, 'videos.thumbnail.candidates', String(sessionId), { count: list.length }); } catch {}
     return NextResponse.json({ success: true, candidates: list });
   } catch (error) {
     console.error('thumbnail candidates error:', error);

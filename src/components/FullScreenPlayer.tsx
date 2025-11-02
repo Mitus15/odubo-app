@@ -168,7 +168,7 @@ export default function FullScreenPlayer({ isVisible, onClose }: FullScreenPlaye
                   {state.currentAlbum.title}
                 </p>
               )}
-              {state.error && (
+              {!state.isLoading && state.error && (
                 <p className="text-red-400 text-sm mt-2">⚠️ {state.error}</p>
               )}
             </div>
@@ -231,9 +231,9 @@ export default function FullScreenPlayer({ isVisible, onClose }: FullScreenPlaye
               {/* Play/Pause */}
               <button
                 onClick={togglePlayPause}
-                disabled={!state.currentTrack || state.error !== null}
+                disabled={!state.currentTrack || state.isLoading}
                 className={`w-20 h-20 flex items-center justify-center rounded-full transition-all shadow-2xl ${
-                  !state.currentTrack || state.error !== null
+                  !state.currentTrack || state.isLoading
                     ? 'bg-[#502d26]/30 text-[#726d6c]/50 cursor-not-allowed'
                     : 'bg-gradient-to-br from-[#843c2d] to-[#a0472f] text-[#ede8df] hover:from-[#843c2d]/90 hover:to-[#a0472f]/90 hover:scale-105 active:scale-95'
                 }`}

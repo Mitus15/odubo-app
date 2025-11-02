@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 export const runtime = 'nodejs';
 import CloudflareStreamAPI from "@/lib/cloudflareStream";
 import { getUserFromRequest, isAdminUser } from "@/lib/auth";
+import { writeAuditLog } from "@/lib/audit";
 
 export async function GET(req: NextRequest) {
   // Authenticate user (prefer token)
@@ -36,7 +37,8 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Failed to fetch video status" }, { status: 500 });
     }
 
-    const { result } = videoDetails;
+  const { result } = videoDetails;
+  try { await writeAuditLog(req, authUser || null, 'videos.stream_status', String(streamVideoId), { state: result.status.state, pct: result.status.pctComplete }); } catch {}
     
     return NextResponse.json({
       success: true,

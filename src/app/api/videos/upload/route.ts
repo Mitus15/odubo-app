@@ -4,6 +4,7 @@ export const runtime = 'nodejs';
 import CloudflareStreamAPI from "@/lib/cloudflareStream";
 import { rateLimit } from "@/lib/rateLimit";
 import { executeQuery } from "@/lib/db";
+import { writeAuditLog } from "@/lib/audit";
 
 // Configure larger request size limit for video uploads
 export const maxDuration = 300; // 5 minutes timeout (adjusted for Vercel hobby limits)
@@ -99,6 +100,9 @@ export async function POST(req: NextRequest) {
     ];
 
     await executeQuery(sql, params);
+
+    // Audit
+    try { await writeAuditLog(req, authUser, 'videos.upload', streamVideoId, { title, category, type, mood, is_public }); } catch {}
 
     return NextResponse.json({
       success: true,

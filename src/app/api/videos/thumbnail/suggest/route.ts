@@ -4,6 +4,7 @@ import { getUserFromRequest, isAdminUser } from '@/lib/auth';
 import { executeQuery, queryDatabase } from '@/lib/db';
 import CloudflareStreamAPI from '@/lib/cloudflareStream';
 import sharp from 'sharp';
+import { writeAuditLog } from '@/lib/audit';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
@@ -181,6 +182,7 @@ export async function POST(req: NextRequest) {
 
     await executeQuery(`UPDATE video_upload_sessions SET status = 'awaiting_choice', updated_at = datetime('now') WHERE id = ?`, [sessionId]);
 
+    try { await writeAuditLog(req, user, 'videos.thumbnail.suggest', String(sessionId), { candidates: ranked.length }); } catch {}
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('thumbnail suggest error:', error);

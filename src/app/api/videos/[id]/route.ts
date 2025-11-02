@@ -3,6 +3,7 @@ import { executeQuery, queryDatabase } from '@/lib/db';
 import { z } from 'zod';
 import { getUserFromRequest, isAdminUser } from '@/lib/auth';
 import { deleteFile } from '@/worker/upload';
+import { writeAuditLog } from '@/lib/audit';
 
 export const runtime = 'nodejs';
 
@@ -54,6 +55,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
     }
     const video = rows[0];
+    try { await writeAuditLog(_req, getUserFromRequest(_req), 'videos.get', String(id)); } catch {}
     return NextResponse.json({ success: true, video });
   } catch (error) {
     console.error('Error fetching video:', error);
@@ -169,6 +171,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       console.warn('Stream metadata sync skipped/failed:', e);
     }
 
+    // Audit
+    await writeAuditLog(req, user, 'videos.update', String(id), { fields: Object.keys(updatable).filter(k => updatable[k] !== null && updatable[k] !== undefined) });
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error updating video:', error);
@@ -228,7 +232,8 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     }
 
     await executeQuery('DELETE FROM videos WHERE id = ?', [id]);
-
+    // Audit
+    await writeAuditLog(req, user, 'videos.delete', String(id));
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error deleting video:', error);

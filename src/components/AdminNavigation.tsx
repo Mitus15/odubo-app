@@ -8,6 +8,7 @@ const adminNavItems = [
   { label: "Dashboard", href: "/admin", icon: "📊" },
   { label: "Videos", href: "/admin/videos", icon: "🎬" },
   { label: "Music", href: "/admin/albums", icon: "🎵" },
+  { label: "Featured", href: "/featured/manage", icon: "⭐" },
   { label: "Users", href: "/admin/users", icon: "👥" },
   { label: "Analytics", href: "/admin/analytics", icon: "📈" },
 ];

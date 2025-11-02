@@ -140,6 +140,9 @@ export default function FullScreenMusicPlayer({ isOpen, onClose }: FullScreenMus
               <p className="text-base sm:text-xl lg:text-lg xl:text-xl text-[#b2a491] mb-1">
                 {state.currentAlbum?.artist_name || 'Unknown Artist'}
               </p>
+              {!state.isLoading && state.error && (
+                <p className="text-red-400 text-sm mt-1">⚠️ {state.error}</p>
+              )}
             </div>
 
             {/* Progress Bar */}
@@ -202,9 +205,16 @@ export default function FullScreenMusicPlayer({ isOpen, onClose }: FullScreenMus
               {/* Play/Pause */}
               <button
                 onClick={togglePlayPause}
-                className="p-6 rounded-full bg-[#ede8df] text-[#302927] hover:bg-[#d4c9b8] transition-colors shadow-lg"
+                disabled={state.isLoading}
+                className={`p-6 rounded-full transition-colors shadow-lg ${
+                  state.isLoading
+                    ? 'bg-[#ede8df]/50 text-[#302927]/50 cursor-not-allowed'
+                    : 'bg-[#ede8df] text-[#302927] hover:bg-[#d4c9b8]'
+                }`}
               >
-                {state.isPlaying ? (
+                {state.isLoading ? (
+                  <div className="w-8 h-8 border-3 border-current border-t-transparent rounded-full animate-spin" />
+                ) : state.isPlaying ? (
                   <svg className="w-10 h-10" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
                   </svg>

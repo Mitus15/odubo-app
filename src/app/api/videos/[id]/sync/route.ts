@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromRequest, isAdminUser } from '@/lib/auth';
 import { queryDatabase } from '@/lib/db';
+import { writeAuditLog } from '@/lib/audit';
 
 export const runtime = 'nodejs';
 
@@ -46,7 +47,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     const { default: CloudflareStreamAPI } = await import('@/lib/cloudflareStream');
     const stream = new CloudflareStreamAPI();
     await stream.updateVideo(uid, { meta: buildStreamMeta(row) });
-
+    try { await writeAuditLog(req, user, 'videos.sync', String(id), { uid }); } catch {}
     return NextResponse.json({ success: true, uid });
   } catch (error) {
     console.error('Sync to Stream failed:', error);

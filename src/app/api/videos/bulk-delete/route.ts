@@ -2,9 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 export const runtime = 'edge';
 import { executeQuery, queryDatabase } from '@/lib/db';
 import { deleteFile } from '@/worker/upload';
+import { writeAuditLog } from '@/lib/audit';
+import { getUserFromRequest, isAdminUser } from '@/lib/auth';
 
 export async function DELETE(req: NextRequest) {
   try {
+    const user = getUserFromRequest(req);
+    if (!isAdminUser(user)) {
+      return NextResponse.json({ error: 'Forbidden: Admins only' }, { status: 403 });
+    }
     const body = await req.json() as { ids: string[] };
     
     if (!body.ids || !Array.isArray(body.ids) || body.ids.length === 0) {
@@ -86,6 +92,7 @@ export async function DELETE(req: NextRequest) {
       body.ids
     );
 
+    try { await writeAuditLog(req, user, 'videos.bulk_delete', body.ids.join(','), { count: body.ids.length }); } catch {}
     return NextResponse.json({
       success: true,
       message: `Successfully deleted ${body.ids.length} videos and associated files`
