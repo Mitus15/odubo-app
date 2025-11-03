@@ -38,8 +38,8 @@ function generateRandomHexString(byteLength: number): string {
 // Database helper functions
 export async function executeQuery(sql: string, params: any[] = []) {
   try {
-    const databaseUrl = process.env.DATABASE_URL;
-    const apiToken = process.env.CLOUDFLARE_D1_API_TOKEN;
+  const databaseUrl = process.env.DATABASE_URL;
+  const apiToken = process.env.CLOUDFLARE_D1_API_TOKEN || process.env.CLOUDFLARE_API_TOKEN;
     
     if (!databaseUrl) {
       throw new Error('DATABASE_URL environment variable is not set');
@@ -78,8 +78,8 @@ export async function executeQuery(sql: string, params: any[] = []) {
 
 export async function queryDatabase(sql: string, params: any[] = []) {
   try {
-    const databaseUrl = process.env.DATABASE_URL;
-    const apiToken = process.env.CLOUDFLARE_D1_API_TOKEN;
+  const databaseUrl = process.env.DATABASE_URL;
+  const apiToken = process.env.CLOUDFLARE_D1_API_TOKEN || process.env.CLOUDFLARE_API_TOKEN;
     
     if (!databaseUrl) {
       throw new Error('DATABASE_URL environment variable is not set');
@@ -130,8 +130,8 @@ export async function insertUser(user: {
   is_admin?: boolean;
 }) {
   try {
-    const databaseUrl = process.env.DATABASE_URL;
-    const apiToken = process.env.CLOUDFLARE_D1_API_TOKEN;
+  const databaseUrl = process.env.DATABASE_URL;
+  const apiToken = process.env.CLOUDFLARE_D1_API_TOKEN || process.env.CLOUDFLARE_API_TOKEN;
     
     if (!databaseUrl) {
       throw new Error('DATABASE_URL environment variable is not set');
@@ -181,8 +181,8 @@ export async function insertUser(user: {
 
 export async function getUserByEmail(email: string): Promise<User | null> {
   try {
-    const databaseUrl = process.env.DATABASE_URL;
-    const apiToken = process.env.CLOUDFLARE_D1_API_TOKEN;
+  const databaseUrl = process.env.DATABASE_URL;
+  const apiToken = process.env.CLOUDFLARE_D1_API_TOKEN || process.env.CLOUDFLARE_API_TOKEN;
     
     if (!databaseUrl) {
       throw new Error('DATABASE_URL environment variable is not set');
@@ -275,8 +275,8 @@ export async function updateUser(id: string, updates: Partial<Omit<User, 'id' | 
 // Account lockout functions
 export async function incrementFailedLoginAttempts(email: string): Promise<{ isLocked: boolean; lockoutExpiry?: string }> {
   try {
-    const databaseUrl = process.env.DATABASE_URL;
-    const apiToken = process.env.CLOUDFLARE_D1_API_TOKEN;
+  const databaseUrl = process.env.DATABASE_URL;
+  const apiToken = process.env.CLOUDFLARE_D1_API_TOKEN || process.env.CLOUDFLARE_API_TOKEN;
     
     if (!databaseUrl) {
       throw new Error('DATABASE_URL environment variable is not set');
@@ -303,14 +303,14 @@ export async function incrementFailedLoginAttempts(email: string): Promise<{ isL
 export async function resetFailedLoginAttempts(email: string): Promise<void> {
   try {
     const databaseUrl = process.env.DATABASE_URL;
-    const apiToken = process.env.CLOUDFLARE_D1_API_TOKEN;
+    const apiToken = process.env.CLOUDFLARE_D1_API_TOKEN || process.env.CLOUDFLARE_API_TOKEN;
     
     if (!databaseUrl) {
       throw new Error('DATABASE_URL environment variable is not set');
     }
     
     if (!apiToken) {
-      throw new Error('CLOUDFLARE_D1_API_TOKEN environment variable is not set');
+      throw new Error('CLOUDFLARE_D1_API_TOKEN or CLOUDFLARE_API_TOKEN environment variable is not set');
     }
     
     const user = await getUserByEmail(email);
@@ -329,14 +329,14 @@ export async function resetFailedLoginAttempts(email: string): Promise<void> {
 export async function isAccountLocked(email: string): Promise<{ isLocked: boolean; lockoutExpiry?: string }> {
   try {
     const databaseUrl = process.env.DATABASE_URL;
-    const apiToken = process.env.CLOUDFLARE_D1_API_TOKEN;
+    const apiToken = process.env.CLOUDFLARE_D1_API_TOKEN || process.env.CLOUDFLARE_API_TOKEN;
     
     if (!databaseUrl) {
       throw new Error('DATABASE_URL environment variable is not set');
     }
     
     if (!apiToken) {
-      throw new Error('CLOUDFLARE_D1_API_TOKEN environment variable is not set');
+      throw new Error('CLOUDFLARE_D1_API_TOKEN or CLOUDFLARE_API_TOKEN environment variable is not set');
     }
     
     const user = await getUserByEmail(email);
@@ -357,14 +357,14 @@ export async function isAccountLocked(email: string): Promise<{ isLocked: boolea
 export async function generateEmailVerificationToken(email: string): Promise<{ token: string; expiry: string }> {
   try {
     const databaseUrl = process.env.DATABASE_URL;
-    const apiToken = process.env.CLOUDFLARE_D1_API_TOKEN;
+    const apiToken = process.env.CLOUDFLARE_D1_API_TOKEN || process.env.CLOUDFLARE_API_TOKEN;
     
     if (!databaseUrl) {
       throw new Error('DATABASE_URL environment variable is not set');
     }
     
     if (!apiToken) {
-      throw new Error('CLOUDFLARE_D1_API_TOKEN environment variable is not set');
+      throw new Error('CLOUDFLARE_D1_API_TOKEN or CLOUDFLARE_API_TOKEN environment variable is not set');
     }
     
     const user = await getUserByEmail(email);
@@ -390,14 +390,14 @@ export async function generateEmailVerificationToken(email: string): Promise<{ t
 export async function verifyEmailToken(email: string, token: string): Promise<boolean> {
   try {
     const databaseUrl = process.env.DATABASE_URL;
-    const apiToken = process.env.CLOUDFLARE_D1_API_TOKEN;
+    const apiToken = process.env.CLOUDFLARE_D1_API_TOKEN || process.env.CLOUDFLARE_API_TOKEN;
     
     if (!databaseUrl) {
       throw new Error('DATABASE_URL environment variable is not set');
     }
     
     if (!apiToken) {
-      throw new Error('CLOUDFLARE_D1_API_TOKEN environment variable is not set');
+      throw new Error('CLOUDFLARE_D1_API_TOKEN or CLOUDFLARE_API_TOKEN environment variable is not set');
     }
     
     const user = await getUserByEmail(email);
@@ -423,14 +423,14 @@ export async function verifyEmailToken(email: string, token: string): Promise<bo
 export async function isEmailVerified(email: string): Promise<boolean> {
   try {
     const databaseUrl = process.env.DATABASE_URL;
-    const apiToken = process.env.CLOUDFLARE_D1_API_TOKEN;
+    const apiToken = process.env.CLOUDFLARE_D1_API_TOKEN || process.env.CLOUDFLARE_API_TOKEN;
     
     if (!databaseUrl) {
       throw new Error('DATABASE_URL environment variable is not set');
     }
     
     if (!apiToken) {
-      throw new Error('CLOUDFLARE_D1_API_TOKEN environment variable is not set');
+      throw new Error('CLOUDFLARE_D1_API_TOKEN or CLOUDFLARE_API_TOKEN environment variable is not set');
     }
     
     const user = await getUserByEmail(email);
@@ -448,14 +448,14 @@ export async function isEmailVerified(email: string): Promise<boolean> {
 export async function deleteUser(id: string) {
   try {
     const databaseUrl = process.env.DATABASE_URL;
-    const apiToken = process.env.CLOUDFLARE_D1_API_TOKEN;
+    const apiToken = process.env.CLOUDFLARE_D1_API_TOKEN || process.env.CLOUDFLARE_API_TOKEN;
     
     if (!databaseUrl) {
       throw new Error('DATABASE_URL environment variable is not set');
     }
     
     if (!apiToken) {
-      throw new Error('CLOUDFLARE_D1_API_TOKEN environment variable is not set');
+      throw new Error('CLOUDFLARE_D1_API_TOKEN or CLOUDFLARE_API_TOKEN environment variable is not set');
     }
     
     const sql = 'DELETE FROM users WHERE id = ?';

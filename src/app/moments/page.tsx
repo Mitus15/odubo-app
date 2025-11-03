@@ -1,6 +1,6 @@
 "use client";
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 type Tab = 'join' | 'moments';
 
@@ -38,17 +38,22 @@ function IconFolder(props: React.SVGProps<SVGSVGElement>) {
 
 export default function MomentsIndex() {
   const [tab, setTab] = useState<Tab>('join');
-  const galleries = useMemo(
-    () => [
-      { id: 'g1', title: 'Studio Launch Night', date: 'Jul 02, 2025', from: '#502d26', to: '#6b4c3b' },
-      { id: 'g2', title: 'Harmattan House', date: 'Dec 18, 2024', from: '#6b4c3b', to: '#b2a491' },
-      { id: 'g3', title: 'City Lights', date: 'Sep 10, 2024', from: '#3a2f2a', to: '#ede8df' },
-      { id: 'g4', title: 'Indigo Jazz', date: 'Mar 05, 2024', from: '#302927', to: '#6b4c3b' },
-      // Mark any item with { featured: true } to surface it. If none, Featured stays hidden.
-    ] as Array<{ id: string; title: string; date: string; from: string; to: string; featured?: boolean }>,
-    []
-  );
-  const featured = useMemo(() => galleries.filter((g) => g.featured), [galleries]);
+  const [galleries, setGalleries] = useState<Array<{ id: number; title: string; created_at?: string }>>([]);
+  const featured: any[] = useMemo(() => [], []);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/moments/galleries/public?limit=12');
+        const data: any = await res.json().catch(() => ({}));
+        if (res.ok && Array.isArray(data.galleries)) {
+          setGalleries(data.galleries.map((g: any) => ({ id: g.id, title: g.title, created_at: g.created_at })));
+        }
+      } catch (e) {
+        console.error('Failed loading galleries', e);
+      }
+    })();
+  }, []);
 
   return (
     // Scroll within the app layout's overflow-hidden main area
@@ -82,7 +87,7 @@ export default function MomentsIndex() {
       </header>
 
       <main className="max-w-6xl mx-auto px-6 pb-24">
-        {tab === 'join' ? <JoinSection /> : <LibrarySection galleries={galleries} featured={featured} />}
+  {tab === 'join' ? <JoinSection /> : <LibrarySection galleries={galleries} featured={featured} />}
       </main>
     </div>
   );
@@ -141,7 +146,7 @@ function JoinSection() {
   );
 }
 
-function LibrarySection({ galleries, featured }: { galleries: Array<{ id: string; title: string; date: string; from: string; to: string }>; featured: Array<{ id: string; title: string; date: string; from: string; to: string }> }) {
+function LibrarySection({ galleries, featured }: { galleries: Array<{ id: number; title: string; created_at?: string }>; featured: Array<any> }) {
   return (
     <section className="mt-6 space-y-6">
       {featured.length > 0 && (
@@ -153,14 +158,17 @@ function LibrarySection({ galleries, featured }: { galleries: Array<{ id: string
           </div>
         </Shelf>
       )}
-
-      <Shelf title="Recent">
-        <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2">
-          {[...galleries].reverse().map((g, i) => (
-            <GalleryCard key={g.id + '-r'} title={g.title} date={g.date} from={i % 2 ? '#6b4c3b' : '#502d26'} to={g.to} />
-          ))}
-        </div>
-      </Shelf>
+      {galleries.length > 0 ? (
+        <Shelf title="Recent">
+          <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2">
+            {[...galleries].map((g, i) => (
+              <GalleryCard key={g.id + '-r'} title={g.title} date={g.created_at ? new Date(g.created_at).toDateString() : ''} from={i % 2 ? '#6b4c3b' : '#502d26'} to={i % 2 ? '#502d26' : '#6b4c3b'} />
+            ))}
+          </div>
+        </Shelf>
+      ) : (
+        <div className="text-[13px] text-[#b2a491]">No galleries to show yet.</div>
+      )}
     </section>
   );
 }

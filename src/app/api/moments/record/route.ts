@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { executeQuery } from '@/lib/db';
+import { executeQuery, queryDatabase } from '@/lib/db';
 
 export async function POST(req: Request) {
   try {
@@ -13,6 +13,17 @@ export async function POST(req: Request) {
     const mediaType = body.media_type || body.mediaType || 'photo';
 
     if (!galleryId || !key) return NextResponse.json({ error: 'Missing parameters' }, { status: 400 });
+
+    // Enforce gallery schedule again server-side (defense in depth)
+    const rows = await queryDatabase('SELECT id, starts_at, ends_at FROM galleries WHERE id = ? LIMIT 1', [galleryId]);
+    if (!rows[0]) return NextResponse.json({ error: 'Gallery not found' }, { status: 404 });
+    const { starts_at, ends_at } = rows[0] as { starts_at?: string | null; ends_at?: string | null };
+    const now = Date.now();
+    const startOk = !starts_at || !Number.isNaN(Date.parse(starts_at)) ? (!starts_at || now >= Date.parse(starts_at!)) : true;
+    const endOk = !ends_at || !Number.isNaN(Date.parse(ends_at)) ? (!ends_at || now <= Date.parse(ends_at!)) : true;
+    if (!(startOk && endOk)) {
+      return NextResponse.json({ error: 'This gallery is not accepting uploads at this time.' }, { status: 403 });
+    }
 
     const sql = `INSERT INTO gallery_photos (gallery_id, uid, r2_key, thumbnail_key, original_filename, user_name, media_type) VALUES (?, ?, ?, ?, ?, ?, ?)`;
     await executeQuery(sql, [galleryId, uid, key, thumbnailKey, originalFilename, userName, mediaType]);

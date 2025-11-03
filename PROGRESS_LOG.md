@@ -211,3 +211,96 @@
 ---
 
 *This log is updated daily during our 30-day sprint to 9/10 enterprise-grade status.*
+
+
+---
+
+## 📌 2025-11-02 — In‑app Cloudflare D1 + R2 Admin Tools
+
+### Summary
+- Consolidated env management to remove duplication/inconsistencies.
+- Shipped an in-app SQL console for D1 and an R2 storage browser so you don’t need to leave the app for common tasks.
+- Kept auth and runtime aligned with existing patterns; endpoints require admin or editor.
+
+### What was implemented
+- Environment consolidation
+  - `.env.local` is now the single source for dev; moved JWT secrets to server-only keys; removed prod values. Neutralized `.env` and added `.env.example` template.
+- D1 admin console (SQL)
+  - Page: `/admin/db` — runs SELECT/PRAGMA (read) and writes (PUT/ALTER/INSERT/etc.).
+  - Renders SELECT results as a table; JSON fallback for other operations.
+  - Quick action: “Ensure Featured singleton” re-applies safe schema/seed.
+  - Files: `src/app/admin/db/page.tsx`, `src/app/api/admin/db/route.ts`, `src/app/api/admin/db/apply-featured-singleton/route.ts`.
+- R2 storage admin
+  - Page: `/admin/storage` — list by prefix with pagination, open public links, upload (multipart), delete.
+  - Endpoints: list, head, delete, upload, move; exposes public base URL.
+  - Files:
+    - UI: `src/app/admin/storage/page.tsx`
+    - API: `src/app/api/admin/r2/{base,list,object,upload,move}/route.ts`
+  - Nav: `src/components/AdminNavigation.tsx` — added “Storage”.
+
+### Quality gates
+- Typecheck and lint: PASS for new/updated files.
+- Basic smoke checks: list objects via `/admin/storage` with a prefix; run sample SELECT via `/admin/db`.
+
+### Notes
+- Uploads use CLOUDFLARE_R2_PUBLIC_URL for open links; Node runtime is used for AWS SDK v3.
+- Admin endpoints share existing auth helpers and accept Bearer tokens from browser storage.
+
+### Return-to tasks (tracked for follow-up)
+- [ ] Storage UI: add Move/Rename controls (API exists), bulk delete, drag-and-drop uploads, previews for images/videos.
+- [ ] SQL console: add saved queries, presets, CSV export, and query history.
+- [ ] Migrations panel: optional UI to run known D1 migrations (consider embedding scripts or storing them in D1 to be Pages-friendly).
+- [ ] Finalize DB-level single-row trigger via Cloudflare Console if desired (app already enforces singleton).
+
+
+## 📌 2025-11-02 — Moments schema, Featured link, and admin/auth fixes
+
+### Summary
+- Enabled a full “Moments” flow: schema apply in-app, public galleries endpoint, and Featured page linking to a specific capture gallery.
+- Tightened server-side rules: enforced upload/record schedule windows and added admin/bootstrap allowances where needed.
+- Improved operability: clearer login errors, an env health endpoint, and normalized D1 token handling.
+
+### What was implemented
+- Moments data model and enforcement
+  - Idempotent schema apply API with admin check and one-time bootstrap allowance when the table doesn’t exist.
+    - Files: `src/app/api/admin/db/apply-moments/route.ts`, `src/app/admin/db/page.tsx` (added “Apply Moments schema” button)
+  - Schedule window enforcement (starts_at/ends_at) on upload and record endpoints.
+    - Files: `src/app/api/moments/upload-url/route.ts`, `src/app/api/moments/record/route.ts`
+  - Public galleries endpoint and Moments page wiring (removed placeholders).
+    - Files: `src/app/api/moments/galleries/public/route.ts`, `src/app/moments/page.tsx`
+- Featured ↔ Moments linkage
+  - Manage Featured now lets you create/select a Moments gallery inline and sets `moments_link` to its capture page.
+    - Files: `src/app/featured/manage/page.tsx` (inline create via `/api/moments/create`, resolve via `/api/moments/join`)
+- Admin tooling + UX
+  - Storage UI gained Rename/Move action wired to existing API.
+    - Files: `src/app/admin/storage/page.tsx`
+  - Admin logout button added to navigation.
+    - Files: `src/components/AdminNavigation.tsx`
+- Auth + ops hardening
+  - Admin override via `ADMIN_EMAILS` and DB-role fallback for guarded endpoints.
+    - Files: `src/lib/auth.ts`, `src/app/api/admin/db/apply-moments/route.ts`
+  - Login route surfaces clear misconfiguration/errors instead of generic 400s.
+    - Files: `src/app/api/users/route.ts`
+  - D1 token handling normalized to accept `CLOUDFLARE_D1_API_TOKEN` or `CLOUDFLARE_API_TOKEN` across DB helpers.
+    - Files: `src/lib/db.ts`
+  - Added public env health probe to verify presence of critical vars without logging in.
+    - Files: `src/app/api/health/env/route.ts`
+
+### Quality gates
+- Typecheck and lint: PASS on all changed files.
+- Smoke checks:
+  - `/admin/db` → Apply Moments schema returns `ok: true`.
+  - `/featured/manage` → Create/select gallery, Save; “Open” goes to `/moments/capture?galleryId=…`.
+  - `/moments` → Recent galleries appear via public endpoint.
+  - `/api/health/env` → `ok: true` with DB URL, D1 token, and JWT secret present.
+
+### How to verify
+- Apply schema: `/admin/db` → “Apply Moments schema”.
+- Link from Featured: `/featured/manage` → create/select gallery, Save, then click “Open”.
+- Schedule enforcement: set `starts_at`/`ends_at` for a gallery; upload inside window (success) vs outside (403).
+- Check envs: hit `/api/health/env` and ensure `ok: true`.
+
+### Next
+- Visibility controls on public galleries (config-driven private/link modes).
+- Storage UI polish: bulk delete, drag-and-drop uploads, image/video previews.
+- Moments video pipeline finalization (thumbnailing/derivatives).

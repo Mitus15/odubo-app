@@ -17,28 +17,20 @@ export default function AppHeader() {
         {/* Ambient background gradient */}
         <div className="absolute inset-0 bg-gradient-to-br from-[#843c2d]/5 via-transparent to-[#502d26]/5"></div>
         
-        {/* Profile Menu - Left Side */}
+        {/* Brand Logo - Left Side (links to Home) */}
         <div className="relative z-10">
-          {isAuthenticated ? (
-            <button
-              className="w-8 h-8 rounded-full bg-gradient-to-br from-[#843c2d] to-[#502d26] flex items-center justify-center text-[#ede8df] text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#843c2d]/50 shadow-lg glass-card hover:scale-105 transition-all duration-200"
-              onClick={() => setProfileMenuOpen(!profileMenuOpen)}
-              aria-label="Profile menu"
-            >
-              {user?.firstName ? user.firstName.charAt(0).toUpperCase() : 'U'}
-            </button>
-          ) : (
+          <a href="/" aria-label="Home">
             <img 
               src="/odubo_logo_emboss.png" 
               alt="Odubo Studio" 
               className="w-8 h-8 object-contain"
             />
-          )}
+          </a>
         </div>
 
         {/* Desktop Navigation - Center/Right */}
         <nav className="hidden md:flex items-center gap-6 relative z-10">
-          <a href="/" className="text-[#ede8df] hover:text-[#b2a491] transition-colors">Home</a>
+          <a href="/featured" className="text-[#ede8df] hover:text-[#b2a491] transition-colors">Featured</a>
           <a href="/music" className="text-[#ede8df] hover:text-[#b2a491] transition-colors">Music</a>
           <a href="/media" className="text-[#ede8df] hover:text-[#b2a491] transition-colors">Video</a>
           <a href="/moments" className="text-[#ede8df] hover:text-[#b2a491] transition-colors">Moments</a>
@@ -80,11 +72,11 @@ export default function AppHeader() {
                 
                 <nav className="space-y-4">
                   <a 
-                    href="/" 
+                    href="/featured" 
                     className="block w-full p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-all duration-200 text-center text-[#ede8df] font-medium hover:scale-105"
                     onClick={() => setNavMenuOpen(false)}
                   >
-                    Home
+                    Featured
                   </a>
                   <a 
                     href="/music" 

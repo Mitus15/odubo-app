@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { verifyUserFromRequest, getUserRoleFromRequest } from '@/lib/auth';
+import { verifyUserFromRequest, isAdminUser } from '@/lib/auth';
 import { executeQuery } from '@/lib/db';
 import { rateLimit } from '@/lib/rateLimit';
 import { writeAuditLog } from '@/lib/audit';
@@ -8,9 +8,7 @@ import { GalleryCreateSchema } from '@/lib/momentsSchemas';
 export async function POST(req: Request) {
   const user = await verifyUserFromRequest(req as any);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-  const role = await getUserRoleFromRequest(req as any);
-  if (role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  if (!isAdminUser(user)) return NextResponse.json({ error: 'Admins only' }, { status: 403 });
 
   try {
     const rl = await rateLimit({ key: `galleries:create:${user.userId}`, limit: 20, windowMs: 60_000 });

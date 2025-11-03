@@ -3,6 +3,7 @@ import { verifyUserFromRequest } from '@/lib/auth';
 import { generateFilePath, getMimeType } from '@/lib/fileOrganization';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { queryDatabase } from '@/lib/db';
 
 export async function POST(req: Request) {
   try {
@@ -14,6 +15,17 @@ export async function POST(req: Request) {
     const originalName = body.fileName || `photo_${Date.now()}.jpg`;
     const contentType = body.contentType || getMimeType(originalName) || 'application/octet-stream';
     if (!galleryId) return NextResponse.json({ error: 'Missing galleryId' }, { status: 400 });
+
+    // Enforce gallery schedule: must exist and be within starts_at/ends_at if set
+    const rows = await queryDatabase('SELECT id, starts_at, ends_at FROM galleries WHERE id = ? LIMIT 1', [galleryId]);
+    if (!rows[0]) return NextResponse.json({ error: 'Gallery not found' }, { status: 404 });
+    const { starts_at, ends_at } = rows[0] as { starts_at?: string | null; ends_at?: string | null };
+    const now = Date.now();
+    const startOk = !starts_at || !Number.isNaN(Date.parse(starts_at)) ? (!starts_at || now >= Date.parse(starts_at!)) : true;
+    const endOk = !ends_at || !Number.isNaN(Date.parse(ends_at)) ? (!ends_at || now <= Date.parse(ends_at!)) : true;
+    if (!(startOk && endOk)) {
+      return NextResponse.json({ error: 'This gallery is not accepting uploads at this time.' }, { status: 403 });
+    }
 
     // Generate R2 key with a clear prefix for organization
     const key = generateFilePath({ fileType: body.mediaType === 'video' ? 'gallery-video' : 'gallery-photo', galleryId: String(galleryId), fileName: originalName });

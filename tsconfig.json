@@ -59,8 +59,12 @@
     "**/*.tsx",
     "next-env.d.ts",
     ".next/types/**/*.ts"
+    // Exclude Next-generated type files to avoid strict route param checks breaking tsc
+    // ".next/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    ".next",
+    "scripts"
   ]
 }

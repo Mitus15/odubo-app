@@ -73,8 +73,21 @@ function decodeWithoutVerify(token: string): JWTPayload | null {
   }
 }
 
+function emailInAdminList(email?: string | null): boolean {
+  if (!email) return false;
+  const list = (process.env.ADMIN_EMAILS || '')
+    .split(',')
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean);
+  return list.includes(email.toLowerCase());
+}
+
 export function isAdminUser(user: AuthTokenPayload | null | undefined): boolean {
-  return !!user?.is_admin;
+  if (!user) return false;
+  // Allow either token claim or env-based admin emails
+  if (user.is_admin) return true;
+  if (emailInAdminList(user.email)) return true;
+  return false;
 }
 
 export async function getUserRoleFromRequest(req: NextRequest): Promise<Role | null> {

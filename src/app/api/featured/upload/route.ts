@@ -24,12 +24,26 @@ export async function POST(req: NextRequest) {
     const file = form.get('file') as File | null;
     const slug = String(form.get('slug') || '').trim().toLowerCase();
     const kind = String(form.get('kind') || '').trim(); // 'cover' | 'background'
-    if (!file || !slug || !['cover', 'background'].includes(kind)) {
-      return NextResponse.json({ error: 'file, slug, kind required' }, { status: 400 });
+    if (!file || !['cover', 'background'].includes(kind)) {
+      return NextResponse.json({ error: 'file and kind required' }, { status: 400 });
     }
 
-  const rows = await queryDatabase('SELECT cover_image_url, background_video_url FROM featured_pages WHERE slug = ? LIMIT 1', [slug]);
-  if (!rows.length) return NextResponse.json({ error: 'Featured not found' }, { status: 404 });
+    // Decide storage scope: legacy (with slug) vs singleton
+    let priorCover: string | null = null;
+    let priorBg: string | null = null;
+    let keyPrefix = 'featured/single';
+    if (slug) {
+      const rows = await queryDatabase('SELECT cover_image_url, background_video_url FROM featured_pages WHERE slug = ? LIMIT 1', [slug]);
+      if (!rows.length) return NextResponse.json({ error: 'Featured not found' }, { status: 404 });
+      priorCover = (rows[0] as any).cover_image_url || null;
+      priorBg = (rows[0] as any).background_video_url || null;
+      keyPrefix = `featured/${slug}`;
+    } else {
+      const rows = await queryDatabase('SELECT cover_image_url, background_video_url FROM featured_single WHERE id = 1 LIMIT 1', []);
+      priorCover = rows.length ? (rows[0] as any).cover_image_url || null : null;
+      priorBg = rows.length ? (rows[0] as any).background_video_url || null : null;
+      keyPrefix = 'featured/single';
+    }
 
     const arrayBuffer = await file.arrayBuffer();
     const body = Buffer.from(arrayBuffer);
@@ -39,7 +53,7 @@ export async function POST(req: NextRequest) {
   // Versioned key to defeat caches and ensure immediate swap on replace
   const version = Date.now();
   const baseName = kind === 'cover' ? 'cover' : 'background';
-  const key = `featured/${slug}/${baseName}-${version}.${ext}`;
+    const key = `${keyPrefix}/${baseName}-${version}.${ext}`;
 
     await s3.send(new PutObjectCommand({
       Bucket: process.env.CLOUDFLARE_R2_BUCKET_NAME,
@@ -52,8 +66,17 @@ export async function POST(req: NextRequest) {
     const publicUrl = `${process.env.CLOUDFLARE_R2_PUBLIC_URL}/${key}`;
     const field = kind === 'cover' ? 'cover_image_url' : 'background_video_url';
     // Keep prior URL to delete old object after successful update
-    const priorUrl: string | null = kind === 'cover' ? (rows[0] as any).cover_image_url : (rows[0] as any).background_video_url;
-    await executeQuery(`UPDATE featured_pages SET ${field} = ?, updated_at = datetime('now') WHERE slug = ?`, [publicUrl, slug]);
+    const priorUrl: string | null = kind === 'cover' ? priorCover : priorBg;
+    if (slug) {
+      await executeQuery(`UPDATE featured_pages SET ${field} = ?, updated_at = datetime('now') WHERE slug = ?`, [publicUrl, slug]);
+    } else {
+      // Ensure row exists
+      await executeQuery(
+        `INSERT INTO featured_single (id, ${field}, created_at, updated_at) VALUES (1, ?, datetime('now'), datetime('now'))
+         ON CONFLICT(id) DO UPDATE SET ${field} = excluded.${field}, updated_at = datetime('now')`,
+        [publicUrl]
+      );
+    }
 
     // Best-effort delete of previous object to avoid orphaned files
     if (priorUrl) {
@@ -70,7 +93,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    try { await writeAuditLog(req, user, 'featured.upload', slug, { kind, key }); } catch {}
+  try { await writeAuditLog(req, user, 'featured.upload', slug || 'singleton', { kind, key }); } catch {}
     return NextResponse.json({ success: true, url: publicUrl });
   } catch (e) {
     console.error('featured upload error:', e);

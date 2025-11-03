@@ -553,7 +553,27 @@ export async function POST(req: NextRequest) {
       return res;
     } catch (err: any) {
       console.error('Login error:', err);
-      return NextResponse.json({ error: 'Login failed', details: err.errors }, { status: 400 });
+      const msg = (err?.message || '').toString();
+      // Surface common misconfigurations with clearer messages
+      if (msg.includes('DATABASE_URL environment variable is not set')) {
+        return NextResponse.json(
+          { error: 'Server misconfigured: DATABASE_URL is not set' },
+          { status: 500 }
+        );
+      }
+      if (msg.includes('CLOUDFLARE_D1_API_TOKEN environment variable is not set')) {
+        return NextResponse.json(
+          { error: 'Server misconfigured: CLOUDFLARE_D1_API_TOKEN is not set' },
+          { status: 500 }
+        );
+      }
+      if (msg.includes('D1 /query non-JSON response')) {
+        return NextResponse.json(
+          { error: 'Database connection failed: check DATABASE_URL and Cloudflare credentials' },
+          { status: 502 }
+        );
+      }
+      return NextResponse.json({ error: 'Login failed' }, { status: 400 });
     }
   }
 

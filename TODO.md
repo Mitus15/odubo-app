@@ -15,6 +15,18 @@ This document tracks issues, features, and technical debt to revisit later.
 - [ ] Clean up duplicate error logging in API route
 - [ ] Add rate limiting to forgot password endpoint
 
+## Cloudflare Admin Tools (D1 + R2) — Return To
+
+- [ ] Storage UI: Add Move/Rename controls (API exists via `/api/admin/r2/move`)
+- [ ] Storage UI: Bulk delete selection and confirm dialog
+- [ ] Storage UI: Drag-and-drop uploads and upload queue with progress
+- [ ] Storage UI: Inline previews for images/videos; basic metadata panel
+- [ ] SQL Console: Saved queries and presets (with quick-run buttons)
+- [ ] SQL Console: CSV export for SELECT results and copy-to-clipboard
+- [ ] SQL Console: Query history with timestamps and re-run
+- [ ] Migrations Panel: Optional UI to run known D1 migrations safely (embed scripts or store in D1)
+- [ ] DB enforcement: Optionally finalize the single-row trigger in Cloudflare Console for `featured_pages`
+
 # Admin UI & Upload Enhancements (recent additions)
 - [ ] Add visual progress bars for Stream uploads and analysis
 - [ ] Add preview modal/lightbox for thumbnail candidates (admin)

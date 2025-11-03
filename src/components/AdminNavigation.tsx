@@ -9,6 +9,8 @@ const adminNavItems = [
   { label: "Videos", href: "/admin/videos", icon: "🎬" },
   { label: "Music", href: "/admin/albums", icon: "🎵" },
   { label: "Featured", href: "/featured/manage", icon: "⭐" },
+  { label: "Database", href: "/admin/db", icon: "🗄️" },
+  { label: "Storage", href: "/admin/storage", icon: "🗂️" },
   { label: "Users", href: "/admin/users", icon: "👥" },
   { label: "Analytics", href: "/admin/analytics", icon: "📈" },
 ];
@@ -17,6 +19,13 @@ export default function AdminNavigation() {
   const pathname = usePathname();
 
   const [open, setOpen] = useState(false);
+  function logout() {
+    try {
+      localStorage.removeItem('token');
+    } catch {}
+    // Best-effort redirect to login
+    if (typeof window !== 'undefined') window.location.href = '/login';
+  }
 
   return (
     <nav className="bg-gray-900 shadow-sm border-b border-gray-700">
@@ -26,7 +35,7 @@ export default function AdminNavigation() {
             Admin Panel
           </Link>
           {/* Desktop nav */}
-          <div className="hidden md:flex space-x-1">
+          <div className="hidden md:flex space-x-1 items-center">
             {adminNavItems.map((item) => {
               const isActive = pathname === item.href;
               return (
@@ -44,6 +53,13 @@ export default function AdminNavigation() {
                 </Link>
               );
             })}
+            <button
+              className="ml-2 px-3 py-1.5 text-sm rounded border border-gray-700 text-gray-300 hover:text-white hover:bg-gray-800"
+              onClick={logout}
+              title="Log out"
+            >
+              Log out
+            </button>
           </div>
           {/* Hamburger for mobile */}
           <button
@@ -78,6 +94,12 @@ export default function AdminNavigation() {
               </Link>
             );
           })}
+          <button
+            className="mt-2 w-full px-4 py-2 text-left text-sm font-medium text-gray-300 hover:text-white border border-gray-700 rounded"
+            onClick={() => { setOpen(false); logout(); }}
+          >
+            Log out
+          </button>
         </div>
       )}
     </nav>
