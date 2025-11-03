@@ -10,7 +10,7 @@
         "https://odubo.studio",
         "https://www.odubo.studio"
       ],
-      "AllowedMethods": ["GET", "HEAD", "PUT", "POST", "OPTIONS"],
+  "AllowedMethods": ["GET", "HEAD", "PUT", "POST"],
       "AllowedHeaders": ["*"],
       "ExposeHeaders": [
         "Accept-Ranges",

@@ -33,7 +33,9 @@
     "audio:hls:album": "tsx --env-file=.env.local scripts/transcode_audio_to_hls.ts --album",
     "audio:hls:all": "tsx --env-file=.env.local scripts/transcode_audio_to_hls.ts --all",
     "generate-icons": "node ./scripts/generate-icons.js",
-    "db:apply:featured": "tsx --env-file=.env scripts/apply_featured_singleton.ts || tsx --env-file=.env.local scripts/apply_featured_singleton.ts"
+    "db:apply:featured": "tsx --env-file=.env scripts/apply_featured_singleton.ts || tsx --env-file=.env.local scripts/apply_featured_singleton.ts",
+    "moments:test": "node scripts/test_moments_connectivity.mjs",
+    "moments:create-gallery": "node scripts/create_gallery.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.858.0",

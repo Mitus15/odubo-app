@@ -304,3 +304,38 @@
 - Visibility controls on public galleries (config-driven private/link modes).
 - Storage UI polish: bulk delete, drag-and-drop uploads, image/video previews.
 - Moments video pipeline finalization (thumbnailing/derivatives).
+
+
+## 📌 2025-11-03 — Moments event readiness + production E2E
+
+### Summary
+- Hardened the Moments upload proxy for real-world events and validated the full presigned upload flow against production.
+- Created helper scripts to create galleries and to run a camera-free E2E upload test.
+- Documented the event readiness status, architecture, flow, and gaps.
+
+### What was implemented
+- Upload proxy guardrails (Node runtime)
+  - Pre-parse flood guard (~10 rps/IP) and per-IP-per-gallery limit (300/min/IP)
+  - 50 MB max size, MIME allowlist for images/videos
+  - Non-blocking audit logging on upload
+- Test tooling
+  - `scripts/create_gallery.mjs` — inserts a gallery in D1 with a fresh code and event window
+  - `scripts/test_moments_connectivity.mjs` — requests presigned URL → PUT → record → list
+  - NPM scripts: `moments:create-gallery`, `moments:test`
+
+### Production test (odubo.studio)
+- Created gallery: id=3, code=BECY1L, title="Moments E2E Test", window ≈ 2h
+- upload-url → PUT → record → list: PASS
+- Example object: `galleries/3/photos/test_1762163654332.png`
+- Public URL: https://media.odubo.studio/galleries/3/photos/test_1762163654332.png
+
+### Readiness & gaps
+- Functional: READY for small/medium events (presigned PUT preferred; proxy fallback ok)
+- Required for events: prompt attendees for Instagram handle on capture and attach `user_name` in record
+- Recommended next:
+  - Add RL to `/api/moments/upload-url` and `/api/moments/record`
+  - Optionally stream proxy uploads to reduce memory peak
+  - Consider longer event codes (8–10 chars) and post-event rotation
+
+### Reference
+- Detailed report: `docs/MOMENTS_EVENT_READINESS_2025-11-03.md`

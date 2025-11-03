@@ -16,6 +16,9 @@ export interface FileOrganizationOptions {
   fileType: FileType;
   fileName?: string;
   galleryId?: string;
+  galleryName?: string;
+  galleryCode?: string;
+  gallerySlug?: string;
   uid?: string;
 }
 
@@ -24,11 +27,14 @@ export interface FileOrganizationOptions {
  */
 export function generateFilePath(opts: FileOrganizationOptions) {
   const fileName = opts.fileName || `${Date.now()}`;
+  // Prefer friendly folder names when possible: galleryName > galleryCode > gallerySlug > galleryId
+  const rawFolder = (opts.galleryName || opts.galleryCode || opts.gallerySlug || opts.galleryId || 'unknown').toString();
+  const galleryFolder = toSlug(rawFolder);
   switch (opts.fileType) {
     case 'gallery-photo':
-      return `galleries/${opts.galleryId}/photos/${sanitizeFileName(fileName)}`;
+      return `galleries/${sanitizeFileName(galleryFolder)}/photos/${sanitizeFileName(fileName)}`;
     case 'gallery-video':
-      return `galleries/${opts.galleryId}/videos/${sanitizeFileName(fileName)}`;
+      return `galleries/${sanitizeFileName(galleryFolder)}/videos/${sanitizeFileName(fileName)}`;
     default:
       return `uploads/${sanitizeFileName(fileName)}`;
   }
@@ -73,6 +79,18 @@ export function sanitizeFileName(name: string) {
     .replace(/[^a-zA-Z0-9._-]/g, '_')
     .replace(/_+/g, '_')
     .replace(/^[_.-]+|[_.-]+$/g, '');
+}
+
+// Simple slug for folder names: lowercase, spaces->dash, strip invalid
+export function toSlug(name: string) {
+  return (name || '')
+    .toString()
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9.-]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '');
 }
 
 // Determine if a file extension is valid for a given expected type/category

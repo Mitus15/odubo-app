@@ -1,9 +1,10 @@
 "use client";
 import { useEffect, useRef, useState, use } from 'react';
 
-export default function CapturePage({ searchParams }: { searchParams?: Promise<{ galleryId?: string; starts_at?: string; ends_at?: string }> }) {
+export default function CapturePage({ searchParams }: { searchParams?: Promise<{ galleryId?: string; code?: string; starts_at?: string; ends_at?: string }> }) {
   const params = searchParams ? use(searchParams) : {};
   const galleryId = params?.galleryId;
+  const code = (params as any)?.code as string | undefined;
   const startsAt = params?.starts_at ? new Date(params.starts_at) : null;
   const endsAt = params?.ends_at ? new Date(params.ends_at) : null;
   
@@ -350,7 +351,7 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
   }
 
   async function uploadMedia() {
-    if (!mediaBlob || !galleryId) return setError('No media or gallery');
+    if (!mediaBlob || (!galleryId && !code)) return setError('No media or gallery');
     if (!canUploadNow()) return setError('This event is not accepting uploads at this time.');
 
     setError('');
@@ -361,7 +362,7 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
       const uRes = await fetch('/api/moments/upload-url', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ galleryId, fileName: filename }),
+        body: JSON.stringify({ galleryId, code, fileName: filename }),
       });
       const uData = (await uRes.json()) as any;
       if (!uRes.ok) throw new Error(uData?.error || 'Failed to get upload url');
@@ -388,7 +389,7 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
       const rRes = await fetch('/api/moments/record', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ galleryId, r2_key: key, original_filename: filename, user_name: 'Anonymous', media_type: mediaType }),
+        body: JSON.stringify({ galleryId, code, r2_key: key, original_filename: filename, user_name: 'Anonymous', media_type: mediaType }),
       });
       const rData = (await rRes.json()) as any;
       if (!rRes.ok) throw new Error(rData?.error || 'Failed to record');
@@ -429,7 +430,8 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
     // Make this page independently scrollable within the App layout's main area
     <div className="h-full overflow-y-auto">
       <div className="p-6 max-w-2xl mx-auto pb-24">
-      <h1 className="text-2xl font-bold mb-4">Capture Moment</h1>
+  <h1 className="text-2xl font-bold mb-1">Capture Moment</h1>
+  <div className="text-xs opacity-70 mb-3">Event code: {code || '—'}</div>
       <div className="text-sm text-[#b2a491] mb-3">Event window: {startsAt ? startsAt.toLocaleString() : 'N/A'} — {endsAt ? endsAt.toLocaleString() : 'N/A'}</div>
       
       {error && <div className="text-red-400 mb-3 p-3 bg-red-900/20 border border-red-600 rounded">{error}</div>}

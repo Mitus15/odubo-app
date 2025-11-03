@@ -162,7 +162,7 @@ function LibrarySection({ galleries, featured }: { galleries: Array<{ id: number
         <Shelf title="Recent">
           <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2">
             {[...galleries].map((g, i) => (
-              <GalleryCard key={g.id + '-r'} title={g.title} date={g.created_at ? new Date(g.created_at).toDateString() : ''} from={i % 2 ? '#6b4c3b' : '#502d26'} to={i % 2 ? '#502d26' : '#6b4c3b'} />
+              <GalleryCard key={g.id + '-r'} id={g.id} title={g.title} date={g.created_at ? new Date(g.created_at).toDateString() : ''} from={i % 2 ? '#6b4c3b' : '#502d26'} to={i % 2 ? '#502d26' : '#6b4c3b'} />
             ))}
           </div>
         </Shelf>
@@ -185,7 +185,9 @@ function Shelf({ title, children }: { title: string; children: React.ReactNode }
   );
 }
 
-function GalleryCard({ title, date, from, to }: { title: string; date: string; from: string; to: string }) {
+// Link already imported at top
+
+function GalleryCard({ title, date, from, to, id }: { title: string; date: string; from: string; to: string; id?: number }) {
   return (
     <article
       className="snap-start shrink-0 w-[200px] rounded-2xl border border-[#3b3733] overflow-hidden bg-[#1f1e1d] active:scale-95 transition"
@@ -198,7 +200,11 @@ function GalleryCard({ title, date, from, to }: { title: string; date: string; f
         <div className="text-[14px] font-medium text-[#ede8df] line-clamp-2 min-h-[40px]">{title}</div>
         <div className="text-[12px] text-[#b2a491] mt-1">{date}</div>
         <div className="mt-2 flex gap-2">
-          <button className="px-3 py-1.5 text-[12px] rounded bg-[#ede8df] text-[#171616] active:scale-95">View</button>
+          {typeof id === 'number' ? (
+            <Link href={`/moments/gallery/${id}`} className="px-3 py-1.5 text-[12px] rounded bg-[#ede8df] text-[#171616] active:scale-95">View</Link>
+          ) : (
+            <span className="px-3 py-1.5 text-[12px] rounded bg-[#ede8df] text-[#171616] opacity-50">View</span>
+          )}
           <button className="px-3 py-1.5 text-[12px] rounded bg-[#171616] text-[#ede8df] border border-[#3b3733] active:scale-95">Share</button>
         </div>
       </div>

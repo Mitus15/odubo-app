@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { verifyUserFromRequest } from '@/lib/auth';
+import { verifyUserFromRequest, isAdminUser } from '@/lib/auth';
 import { generateFilePath, getMimeType } from '@/lib/fileOrganization';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
@@ -8,18 +8,21 @@ import { queryDatabase } from '@/lib/db';
 export async function POST(req: Request) {
   try {
     // Optionally verify user (attendee can be anonymous)
-    const _user = await verifyUserFromRequest(req as any).catch(() => null);
+  const _user = await verifyUserFromRequest(req as any).catch(() => null);
 
     const body = await req.json() as any;
     const galleryId = body.galleryId;
+    const code = body.code || body.eventCode || null;
     const originalName = body.fileName || `photo_${Date.now()}.jpg`;
     const contentType = body.contentType || getMimeType(originalName) || 'application/octet-stream';
-    if (!galleryId) return NextResponse.json({ error: 'Missing galleryId' }, { status: 400 });
+    if (!galleryId && !code) return NextResponse.json({ error: 'Missing gallery identifier (galleryId or code)' }, { status: 400 });
 
-    // Enforce gallery schedule: must exist and be within starts_at/ends_at if set
-    const rows = await queryDatabase('SELECT id, starts_at, ends_at FROM galleries WHERE id = ? LIMIT 1', [galleryId]);
+    // Load gallery (by id or code) and enforce schedule window
+    const rows = code
+      ? await queryDatabase('SELECT id, code, title, starts_at, ends_at FROM galleries WHERE code = ? LIMIT 1', [code])
+      : await queryDatabase('SELECT id, code, title, starts_at, ends_at FROM galleries WHERE id = ? LIMIT 1', [galleryId]);
     if (!rows[0]) return NextResponse.json({ error: 'Gallery not found' }, { status: 404 });
-    const { starts_at, ends_at } = rows[0] as { starts_at?: string | null; ends_at?: string | null };
+  const { starts_at, ends_at, code: gCode, title } = rows[0] as { starts_at?: string | null; ends_at?: string | null; code?: string | null; title?: string | null };
     const now = Date.now();
     const startOk = !starts_at || !Number.isNaN(Date.parse(starts_at)) ? (!starts_at || now >= Date.parse(starts_at!)) : true;
     const endOk = !ends_at || !Number.isNaN(Date.parse(ends_at)) ? (!ends_at || now <= Date.parse(ends_at!)) : true;
@@ -27,8 +30,20 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'This gallery is not accepting uploads at this time.' }, { status: 403 });
     }
 
+    // Uploads require possession of the event code unless admin
+    const isAdmin = isAdminUser(_user);
+    const hasValidCode = !!code && code === gCode;
+    if (!isAdmin && !hasValidCode) {
+      return NextResponse.json({ error: 'Event code required to upload' }, { status: 403 });
+    }
+
     // Generate R2 key with a clear prefix for organization
-    const key = generateFilePath({ fileType: body.mediaType === 'video' ? 'gallery-video' : 'gallery-photo', galleryId: String(galleryId), fileName: originalName });
+    const key = generateFilePath({
+      fileType: body.mediaType === 'video' ? 'gallery-video' : 'gallery-photo',
+      galleryId: galleryId ? String(galleryId) : undefined,
+      galleryName: title || undefined,
+      fileName: originalName,
+    });
 
     const publicBase = process.env.CLOUDFLARE_R2_PUBLIC_URL;
     const publicUrl = publicBase ? `${publicBase}/${key}` : null;
