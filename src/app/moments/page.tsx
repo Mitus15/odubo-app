@@ -148,6 +148,7 @@ function CapturePanel({ galleryId, setGalleryId, ig, setIg }: { galleryId: strin
   const [cameraStarted, setCameraStarted] = useState(false);
   const [videoRef, setVideoRef] = useState<HTMLVideoElement | null>(null);
   const [canvasRef, setCanvasRef] = useState<HTMLCanvasElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const [blob, setBlob] = useState<Blob | null>(null);
   const [preview, setPreview] = useState<string>('');
   const [uploading, setUploading] = useState(false);
@@ -159,15 +160,34 @@ function CapturePanel({ galleryId, setGalleryId, ig, setIg }: { galleryId: strin
     try {
       if (!canOpenCamera) { setError('Enter Event ID to open camera'); return; }
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
-      if (videoRef) {
-        (videoRef as any).srcObject = stream;
-        await (videoRef as any).play?.();
-        setCameraStarted(true);
-      }
+      streamRef.current = stream;
+      setCameraStarted(true);
     } catch (e: any) {
       setError(e?.message || 'Camera failed');
     }
   }
+
+  // Attach stream to video once it's available and the element is mounted
+  useEffect(() => {
+    if (cameraStarted && videoRef && streamRef.current) {
+      try {
+        (videoRef as any).srcObject = streamRef.current;
+        (videoRef as any).playsInline = true;
+        (videoRef as any).muted = true;
+        (videoRef as any).autoplay = true;
+        (videoRef as any).play?.().catch(() => {});
+      } catch {}
+    }
+    return () => {
+      // Cleanup: stop tracks when component unmounts or camera restarts
+      if (!cameraStarted && streamRef.current) {
+        try {
+          streamRef.current.getTracks().forEach(t => t.stop());
+        } catch {}
+        streamRef.current = null;
+      }
+    };
+  }, [cameraStarted, videoRef]);
 
   function takePhoto() {
     if (!videoRef || !canvasRef) return;
