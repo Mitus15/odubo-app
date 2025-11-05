@@ -2,6 +2,30 @@
 
 This document tracks issues, features, and technical debt to revisit later.
 
+## Moments Production Finalization Checklist (Event)
+
+- [ ] Visibility toggle: config flag to choose public view mode (all vs moderated-only) per gallery or globally
+- [ ] Viewer auto-refresh: poll `/api/moments/list` every 10–15s during event; pause on tab hidden
+- [ ] Rate limiting: add RL to `/api/moments/upload-url` and `/api/moments/record` (proxy already hardened)
+- [ ] Sentry/metrics: basic error tracking on core API routes; sample dashboard
+- [ ] Moderation UI: add filters (unmoderated first), bulk approve/reject, and quick hide
+- [ ] Consent: optional short consent copy on Capture; link to policy
+- [ ] Admin controls: gallery-level quick actions (extend window, freeze uploads, rotate code)
+- [ ] Export/backup: R2 prefix export script and D1 rows CSV export post-event
+- [ ] Slideshow/live wall (optional): simple rotating grid from public list
+- [ ] QA runbook: preflight checklist (QR redirect window, env audit, smoke tests, rate limits)
+
+## Livestream Integration (Cloudflare Stream)
+
+- [x] Live Input API: `/api/stream/live-input` (GET/POST) to ensure a default RTMPS/WHIP input with automatic recording
+- [x] Admin Live page: `/admin/live` shows ingest URL/key and a live preview
+- [x] Public Live page: `/live` embeds the live player via Stream iframe
+- [x] Admin nav: add Live link (📡)
+- [ ] Webhook: implement `/api/webhooks/stream` to capture `video.ready` and auto-insert VOD into D1
+- [ ] Videos import: “Import Stream UID” action in Admin → Videos (manual fallback)
+- [ ] Live indicator: optional badge on site when live input status is active
+- [ ] Docs: OBS/Streamlabs quick setup and event-day steps (`docs/LIVESTREAMING.md`)
+
 ## Outstanding/To Revisit
 
 - [ ] Confirm Resend email delivery for all user flows (production + dev)
@@ -114,3 +138,9 @@ Add more items as needed!
 - [x] Add camera front/back switch (toggle with facingMode/deviceId)
 - [x] Deterministic camera toggle with named devices and persistence (localStorage) + device dropdown
 - [x] Staging/Preview documentation for mobile HTTPS testing (`docs/STAGING.md`)
+
+
+### Music Player Modal
+
+- [x] Fix the full screen music player modal
+- [x] Implement horizontal scrolling for control buttons

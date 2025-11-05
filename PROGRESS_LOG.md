@@ -339,3 +339,40 @@
 
 ### Reference
 - Detailed report: `docs/MOMENTS_EVENT_READINESS_2025-11-03.md`
+
+
+## 📌 2025-11-04 — Moments UX polish + Live streaming plan
+
+### Summary
+- Made public Moments galleries show all uploads without requiring the event code (friction-free viewing).
+- Ensured Featured → Moments button auto-passes the event code and attendee IG handle to Capture.
+- Capture now tags uploads with the attendee’s IG handle as `user_name`.
+- Pushed changes to main for Pages deploy. Drafted a live streaming architecture using Cloudflare Stream Live Inputs.
+
+### What was implemented
+- Public viewing change
+  - API now returns all photos for a gallery, code or not; rate limits remain in place.
+  - File: `src/app/api/moments/list/route.ts` (removed moderation filter by default).
+- Featured → Capture auto-link with code + IG
+  - Featured manage writes `moments_link` as `/moments/capture?galleryId=ID&code=CODE&starts_at=…&ends_at=…`.
+  - Featured client persists IG handle to localStorage and appends `?ig=<handle>` to Moments link.
+  - Files: `src/app/featured/manage/page.tsx`, `src/app/featured/[slug]/FeaturedInteractive.tsx`.
+- Capture tagging
+  - Capture reads `ig` from query/localStorage, displays “Posting as @handle”, and records the handle with the upload.
+  - File: `src/app/moments/capture/page.tsx`.
+
+### Live streaming plan (Cloudflare Stream Live Inputs)
+- Create or reuse a Stream Live Input (RTMPS/WHIP) with recording mode=automatic.
+- Stream from OBS/Streamlabs to the RTMPS endpoint; embed the live player on `/live`.
+- After the stream ends, Stream automatically creates a VOD; import into the Videos library via existing sync.
+- Follow-ups: Add a webhook endpoint to auto-insert VODs into D1 when recording completes.
+
+### Next steps (Moments finalize)
+- Feature flag for public visibility: toggle between “all” vs “moderated-only” for public view.
+- Add lightweight Sentry/metrics; RL on upload-url/record; auto-refresh in viewer; moderation dashboard.
+- Event runbook: QR redirect window check, env audit, backup/export, and post-event cleanup.
+
+### Quality gates
+- Typecheck: PASS on edited files; working tree clean.
+- Deploy: GitHub push initiated; Pages build expected.
+

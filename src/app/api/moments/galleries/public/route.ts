@@ -11,14 +11,33 @@ export async function GET(req: Request) {
 
     // In the future: filter by visibility in config JSON
     const rows = await queryDatabase(
-      `SELECT id, title, description, starts_at, ends_at, created_at, updated_at
-       FROM galleries
-       ORDER BY created_at DESC
+      `SELECT g.id, g.title, g.description, g.starts_at, g.ends_at, g.created_at, g.updated_at,
+        (
+          SELECT gp.thumbnail_key FROM gallery_photos gp
+          WHERE gp.gallery_id = g.id
+          ORDER BY gp.created_at DESC
+          LIMIT 1
+        ) AS cover_thumbnail_key,
+        (
+          SELECT gp.r2_key FROM gallery_photos gp
+          WHERE gp.gallery_id = g.id
+          ORDER BY gp.created_at DESC
+          LIMIT 1
+        ) AS cover_r2_key
+       FROM galleries g
+       ORDER BY g.created_at DESC
        LIMIT ? OFFSET ?`,
       [limit, offset]
     );
 
-    return NextResponse.json({ galleries: rows || [] });
+    const publicBase = process.env.CLOUDFLARE_R2_PUBLIC_URL;
+    const galleries = (rows || []).map((g: any) => ({
+      ...g,
+      cover_url: g.cover_r2_key && publicBase ? `${publicBase}/${g.cover_r2_key}` : null,
+      cover_thumb_url: g.cover_thumbnail_key && publicBase ? `${publicBase}/${g.cover_thumbnail_key}` : null,
+    }));
+
+    return NextResponse.json({ galleries });
   } catch (e: any) {
     console.error('Public galleries list error:', e);
     return NextResponse.json({ error: e.message || 'Failed' }, { status: 500 });

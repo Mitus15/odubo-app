@@ -35,6 +35,32 @@ export default function GalleryViewer({ params, searchParams }: { params: { id: 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canFetch]);
 
+  // Auto-refresh while tab is visible
+  useEffect(() => {
+    if (!canFetch) return;
+    let timer: any;
+    let cancelled = false;
+    function onVisibility() {
+      if (document.hidden) return;
+      fetchPhotos();
+    }
+    // staggered interval ~12s
+    function start() {
+      clearInterval(timer);
+      timer = setInterval(() => {
+        if (!document.hidden) fetchPhotos();
+      }, 12000);
+    }
+    start();
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canFetch, id, code]);
+
   return (
     <div className="h-full overflow-y-auto">
       <div className="max-w-6xl mx-auto p-6 pb-24">
