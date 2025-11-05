@@ -117,7 +117,16 @@ export default function FeaturedManageSingleton() {
 
   function setSelectedGallery(id: string) {
     if (!item) return;
-    const link = id ? `/moments/capture?galleryId=${id}` : '';
+    // Try to find the selected gallery to include its event code and schedule in the link
+    let link = '';
+    if (id) {
+      const g = galleries.find((gg: any) => String(gg.id) === String(id));
+      const params = new URLSearchParams({ galleryId: String(id) });
+      if (g?.code) params.set('code', g.code);
+      if (g?.starts_at) params.set('starts_at', g.starts_at);
+      if (g?.ends_at) params.set('ends_at', g.ends_at);
+      link = `/moments/capture?${params.toString()}`;
+    }
     setItem({ ...(item as any), moments_link: link });
   }
 

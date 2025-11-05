@@ -1,10 +1,11 @@
 "use client";
 import { useEffect, useRef, useState, use } from 'react';
 
-export default function CapturePage({ searchParams }: { searchParams?: Promise<{ galleryId?: string; code?: string; starts_at?: string; ends_at?: string }> }) {
+export default function CapturePage({ searchParams }: { searchParams?: Promise<{ galleryId?: string; code?: string; starts_at?: string; ends_at?: string; ig?: string }> }) {
   const params = searchParams ? use(searchParams) : {};
   const galleryId = params?.galleryId;
   const code = (params as any)?.code as string | undefined;
+  const igParam = (params as any)?.ig as string | undefined;
   const startsAt = params?.starts_at ? new Date(params.starts_at) : null;
   const endsAt = params?.ends_at ? new Date(params.ends_at) : null;
   
@@ -25,6 +26,7 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
   const [preferredFrontId, setPreferredFrontId] = useState<string | null>(null);
   const [preferredBackId, setPreferredBackId] = useState<string | null>(null);
   const [selectedDeviceId, setSelectedDeviceId] = useState<string | 'auto'>('auto');
+  const [userName, setUserName] = useState<string>('');
   // Helper: dataURL -> Blob (for Safari toBlob fallback)
   function dataURLToBlob(dataURL: string) {
     const parts = dataURL.split(',');
@@ -389,7 +391,7 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
       const rRes = await fetch('/api/moments/record', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ galleryId, code, r2_key: key, original_filename: filename, user_name: 'Anonymous', media_type: mediaType }),
+        body: JSON.stringify({ galleryId, code, r2_key: key, original_filename: filename, user_name: (userName || 'Anonymous'), media_type: mediaType }),
       });
       const rData = (await rRes.json()) as any;
       if (!rRes.ok) throw new Error(rData?.error || 'Failed to record');
@@ -412,6 +414,14 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
       const b = localStorage.getItem('cameraBackId');
       if (f) setPreferredFrontId(f);
       if (b) setPreferredBackId(b);
+      // Load IG handle from query or localStorage
+      const fromQuery = (igParam || '').trim();
+      const stored = localStorage.getItem('instagramHandle') || '';
+      const norm = (fromQuery || stored).trim().replace(/^@/, '');
+      if (norm) {
+        setUserName('@' + norm);
+        try { localStorage.setItem('instagramHandle', norm); } catch {}
+      }
     } catch {}
     return () => {
       if (stream) {
@@ -432,6 +442,9 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
       <div className="p-6 max-w-2xl mx-auto pb-24">
   <h1 className="text-2xl font-bold mb-1">Capture Moment</h1>
   <div className="text-xs opacity-70 mb-3">Event code: {code || '—'}</div>
+      {userName && (
+        <div className="text-xs opacity-80 mb-2">Posting as <span className="font-semibold">{userName}</span></div>
+      )}
       <div className="text-sm text-[#b2a491] mb-3">Event window: {startsAt ? startsAt.toLocaleString() : 'N/A'} — {endsAt ? endsAt.toLocaleString() : 'N/A'}</div>
       
       {error && <div className="text-red-400 mb-3 p-3 bg-red-900/20 border border-red-600 rounded">{error}</div>}

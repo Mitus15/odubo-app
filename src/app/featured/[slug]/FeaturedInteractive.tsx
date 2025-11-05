@@ -26,6 +26,13 @@ export default function FeaturedInteractive({ config }: { config: FeaturedConfig
   // Enable Moments when the field is non-empty (dynamic toggle)
   const enabled = normalized.length > 0;
 
+  // Persist handle locally so capture page can associate uploads
+  useEffect(() => {
+    try {
+      if (normalized) localStorage.setItem('instagramHandle', normalized);
+    } catch {}
+  }, [normalized]);
+
   // Auto-unlock and background-submit as soon as a valid handle is entered
   // Optional: background submit once per unique handle (non-blocking)
   useEffect(() => {
@@ -46,6 +53,20 @@ export default function FeaturedInteractive({ config }: { config: FeaturedConfig
     }
     return () => { cancelled = true; };
   }, [enabled, normalized, config.slug, lastSubmitted]);
+
+  // Build a link that appends the IG handle as a query param when available
+  function withIgParam(href?: string): string | undefined {
+    if (!href) return href;
+    try {
+      const url = new URL(href, typeof window !== 'undefined' ? window.location.origin : 'https://odubo.studio');
+      if (normalized) url.searchParams.set('ig', normalized);
+      return url.pathname + url.search + url.hash;
+    } catch {
+      // Fallback for relative/invalid URLs: append minimally
+      if (!normalized) return href;
+      return href + (href.includes('?') ? `&ig=${encodeURIComponent(normalized)}` : `?ig=${encodeURIComponent(normalized)}`);
+    }
+  }
 
   const GlowButton = ({ label, href, disabled }: { label: string; href?: string; disabled?: boolean }) => (
     <motion.a
@@ -138,7 +159,7 @@ export default function FeaturedInteractive({ config }: { config: FeaturedConfig
             </div>
 
             {/* Moments button (always labeled 'Moments') */}
-            <GlowButton label="Moments" href={enabled ? (config.momentsLink || '#') : undefined} disabled={!enabled} />
+            <GlowButton label="Moments" href={enabled ? withIgParam(config.momentsLink || '#') : undefined} disabled={!enabled} />
 
             {/* Custom links in a single vertical column */}
             {(config.extraLinks || []).map((l, i) => (
