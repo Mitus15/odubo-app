@@ -1,6 +1,6 @@
 "use client";
 import Link from 'next/link';
-import { useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 // Minimal inline icons (no extra deps)
@@ -37,7 +37,7 @@ function IconFolder(props: React.SVGProps<SVGSVGElement>) {
 
 type MomentsTab = 'view' | 'capture';
 
-export default function MomentsIndex() {
+function MomentsIndex() {
   const params = useSearchParams();
   const prefillGalleryId = params?.get('galleryId') ?? '';
   const prefillIg = params?.get('ig') ?? '';
@@ -111,6 +111,14 @@ export default function MomentsIndex() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function MomentsPage() {
+  return (
+    <Suspense fallback={<div className="max-w-6xl mx-auto px-6 py-10 text-[#b2a491]">Loading…</div>}>
+      <MomentsIndex />
+    </Suspense>
   );
 }
 function GalleryGrid({ galleries }: { galleries: Array<{ id: number; title: string; created_at?: string; cover_url?: string | null; cover_thumb_url?: string | null }> }) {
