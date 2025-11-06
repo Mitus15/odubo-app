@@ -1,6 +1,6 @@
 "use client";
 import Link from 'next/link';
-import { Suspense, useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 // Minimal inline icons (no extra deps)
@@ -41,11 +41,15 @@ function MomentsIndex() {
   const params = useSearchParams();
   const prefillGalleryId = params?.get('galleryId') ?? '';
   const prefillIg = params?.get('ig') ?? '';
+  const prefillCode = params?.get('code') ?? '';
+  const wantOpen = params?.get('open') === '1';
   const [galleries, setGalleries] = useState<Array<{ id: number; title: string; created_at?: string; cover_url?: string | null; cover_thumb_url?: string | null }>>([]);
   const [galleryId, setGalleryId] = useState<string>(prefillGalleryId);
   const [ig, setIg] = useState<string>(prefillIg ? (prefillIg.startsWith('@') ? prefillIg : `@${prefillIg}`) : '');
+  const [eventCode, setEventCode] = useState<string>(prefillCode);
   const captureRef = useRef<HTMLDivElement | null>(null);
   const [tab, setTab] = useState<MomentsTab>(prefillGalleryId ? 'capture' : 'view');
+  const [showCameraModal, setShowCameraModal] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -74,6 +78,10 @@ function MomentsIndex() {
       } catch {}
     }
     if (prefillGalleryId) setTab('capture');
+    // Auto-open modal when directed from Featured button
+    if (prefillGalleryId && (prefillIg || ig) && wantOpen) {
+      setShowCameraModal(true);
+    }
   }, [prefillGalleryId, prefillIg]);
 
   return (
@@ -105,11 +113,19 @@ function MomentsIndex() {
             </section>
           ) : (
             <section ref={captureRef}>
-              <CapturePanel galleryId={galleryId} setGalleryId={setGalleryId} ig={ig} setIg={setIg} />
+              <CapturePanel onOpenCamera={() => setShowCameraModal(true)} galleryId={galleryId} setGalleryId={setGalleryId} ig={ig} setIg={setIg} />
             </section>
           )}
         </div>
       </main>
+      {showCameraModal && (
+        <CameraModal
+          galleryId={galleryId}
+          ig={ig}
+          code={eventCode}
+          onClose={() => setShowCameraModal(false)}
+        />
+      )}
     </div>
   );
 }
@@ -144,99 +160,13 @@ function GalleryGrid({ galleries }: { galleries: Array<{ id: number; title: stri
   );
 }
 
-function CapturePanel({ galleryId, setGalleryId, ig, setIg }: { galleryId: string; setGalleryId: (v: string) => void; ig: string; setIg: (v: string) => void }) {
-  const [cameraStarted, setCameraStarted] = useState(false);
-  const [videoRef, setVideoRef] = useState<HTMLVideoElement | null>(null);
-  const [canvasRef, setCanvasRef] = useState<HTMLCanvasElement | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const [blob, setBlob] = useState<Blob | null>(null);
-  const [preview, setPreview] = useState<string>('');
-  const [uploading, setUploading] = useState(false);
+function CapturePanel({ onOpenCamera, galleryId, setGalleryId, ig, setIg }: { onOpenCamera: () => void; galleryId: string; setGalleryId: (v: string) => void; ig: string; setIg: (v: string) => void }) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const canOpenCamera = !!(galleryId && galleryId.trim().length > 0);
 
-  async function startCamera() {
-    try {
-      if (!canOpenCamera) { setError('Enter Event ID to open camera'); return; }
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
-      streamRef.current = stream;
-      setCameraStarted(true);
-    } catch (e: any) {
-      setError(e?.message || 'Camera failed');
-    }
-  }
-
-  // Attach stream to video once it's available and the element is mounted
-  useEffect(() => {
-    if (cameraStarted && videoRef && streamRef.current) {
-      try {
-        (videoRef as any).srcObject = streamRef.current;
-        (videoRef as any).playsInline = true;
-        (videoRef as any).muted = true;
-        (videoRef as any).autoplay = true;
-        (videoRef as any).play?.().catch(() => {});
-      } catch {}
-    }
-    return () => {
-      // Cleanup: stop tracks when component unmounts or camera restarts
-      if (!cameraStarted && streamRef.current) {
-        try {
-          streamRef.current.getTracks().forEach(t => t.stop());
-        } catch {}
-        streamRef.current = null;
-      }
-    };
-  }, [cameraStarted, videoRef]);
-
-  function takePhoto() {
-    if (!videoRef || !canvasRef) return;
-    const vw = (videoRef as any).videoWidth || 0;
-    const vh = (videoRef as any).videoHeight || 0;
-    if (!vw || !vh) return;
-    canvasRef.width = vw;
-    canvasRef.height = vh;
-    const ctx = canvasRef.getContext('2d');
-    if (!ctx) return;
-    ctx.drawImage(videoRef, 0, 0, vw, vh);
-    const dataUrl = canvasRef.toDataURL('image/jpeg', 0.9);
-    setPreview(dataUrl);
-    const b = dataURLToBlob(dataUrl);
-    setBlob(b);
-  }
-
-  function dataURLToBlob(dataURL: string) {
-    const parts = dataURL.split(',');
-    const mime = parts[0].match(/:(.*?);/)?.[1] || 'image/jpeg';
-    const bstr = atob(parts[1]);
-    const u8 = new Uint8Array(bstr.length);
-    for (let i = 0; i < bstr.length; i++) u8[i] = bstr.charCodeAt(i);
-    return new Blob([u8], { type: mime });
-  }
-
-  async function upload() {
-    if (!blob || !galleryId) { setError('Missing photo or Event ID'); return; }
-    setUploading(true); setError(''); setSuccess('');
-    try {
-      const filename = `photo_${Date.now()}.jpg`;
-      const u = await fetch('/api/moments/upload-url', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ galleryId, fileName: filename, mediaType: 'photo' }) });
-      const uj: any = await u.json();
-      if (!u.ok) throw new Error(uj?.error || 'Upload URL failed');
-      await fetch(uj.uploadUrl, { method: 'PUT', headers: { 'Content-Type': 'image/jpeg' }, body: blob });
-      const r = await fetch('/api/moments/record', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ galleryId, r2_key: uj.key, original_filename: filename, user_name: ig || undefined, media_type: 'photo' }) });
-      const rj: any = await r.json();
-      if (!r.ok) throw new Error(rj?.error || 'Record failed');
-      setSuccess('Uploaded! It will appear in the gallery shortly.');
-      setBlob(null); setPreview('');
-    } catch (e: any) {
-      setError(e?.message || String(e));
-    } finally {
-      setUploading(false);
-    }
-  }
-
   return (
-    <div className="relative text-[#ede8df] rounded-3xl overflow-hidden min-h-[100vh] md:min-h-[80vh] border border-[#3b3733]/60 bg-gradient-to-b from-[#1a1511] via-[#141110] to-[#0c0b0a]">
+    <div className="relative text-[#ede8df] rounded-3xl overflow-hidden min-h-[60vh] md:min-h-[50vh] border border-[#3b3733]/60 bg-gradient-to-b from-[#1a1511] via-[#141110] to-[#0c0b0a]">
       {/* Ambient liquid highlights */}
       <div
         className="pointer-events-none absolute -top-20 -right-16 h-72 w-72 rounded-full blur-3xl opacity-30"
@@ -275,45 +205,234 @@ function CapturePanel({ galleryId, setGalleryId, ig, setIg }: { galleryId: strin
 
             {error && <div className="mt-4 p-3 rounded-lg border border-red-700/70 bg-red-900/30 text-red-200">{error}</div>}
 
-            {/* Camera area */}
-            {cameraStarted && (
-              <div className="mt-4 rounded-xl overflow-hidden border border-white/10 bg-black/90 shadow-lg">
-                <video ref={setVideoRef} autoPlay playsInline muted className="w-full h-auto" />
-                <canvas ref={setCanvasRef} style={{ display: 'none' }} />
-              </div>
-            )}
-
             {/* Actions */}
             <div className="mt-5 flex flex-wrap gap-3">
-              {!cameraStarted ? (
-                <button
-                  onClick={startCamera}
-                  disabled={!canOpenCamera}
-                  className="px-5 py-2.5 rounded-full bg-gradient-to-b from-[#ffb067] to-[#ff7a1a] text-[#171616] font-extrabold tracking-wide shadow-[0_10px_30px_rgba(255,122,26,0.25)] enabled:active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Open Camera
-                </button>
-              ) : (
-                <>
-                  <button onClick={takePhoto} className="px-5 py-2.5 rounded-full bg-[#efe9df] text-[#171616] font-semibold enabled:active:scale-95">Capture</button>
-                  <button
-                    onClick={upload}
-                    disabled={!blob || uploading}
-                    className="px-5 py-2.5 rounded-full bg-[#1f1e1d] text-[#ede8df] border border-[#3b3733] enabled:active:scale-95 disabled:opacity-50"
-                  >
-                    {uploading ? 'Uploading…' : 'Upload'}
-                  </button>
-                </>
-              )}
+              <button
+                onClick={() => {
+                  if (!canOpenCamera) { setError('Enter Event ID to open camera'); return; }
+                  onOpenCamera();
+                }}
+                disabled={!canOpenCamera}
+                className="px-5 py-2.5 rounded-full bg-gradient-to-b from-[#ffb067] to-[#ff7a1a] text-[#171616] font-extrabold tracking-wide shadow-[0_10px_30px_rgba(255,122,26,0.25)] enabled:active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Open Camera
+              </button>
             </div>
 
-            {preview && (
-              <div className="mt-4">
-                <img src={preview} alt="preview" className="rounded-xl border border-white/10 max-h-72" />
-              </div>
-            )}
             {success && <div className="mt-4 p-3 rounded-lg border border-emerald-700/60 bg-emerald-900/30 text-emerald-200">{success}</div>}
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CameraModal({ galleryId, ig, code, onClose }: { galleryId: string; ig: string; code?: string; onClose: () => void }) {
+  const [aspect, setAspect] = useState<'9:16' | '3:4'>('9:16');
+  const [facing, setFacing] = useState<'environment' | 'user'>('environment');
+  const [videoRef, setVideoRef] = useState<HTMLVideoElement | null>(null);
+  const [canvasRef, setCanvasRef] = useState<HTMLCanvasElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const [blob, setBlob] = useState<Blob | null>(null);
+  const [preview, setPreview] = useState<string>('');
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState('');
+
+  const aspectClass = useMemo(() => (aspect === '9:16' ? 'aspect-[9/16]' : 'aspect-[3/4]'), [aspect]);
+
+  async function startCamera() {
+    try {
+      // Stop any existing
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(t => t.stop());
+        streamRef.current = null;
+      }
+      const ratio = aspect === '9:16' ? 9/16 : 3/4;
+      const constraints: MediaStreamConstraints = {
+        video: {
+          facingMode: { ideal: facing } as any,
+          aspectRatio: { ideal: ratio } as any
+        },
+        audio: false
+      };
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      streamRef.current = stream;
+      if (videoRef) {
+        (videoRef as any).srcObject = stream;
+        (videoRef as any).playsInline = true;
+        (videoRef as any).muted = true;
+        (videoRef as any).autoplay = true;
+        await (videoRef as any).play?.().catch(() => {});
+      }
+      setError('');
+    } catch (e: any) {
+      setError(e?.message || 'Camera failed');
+    }
+  }
+
+  useEffect(() => {
+    // Start on mount
+    startCamera();
+    return () => {
+      if (streamRef.current) {
+        try { streamRef.current.getTracks().forEach(t => t.stop()); } catch {}
+      }
+      streamRef.current = null;
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [facing, aspect]);
+
+  function cropAndDrawToCanvas() {
+    if (!videoRef || !canvasRef) return null;
+    const vw = (videoRef as any).videoWidth || 0;
+    const vh = (videoRef as any).videoHeight || 0;
+    if (!vw || !vh) return null;
+    // Compute crop to desired aspect
+    const target = aspect === '9:16' ? 9/16 : 3/4;
+    const srcAspect = vw / vh;
+    let sw = vw, sh = vh, sx = 0, sy = 0;
+    if (srcAspect > target) {
+      // too wide, crop width
+      sw = Math.round(vh * target);
+      sx = Math.round((vw - sw) / 2);
+    } else if (srcAspect < target) {
+      // too tall, crop height
+      sh = Math.round(vw / target);
+      sy = Math.round((vh - sh) / 2);
+    }
+    canvasRef.width = sw;
+    canvasRef.height = sh;
+    const ctx = canvasRef.getContext('2d');
+    if (!ctx) return null;
+    ctx.drawImage(videoRef, sx, sy, sw, sh, 0, 0, sw, sh);
+    return canvasRef.toDataURL('image/jpeg', 0.92);
+  }
+
+  function takePhoto() {
+    const dataUrl = cropAndDrawToCanvas();
+    if (!dataUrl) return;
+    setPreview(dataUrl);
+    const b = dataURLToBlob(dataUrl);
+    setBlob(b);
+  }
+
+  function resetPhoto() {
+    setPreview('');
+    setBlob(null);
+  }
+
+  function dataURLToBlob(dataURL: string) {
+    const parts = dataURL.split(',');
+    const mime = parts[0].match(/:(.*?);/)?.[1] || 'image/jpeg';
+    const bstr = atob(parts[1]);
+    const u8 = new Uint8Array(bstr.length);
+    for (let i = 0; i < bstr.length; i++) u8[i] = bstr.charCodeAt(i);
+    return new Blob([u8], { type: mime });
+  }
+
+  function timeoutFetch(input: RequestInfo | URL, init: RequestInit = {}, ms = 15000): Promise<Response> {
+    const ctrl = new AbortController();
+    const id = setTimeout(() => ctrl.abort(), ms);
+    return fetch(input, { ...init, signal: ctrl.signal }).finally(() => clearTimeout(id));
+  }
+
+  async function tryDirectUpload(filename: string) {
+    // Get presigned URL
+    const u = await timeoutFetch('/api/moments/upload-url', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ galleryId, fileName: filename, mediaType: 'photo' })
+    });
+    const uj: any = await u.json();
+    if (!u.ok) throw new Error(uj?.error || 'Upload URL failed');
+    // PUT to R2
+    await timeoutFetch(uj.uploadUrl, { method: 'PUT', headers: { 'Content-Type': 'image/jpeg' }, body: blob as Blob }, 20000);
+    return uj.key as string;
+  }
+
+  async function tryProxyUpload(filename: string) {
+    const fd = new FormData();
+    fd.append('file', blob as Blob, filename);
+    fd.append('galleryId', galleryId);
+    if (code) fd.append('code', code);
+    fd.append('mediaType', 'photo');
+    fd.append('fileName', filename);
+    const p = await timeoutFetch('/api/moments/upload-proxy', { method: 'POST', body: fd }, 30000);
+    const pj: any = await p.json();
+    if (!p.ok) throw new Error(pj?.error || 'Proxy upload failed');
+    return pj.key as string;
+  }
+
+  async function upload() {
+    if (!blob || !galleryId) { setError('Missing photo or Event ID'); return; }
+    setUploading(true); setError('');
+    try {
+      const filename = `photo_${Date.now()}.jpg`;
+      let key: string | null = null;
+      const online = typeof navigator !== 'undefined' ? navigator.onLine : true;
+      // Try direct first (2 attempts), then proxy (2 attempts)
+      const attempts: Array<() => Promise<string>> = [
+        () => tryDirectUpload(filename),
+        () => tryDirectUpload(filename),
+        () => tryProxyUpload(filename),
+        () => tryProxyUpload(filename)
+      ];
+      if (!online) {
+        // Prefer proxy first if offline status is reported (may still fail if no connectivity)
+        attempts.unshift(() => tryProxyUpload(filename));
+      }
+      let lastErr: any = null;
+      for (const fn of attempts) {
+        try { key = await fn(); break; } catch (e) { lastErr = e; continue; }
+      }
+      if (!key) throw lastErr || new Error('Upload failed');
+
+      const r = await timeoutFetch('/api/moments/record', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ galleryId, r2_key: key, original_filename: filename, user_name: ig || undefined, media_type: 'photo' }) });
+      const rj: any = await r.json();
+      if (!r.ok) throw new Error(rj?.error || 'Record failed');
+  // Reset and auto-close shortly after success for smooth UX
+  resetPhoto();
+  setTimeout(() => { try { onClose(); } catch {} }, 700);
+    } catch (e: any) {
+      setError(e?.message || String(e));
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm">
+      <div className="absolute inset-0 flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-3">
+          <div className="text-[#ede8df] font-semibold">Camera</div>
+          <button onClick={onClose} className="px-3 py-1.5 rounded bg-white/10 border border-white/20 text-[#ede8df]">Close</button>
+        </div>
+        {/* Preview area */}
+        <div className="flex-1 w-full max-w-screen mx-auto px-4 pb-3 flex flex-col">
+          <div className={`mx-auto w-full max-w-[min(95vw,900px)] ${aspectClass} bg-black rounded-xl overflow-hidden border border-white/10 relative`}>
+            {!preview && <video ref={setVideoRef} autoPlay playsInline muted className="h-full w-full object-cover" />}
+            <canvas ref={setCanvasRef} className="hidden" />
+            {preview && (
+              <img src={preview} alt="preview" className="h-full w-full object-contain bg-black" />
+            )}
+          </div>
+          {/* Controls */}
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+            <div className="inline-flex rounded-full overflow-hidden border border-white/20">
+              <button onClick={() => setAspect('9:16')} className={`px-3 py-1.5 text-sm ${aspect==='9:16'?'bg-white/20 text-white':'text-white/80'}`}>9:16</button>
+              <button onClick={() => setAspect('3:4')} className={`px-3 py-1.5 text-sm ${aspect==='3:4'?'bg-white/20 text-white':'text-white/80'}`}>3:4</button>
+            </div>
+            <button onClick={() => { setFacing(f => f==='environment'?'user':'environment'); }} className="px-3 py-1.5 rounded-full bg-white/10 border border-white/20 text-white">Switch Camera</button>
+            {!preview ? (
+              <button onClick={takePhoto} className="px-4 py-2 rounded-full bg-[#efe9df] text-[#171616] font-semibold">Capture</button>
+            ) : (
+              <>
+                <button onClick={resetPhoto} className="px-3 py-1.5 rounded-full bg-white/10 border border-white/20 text-white">Reset</button>
+                <button onClick={upload} disabled={uploading} className="px-4 py-2 rounded-full bg-[#1f1e1d] text-[#ede8df] border border-[#3b3733] disabled:opacity-50">{uploading ? 'Uploading…' : 'Upload'}</button>
+              </>
+            )}
+          </div>
+          {error && <div className="mt-3 text-center text-red-300 text-sm">{error}</div>}
         </div>
       </div>
     </div>

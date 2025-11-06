@@ -54,17 +54,26 @@ export default function FeaturedInteractive({ config }: { config: FeaturedConfig
     return () => { cancelled = true; };
   }, [enabled, normalized, config.slug, lastSubmitted]);
 
-  // Build a link that appends the IG handle as a query param when available
+  // Build a link that appends the IG handle and normalizes old capture path to new Moments page
   function withIgParam(href?: string): string | undefined {
     if (!href) return href;
     try {
-      const url = new URL(href, typeof window !== 'undefined' ? window.location.origin : 'https://odubo.studio');
+      const base = typeof window !== 'undefined' ? window.location.origin : 'https://odubo.studio';
+      const url = new URL(href, base);
+      // Normalize legacy /moments/capture path to new /moments page, preserving query
+      if (url.pathname.startsWith('/moments/capture')) {
+        url.pathname = '/moments';
+      }
+      // Signal the Moments page to auto-open the camera modal
+      url.searchParams.set('open', '1');
       if (normalized) url.searchParams.set('ig', normalized);
       return url.pathname + url.search + url.hash;
     } catch {
-      // Fallback for relative/invalid URLs: append minimally
-      if (!normalized) return href;
-      return href + (href.includes('?') ? `&ig=${encodeURIComponent(normalized)}` : `?ig=${encodeURIComponent(normalized)}`);
+      // Fallback for relative/invalid URLs: append minimally and normalize path textually
+      let out = href.startsWith('/moments/capture') ? href.replace('/moments/capture', '/moments') : href;
+      out = out + (out.includes('?') ? '&open=1' : '?open=1');
+      if (!normalized) return out;
+      return out + (out.includes('?') ? `&ig=${encodeURIComponent(normalized)}` : `?ig=${encodeURIComponent(normalized)}`);
     }
   }
 
