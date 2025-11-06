@@ -237,11 +237,34 @@ function CameraModal({ galleryId, ig, code, onClose }: { galleryId: string; ig: 
   const [preview, setPreview] = useState<string>('');
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
+  const headerRef = useRef<HTMLDivElement | null>(null);
+  const controlsRef = useRef<HTMLDivElement | null>(null);
+  const [boxSize, setBoxSize] = useState<{width: number; height: number}>({ width: 0, height: 0 });
 
-  const aspectClass = useMemo(() => (aspect === '9:16' ? 'aspect-[9/16]' : 'aspect-[3/4]'), [aspect]);
+  const aspectRatio = useMemo(() => (aspect === '9:16' ? 9/16 : 3/4), [aspect]);
+
+  async function waitForVideoReady(video: HTMLVideoElement) {
+    if (video.readyState >= 2 && video.videoWidth > 0 && video.videoHeight > 0) return;
+    await new Promise<void>((resolve) => {
+      const onReady = () => {
+        if (video.videoWidth > 0 && video.videoHeight > 0) {
+          video.removeEventListener('loadedmetadata', onReady);
+          video.removeEventListener('canplay', onReady);
+          resolve();
+        }
+      };
+      video.addEventListener('loadedmetadata', onReady);
+      video.addEventListener('canplay', onReady);
+      setTimeout(() => { video.removeEventListener('loadedmetadata', onReady); video.removeEventListener('canplay', onReady); resolve(); }, 2500);
+    });
+  }
 
   async function startCamera() {
     try {
+      if (typeof window !== 'undefined' && !window.isSecureContext) {
+        setError('Camera requires HTTPS (or localhost).');
+        return;
+      }
       // Stop any existing
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(t => t.stop());
@@ -262,6 +285,7 @@ function CameraModal({ galleryId, ig, code, onClose }: { galleryId: string; ig: 
         (videoRef as any).playsInline = true;
         (videoRef as any).muted = true;
         (videoRef as any).autoplay = true;
+        try { await waitForVideoReady(videoRef); } catch {}
         await (videoRef as any).play?.().catch(() => {});
       }
       setError('');
@@ -270,17 +294,56 @@ function CameraModal({ galleryId, ig, code, onClose }: { galleryId: string; ig: 
     }
   }
 
+  // Attach stream to video if ref becomes available after starting
   useEffect(() => {
-    // Start on mount
-    startCamera();
-    return () => {
-      if (streamRef.current) {
-        try { streamRef.current.getTracks().forEach(t => t.stop()); } catch {}
-      }
-      streamRef.current = null;
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (videoRef && streamRef.current) {
+      try {
+        (videoRef as any).srcObject = streamRef.current;
+        (videoRef as any).playsInline = true;
+        (videoRef as any).muted = true;
+        (videoRef as any).autoplay = true;
+        (videoRef as any).play?.().catch(() => {});
+      } catch {}
+    }
+  }, [videoRef]);
+
+  // Restart camera when facing/aspect change, but only after user starts once
+  useEffect(() => {
+    if (streamRef.current) {
+      startCamera();
+    }
+    return () => {};
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [facing, aspect]);
+
+  // Compute a preview box that fits in viewport along with header and controls (no scrolling needed for controls)
+  useEffect(() => {
+    function compute() {
+      const vw = Math.min(window.innerWidth, document.documentElement.clientWidth || window.innerWidth);
+      const vh = Math.min(window.innerHeight, document.documentElement.clientHeight || window.innerHeight);
+      const headerH = headerRef.current?.offsetHeight || 0;
+      const controlsH = controlsRef.current?.offsetHeight || 0;
+      const sidePadding = 16 * 2; // px-4 left+right
+      const verticalGaps = 12 + 12; // approximate top/bottom gaps around box
+      const availableH = Math.max(120, vh - headerH - controlsH - verticalGaps);
+      // Width limited by viewport minus padding, and by available height * aspect
+      const maxByHeight = availableH * aspectRatio;
+      const maxByWidth = vw - sidePadding;
+      const width = Math.max(240, Math.min(maxByWidth, maxByHeight));
+      const height = Math.round(width / aspectRatio);
+      setBoxSize({ width: Math.round(width), height });
+    }
+    compute();
+    const ro = new ResizeObserver(compute);
+    ro.observe(document.documentElement);
+    window.addEventListener('orientationchange', compute);
+    window.addEventListener('resize', compute);
+    return () => {
+      try { ro.disconnect(); } catch {}
+      window.removeEventListener('orientationchange', compute);
+      window.removeEventListener('resize', compute);
+    };
+  }, [aspectRatio]);
 
   function cropAndDrawToCanvas() {
     if (!videoRef || !canvasRef) return null;
@@ -304,7 +367,16 @@ function CameraModal({ galleryId, ig, code, onClose }: { galleryId: string; ig: 
     canvasRef.height = sh;
     const ctx = canvasRef.getContext('2d');
     if (!ctx) return null;
-    ctx.drawImage(videoRef, sx, sy, sw, sh, 0, 0, sw, sh);
+    const mirror = facing === 'user';
+    if (mirror) {
+      ctx.save();
+      ctx.translate(sw, 0);
+      ctx.scale(-1, 1);
+      ctx.drawImage(videoRef, sx, sy, sw, sh, 0, 0, sw, sh);
+      ctx.restore();
+    } else {
+      ctx.drawImage(videoRef, sx, sy, sw, sh, 0, 0, sw, sh);
+    }
     return canvasRef.toDataURL('image/jpeg', 0.92);
   }
 
@@ -400,29 +472,46 @@ function CameraModal({ galleryId, ig, code, onClose }: { galleryId: string; ig: 
   }
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm">
-      <div className="absolute inset-0 flex flex-col">
+    <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm overflow-y-auto">
+      <div className="min-h-[100dvh] pt-[env(safe-area-inset-top)] pb-[calc(96px+env(safe-area-inset-bottom))]">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3">
+        <div ref={headerRef} className="sticky top-0 z-10 flex items-center justify-between px-4 py-3 bg-black/60 backdrop-blur-sm">
           <div className="text-[#ede8df] font-semibold">Camera</div>
           <button onClick={onClose} className="px-3 py-1.5 rounded bg-white/10 border border-white/20 text-[#ede8df]">Close</button>
         </div>
+
         {/* Preview area */}
-        <div className="flex-1 w-full max-w-screen mx-auto px-4 pb-3 flex flex-col">
-          <div className={`mx-auto w-full max-w-[min(95vw,900px)] ${aspectClass} bg-black rounded-xl overflow-hidden border border-white/10 relative`}>
-            {!preview && <video ref={setVideoRef} autoPlay playsInline muted className="h-full w-full object-cover" />}
+        <div className="w-full max-w-screen mx-auto px-4">
+          <div
+            className="mx-auto bg-black rounded-xl overflow-hidden border border-white/10 relative"
+            style={{ width: boxSize.width ? `${boxSize.width}px` : undefined, height: boxSize.height ? `${boxSize.height}px` : undefined }}
+          >
+            {!preview && (
+              <>
+                <video ref={setVideoRef} autoPlay playsInline muted className="h-full w-full object-cover" />
+                {!streamRef.current && (
+                  <div className="absolute inset-0 grid place-items-center bg-black/40">
+                    <button onClick={startCamera} className="px-5 py-3 rounded-full bg-[#efe9df] text-[#171616] font-semibold">Start Camera</button>
+                  </div>
+                )}
+              </>
+            )}
             <canvas ref={setCanvasRef} className="hidden" />
             {preview && (
               <img src={preview} alt="preview" className="h-full w-full object-contain bg-black" />
             )}
           </div>
-          {/* Controls */}
-          <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+          {error && <div className="mt-3 text-center text-red-300 text-sm">{error}</div>}
+        </div>
+
+        {/* Bottom controls bar (always visible) */}
+        <div ref={controlsRef} className="fixed bottom-0 inset-x-0 z-20 px-3 pb-[calc(12px+env(safe-area-inset-bottom))] pt-2 bg-gradient-to-t from-black/80 to-black/20 backdrop-blur">
+          <div className="mx-auto max-w-[min(95vw,900px)] flex flex-wrap items-center justify-center gap-2">
             <div className="inline-flex rounded-full overflow-hidden border border-white/20">
               <button onClick={() => setAspect('9:16')} className={`px-3 py-1.5 text-sm ${aspect==='9:16'?'bg-white/20 text-white':'text-white/80'}`}>9:16</button>
               <button onClick={() => setAspect('3:4')} className={`px-3 py-1.5 text-sm ${aspect==='3:4'?'bg-white/20 text-white':'text-white/80'}`}>3:4</button>
             </div>
-            <button onClick={() => { setFacing(f => f==='environment'?'user':'environment'); }} className="px-3 py-1.5 rounded-full bg-white/10 border border-white/20 text-white">Switch Camera</button>
+            <button onClick={() => { setFacing(f => f==='environment'?'user':'environment'); }} className="px-3 py-1.5 rounded-full bg-white/10 border border-white/20 text-white">Switch</button>
             {!preview ? (
               <button onClick={takePhoto} className="px-4 py-2 rounded-full bg-[#efe9df] text-[#171616] font-semibold">Capture</button>
             ) : (
@@ -432,7 +521,6 @@ function CameraModal({ galleryId, ig, code, onClose }: { galleryId: string; ig: 
               </>
             )}
           </div>
-          {error && <div className="mt-3 text-center text-red-300 text-sm">{error}</div>}
         </div>
       </div>
     </div>
