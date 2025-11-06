@@ -67,6 +67,12 @@ export default function FeaturedInteractive({ config }: { config: FeaturedConfig
       // Signal the Moments page to auto-open the camera modal
       url.searchParams.set('open', '1');
       if (normalized) url.searchParams.set('ig', normalized);
+      // If this featured link already knows a gallery (via id or join code), pass it through
+      // Preferred: galleryId; Fallback: resolve code on the Moments page
+      const knownGalleryId = url.searchParams.get('galleryId');
+      const knownCode = url.searchParams.get('code') || url.searchParams.get('eventCode');
+      if (knownGalleryId) url.searchParams.set('galleryId', knownGalleryId);
+      if (!knownGalleryId && knownCode) url.searchParams.set('code', knownCode);
       return url.pathname + url.search + url.hash;
     } catch {
       // Fallback for relative/invalid URLs: append minimally and normalize path textually

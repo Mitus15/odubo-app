@@ -84,6 +84,23 @@ function MomentsIndex() {
     }
   }, [prefillGalleryId, prefillIg]);
 
+  // If a galleryId is known but code is missing, resolve it for smoother uploads (Featured deep-link or manual ID)
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      if (!galleryId || eventCode) return;
+      try {
+        const res = await fetch(`/api/moments/galleries/${encodeURIComponent(galleryId)}`);
+        const data: any = await res.json().catch(() => ({}));
+        if (!active) return;
+        if (res.ok && data?.gallery?.code) {
+          setEventCode(String(data.gallery.code));
+        }
+      } catch {}
+    })();
+    return () => { active = false; };
+  }, [galleryId, eventCode]);
+
   return (
     // Scroll within the app layout's overflow-hidden main area
     <div className="h-full overflow-y-auto bg-gradient-to-b from-[#171616] via-[#1b1a19] to-[#171616]">
@@ -213,7 +230,7 @@ function CapturePanel({ onOpenCamera, galleryId, setGalleryId, ig, setIg }: { on
                   onOpenCamera();
                 }}
                 disabled={!canOpenCamera}
-                className="px-5 py-2.5 rounded-full bg-gradient-to-b from-[#ffb067] to-[#ff7a1a] text-[#171616] font-extrabold tracking-wide shadow-[0_10px_30px_rgba(255,122,26,0.25)] enabled:active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-5 py-2.5 rounded-full bg-[#ede8df] text-[#171616] font-extrabold tracking-wide shadow-[0_10px_28px_rgba(237,232,223,0.25)] enabled:active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Open Camera
               </button>
