@@ -72,19 +72,25 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `Unsupported content-type: ${detectedType}` }, { status: 415 });
     }
 
-    // Resolve gallery and enforce schedule
+    // Resolve gallery and enforce schedule (also load config for public allowance)
     const rows = code
-      ? await queryDatabase('SELECT id, code, title, starts_at, ends_at FROM galleries WHERE code = ? LIMIT 1', [code])
-      : await queryDatabase('SELECT id, code, title, starts_at, ends_at FROM galleries WHERE id = ? LIMIT 1', [galleryId]);
+      ? await queryDatabase('SELECT id, code, title, starts_at, ends_at, config FROM galleries WHERE code = ? LIMIT 1', [code])
+      : await queryDatabase('SELECT id, code, title, starts_at, ends_at, config FROM galleries WHERE id = ? LIMIT 1', [galleryId]);
     if (!rows[0]) return NextResponse.json({ error: 'Gallery not found' }, { status: 404 });
-  const g = rows[0] as { id: number; code?: string | null; title?: string | null; starts_at?: string | null; ends_at?: string | null };
+  const g = rows[0] as { id: number; code?: string | null; title?: string | null; starts_at?: string | null; ends_at?: string | null; config?: any };
     const now = Date.now();
     const startOk = !g.starts_at || !Number.isNaN(Date.parse(g.starts_at)) ? (!g.starts_at || now >= Date.parse(g.starts_at!)) : true;
     const endOk = !g.ends_at || !Number.isNaN(Date.parse(g.ends_at)) ? (!g.ends_at || now <= Date.parse(g.ends_at!)) : true;
     if (!(startOk && endOk)) return NextResponse.json({ error: 'This gallery is not accepting uploads at this time.' }, { status: 403 });
 
-    // Uploads require code unless admin
-    if (!isAdmin && (!code || code !== g.code)) {
+    // Uploads require code unless admin OR the gallery is public OR an env override allows public proxy
+    let allowWithoutCode = false;
+    try {
+      const cfg = typeof g.config === 'string' ? JSON.parse(g.config || '{}') : (g.config || {});
+      allowWithoutCode = cfg?.is_public === true;
+    } catch {}
+    const envOverride = (process.env.MOMENTS_PROXY_ALLOW_PUBLIC || '').toLowerCase() === '1';
+    if (!isAdmin && !envOverride && !allowWithoutCode && (!code || code !== g.code)) {
       return NextResponse.json({ error: 'Event code required to upload' }, { status: 403 });
     }
 

@@ -416,6 +416,38 @@ class CloudflareStreamAPI {
 
     return false;
   }
+
+  // ===== Live Inputs =====
+  /** Create a Live Input (RTMPS/WHIP) with optional automatic recording */
+  async createLiveInput(name: string, options: { recordingMode?: 'automatic' | 'off'; allowedOrigins?: string[] } = {}) {
+    const recMode = options.recordingMode || 'automatic';
+    const body: any = {
+      meta: { name },
+      recording: { mode: recMode },
+    };
+    if (options.allowedOrigins) body.allowedOrigins = options.allowedOrigins;
+    return this.makeRequest(`/live_inputs`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  }
+
+  /** List Live Inputs */
+  async listLiveInputs(params: { search?: string } = {}) {
+    const qs = params.search ? `?search=${encodeURIComponent(params.search)}` : '';
+    return this.makeRequest(`/live_inputs${qs}`);
+  }
+
+  /** Get Live Input by UID */
+  async getLiveInput(uid: string) {
+    return this.makeRequest(`/live_inputs/${uid}`);
+  }
+
+  /** Delete a Live Input */
+  async deleteLiveInput(uid: string) {
+    return this.makeRequest(`/live_inputs/${uid}`, { method: 'DELETE' });
+  }
 }
 
 export default CloudflareStreamAPI;

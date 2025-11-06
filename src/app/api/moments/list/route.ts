@@ -13,7 +13,9 @@ export async function GET(req: Request) {
 
     if (!galleryId) return NextResponse.json({ error: 'Missing galleryId' }, { status: 400 });
 
-    // Public viewing: return all photos for a gallery regardless of code.
+    // Public viewing mode controlled by env flag:
+    // MOMENTS_PUBLIC_MODE = 'all' | 'moderated' (default 'all')
+    const publicMode = (process.env.MOMENTS_PUBLIC_MODE || 'all').toLowerCase();
     // Keep basic rate limiting. Admin detection is retained only for key scoping.
     const user = await verifyUserFromRequest(req as any).catch(() => null);
     const isAdmin = isAdminUser(user);
@@ -21,8 +23,10 @@ export async function GET(req: Request) {
     const rl = await rateLimit({ key: rlKey, limit: 300, windowMs: 60_000 });
     if (!rl.allowed) return NextResponse.json({ error: 'Rate limited' }, { status: 429 });
 
-    // Always return all photos (no moderation filter) regardless of code presence
-    const where = 'WHERE gallery_id = ?';
+    // Apply moderation filter if configured
+    const where = publicMode === 'moderated'
+      ? 'WHERE gallery_id = ? AND (moderated = 1 OR moderated IS NULL)'
+      : 'WHERE gallery_id = ?';
     const rows = await queryDatabase(
       `SELECT id, uid, r2_key, thumbnail_key, user_name, moderated, created_at, media_type, original_filename
        FROM gallery_photos ${where}

@@ -442,9 +442,21 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
       <div className="p-6 max-w-2xl mx-auto pb-24">
   <h1 className="text-2xl font-bold mb-1">Capture Moment</h1>
   <div className="text-xs opacity-70 mb-3">Event code: {code || '—'}</div>
-      {userName && (
-        <div className="text-xs opacity-80 mb-2">Posting as <span className="font-semibold">{userName}</span></div>
-      )}
+      <div className="text-xs opacity-80 mb-2 flex items-center gap-2">
+        <span>Posting as</span>
+        <input
+          value={userName}
+          onChange={(e) => {
+            const raw = e.target.value || '';
+            const norm = raw.replace(/^@?/, '@');
+            setUserName(norm);
+            try { localStorage.setItem('instagramHandle', norm.replace(/^@/, '')); } catch {}
+          }}
+          placeholder="@yourhandle"
+          className="px-2 py-1 rounded bg-white/10 border border-white/20 text-xs"
+          style={{ width: 160 }}
+        />
+      </div>
       <div className="text-sm text-[#b2a491] mb-3">Event window: {startsAt ? startsAt.toLocaleString() : 'N/A'} — {endsAt ? endsAt.toLocaleString() : 'N/A'}</div>
       
       {error && <div className="text-red-400 mb-3 p-3 bg-red-900/20 border border-red-600 rounded">{error}</div>}

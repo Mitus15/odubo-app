@@ -4,6 +4,7 @@ import { generateFilePath, getMimeType } from '@/lib/fileOrganization';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { queryDatabase } from '@/lib/db';
+import { rateLimit } from '@/lib/rateLimit';
 
 export async function POST(req: Request) {
   try {
@@ -22,7 +23,7 @@ export async function POST(req: Request) {
       ? await queryDatabase('SELECT id, code, title, starts_at, ends_at FROM galleries WHERE code = ? LIMIT 1', [code])
       : await queryDatabase('SELECT id, code, title, starts_at, ends_at FROM galleries WHERE id = ? LIMIT 1', [galleryId]);
     if (!rows[0]) return NextResponse.json({ error: 'Gallery not found' }, { status: 404 });
-  const { starts_at, ends_at, code: gCode, title } = rows[0] as { starts_at?: string | null; ends_at?: string | null; code?: string | null; title?: string | null };
+  const { id, starts_at, ends_at, code: gCode, title } = rows[0] as { id: number; starts_at?: string | null; ends_at?: string | null; code?: string | null; title?: string | null };
     const now = Date.now();
     const startOk = !starts_at || !Number.isNaN(Date.parse(starts_at)) ? (!starts_at || now >= Date.parse(starts_at!)) : true;
     const endOk = !ends_at || !Number.isNaN(Date.parse(ends_at)) ? (!ends_at || now <= Date.parse(ends_at!)) : true;
@@ -30,12 +31,18 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'This gallery is not accepting uploads at this time.' }, { status: 403 });
     }
 
-    // Uploads require possession of the event code unless admin
+    // Accept uploads via galleryId (preferred) or by valid event code.
+    // If a code is provided by the client, validate it; otherwise allow by galleryId.
     const isAdmin = isAdminUser(_user);
-    const hasValidCode = !!code && code === gCode;
-    if (!isAdmin && !hasValidCode) {
-      return NextResponse.json({ error: 'Event code required to upload' }, { status: 403 });
+    const hasCode = typeof code === 'string' && code.length > 0;
+    if (!isAdmin && hasCode && code !== gCode) {
+      return NextResponse.json({ error: 'Invalid event code' }, { status: 403 });
     }
+
+    // Rate limit per IP per gallery to be event-friendly but safe
+    const ip = (req.headers as any).get?.('x-forwarded-for') || (req as any).headers?.get?.('x-forwarded-for') || 'unknown';
+    const rl = await rateLimit({ key: `moments:upload-url:${ip}:g:${id}`, limit: 120, windowMs: 60_000 });
+    if (!rl.allowed) return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
 
     // Generate R2 key with a clear prefix for organization
     const key = generateFilePath({

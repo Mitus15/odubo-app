@@ -35,7 +35,7 @@ export default function JoinMomentsPage() {
           <div className="text-sm text-[#b2a491]">Event runs from {gallery.starts_at || 'N/A'} to {gallery.ends_at || 'N/A'}</div>
           <div className="mt-3 flex gap-2">
             <a
-              href={`/moments/capture?galleryId=${gallery.id}&code=${encodeURIComponent(gallery.code)}&starts_at=${encodeURIComponent(gallery.starts_at || '')}&ends_at=${encodeURIComponent(gallery.ends_at || '')}`}
+              href={`/moments?galleryId=${gallery.id}&code=${encodeURIComponent(gallery.code)}&starts_at=${encodeURIComponent(gallery.starts_at || '')}&ends_at=${encodeURIComponent(gallery.ends_at || '')}`}
               className="px-4 py-2 rounded bg-[#502d26] text-[#ede8df] hover:bg-[#6b4c3b] transition-colors"
             >
               Open Camera

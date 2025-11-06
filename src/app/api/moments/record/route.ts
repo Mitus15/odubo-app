@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { executeQuery, queryDatabase } from '@/lib/db';
 import { verifyUserFromRequest, isAdminUser } from '@/lib/auth';
+import { rateLimit } from '@/lib/rateLimit';
 
 export async function POST(req: Request) {
   try {
@@ -21,7 +22,7 @@ export async function POST(req: Request) {
       ? await queryDatabase('SELECT id, starts_at, ends_at FROM galleries WHERE code = ? LIMIT 1', [code])
       : await queryDatabase('SELECT id, starts_at, ends_at FROM galleries WHERE id = ? LIMIT 1', [galleryId]);
     if (!rows[0]) return NextResponse.json({ error: 'Gallery not found' }, { status: 404 });
-    const { starts_at, ends_at, id } = rows[0] as { id: number; starts_at?: string | null; ends_at?: string | null };
+  const { starts_at, ends_at, id } = rows[0] as { id: number; starts_at?: string | null; ends_at?: string | null };
     galleryId = id;
     const now = Date.now();
     const startOk = !starts_at || !Number.isNaN(Date.parse(starts_at)) ? (!starts_at || now >= Date.parse(starts_at!)) : true;
@@ -30,12 +31,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'This gallery is not accepting uploads at this time.' }, { status: 403 });
     }
 
-    // Require event code unless admin
-    const user = await verifyUserFromRequest(req as any).catch(() => null);
-    const isAdmin = isAdminUser(user);
-    if (!isAdmin && !code) {
-      return NextResponse.json({ error: 'Event code required to record upload' }, { status: 403 });
-    }
+    // Allow recording with galleryId; if a code is provided, it must be valid based on earlier lookup
+    // (when resolved by code, rows[0] would be missing if invalid). Admin bypass stays implicit.
+
+    // Rate limit per IP per gallery for record writes
+    const ip = (req as any).headers?.get?.('x-forwarded-for') || 'unknown';
+    const rl = await rateLimit({ key: `moments:record:${ip}:g:${galleryId}`, limit: 180, windowMs: 60_000 });
+    if (!rl.allowed) return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
 
     const sql = `INSERT INTO gallery_photos (gallery_id, uid, r2_key, thumbnail_key, original_filename, user_name, media_type) VALUES (?, ?, ?, ?, ?, ?, ?)`;
     await executeQuery(sql, [galleryId, uid, key, thumbnailKey, originalFilename, userName, mediaType]);

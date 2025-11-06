@@ -1,8 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-
-// Data types - unified concept treating galleries as events
 type MomentsEvent = {
   id: string;
   title: string;
@@ -337,7 +335,7 @@ function EventCard({
             Copy Code
           </button>
           <Link 
-            href={`/moments/capture?galleryId=${event.id}`} 
+            href={`/moments?galleryId=${event.id}`} 
             className="px-3 py-2 rounded bg-[#ede8df] text-[#171616] text-center text-sm hover:bg-[#d6cfc0]"
           >
             Open Capture
