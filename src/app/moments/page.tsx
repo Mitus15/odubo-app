@@ -240,6 +240,7 @@ function CameraModal({ galleryId, ig, code, onClose }: { galleryId: string; ig: 
   const headerRef = useRef<HTMLDivElement | null>(null);
   const controlsRef = useRef<HTMLDivElement | null>(null);
   const [boxSize, setBoxSize] = useState<{width: number; height: number}>({ width: 0, height: 0 });
+  const [isStarting, setIsStarting] = useState(false);
 
   const aspectRatio = useMemo(() => (aspect === '9:16' ? 9/16 : 3/4), [aspect]);
 
@@ -270,11 +271,15 @@ function CameraModal({ galleryId, ig, code, onClose }: { galleryId: string; ig: 
         streamRef.current.getTracks().forEach(t => t.stop());
         streamRef.current = null;
       }
-      const ratio = aspect === '9:16' ? 9/16 : 3/4;
+      // Prefer high quality while avoiding iOS Safari zooming; avoid aspectRatio constraint to prevent forced crop/zoom
+      const idealWidth = facing === 'environment' ? 1920 : 1280;
+      const idealHeight = facing === 'environment' ? 1080 : 720;
       const constraints: MediaStreamConstraints = {
         video: {
           facingMode: { ideal: facing } as any,
-          aspectRatio: { ideal: ratio } as any
+          width: { ideal: idealWidth } as any,
+          height: { ideal: idealHeight } as any,
+          frameRate: { ideal: 30, max: 30 } as any
         },
         audio: false
       };
@@ -472,51 +477,63 @@ function CameraModal({ galleryId, ig, code, onClose }: { galleryId: string; ig: 
   }
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm overflow-y-auto">
+    <div className="fixed inset-0 z-[100] bg-gradient-to-b from-[#1a1511]/95 via-[#0f0d0c]/90 to-[#0b0a09]/90 supports-[backdrop-filter]:backdrop-blur overflow-y-auto">
       <div className="min-h-[100dvh] pt-[env(safe-area-inset-top)] pb-[calc(96px+env(safe-area-inset-bottom))]">
         {/* Header */}
-        <div ref={headerRef} className="sticky top-0 z-10 flex items-center justify-between px-4 py-3 bg-black/60 backdrop-blur-sm">
+        <div ref={headerRef} className="sticky top-0 z-10 flex items-center justify-between px-4 py-3 bg-[#1a1511]/70 supports-[backdrop-filter]:backdrop-blur border-b border-[#3b3733]/70">
           <div className="text-[#ede8df] font-semibold">Camera</div>
-          <button onClick={onClose} className="px-3 py-1.5 rounded bg-white/10 border border-white/20 text-[#ede8df]">Close</button>
+          <button onClick={onClose} className="px-3 py-1.5 rounded-lg bg-white/5 supports-[backdrop-filter]:backdrop-blur border border-[#3b3733] text-[#ede8df] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">Close</button>
         </div>
 
         {/* Preview area */}
         <div className="w-full max-w-screen mx-auto px-4">
           <div
-            className="mx-auto bg-black rounded-xl overflow-hidden border border-white/10 relative"
+            className="mx-auto rounded-2xl overflow-hidden border border-[#3b3733]/70 relative bg-[#0f0d0c] shadow-[0_10px_40px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.05)]"
             style={{ width: boxSize.width ? `${boxSize.width}px` : undefined, height: boxSize.height ? `${boxSize.height}px` : undefined }}
           >
             {!preview && (
               <>
-                <video ref={setVideoRef} autoPlay playsInline muted className="h-full w-full object-cover" />
-                {!streamRef.current && (
-                  <div className="absolute inset-0 grid place-items-center bg-black/40">
-                    <button onClick={startCamera} className="px-5 py-3 rounded-full bg-[#efe9df] text-[#171616] font-semibold">Start Camera</button>
+                <video
+                  ref={setVideoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className={`h-full w-full ${facing==='user' ? 'object-contain' : 'object-cover'}`}
+                  style={facing==='user' ? { transform: 'scaleX(-1)' } : undefined}
+                />
+                {(!streamRef.current && !isStarting) && (
+                  <div className="absolute inset-0 grid place-items-center bg-[#0b0a09]/50">
+                    <button
+                      onClick={() => { setIsStarting(true); startCamera().catch(() => setIsStarting(false)); }}
+                      className="px-5 py-3 rounded-full bg-gradient-to-b from-[#ffb067] to-[#ff7a1a] text-[#171616] font-extrabold tracking-wide shadow-[0_10px_30px_rgba(255,122,26,0.25)] active:scale-95"
+                    >
+                      Open Camera
+                    </button>
                   </div>
                 )}
               </>
             )}
             <canvas ref={setCanvasRef} className="hidden" />
             {preview && (
-              <img src={preview} alt="preview" className="h-full w-full object-contain bg-black" />
+              <img src={preview} alt="preview" className="h-full w-full object-contain bg-[#0f0d0c]" />
             )}
           </div>
           {error && <div className="mt-3 text-center text-red-300 text-sm">{error}</div>}
         </div>
 
         {/* Bottom controls bar (always visible) */}
-        <div ref={controlsRef} className="fixed bottom-0 inset-x-0 z-20 px-3 pb-[calc(12px+env(safe-area-inset-bottom))] pt-2 bg-gradient-to-t from-black/80 to-black/20 backdrop-blur">
+        <div ref={controlsRef} className="fixed bottom-0 inset-x-0 z-20 px-3 pb-[calc(12px+env(safe-area-inset-bottom))] pt-2 bg-gradient-to-t from-[#140f0c]/90 to-[#0c0b0a]/50 supports-[backdrop-filter]:backdrop-blur border-t border-[#3b3733]/70">
           <div className="mx-auto max-w-[min(95vw,900px)] flex flex-wrap items-center justify-center gap-2">
-            <div className="inline-flex rounded-full overflow-hidden border border-white/20">
-              <button onClick={() => setAspect('9:16')} className={`px-3 py-1.5 text-sm ${aspect==='9:16'?'bg-white/20 text-white':'text-white/80'}`}>9:16</button>
-              <button onClick={() => setAspect('3:4')} className={`px-3 py-1.5 text-sm ${aspect==='3:4'?'bg-white/20 text-white':'text-white/80'}`}>3:4</button>
+            <div className="inline-flex rounded-full overflow-hidden border border-[#3b3733]/80 bg-white/5">
+              <button onClick={() => setAspect('9:16')} className={`px-3 py-1.5 text-sm ${aspect==='9:16'?'bg-[#ff8a3d]/30 text-[#ffeedd]':'text-[#e8ded2]'}`}>9:16</button>
+              <button onClick={() => setAspect('3:4')} className={`px-3 py-1.5 text-sm ${aspect==='3:4'?'bg-[#ff8a3d]/30 text-[#ffeedd]':'text-[#e8ded2]'}`}>3:4</button>
             </div>
-            <button onClick={() => { setFacing(f => f==='environment'?'user':'environment'); }} className="px-3 py-1.5 rounded-full bg-white/10 border border-white/20 text-white">Switch</button>
+            <button onClick={() => { setFacing(f => f==='environment'?'user':'environment'); }} className="px-3 py-1.5 rounded-full bg-white/5 supports-[backdrop-filter]:backdrop-blur border border-[#3b3733]/80 text-[#ede8df]">Switch</button>
             {!preview ? (
-              <button onClick={takePhoto} className="px-4 py-2 rounded-full bg-[#efe9df] text-[#171616] font-semibold">Capture</button>
+              <button onClick={takePhoto} className="px-4 py-2 rounded-full bg-gradient-to-b from-[#ffb067] to-[#ff7a1a] text-[#171616] font-extrabold tracking-wide shadow-[0_10px_30px_rgba(255,122,26,0.25)] active:scale-95">Capture</button>
             ) : (
               <>
-                <button onClick={resetPhoto} className="px-3 py-1.5 rounded-full bg-white/10 border border-white/20 text-white">Reset</button>
+                <button onClick={resetPhoto} className="px-3 py-1.5 rounded-full bg-white/5 supports-[backdrop-filter]:backdrop-blur border border-[#3b3733]/80 text-[#ede8df]">Reset</button>
                 <button onClick={upload} disabled={uploading} className="px-4 py-2 rounded-full bg-[#1f1e1d] text-[#ede8df] border border-[#3b3733] disabled:opacity-50">{uploading ? 'Uploading…' : 'Upload'}</button>
               </>
             )}
