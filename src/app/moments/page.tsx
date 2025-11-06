@@ -253,6 +253,7 @@ function CameraModal({ galleryId, ig, code, onClose }: { galleryId: string; ig: 
   const [blob, setBlob] = useState<Blob | null>(null);
   const [preview, setPreview] = useState<string>('');
   const [uploading, setUploading] = useState(false);
+  const [uploaded, setUploaded] = useState(false);
   const [error, setError] = useState('');
   const headerRef = useRef<HTMLDivElement | null>(null);
   const controlsRef = useRef<HTMLDivElement | null>(null);
@@ -413,6 +414,7 @@ function CameraModal({ galleryId, ig, code, onClose }: { galleryId: string; ig: 
   function resetPhoto() {
     setPreview('');
     setBlob(null);
+    setUploaded(false);
   }
 
   function dataURLToBlob(dataURL: string) {
@@ -458,6 +460,18 @@ function CameraModal({ galleryId, ig, code, onClose }: { galleryId: string; ig: 
 
   async function upload() {
     if (!blob || !galleryId) { setError('Missing photo or Event ID'); return; }
+    // Client-side soft rate limit: 3 uploads per 2 minutes per gallery
+    const limitWindowMs = 120000; const maxCount = 3;
+    try {
+      const key = `moments:rate:${galleryId}`;
+      const now = Date.now();
+      const arr = JSON.parse(localStorage.getItem(key) || '[]').filter((t: number) => now - t < limitWindowMs);
+      if (arr.length >= maxCount) {
+        const waitMs = limitWindowMs - (now - arr[0]);
+        setError(`Rate limit: try again in ${Math.ceil(waitMs/1000)}s`);
+        return;
+      }
+    } catch {}
     setUploading(true); setError('');
     try {
       const filename = `photo_${Date.now()}.jpg`;
@@ -483,9 +497,17 @@ function CameraModal({ galleryId, ig, code, onClose }: { galleryId: string; ig: 
       const r = await timeoutFetch('/api/moments/record', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ galleryId, r2_key: key, original_filename: filename, user_name: ig || undefined, media_type: 'photo' }) });
       const rj: any = await r.json();
       if (!r.ok) throw new Error(rj?.error || 'Record failed');
-  // Reset and auto-close shortly after success for smooth UX
-  resetPhoto();
-  setTimeout(() => { try { onClose(); } catch {} }, 700);
+      // Record client-side rate stamp
+      try {
+        const k = `moments:rate:${galleryId}`;
+        const now = Date.now();
+        const arr = JSON.parse(localStorage.getItem(k) || '[]').filter((t: number) => now - t < 120000);
+        arr.push(now);
+        localStorage.setItem(k, JSON.stringify(arr));
+      } catch {}
+      setUploaded(true);
+      // keep modal open for more shots
+      resetPhoto();
     } catch (e: any) {
       setError(e?.message || String(e));
     } finally {
@@ -547,14 +569,21 @@ function CameraModal({ galleryId, ig, code, onClose }: { galleryId: string; ig: 
             </div>
             <button onClick={() => { setFacing(f => f==='environment'?'user':'environment'); }} className="px-3 py-1.5 rounded-full bg-white/5 supports-[backdrop-filter]:backdrop-blur border border-[#3b3733]/80 text-[#ede8df]">Switch</button>
             {!preview ? (
-              <button onClick={takePhoto} className="px-4 py-2 rounded-full bg-gradient-to-b from-[#ffb067] to-[#ff7a1a] text-[#171616] font-extrabold tracking-wide shadow-[0_10px_30px_rgba(255,122,26,0.25)] active:scale-95">Capture</button>
+              <button onClick={takePhoto} className="px-4 py-2 rounded-full bg-[#ede8df] text-[#171616] font-extrabold tracking-wide shadow-[0_10px_28px_rgba(237,232,223,0.25)] active:scale-95">Capture</button>
             ) : (
               <>
+                <a href={preview} download={`odubo_${Date.now()}.jpg`} className="px-3 py-1.5 rounded-full bg-white/5 supports-[backdrop-filter]:backdrop-blur border border-[#3b3733]/80 text-[#ede8df]">Download</a>
                 <button onClick={resetPhoto} className="px-3 py-1.5 rounded-full bg-white/5 supports-[backdrop-filter]:backdrop-blur border border-[#3b3733]/80 text-[#ede8df]">Reset</button>
                 <button onClick={upload} disabled={uploading} className="px-4 py-2 rounded-full bg-[#1f1e1d] text-[#ede8df] border border-[#3b3733] disabled:opacity-50">{uploading ? 'Uploading…' : 'Upload'}</button>
               </>
             )}
           </div>
+          {uploaded && (
+            <div className="mt-3 flex items-center justify-center gap-3">
+              <span className="text-sm text-[#cfc2ae]">Uploaded. You can take more.</span>
+              <a href={`/moments/gallery/${encodeURIComponent(galleryId)}${code?`?code=${encodeURIComponent(code)}`:''}`} className="px-3 py-1.5 rounded-full bg-[#171616] text-[#ede8df] border border-[#3b3733]">Open Gallery</a>
+            </div>
+          )}
         </div>
       </div>
     </div>

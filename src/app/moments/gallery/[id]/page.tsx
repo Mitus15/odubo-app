@@ -7,6 +7,8 @@ export default function GalleryViewer({ params, searchParams }: { params: { id: 
   const [photos, setPhotos] = useState<Array<any>>([]);
   const [error, setError] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [index, setIndex] = useState(0);
 
   const canFetch = useMemo(() => Number.isFinite(id), [id]);
 
@@ -61,6 +63,31 @@ export default function GalleryViewer({ params, searchParams }: { params: { id: 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canFetch, id, code]);
 
+  function openAt(i: number) {
+    setIndex(i);
+    setViewerOpen(true);
+  }
+
+  function prev() { setIndex(i => (i - 1 + photos.length) % photos.length); }
+  function next() { setIndex(i => (i + 1) % photos.length); }
+
+  // Swipe handling
+  useEffect(() => {
+    if (!viewerOpen) return;
+    let startX = 0; let dx = 0;
+    function onTouchStart(e: TouchEvent) { startX = e.changedTouches[0].clientX; }
+    function onTouchEnd(e: TouchEvent) {
+      dx = e.changedTouches[0].clientX - startX;
+      if (Math.abs(dx) > 40) { dx < 0 ? next() : prev(); }
+    }
+    document.addEventListener('touchstart', onTouchStart, { passive: true });
+    document.addEventListener('touchend', onTouchEnd, { passive: true });
+    return () => {
+      document.removeEventListener('touchstart', onTouchStart as any);
+      document.removeEventListener('touchend', onTouchEnd as any);
+    };
+  }, [viewerOpen, photos.length]);
+
   return (
     <div className="h-full overflow-y-auto">
       <div className="max-w-6xl mx-auto p-6 pb-24">
@@ -76,8 +103,8 @@ export default function GalleryViewer({ params, searchParams }: { params: { id: 
 
         {photos.length > 0 && (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-            {photos.map((p: any) => (
-              <figure key={p.id} className="rounded overflow-hidden border border-[#3b3733] bg-[#1f1e1d]">
+            {photos.map((p: any, i: number) => (
+              <figure key={p.id} className="rounded overflow-hidden border border-[#3b3733] bg-[#1f1e1d] cursor-zoom-in" onClick={() => openAt(i)}>
                 {p.media_type === 'video' ? (
                   <video src={p.r2_url} controls className="w-full h-auto" />
                 ) : (
@@ -92,6 +119,26 @@ export default function GalleryViewer({ params, searchParams }: { params: { id: 
           </div>
         )}
       </div>
+
+      {viewerOpen && photos[index] && (
+        <div className="fixed inset-0 z-50 bg-black/90 text-white">
+          <button className="absolute top-3 right-3 px-3 py-1.5 bg-white/10 rounded border border-white/20" onClick={() => setViewerOpen(false)}>Close</button>
+          <div className="h-full w-full grid place-items-center px-4">
+            {photos[index].media_type === 'video' ? (
+              <video src={photos[index].r2_url} controls className="max-h-[80vh] max-w-[95vw]" />
+            ) : (
+              <img src={photos[index].r2_url} alt={photos[index].original_filename || 'photo'} className="max-h-[80vh] max-w-[95vw] object-contain" />
+            )}
+          </div>
+          <div className="absolute bottom-4 inset-x-0 flex items-center justify-center gap-3">
+            <button onClick={prev} className="px-3 py-2 bg-white/10 rounded border border-white/20">Prev</button>
+            {photos[index].media_type !== 'video' && (
+              <a href={photos[index].r2_url || photos[index].thumbnail_url} download className="px-3 py-2 bg-white/10 rounded border border-white/20">Download</a>
+            )}
+            <button onClick={next} className="px-3 py-2 bg-white/10 rounded border border-white/20">Next</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

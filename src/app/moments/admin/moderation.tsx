@@ -23,6 +23,12 @@ export default function MomentsModeration({ galleryId }: { galleryId: string }) 
     if (res.ok) load();
   }
 
+  async function deletePhoto(id: number) {
+    if (!confirm('Delete this photo permanently?')) return;
+    const res = await fetch(`/api/moments/photos/${id}`, { method: 'DELETE' });
+    if (res.ok) load();
+  }
+
   async function bulk(action: 'approve' | 'reject') {
     const ids = Object.keys(selected).filter(k => selected[Number(k)]).map(k => Number(k));
     await Promise.all(ids.map(id => fetch('/api/moments/moderate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, action }) })));
@@ -46,7 +52,8 @@ export default function MomentsModeration({ galleryId }: { galleryId: string }) 
             <img src={i.thumbnail_url || i.r2_url} alt={i.original_filename || 'photo'} />
             <div className="flex gap-2 p-2">
               <button className="px-3 py-1 bg-green-600 rounded" onClick={() => moderate(i.id, 'approve')}>Approve</button>
-              <button className="px-3 py-1 bg-red-600 rounded" onClick={() => moderate(i.id, 'reject')}>Reject</button>
+              <button className="px-3 py-1 bg-yellow-700 rounded" onClick={() => moderate(i.id, 'reject')}>Hide</button>
+              <button className="ml-auto px-3 py-1 bg-red-700 rounded" onClick={() => deletePhoto(i.id)}>Delete</button>
             </div>
           </div>
         ))}
