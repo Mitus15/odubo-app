@@ -15,6 +15,30 @@ This document tracks issues, features, and technical debt to revisit later.
 - [ ] Slideshow/live wall (optional): simple rotating grid from public list
 - [ ] QA runbook: preflight checklist (QR redirect window, env audit, smoke tests, rate limits)
 
+### 2025-11-05 — Moments Enhancements (Shipped + Pending)
+
+Shipped today
+- [x] Capture: allow download before upload (data URL → file)
+- [x] Capture: keep modal open after upload; show “Open Gallery” CTA
+- [x] Capture: soft client rate limit (3 uploads per 2 minutes per gallery)
+- [x] Capture: front camera mirrored (preview and saved), no artificial zoom
+- [x] Capture: true 9:16 and 3:4 via canvas crop (no letterboxing)
+- [x] Styling: luxury brown glass UI across capture modal (no orange)
+- [x] Featured → Moments: forward galleryId/code + ig; auto-open camera
+- [x] Moments: auto-resolve code from galleryId (fetch `/api/moments/galleries/:id`)
+- [x] Admin: delete photo (API + UI)
+- [x] Admin: delete entire gallery from admin page
+- [x] Gallery: lightbox modal with swipe and download
+
+Pending / Next
+- [ ] Server-side rate limit on `/api/moments/upload-url` and `/api/moments/record`
+- [ ] Moderation UI filters (unmoderated first), pagination, bulk operations polish
+- [ ] Public/private visibility switch per gallery; private mode enforces event code for viewing
+- [ ] Lightbox accessibility: focus trap, Esc to close, keyboard arrows
+- [ ] Device QA on iOS/Android; tune preview box sizing for smallest screens
+- [ ] Minimal e2e tests for capture → upload → record → list
+- [ ] Offline/spotty network: optional local queue with retry
+
 ## Livestream Integration (Cloudflare Stream)
 
 - [x] Live Input API: `/api/stream/live-input` (GET/POST) to ensure a default RTMPS/WHIP input with automatic recording

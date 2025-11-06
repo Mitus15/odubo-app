@@ -376,3 +376,59 @@
 - Typecheck: PASS on edited files; working tree clean.
 - Deploy: GitHub push initiated; Pages build expected.
 
+
+## 📌 2025-11-05 — Moments capture redesign, admin moderation, and gallery viewer
+
+### Summary
+- Delivered a mobile-first Capture experience that fits the viewport (no initial scroll), mirrors front camera, uses brand “lux brown glass” styling, and captures true 9:16 or 3:4 photos without letterboxing.
+- Simplified Featured → Moments deep link: passes galleryId/code/IG; Moments auto-resolves the code when only galleryId is known.
+- Improved capture flow: allow download before upload; keep modal open after upload; added client-side rate limit (3 per 2 minutes) and an “Open Gallery” CTA.
+- Shipped admin moderation tools to hide/delete photos and delete entire galleries.
+- Upgraded gallery view with a swipeable lightbox and download option.
+
+### What was implemented
+- Capture modal and camera behavior
+  - Dynamic preview sizing so preview + controls fit within the viewport; supports safe-area insets.
+  - “Open Camera” overlay button that disappears immediately on tap.
+  - Front camera preview is mirrored and not artificially zoomed (object-contain); high-quality getUserMedia constraints without forced aspectRatio to avoid iOS zooming.
+  - True aspect capture via canvas cropping for 9:16 and 3:4 (no black bars in saved image).
+  - Brand polish: luxury brown gradients, subtle glass borders/shadows; removed any orange.
+- Linking and auto-fill
+  - Featured CTA now forwards galleryId or code and IG; Moments sets open=1 and auto-resolves the event code from galleryId if missing.
+- Capture flow UX
+  - Download the captured image before upload.
+  - Modal stays open after upload so the user can take more pictures.
+  - Client-side soft rate limit: 3 uploads per 2 minutes per gallery (with countdown message when hit).
+  - “Open Gallery” button appears after successful upload.
+- Admin moderation and deletion
+  - New API: DELETE `/api/moments/photos/[id]` (admin-only) removes DB row and best-effort deletes R2 keys.
+  - Admin UI: Approve/Hide/Delete actions per photo; Delete confirmation.
+  - Admin page: Delete whole gallery and quick link to public gallery view.
+- Gallery viewing
+  - Lightbox modal: click a photo to open; swipe left/right; Prev/Next controls; Download for images.
+
+### Files of note
+- Capture and routing
+  - `src/app/moments/page.tsx` (CameraModal sizing, front camera mirror, 3:4 crop, Download pre-upload, keep open, rate limit, Open Gallery CTA)
+  - `src/app/featured/[slug]/FeaturedInteractive.tsx` (forward galleryId/code + ig; open=1)
+  - Auto-resolve code from id: `src/app/moments/page.tsx` fetches `/api/moments/galleries/[id]` to set `eventCode` when missing.
+- Admin
+  - `src/app/api/moments/photos/[id]/route.ts` (DELETE)
+  - `src/app/moments/admin/moderation.tsx` (Approve/Hide/Delete)
+  - `src/app/moments/admin/page.tsx` (Delete Gallery, Open Public View)
+- Viewer
+  - `src/app/moments/gallery/[id]/page.tsx` (lightbox modal with swipe + download)
+
+### Quality gates
+- Typecheck/lint: PASS on modified files.
+- Build: local build success; preview branch pushed for CI (`preview/moments-capture-redesign`).
+- Runtime: R2 operations use Node runtime; admin actions guarded by existing auth helpers.
+
+### Next (follow-ups)
+- Server-side rate limit on `/api/moments/upload-url` and `/api/moments/record` to complement client limit.
+- Moderation UI: filters (unmoderated first), pagination, and bulk actions polish.
+- Public/private visibility: config and code-based access mode; “NEWCODE” reserved for private mode.
+- Lightbox accessibility: focus trap, Esc to close, keyboard arrows.
+- Device QA across iOS/Android; tweak viewport sizing constants as needed.
+- Tests: minimal e2e for capture/upload/record/list.
+
