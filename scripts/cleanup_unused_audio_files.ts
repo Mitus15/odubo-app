@@ -3,7 +3,7 @@ import 'dotenv/config';
 
 import { S3Client, ListObjectsV2Command, DeleteObjectsCommand, _Object } from '@aws-sdk/client-s3';
 import path from 'node:path';
-import { queryDatabase } from '@/lib/db';
+import { queryDatabase } from '../src/lib/db';
 
 function requireEnv(name: string): string {
   const v = process.env[name];

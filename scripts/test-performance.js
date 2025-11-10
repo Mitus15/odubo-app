@@ -38,7 +38,7 @@ const logSection = (title) => {
 
 const logSuccess = (message) => log(`✅ ${message}`, 'green');
 const logWarning = (message) => log(`⚠️  ${message}`, 'yellow');
-const logError = (message) => log(`❌ ${message}', 'red');
+const logError = (message) => log(`❌ ${message}`, 'red');
 const logInfo = (message) => log(`ℹ️  ${message}`, 'blue');
 
 // Check if required tools are installed

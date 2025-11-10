@@ -44,27 +44,38 @@ function MomentsIndex() {
   const prefillCode = params?.get('code') ?? '';
   const wantOpen = params?.get('open') === '1';
   const [galleries, setGalleries] = useState<Array<{ id: number; title: string; created_at?: string; cover_url?: string | null; cover_thumb_url?: string | null }>>([]);
+  const [galleryLoading, setGalleryLoading] = useState(false);
+  const [galleryError, setGalleryError] = useState('');
   const [galleryId, setGalleryId] = useState<string>(prefillGalleryId);
   const [ig, setIg] = useState<string>(prefillIg ? (prefillIg.startsWith('@') ? prefillIg : `@${prefillIg}`) : '');
   const [eventCode, setEventCode] = useState<string>(prefillCode);
   const captureRef = useRef<HTMLDivElement | null>(null);
-  const [tab, setTab] = useState<MomentsTab>(prefillGalleryId ? 'capture' : 'view');
+  const [tab, setTab] = useState<MomentsTab>('view');
   const [showCameraModal, setShowCameraModal] = useState(false);
 
   useEffect(() => {
+    let active = true;
     (async () => {
       try {
+        setGalleryLoading(true);
+        setGalleryError('');
         const res = await fetch('/api/moments/galleries/public?limit=12');
         const data: any = await res.json().catch(() => ({}));
+        if (!active) return;
         if (res.ok && Array.isArray(data.galleries)) {
           setGalleries(
             data.galleries.map((g: any) => ({ id: g.id, title: g.title, created_at: g.created_at, cover_url: g.cover_url, cover_thumb_url: g.cover_thumb_url }))
           );
+        } else if (!res.ok) {
+          setGalleryError(data?.error || 'Failed to load galleries');
         }
-      } catch (e) {
-        console.error('Failed loading galleries', e);
+      } catch (e: any) {
+        if (active) setGalleryError(e?.message || 'Failed to load galleries');
+      } finally {
+        if (active) setGalleryLoading(false);
       }
     })();
+    return () => { active = false; };
   }, []);
 
   useEffect(() => {
@@ -77,11 +88,8 @@ function MomentsIndex() {
         if (stored && !ig) setIg(stored.startsWith('@') ? stored : `@${stored}`);
       } catch {}
     }
-    if (prefillGalleryId) setTab('capture');
-    // Auto-open modal when directed from Featured button
-    if (prefillGalleryId && (prefillIg || ig) && wantOpen) {
-      setShowCameraModal(true);
-    }
+    // Removed auto-switch to capture; user can manually open camera.
+    // Removed auto-open camera gating via IG handle.
   }, [prefillGalleryId, prefillIg]);
 
   // If a galleryId is known but code is missing, resolve it for smoother uploads (Featured deep-link or manual ID)
@@ -126,7 +134,7 @@ function MomentsIndex() {
               <div className="flex items-center justify-between mb-3">
                 <h2 className="text-[18px] font-semibold text-[#ede8df]">Galleries</h2>
               </div>
-              <GalleryGrid galleries={galleries} />
+              <GalleryGrid galleries={galleries} loading={galleryLoading} error={galleryError} />
             </section>
           ) : (
             <section ref={captureRef}>
@@ -154,7 +162,9 @@ export default function MomentsPage() {
     </Suspense>
   );
 }
-function GalleryGrid({ galleries }: { galleries: Array<{ id: number; title: string; created_at?: string; cover_url?: string | null; cover_thumb_url?: string | null }> }) {
+function GalleryGrid({ galleries, loading, error }: { galleries: Array<{ id: number; title: string; created_at?: string; cover_url?: string | null; cover_thumb_url?: string | null }>; loading: boolean; error: string }) {
+  if (loading) return <div className="text-[13px] text-[#b2a491]">Loading galleries…</div>;
+  if (error) return <div className="text-[13px] text-red-300">{error}</div>;
   if (!galleries?.length) return <div className="text-[13px] text-[#b2a491]">No galleries yet.</div>;
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -181,6 +191,70 @@ function CapturePanel({ onOpenCamera, galleryId, setGalleryId, ig, setIg }: { on
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const canOpenCamera = !!(galleryId && galleryId.trim().length > 0);
+  const [startsAt, setStartsAt] = useState<Date | null>(null);
+  const [endsAt, setEndsAt] = useState<Date | null>(null);
+  const [scheduleLoading, setScheduleLoading] = useState(false);
+  const [rsvpEmail, setRsvpEmail] = useState('');
+  const [rsvpIg, setRsvpIg] = useState('');
+  const [rsvpIgOptIn, setRsvpIgOptIn] = useState(true);
+  const [rsvpPhone, setRsvpPhone] = useState('');
+  const [rsvpSmsOptIn, setRsvpSmsOptIn] = useState(false);
+  const [rsvpSubmitting, setRsvpSubmitting] = useState(false);
+  const [rsvpDone, setRsvpDone] = useState(false);
+  const [rsvpOffsets, setRsvpOffsets] = useState<number[]>([]);
+
+  // Fetch gallery schedule when galleryId entered
+  useEffect(() => {
+    let active = true;
+    async function load() {
+      if (!galleryId || !galleryId.trim()) { setStartsAt(null); setEndsAt(null); return; }
+      setScheduleLoading(true);
+      try {
+        const res = await fetch(`/api/moments/galleries/${encodeURIComponent(galleryId)}`);
+        const data: any = await res.json().catch(() => ({}));
+        if (!active) return;
+        if (res.ok && data.gallery) {
+          setStartsAt(data.gallery.starts_at ? new Date(data.gallery.starts_at) : null);
+          setEndsAt(data.gallery.ends_at ? new Date(data.gallery.ends_at) : null);
+        }
+      } finally {
+        if (active) setScheduleLoading(false);
+      }
+    }
+    load();
+    return () => { active = false; };
+  }, [galleryId]);
+
+  const now = new Date();
+  const beforeStart = startsAt ? now < startsAt : false;
+  const afterEnd = endsAt ? now > endsAt : false;
+  const windowOpen = !beforeStart && !afterEnd;
+
+  async function submitRsvp() {
+  if (!galleryId || (!rsvpEmail && !rsvpIg && !rsvpPhone)) { setError('Enter email, Instagram, or phone'); return; }
+    setRsvpSubmitting(true); setError('');
+    try {
+      const body: any = { galleryId: Number(galleryId), reminder_offsets: rsvpOffsets };
+  if (rsvpEmail) body.email = rsvpEmail.trim();
+  if (rsvpIg) body.instagram_handle = rsvpIg.trim();
+  if (rsvpPhone) body.phone = rsvpPhone.trim();
+      body.instagram_opt_in = rsvpIgOptIn;
+  body.sms_opt_in = rsvpSmsOptIn;
+      const res = await fetch('/api/moments/rsvp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const data: any = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || 'RSVP failed');
+      setRsvpDone(true);
+      setSuccess('RSVP saved');
+    } catch (e: any) {
+      setError(e?.message || 'Failed');
+    } finally {
+      setRsvpSubmitting(false);
+    }
+  }
+
+  function toggleOffset(mins: number) {
+    setRsvpOffsets(prev => prev.includes(mins) ? prev.filter(m => m !== mins) : prev.concat(mins).sort((a,b) => a-b));
+  }
 
   return (
     <div className="relative text-[#ede8df] rounded-3xl overflow-hidden min-h-[60vh] md:min-h-[50vh] border border-[#3b3733]/60 bg-gradient-to-b from-[#1a1511] via-[#141110] to-[#0c0b0a]">
@@ -220,20 +294,90 @@ function CapturePanel({ onOpenCamera, galleryId, setGalleryId, ig, setIg }: { on
               </label>
             </div>
 
+            {/* Schedule status */}
+            <div className="mt-4 text-xs text-[#c9b9a5]">
+              {scheduleLoading && <span>Checking schedule…</span>}
+              {!scheduleLoading && startsAt && (
+                <span>Window: {startsAt.toLocaleString()} – {endsAt ? endsAt.toLocaleString() : '—'} ({beforeStart ? 'Not started' : afterEnd ? 'Ended' : 'Live'})</span>
+              )}
+              {!scheduleLoading && !startsAt && galleryId && <span>No schedule set for this gallery.</span>}
+            </div>
+
             {error && <div className="mt-4 p-3 rounded-lg border border-red-700/70 bg-red-900/30 text-red-200">{error}</div>}
 
             {/* Actions */}
             <div className="mt-5 flex flex-wrap gap-3">
-              <button
-                onClick={() => {
-                  if (!canOpenCamera) { setError('Enter Event ID to open camera'); return; }
-                  onOpenCamera();
-                }}
-                disabled={!canOpenCamera}
-                className="px-5 py-2.5 rounded-full bg-[#ede8df] text-[#171616] font-extrabold tracking-wide shadow-[0_10px_28px_rgba(237,232,223,0.25)] enabled:active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Open Camera
-              </button>
+              {windowOpen ? (
+                <button
+                  onClick={() => {
+                    if (!canOpenCamera) { setError('Enter Event ID to open camera'); return; }
+                    onOpenCamera();
+                  }}
+                  disabled={!canOpenCamera}
+                  className="px-5 py-2.5 rounded-full bg-[#ede8df] text-[#171616] font-extrabold tracking-wide shadow-[0_10px_28px_rgba(237,232,223,0.25)] enabled:active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Open Camera
+                </button>
+              ) : (
+                <div className="w-full">
+                  <div className="text-sm font-semibold mb-2">RSVP to Get Reminders</div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <label className="text-xs md:col-span-2">Email (optional)
+                      <input
+                        value={rsvpEmail}
+                        onChange={(e) => setRsvpEmail(e.target.value)}
+                        placeholder="you@example.com"
+                        className="mt-1 w-full rounded-md bg-[#1f1a17]/80 border border-white/10 px-3 py-2 text-[#efe9df] placeholder-[#9f9381] focus:outline-none focus:ring-2 focus:ring-[#ff8a3d]/40"
+                      />
+                    </label>
+                    <label className="text-xs">Instagram (optional)
+                      <input
+                        value={rsvpIg}
+                        onChange={(e) => setRsvpIg(e.target.value)}
+                        placeholder="@yourhandle"
+                        className="mt-1 w-full rounded-md bg-[#1f1a17]/80 border border-white/10 px-3 py-2 text-[#efe9df] placeholder-[#9f9381] focus:outline-none focus:ring-2 focus:ring-[#ff8a3d]/40"
+                      />
+                    </label>
+                    <label className="text-xs">Phone (optional)
+                      <input
+                        value={rsvpPhone}
+                        onChange={(e) => setRsvpPhone(e.target.value)}
+                        placeholder="+15551234567"
+                        className="mt-1 w-full rounded-md bg-[#1f1a17]/80 border border-white/10 px-3 py-2 text-[#efe9df] placeholder-[#9f9381] focus:outline-none focus:ring-2 focus:ring-[#ff8a3d]/40"
+                      />
+                    </label>
+                    <div className="text-xs md:col-span-3 flex items-center gap-2">
+                      <input id="optin" type="checkbox" checked={rsvpIgOptIn} onChange={(e) => setRsvpIgOptIn(e.target.checked)} />
+                      <label htmlFor="optin">Consent to be tagged on Instagram</label>
+                    </div>
+                    <div className="text-xs md:col-span-3 flex items-center gap-2">
+                      <input id="smsopt" type="checkbox" checked={rsvpSmsOptIn} onChange={(e) => setRsvpSmsOptIn(e.target.checked)} />
+                      <label htmlFor="smsopt">Opt in to SMS reminders</label>
+                    </div>
+                    <div className="text-xs md:col-span-3">Select reminders
+                      <div className="mt-1 flex flex-wrap gap-2">
+                        {[1440, 60, 15].map((m) => (
+                          <button
+                            key={m}
+                            type="button"
+                            onClick={() => toggleOffset(m)}
+                            className={`px-3 py-1.5 rounded-full text-xs border ${rsvpOffsets.includes(m) ? 'bg-[#ff8a3d] border-[#ff8a3d] text-[#171616]' : 'bg-[#1f1a17]/70 border-white/10 text-[#efe9df]'}`}
+                          >
+                            {m === 1440 ? '24h' : m === 60 ? '1h' : `${m}m`}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={submitRsvp}
+                    disabled={(!rsvpEmail && !rsvpIg && !rsvpPhone) || rsvpSubmitting}
+                    className="mt-3 px-5 py-2.5 rounded-full bg-[#ede8df] text-[#171616] font-extrabold tracking-wide shadow-[0_10px_28px_rgba(237,232,223,0.25)] disabled:opacity-50"
+                  >
+                    {rsvpSubmitting ? 'Submitting…' : rsvpDone ? 'RSVP Saved' : beforeStart ? 'Notify Me' : 'Ended'}
+                  </button>
+                </div>
+              )}
             </div>
 
             {success && <div className="mt-4 p-3 rounded-lg border border-emerald-700/60 bg-emerald-900/30 text-emerald-200">{success}</div>}

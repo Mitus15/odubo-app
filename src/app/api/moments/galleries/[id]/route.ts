@@ -5,9 +5,10 @@ import { GalleryUpdateSchema } from '@/lib/momentsSchemas';
 import { writeAuditLog } from '@/lib/audit';
 import { rateLimit } from '@/lib/rateLimit';
 
-export async function GET(_req: Request, ctx: { params: { id: string } }) {
+export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   try {
-    const id = Number(ctx.params.id);
+    const { id: idStr } = await ctx.params;
+    const id = Number(idStr);
     if (!Number.isFinite(id)) return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
     const rows = await queryDatabase('SELECT id, code, title, description, starts_at, ends_at, created_by, created_at, updated_at, config FROM galleries WHERE id = ? LIMIT 1', [id]);
     if (!rows[0]) return NextResponse.json({ error: 'Not found' }, { status: 404 });
@@ -17,12 +18,12 @@ export async function GET(_req: Request, ctx: { params: { id: string } }) {
   }
 }
 
-export async function PATCH(req: Request, ctx: { params: { id: string } }) {
+export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   try {
     const user = await verifyUserFromRequest(req as any);
     if (!isAdminUser(user)) return NextResponse.json({ error: 'Admins only' }, { status: 403 });
-
-    const id = Number(ctx.params.id);
+    const { id: idStr } = await ctx.params;
+    const id = Number(idStr);
     if (!Number.isFinite(id)) return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
 
     const rl = await rateLimit({ key: `galleries:update:${user!.userId}`, limit: 60, windowMs: 60_000 });
@@ -33,14 +34,14 @@ export async function PATCH(req: Request, ctx: { params: { id: string } }) {
     if (!parsed.success) return NextResponse.json({ error: 'Invalid input', issues: parsed.error.issues }, { status: 400 });
 
     const updates: string[] = [];
-    const params: any[] = [];
+    const sqlParams: any[] = [];
     for (const [k, v] of Object.entries(parsed.data)) {
       updates.push(`${k} = ?`);
-      params.push(k === 'config' && v != null ? JSON.stringify(v) : v);
+      sqlParams.push(k === 'config' && v != null ? JSON.stringify(v) : v);
     }
     if (updates.length === 0) return NextResponse.json({ ok: true });
-    params.push(id);
-    await executeQuery(`UPDATE galleries SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, params);
+    sqlParams.push(id);
+    await executeQuery(`UPDATE galleries SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, sqlParams);
 
     await writeAuditLog(req, user, 'galleries.update', String(id), { fields: Object.keys(parsed.data) });
     return NextResponse.json({ ok: true });
@@ -50,12 +51,12 @@ export async function PATCH(req: Request, ctx: { params: { id: string } }) {
   }
 }
 
-export async function DELETE(req: Request, ctx: { params: { id: string } }) {
+export async function DELETE(req: Request, ctx: { params: Promise<{ id: string }> }) {
   try {
     const user = await verifyUserFromRequest(req as any);
     if (!isAdminUser(user)) return NextResponse.json({ error: 'Admins only' }, { status: 403 });
-
-    const id = Number(ctx.params.id);
+    const { id: idStr } = await ctx.params;
+    const id = Number(idStr);
     if (!Number.isFinite(id)) return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
 
     const rl = await rateLimit({ key: `galleries:delete:${user!.userId}`, limit: 20, windowMs: 60_000 });

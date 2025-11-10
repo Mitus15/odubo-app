@@ -423,12 +423,18 @@ function EventModal({
   const [title, setTitle] = useState(initial?.title || '');
   const [code, setCode] = useState(initial?.code || generateCode());
   const [description, setDescription] = useState(initial?.description || '');
-  const [uiStart, setUiStart] = useState<string>(
-    initial?.starts_at ? initial.starts_at.slice(0, 10) : ''
-  );
-  const [uiEnd, setUiEnd] = useState<string>(
-    initial?.ends_at ? initial.ends_at.slice(0, 10) : ''
-  );
+  // Use datetime-local (YYYY-MM-DDTHH:MM) instead of date-only to allow precise window control
+  function toLocalDateTime(iso?: string | null): string {
+    if (!iso) return '';
+    try {
+      const d = new Date(iso);
+      // Format to YYYY-MM-DDTHH:MM in the user's local timezone
+      const pad = (n: number) => n.toString().padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    } catch { return ''; }
+  }
+  const [uiStart, setUiStart] = useState<string>(toLocalDateTime(initial?.starts_at || null));
+  const [uiEnd, setUiEnd] = useState<string>(toLocalDateTime(initial?.ends_at || null));
   const [persistent, setPersistent] = useState<boolean>(!!initial?.config?.persistent);
   const [featured, setFeatured] = useState(!!initial?.config?.featured);
   const [capacity, setCapacity] = useState(initial?.config?.capacity?.toString() || '');
@@ -441,8 +447,18 @@ function EventModal({
 
   function submit() {
     const id = initial?.id || `g${Math.random().toString(36).slice(2, 7)}`;
-    const starts_at = uiStart ? new Date(`${uiStart}T00:00:00Z`).toISOString() : null;
-    const ends_at = persistent ? null : (uiEnd ? new Date(`${uiEnd}T00:00:00Z`).toISOString() : null);
+    // If the admin provided a datetime-local value, interpret it as local and convert to UTC ISO
+    function toIso(dt: string): string | null {
+      if (!dt) return null;
+      // dt is already 'YYYY-MM-DDTHH:MM'; construct a Date object in local time
+      const parts = dt.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/);
+      if (!parts) return new Date(dt).toISOString();
+      const [_, y, m, d, hh, mm] = parts.map(String);
+      const local = new Date(Number(y), Number(m)-1, Number(d), Number(hh), Number(mm), 0, 0);
+      return local.toISOString();
+    }
+    const starts_at = toIso(uiStart);
+    const ends_at = persistent ? null : toIso(uiEnd);
     
     const event: MomentsEvent = {
       id,
@@ -512,23 +528,23 @@ function EventModal({
           
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <label className="block text-sm text-[#b2a491]">
-              Start Date
-              <input 
-                type="date" 
-                value={uiStart} 
-                onChange={(e) => setUiStart(e.target.value)} 
-                className="mt-1 w-full rounded bg-[#171616] text-[#ede8df] border border-[#3b3733] p-2" 
+              Start Date & Time
+              <input
+                type="datetime-local"
+                value={uiStart}
+                onChange={(e) => setUiStart(e.target.value)}
+                className="mt-1 w-full rounded bg-[#171616] text-[#ede8df] border border-[#3b3733] p-2"
               />
             </label>
-            
+
             <label className="block text-sm text-[#b2a491]">
-              End Date
-              <input 
-                type="date" 
-                value={uiEnd} 
-                onChange={(e) => setUiEnd(e.target.value)} 
+              End Date & Time
+              <input
+                type="datetime-local"
+                value={uiEnd}
+                onChange={(e) => setUiEnd(e.target.value)}
                 disabled={persistent}
-                className="mt-1 w-full rounded bg-[#171616] text-[#ede8df] border border-[#3b3733] p-2 disabled:opacity-50" 
+                className="mt-1 w-full rounded bg-[#171616] text-[#ede8df] border border-[#3b3733] p-2 disabled:opacity-50"
               />
             </label>
           </div>

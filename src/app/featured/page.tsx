@@ -5,19 +5,42 @@ import { executeQuery, queryDatabase } from '@/lib/db';
 
 async function loadSingleton(): Promise<FeaturedConfig | null> {
   const rows = await queryDatabase(
-    `SELECT slug, title, subtitle, date_text, venue, album_link, moments_link, cover_image_url, background_video_url, extra_links_json FROM featured_pages LIMIT 1`,
+    `SELECT slug, title, subtitle, date_text, time_text, venue, album_link, moments_link, cover_image_url, background_video_url, extra_links_json FROM featured_pages LIMIT 1`,
     []
   );
   if (rows && rows.length) {
     const r: any = rows[0];
     const extraLinks = (() => { try { return JSON.parse(r.extra_links_json || '[]'); } catch { return []; } })();
+    // Derive SSR label and target path for Moments button based on schedule
+    let momentsButtonLabel: 'RSVP' | 'Moments' | undefined;
+    let momentsTargetPath: string | undefined;
+    const ml: string | undefined = r.moments_link || undefined;
+    if (ml) {
+      const m = String(ml).match(/[?&]galleryId=(\d+)/);
+      const gid = m ? m[1] : '';
+      if (gid) {
+        try {
+          const gRows = await queryDatabase('SELECT id, starts_at, ends_at FROM galleries WHERE id = ? LIMIT 1', [Number(gid)]);
+          if (gRows && gRows[0]) {
+            const starts = gRows[0].starts_at ? Date.parse(gRows[0].starts_at as string) : NaN;
+            const now = Date.now();
+            const beforeStart = Number.isFinite(starts) ? now < starts : false;
+            momentsButtonLabel = beforeStart ? 'RSVP' : 'Moments';
+            momentsTargetPath = beforeStart ? `/moments/rsvp/${encodeURIComponent(gid)}` : `/moments?galleryId=${encodeURIComponent(gid)}`;
+          }
+        } catch {}
+      }
+    }
     return {
       slug: r.slug || 'featured',
       title: r.title,
       subtitle: r.subtitle || undefined,
-      date: r.date_text || undefined,
+  date: r.date_text || undefined,
+  time: r.time_text || undefined,
       venue: r.venue || undefined,
       momentsLink: r.moments_link || undefined,
+      momentsButtonLabel,
+      momentsTargetPath,
       backgroundVideoUrl: r.background_video_url || undefined,
       extraLinks,
     } as FeaturedConfig;

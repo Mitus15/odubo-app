@@ -115,6 +115,8 @@ export default function FeaturedManageSingleton() {
     return m ? m[1] : '';
   }, [item?.moments_link]);
 
+  // Event window is managed in Admin → Moments; no schedule editing here
+
   function setSelectedGallery(id: string) {
     if (!item) return;
     // Link Featured → Moments index with prefilled galleryId (and optional schedule)
@@ -128,6 +130,8 @@ export default function FeaturedManageSingleton() {
     }
     setItem({ ...(item as any), moments_link: link });
   }
+
+  // No-op: schedule editing moved to Admin → Moments
 
   async function createGalleryInline() {
     const title = (newGalleryTitle || '').trim();
@@ -199,7 +203,15 @@ export default function FeaturedManageSingleton() {
                   Open
                 </a>
               </div>
-              <div className="text-xs text-white/70">When a gallery is selected, the Moments button on the Featured page links to its capture page.</div>
+              <div className="text-xs text-white/70">When a gallery is selected, the Moments button on the Featured page links to the event. Before the start time it shows “RSVP” and routes to the RSVP page; once live it opens the Moments gallery.</div>
+              {selectedGalleryId && (
+                <div className="mt-3 rounded-md border border-white/20 bg-white/5 p-3">
+                  <div className="text-xs font-semibold mb-1">Event Window</div>
+                  <div className="text-xs text-white/70">
+                    Event window (start/end) is managed in Admin → Moments. Open the Moments panel to set the window for this gallery.
+                  </div>
+                </div>
+              )}
               <div className="mt-1 flex gap-2 items-center">
                 <input value={newGalleryTitle} onChange={(e) => setNewGalleryTitle(e.target.value)} placeholder="New gallery title"
                   className="flex-1 rounded-md bg-white/10 border border-white/20 px-3 py-2" />

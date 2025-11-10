@@ -19,7 +19,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ slu
     const { slug } = await params;
     const s = slug.toLowerCase();
     const rows = await queryDatabase(
-      `SELECT slug, title, subtitle, date_text, venue, album_link, moments_link, cover_image_url, background_video_url, extra_links_json, is_published, created_at, updated_at
+  `SELECT slug, title, subtitle, date_text, time_text, venue, album_link, moments_link, cover_image_url, background_video_url, extra_links_json, is_published, created_at, updated_at
        FROM featured_pages WHERE slug = ? LIMIT 1`,
        [s]
     );
@@ -45,7 +45,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ slug
 
     set('title', body?.title);
     set('subtitle', body?.subtitle);
-    set('date_text', body?.date_text);
+  set('date_text', body?.date_text);
+  set('time_text', body?.time_text);
     set('venue', body?.venue);
     set('album_link', body?.album_link);
     set('moments_link', body?.moments_link);

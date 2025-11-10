@@ -1,4 +1,16 @@
-import '@testing-library/jest-dom';
+require('@testing-library/jest-dom');
+
+// Minimal polyfills for Web APIs used by Next App Router and components
+if (typeof global.Request === 'undefined') {
+  // Basic Request polyfill to satisfy Next imports in tests
+  // Not a full implementation; sufficient for module evaluation
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  global.Request = function() {};
+}
+
+if (typeof global.performance === 'undefined') {
+  global.performance = {};
+}
 
 // Mock Next.js router
 jest.mock('next/router', () => ({
@@ -76,15 +88,13 @@ global.ResizeObserver = class ResizeObserver {
 };
 
 // Mock Performance API
-Object.defineProperty(window, 'performance', {
-  writable: true,
-  value: {
-    getEntriesByType: jest.fn(() => []),
-    mark: jest.fn(),
-    measure: jest.fn(),
-    now: jest.fn(() => Date.now()),
-  },
-});
+// Ensure performance has common methods
+const perf = global.performance || {};
+perf.getEntriesByType = perf.getEntriesByType || jest.fn(() => []);
+perf.mark = perf.mark || jest.fn();
+perf.measure = perf.measure || jest.fn();
+perf.now = perf.now || jest.fn(() => Date.now());
+global.performance = perf;
 
 // Mock localStorage
 const localStorageMock = {

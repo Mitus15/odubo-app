@@ -1,9 +1,13 @@
 "use client";
 import { useEffect, useMemo, useState } from 'react';
 
-export default function GalleryViewer({ params, searchParams }: { params: { id: string }; searchParams?: { code?: string } }) {
+import { useSearchParams } from 'next/navigation';
+
+export default function GalleryViewer({ params }: { params: { id: string } }) {
   const id = Number(params.id);
-  const [code, setCode] = useState<string>(searchParams?.code || '');
+  const sp = useSearchParams();
+  const codeFromUrl = sp?.get('code') || '';
+  const [code, setCode] = useState<string>(codeFromUrl);
   const [photos, setPhotos] = useState<Array<any>>([]);
   const [error, setError] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
@@ -17,14 +21,17 @@ export default function GalleryViewer({ params, searchParams }: { params: { id: 
     setLoading(true);
     setError('');
     try {
-      const url = new URL('/api/moments/list', window.location.origin);
+  const url = new URL('/api/moments/list', window.location.origin);
       url.searchParams.set('galleryId', String(id));
   if (code) url.searchParams.set('code', code);
       url.searchParams.set('limit', '200');
   const res = await fetch(url.toString());
   const data: any = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data?.error || 'Failed to load photos');
-  setPhotos(Array.isArray(data?.photos) ? data.photos : []);
+  // Client-side safety: hide rejected if server ever returns them to public views
+  const list = Array.isArray(data?.photos) ? data.photos : [];
+  const filtered = list.filter((p: any) => p.moderated !== 2);
+  setPhotos(filtered);
     } catch (e: any) {
       setError(e?.message || String(e));
     } finally {
@@ -112,7 +119,7 @@ export default function GalleryViewer({ params, searchParams }: { params: { id: 
                 )}
                 <figcaption className="p-2 text-xs text-[#b2a491] flex items-center justify-between">
                   <span>{p.user_name || 'Anon'}</span>
-                  <span>{new Date(p.created_at).toLocaleDateString()}</span>
+                  <span>{new Date(p.created_at).toLocaleDateString()}{p.moderated === 2 && ' (hidden)'}</span>
                 </figcaption>
               </figure>
             ))}

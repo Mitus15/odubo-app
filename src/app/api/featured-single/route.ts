@@ -5,7 +5,7 @@ import { getUserFromRequest, isAdminUser, userHasAnyRole } from '@/lib/auth';
 
 async function getOrCreateSingleton() {
   const rows = await queryDatabase(
-    `SELECT slug, title, subtitle, date_text, venue, album_link, moments_link, cover_image_url, background_video_url, extra_links_json, is_published, created_at, updated_at FROM featured_pages LIMIT 1`,
+    `SELECT slug, title, subtitle, date_text, time_text, venue, album_link, moments_link, cover_image_url, background_video_url, extra_links_json, is_published, created_at, updated_at FROM featured_pages LIMIT 1`,
     []
   );
   if (rows && rows.length) return rows[0];
@@ -15,7 +15,7 @@ async function getOrCreateSingleton() {
     ['featured', 'Featured', 1]
   );
   const rows2 = await queryDatabase(
-    `SELECT slug, title, subtitle, date_text, venue, album_link, moments_link, cover_image_url, background_video_url, extra_links_json, is_published, created_at, updated_at FROM featured_pages LIMIT 1`,
+    `SELECT slug, title, subtitle, date_text, time_text, venue, album_link, moments_link, cover_image_url, background_video_url, extra_links_json, is_published, created_at, updated_at FROM featured_pages LIMIT 1`,
     []
   );
   return rows2[0];
@@ -43,7 +43,8 @@ export async function PUT(req: NextRequest) {
 
     set('title', body?.title);
     set('subtitle', body?.subtitle);
-    set('date_text', body?.date_text);
+  set('date_text', body?.date_text);
+  set('time_text', body?.time_text);
     set('venue', body?.venue);
     set('album_link', body?.album_link);
     set('moments_link', body?.moments_link);

@@ -79,6 +79,11 @@ async function main() {
     await applyFile('database/migrations/019_add_audit_logs.sql');
     await applyFile('database/migrations/020_add_events_table.sql');
   await applyFile('database/migrations/022_create_featured_pages.sql');
+    // Ensure optional featured extras are present
+    try { await applyFile('database/migrations/023_add_is_active_to_featured.sql'); } catch {}
+    try { await applyFile('database/migrations/024_enforce_single_featured.sql'); } catch {}
+    try { await applyFile('database/migrations/024_create_featured_single.sql'); } catch {}
+    try { await applyFile('database/migrations/029_add_time_text_to_featured.sql'); } catch {}
     // New: video thumbnail timestamp pct
     await applyFile('database/migrations/021_add_video_thumbnail_pct.sql');
     // Verify

@@ -39,6 +39,59 @@ Pending / Next
 - [ ] Minimal e2e tests for capture → upload → record → list
 - [ ] Offline/spotty network: optional local queue with retry
 
+### 2025-11-07 — Moments Hardening & Email Patches (Shipped)
+
+Shipped items (branding, reliability, unsubscribe, scripts):
+- [x] Email branding: absolute HTTPS logo + alt text
+- [x] Added preheader text + plain-text multipart fallback for reminders
+- [x] Centralized env helpers (`getSiteUrl`, email config validation)
+- [x] Validation helpers (`normalizeEmail`, `isValidEmail`)
+- [x] Unsubscribe flow (API route + UI state, clears reminder offsets)
+- [x] Local in-memory rate limit (60s guard) for reminder dispatcher
+- [x] Centralized branded email template (`brandedEmailHTML`) + tests
+- [x] Added focused Jest tests (env, validation, rate limit, template)
+- [x] Path alias/script typecheck isolation via `scripts/tsconfig.json`
+- [x] Fixed migration/organization scripts (poster key generation, remove invalid `video-poster` type)
+- [x] Fixed performance test script template literal bug
+- [x] Added optional workflows log (hardening documentation)
+
+Follow-up (non-blocking) backlog spawned from patches:
+- [ ] Distributed rate limit (D1-backed) for reminder dispatcher (prevent multi-instance duplicates)
+- [ ] Dispatcher batching: pre-fetch existing logs for rsvp_id+offset matrix to reduce per-row SELECTs
+- [ ] Concurrency/backpressure: Promise pool for email/SMS sends
+- [ ] Monitoring & metrics: counts of sent/skipped/failures + alert threshold (Resend/Twilio errors)
+- [ ] Explicit `rsvp_unsubscribed` boolean column (semantics + audit clarity)
+- [ ] End-to-end reminder integration test (create RSVP, simulate due offset, assert email + DB log)
+- [ ] Admin audit logging (CRUD + reminder config changes)
+
+### Music Page Overhaul (Spec & Upcoming Work — 2025-11)
+
+Scope: Public music browsing + album players + full-screen/inline modals + admin CMS for albums/tracks/artwork.
+
+Planned tasks:
+- [ ] Code audit: existing music components/routes, data fetch patterns, performance bottlenecks
+- [ ] Product & data spec (albums, tracks, artwork, playback analytics, playlist model)
+- [ ] DB migrations: `albums`, `tracks`, `album_artwork` (or embed artwork key in albums), ordering fields
+- [ ] Admin CMS pages: album list/create/edit, track list/upload, artwork upload & crop, publish/unpublish
+- [ ] Global audio player context (state: currentTrack, queue, playbackStatus, volume, repeat, shuffle)
+- [ ] HLS + progressive fallback (hls.js for `.m3u8`, fallback to `.web.m4a` AAC) with error recovery
+- [ ] Playlist/queue actions: add/remove/next/prev/shuffle/repeat; persist queue & last position in `localStorage`
+- [ ] Player UI components: mini bar, expanded modal, album-level embedded player
+- [ ] Album modal: track list virtualization, lazy cover art, keyboard & screen reader support
+- [ ] Performance optimizations: code split music bundle, prefetch album art, virtualize long track lists
+- [ ] Accessibility: ARIA roles, focus management, keyboard shortcuts (space play/pause, arrows seek, F focus)
+- [ ] Analytics hooks: playback start/end, buffering durations, error events
+- [ ] Admin bulk operations: reorder tracks (drag/drop), batch publish, metadata validation
+- [ ] Album artwork processing: resize variants (cover, thumbnail) + CDN cache headers
+- [ ] Tests: unit (queue logic, player controls, HLS fallback), integration (album load, play sequence), a11y snapshot
+- [ ] Release readiness checklist: degraded network retry, HLS failure fallback, resume after reload, error messaging
+
+Future enhancements (post-MVP):
+- [ ] User playlists/favorites syncing (D1 + local mirror)
+- [ ] Crossfade transitions between tracks
+- [ ] Smart preload of next track based on network conditions
+- [ ] Lyric/liner notes modal + timed lyric sync (optional)
+
 ## Livestream Integration (Cloudflare Stream)
 
 - [x] Live Input API: `/api/stream/live-input` (GET/POST) to ensure a default RTMPS/WHIP input with automatic recording
@@ -52,14 +105,14 @@ Pending / Next
 
 ## Outstanding/To Revisit
 
-- [ ] Confirm Resend email delivery for all user flows (production + dev)
+- [x] Confirm Resend email delivery for all user flows (production + dev)
 - [ ] Add more robust error handling/logging for email failures
 - [ ] Support for custom sender address (not just onboarding@resend.dev)
 - [ ] Add admin UI for managing users and password resets
 - [ ] Improve user feedback for password reset errors (expired/invalid link)
 - [ ] Remove debug logs (e.g., RESEND_API_KEY) before production
 - [ ] Add tests for forgot/reset password flow
-- [ ] Review .env and environment variable loading for all environments
+- [x] Centralize and validate email/site env loading (`env.ts` helper)
 - [ ] Clean up duplicate error logging in API route
 - [ ] Add rate limiting to forgot password endpoint
 

@@ -17,6 +17,65 @@ export default function AlbumEditClient({ album, tracks }: AlbumEditClientProps)
   const [showTrackModal, setShowTrackModal] = useState(false);
   const [currentTracks, setCurrentTracks] = useState<Track[]>(tracks);
   const [currentAlbum, setCurrentAlbum] = useState<Album>(album);
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [isUpdatingCover, setIsUpdatingCover] = useState(false);
+  const [coverUrlInput, setCoverUrlInput] = useState<string>('');
+
+  // Handle local file selection for new cover art
+  const handleCoverFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    setCoverFile(file);
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (ev) => setCoverPreview(ev.target?.result as string);
+      reader.readAsDataURL(file);
+    } else {
+      setCoverPreview(null);
+    }
+  };
+
+  // PATCH album cover using an existing URL+key (when already uploaded elsewhere)
+  const patchCoverDirect = async (cover_art_url: string, cover_art_key: string) => {
+    setIsUpdatingCover(true);
+    try {
+      const res = await fetch(`/api/albums/${currentAlbum.id}/update-cover`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cover_art_url, cover_art_key })
+      });
+      const data = await res.json() as { success?: boolean; error?: string };
+      if (!res.ok || !data.success) throw new Error(data.error || 'Failed to update cover');
+      setCurrentAlbum(a => ({ ...a, cover_art_url }));
+      setCoverFile(null);
+      setCoverPreview(null);
+      setCoverUrlInput('');
+    } catch (err) {
+      console.error('Cover update error:', err);
+      alert((err as Error).message);
+    } finally {
+      setIsUpdatingCover(false);
+    }
+  };
+
+  // Simulated upload flow (placeholder): in a future iteration this should POST to an upload endpoint (R2/Cloudflare Images)
+  // For now we allow direct URL entry. If a file is chosen, we ask user to confirm manual external upload.
+  const handleCoverSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    // Priority: direct URL input
+    if (coverUrlInput.trim()) {
+      // Derive a key from URL path for now (placeholder logic)
+      const url = coverUrlInput.trim();
+      const key = url.split('/').pop() || 'cover_art';
+      await patchCoverDirect(url, key);
+      return;
+    }
+    if (coverFile) {
+      alert('File selected but upload endpoint not yet implemented. Upload the file to storage manually, then paste its URL into the field and submit again.');
+    } else {
+      alert('Select a file or provide a URL first.');
+    }
+  };
 
   const refreshTracks = async () => {
     try {
@@ -39,7 +98,7 @@ export default function AlbumEditClient({ album, tracks }: AlbumEditClientProps)
   const totalDuration = currentTracks.reduce((total, track) => total + track.duration, 0);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#302927] via-[#171616] to-[#302927] text-white">
+    <div className="min-h-screen bg-gradient-to-br from-[#302927] via-[#171616] to-[#302927] text-white overflow-y-auto">
       <AdminNavigation />
       
       <div className="pt-20 pb-6 px-4 max-w-7xl mx-auto">
@@ -57,8 +116,78 @@ export default function AlbumEditClient({ album, tracks }: AlbumEditClientProps)
           <h1 className="text-2xl md:text-3xl font-bold text-[#ede8df]">Album Details</h1>
         </div>
 
+        {/* Cover Art Update Form */}
+        <div className="mb-8 bg-[#302927]/60 border border-[#502d26]/40 rounded-xl p-6">
+          <h2 className="text-xl font-bold mb-4 text-[#ede8df] flex items-center gap-2">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+            Update Cover Art
+          </h2>
+          <form onSubmit={handleCoverSubmit} className="space-y-4">
+            <div className="flex flex-col md:flex-row gap-6">
+              <div className="w-40 h-40 relative flex-shrink-0">
+                {(coverPreview || currentAlbum.cover_art_url) ? (
+                  <Image
+                    src={coverPreview || currentAlbum.cover_art_url!}
+                    alt="Cover preview"
+                    fill
+                    className="object-cover rounded-lg"
+                  />
+                ) : (
+                  <div className="w-full h-full rounded-lg bg-gradient-to-br from-[#502d26] to-[#843c2d] flex items-center justify-center text-sm text-[#ede8df]/70">
+                    No Cover
+                  </div>
+                )}
+              </div>
+              <div className="flex-1 space-y-4">
+                <div>
+                  <label className="block text-sm mb-1 text-[#b2a491]">Cover Image File (future upload)</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleCoverFileChange}
+                    className="block w-full text-sm text-[#ede8df] file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:bg-[#843c2d] file:text-white hover:file:bg-[#a04834]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm mb-1 text-[#b2a491]">Existing Cover URL</label>
+                  <input
+                    type="url"
+                    placeholder="https://cdn.example.com/album/cover.jpg"
+                    value={coverUrlInput}
+                    onChange={(e) => setCoverUrlInput(e.target.value)}
+                    className="w-full px-3 py-2 bg-[#171616] border border-[#502d26]/50 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#843c2d]"
+                  />
+                  <p className="text-xs text-[#726d6c] mt-1">Enter a hosted image URL to immediately update. File uploads will be supported in a later iteration.</p>
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    type="submit"
+                    disabled={isUpdatingCover || (!coverUrlInput.trim() && !coverFile)}
+                    className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      isUpdatingCover || (!coverUrlInput.trim() && !coverFile)
+                        ? 'bg-[#502d26]/40 text-[#b2a491] cursor-not-allowed'
+                        : 'bg-[#843c2d] hover:bg-[#a04834] text-white'
+                    }`}
+                  >
+                    {isUpdatingCover ? 'Updating…' : 'Save Cover'}
+                  </button>
+                  {(coverPreview || coverUrlInput) && (
+                    <button
+                      type="button"
+                      onClick={() => { setCoverFile(null); setCoverPreview(null); setCoverUrlInput(''); }}
+                      className="px-5 py-2 rounded-lg text-sm font-medium bg-[#302927] hover:bg-[#403532] text-[#ede8df] border border-[#502d26]/50"
+                    >
+                      Reset
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+
         {/* Desktop Layout: 2-Column Layout */}
-        <div className="hidden xl:grid xl:grid-cols-2 gap-6">
+  <div className="hidden xl:grid xl:grid-cols-2 gap-6">
           {/* Left Column: Album Cover, Details, and Info */}
           <div className="space-y-6">
             {/* Album Hero Section */}
@@ -263,7 +392,7 @@ export default function AlbumEditClient({ album, tracks }: AlbumEditClientProps)
         </div>
 
         {/* Mobile Layout: Stacked Layout */}
-        <div className="xl:hidden space-y-6">
+  <div className="xl:hidden space-y-6">
           {/* Album Hero Section */}
           <div className="bg-gradient-to-r from-[#302927]/80 to-[#171616]/80 backdrop-blur-sm rounded-2xl p-6 border border-[#502d26]/30">
             <div className="flex flex-col lg:flex-row gap-6">

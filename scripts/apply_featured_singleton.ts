@@ -35,11 +35,11 @@ async function d1(sql: string, params: any[] = []) {
     const text = await res.text();
     throw new Error(`D1 non-JSON response (${res.status}): ${text}`);
   }
-  const data = await res.json();
-  if (!res.ok || data.success === false) {
+  const data: any = await res.json();
+  if (!res.ok || data?.success === false) {
     throw new Error(`D1 error: ${JSON.stringify(data)}`);
   }
-  return data;
+  return data as any;
 }
 
 async function run() {

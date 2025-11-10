@@ -7,6 +7,7 @@ type FeaturedItem = {
   title: string;
   subtitle?: string;
   date_text?: string;
+  time_text?: string;
   venue?: string;
   moments_link?: string;
   cover_image_url?: string;
@@ -59,6 +60,7 @@ export default function ManageFeaturedPage() {
         title: item.title,
         subtitle: item.subtitle,
         date_text: item.date_text,
+        time_text: item.time_text,
         venue: item.venue,
         moments_link: item.moments_link,
         // Persist all custom buttons (label + href)
@@ -120,6 +122,9 @@ export default function ManageFeaturedPage() {
           </label>
           <label className="block text-sm">Date Text
             <input value={item.date_text || ''} onChange={(e) => setItem({ ...(item as any), date_text: e.target.value })} className="mt-1 w-full rounded-md bg-white/10 border border-white/20 px-3 py-2" />
+          </label>
+          <label className="block text-sm">Time Text
+            <input value={item.time_text || ''} onChange={(e) => setItem({ ...(item as any), time_text: e.target.value })} placeholder="e.g., 7:00 PM" className="mt-1 w-full rounded-md bg-white/10 border border-white/20 px-3 py-2" />
           </label>
           <label className="block text-sm">Venue
             <input value={item.venue || ''} onChange={(e) => setItem({ ...(item as any), venue: e.target.value })} className="mt-1 w-full rounded-md bg-white/10 border border-white/20 px-3 py-2" />

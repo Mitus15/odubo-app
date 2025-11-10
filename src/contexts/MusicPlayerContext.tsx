@@ -30,6 +30,8 @@ export interface PlayerState {
   currentIndex: number;
   isShuffled: boolean;
   repeatMode: 'none' | 'one' | 'all';
+  // When shuffle + Repeat All are active, reshuffle the order at loop end
+  reshuffleOnLoopEnd: boolean;
   // Shuffle management
   shuffledOrder: number[]; // indices referencing originalQueue
   shuffledPointer: number; // current position within shuffledOrder
@@ -72,7 +74,8 @@ export type PlayerAction =
   | { type: 'SET_AUTO_PLAY'; payload: boolean }
   | { type: 'SET_LIBRARY_TRACKS'; payload: Track[] }
   | { type: 'ENTER_LIBRARY_SHUFFLE_MODE' }
-  | { type: 'EXIT_LIBRARY_SHUFFLE_MODE' };
+  | { type: 'EXIT_LIBRARY_SHUFFLE_MODE' }
+  | { type: 'TOGGLE_RESHUFFLE_ON_LOOP_END' };
 
 const initialState: PlayerState = {
   currentTrack: null,
@@ -89,6 +92,7 @@ const initialState: PlayerState = {
   currentIndex: -1,
   isShuffled: false,
   repeatMode: 'none',
+  reshuffleOnLoopEnd: true,
   shuffledOrder: [],
   shuffledPointer: -1,
   autoPlay: true, // Enable autoplay by default
@@ -192,24 +196,43 @@ const playerReducer = (state: PlayerState, action: PlayerAction): PlayerState =>
         let pointer = state.shuffledPointer + 1;
         if (pointer >= state.shuffledOrder.length) {
           if (state.repeatMode === 'all') {
-            // Reshuffle maintaining current track first
-            const currentIdx = state.currentIndex;
-            const base = state.originalQueue.map((_, i) => i).filter(i => i !== currentIdx);
-            for (let i = base.length - 1; i > 0; i--) {
-              const j = Math.floor(Math.random() * (i + 1));
-              [base[i], base[j]] = [base[j], base[i]];
+            // If reshuffleOnLoopEnd enabled, rebuild physical queue keeping current track then reshuffling remainder
+            if (state.reshuffleOnLoopEnd) {
+              const currentIdx = state.currentIndex;
+              const currentTrack = state.queue[currentIdx];
+              const remainderOriginal = state.originalQueue.filter(t => t.id !== currentTrack?.id);
+              const reshuffledRemainder = shuffleArray(remainderOriginal);
+              const newQueue = currentTrack ? [currentTrack, ...reshuffledRemainder] : reshuffledRemainder;
+              return {
+                ...state,
+                queue: newQueue,
+                currentTrack,
+                currentIndex: 0,
+                shuffledOrder: newQueue.map((_, i) => i),
+                shuffledPointer: 0,
+                isLoading: true,
+                currentTime: 0,
+              };
+            } else {
+              // Legacy behavior: reshuffle order indices only
+              const currentIdx = state.currentIndex;
+              const base = state.originalQueue.map((_, i) => i).filter(i => i !== currentIdx);
+              for (let i = base.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [base[i], base[j]] = [base[j], base[i]];
+              }
+              pointer = 0;
+              const newOrder = [currentIdx, ...base];
+              return {
+                ...state,
+                shuffledOrder: newOrder,
+                shuffledPointer: 0,
+                currentTrack: state.queue[currentIdx],
+                currentIndex: currentIdx,
+                isLoading: true,
+                currentTime: 0,
+              };
             }
-            pointer = 0;
-            const newOrder = [currentIdx, ...base];
-            return {
-              ...state,
-              shuffledOrder: newOrder,
-              shuffledPointer: 0,
-              currentTrack: state.queue[currentIdx],
-              currentIndex: currentIdx,
-              isLoading: true,
-              currentTime: 0,
-            };
           } else {
             // End reached
             if (state.autoPlay && state.libraryTracks.length > 0) {
@@ -244,6 +267,9 @@ const playerReducer = (state: PlayerState, action: PlayerAction): PlayerState =>
           isLoading: true,
           currentTime: 0,
           isLibraryShuffleMode: false,
+          isPlaying: true,
+          isPaused: false,
+          error: null,
         };
       }
 
@@ -279,6 +305,9 @@ const playerReducer = (state: PlayerState, action: PlayerAction): PlayerState =>
         isLoading: true,
         currentTime: 0,
         isLibraryShuffleMode: false,
+        isPlaying: true,
+        isPaused: false,
+        error: null,
       };
     }
     
@@ -308,10 +337,13 @@ const playerReducer = (state: PlayerState, action: PlayerAction): PlayerState =>
         return {
           ...state,
           currentTrack: prevTrack,
-            currentIndex: prevIndex,
+          currentIndex: prevIndex,
           shuffledPointer: pointer,
           isLoading: true,
           currentTime: 0,
+          isPlaying: true,
+          isPaused: false,
+          error: null,
         };
       }
       let prevIndex = state.currentIndex - 1;
@@ -326,6 +358,9 @@ const playerReducer = (state: PlayerState, action: PlayerAction): PlayerState =>
         currentIndex: prevIndex,
         isLoading: true,
         currentTime: 0,
+        isPlaying: true,
+        isPaused: false,
+        error: null,
       };
     }
     
@@ -353,36 +388,47 @@ const playerReducer = (state: PlayerState, action: PlayerAction): PlayerState =>
     
     case 'TOGGLE_SHUFFLE': {
       const newShuffled = !state.isShuffled;
-      
+
+      // Ensure we have an originalQueue snapshot to restore later
+      const baseOriginal = state.originalQueue.length > 0 ? state.originalQueue : state.queue;
+
       if (newShuffled) {
-        // Generate shuffled order referencing originalQueue indices
-        const base = state.queue.map((_, i) => i);
+        // Shuffle the queue (excluding current track) and rebuild queue with current track at front
         const currentIdx = state.currentIndex >= 0 ? state.currentIndex : 0;
-        const others = base.filter(i => i !== currentIdx);
-        for (let i = others.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [others[i], others[j]] = [others[j], others[i]];
-        }
-        const shuffledOrder = [currentIdx, ...others];
+        const currentTrack = state.queue[currentIdx] || state.currentTrack;
+        const remainder = state.queue.filter((_, i) => i !== currentIdx);
+        const shuffledRemainder = shuffleArray(remainder);
+        const newQueue = currentTrack ? [currentTrack, ...shuffledRemainder] : shuffledRemainder;
+
         return {
           ...state,
           isShuffled: true,
-          shuffledOrder,
+          queue: newQueue,
+          originalQueue: baseOriginal, // preserve original order for restoration
+          currentIndex: 0, // current track now at position 0
+          shuffledOrder: newQueue.map((_, i) => i), // trivial order (already shuffled physically)
           shuffledPointer: 0,
-          originalQueue: state.originalQueue.length > 0 ? state.originalQueue : state.queue,
         };
       } else {
-        // Disable shuffle: queue already holds track objects; ensure currentIndex points to correct track
+        // Restore original queue order while keeping currentTrack index aligned
         const currentTrack = state.currentTrack;
-        const originalIndex = currentTrack ? state.queue.findIndex(t => t.id === currentTrack.id) : 0;
+        const restoredQueue = baseOriginal;
+        const restoredIndex = currentTrack ? restoredQueue.findIndex(t => t.id === currentTrack.id) : 0;
         return {
-          ...state,
-          isShuffled: false,
-          shuffledOrder: [],
-          shuffledPointer: -1,
-          currentIndex: originalIndex >= 0 ? originalIndex : 0,
+            ...state,
+            isShuffled: false,
+            queue: restoredQueue,
+            currentIndex: restoredIndex >= 0 ? restoredIndex : 0,
+            shuffledOrder: [],
+            shuffledPointer: -1,
         };
       }
+    }
+    case 'TOGGLE_RESHUFFLE_ON_LOOP_END': {
+      return {
+        ...state,
+        reshuffleOnLoopEnd: !state.reshuffleOnLoopEnd,
+      };
     }
     
     case 'SET_REPEAT_MODE': {
@@ -490,10 +536,20 @@ const playerReducer = (state: PlayerState, action: PlayerAction): PlayerState =>
       } else if (fromIndex > state.currentIndex && toIndex <= state.currentIndex) {
         newCurrentIndex = state.currentIndex + 1;
       }
-      
+
+      // Keep originalQueue in sync to avoid shuffle mismatch after manual reorder.
+      const newOriginalQueue = state.originalQueue.length === state.queue.length
+        ? (() => {
+            const clone = [...state.originalQueue];
+            // Map track ids to original positions; reorder by newQueue order.
+            return newQueue.map(t => clone.find(ct => ct.id === t.id) || t);
+          })()
+        : state.originalQueue;
+
       return {
         ...state,
         queue: newQueue,
+        originalQueue: newOriginalQueue,
         currentIndex: newCurrentIndex,
       };
     }
@@ -594,8 +650,10 @@ interface MusicPlayerContextType {
   toggleMute: () => void;
   toggleShuffle: () => void;
   cycleRepeatMode: () => void;
+  toggleReshuffleOnLoopEnd: () => void;
   addToQueue: (tracks: Track[]) => void;
   removeFromQueue: (index: number) => void;
+  reorderQueue: (fromIndex: number, toIndex: number) => void;
   playFromQueue: (index: number) => void;
   clearQueue: () => void;
   
@@ -722,12 +780,12 @@ export const MusicPlayerProvider: React.FC<MusicPlayerProviderProps> = ({ childr
         }
       }
       
-  // Normal next track behavior - mark advancing to avoid pause race
-  advancingRef.current = true;
-  try { audio.pause(); } catch {}
-  try { audio.currentTime = 0; } catch {}
-  try { audio.src = ''; } catch {}
-  dispatch({ type: 'NEXT_TRACK' });
+      // Normal next track behavior - mark advancing to avoid pause race
+      advancingRef.current = true;
+      try { audio.pause(); } catch {}
+      try { audio.currentTime = 0; } catch {}
+      try { audio.src = ''; } catch {}
+      dispatch({ type: 'NEXT_TRACK' });
     };
 
     const handlePlay = () => {
@@ -743,10 +801,9 @@ export const MusicPlayerProvider: React.FC<MusicPlayerProviderProps> = ({ childr
     };
 
     const handlePause = () => {
-      // Ignore pause events that are part of an advance/track-change flow
+      // If we are advancing to next track, don't toggle play state
       if (advancingRef.current) return;
-
-      // Only update state if it wasn't manually paused
+      // If audio element paused but state still says playing, flip state
       if (state.isPlaying) {
         dispatch({ type: 'PLAY_PAUSE' });
       }
@@ -1276,12 +1333,23 @@ export const MusicPlayerProvider: React.FC<MusicPlayerProviderProps> = ({ childr
     dispatch({ type: 'SET_REPEAT_MODE', payload: nextMode });
   };
 
+  const toggleReshuffleOnLoopEnd = () => {
+    dispatch({ type: 'TOGGLE_RESHUFFLE_ON_LOOP_END' });
+  };
+
   const addToQueue = (tracks: Track[]) => {
     dispatch({ type: 'ADD_TO_QUEUE', payload: tracks });
   };
 
   const removeFromQueue = (index: number) => {
     dispatch({ type: 'REMOVE_FROM_QUEUE', payload: index });
+  };
+
+  const reorderQueue = (fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex) return;
+    if (fromIndex < 0 || toIndex < 0) return;
+    if (fromIndex >= state.queue.length || toIndex >= state.queue.length) return;
+    dispatch({ type: 'REORDER_QUEUE', payload: { fromIndex, toIndex } });
   };
 
   const playFromQueue = (index: number) => {
@@ -1387,8 +1455,10 @@ export const MusicPlayerProvider: React.FC<MusicPlayerProviderProps> = ({ childr
     toggleMute,
     toggleShuffle,
     cycleRepeatMode,
+    toggleReshuffleOnLoopEnd,
     addToQueue,
     removeFromQueue,
+  reorderQueue,
     playFromQueue,
     clearQueue,
     setAutoPlay,

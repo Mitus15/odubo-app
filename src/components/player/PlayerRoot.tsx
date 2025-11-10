@@ -80,6 +80,16 @@ export default function PlayerRoot() {
         album={state.currentAlbum}
         currentTime={state.currentTime}
         duration={state.duration}
+        error={state.error}
+        onRetry={() => {
+          // Simple retry logic: re-trigger play on current track if error present
+          if (state.currentTrack) {
+            togglePlayPause(); // pause if playing
+            setTimeout(() => {
+              togglePlayPause(); // attempt play again
+            }, 150);
+          }
+        }}
         onPlayPause={togglePlayPause}
         onNext={nextTrack}
         onPrev={previousTrack}

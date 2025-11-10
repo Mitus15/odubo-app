@@ -13,11 +13,14 @@ interface Video {
   poster_url?: string;
   thumbnail?: string;
   duration?: string;
+  duration_seconds?: number | null;
   category?: string;
   type?: string;
   mood?: string;
   credits?: string;
   created_at: string;
+  uid?: string;
+  thumbnail_timestamp_pct?: number | null;
 }
 
 interface VideoLibraryProps {
@@ -88,7 +91,26 @@ export default function VideoLibrary({ videos }: VideoLibraryProps) {
   };
 
   const getVideoThumbnail = (video: Video) => {
-    return video.poster_url || video.thumbnail || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgdmlld0JveD0iMCAwIDQwMCAzMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iMzAwIiBmaWxsPSIjMUExQTFBIi8+CjxwYXRoIGQ9Ik0xNTAgMTIwTDI1MCA4NVYyMTVMMTUwIDE4MFYxMjBaIiBmaWxsPSIjNEM0QzRDIi8+CjxjaXJjbGUgY3g9IjIwMCIgY3k9IjE1MCIgcj0iMjAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzRDNEM0QyIgc3Ryb2tlLXdpZHRoPSIyIi8+Cjx0ZXh0IHg9IjIwMCIgeT0iMjgwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNEM0QzRDIiBmb250LXNpemU9IjE0IiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiI+VmlkZW88L3RleHQ+Cjwvc3ZnPgo=';
+    // 1) Use explicit poster/thumbnail if present
+    if (video.poster_url) return video.poster_url;
+    if (video.thumbnail) return video.thumbnail;
+
+    // 2) Fallback to Cloudflare Stream frame if we have a UID
+    if (video.uid) {
+      const pct = typeof video.thumbnail_timestamp_pct === 'number' && video.thumbnail_timestamp_pct >= 0 && video.thumbnail_timestamp_pct <= 1
+        ? video.thumbnail_timestamp_pct
+        : 0.5;
+      const dur = typeof video.duration_seconds === 'number' && isFinite(video.duration_seconds) ? Math.max(0, video.duration_seconds) : null;
+      const timeSec = dur ? Math.max(0, Math.floor(pct * dur)) : null;
+      const base = `https://videodelivery.net/${video.uid}/thumbnails/thumbnail.jpg`;
+      const params = new URLSearchParams();
+      params.set('width', '640');
+      if (timeSec !== null) params.set('time', `${timeSec}s`);
+      return `${base}?${params.toString()}`;
+    }
+
+    // 3) Placeholder
+    return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgdmlld0JveD0iMCAwIDQwMCAzMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iMzAwIiBmaWxsPSIjMUExQTFBIi8+CjxwYXRoIGQ9Ik0xNTAgMTIwTDI1MCA4NVYyMTVMMTUwIDE4MFYxMjBaIiBmaWxsPSIjNEM0QzRDIi8+CjxjaXJjbGUgY3g9IjIwMCIgY3k9IjE1MCIgcj0iMjAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzRDNEM0QyIgc3Ryb2tlLXdpZHRoPSIyIi8+Cjx0ZXh0IHg9IjIwMCIgeT0iMjgwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNEM0QzRDIiBmb250LXNpemU9IjE0IiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiI+VmlkZW88L3RleHQ+Cjwvc3ZnPgo=';
   };
 
   return (

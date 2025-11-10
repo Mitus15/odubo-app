@@ -625,22 +625,94 @@ CREATE TABLE IF NOT EXISTS game_achievements (
 -- =============================================================================
 -- VIDEO STORAGE (Cloudflare R2)
 -- =============================================================================
+-- NOTE: The videos table has evolved via migrations (005,006,008,015,021) to include
+-- additional metadata, publication gating, and thumbnail selection fields.
+-- This base schema definition reflects the CURRENT expected structure for fresh setups.
 CREATE TABLE IF NOT EXISTS videos (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
+  uid TEXT,                              -- Stable unique identifier (migration 008)
   title TEXT,
+  artist_name TEXT,                     -- Added for parity with music assets (migration 006)
   description TEXT,
-  url TEXT,
-  poster_url TEXT,
-  thumbnail TEXT,
-  duration TEXT,
+  url TEXT,                             -- Cloudflare Stream embed URL (or direct fallback)
+  poster_url TEXT,                      -- Poster/thumbnail image URL (R2 or Stream generated)
+  thumbnail TEXT,                       -- Alias/fallback (legacy)
+  duration TEXT,                        -- Formatted or raw duration string
   category TEXT,
-  is_public INTEGER,
-  type TEXT,
-  mood TEXT,
-  credits TEXT,
-  related_projects TEXT,
-  created_at TEXT
+  is_public INTEGER,                    -- 1/0 flag for public visibility
+  type TEXT,                            -- e.g. music-video | short-film | feature
+  mood TEXT,                            -- free-text mood classification
+  credits TEXT,                         -- JSON array of credit objects
+  related_projects TEXT,                -- JSON array of related project IDs
+  status TEXT DEFAULT 'draft' CHECK (status IN ('draft','published','archived')), -- lifecycle status (migration 005)
+  stream_video_id TEXT,                 -- Underlying Cloudflare Stream UID (redundant with uid but kept)
+  publication_status TEXT NOT NULL DEFAULT 'archived' CHECK (publication_status IN ('live','archived')), -- gating status (migration 015)
+  thumbnail_timestamp_pct REAL,         -- Selected thumbnail timestamp percentage (migration 021)
+  chosen_candidate_id INTEGER,          -- Chosen candidate (optional; migration 021)
+  created_at TEXT,                      -- Creation timestamp
+  updated_at TEXT                       -- Last update timestamp (migration 006)
 );
+
+-- Helpful indexes consolidated (some created by migration 009 + 015):
+CREATE INDEX IF NOT EXISTS idx_videos_status ON videos(status);
+CREATE INDEX IF NOT EXISTS idx_videos_created_at ON videos(created_at);
+CREATE INDEX IF NOT EXISTS idx_videos_category ON videos(category);
+CREATE INDEX IF NOT EXISTS idx_videos_type ON videos(type);
+CREATE INDEX IF NOT EXISTS idx_videos_publication_status ON videos(publication_status);
+
+-- =============================================================================
+-- VIDEO UPLOAD SESSIONS (deferred creation until thumbnail selection)
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS video_upload_sessions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  uid TEXT NOT NULL,                    -- Matches videos.uid / Stream UID
+  meta_json TEXT NOT NULL,              -- JSON metadata captured at upload time
+  status TEXT NOT NULL DEFAULT 'uploaded', -- uploaded | analyzing | awaiting_choice | finalizing | done | aborted
+  created_by TEXT,                      -- Email or identifier of creator
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_video_upload_sessions_uid ON video_upload_sessions(uid);
+CREATE INDEX IF NOT EXISTS idx_video_upload_sessions_status ON video_upload_sessions(status);
+
+-- =============================================================================
+-- VIDEO THUMBNAIL CANDIDATES (per-session AI & heuristic ranked frames)
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS videos_thumbnail_candidates (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  session_id INTEGER NOT NULL,
+  uid TEXT NOT NULL,                    -- For easier joins without session lookup
+  url TEXT NOT NULL,                    -- Frame image URL
+  timestamp_s REAL,                     -- Approximate timestamp in seconds
+  pct REAL,                             -- Normalized position (0..1)
+  sharpness REAL,                       -- Heuristic clarity score
+  exposure REAL,                        -- Approximate brightness/exposure metric
+  face_score REAL,                      -- Reserved for future face detection weight
+  ai_score REAL,                        -- Combined heuristic/AI scoring
+  rank INTEGER,                         -- Final ordered rank (1 = best)
+  rationale TEXT,                       -- AI or heuristic rationale string
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY(session_id) REFERENCES video_upload_sessions(id)
+);
+CREATE INDEX IF NOT EXISTS idx_videos_thumbnail_candidates_session ON videos_thumbnail_candidates(session_id);
+
+-- =============================================================================
+-- VIDEO ANALYSIS CACHE (transcripts, moods, themes)
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS videos_analysis (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  uid TEXT NOT NULL,                    -- Reference to videos.uid
+  transcript_json TEXT,                 -- JSON transcript if generated
+  chorus_timestamps_json TEXT,          -- Future: musical structure markers
+  mood TEXT,                            -- AI-classified mood
+  genre TEXT,                           -- AI-classified genre
+  themes_json TEXT,                     -- JSON array of thematic tags
+  provider TEXT,                        -- AI provider name
+  model TEXT,                           -- AI model identifier
+  diagnostics_json TEXT,                -- Performance / debug metrics
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_videos_analysis_uid ON videos_analysis(uid);
 -- =============================================================================
 
 -- PERFORMANCE INDEXES

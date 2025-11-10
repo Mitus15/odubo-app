@@ -71,7 +71,7 @@ export default function RootLayout({
             {/* <ClientCapabilities /> */}
             <div className="h-full w-full flex flex-col overflow-hidden">
               <AppHeader />
-              <main className="flex-1 min-h-0 pt-14 safe-area-header pb-24 safe-area-bottom">
+              <main className="flex-1 min-h-0 pt-14 safe-area-header pb-24 safe-area-bottom overflow-y-auto">
                 {children}
               </main>
               <MusicPlayerLayout />

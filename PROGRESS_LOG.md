@@ -398,6 +398,52 @@
 - Capture flow UX
   - Download the captured image before upload.
   - Modal stays open after upload so the user can take more pictures.
+
+
+## 📌 2025-11-08 — Music player overhaul, queue/shuffle correctness, and admin album UX fixes
+
+### Summary
+- Rebuilt the full-screen player experience with a clean, mobile-first glass aesthetic and eliminated noisy/fragile UI elements.
+- Made the queue behave like a true, reorderable queue with accessible controls; shuffle now physically rearranges the queue, not just an index mapping.
+- Added a power-user control to reshuffle at loop boundaries when Repeat All is on.
+- Cleaned up legacy full-screen player code paths and synced docs for optional workflows.
+- Fixed admin album edit page not scrolling and added a simple cover artwork update flow via URL.
+
+### What was implemented
+- Mini player smoothing (MiniBar)
+  - Suppress transient “Audio source not supported” errors during initial load (grace window increased to ~5s)
+  - Removed buffering text and the old waveform visual for a calmer feel
+  - Play/pause state is driven by actual audio element events for perfect sync
+- Expanded player redesign (`src/components/player/ExpandedView.tsx`)
+  - Mobile-first responsive sizing, swipe-down close, no waveform/mute clutter
+  - Fixed disappearing album art edge case
+  - Updated icons and tightened layout spacing
+- Queue improvements (`src/components/player/QueueDrawer.tsx` + `MusicPlayerContext`)
+  - Pinned “Now Playing” at top; “Up Next” is reorderable (drag & drop)
+  - Keyboard-accessible reordering via Move Up/Down buttons
+  - Remove button for items; reducer keeps `originalQueue` for shuffle integrity
+- Shuffle correctness (`src/contexts/MusicPlayerContext.tsx`)
+  - Shuffle physically reorders the queue (current track locked to index 0)
+  - `originalQueue` retained to restore order when toggling shuffle off
+  - New `reshuffleOnLoopEnd` flag and UI toggle (only visible with Repeat All + Shuffle)
+- Legacy cleanup
+  - Removed unused `src/components/FullScreenMusicPlayer.tsx` and `src/components/FullScreenPlayer.tsx`
+- Optional workflows doc
+  - `docs/OPTIONAL_WORKFLOWS.md` now includes a Music Player UX & Queue section with shipped items and optional refinements
+- Admin album edit UX
+  - Page now scrolls (added `overflow-y-auto` to `main` in `src/app/layout.tsx`)
+  - Added cover art update UI in `src/components/AlbumEditClient.tsx` with preview and URL-based PATCH to `/api/albums/[id]/update-cover` (file upload flow slated for later)
+
+### Quality gates
+- Build: PASS (`next build --no-lint`)
+- Typecheck: PASS on changed files
+- Manual smoke: Queue reorder, shuffle toggle, and reshuffle toggle behave as expected; album edit view scrolls and can set cover via URL
+
+### Notes
+- Preferences persistence (shuffle, repeat, reshuffle) is a good next opt-in
+- Consider ARIA live announcements for queue reordering for screen readers
+- File upload endpoint for cover images (R2/Images) remains a follow-up; currently supports direct URL
+
   - Client-side soft rate limit: 3 uploads per 2 minutes per gallery (with countdown message when hit).
   - “Open Gallery” button appears after successful upload.
 - Admin moderation and deletion

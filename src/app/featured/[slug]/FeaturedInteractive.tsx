@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import dynamic from 'next/dynamic';
 
@@ -13,73 +14,32 @@ export type FeaturedConfig = {
   title: string;
   subtitle?: string;
   date?: string;
+  time?: string;
   venue?: string;
   momentsLink?: string; // gated; revealed after RSVP
+  momentsButtonLabel?: 'RSVP' | 'Moments';
+  momentsTargetPath?: string; // precomputed SSR target path for moments button
   extraLinks?: FeaturedLink[]; // all custom buttons to display
   backgroundVideoUrl?: string; // optional, if absent show gradient
 };
 
 export default function FeaturedInteractive({ config }: { config: FeaturedConfig }) {
-  const [ig, setIg] = useState('');
-  const [lastSubmitted, setLastSubmitted] = useState<string | null>(null);
-  const normalized = ig.trim().replace(/^@/, '');
-  // Enable Moments when the field is non-empty (dynamic toggle)
-  const enabled = normalized.length > 0;
+  const router = useRouter();
+  const [launching, setLaunching] = useState(false);
+  const momentsLabel = config.momentsButtonLabel || 'Moments';
 
-  // Persist handle locally so capture page can associate uploads
-  useEffect(() => {
+  async function handleMomentsClick() {
     try {
-      if (normalized) localStorage.setItem('instagramHandle', normalized);
-    } catch {}
-  }, [normalized]);
-
-  // Auto-unlock and background-submit as soon as a valid handle is entered
-  // Optional: background submit once per unique handle (non-blocking)
-  useEffect(() => {
-    let cancelled = false;
-    if (enabled && normalized && lastSubmitted !== normalized) {
-      setLastSubmitted(normalized);
-      (async () => {
-        try {
-          await fetch('/api/featured/rsvp', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ slug: config.slug, instagram: normalized })
-          });
-        } catch (e) {
-          if (!cancelled) console.warn('RSVP background submit failed:', e);
-        }
-      })();
-    }
-    return () => { cancelled = true; };
-  }, [enabled, normalized, config.slug, lastSubmitted]);
-
-  // Build a link that appends the IG handle and normalizes old capture path to new Moments page
-  function withIgParam(href?: string): string | undefined {
-    if (!href) return href;
-    try {
-      const base = typeof window !== 'undefined' ? window.location.origin : 'https://odubo.studio';
-      const url = new URL(href, base);
-      // Normalize legacy /moments/capture path to new /moments page, preserving query
-      if (url.pathname.startsWith('/moments/capture')) {
-        url.pathname = '/moments';
+      setLaunching(true);
+      if (config.momentsTargetPath) {
+        router.push(config.momentsTargetPath);
+        return;
       }
-      // Signal the Moments page to auto-open the camera modal
-      url.searchParams.set('open', '1');
-      if (normalized) url.searchParams.set('ig', normalized);
-      // If this featured link already knows a gallery (via id or join code), pass it through
-      // Preferred: galleryId; Fallback: resolve code on the Moments page
-      const knownGalleryId = url.searchParams.get('galleryId');
-      const knownCode = url.searchParams.get('code') || url.searchParams.get('eventCode');
-      if (knownGalleryId) url.searchParams.set('galleryId', knownGalleryId);
-      if (!knownGalleryId && knownCode) url.searchParams.set('code', knownCode);
-      return url.pathname + url.search + url.hash;
-    } catch {
-      // Fallback for relative/invalid URLs: append minimally and normalize path textually
-      let out = href.startsWith('/moments/capture') ? href.replace('/moments/capture', '/moments') : href;
-      out = out + (out.includes('?') ? '&open=1' : '?open=1');
-      if (!normalized) return out;
-      return out + (out.includes('?') ? `&ig=${encodeURIComponent(normalized)}` : `?ig=${encodeURIComponent(normalized)}`);
+      // Fallback: use momentsLink if no target was precomputed
+      const raw = config.momentsLink || '/moments';
+      router.push(raw);
+    } finally {
+      setLaunching(false);
     }
   }
 
@@ -150,9 +110,9 @@ export default function FeaturedInteractive({ config }: { config: FeaturedConfig
             {(config.subtitle || config.venue || config.date) && (
               <div className="mt-3 opacity-95" style={{ textShadow: '0 1px 8px rgba(0,0,0,0.6)' }}>
                 {config.subtitle || ''}
-                {(config.venue || config.date) && (
+                {(config.venue || config.date || config.time) && (
                   <div className="mt-1 text-sm opacity-90" style={{ textShadow: '0 1px 6px rgba(0,0,0,0.55)' }}>
-                    {[config.date, config.venue].filter(Boolean).join(' · ')}
+                    {[config.date, config.time, config.venue].filter(Boolean).join(' · ')}
                   </div>
                 )}
               </div>
@@ -161,20 +121,24 @@ export default function FeaturedInteractive({ config }: { config: FeaturedConfig
 
           {/* Column layout: input above Moments, then links below */}
           <div className="mt-8 flex flex-col items-stretch gap-3 md:gap-4">
-            {/* Instagram input */}
-            <div className="relative">
-              <input
-                value={ig}
-                onChange={(e) => setIg(e.target.value)}
-                placeholder="Enter your Instagram handle"
-                className="w-full rounded-full bg-white/10 border border-white/20 px-4 py-3 placeholder-white/60 backdrop-blur-xl outline-none focus:ring-2 focus:ring-white/30"
-                style={{ color: 'var(--fg, #ede8df)' }}
-              />
-              <div className="pointer-events-none absolute inset-0 rounded-full shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]" />
-            </div>
-
-            {/* Moments button (always labeled 'Moments') */}
-            <GlowButton label="Moments" href={enabled ? withIgParam(config.momentsLink || '#') : undefined} disabled={!enabled} />
+            {/* Moments button (unlocked by default) */}
+            <button
+              type="button"
+              onClick={handleMomentsClick}
+              disabled={launching}
+              className="relative w-full inline-flex items-center justify-center px-6 md:px-8 py-3 md:py-3.5 rounded-full text-sm md:text-base font-semibold tracking-wide select-none"
+              style={{
+                background: 'linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.06) 100%)',
+                border: '1px solid rgba(255,255,255,0.25)',
+                color: '#ede8df',
+                boxShadow: '0 8px 30px rgba(16, 255, 238, 0.12), inset 0 1px 0 rgba(255,255,255,0.25)',
+                WebkitBackdropFilter: 'blur(14px)',
+                backdropFilter: 'blur(14px)'
+              }}
+            >
+              <span className="relative z-10">{launching ? 'Opening…' : momentsLabel}</span>
+              <span aria-hidden className="pointer-events-none absolute -inset-0.5 rounded-full opacity-40 blur-md" style={{ background: 'radial-gradient(60% 50% at 50% 50%, rgba(0,255,224,0.35), transparent)' }} />
+            </button>
 
             {/* Custom links in a single vertical column */}
             {(config.extraLinks || []).map((l, i) => (

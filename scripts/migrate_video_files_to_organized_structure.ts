@@ -25,7 +25,7 @@ config({ path: '.env.local', override: true });
 
 import { S3Client, ListObjectsV2Command, CopyObjectCommand, DeleteObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
 import { queryDatabase, executeQuery } from '../src/lib/db.js';
-import { generateFilePath, validateFileType } from '../src/lib/fileOrganization.js';
+import { validateFileType } from '../src/lib/fileOrganization.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -222,22 +222,14 @@ async function generateMigrationPlan(): Promise<MigrationPlan[]> {
     
     // Generate new paths if files exist
     if (oldVideoKey) {
-      newVideoKey = generateFilePath({
-        fileType: 'video',
-        videoId,
-        videoType,
-        fileName: oldVideoKey
-      });
+      const baseName = oldVideoKey.split('/').pop() || 'video.mp4';
+      newVideoKey = `videos/${videoType}/${videoId}/${Date.now()}_${baseName}`;
       newVideoUrl = `${PUBLIC_URL_BASE}/${newVideoKey}`;
     }
     
     if (oldPosterKey) {
-      newPosterKey = generateFilePath({
-        fileType: 'video-poster',
-        videoId,
-        videoType,
-        fileName: oldPosterKey
-      });
+      const baseName = oldPosterKey.split('/').pop() || 'poster.jpg';
+      newPosterKey = `videos/${videoType}/${videoId}/poster_${Date.now()}_${baseName}`;
       newPosterUrl = `${PUBLIC_URL_BASE}/${newPosterKey}`;
     }
     

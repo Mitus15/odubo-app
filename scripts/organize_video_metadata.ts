@@ -236,12 +236,9 @@ async function generateOrganizationPlan(): Promise<OrganizationPlan[]> {
     let newPosterUrl: string | null = null;
     
     if (oldPosterKey) {
-      newPosterKey = generateFilePath({
-        fileType: 'video-poster',
-        videoId,
-        videoType,
-        fileName: oldPosterKey
-      });
+      // Posters live alongside video organized path: videos/{type}/{videoId}/poster_<orig>
+      const baseName = oldPosterKey.split('/').pop() || 'poster.jpg';
+      newPosterKey = `videos/${videoType}/${videoId}/poster_${baseName}`;
       newPosterUrl = `${PUBLIC_URL_BASE}/${newPosterKey}`;
     }
     

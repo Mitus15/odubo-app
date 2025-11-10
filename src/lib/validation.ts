@@ -219,3 +219,13 @@ export type Track = z.infer<typeof trackSchema>;
 export type Product = z.infer<typeof productSchema>;
 export type Collection = z.infer<typeof collectionSchema>;
 export type UserPreferences = z.infer<typeof userPreferencesSchema>;
+
+// Lightweight helpers for common input validation/sanitization
+export function normalizeEmail(email: string): string {
+  return String(email || '').trim().toLowerCase();
+}
+
+export function isValidEmail(email: string): boolean {
+  const e = normalizeEmail(email);
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+}

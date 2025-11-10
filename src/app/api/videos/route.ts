@@ -30,12 +30,16 @@ export async function GET(req: NextRequest) {
           title,
           COALESCE(artist_name, '') as artist_name,
           description,
+          COALESCE(short_description, '') as short_description,
+          COALESCE(long_description, '') as long_description,
+          COALESCE(tags, '[]') as tags,
           url,
           url as video_url,
           poster_url,
           poster_url as thumbnail_url,
           thumbnail,
           duration,
+          duration_seconds,
           category,
           is_public,
           type,
@@ -45,6 +49,8 @@ export async function GET(req: NextRequest) {
           COALESCE(status, 'published') as status,
           COALESCE(stream_video_id, '') as stream_video_id,
           COALESCE(publication_status, 'archived') as publication_status,
+          ai_description,
+          thumbnail_timestamp_pct,
           created_at,
           COALESCE(updated_at, created_at) as updated_at
         FROM videos 
@@ -88,18 +94,30 @@ export async function GET(req: NextRequest) {
         stream_video_id: video.stream_video_id || '',
         publication_status: video.publication_status || 'archived',
         updated_at: video.updated_at || video.created_at || new Date().toISOString(),
-        thumbnail_url: video.thumbnail_url || video.poster_url || video.thumbnail || ''
+        thumbnail_url: video.thumbnail_url || video.poster_url || video.thumbnail || '',
+        short_description: video.short_description || '',
+        long_description: video.long_description || '',
+        tags: video.tags || '[]',
+        duration_seconds: video.duration_seconds || null,
+        ai_description: video.ai_description || null,
+        thumbnail_timestamp_pct: video.thumbnail_timestamp_pct || null,
       }));
     }
 
-    const transformedVideos = (videos as any[]).map((video) => ({
-      ...video,
-      status: video.status || 'published',
-      artist_name: video.artist_name || '',
-      duration: Number.parseInt(String(video.duration)) || 0,
-      created_at: video.created_at || new Date().toISOString(),
-      updated_at: video.updated_at || video.created_at || new Date().toISOString(),
-    }));
+    const transformedVideos = (videos as any[]).map((video) => {
+      let parsedTags: any = [];
+      try { parsedTags = Array.isArray(video.tags) ? video.tags : JSON.parse(String(video.tags || '[]')); } catch { parsedTags = []; }
+      return {
+        ...video,
+        status: video.status || 'published',
+        artist_name: video.artist_name || '',
+        duration: Number.parseInt(String(video.duration)) || 0,
+        duration_seconds: typeof video.duration_seconds === 'number' ? video.duration_seconds : (Number.isFinite(Number(video.duration_seconds)) ? Number(video.duration_seconds) : null),
+        tags: parsedTags,
+        created_at: video.created_at || new Date().toISOString(),
+        updated_at: video.updated_at || video.created_at || new Date().toISOString(),
+      };
+    });
 
     // Audit (non-blocking)
     await writeAuditLog(req, getUserFromRequest(req), 'videos.list', `count=${transformedVideos.length}`, {
@@ -126,10 +144,15 @@ const videoCreateSchema = z.object({
   title: z.string().min(1),
   artist_name: z.string().optional().default(''),
   description: z.string().optional().default(''),
+  short_description: z.string().optional().nullable(),
+  long_description: z.string().optional().nullable(),
+  ai_description: z.string().optional().nullable(),
+  tags: z.union([z.string(), z.array(z.string())]).optional().default('[]'),
   url: z.string().min(1),
   poster_url: z.string().optional().default(''),
   thumbnail: z.string().optional().default(''),
   duration: z.union([z.string(), z.number()]).optional().default(''),
+  duration_seconds: z.union([z.number(), z.string()]).optional().nullable(),
   category: z.string().optional().default(''),
   is_public: z.union([z.boolean(), z.number(), z.string()]).optional().default(false),
   type: z.string().optional().default(''),
@@ -138,6 +161,7 @@ const videoCreateSchema = z.object({
   related_projects: z.union([z.string(), z.array(z.any())]).optional().default('[]'),
   status: z.string().optional().default('draft'),
   publication_status: z.enum(['live','archived']).optional().default('archived'),
+  thumbnail_timestamp_pct: z.union([z.number(), z.string()]).optional().nullable(),
 });
 
 export async function POST(req: NextRequest) {
@@ -155,11 +179,16 @@ export async function POST(req: NextRequest) {
 
     const title = body.title.trim();
     const artist_name = body.artist_name || '';
-    const description = body.description || '';
+  const description = body.description || '';
+  const short_description = body.short_description ?? null;
+  const long_description = body.long_description ?? null;
+  const ai_description = body.ai_description ?? null;
+  const tagsJson = Array.isArray(body.tags) ? JSON.stringify(body.tags) : (typeof body.tags === 'string' ? body.tags : '[]');
     const url = (body as any).url || (body as any).video_url || '';
     const poster_url = (body as any).poster_url || (body as any).thumbnail_url || '';
     const thumbnail = body.thumbnail || '';
     const duration = body.duration ?? '';
+  const duration_seconds = body.duration_seconds === '' ? null : (body.duration_seconds as any);
     const category = body.category || '';
     const is_public = body.is_public === true || body.is_public === 1 || body.is_public === '1' || body.is_public === 'true' ? 1 : 0;
     const type = body.type || '';
@@ -168,6 +197,7 @@ export async function POST(req: NextRequest) {
     const related_projects = typeof body.related_projects === 'string' ? body.related_projects : JSON.stringify(body.related_projects || []);
     const status = (body.status || 'draft').trim();
     const publication_status: 'live' | 'archived' = (body.publication_status || 'archived') as any;
+  const thumbnail_timestamp_pct = (body.thumbnail_timestamp_pct === '' ? null : (body.thumbnail_timestamp_pct as any));
 
     if (!title || !url) {
       return NextResponse.json(
@@ -178,16 +208,23 @@ export async function POST(req: NextRequest) {
 
     await executeQuery(
       `INSERT INTO videos (
-        title, artist_name, description, url, poster_url, thumbnail, duration, category, is_public, type, mood, credits, related_projects, status, publication_status, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
+        title, artist_name, description, short_description, long_description, ai_description, tags,
+        url, poster_url, thumbnail, duration, duration_seconds, category, is_public, type, mood,
+        credits, related_projects, status, publication_status, thumbnail_timestamp_pct, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
       [
         title,
         artist_name,
         description,
+        short_description,
+        long_description,
+        ai_description,
+        tagsJson,
         url,
         poster_url,
         thumbnail,
         String(duration),
+        duration_seconds,
         category,
         is_public,
         type,
@@ -195,7 +232,8 @@ export async function POST(req: NextRequest) {
         credits,
         related_projects,
         status || 'draft',
-        publication_status
+        publication_status,
+        thumbnail_timestamp_pct
       ]
     );
     // Audit

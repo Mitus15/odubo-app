@@ -81,7 +81,23 @@ async function geminiRank(candidates: FrameScore[], context: { title?: string; c
   if (!GEMINI_API_KEY) return { ordered: candidates.map((_, i) => i), rationale: 'ai:skipped' };
   try {
     const parts: any[] = [
-      { text: `You are selecting the best thumbnail for a music video. Consider composition, clarity (no blur), emotional alignment, and genre/mood aesthetics. Provide a JSON { order: [indexes], rationale: "..." } where indexes refer to the images in the same order as provided (0-based). Context: title=${context.title || ''}, category=${context.category || ''}, mood=${context.mood || ''}.` }
+      { text: [
+        'You are an expert creative director and cinematographer choosing the best thumbnail frame.',
+        'Evaluate EACH image by:',
+        '- Composition (rule of thirds, leading lines, framing, depth, balance)',
+        '- Subject clarity (faces/subjects readable, minimal motion blur unless artistic)',
+        '- Color harmony and palette (contrast, mood alignment, skin tones)',
+        '- Mise-en-scène (props, wardrobe, setting, lighting that convey story and brand)',
+        '- Emotional impact and story beat (intrigue, climax, iconic moment)',
+        '- Avoid text overlays, random UI elements, or awkward mid-blinks if possible',
+        '',
+        `Context: title=${context.title || ''}, category=${context.category || ''}, mood=${context.mood || ''}.`,
+        'Return STRICT JSON with shape:\n{',
+        '  "order": [0-based indexes best..worst],',
+        '  "scores": [{"i": index, "composition": 0..1, "clarity": 0..1, "color": 0..1, "emotion": 0..1}],',
+        '  "rationale": "one-paragraph rationale summarizing choice"',
+        '}',
+      ].join('\n') }
     ];
 
     for (const c of candidates) {
@@ -103,7 +119,8 @@ async function geminiRank(candidates: FrameScore[], context: { title?: string; c
     const parsed = m ? JSON.parse(m[0]) : {};
     const order = Array.isArray(parsed.order) ? parsed.order.filter((i: number) => Number.isInteger(i)) : candidates.map((_, i: number) => i);
     const rationale = typeof parsed.rationale === 'string' ? parsed.rationale : 'ai:ok';
-    return { ordered: order, rationale };
+    const scores = Array.isArray(parsed.scores) ? parsed.scores : [];
+    return { ordered: order, rationale, scores } as any;
   } catch (e) {
     console.warn('Gemini ranking failed:', e);
     return { ordered: candidates.map((_, i) => i), rationale: 'ai:error' };
@@ -154,7 +171,7 @@ export async function POST(req: NextRequest) {
     frames.sort((a, b) => b.score - a.score);
     const top = frames.slice(0, 6);
 
-    const { ordered, rationale } = await geminiRank(top, { title: meta.title, category: meta.category, mood: meta.mood });
+  const { ordered, rationale, scores } = await geminiRank(top, { title: meta.title, category: meta.category, mood: meta.mood }) as any;
 
     const ranked = ordered
       .map((i: number) => top[i])
@@ -163,6 +180,10 @@ export async function POST(req: NextRequest) {
       .map((f: FrameScore, idx: number) => ({ ...f, finalRank: idx + 1 }));
 
     for (const r of ranked) {
+      const scoreObj = Array.isArray(scores) ? scores.find((s: any) => Number(s?.i) === top.indexOf(r)) : null;
+      const aiScore = typeof scoreObj?.composition === 'number' && typeof scoreObj?.clarity === 'number' && typeof scoreObj?.color === 'number' && typeof scoreObj?.emotion === 'number'
+        ? (0.35 * scoreObj.composition + 0.25 * scoreObj.clarity + 0.2 * scoreObj.color + 0.2 * scoreObj.emotion)
+        : r.score; // fallback to heuristic
       await executeQuery(
         `INSERT INTO videos_thumbnail_candidates (session_id, uid, url, timestamp_s, pct, sharpness, exposure, face_score, ai_score, rank, rationale)
          VALUES (?, ?, ?, NULL, ?, ?, ?, NULL, ?, ?, ?)`,
@@ -173,7 +194,7 @@ export async function POST(req: NextRequest) {
           r.pct,
           r.clarity, // use clarity as sharpness proxy
           r.brightness,
-          r.score,
+          aiScore,
           r.finalRank,
           rationale,
         ]
