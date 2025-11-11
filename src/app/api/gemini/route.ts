@@ -3,15 +3,15 @@ export const runtime = 'nodejs';
 import { executeQuery, queryDatabase } from '@/lib/db';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-1.5-flash-8b';
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
 
 // Build prioritized list of endpoint URLs to try
 const MODEL_CANDIDATES = [
   GEMINI_MODEL,
-  'gemini-1.5-flash-8b',
-  'gemini-1.5-flash-002',
-  'gemini-1.5-pro-002',
-  'gemini-2.0-flash',
+  'gemini-1.5-flash',
+  'gemini-1.5-flash-latest',
+  'gemini-1.5-pro',
+  'gemini-2.0-flash-exp',
 ];
 
 const GEMINI_API_URLS = MODEL_CANDIDATES.flatMap(m => [
