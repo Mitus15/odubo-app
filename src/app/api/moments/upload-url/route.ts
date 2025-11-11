@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { verifyUserFromRequest, isAdminUser } from '@/lib/auth';
+import { getUserFromRequest, isAdminUser } from '@/lib/auth';
 import { generateFilePath, getMimeType } from '@/lib/fileOrganization';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
@@ -9,7 +9,7 @@ import { rateLimit } from '@/lib/rateLimit';
 export async function POST(req: Request) {
   try {
     // Optionally verify user (attendee can be anonymous)
-  const _user = await verifyUserFromRequest(req as any).catch(() => null);
+  const _user = getUserFromRequest(req as any) || null;
 
     const body = await req.json() as any;
     const galleryId = body.galleryId;

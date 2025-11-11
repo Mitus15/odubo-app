@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { verifyUserFromRequest, isAdminUser } from '@/lib/auth';
+import { getUserFromRequest, isAdminUser } from '@/lib/auth';
 import { executeQuery, queryDatabase } from '@/lib/db';
 import { GalleryUpdateSchema } from '@/lib/momentsSchemas';
 import { writeAuditLog } from '@/lib/audit';
@@ -20,7 +20,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
 
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   try {
-    const user = await verifyUserFromRequest(req as any);
+    const user = getUserFromRequest(req as any);
     if (!isAdminUser(user)) return NextResponse.json({ error: 'Admins only' }, { status: 403 });
     const { id: idStr } = await ctx.params;
     const id = Number(idStr);
@@ -53,7 +53,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
 
 export async function DELETE(req: Request, ctx: { params: Promise<{ id: string }> }) {
   try {
-    const user = await verifyUserFromRequest(req as any);
+    const user = getUserFromRequest(req as any);
     if (!isAdminUser(user)) return NextResponse.json({ error: 'Admins only' }, { status: 403 });
     const { id: idStr } = await ctx.params;
     const id = Number(idStr);

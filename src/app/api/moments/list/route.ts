@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { queryDatabase } from '@/lib/db';
-import { verifyUserFromRequest, isAdminUser } from '@/lib/auth';
+import { getUserFromRequest, isAdminUser } from '@/lib/auth';
 import { rateLimit } from '@/lib/rateLimit';
 
 export async function GET(req: Request) {
@@ -19,7 +19,7 @@ export async function GET(req: Request) {
   //  - 'all': show approved + unreviewed, but still hide rejected (moderated = 2)
   const publicMode = (process.env.MOMENTS_PUBLIC_MODE || 'moderated').toLowerCase();
     // Keep basic rate limiting. Admin detection is retained only for key scoping.
-    const user = await verifyUserFromRequest(req as any).catch(() => null);
+    const user = getUserFromRequest(req as any) || null;
     const isAdmin = isAdminUser(user);
     const rlKey = isAdmin ? `moments:list:admin:${user!.userId}` : `moments:list:${galleryId}:public`;
     const rl = await rateLimit({ key: rlKey, limit: 300, windowMs: 60_000 });

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { executeQuery, queryDatabase } from '@/lib/db';
-import { verifyUserFromRequest, isAdminUser } from '@/lib/auth';
+import { getUserFromRequest, isAdminUser } from '@/lib/auth';
 import { rateLimit } from '@/lib/rateLimit';
 
 export async function POST(req: Request) {

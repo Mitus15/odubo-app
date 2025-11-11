@@ -4,7 +4,7 @@ export const runtime = 'nodejs';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { generateFilePath } from '@/lib/fileOrganization';
 import { queryDatabase } from '@/lib/db';
-import { verifyUserFromRequest, isAdminUser } from '@/lib/auth';
+import { getUserFromRequest, isAdminUser } from '@/lib/auth';
 import { rateLimit } from '@/lib/rateLimit';
 import { writeAuditLog } from '@/lib/audit';
 
@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
     }
 
-  const user = await verifyUserFromRequest(req as any).catch(() => null);
+  const user = getUserFromRequest(req as any) || null;
   const isAdmin = isAdminUser(user);
 
   const form = await req.formData();

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
 import { EventCreateSchema } from '@/lib/momentsSchemas';
 import { executeQuery } from '@/lib/db';
-import { verifyUserFromRequest, isAdminUser } from '@/lib/auth';
+import { getUserFromRequest, isAdminUser } from '@/lib/auth';
 import { rateLimit } from '@/lib/rateLimit';
 import { writeAuditLog } from '@/lib/audit';
 
@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Admin authentication
-    const user = await verifyUserFromRequest(req);
+    const user = getUserFromRequest(req);
     if (!user || !isAdminUser(user)) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 401 });
     }
@@ -93,7 +93,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Admin authentication
-    const user = await verifyUserFromRequest(req);
+    const user = getUserFromRequest(req);
     if (!user || !isAdminUser(user)) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 401 });
     }

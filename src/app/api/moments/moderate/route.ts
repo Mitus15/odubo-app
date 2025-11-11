@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
-import { verifyUserFromRequest } from '@/lib/auth';
+import { getUserFromRequest } from '@/lib/auth';
 import { executeQuery } from '@/lib/db';
 import { rateLimit } from '@/lib/rateLimit';
 import { writeAuditLog } from '@/lib/audit';
 
 export async function POST(req: Request) {
   try {
-  const user = await verifyUserFromRequest(req as any);
+  const user = getUserFromRequest(req as any);
     if (!user || !user.is_admin) return NextResponse.json({ error: 'Admins only' }, { status: 403 });
 
   const rl = await rateLimit({ key: `moments:moderate:${user.userId}`, limit: 120, windowMs: 60_000 });

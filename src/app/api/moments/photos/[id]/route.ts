@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { verifyUserFromRequest, isAdminUser } from '@/lib/auth';
+import { getUserFromRequest, isAdminUser } from '@/lib/auth';
 import { executeQuery, queryDatabase } from '@/lib/db';
 import { rateLimit } from '@/lib/rateLimit';
 import { writeAuditLog } from '@/lib/audit';
@@ -16,7 +16,7 @@ const s3 = new S3Client({
 
 export async function DELETE(req: Request, ctx: { params: { id: string } }) {
   try {
-    const user = await verifyUserFromRequest(req as any);
+    const user = getUserFromRequest(req as any);
     if (!isAdminUser(user)) return NextResponse.json({ error: 'Admins only' }, { status: 403 });
 
     const rl = await rateLimit({ key: `moments:photo-delete:${user!.userId}`, limit: 60, windowMs: 60_000 });

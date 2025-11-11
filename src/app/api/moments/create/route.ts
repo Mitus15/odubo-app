@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
-import { verifyUserFromRequest, isAdminUser } from '@/lib/auth';
+import { getUserFromRequest, isAdminUser } from '@/lib/auth';
 import { executeQuery } from '@/lib/db';
 import { rateLimit } from '@/lib/rateLimit';
 import { writeAuditLog } from '@/lib/audit';
 import { GalleryCreateSchema } from '@/lib/momentsSchemas';
 
 export async function POST(req: Request) {
-  const user = await verifyUserFromRequest(req as any);
+  const user = getUserFromRequest(req as any);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   if (!isAdminUser(user)) return NextResponse.json({ error: 'Admins only' }, { status: 403 });
 
