@@ -13,12 +13,10 @@ export async function GET(req: Request) {
 
     if (!galleryId) return NextResponse.json({ error: 'Missing galleryId' }, { status: 400 });
 
-  // Public viewing mode for non-admin viewers:
-  // MOMENTS_PUBLIC_MODE = 'all' | 'moderated'
-  //  - 'moderated': only approved (moderated = 1)
-  //  - 'all': show approved + unreviewed, but still hide rejected (moderated = 2)
-  const publicMode = (process.env.MOMENTS_PUBLIC_MODE || 'moderated').toLowerCase();
-    // Keep basic rate limiting. Admin detection is retained only for key scoping.
+    // Photos are visible by default. Moderation only hides inappropriate content.
+    // moderated = 0 (default/unreviewed) → visible
+    // moderated = 1 (approved) → visible
+    // moderated = 2 (rejected/hidden) → hidden from public
     const user = getUserFromRequest(req as any) || null;
     const isAdmin = isAdminUser(user);
     const rlKey = isAdmin ? `moments:list:admin:${user!.userId}` : `moments:list:${galleryId}:public`;
@@ -29,11 +27,8 @@ export async function GET(req: Request) {
     if (isAdmin) {
       // Admins see everything (including hidden) for moderation purposes
       where = 'WHERE gallery_id = ?';
-    } else if (publicMode === 'moderated') {
-      // Public strict moderated view: only approved
-      where = 'WHERE gallery_id = ? AND moderated = 1';
     } else {
-      // Public 'all' view: approved + unreviewed, hide rejected
+      // Public view: show all photos except rejected/hidden ones (moderated = 2)
       where = 'WHERE gallery_id = ? AND (moderated != 2 OR moderated IS NULL)';
     }
     const rows = await queryDatabase(

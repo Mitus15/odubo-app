@@ -6,6 +6,27 @@ import { writeAuditLog } from '@/lib/audit';
 
 export async function GET(req: Request) {
   try {
+    const url = new URL(req.url);
+    const code = url.searchParams.get('code');
+    
+    // Public endpoint when querying by code (for attendees to validate event code)
+    if (code) {
+      const rl = await rateLimit({ key: `galleries:bycode:${code}`, limit: 30, windowMs: 60_000 });
+      if (!rl.allowed) return NextResponse.json({ error: 'Rate limited' }, { status: 429 });
+      
+      const rows = await queryDatabase(
+        'SELECT id, code, title, description, starts_at, ends_at, created_at FROM galleries WHERE code = ? LIMIT 1',
+        [code.trim().toUpperCase()]
+      );
+      
+      if (rows.length === 0) {
+        return NextResponse.json({ error: 'Invalid event code' }, { status: 404 });
+      }
+      
+      return NextResponse.json({ galleries: rows });
+    }
+    
+    // Admin-only endpoint for listing all galleries
     const user = getUserFromRequest(req as any);
     console.log('[galleries/GET] Auth check:', { 
       hasUser: !!user, 
@@ -19,7 +40,6 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'Admins only' }, { status: 403 });
     }
 
-    const url = new URL(req.url);
     const limit = Math.min(100, Math.max(1, Number(url.searchParams.get('limit') || '20')));
     const offset = Math.max(0, Number(url.searchParams.get('offset') || '0'));
 

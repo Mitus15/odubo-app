@@ -1,13 +1,18 @@
 "use client";
 import { useEffect, useRef, useState, use } from 'react';
 
-export default function CapturePage({ searchParams }: { searchParams?: Promise<{ galleryId?: string; code?: string; starts_at?: string; ends_at?: string; ig?: string }> }) {
+export default function CapturePage({ searchParams }: { searchParams?: Promise<{ code?: string; starts_at?: string; ends_at?: string; ig?: string }> }) {
   const params = searchParams ? use(searchParams) : {};
-  const galleryId = params?.galleryId;
-  const code = (params as any)?.code as string | undefined;
-  const igParam = (params as any)?.ig as string | undefined;
+  const code = params?.code;
+  const igParam = params?.ig as string | undefined;
   const startsAt = params?.starts_at ? new Date(params.starts_at) : null;
   const endsAt = params?.ends_at ? new Date(params.ends_at) : null;
+  
+  // Code entry state
+  const [codeInput, setCodeInput] = useState(code || '');
+  const [codeSubmitted, setCodeSubmitted] = useState(!!code);
+  const [validatingCode, setValidatingCode] = useState(false);
+  const [galleryInfo, setGalleryInfo] = useState<{ id: number; title: string; starts_at?: string; ends_at?: string } | null>(null);
   
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -84,6 +89,43 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
     if (/back|rear|world|environment/.test(l)) return 'back';
     if (/front|user|facetime|true\s*depth/.test(l)) return 'front';
     return 'unknown';
+  }
+
+  async function validateEventCode() {
+    if (!codeInput.trim()) {
+      setError('Please enter an event code');
+      return;
+    }
+    
+    setValidatingCode(true);
+    setError('');
+    
+    try {
+      // Query the backend to validate the code and get gallery info
+      const res = await fetch(`/api/moments/galleries?code=${encodeURIComponent(codeInput.trim())}`);
+      if (!res.ok) {
+        throw new Error('Invalid event code or event not found');
+      }
+      
+      const data = (await res.json()) as any;
+      if (!data.galleries || data.galleries.length === 0) {
+        throw new Error('Invalid event code');
+      }
+      
+      const gallery = data.galleries[0];
+      setGalleryInfo(gallery);
+      setCodeSubmitted(true);
+      
+      // Update URL to include the code (optional, for shareable links)
+      const newUrl = new URL(window.location.href);
+      newUrl.searchParams.set('code', codeInput.trim());
+      window.history.replaceState({}, '', newUrl.toString());
+      
+    } catch (e: any) {
+      setError(e.message || 'Failed to validate event code');
+    } finally {
+      setValidatingCode(false);
+    }
   }
 
   function isFrontActive(): boolean {
@@ -347,13 +389,16 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
   // Check if uploads are allowed now
   function canUploadNow() {
     const now = new Date();
-    if (startsAt && now < startsAt) return false;
-    if (endsAt && now > endsAt) return false;
+    const starts = galleryInfo?.starts_at ? new Date(galleryInfo.starts_at) : startsAt;
+    const ends = galleryInfo?.ends_at ? new Date(galleryInfo.ends_at) : endsAt;
+    if (starts && now < starts) return false;
+    if (ends && now > ends) return false;
     return true;
   }
 
   async function uploadMedia() {
-    if (!mediaBlob || (!galleryId && !code)) return setError('No media or gallery');
+    if (!mediaBlob || !code) return setError('No media or event code');
+    if (!galleryInfo) return setError('Please validate event code first');
     if (!canUploadNow()) return setError('This event is not accepting uploads at this time.');
 
     setError('');
@@ -364,7 +409,7 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
       const uRes = await fetch('/api/moments/upload-url', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ galleryId, code, fileName: filename }),
+        body: JSON.stringify({ code, fileName: filename }),
       });
       const uData = (await uRes.json()) as any;
       if (!uRes.ok) throw new Error(uData?.error || 'Failed to get upload url');
@@ -391,7 +436,7 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
       const rRes = await fetch('/api/moments/record', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ galleryId, code, r2_key: key, original_filename: filename, user_name: (userName || 'Anonymous'), media_type: mediaType }),
+        body: JSON.stringify({ code, r2_key: key, original_filename: filename, user_name: (userName || 'Anonymous'), media_type: mediaType }),
       });
       const rData = (await rRes.json()) as any;
       if (!rRes.ok) throw new Error(rData?.error || 'Failed to record');
@@ -422,6 +467,11 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
         setUserName('@' + norm);
         try { localStorage.setItem('instagramHandle', norm); } catch {}
       }
+      
+      // If code is provided in URL, validate it automatically
+      if (code && !codeSubmitted) {
+        validateEventCode();
+      }
     } catch {}
     return () => {
       if (stream) {
@@ -440,44 +490,85 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
     // Make this page independently scrollable within the App layout's main area
     <div className="h-full overflow-y-auto">
       <div className="p-6 max-w-2xl mx-auto pb-24">
-  <h1 className="text-2xl font-bold mb-1">Capture Moment</h1>
-  <div className="text-xs opacity-70 mb-3">Event code: {code || '—'}</div>
-      <div className="text-xs opacity-80 mb-2 flex items-center gap-2">
-        <span>Posting as</span>
-        <input
-          value={userName}
-          onChange={(e) => {
-            const raw = e.target.value || '';
-            const norm = raw.replace(/^@?/, '@');
-            setUserName(norm);
-            try { localStorage.setItem('instagramHandle', norm.replace(/^@/, '')); } catch {}
-          }}
-          placeholder="@yourhandle"
-          className="px-2 py-1 rounded bg-white/10 border border-white/20 text-xs"
-          style={{ width: 160 }}
-        />
-      </div>
-      <div className="text-sm text-[#b2a491] mb-3">Event window: {startsAt ? startsAt.toLocaleString() : 'N/A'} — {endsAt ? endsAt.toLocaleString() : 'N/A'}</div>
-      
-      {error && <div className="text-red-400 mb-3 p-3 bg-red-900/20 border border-red-600 rounded">{error}</div>}
-      {!canUploadNow() && <div className="mb-3 text-yellow-300">This event is not accepting uploads at this time.</div>}
-      
-      {!cameraStarted && (
-        <div className="mb-3 p-3 bg-blue-900/20 border border-blue-600 rounded">
-          <button 
-            onClick={() => startCamera()}
-            className="px-4 py-2 rounded bg-[#ede8df] text-[#171616] hover:bg-[#d6cfc0] transition-colors font-semibold"
-          >
-            📷 Start Camera
-          </button>
-          <div className="mt-2 text-xs opacity-70">Default: {facingMode === 'environment' ? 'Back' : 'Front'} camera</div>
-        </div>
-      )}
-      
-      {/* Camera Feed */}
-      <div className="bg-black rounded overflow-hidden mb-3">
-        <video
-          ref={videoRef}
+        <h1 className="text-2xl font-bold mb-1">Capture Moment</h1>
+        
+        {/* Code Entry Form - Show if no valid code submitted */}
+        {!codeSubmitted && (
+          <div className="mb-6 p-6 bg-[#2a2626] border border-[#3b3733] rounded-lg">
+            <h2 className="text-lg font-semibold mb-3">Enter Event Code</h2>
+            <p className="text-sm text-[#b2a491] mb-4">
+              You need an event code to access this gallery. Ask the event host for the code.
+            </p>
+            <div className="flex gap-3">
+              <input
+                type="text"
+                value={codeInput}
+                onChange={(e) => setCodeInput(e.target.value.trim().toUpperCase())}
+                onKeyDown={(e) => e.key === 'Enter' && validateEventCode()}
+                placeholder="Enter code (e.g., ABC123)"
+                className="flex-1 px-4 py-2 rounded bg-[#171616] border border-[#3b3733] text-[#ede8df] placeholder-[#666461]"
+                disabled={validatingCode}
+              />
+              <button
+                onClick={validateEventCode}
+                disabled={validatingCode || !codeInput.trim()}
+                className="px-6 py-2 rounded bg-[#ede8df] text-[#171616] hover:bg-[#d6cfc0] transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {validatingCode ? 'Validating...' : 'Submit'}
+              </button>
+            </div>
+          </div>
+        )}
+        
+        {/* Show gallery info and camera controls only after code is validated */}
+        {codeSubmitted && galleryInfo && (
+          <>
+            <div className="mb-4 p-4 bg-green-900/20 border border-green-600 rounded">
+              <div className="font-semibold text-green-400">✓ Event: {galleryInfo.title}</div>
+              <div className="text-xs opacity-70 mt-1">Code: {code}</div>
+            </div>
+            
+            <div className="text-xs opacity-80 mb-2 flex items-center gap-2">
+              <span>Posting as</span>
+              <input
+                value={userName}
+                onChange={(e) => {
+                  const raw = e.target.value || '';
+                  const norm = raw.replace(/^@?/, '@');
+                  setUserName(norm);
+                  try { localStorage.setItem('instagramHandle', norm.replace(/^@/, '')); } catch {}
+                }}
+                placeholder="@yourhandle"
+                className="px-2 py-1 rounded bg-white/10 border border-white/20 text-xs"
+                style={{ width: 160 }}
+              />
+            </div>
+            
+            {galleryInfo.starts_at && galleryInfo.ends_at && (
+              <div className="text-sm text-[#b2a491] mb-3">
+                Event window: {new Date(galleryInfo.starts_at).toLocaleString()} — {new Date(galleryInfo.ends_at).toLocaleString()}
+              </div>
+            )}
+            
+            {error && <div className="text-red-400 mb-3 p-3 bg-red-900/20 border border-red-600 rounded">{error}</div>}
+            {!canUploadNow() && <div className="mb-3 text-yellow-300">This event is not accepting uploads at this time.</div>}
+            
+            {!cameraStarted && (
+              <div className="mb-3 p-3 bg-blue-900/20 border border-blue-600 rounded">
+                <button 
+                  onClick={() => startCamera()}
+                  className="px-4 py-2 rounded bg-[#ede8df] text-[#171616] hover:bg-[#d6cfc0] transition-colors font-semibold"
+                >
+                  📷 Start Camera
+                </button>
+                <div className="mt-2 text-xs opacity-70">Default: {facingMode === 'environment' ? 'Back' : 'Front'} camera</div>
+              </div>
+            )}
+            
+            {/* Camera Feed */}
+            <div className="bg-black rounded overflow-hidden mb-3">
+              <video
+                ref={videoRef}
           autoPlay
           playsInline
           muted
@@ -558,6 +649,8 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
           )}
         </div>
       )}
+          </>
+        )}
       </div>
     </div>
   );
