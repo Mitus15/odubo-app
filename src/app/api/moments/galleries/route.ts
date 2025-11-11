@@ -1,13 +1,23 @@
 import { NextResponse } from 'next/server';
-import { verifyUserFromRequest, isAdminUser } from '@/lib/auth';
+import { getUserFromRequest, isAdminUser } from '@/lib/auth';
 import { queryDatabase } from '@/lib/db';
 import { rateLimit } from '@/lib/rateLimit';
 import { writeAuditLog } from '@/lib/audit';
 
 export async function GET(req: Request) {
   try {
-    const user = await verifyUserFromRequest(req as any);
-    if (!isAdminUser(user)) return NextResponse.json({ error: 'Admins only' }, { status: 403 });
+    const user = getUserFromRequest(req as any);
+    console.log('[galleries/GET] Auth check:', { 
+      hasUser: !!user, 
+      isAdmin: isAdminUser(user),
+      userId: user?.userId,
+      email: user?.email 
+    });
+    
+    if (!isAdminUser(user)) {
+      console.error('[galleries] Admin check failed - returning 403');
+      return NextResponse.json({ error: 'Admins only' }, { status: 403 });
+    }
 
     const url = new URL(req.url);
     const limit = Math.min(100, Math.max(1, Number(url.searchParams.get('limit') || '20')));
@@ -21,6 +31,7 @@ export async function GET(req: Request) {
       [limit, offset]
     );
 
+    console.log('[galleries/GET] Success - returning', rows.length, 'galleries');
     await writeAuditLog(req, user, 'galleries.list', `count=${rows.length}`, { limit, offset });
     return NextResponse.json({ galleries: rows });
   } catch (e: any) {
