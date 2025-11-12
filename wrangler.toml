@@ -5,6 +5,13 @@ compatibility_flags = ["nodejs_compat"]
 # Pages configuration (serve assets from static so _worker.js and index.html are at root)
 pages_build_output_dir = ".vercel/output/static"
 
+# D1 Database configuration for migrations
+[[d1_databases]]
+binding = "DB"
+database_name = "odubo"
+database_id = "c63953e2-82b5-407f-b10d-831fc7e5e85e"
+migrations_dir = "./database/migrations"
+
 [env.production]
 [env.production.vars]
 NODE_ENV = "production"
