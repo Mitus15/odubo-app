@@ -848,18 +848,32 @@ function CameraModal({ galleryId, ig, code, onClose }: { galleryId: string; ig: 
   }
 
   return (
-    <div className="fixed inset-0 z-[100] bg-gradient-to-b from-[#1a1511]/95 via-[#0f0d0c]/90 to-[#0b0a09]/90 supports-[backdrop-filter]:backdrop-blur overflow-y-auto">
-      <div className="min-h-[100dvh] pt-[env(safe-area-inset-top)] pb-[calc(96px+env(safe-area-inset-bottom))]">
-        {/* Header */}
-        <div ref={headerRef} className="sticky top-0 z-10 flex items-center justify-between px-4 py-3 bg-[#1a1511]/70 supports-[backdrop-filter]:backdrop-blur border-b border-[#3b3733]/70">
-          <div className="text-[#ede8df] font-semibold">Camera</div>
+    <div className="fixed inset-0 z-[100] bg-gradient-to-b from-[#1a1511]/95 via-[#0f0d0c]/90 to-[#0b0a09]/90 supports-[backdrop-filter]:backdrop-blur">
+      {/* Full height container with flexbox - no scrolling needed */}
+      <div className="h-full flex flex-col pt-16">
+        {/* Header - positioned below app navbar */}
+        <div ref={headerRef} className="flex-none flex items-center justify-between px-4 py-3 bg-[#1a1511]/70 supports-[backdrop-filter]:backdrop-blur border-b border-[#3b3733]/70">
+          <div className="flex items-center gap-3">
+            <span className="text-[#ede8df] font-semibold">Camera</span>
+            {galleryId && (
+              <>
+                <span className="text-[#666461]">•</span>
+                <Link 
+                  href={`/moments/gallery/${galleryId}`}
+                  className="text-sm text-[#ff8a3d] hover:text-[#ffb067] transition-colors"
+                >
+                  View Gallery
+                </Link>
+              </>
+            )}
+          </div>
           <button onClick={onClose} className="px-3 py-1.5 rounded-lg bg-white/5 supports-[backdrop-filter]:backdrop-blur border border-[#3b3733] text-[#ede8df] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">Close</button>
         </div>
 
-        {/* Preview area */}
-        <div className="w-full max-w-screen mx-auto px-4">
+        {/* Preview area - fills available space */}
+        <div className="flex-1 flex items-center justify-center px-4 py-4 overflow-hidden">
           <div
-            className="mx-auto rounded-2xl overflow-hidden border border-[#3b3733]/70 relative bg-[#0f0d0c] shadow-[0_10px_40px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.05)]"
+            className="rounded-2xl overflow-hidden border border-[#3b3733]/70 relative bg-[#0f0d0c] shadow-[0_10px_40px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.05)]"
             style={{ width: boxSize.width ? `${boxSize.width}px` : undefined, height: boxSize.height ? `${boxSize.height}px` : undefined }}
           >
             {!preview && (
@@ -889,11 +903,11 @@ function CameraModal({ galleryId, ig, code, onClose }: { galleryId: string; ig: 
               <img src={preview} alt="preview" className="h-full w-full object-contain bg-[#0f0d0c]" />
             )}
           </div>
-          {error && <div className="mt-3 text-center text-red-300 text-sm">{error}</div>}
+          {error && <div className="absolute bottom-2 left-0 right-0 text-center text-red-300 text-sm px-4">{error}</div>}
         </div>
 
-        {/* Bottom controls bar (always visible) */}
-        <div ref={controlsRef} className="fixed bottom-0 inset-x-0 z-20 px-3 pb-[calc(12px+env(safe-area-inset-bottom))] pt-2 bg-gradient-to-t from-[#140f0c]/90 to-[#0c0b0a]/50 supports-[backdrop-filter]:backdrop-blur border-t border-[#3b3733]/70">
+        {/* Bottom controls bar */}
+        <div ref={controlsRef} className="flex-none px-3 pb-[calc(12px+env(safe-area-inset-bottom))] pt-2 bg-gradient-to-t from-[#140f0c]/90 to-[#0c0b0a]/50 supports-[backdrop-filter]:backdrop-blur border-t border-[#3b3733]/70">
           <div className="mx-auto max-w-[min(95vw,900px)] flex flex-wrap items-center justify-center gap-2">
             <div className="inline-flex rounded-full overflow-hidden border border-[#3b3733]/80 bg-white/5">
               <button onClick={() => setAspect('9:16')} className={`px-3 py-1.5 text-sm ${aspect==='9:16'?'bg-[#ff8a3d]/30 text-[#ffeedd]':'text-[#e8ded2]'}`}>9:16</button>
