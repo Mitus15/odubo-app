@@ -107,12 +107,9 @@ export default function GalleryViewer({ params }: { params: { id: string } }) {
   function prev() { setIndex(i => (i - 1 + photos.length) % photos.length); }
   function next() { setIndex(i => (i + 1) % photos.length); }
 
-  // Swipe handling
+  // Swipe handling and keyboard navigation
   useEffect(() => {
     if (!viewerOpen) return;
-    
-    // Prevent body scroll when lightbox is open
-    document.body.style.overflow = 'hidden';
     
     let startX = 0; let dx = 0;
     function onTouchStart(e: TouchEvent) { startX = e.changedTouches[0].clientX; }
@@ -129,8 +126,6 @@ export default function GalleryViewer({ params }: { params: { id: string } }) {
     document.addEventListener('touchend', onTouchEnd, { passive: true });
     document.addEventListener('keydown', onKeyDown);
     return () => {
-      // Restore body scroll
-      document.body.style.overflow = '';
       document.removeEventListener('touchstart', onTouchStart as any);
       document.removeEventListener('touchend', onTouchEnd as any);
       document.removeEventListener('keydown', onKeyDown);
@@ -242,85 +237,91 @@ export default function GalleryViewer({ params }: { params: { id: string } }) {
         )}
       </main>
 
-      {/* Lightbox viewer */}
+      {/* Lightbox viewer - positioned below navbar */}
       {viewerOpen && photos[index] && (
-        <div className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-sm">
-          {/* Close button */}
-          <button 
-            className="absolute top-4 right-4 z-10 p-2 rounded-lg bg-white/10 border border-white/20 hover:bg-white/20 transition-colors"
-            onClick={() => setViewerOpen(false)}
-          >
-            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-
-          {/* Image/Video container */}
-          <div className="h-full w-full flex items-center justify-center px-4 py-20">
-            {photos[index].media_type === 'video' ? (
-              <video 
-                src={photos[index].r2_url} 
-                controls 
-                autoPlay
-                className="max-h-full max-w-full rounded-lg shadow-2xl"
-              />
-            ) : (
-              <img 
-                src={photos[index].r2_url} 
-                alt={photos[index].original_filename || 'photo'} 
-                className="max-h-full max-w-full object-contain rounded-lg shadow-2xl"
-              />
-            )}
-          </div>
-
-          {/* Photo info */}
-          <div className="absolute top-4 left-4 bg-black/60 backdrop-blur-sm rounded-lg px-4 py-2 border border-white/10">
-            <p className="text-white font-medium">{photos[index].user_name || 'Anonymous'}</p>
-            <p className="text-white/70 text-sm">{new Date(photos[index].created_at).toLocaleString()}</p>
-          </div>
-
-          {/* Navigation controls */}
-          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-3">
-            <button 
-              onClick={prev} 
-              className="p-3 rounded-lg bg-white/10 border border-white/20 hover:bg-white/20 transition-colors disabled:opacity-50"
-              disabled={photos.length <= 1}
-            >
-              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
-            
-            <span className="px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white text-sm font-medium">
-              {index + 1} / {photos.length}
-            </span>
-
-            {photos[index].media_type !== 'video' && (
-              <a 
-                href={photos[index].r2_url} 
-                download
-                className="p-3 rounded-lg bg-white/10 border border-white/20 hover:bg-white/20 transition-colors"
+        <div className="fixed inset-x-0 top-0 bottom-0 z-30 bg-black">
+          {/* Main content area - starts below navbar (h-16) */}
+          <div className="pt-16 h-full flex flex-col">
+            {/* Top bar with info and close */}
+            <div className="flex-none bg-black/80 backdrop-blur-sm border-b border-white/10 px-4 py-3 flex items-center justify-between">
+              <div className="flex-1">
+                <p className="text-white font-medium text-sm">{photos[index].user_name || 'Anonymous'}</p>
+                <p className="text-white/60 text-xs">{new Date(photos[index].created_at).toLocaleString()}</p>
+              </div>
+              <button 
+                className="p-2 rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 transition-colors"
+                onClick={() => setViewerOpen(false)}
               >
                 <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
-              </a>
-            )}
-            
-            <button 
-              onClick={next} 
-              className="p-3 rounded-lg bg-white/10 border border-white/20 hover:bg-white/20 transition-colors disabled:opacity-50"
-              disabled={photos.length <= 1}
-            >
-              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-          </div>
+              </button>
+            </div>
 
-          {/* Keyboard hint */}
-          <div className="absolute bottom-6 right-6 text-white/40 text-xs hidden sm:block">
-            Use arrow keys to navigate
+            {/* Image/Video container - fills remaining space */}
+            <div className="flex-1 flex items-center justify-center px-4 py-4 overflow-hidden">
+              {photos[index].media_type === 'video' ? (
+                <video 
+                  src={photos[index].r2_url} 
+                  controls 
+                  autoPlay
+                  className="max-h-full max-w-full rounded-lg shadow-2xl"
+                />
+              ) : (
+                <img 
+                  src={photos[index].r2_url} 
+                  alt={photos[index].original_filename || 'photo'} 
+                  className="max-h-full max-w-full object-contain rounded-lg shadow-2xl"
+                />
+              )}
+            </div>
+
+            {/* Bottom controls */}
+            <div className="flex-none bg-black/80 backdrop-blur-sm border-t border-white/10 px-4 py-4">
+              <div className="flex items-center justify-center gap-3">
+                <button 
+                  onClick={prev} 
+                  className="p-3 rounded-lg bg-white/10 border border-white/20 hover:bg-white/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={photos.length <= 1}
+                >
+                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+                
+                <span className="px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white text-sm font-medium min-w-[100px] text-center">
+                  {index + 1} / {photos.length}
+                </span>
+
+                {photos[index].media_type !== 'video' && (
+                  <a 
+                    href={photos[index].r2_url} 
+                    download
+                    className="p-3 rounded-lg bg-white/10 border border-white/20 hover:bg-white/20 transition-colors"
+                    title="Download photo"
+                  >
+                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                  </a>
+                )}
+                
+                <button 
+                  onClick={next} 
+                  className="p-3 rounded-lg bg-white/10 border border-white/20 hover:bg-white/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={photos.length <= 1}
+                >
+                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </div>
+              
+              {/* Keyboard hint */}
+              <div className="text-center text-white/40 text-xs mt-3 hidden sm:block">
+                Use arrow keys to navigate • ESC to close
+              </div>
+            </div>
           </div>
         </div>
       )}
