@@ -110,6 +110,10 @@ export default function GalleryViewer({ params }: { params: { id: string } }) {
   // Swipe handling
   useEffect(() => {
     if (!viewerOpen) return;
+    
+    // Prevent body scroll when lightbox is open
+    document.body.style.overflow = 'hidden';
+    
     let startX = 0; let dx = 0;
     function onTouchStart(e: TouchEvent) { startX = e.changedTouches[0].clientX; }
     function onTouchEnd(e: TouchEvent) {
@@ -125,6 +129,8 @@ export default function GalleryViewer({ params }: { params: { id: string } }) {
     document.addEventListener('touchend', onTouchEnd, { passive: true });
     document.addEventListener('keydown', onKeyDown);
     return () => {
+      // Restore body scroll
+      document.body.style.overflow = '';
       document.removeEventListener('touchstart', onTouchStart as any);
       document.removeEventListener('touchend', onTouchEnd as any);
       document.removeEventListener('keydown', onKeyDown);
@@ -238,7 +244,7 @@ export default function GalleryViewer({ params }: { params: { id: string } }) {
 
       {/* Lightbox viewer */}
       {viewerOpen && photos[index] && (
-        <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-sm">
           {/* Close button */}
           <button 
             className="absolute top-4 right-4 z-10 p-2 rounded-lg bg-white/10 border border-white/20 hover:bg-white/20 transition-colors"

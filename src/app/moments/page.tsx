@@ -162,26 +162,138 @@ export default function MomentsPage() {
     </Suspense>
   );
 }
-function GalleryGrid({ galleries, loading, error }: { galleries: Array<{ id: number; title: string; created_at?: string; cover_url?: string | null; cover_thumb_url?: string | null }>; loading: boolean; error: string }) {
-  if (loading) return <div className="text-[13px] text-[#b2a491]">Loading galleries…</div>;
-  if (error) return <div className="text-[13px] text-red-300">{error}</div>;
-  if (!galleries?.length) return <div className="text-[13px] text-[#b2a491]">No galleries yet.</div>;
+
+function GalleryCard({ gallery }: { gallery: { id: number; title: string; created_at?: string; cover_url?: string | null; cover_thumb_url?: string | null } }) {
+  const [recentPhotos, setRecentPhotos] = useState<Array<{id: number; thumbnail_url?: string; r2_url: string}>>([]);
+  const [photoCount, setPhotoCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    async function fetchPreview() {
+      try {
+        const res = await fetch(`/api/moments/list?galleryId=${gallery.id}&limit=4`);
+        const data: any = await res.json().catch(() => ({}));
+        if (!active) return;
+        if (res.ok && Array.isArray(data.photos)) {
+          setRecentPhotos(data.photos.slice(0, 4));
+          setPhotoCount(data.photos.length);
+        }
+      } catch (e) {
+        console.error('Failed to load gallery preview:', e);
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+    fetchPreview();
+    return () => { active = false; };
+  }, [gallery.id]);
+
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+    <Link 
+      href={`/moments/gallery/${gallery.id}`}
+      className="group block rounded-2xl overflow-hidden border border-[#3b3733] bg-gradient-to-br from-[#1f1e1d] to-[#171616] hover:border-[#ede8df]/40 transition-all duration-300 hover:shadow-xl hover:shadow-[#ff8a3d]/10"
+    >
+      {/* Photo Grid Preview */}
+      <div className="aspect-square bg-[#0a0908] overflow-hidden relative">
+        {loading ? (
+          <div className="absolute inset-0 bg-gradient-to-br from-[#2a2626] to-[#1f1e1d] animate-pulse" />
+        ) : recentPhotos.length > 0 ? (
+          <div className="grid grid-cols-2 gap-0.5 h-full">
+            {recentPhotos.slice(0, 4).map((photo, idx) => (
+              <div key={photo.id} className="relative overflow-hidden bg-[#0a0908]">
+                <img 
+                  src={photo.thumbnail_url || photo.r2_url} 
+                  alt=""
+                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                  style={{ transitionDelay: `${idx * 50}ms` }}
+                />
+              </div>
+            ))}
+            {/* Fill empty slots if less than 4 photos */}
+            {[...Array(Math.max(0, 4 - recentPhotos.length))].map((_, idx) => (
+              <div key={`empty-${idx}`} className="bg-gradient-to-br from-[#2a2626] to-[#1f1e1d]" />
+            ))}
+          </div>
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-br from-[#502d26] to-[#6b4c3b] flex items-center justify-center">
+            <svg className="w-12 h-12 text-white/20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          </div>
+        )}
+        
+        {/* Photo count badge */}
+        {photoCount > 0 && (
+          <div className="absolute top-2 right-2 px-2.5 py-1 rounded-lg bg-black/70 backdrop-blur-sm border border-white/10 text-white text-xs font-medium">
+            {photoCount} {photoCount === 1 ? 'photo' : 'photos'}
+          </div>
+        )}
+      </div>
+
+      {/* Gallery Info */}
+      <div className="p-4">
+        <h3 className="text-base font-bold text-[#ede8df] line-clamp-2 mb-1 group-hover:text-[#ff8a3d] transition-colors">
+          {gallery.title}
+        </h3>
+        <div className="flex items-center gap-2 text-xs text-[#8f8271]">
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          {gallery.created_at ? new Date(gallery.created_at).toLocaleDateString('en-US', { 
+            month: 'short', 
+            day: 'numeric', 
+            year: 'numeric' 
+          }) : 'Date unknown'}
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+function GalleryGrid({ galleries, loading, error }: { galleries: Array<{ id: number; title: string; created_at?: string; cover_url?: string | null; cover_thumb_url?: string | null }>; loading: boolean; error: string }) {
+  if (loading) {
+    return (
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        {[...Array(8)].map((_, i) => (
+          <div key={i} className="animate-pulse rounded-2xl overflow-hidden bg-[#1f1e1d] border border-[#3b3733]">
+            <div className="aspect-square bg-gradient-to-br from-[#2a2626] to-[#1f1e1d]" />
+            <div className="p-4 space-y-2">
+              <div className="h-4 bg-[#3b3733] rounded w-3/4" />
+              <div className="h-3 bg-[#3b3733] rounded w-1/2" />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  
+  if (error) {
+    return (
+      <div className="p-6 rounded-2xl border border-red-600/50 bg-red-900/20 text-red-300 text-sm">
+        {error}
+      </div>
+    );
+  }
+  
+  if (!galleries?.length) {
+    return (
+      <div className="text-center py-20">
+        <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-[#1f1e1d] border border-[#3b3733] flex items-center justify-center">
+          <svg className="w-8 h-8 text-[#666461]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+          </svg>
+        </div>
+        <p className="text-lg font-medium text-[#b2a491]">No galleries yet</p>
+        <p className="text-sm text-[#8f8271] mt-1">Create your first event to get started</p>
+      </div>
+    );
+  }
+  
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
       {galleries.map((g) => (
-        <Link key={g.id} href={`/moments/gallery/${g.id}`} className="group block rounded-xl overflow-hidden border border-[#3b3733] bg-[#1f1e1d] hover:border-white/30">
-          <div className="aspect-[4/3] bg-[#2a2626] overflow-hidden">
-            {g.cover_thumb_url || g.cover_url ? (
-              <img src={(g.cover_thumb_url || g.cover_url)!} alt={g.title} className="w-full h-full object-cover group-hover:scale-[1.02] transition" />
-            ) : (
-              <div className="w-full h-full bg-gradient-to-br from-[#502d26] to-[#6b4c3b]" />
-            )}
-          </div>
-          <div className="p-3">
-            <div className="text-sm font-semibold text-[#ede8df] line-clamp-2">{g.title}</div>
-            <div className="text-[11px] text-[#b2a491]">ID: {g.id}{g.created_at ? ` • ${new Date(g.created_at).toLocaleDateString()}` : ''}</div>
-          </div>
-        </Link>
+        <GalleryCard key={g.id} gallery={g} />
       ))}
     </div>
   );
