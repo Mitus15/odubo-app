@@ -73,7 +73,7 @@ export default function GalleryViewer({ params }: { params: { id: string } }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canFetch]);
 
-  // Auto-refresh while tab is visible
+  // Auto-refresh while tab is visible - reduced from 12s to 30s for better performance
   useEffect(() => {
     if (!canFetch) return;
     let timer: any;
@@ -82,12 +82,12 @@ export default function GalleryViewer({ params }: { params: { id: string } }) {
       if (document.hidden) return;
       fetchPhotos();
     }
-    // staggered interval ~12s
+    // Increased interval from 12s to 30s to reduce server load
     function start() {
       clearInterval(timer);
       timer = setInterval(() => {
         if (!document.hidden) fetchPhotos();
-      }, 12000);
+      }, 30000); // Changed from 12000 to 30000
     }
     start();
     document.addEventListener('visibilitychange', onVisibility);
@@ -220,6 +220,8 @@ export default function GalleryViewer({ params }: { params: { id: string } }) {
                     alt={p.original_filename || 'photo'} 
                     className="w-full h-auto group-hover:scale-[1.02] transition-transform duration-300"
                     loading="lazy"
+                    decoding="async"
+                    fetchPriority={i < 4 ? "high" : "low"}
                     onLoad={() => setLoadedImages(prev => new Set(prev).add(p.id))}
                   />
                 )}

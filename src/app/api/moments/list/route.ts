@@ -44,7 +44,14 @@ export async function GET(req: Request) {
       r2_url: publicBase ? `${publicBase}/${r.r2_key}` : null,
       thumbnail_url: r.thumbnail_key ? (publicBase ? `${publicBase}/${r.thumbnail_key}` : null) : null,
     }));
-    return NextResponse.json({ photos });
+    
+    // Cache for 30 seconds for public, 10 seconds for admin (fresher for moderation)
+    const cacheTime = isAdmin ? 10 : 30;
+    return NextResponse.json({ photos }, {
+      headers: {
+        'Cache-Control': `public, s-maxage=${cacheTime}, stale-while-revalidate=15`,
+      },
+    });
   } catch (e: any) {
     console.error('List gallery photos error:', e);
     return NextResponse.json({ error: e.message || 'Failed' }, { status: 500 });

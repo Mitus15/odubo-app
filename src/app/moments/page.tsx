@@ -43,7 +43,7 @@ function MomentsIndex() {
   const prefillIg = params?.get('ig') ?? '';
   const prefillCode = params?.get('code') ?? '';
   const wantOpen = params?.get('open') === '1';
-  const [galleries, setGalleries] = useState<Array<{ id: number; title: string; created_at?: string; cover_url?: string | null; cover_thumb_url?: string | null }>>([]);
+  const [galleries, setGalleries] = useState<Array<{ id: number; title: string; created_at?: string; cover_url?: string | null; cover_thumb_url?: string | null; photo_count?: number; preview_photos?: Array<{id: number; thumbnail_url?: string; r2_url: string}> }>>([]);
   const [galleryLoading, setGalleryLoading] = useState(false);
   const [galleryError, setGalleryError] = useState('');
   const [galleryId, setGalleryId] = useState<string>(prefillGalleryId);
@@ -59,13 +59,12 @@ function MomentsIndex() {
       try {
         setGalleryLoading(true);
         setGalleryError('');
-        const res = await fetch('/api/moments/galleries/public?limit=12');
+        // Request with preview=true to get photo counts and preview photos in single request
+        const res = await fetch('/api/moments/galleries/public?limit=12&preview=true');
         const data: any = await res.json().catch(() => ({}));
         if (!active) return;
         if (res.ok && Array.isArray(data.galleries)) {
-          setGalleries(
-            data.galleries.map((g: any) => ({ id: g.id, title: g.title, created_at: g.created_at, cover_url: g.cover_url, cover_thumb_url: g.cover_thumb_url }))
-          );
+          setGalleries(data.galleries);
         } else if (!res.ok) {
           setGalleryError(data?.error || 'Failed to load galleries');
         }
@@ -163,31 +162,10 @@ export default function MomentsPage() {
   );
 }
 
-function GalleryCard({ gallery }: { gallery: { id: number; title: string; created_at?: string; cover_url?: string | null; cover_thumb_url?: string | null } }) {
-  const [recentPhotos, setRecentPhotos] = useState<Array<{id: number; thumbnail_url?: string; r2_url: string}>>([]);
-  const [photoCount, setPhotoCount] = useState(0);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let active = true;
-    async function fetchPreview() {
-      try {
-        const res = await fetch(`/api/moments/list?galleryId=${gallery.id}&limit=4`);
-        const data: any = await res.json().catch(() => ({}));
-        if (!active) return;
-        if (res.ok && Array.isArray(data.photos)) {
-          setRecentPhotos(data.photos.slice(0, 4));
-          setPhotoCount(data.photos.length);
-        }
-      } catch (e) {
-        console.error('Failed to load gallery preview:', e);
-      } finally {
-        if (active) setLoading(false);
-      }
-    }
-    fetchPreview();
-    return () => { active = false; };
-  }, [gallery.id]);
+function GalleryCard({ gallery }: { gallery: { id: number; title: string; created_at?: string; cover_url?: string | null; cover_thumb_url?: string | null; photo_count?: number; preview_photos?: Array<{id: number; thumbnail_url?: string; r2_url: string}> } }) {
+  // Use data from API instead of separate fetch - massive performance win!
+  const photoCount = gallery.photo_count || 0;
+  const recentPhotos = gallery.preview_photos || [];
 
   return (
     <Link 
@@ -196,15 +174,14 @@ function GalleryCard({ gallery }: { gallery: { id: number; title: string; create
     >
       {/* Photo Grid Preview */}
       <div className="aspect-square bg-[#0a0908] overflow-hidden relative">
-        {loading ? (
-          <div className="absolute inset-0 bg-gradient-to-br from-[#2a2626] to-[#1f1e1d] animate-pulse" />
-        ) : recentPhotos.length > 0 ? (
+        {recentPhotos.length > 0 ? (
           <div className="grid grid-cols-2 gap-0.5 h-full">
             {recentPhotos.slice(0, 4).map((photo, idx) => (
               <div key={photo.id} className="relative overflow-hidden bg-[#0a0908]">
                 <img 
                   src={photo.thumbnail_url || photo.r2_url} 
                   alt=""
+                  loading="lazy"
                   className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                   style={{ transitionDelay: `${idx * 50}ms` }}
                 />
@@ -251,7 +228,7 @@ function GalleryCard({ gallery }: { gallery: { id: number; title: string; create
   );
 }
 
-function GalleryGrid({ galleries, loading, error }: { galleries: Array<{ id: number; title: string; created_at?: string; cover_url?: string | null; cover_thumb_url?: string | null }>; loading: boolean; error: string }) {
+function GalleryGrid({ galleries, loading, error }: { galleries: Array<{ id: number; title: string; created_at?: string; cover_url?: string | null; cover_thumb_url?: string | null; photo_count?: number; preview_photos?: Array<{id: number; thumbnail_url?: string; r2_url: string}> }>; loading: boolean; error: string }) {
   if (loading) {
     return (
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
