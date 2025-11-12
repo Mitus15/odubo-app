@@ -157,83 +157,85 @@ function MomentsIndex() {
         </div>
       </main>
 
-      {/* Terms and Conditions Modal */}
+      {/* Terms and Conditions Modal - positioned below navbar */}
       {showTermsModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-gradient-to-br from-[#1f1e1d] to-[#171616] border border-[#3b3733] rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden">
-            {/* Header */}
-            <div className="bg-gradient-to-r from-[#ff8a3d] to-[#d97028] px-6 py-4">
-              <h2 className="text-xl font-bold text-white">Terms & Conditions</h2>
-              <p className="text-white/90 text-sm mt-1">Please read before uploading</p>
-            </div>
+        <div className="fixed inset-x-0 top-0 bottom-0 z-30 bg-black/80 backdrop-blur-sm">
+          <div className="pt-16 h-full flex items-center justify-center p-4">
+            <div className="bg-gradient-to-br from-[#1f1e1d] to-[#171616] border border-[#3b3733] rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden">
+              {/* Header */}
+              <div className="bg-gradient-to-r from-[#ff8a3d] to-[#d97028] px-6 py-4">
+                <h2 className="text-xl font-bold text-white">Terms & Conditions</h2>
+                <p className="text-white/90 text-sm mt-1">Please read before uploading</p>
+              </div>
 
-            {/* Content */}
-            <div className="px-6 py-6 max-h-[60vh] overflow-y-auto">
-              <div className="space-y-4 text-[#ede8df]">
-                <p className="text-sm leading-relaxed">
-                  By uploading photos or videos to Moments, you acknowledge and agree to the following:
-                </p>
-
-                <div className="space-y-3 text-sm">
-                  <div className="flex gap-3">
-                    <div className="flex-shrink-0 w-6 h-6 rounded-full bg-[#ff8a3d]/20 flex items-center justify-center text-[#ff8a3d] text-xs font-bold mt-0.5">
-                      1
-                    </div>
-                    <p className="leading-relaxed">
-                      <span className="font-semibold text-[#ff8a3d]">Content License:</span> You grant Odubo Studio and event organizers a perpetual, worldwide, royalty-free license to use, reproduce, distribute, display, and publish your uploaded content for any lawful purpose.
-                    </p>
-                  </div>
-
-                  <div className="flex gap-3">
-                    <div className="flex-shrink-0 w-6 h-6 rounded-full bg-[#ff8a3d]/20 flex items-center justify-center text-[#ff8a3d] text-xs font-bold mt-0.5">
-                      2
-                    </div>
-                    <p className="leading-relaxed">
-                      <span className="font-semibold text-[#ff8a3d]">Public Display:</span> Your content may be publicly displayed in event galleries, shared on social media, used in marketing materials, or published by any party associated with the event.
-                    </p>
-                  </div>
-
-                  <div className="flex gap-3">
-                    <div className="flex-shrink-0 w-6 h-6 rounded-full bg-[#ff8a3d]/20 flex items-center justify-center text-[#ff8a3d] text-xs font-bold mt-0.5">
-                      3
-                    </div>
-                    <p className="leading-relaxed">
-                      <span className="font-semibold text-[#ff8a3d]">Rights & Ownership:</span> You confirm that you own all rights to the content or have obtained necessary permissions, and that your content does not violate any third-party rights.
-                    </p>
-                  </div>
-
-                  <div className="flex gap-3">
-                    <div className="flex-shrink-0 w-6 h-6 rounded-full bg-[#ff8a3d]/20 flex items-center justify-center text-[#ff8a3d] text-xs font-bold mt-0.5">
-                      4
-                    </div>
-                    <p className="leading-relaxed">
-                      <span className="font-semibold text-[#ff8a3d]">Content Standards:</span> You agree not to upload content that is illegal, offensive, defamatory, or violates any applicable laws or regulations.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="pt-3 border-t border-[#3b3733]">
-                  <p className="text-xs text-[#b2a491] leading-relaxed">
-                    By clicking "I Agree," you acknowledge that you have read, understood, and agree to be bound by these terms. If you do not agree, please click "Decline."
+              {/* Content */}
+              <div className="px-6 py-6 max-h-[50vh] overflow-y-auto">
+                <div className="space-y-4 text-[#ede8df]">
+                  <p className="text-sm leading-relaxed">
+                    By uploading photos or videos to Moments, you acknowledge and agree to the following:
                   </p>
+
+                  <div className="space-y-3 text-sm">
+                    <div className="flex gap-3">
+                      <div className="flex-shrink-0 w-6 h-6 rounded-full bg-[#ff8a3d]/20 flex items-center justify-center text-[#ff8a3d] text-xs font-bold mt-0.5">
+                        1
+                      </div>
+                      <p className="leading-relaxed">
+                        <span className="font-semibold text-[#ff8a3d]">Content License:</span> You grant Odubo Studio and event organizers a perpetual, worldwide, royalty-free license to use, reproduce, distribute, display, and publish your uploaded content for any lawful purpose.
+                      </p>
+                    </div>
+
+                    <div className="flex gap-3">
+                      <div className="flex-shrink-0 w-6 h-6 rounded-full bg-[#ff8a3d]/20 flex items-center justify-center text-[#ff8a3d] text-xs font-bold mt-0.5">
+                        2
+                      </div>
+                      <p className="leading-relaxed">
+                        <span className="font-semibold text-[#ff8a3d]">Public Display:</span> Your content may be publicly displayed in event galleries, shared on social media, used in marketing materials, or published by any party associated with the event.
+                      </p>
+                    </div>
+
+                    <div className="flex gap-3">
+                      <div className="flex-shrink-0 w-6 h-6 rounded-full bg-[#ff8a3d]/20 flex items-center justify-center text-[#ff8a3d] text-xs font-bold mt-0.5">
+                        3
+                      </div>
+                      <p className="leading-relaxed">
+                        <span className="font-semibold text-[#ff8a3d]">Rights & Ownership:</span> You confirm that you own all rights to the content or have obtained necessary permissions, and that your content does not violate any third-party rights.
+                      </p>
+                    </div>
+
+                    <div className="flex gap-3">
+                      <div className="flex-shrink-0 w-6 h-6 rounded-full bg-[#ff8a3d]/20 flex items-center justify-center text-[#ff8a3d] text-xs font-bold mt-0.5">
+                        4
+                      </div>
+                      <p className="leading-relaxed">
+                        <span className="font-semibold text-[#ff8a3d]">Content Standards:</span> You agree not to upload content that is illegal, offensive, defamatory, or violates any applicable laws or regulations.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="pt-3 border-t border-[#3b3733]">
+                    <p className="text-xs text-[#b2a491] leading-relaxed">
+                      By clicking "I Agree," you acknowledge that you have read, understood, and agree to be bound by these terms. If you do not agree, please click "Decline."
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Actions */}
-            <div className="px-6 py-4 bg-[#0a0908] border-t border-[#3b3733] flex gap-3">
-              <button
-                onClick={handleDeclineTerms}
-                className="flex-1 px-4 py-3 rounded-xl border border-[#3b3733] text-[#b2a491] font-medium hover:border-[#ede8df]/30 hover:text-[#ede8df] transition-all"
-              >
-                Decline
-              </button>
-              <button
-                onClick={handleAcceptTerms}
-                className="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-[#ff8a3d] to-[#d97028] text-white font-semibold hover:shadow-lg hover:shadow-[#ff8a3d]/30 transition-all"
-              >
-                I Agree
-              </button>
+              {/* Actions */}
+              <div className="px-6 py-4 bg-[#0a0908] border-t border-[#3b3733] flex gap-3">
+                <button
+                  onClick={handleDeclineTerms}
+                  className="flex-1 px-4 py-3 rounded-xl border border-[#3b3733] text-[#b2a491] font-medium hover:border-[#ede8df]/30 hover:text-[#ede8df] transition-all"
+                >
+                  Decline
+                </button>
+                <button
+                  onClick={handleAcceptTerms}
+                  className="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-[#ff8a3d] to-[#d97028] text-white font-semibold hover:shadow-lg hover:shadow-[#ff8a3d]/30 transition-all"
+                >
+                  I Agree
+                </button>
+              </div>
             </div>
           </div>
         </div>
