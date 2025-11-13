@@ -188,11 +188,11 @@ export default function GalleryViewer({ params }: { params: { id: string } }) {
         )}
 
         {photos.length > 0 && (
-          <div className="columns-2 sm:columns-3 md:columns-4 lg:columns-5 gap-3 sm:gap-4 space-y-3 sm:space-y-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
             {photos.map((p: any, i: number) => (
               <figure 
                 key={p.id} 
-                className="break-inside-avoid group cursor-pointer relative overflow-hidden rounded-xl bg-[#1f1e1d] border border-[#3b3733] hover:border-[#ede8df]/40 transition-all duration-300 hover:shadow-xl hover:shadow-[#ff8a3d]/5"
+                className="group cursor-pointer relative overflow-hidden rounded-xl bg-[#1f1e1d] border border-[#3b3733] hover:border-[#ede8df]/40 transition-all duration-300 hover:shadow-xl hover:shadow-[#ff8a3d]/5"
                 onClick={() => openAt(i)}
                 style={{
                   animation: loadedImages.has(p.id) ? 'fadeInUp 0.4s ease-out' : 'none',
@@ -200,7 +200,7 @@ export default function GalleryViewer({ params }: { params: { id: string } }) {
                 }}
               >
                 {p.media_type === 'video' ? (
-                  <div className="relative aspect-video bg-black">
+                  <div className="relative aspect-square bg-black">
                     <video 
                       src={p.thumbnail_url || p.r2_url} 
                       className="w-full h-full object-cover"
@@ -215,15 +215,17 @@ export default function GalleryViewer({ params }: { params: { id: string } }) {
                     </div>
                   </div>
                 ) : (
-                  <img 
-                    src={p.thumbnail_url || p.r2_url} 
-                    alt={p.original_filename || 'photo'} 
-                    className="w-full h-auto group-hover:scale-[1.02] transition-transform duration-300"
-                    loading="lazy"
-                    decoding="async"
-                    fetchPriority={i < 4 ? "high" : "low"}
-                    onLoad={() => setLoadedImages(prev => new Set(prev).add(p.id))}
-                  />
+                  <div className="relative aspect-square bg-[#0a0908] overflow-hidden">
+                    <img 
+                      src={p.thumbnail_url || p.r2_url} 
+                      alt={p.original_filename || 'photo'} 
+                      className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300"
+                      loading="lazy"
+                      decoding="async"
+                      fetchPriority={i < 4 ? "high" : "low"}
+                      onLoad={() => setLoadedImages(prev => new Set(prev).add(p.id))}
+                    />
+                  </div>
                 )}
                 
                 {/* Overlay info */}

@@ -576,21 +576,27 @@ function CapturePanel({ onOpenCamera, galleryId, setGalleryId, ig, setIg }: { on
   );
 }
 
+type UploadQueueItem = {
+  id: string;
+  preview: string;
+  blob: Blob;
+  status: 'queued' | 'uploading' | 'success' | 'error';
+  error?: string;
+};
+
 function CameraModal({ galleryId, ig, code, onClose }: { galleryId: string; ig: string; code?: string; onClose: () => void }) {
   const [aspect, setAspect] = useState<'9:16' | '3:4'>('9:16');
   const [facing, setFacing] = useState<'environment' | 'user'>('environment');
   const [videoRef, setVideoRef] = useState<HTMLVideoElement | null>(null);
   const [canvasRef, setCanvasRef] = useState<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const [blob, setBlob] = useState<Blob | null>(null);
-  const [preview, setPreview] = useState<string>('');
-  const [uploading, setUploading] = useState(false);
-  const [uploaded, setUploaded] = useState(false);
   const [error, setError] = useState('');
   const headerRef = useRef<HTMLDivElement | null>(null);
   const controlsRef = useRef<HTMLDivElement | null>(null);
   const [boxSize, setBoxSize] = useState<{width: number; height: number}>({ width: 0, height: 0 });
   const [isStarting, setIsStarting] = useState(false);
+  const [uploadQueue, setUploadQueue] = useState<UploadQueueItem[]>([]);
+  const uploadingCountRef = useRef<number>(0);
 
   const aspectRatio = useMemo(() => (aspect === '9:16' ? 9/16 : 3/4), [aspect]);
 
@@ -738,15 +744,18 @@ function CameraModal({ galleryId, ig, code, onClose }: { galleryId: string; ig: 
   function takePhoto() {
     const dataUrl = cropAndDrawToCanvas();
     if (!dataUrl) return;
-    setPreview(dataUrl);
     const b = dataURLToBlob(dataUrl);
-    setBlob(b);
-  }
-
-  function resetPhoto() {
-    setPreview('');
-    setBlob(null);
-    setUploaded(false);
+    
+    // Add to queue and start upload immediately
+    const queueItem: UploadQueueItem = {
+      id: `${Date.now()}_${Math.random()}`,
+      preview: dataUrl,
+      blob: b,
+      status: 'queued'
+    };
+    
+    setUploadQueue(prev => [...prev, queueItem]);
+    // Camera stays live, user can continue capturing
   }
 
   function dataURLToBlob(dataURL: string) {
@@ -764,7 +773,7 @@ function CameraModal({ galleryId, ig, code, onClose }: { galleryId: string; ig: 
     return fetch(input, { ...init, signal: ctrl.signal }).finally(() => clearTimeout(id));
   }
 
-  async function tryDirectUpload(filename: string) {
+  async function tryDirectUpload(filename: string, blob: Blob) {
     // Get presigned URL
     const u = await timeoutFetch('/api/moments/upload-url', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -773,13 +782,13 @@ function CameraModal({ galleryId, ig, code, onClose }: { galleryId: string; ig: 
     const uj: any = await u.json();
     if (!u.ok) throw new Error(uj?.error || 'Upload URL failed');
     // PUT to R2
-    await timeoutFetch(uj.uploadUrl, { method: 'PUT', headers: { 'Content-Type': 'image/jpeg' }, body: blob as Blob }, 20000);
+    await timeoutFetch(uj.uploadUrl, { method: 'PUT', headers: { 'Content-Type': 'image/jpeg' }, body: blob }, 20000);
     return uj.key as string;
   }
 
-  async function tryProxyUpload(filename: string) {
+  async function tryProxyUpload(filename: string, blob: Blob) {
     const fd = new FormData();
-    fd.append('file', blob as Blob, filename);
+    fd.append('file', blob, filename);
     fd.append('galleryId', galleryId);
     if (code) fd.append('code', code);
     fd.append('mediaType', 'photo');
@@ -790,84 +799,156 @@ function CameraModal({ galleryId, ig, code, onClose }: { galleryId: string; ig: 
     return pj.key as string;
   }
 
-  async function upload() {
-    if (!blob || !galleryId) { setError('Missing photo or Event ID'); return; }
-    // Client-side soft rate limit: 3 uploads per 2 minutes per gallery
-    const limitWindowMs = 120000; const maxCount = 3;
-    try {
-      const key = `moments:rate:${galleryId}`;
-      const now = Date.now();
-      const arr = JSON.parse(localStorage.getItem(key) || '[]').filter((t: number) => now - t < limitWindowMs);
-      if (arr.length >= maxCount) {
-        const waitMs = limitWindowMs - (now - arr[0]);
-        setError(`Rate limit: try again in ${Math.ceil(waitMs/1000)}s`);
-        return;
-      }
-    } catch {}
-    setUploading(true); setError('');
-    try {
-      const filename = `photo_${Date.now()}.jpg`;
-      let key: string | null = null;
-      const online = typeof navigator !== 'undefined' ? navigator.onLine : true;
-      // Try direct first (2 attempts), then proxy (2 attempts)
-      const attempts: Array<() => Promise<string>> = [
-        () => tryDirectUpload(filename),
-        () => tryDirectUpload(filename),
-        () => tryProxyUpload(filename),
-        () => tryProxyUpload(filename)
-      ];
-      if (!online) {
-        // Prefer proxy first if offline status is reported (may still fail if no connectivity)
-        attempts.unshift(() => tryProxyUpload(filename));
-      }
-      let lastErr: any = null;
-      for (const fn of attempts) {
-        try { key = await fn(); break; } catch (e) { lastErr = e; continue; }
-      }
-      if (!key) throw lastErr || new Error('Upload failed');
-
-      const r = await timeoutFetch('/api/moments/record', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ galleryId, r2_key: key, original_filename: filename, user_name: ig || undefined, media_type: 'photo' }) });
-      const rj: any = await r.json();
-      if (!r.ok) throw new Error(rj?.error || 'Record failed');
-      // Record client-side rate stamp
-      try {
-        const k = `moments:rate:${galleryId}`;
-        const now = Date.now();
-        const arr = JSON.parse(localStorage.getItem(k) || '[]').filter((t: number) => now - t < 120000);
-        arr.push(now);
-        localStorage.setItem(k, JSON.stringify(arr));
-      } catch {}
-      setUploaded(true);
-      // keep modal open for more shots
-      resetPhoto();
-    } catch (e: any) {
-      setError(e?.message || String(e));
-    } finally {
-      setUploading(false);
+  async function uploadQueueItem(item: UploadQueueItem) {
+    if (!galleryId) throw new Error('Missing gallery ID');
+    
+    const filename = `photo_${Date.now()}.jpg`;
+    let key: string | null = null;
+    const online = typeof navigator !== 'undefined' ? navigator.onLine : true;
+    
+    // Try direct first (2 attempts), then proxy (2 attempts)
+    const attempts: Array<() => Promise<string>> = [
+      () => tryDirectUpload(filename, item.blob),
+      () => tryDirectUpload(filename, item.blob),
+      () => tryProxyUpload(filename, item.blob),
+      () => tryProxyUpload(filename, item.blob)
+    ];
+    if (!online) {
+      attempts.unshift(() => tryProxyUpload(filename, item.blob));
     }
+    
+    let lastErr: any = null;
+    for (const fn of attempts) {
+      try { key = await fn(); break; } catch (e) { lastErr = e; continue; }
+    }
+    if (!key) throw lastErr || new Error('Upload failed');
+
+    const r = await timeoutFetch('/api/moments/record', { 
+      method: 'POST', 
+      headers: { 'Content-Type': 'application/json' }, 
+      body: JSON.stringify({ 
+        galleryId, 
+        r2_key: key, 
+        original_filename: filename, 
+        user_name: ig || undefined, 
+        media_type: 'photo' 
+      }) 
+    });
+    const rj: any = await r.json();
+    if (!r.ok) throw new Error(rj?.error || 'Record failed');
+    
+    // Record client-side rate stamp
+    try {
+      const k = `moments:rate:${galleryId}`;
+      const now = Date.now();
+      const arr = JSON.parse(localStorage.getItem(k) || '[]').filter((t: number) => now - t < 120000);
+      arr.push(now);
+      localStorage.setItem(k, JSON.stringify(arr));
+    } catch {}
   }
+
+  // Process upload queue - max 3 concurrent uploads
+  useEffect(() => {
+    const processQueue = async () => {
+      const queued = uploadQueue.filter(item => item.status === 'queued');
+      const uploading = uploadQueue.filter(item => item.status === 'uploading');
+      
+      // Only process if we have capacity (max 3 concurrent)
+      if (uploading.length >= 3 || queued.length === 0) return;
+      
+      const toUpload = queued.slice(0, 3 - uploading.length);
+      
+      for (const item of toUpload) {
+        // Mark as uploading
+        setUploadQueue(prev => prev.map(i => 
+          i.id === item.id ? { ...i, status: 'uploading' } : i
+        ));
+        
+        uploadingCountRef.current++;
+        
+        // Upload in background
+        uploadQueueItem(item)
+          .then(() => {
+            setUploadQueue(prev => prev.map(i => 
+              i.id === item.id ? { ...i, status: 'success' } : i
+            ));
+            // Remove from queue after 2 seconds
+            setTimeout(() => {
+              setUploadQueue(prev => prev.filter(i => i.id !== item.id));
+            }, 2000);
+          })
+          .catch((e: any) => {
+            setUploadQueue(prev => prev.map(i => 
+              i.id === item.id ? { ...i, status: 'error', error: e?.message || 'Upload failed' } : i
+            ));
+          })
+          .finally(() => {
+            uploadingCountRef.current--;
+          });
+      }
+    };
+    
+    processQueue();
+  }, [uploadQueue, galleryId, ig, code]);
 
   return (
     <div className="fixed inset-0 z-[100] bg-gradient-to-b from-[#1a1511]/95 via-[#0f0d0c]/90 to-[#0b0a09]/90 supports-[backdrop-filter]:backdrop-blur">
       {/* Full height container with flexbox - no scrolling needed */}
       <div className="h-full flex flex-col pt-16">
-        {/* Header - positioned below app navbar */}
-        <div ref={headerRef} className="flex-none flex items-center justify-between px-4 py-3 bg-[#1a1511]/70 supports-[backdrop-filter]:backdrop-blur border-b border-[#3b3733]/70">
-          <div className="flex items-center gap-3">
-            <span className="text-[#ede8df] font-semibold">Camera</span>
-            {galleryId && (
-              <>
-                <span className="text-[#666461]">•</span>
-                <Link 
-                  href={`/moments/gallery/${galleryId}`}
-                  className="text-sm text-[#ff8a3d] hover:text-[#ffb067] transition-colors"
-                >
-                  View Gallery
-                </Link>
-              </>
-            )}
+        {/* Header with upload queue - positioned below app navbar */}
+        <div ref={headerRef} className="flex-none bg-[#1a1511]/70 supports-[backdrop-filter]:backdrop-blur border-b border-[#3b3733]/70">
+          <div className="flex items-center justify-between px-4 py-3">
+            <div className="flex items-center gap-3">
+              <span className="text-[#ede8df] font-semibold">Camera</span>
+              {galleryId && (
+                <>
+                  <span className="text-[#666461]">•</span>
+                  <Link 
+                    href={`/moments/gallery/${galleryId}`}
+                    className="text-sm text-[#ff8a3d] hover:text-[#ffb067] transition-colors"
+                  >
+                    View Gallery
+                  </Link>
+                </>
+              )}
+            </div>
+            <button onClick={onClose} className="px-3 py-1.5 rounded-lg bg-white/5 supports-[backdrop-filter]:backdrop-blur border border-[#3b3733] text-[#ede8df] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">Close</button>
           </div>
-          <button onClick={onClose} className="px-3 py-1.5 rounded-lg bg-white/5 supports-[backdrop-filter]:backdrop-blur border border-[#3b3733] text-[#ede8df] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">Close</button>
+          
+          {/* Upload Queue */}
+          {uploadQueue.length > 0 && (
+            <div className="px-4 pb-3 flex gap-2 overflow-x-auto">
+              {uploadQueue.map((item) => (
+                <div 
+                  key={item.id}
+                  className="relative flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all"
+                  style={{
+                    borderColor: item.status === 'uploading' ? '#ff8a3d' : item.status === 'success' ? '#10b981' : item.status === 'error' ? '#ef4444' : '#3b3733',
+                    animation: item.status === 'success' ? 'pulse 0.5s ease-out' : 'none'
+                  }}
+                >
+                  <img src={item.preview} alt="" className="w-full h-full object-cover" />
+                  
+                  {/* Status overlay */}
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                    {item.status === 'uploading' && (
+                      <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    )}
+                    {item.status === 'success' && (
+                      <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                    {item.status === 'error' && (
+                      <svg className="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Preview area - fills available space */}
@@ -876,32 +957,25 @@ function CameraModal({ galleryId, ig, code, onClose }: { galleryId: string; ig: 
             className="rounded-2xl overflow-hidden border border-[#3b3733]/70 relative bg-[#0f0d0c] shadow-[0_10px_40px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.05)]"
             style={{ width: boxSize.width ? `${boxSize.width}px` : undefined, height: boxSize.height ? `${boxSize.height}px` : undefined }}
           >
-            {!preview && (
-              <>
-                <video
-                  ref={setVideoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  className={`h-full w-full ${facing==='user' ? 'object-contain' : 'object-cover'}`}
-                  style={facing==='user' ? { transform: 'scaleX(-1)' } : undefined}
-                />
-                {(!streamRef.current && !isStarting) && (
-                  <div className="absolute inset-0 grid place-items-center bg-[#0b0a09]/50">
-                    <button
-                      onClick={() => { setIsStarting(true); startCamera().catch(() => setIsStarting(false)); }}
-                      className="px-5 py-3 rounded-full bg-gradient-to-b from-[#ffb067] to-[#ff7a1a] text-[#171616] font-extrabold tracking-wide shadow-[0_10px_30px_rgba(255,122,26,0.25)] active:scale-95"
-                    >
-                      Open Camera
-                    </button>
-                  </div>
-                )}
-              </>
+            <video
+              ref={setVideoRef}
+              autoPlay
+              playsInline
+              muted
+              className={`h-full w-full ${facing==='user' ? 'object-contain' : 'object-cover'}`}
+              style={facing==='user' ? { transform: 'scaleX(-1)' } : undefined}
+            />
+            {(!streamRef.current && !isStarting) && (
+              <div className="absolute inset-0 grid place-items-center bg-[#0b0a09]/50">
+                <button
+                  onClick={() => { setIsStarting(true); startCamera().catch(() => setIsStarting(false)); }}
+                  className="px-5 py-3 rounded-full bg-gradient-to-b from-[#ffb067] to-[#ff7a1a] text-[#171616] font-extrabold tracking-wide shadow-[0_10px_30px_rgba(255,122,26,0.25)] active:scale-95"
+                >
+                  Open Camera
+                </button>
+              </div>
             )}
             <canvas ref={setCanvasRef} className="hidden" />
-            {preview && (
-              <img src={preview} alt="preview" className="h-full w-full object-contain bg-[#0f0d0c]" />
-            )}
           </div>
           {error && <div className="absolute bottom-2 left-0 right-0 text-center text-red-300 text-sm px-4">{error}</div>}
         </div>
@@ -914,20 +988,23 @@ function CameraModal({ galleryId, ig, code, onClose }: { galleryId: string; ig: 
               <button onClick={() => setAspect('3:4')} className={`px-3 py-1.5 text-sm ${aspect==='3:4'?'bg-[#ff8a3d]/30 text-[#ffeedd]':'text-[#e8ded2]'}`}>3:4</button>
             </div>
             <button onClick={() => { setFacing(f => f==='environment'?'user':'environment'); }} className="px-3 py-1.5 rounded-full bg-white/5 supports-[backdrop-filter]:backdrop-blur border border-[#3b3733]/80 text-[#ede8df]">Switch</button>
-            {!preview ? (
-              <button onClick={takePhoto} className="px-4 py-2 rounded-full bg-[#ede8df] text-[#171616] font-extrabold tracking-wide shadow-[0_10px_28px_rgba(237,232,223,0.25)] active:scale-95">Capture</button>
-            ) : (
-              <>
-                <a href={preview} download={`odubo_${Date.now()}.jpg`} className="px-3 py-1.5 rounded-full bg-white/5 supports-[backdrop-filter]:backdrop-blur border border-[#3b3733]/80 text-[#ede8df]">Download</a>
-                <button onClick={resetPhoto} className="px-3 py-1.5 rounded-full bg-white/5 supports-[backdrop-filter]:backdrop-blur border border-[#3b3733]/80 text-[#ede8df]">Reset</button>
-                <button onClick={upload} disabled={uploading} className="px-4 py-2 rounded-full bg-[#1f1e1d] text-[#ede8df] border border-[#3b3733] disabled:opacity-50">{uploading ? 'Uploading…' : 'Upload'}</button>
-              </>
-            )}
+            <button 
+              onClick={takePhoto}
+              disabled={uploadQueue.filter(i => i.status === 'uploading').length >= 3}
+              className="px-4 py-2 rounded-full bg-[#ede8df] text-[#171616] font-extrabold tracking-wide shadow-[0_10px_28px_rgba(237,232,223,0.25)] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Capture
+            </button>
           </div>
-          {uploaded && (
-            <div className="mt-3 flex items-center justify-center gap-3">
-              <span className="text-sm text-[#cfc2ae]">Uploaded. You can take more.</span>
-              <a href={`/moments/gallery/${encodeURIComponent(galleryId)}${code?`?code=${encodeURIComponent(code)}`:''}`} className="px-3 py-1.5 rounded-full bg-[#171616] text-[#ede8df] border border-[#3b3733]">Open Gallery</a>
+          
+          {uploadQueue.length > 0 && (
+            <div className="mt-2 text-center text-xs text-[#b2a491]">
+              {uploadQueue.filter(i => i.status === 'uploading').length > 0 && (
+                <span>Uploading {uploadQueue.filter(i => i.status === 'uploading').length} of {uploadQueue.length}...</span>
+              )}
+              {uploadQueue.filter(i => i.status === 'success').length > 0 && uploadQueue.filter(i => i.status === 'uploading').length === 0 && (
+                <span className="text-green-400">✓ {uploadQueue.filter(i => i.status === 'success').length} uploaded successfully</span>
+              )}
             </div>
           )}
         </div>
