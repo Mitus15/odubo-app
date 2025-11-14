@@ -587,6 +587,8 @@ type UploadQueueItem = {
 function CameraModal({ galleryId, ig, code, onClose }: { galleryId: string; ig: string; code?: string; onClose: () => void }) {
   const [aspect, setAspect] = useState<'9:16' | '3:4'>('9:16');
   const [facing, setFacing] = useState<'environment' | 'user'>('environment');
+  const [flashMode, setFlashMode] = useState<'off' | 'on' | 'auto'>('off');
+  const [hasFlash, setHasFlash] = useState(false);
   const [videoRef, setVideoRef] = useState<HTMLVideoElement | null>(null);
   const [canvasRef, setCanvasRef] = useState<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -641,6 +643,25 @@ function CameraModal({ galleryId, ig, code, onClose }: { galleryId: string; ig: 
       };
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = stream;
+      
+      // Check if flash/torch is available
+      const videoTrack = stream.getVideoTracks()[0];
+      if (videoTrack) {
+        const capabilities = videoTrack.getCapabilities?.() as any;
+        setHasFlash(!!(capabilities && capabilities.torch));
+        
+        // Apply flash mode if supported
+        if (capabilities && capabilities.torch && flashMode !== 'off') {
+          try {
+            await videoTrack.applyConstraints({
+              advanced: [{ torch: flashMode === 'on' } as any]
+            });
+          } catch (e) {
+            console.warn('Flash not supported:', e);
+          }
+        }
+      }
+      
       if (videoRef) {
         (videoRef as any).srcObject = stream;
         (videoRef as any).playsInline = true;
@@ -676,6 +697,22 @@ function CameraModal({ galleryId, ig, code, onClose }: { galleryId: string; ig: 
     return () => {};
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [facing, aspect]);
+
+  // Update flash when flashMode changes
+  useEffect(() => {
+    if (!streamRef.current) return;
+    const videoTrack = streamRef.current.getVideoTracks()[0];
+    if (!videoTrack) return;
+    
+    const capabilities = videoTrack.getCapabilities?.() as any;
+    if (capabilities && capabilities.torch) {
+      videoTrack.applyConstraints({
+        advanced: [{ torch: flashMode === 'on' } as any]
+      }).catch((e) => {
+        console.warn('Failed to toggle flash:', e);
+      });
+    }
+  }, [flashMode]);
 
   // Compute a preview box that fits in viewport along with header and controls (no scrolling needed for controls)
   useEffect(() => {
@@ -987,6 +1024,30 @@ function CameraModal({ galleryId, ig, code, onClose }: { galleryId: string; ig: 
               <button onClick={() => setAspect('9:16')} className={`px-3 py-1.5 text-sm ${aspect==='9:16'?'bg-[#ff8a3d]/30 text-[#ffeedd]':'text-[#e8ded2]'}`}>9:16</button>
               <button onClick={() => setAspect('3:4')} className={`px-3 py-1.5 text-sm ${aspect==='3:4'?'bg-[#ff8a3d]/30 text-[#ffeedd]':'text-[#e8ded2]'}`}>3:4</button>
             </div>
+            
+            {hasFlash && (
+              <button 
+                onClick={() => setFlashMode(m => m === 'off' ? 'on' : 'off')}
+                className={`px-3 py-1.5 rounded-full supports-[backdrop-filter]:backdrop-blur border transition-colors ${
+                  flashMode === 'on' 
+                    ? 'bg-[#ff8a3d]/30 border-[#ff8a3d] text-[#ffeedd]' 
+                    : 'bg-white/5 border-[#3b3733]/80 text-[#ede8df]'
+                }`}
+                title={flashMode === 'on' ? 'Flash On' : 'Flash Off'}
+              >
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                  {flashMode === 'on' ? (
+                    <path d="M7 2v11h3v9l7-12h-4l4-8z" />
+                  ) : (
+                    <>
+                      <path d="M7 2v11h3v9l7-12h-4l4-8z" opacity="0.3" />
+                      <path d="M3 3l18 18M17 10l-2.5-5H7" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" />
+                    </>
+                  )}
+                </svg>
+              </button>
+            )}
+            
             <button onClick={() => { setFacing(f => f==='environment'?'user':'environment'); }} className="px-3 py-1.5 rounded-full bg-white/5 supports-[backdrop-filter]:backdrop-blur border border-[#3b3733]/80 text-[#ede8df]">Switch</button>
             <button 
               onClick={takePhoto}
