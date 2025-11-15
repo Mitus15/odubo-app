@@ -932,7 +932,7 @@ function CameraModal({ galleryId, ig, code, onClose }: { galleryId: string; ig: 
   }
 
   return (
-    <div className="fixed top-14 left-0 right-0 bottom-0 z-20 bg-gradient-to-b from-[#1a1511]/95 via-[#0f0d0c]/90 to-[#0b0a09]/90 supports-[backdrop-filter]:backdrop-blur">
+    <div className="fixed inset-0 z-50 bg-gradient-to-b from-[#1a1511]/95 via-[#0f0d0c]/90 to-[#0b0a09]/90 supports-[backdrop-filter]:backdrop-blur">
       {/* Full height container with flexbox - no scrolling needed */}
       <div className="h-full flex flex-col">
         {/* Header with upload queue - positioned below app navbar - Mobile optimized */}
@@ -1140,7 +1140,7 @@ function CameraModal({ galleryId, ig, code, onClose }: { galleryId: string; ig: 
       {/* Image Preview Modal */}
       {previewImage && (
         <div 
-          className="fixed top-14 left-0 right-0 bottom-0 z-30 bg-black/95 flex items-center justify-center p-4"
+          className="fixed inset-0 z-60 bg-black/95 flex items-center justify-center p-4"
           onClick={() => setPreviewImage(null)}
         >
           <button
