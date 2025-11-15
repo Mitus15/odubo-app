@@ -580,7 +580,7 @@ type UploadQueueItem = {
   id: string;
   preview: string;
   blob: Blob;
-  status: 'queued' | 'uploading' | 'success' | 'error';
+  status: 'pending' | 'uploading' | 'success' | 'error';
   error?: string;
 };
 
@@ -598,7 +598,7 @@ function CameraModal({ galleryId, ig, code, onClose }: { galleryId: string; ig: 
   const [boxSize, setBoxSize] = useState<{width: number; height: number}>({ width: 0, height: 0 });
   const [isStarting, setIsStarting] = useState(false);
   const [uploadQueue, setUploadQueue] = useState<UploadQueueItem[]>([]);
-  const uploadingCountRef = useRef<number>(0);
+  const [isBatchUploading, setIsBatchUploading] = useState(false);
 
   const aspectRatio = useMemo(() => (aspect === '9:16' ? 9/16 : 3/4), [aspect]);
 
@@ -783,16 +783,20 @@ function CameraModal({ galleryId, ig, code, onClose }: { galleryId: string; ig: 
     if (!dataUrl) return;
     const b = dataURLToBlob(dataUrl);
     
-    // Add to queue and start upload immediately
+    // Add to queue for review (not uploaded yet)
     const queueItem: UploadQueueItem = {
       id: `${Date.now()}_${Math.random()}`,
       preview: dataUrl,
       blob: b,
-      status: 'queued'
+      status: 'pending'
     };
     
     setUploadQueue(prev => [...prev, queueItem]);
     // Camera stays live, user can continue capturing
+  }
+
+  function removeFromQueue(id: string) {
+    setUploadQueue(prev => prev.filter(item => item.id !== id));
   }
 
   function dataURLToBlob(dataURL: string) {
@@ -884,49 +888,47 @@ function CameraModal({ galleryId, ig, code, onClose }: { galleryId: string; ig: 
     } catch {}
   }
 
-  // Process upload queue - max 3 concurrent uploads
-  useEffect(() => {
-    const processQueue = async () => {
-      const queued = uploadQueue.filter(item => item.status === 'queued');
-      const uploading = uploadQueue.filter(item => item.status === 'uploading');
-      
-      // Only process if we have capacity (max 3 concurrent)
-      if (uploading.length >= 3 || queued.length === 0) return;
-      
-      const toUpload = queued.slice(0, 3 - uploading.length);
-      
-      for (const item of toUpload) {
+  // Batch upload all pending photos
+  async function batchUploadAll() {
+    const pending = uploadQueue.filter(item => item.status === 'pending');
+    if (pending.length === 0) return;
+    
+    setIsBatchUploading(true);
+    setError('');
+    
+    // Upload up to 3 at a time
+    const uploadBatch = async (items: UploadQueueItem[]) => {
+      for (const item of items) {
         // Mark as uploading
         setUploadQueue(prev => prev.map(i => 
           i.id === item.id ? { ...i, status: 'uploading' } : i
         ));
         
-        uploadingCountRef.current++;
-        
-        // Upload in background
-        uploadQueueItem(item)
-          .then(() => {
-            setUploadQueue(prev => prev.map(i => 
-              i.id === item.id ? { ...i, status: 'success' } : i
-            ));
-            // Remove from queue after 2 seconds
-            setTimeout(() => {
-              setUploadQueue(prev => prev.filter(i => i.id !== item.id));
-            }, 2000);
-          })
-          .catch((e: any) => {
-            setUploadQueue(prev => prev.map(i => 
-              i.id === item.id ? { ...i, status: 'error', error: e?.message || 'Upload failed' } : i
-            ));
-          })
-          .finally(() => {
-            uploadingCountRef.current--;
-          });
+        try {
+          await uploadQueueItem(item);
+          setUploadQueue(prev => prev.map(i => 
+            i.id === item.id ? { ...i, status: 'success' } : i
+          ));
+          // Remove from queue after 1.5 seconds
+          setTimeout(() => {
+            setUploadQueue(prev => prev.filter(i => i.id !== item.id));
+          }, 1500);
+        } catch (e: any) {
+          setUploadQueue(prev => prev.map(i => 
+            i.id === item.id ? { ...i, status: 'error', error: e?.message || 'Upload failed' } : i
+          ));
+        }
       }
     };
     
-    processQueue();
-  }, [uploadQueue, galleryId, ig, code]);
+    // Process in batches of 3
+    for (let i = 0; i < pending.length; i += 3) {
+      const batch = pending.slice(i, i + 3);
+      await uploadBatch(batch);
+    }
+    
+    setIsBatchUploading(false);
+  }
 
   return (
     <div className="fixed inset-0 z-[100] bg-gradient-to-b from-[#1a1511]/95 via-[#0f0d0c]/90 to-[#0b0a09]/90 supports-[backdrop-filter]:backdrop-blur">
@@ -952,38 +954,68 @@ function CameraModal({ galleryId, ig, code, onClose }: { galleryId: string; ig: 
             <button onClick={onClose} className="px-3 py-1.5 rounded-lg bg-white/5 supports-[backdrop-filter]:backdrop-blur border border-[#3b3733] text-[#ede8df] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">Close</button>
           </div>
           
-          {/* Upload Queue */}
+          {/* Upload Queue with delete buttons */}
           {uploadQueue.length > 0 && (
-            <div className="px-4 pb-3 flex gap-2 overflow-x-auto">
-              {uploadQueue.map((item) => (
-                <div 
-                  key={item.id}
-                  className="relative flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all"
-                  style={{
-                    borderColor: item.status === 'uploading' ? '#ff8a3d' : item.status === 'success' ? '#10b981' : item.status === 'error' ? '#ef4444' : '#3b3733',
-                    animation: item.status === 'success' ? 'pulse 0.5s ease-out' : 'none'
-                  }}
-                >
-                  <img src={item.preview} alt="" className="w-full h-full object-cover" />
-                  
-                  {/* Status overlay */}
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-                    {item.status === 'uploading' && (
-                      <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            <div className="px-4 pb-3">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs text-[#b2a491]">
+                  {uploadQueue.filter(i => i.status === 'pending').length} photo{uploadQueue.filter(i => i.status === 'pending').length !== 1 ? 's' : ''} ready
+                </span>
+                {uploadQueue.filter(i => i.status === 'pending').length > 0 && (
+                  <button
+                    onClick={batchUploadAll}
+                    disabled={isBatchUploading}
+                    className="px-3 py-1 rounded-full bg-gradient-to-r from-[#ff8a3d] to-[#d97028] text-white text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg transition-all"
+                  >
+                    {isBatchUploading ? 'Uploading...' : `Upload ${uploadQueue.filter(i => i.status === 'pending').length}`}
+                  </button>
+                )}
+              </div>
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {uploadQueue.map((item) => (
+                  <div 
+                    key={item.id}
+                    className="relative flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-all group"
+                    style={{
+                      borderColor: item.status === 'uploading' ? '#ff8a3d' : item.status === 'success' ? '#10b981' : item.status === 'error' ? '#ef4444' : '#666461',
+                      animation: item.status === 'success' ? 'pulse 0.5s ease-out' : 'none'
+                    }}
+                  >
+                    <img src={item.preview} alt="" className="w-full h-full object-cover" />
+                    
+                    {/* Delete button for pending items */}
+                    {item.status === 'pending' && (
+                      <button
+                        onClick={() => removeFromQueue(item.id)}
+                        className="absolute top-1 right-1 w-6 h-6 rounded-full bg-red-500 hover:bg-red-600 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
                     )}
-                    {item.status === 'success' && (
-                      <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                      </svg>
-                    )}
-                    {item.status === 'error' && (
-                      <svg className="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
+                    
+                    {/* Status overlay */}
+                    {item.status !== 'pending' && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                        {item.status === 'uploading' && (
+                          <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        )}
+                        {item.status === 'success' && (
+                          <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                        {item.status === 'error' && (
+                          <svg className="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        )}
+                      </div>
                     )}
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           )}
         </div>
@@ -1051,7 +1083,7 @@ function CameraModal({ galleryId, ig, code, onClose }: { galleryId: string; ig: 
             <button onClick={() => { setFacing(f => f==='environment'?'user':'environment'); }} className="px-3 py-1.5 rounded-full bg-white/5 supports-[backdrop-filter]:backdrop-blur border border-[#3b3733]/80 text-[#ede8df]">Switch</button>
             <button 
               onClick={takePhoto}
-              disabled={uploadQueue.filter(i => i.status === 'uploading').length >= 3}
+              disabled={isBatchUploading}
               className="px-4 py-2 rounded-full bg-[#ede8df] text-[#171616] font-extrabold tracking-wide shadow-[0_10px_28px_rgba(237,232,223,0.25)] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Capture
@@ -1061,10 +1093,13 @@ function CameraModal({ galleryId, ig, code, onClose }: { galleryId: string; ig: 
           {uploadQueue.length > 0 && (
             <div className="mt-2 text-center text-xs text-[#b2a491]">
               {uploadQueue.filter(i => i.status === 'uploading').length > 0 && (
-                <span>Uploading {uploadQueue.filter(i => i.status === 'uploading').length} of {uploadQueue.length}...</span>
+                <span className="text-[#ff8a3d]">Uploading {uploadQueue.filter(i => i.status === 'uploading').length}...</span>
               )}
-              {uploadQueue.filter(i => i.status === 'success').length > 0 && uploadQueue.filter(i => i.status === 'uploading').length === 0 && (
-                <span className="text-green-400">✓ {uploadQueue.filter(i => i.status === 'success').length} uploaded successfully</span>
+              {uploadQueue.filter(i => i.status === 'success').length > 0 && uploadQueue.filter(i => i.status === 'uploading').length === 0 && uploadQueue.filter(i => i.status === 'pending').length === 0 && (
+                <span className="text-green-400">✓ All uploaded successfully</span>
+              )}
+              {uploadQueue.filter(i => i.status === 'pending').length > 0 && uploadQueue.filter(i => i.status === 'uploading').length === 0 && (
+                <span>Tap photos to review, then upload when ready</span>
               )}
             </div>
           )}
