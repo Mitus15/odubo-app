@@ -67,6 +67,22 @@ function MomentsIndex() {
     setShowTermsModal(false);
   };
 
+  // Function to refresh galleries list
+  const refreshGalleries = async () => {
+    try {
+      setGalleryLoading(true);
+      const res = await fetch('/api/moments/galleries/public?limit=12&preview=true');
+      const data: any = await res.json().catch(() => ({}));
+      if (res.ok && Array.isArray(data.galleries)) {
+        setGalleries(data.galleries);
+      }
+    } catch (e: any) {
+      console.error('Failed to refresh galleries:', e);
+    } finally {
+      setGalleryLoading(false);
+    }
+  };
+
   useEffect(() => {
     let active = true;
     (async () => {
@@ -247,6 +263,7 @@ function MomentsIndex() {
           ig={ig}
           code={eventCode}
           onClose={() => setShowCameraModal(false)}
+          onUploadSuccess={refreshGalleries}
         />
       )}
     </div>
@@ -584,7 +601,7 @@ type UploadQueueItem = {
   error?: string;
 };
 
-function CameraModal({ galleryId, ig, code, onClose }: { galleryId: string; ig: string; code?: string; onClose: () => void }) {
+function CameraModal({ galleryId, ig, code, onClose, onUploadSuccess }: { galleryId: string; ig: string; code?: string; onClose: () => void; onUploadSuccess?: () => void | Promise<void> }) {
   const [aspect, setAspect] = useState<'9:16' | '3:4'>('9:16');
   const [facing, setFacing] = useState<'environment' | 'user'>('environment');
   const [flashMode, setFlashMode] = useState<'off' | 'on' | 'auto'>('off');
@@ -929,6 +946,11 @@ function CameraModal({ galleryId, ig, code, onClose }: { galleryId: string; ig: 
     }
     
     setIsBatchUploading(false);
+    
+    // Refresh galleries after successful uploads
+    if (onUploadSuccess) {
+      onUploadSuccess();
+    }
   }
 
   return (
