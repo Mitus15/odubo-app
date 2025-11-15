@@ -599,6 +599,7 @@ function CameraModal({ galleryId, ig, code, onClose }: { galleryId: string; ig: 
   const [isStarting, setIsStarting] = useState(false);
   const [uploadQueue, setUploadQueue] = useState<UploadQueueItem[]>([]);
   const [isBatchUploading, setIsBatchUploading] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   const aspectRatio = useMemo(() => (aspect === '9:16' ? 9/16 : 3/4), [aspect]);
 
@@ -934,48 +935,50 @@ function CameraModal({ galleryId, ig, code, onClose }: { galleryId: string; ig: 
     <div className="fixed inset-0 z-[100] bg-gradient-to-b from-[#1a1511]/95 via-[#0f0d0c]/90 to-[#0b0a09]/90 supports-[backdrop-filter]:backdrop-blur">
       {/* Full height container with flexbox - no scrolling needed */}
       <div className="h-full flex flex-col pt-16">
-        {/* Header with upload queue - positioned below app navbar */}
+        {/* Header with upload queue - positioned below app navbar - Mobile optimized */}
         <div ref={headerRef} className="flex-none bg-[#1a1511]/70 supports-[backdrop-filter]:backdrop-blur border-b border-[#3b3733]/70">
-          <div className="flex items-center justify-between px-4 py-3">
-            <div className="flex items-center gap-3">
-              <span className="text-[#ede8df] font-semibold">Camera</span>
+          <div className="flex items-center justify-between px-3 sm:px-4 py-2.5 sm:py-3">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+              <span className="text-[#ede8df] font-semibold text-sm sm:text-base">Camera</span>
               {galleryId && (
                 <>
-                  <span className="text-[#666461]">•</span>
+                  <span className="text-[#666461] hidden sm:inline">•</span>
                   <Link 
                     href={`/moments/gallery/${galleryId}`}
-                    className="text-sm text-[#ff8a3d] hover:text-[#ffb067] transition-colors"
+                    className="text-xs sm:text-sm text-[#ff8a3d] hover:text-[#ffb067] transition-colors truncate"
                   >
-                    View Gallery
+                    <span className="hidden sm:inline">View Gallery</span>
+                    <span className="sm:hidden">Gallery</span>
                   </Link>
                 </>
               )}
             </div>
-            <button onClick={onClose} className="px-3 py-1.5 rounded-lg bg-white/5 supports-[backdrop-filter]:backdrop-blur border border-[#3b3733] text-[#ede8df] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">Close</button>
+            <button onClick={onClose} className="px-3 py-1.5 rounded-lg bg-white/5 supports-[backdrop-filter]:backdrop-blur border border-[#3b3733] text-[#ede8df] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] text-sm active:scale-95 transition-transform">Close</button>
           </div>
           
-          {/* Upload Queue with delete buttons */}
+          {/* Upload Queue with delete buttons - Mobile optimized */}
           {uploadQueue.length > 0 && (
-            <div className="px-4 pb-3">
+            <div className="px-3 pb-3">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-[#b2a491]">
+                <span className="text-xs sm:text-sm text-[#b2a491] font-medium">
                   {uploadQueue.filter(i => i.status === 'pending').length} photo{uploadQueue.filter(i => i.status === 'pending').length !== 1 ? 's' : ''} ready
                 </span>
                 {uploadQueue.filter(i => i.status === 'pending').length > 0 && (
                   <button
                     onClick={batchUploadAll}
                     disabled={isBatchUploading}
-                    className="px-3 py-1 rounded-full bg-gradient-to-r from-[#ff8a3d] to-[#d97028] text-white text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg transition-all"
+                    className="px-4 py-1.5 rounded-full bg-gradient-to-r from-[#ff8a3d] to-[#d97028] text-white text-xs sm:text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 transition-all shadow-lg"
                   >
                     {isBatchUploading ? 'Uploading...' : `Upload ${uploadQueue.filter(i => i.status === 'pending').length}`}
                   </button>
                 )}
               </div>
-              <div className="flex gap-2 overflow-x-auto pb-1">
+              <div className="flex gap-2 overflow-x-auto pb-1 -mx-3 px-3" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                 {uploadQueue.map((item) => (
                   <div 
                     key={item.id}
-                    className="relative flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-all group"
+                    onClick={() => setPreviewImage(item.preview)}
+                    className="relative flex-shrink-0 w-24 h-24 sm:w-20 sm:h-20 rounded-xl overflow-hidden border-2 transition-all cursor-pointer active:scale-95"
                     style={{
                       borderColor: item.status === 'uploading' ? '#ff8a3d' : item.status === 'success' ? '#10b981' : item.status === 'error' ? '#ef4444' : '#666461',
                       animation: item.status === 'success' ? 'pulse 0.5s ease-out' : 'none'
@@ -983,11 +986,12 @@ function CameraModal({ galleryId, ig, code, onClose }: { galleryId: string; ig: 
                   >
                     <img src={item.preview} alt="" className="w-full h-full object-cover" />
                     
-                    {/* Delete button for pending items */}
+                    {/* Delete button for pending items - Always visible on mobile */}
                     {item.status === 'pending' && (
                       <button
-                        onClick={() => removeFromQueue(item.id)}
-                        className="absolute top-1 right-1 w-6 h-6 rounded-full bg-red-500 hover:bg-red-600 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                        onClick={(e) => { e.stopPropagation(); removeFromQueue(item.id); }}
+                        className="absolute top-1 right-1 w-7 h-7 sm:w-6 sm:h-6 rounded-full bg-red-500 active:bg-red-600 text-white flex items-center justify-center shadow-lg sm:opacity-0 sm:group-hover:opacity-100 transition-opacity z-10"
+                        aria-label="Delete photo"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -999,15 +1003,15 @@ function CameraModal({ galleryId, ig, code, onClose }: { galleryId: string; ig: 
                     {item.status !== 'pending' && (
                       <div className="absolute inset-0 flex items-center justify-center bg-black/50">
                         {item.status === 'uploading' && (
-                          <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          <div className="w-7 h-7 sm:w-6 sm:h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
                         )}
                         {item.status === 'success' && (
-                          <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-7 h-7 sm:w-6 sm:h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                           </svg>
                         )}
                         {item.status === 'error' && (
-                          <svg className="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-7 h-7 sm:w-6 sm:h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                           </svg>
                         )}
@@ -1049,25 +1053,37 @@ function CameraModal({ galleryId, ig, code, onClose }: { galleryId: string; ig: 
           {error && <div className="absolute bottom-2 left-0 right-0 text-center text-red-300 text-sm px-4">{error}</div>}
         </div>
 
-        {/* Bottom controls bar */}
-        <div ref={controlsRef} className="flex-none px-3 pb-[calc(12px+env(safe-area-inset-bottom))] pt-2 bg-gradient-to-t from-[#140f0c]/90 to-[#0c0b0a]/50 supports-[backdrop-filter]:backdrop-blur border-t border-[#3b3733]/70">
-          <div className="mx-auto max-w-[min(95vw,900px)] flex flex-wrap items-center justify-center gap-2">
+        {/* Bottom controls bar - Mobile optimized */}
+        <div ref={controlsRef} className="flex-none px-2 sm:px-3 pb-[calc(8px+env(safe-area-inset-bottom))] sm:pb-[calc(12px+env(safe-area-inset-bottom))] pt-2 bg-gradient-to-t from-[#140f0c]/90 to-[#0c0b0a]/50 supports-[backdrop-filter]:backdrop-blur border-t border-[#3b3733]/70">
+          <div className="mx-auto max-w-[min(100vw,900px)] flex flex-wrap items-center justify-center gap-1.5 sm:gap-2">
+            {/* Aspect ratio buttons */}
             <div className="inline-flex rounded-full overflow-hidden border border-[#3b3733]/80 bg-white/5">
-              <button onClick={() => setAspect('9:16')} className={`px-3 py-1.5 text-sm ${aspect==='9:16'?'bg-[#ff8a3d]/30 text-[#ffeedd]':'text-[#e8ded2]'}`}>9:16</button>
-              <button onClick={() => setAspect('3:4')} className={`px-3 py-1.5 text-sm ${aspect==='3:4'?'bg-[#ff8a3d]/30 text-[#ffeedd]':'text-[#e8ded2]'}`}>3:4</button>
+              <button 
+                onClick={() => setAspect('9:16')} 
+                className={`px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm font-medium transition-colors ${aspect==='9:16'?'bg-[#ff8a3d]/30 text-[#ffeedd]':'text-[#e8ded2]'}`}
+              >
+                9:16
+              </button>
+              <button 
+                onClick={() => setAspect('3:4')} 
+                className={`px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm font-medium transition-colors ${aspect==='3:4'?'bg-[#ff8a3d]/30 text-[#ffeedd]':'text-[#e8ded2]'}`}
+              >
+                3:4
+              </button>
             </div>
             
+            {/* Flash button */}
             {hasFlash && (
               <button 
                 onClick={() => setFlashMode(m => m === 'off' ? 'on' : 'off')}
-                className={`px-3 py-1.5 rounded-full supports-[backdrop-filter]:backdrop-blur border transition-colors ${
+                className={`p-2 sm:px-3 sm:py-1.5 rounded-full supports-[backdrop-filter]:backdrop-blur border transition-all active:scale-95 ${
                   flashMode === 'on' 
                     ? 'bg-[#ff8a3d]/30 border-[#ff8a3d] text-[#ffeedd]' 
                     : 'bg-white/5 border-[#3b3733]/80 text-[#ede8df]'
                 }`}
-                title={flashMode === 'on' ? 'Flash On' : 'Flash Off'}
+                aria-label={flashMode === 'on' ? 'Flash On' : 'Flash Off'}
               >
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 sm:w-4 sm:h-4" fill="currentColor" viewBox="0 0 24 24">
                   {flashMode === 'on' ? (
                     <path d="M7 2v11h3v9l7-12h-4l4-8z" />
                   ) : (
@@ -1080,31 +1096,70 @@ function CameraModal({ galleryId, ig, code, onClose }: { galleryId: string; ig: 
               </button>
             )}
             
-            <button onClick={() => { setFacing(f => f==='environment'?'user':'environment'); }} className="px-3 py-1.5 rounded-full bg-white/5 supports-[backdrop-filter]:backdrop-blur border border-[#3b3733]/80 text-[#ede8df]">Switch</button>
+            {/* Switch camera button */}
+            <button 
+              onClick={() => { setFacing(f => f==='environment'?'user':'environment'); }} 
+              className="px-3 sm:px-3 py-1.5 rounded-full bg-white/5 supports-[backdrop-filter]:backdrop-blur border border-[#3b3733]/80 text-[#ede8df] text-xs sm:text-sm font-medium active:scale-95 transition-transform"
+            >
+              <span className="hidden xs:inline">Switch</span>
+              <svg className="w-5 h-5 xs:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            </button>
+            
+            {/* Capture button - larger on mobile */}
             <button 
               onClick={takePhoto}
               disabled={isBatchUploading}
-              className="px-4 py-2 rounded-full bg-[#ede8df] text-[#171616] font-extrabold tracking-wide shadow-[0_10px_28px_rgba(237,232,223,0.25)] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-5 sm:px-4 py-2.5 sm:py-2 rounded-full bg-[#ede8df] text-[#171616] font-extrabold text-sm sm:text-base tracking-wide shadow-[0_10px_28px_rgba(237,232,223,0.25)] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed transition-transform"
             >
               Capture
             </button>
           </div>
           
+          {/* Status messages - Mobile friendly */}
           {uploadQueue.length > 0 && (
-            <div className="mt-2 text-center text-xs text-[#b2a491]">
+            <div className="mt-2 text-center text-[10px] sm:text-xs text-[#b2a491] px-2">
               {uploadQueue.filter(i => i.status === 'uploading').length > 0 && (
-                <span className="text-[#ff8a3d]">Uploading {uploadQueue.filter(i => i.status === 'uploading').length}...</span>
+                <span className="text-[#ff8a3d] font-medium">Uploading {uploadQueue.filter(i => i.status === 'uploading').length}...</span>
               )}
               {uploadQueue.filter(i => i.status === 'success').length > 0 && uploadQueue.filter(i => i.status === 'uploading').length === 0 && uploadQueue.filter(i => i.status === 'pending').length === 0 && (
-                <span className="text-green-400">✓ All uploaded successfully</span>
+                <span className="text-green-400 font-medium">✓ All uploaded successfully</span>
               )}
               {uploadQueue.filter(i => i.status === 'pending').length > 0 && uploadQueue.filter(i => i.status === 'uploading').length === 0 && (
-                <span>Tap photos to review, then upload when ready</span>
+                <span className="font-medium">
+                  <span className="hidden sm:inline">Tap photos to review, then upload when ready</span>
+                  <span className="sm:hidden">Review photos, then tap Upload</span>
+                </span>
               )}
             </div>
           )}
         </div>
       </div>
+
+      {/* Image Preview Modal */}
+      {previewImage && (
+        <div 
+          className="fixed inset-0 z-[200] bg-black/95 flex items-center justify-center p-4"
+          onClick={() => setPreviewImage(null)}
+        >
+          <button
+            onClick={() => setPreviewImage(null)}
+            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors"
+            aria-label="Close preview"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+          <img 
+            src={previewImage} 
+            alt="Preview" 
+            className="max-w-full max-h-full object-contain rounded-lg"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   );
 }
