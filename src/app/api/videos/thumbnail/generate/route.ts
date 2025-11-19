@@ -111,7 +111,7 @@ export async function POST(req: NextRequest) {
 
 Respond with JSON: { "score": <number 1-10>, "rationale": "<brief explanation>" }`;
 
-          const model = 'gemini-1.5-flash-8b';
+          const model = 'gemini-2.0-flash';
           const geminiUrl = `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
           
           const result = await fetch(geminiUrl, {

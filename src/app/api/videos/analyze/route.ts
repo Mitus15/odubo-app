@@ -16,7 +16,7 @@ async function generateAIDescription(input: { title: string; description?: strin
       (input.mood ? `Mood: ${input.mood}\n` : '') +
       (input.tags && input.tags.length ? `Tags: ${input.tags.join(', ')}\n` : '');
 
-    const model = 'gemini-1.5-flash-8b';
+    const model = 'gemini-2.0-flash';
     const url = `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
     const resp = await fetch(url, {
       method: 'POST',
@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
         null,
         JSON.stringify(tags || []),
         'google',
-        'gemini-1.5-flash-8b',
+        'gemini-2.0-flash',
         null,
       ]);
       await executeQuery(`UPDATE videos SET ai_description = ? WHERE id = ?`, [ai, v.id]);

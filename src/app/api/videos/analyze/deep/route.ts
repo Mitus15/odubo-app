@@ -55,7 +55,7 @@ async function describeFramesWithGemini(frames: { pct: number; url: string; buff
     parts.push({ inline_data: { mime_type: 'image/jpeg', data: resized.toString('base64') } });
   }
 
-  const model = 'gemini-1.5-flash-8b';
+  const model = 'gemini-2.0-flash';
   const url = `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
   const resp = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ role: 'user', parts }] }) });
   const data: any = await resp.json();
@@ -133,7 +133,7 @@ export async function POST(req: NextRequest) {
         null,
         JSON.stringify(analysis.themes || []),
         'google',
-        'gemini-1.5-flash-8b',
+        'gemini-2.0-flash',
         JSON.stringify({ style_palette: analysis.style_palette, shots_signature: analysis.shots_signature })
       ]);
 

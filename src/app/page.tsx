@@ -56,8 +56,8 @@ async function getVerse() {
         },
         body: JSON.stringify({ action: 'getVerse', timestamp, requestId }),
         cache: 'no-store',
-        // Add timeout to prevent hanging
-        signal: AbortSignal.timeout(5000)
+        // Add timeout to prevent hanging (increased to 20s to allow for retries)
+        signal: AbortSignal.timeout(20000)
       });
     } catch (err) {
       console.error('[HomePage] /api/gemini fetch error:', err);

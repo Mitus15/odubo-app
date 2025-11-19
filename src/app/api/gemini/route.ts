@@ -3,11 +3,13 @@ export const runtime = 'nodejs';
 import { executeQuery, queryDatabase } from '@/lib/db';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
 
 // Build prioritized list of endpoint URLs to try
 const MODEL_CANDIDATES = [
   GEMINI_MODEL,
+  'gemini-2.0-flash-001',
+  'gemini-flash-latest',
   'gemini-1.5-flash',
   'gemini-1.5-flash-latest',
   'gemini-1.5-pro',
