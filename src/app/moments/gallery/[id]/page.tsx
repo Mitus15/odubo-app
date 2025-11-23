@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState, useRef } from 'react';
+import { useEffect, useMemo, useState, useRef, use } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 
@@ -16,8 +16,9 @@ function PhotoSkeleton() {
   );
 }
 
-export default function GalleryViewer({ params }: { params: { id: string } }) {
-  const id = Number(params.id);
+export default function GalleryViewer({ params }: { params: Promise<{ id: string }> }) {
+  const { id: idParam } = use(params);
+  const id = Number(idParam);
   const sp = useSearchParams();
   const codeFromUrl = sp?.get('code') || '';
   const [code, setCode] = useState<string>(codeFromUrl);
