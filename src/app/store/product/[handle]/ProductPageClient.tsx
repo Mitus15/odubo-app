@@ -31,6 +31,7 @@ interface ProductPageClientProps {
 export default function ProductPageClient({ product }: ProductPageClientProps) {
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
   const [selectedVariantId, setSelectedVariantId] = useState<string>('');
+  const [activeImage, setActiveImage] = useState<string | null>(null);
   const [qty, setQty] = useState<number>(1);
   const [hasCartItems, setHasCartItems] = useState<boolean>(false);
   const [justAdded, setJustAdded] = useState<boolean>(false);
@@ -86,6 +87,31 @@ export default function ProductPageClient({ product }: ProductPageClientProps) {
     return product.variants?.find(v => v.id === selectedVariantId);
   }, [selectedVariantId, product.variants]);
 
+  // Sync active image with selected variant
+  useEffect(() => {
+    if (selectedVariant?.image?.src) {
+      setActiveImage(selectedVariant.image.src);
+    }
+  }, [selectedVariant]);
+
+  // Set initial image
+  useEffect(() => {
+    if (!activeImage && product?.images?.[0]?.src) {
+      setActiveImage(product.images[0].src);
+    }
+  }, [product, activeImage]);
+
+  const handleThumbnailClick = (src: string) => {
+    setActiveImage(src);
+    // Find if this image belongs to a specific variant
+    const variant = product.variants?.find(v => v.image?.src === src);
+    if (variant && variant.available !== false) {
+      if (variant.selectedOptions) {
+        setSelectedOptions(variant.selectedOptions);
+      }
+    }
+  };
+
   const addToCart = () => {
     let variantId = selectedVariantId;
     if (!variantId && product?.variants && product.variants.length === 1) {
@@ -107,7 +133,7 @@ export default function ProductPageClient({ product }: ProductPageClientProps) {
       // update UI state
       setHasCartItems(true);
       setJustAdded(true);
-      setTimeout(() => setJustAdded(false), 1000);
+      setTimeout(() => setJustAdded(false), 2000);
     } catch (e) {
       console.warn('Failed to update cart', e);
     }
@@ -115,100 +141,132 @@ export default function ProductPageClient({ product }: ProductPageClientProps) {
 
   return (
     <ScreenLayout>
-      <div className="fixed inset-0 -z-10 bg-gradient-to-br from-stone-950 via-stone-900 to-red-950" />
+      <div className="fixed inset-0 -z-10 bg-[#0c0a09]" />
       <ScrollContainer>
-        <div className="w-full mx-auto p-4 grid grid-cols-1 lg:grid-cols-2 gap-6 xl:gap-10" style={{maxWidth: 'min(1280px, 92vw)'}}>
-          {/* Media */}
-          <div className="rounded-2xl overflow-hidden border border-transparent aspect-square bg-transparent">
-            {(() => {
-              const src = selectedVariant?.image?.src || product?.images?.[0]?.src;
-              if (!src) return <div className="w-full h-full bg-stone-800" />;
-              return <img src={src} alt={product?.title || 'Product'} className="w-full h-full object-cover" />;
-            })()}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+          {/* Breadcrumb / Back */}
+          <div className="mb-8">
+            <a href="/store" className="text-xs uppercase tracking-widest text-[#b2a491] hover:text-[#ede8df] transition-colors">
+              ← Back to Store
+            </a>
           </div>
 
-          {/* Details */}
-          <div>
-            <h1 className="text-3xl font-bold mb-2">{product?.title || 'Product'}</h1>
-            <p className="text-[#b2a491] mb-4">{product?.description || 'Product description coming soon.'}</p>
-
-            {/* Options as pill selectors */}
-            {product?.options && product.options.length > 0 && (
-              <div className="space-y-4 mb-6">
-                {product.options.map((opt) => (
-                  <div key={opt.name}>
-                    <div className="text-sm text-[#b2a491] mb-2">{opt.name}</div>
-                    <div className="flex flex-wrap gap-2">
-                      {opt.values.map(val => {
-                        const isSelected = selectedOptions[opt.name] === val;
-                        // Determine if this value is available given current partial selections
-                        const tentative = { ...selectedOptions, [opt.name]: val };
-                        const anyMatch = product?.variants?.some(v => {
-                          // Treat unknown quantity as available; rely on availableForSale
-                          const isInStock = (v.available !== false) && (v.quantityAvailable == null || v.quantityAvailable > 0);
-                          if (!isInStock) return false;
-                          const so = v.selectedOptions || {};
-                          return (product?.options || []).every(o => tentative[o.name] ? so[o.name] === tentative[o.name] : true);
-                        });
-                        const disabled = !anyMatch;
-                        return (
-                          <button
-                            key={val}
-                            onClick={() => !disabled && setSelectedOptions(prev => ({ ...prev, [opt.name]: val }))}
-                            className={`px-3 py-1.5 rounded-xl border transition-all text-sm ${
-                              isSelected ? 'bg-[#843c2d] text-[#ede8df] border-[#843c2d]' : disabled ? 'border-[#502d26]/20 text-[#726d6c]/60 cursor-not-allowed' : 'border-[#502d26]/40 text-[#ede8df] hover:border-[#843c2d]/50'
-                            }`}
-                            disabled={disabled}
-                          >
-                            {val}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20">
+            {/* Media Gallery */}
+            <div className="space-y-4">
+              <div className="aspect-[3/4] bg-[#1c1a19]/20 overflow-hidden flex items-center justify-center">
+                {(() => {
+                  const src = activeImage || selectedVariant?.image?.src || product?.images?.[0]?.src;
+                  if (!src) return <div className="text-[#502d26] text-xs uppercase tracking-widest">No Image</div>;
+                  return <img src={src} alt={product?.title || 'Product'} className="w-full h-full object-contain transition-all duration-500" />;
+                })()}
               </div>
-            )}
-
-            {/* Price and availability */}
-            {selectedVariant && (
-              <div className="mb-4 text-[#ede8df]">
-                <div className="flex items-center gap-3">
-                  <span className="text-xl font-semibold">{selectedVariant.currency ? `${selectedVariant.currency} ` : '$'}{selectedVariant.price}</span>
-                  <span className={`text-sm ${selectedVariant.available ? 'text-green-400' : 'text-red-400'}`}>
-                    {selectedVariant.available ? (selectedVariant.quantityAvailable != null ? `${selectedVariant.quantityAvailable} available` : 'In stock') : 'Sold out'}
-                  </span>
+              {/* Thumbnails if multiple images exist */}
+              {product?.images && product.images.length > 1 && (
+                <div className="grid grid-cols-4 gap-4">
+                  {product.images.slice(0, 4).map((img, idx) => (
+                    <button 
+                      key={idx} 
+                      onClick={() => handleThumbnailClick(img.src)}
+                      className={`aspect-square bg-[#1c1a19]/20 overflow-hidden border transition-all duration-300 ${
+                        activeImage === img.src ? 'border-[#843c2d] opacity-100' : 'border-transparent opacity-60 hover:opacity-100'
+                      }`}
+                    >
+                      <img src={img.src} alt="" className="w-full h-full object-cover" />
+                    </button>
+                  ))}
                 </div>
-              </div>
-            )}
-
-            {/* Quantity & Add to cart */}
-            <div className="flex items-center gap-3 mb-4">
-              <input
-                type="number"
-                min={1}
-                value={qty}
-                onChange={(e) => setQty(Math.max(1, parseInt(e.target.value || '1', 10)))}
-                className="w-20 bg-transparent border border-[#502d26]/30 rounded-xl p-2 text-[#ede8df]"
-              />
-              <button
-                onClick={addToCart}
-                className={`px-4 py-2 rounded-xl ${ (selectedVariantId || (product?.variants?.length === 1)) ? 'bg-[#843c2d] hover:bg-[#a0472f]' : 'bg-[#502d26]/60 hover:bg-[#502d26]/70'} text-[#ede8df] transition-colors`}
-              >
-                {justAdded ? 'Added' : 'Add to cart'}
-              </button>
+              )}
             </div>
 
-            {hasCartItems && (
-              <div className="mt-2">
-                <a
-                  href="/store/cart"
-                  className="inline-block px-4 py-2 rounded-xl border border-[#502d26]/40 text-[#ede8df] hover:border-[#843c2d]/60 transition-colors"
-                >
-                  View cart
-                </a>
+            {/* Details */}
+            <div className="flex flex-col justify-center">
+              <h1 className="text-3xl sm:text-4xl font-medium text-[#ede8df] mb-4 tracking-wide">{product?.title || 'Product'}</h1>
+              
+              {selectedVariant && (
+                <div className="text-xl text-[#b2a491] font-light tracking-widest mb-8">
+                  {selectedVariant.currency ? `${selectedVariant.currency} ` : '$'}{parseFloat(selectedVariant.price).toFixed(2)}
+                </div>
+              )}
+
+              <div className="prose prose-invert prose-sm text-[#b2a491] mb-10 max-w-md font-light leading-relaxed">
+                {product?.description || 'No description available.'}
               </div>
-            )}
+
+              {/* Options */}
+              {product?.options && product.options.length > 0 && (
+                <div className="space-y-6 mb-10">
+                  {product.options.map((opt) => (
+                    <div key={opt.name}>
+                      <div className="text-xs uppercase tracking-widest text-[#502d26] mb-3">{opt.name}</div>
+                      <div className="flex flex-wrap gap-3">
+                        {opt.values.map(val => {
+                          const isSelected = selectedOptions[opt.name] === val;
+                          // Determine availability
+                          const tentative = { ...selectedOptions, [opt.name]: val };
+                          const anyMatch = product?.variants?.some(v => {
+                            const isInStock = (v.available !== false) && (v.quantityAvailable == null || v.quantityAvailable > 0);
+                            if (!isInStock) return false;
+                            const so = v.selectedOptions || {};
+                            return (product?.options || []).every(o => tentative[o.name] ? so[o.name] === tentative[o.name] : true);
+                          });
+                          const disabled = !anyMatch;
+                          
+                          return (
+                            <button
+                              key={val}
+                              onClick={() => !disabled && setSelectedOptions(prev => ({ ...prev, [opt.name]: val }))}
+                              className={`min-w-[3rem] px-4 py-2 text-sm border transition-all duration-300 ${
+                                isSelected 
+                                  ? 'bg-[#ede8df] text-[#0c0a09] border-[#ede8df]' 
+                                  : disabled 
+                                    ? 'border-[#302927] text-[#302927] cursor-not-allowed decoration-slice line-through' 
+                                    : 'border-[#502d26] text-[#b2a491] hover:border-[#b2a491] hover:text-[#ede8df]'
+                              }`}
+                              disabled={disabled}
+                            >
+                              {val}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="flex flex-col gap-4 max-w-xs">
+                <button
+                  onClick={addToCart}
+                  disabled={!selectedVariant?.available}
+                  className={`w-full py-4 text-sm uppercase tracking-[0.2em] transition-all duration-300 ${
+                    !selectedVariant?.available 
+                      ? 'bg-[#1c1a19] text-[#502d26] cursor-not-allowed border border-[#302927]'
+                      : justAdded
+                        ? 'bg-[#502d26] text-[#ede8df]'
+                        : 'bg-[#843c2d] text-[#ede8df] hover:bg-[#a0472f]'
+                  }`}
+                >
+                  {justAdded ? 'Added to Cart' : (!selectedVariant?.available ? 'Sold Out' : 'Add to Cart')}
+                </button>
+                
+                {hasCartItems && (
+                  <a
+                    href="/store/cart"
+                    className="w-full py-4 text-center text-sm uppercase tracking-[0.2em] border border-[#502d26] text-[#b2a491] hover:text-[#ede8df] hover:border-[#b2a491] transition-all duration-300"
+                  >
+                    View Cart
+                  </a>
+                )}
+              </div>
+
+              {/* Shipping Info */}
+              <div className="mt-12 pt-8 border-t border-[#502d26]/20 text-xs text-[#502d26] uppercase tracking-widest space-y-2">
+                <p>Free shipping on orders over $150</p>
+                <p>Ships from Canada</p>
+              </div>
+            </div>
           </div>
         </div>
       </ScrollContainer>

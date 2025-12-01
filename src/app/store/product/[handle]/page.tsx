@@ -1,49 +1,45 @@
 import { notFound } from 'next/navigation';
 import ProductPageClient from './ProductPageClient';
-
-// Define the shape of the product data
-interface ShopifyProduct {
-  id: string;
-  title: string;
-  handle: string;
-  description?: string;
-  images?: { src: string }[];
-  options?: { name: string; values: string[] }[];
-  variants?: { 
-    id: string; 
-    title: string; 
-    price: string; 
-    currency?: string;
-    available?: boolean; 
-    quantityAvailable?: number;
-    image?: { src: string } | null; 
-    selectedOptions?: Record<string, string> 
-  }[];
-}
+import { getShopifyProduct } from '@/lib/shopify';
 
 // This function now runs on the server
-async function fetchShopifyProduct(handle: string): Promise<ShopifyProduct | null> {
-  try {
-    // We fetch from the internal API route, which in turn calls Shopify
-  const getBaseUrl = (await import('@/lib/getBaseUrl')).default;
-  const baseUrl = getBaseUrl();
-  const res = await fetch(`${baseUrl}/api/shopify/product?handle=${encodeURIComponent(handle)}`, {
-      next: { revalidate: 300 } // Revalidate every 5 minutes
-    });
-    if (!res.ok) return null;
-    return await res.json();
-  } catch {
-    return null;
-  }
+async function fetchProduct(handle: string) {
+  const res = await getShopifyProduct(handle);
+  if (!res.success || !res.product) return null;
+  
+  const p = res.product;
+  
+  // Map to the shape expected by ProductPageClient
+  return {
+    id: p.id,
+    title: p.title,
+    handle: p.handle,
+    description: p.description,
+    images: p.images.map(url => ({ src: url })),
+    options: (p as any).options || [],
+    variants: p.variants.map((v: any) => ({
+      id: v.id,
+      title: v.title,
+      price: String(v.price),
+      currency: v.currency,
+      available: v.available,
+      quantityAvailable: v.quantityAvailable,
+      image: v.image,
+      selectedOptions: v.selectedOptions
+    }))
+  };
 }
 
 // The page itself becomes an async Server Component
 export default async function ProductDetailPage({ params }: { params: { handle: string } }) {
-  if (!params?.handle) {
+  // Await params for Next.js 15+
+  const { handle } = await params;
+  
+  if (!handle) {
     notFound();
   }
 
-  const product = await fetchShopifyProduct(params.handle);
+  const product = await fetchProduct(handle);
 
   if (!product) {
     notFound();

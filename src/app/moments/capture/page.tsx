@@ -560,7 +560,33 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
         )}
         
         {/* Show gallery info and camera controls only after code is validated */}
-        {codeSubmitted && galleryInfo && (
+        
+        {/* Event Over State */}
+        {codeSubmitted && galleryInfo && (galleryInfo.ends_at && new Date() > new Date(galleryInfo.ends_at)) && (
+          <div className="space-y-6">
+             <div className="p-8 text-center bg-[#1f1e1d] border border-[#3b3733] rounded-2xl">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[#2a2626] flex items-center justify-center">
+                  <svg className="w-8 h-8 text-[#b2a491]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <h2 className="text-xl font-bold text-[#ede8df] mb-2">Event Ended</h2>
+                <p className="text-[#8f8271] mb-6">This event is over and no longer accepting new uploads.</p>
+                <Link 
+                  href={`/moments/gallery/${galleryInfo.id}`}
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#ede8df] text-[#171616] font-bold hover:bg-white transition-colors"
+                >
+                  View Gallery
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                  </svg>
+                </Link>
+             </div>
+          </div>
+        )}
+
+        {/* Active Event State */}
+        {codeSubmitted && galleryInfo && !(galleryInfo.ends_at && new Date() > new Date(galleryInfo.ends_at)) && (
           <div className="space-y-6">
             {/* Success banner */}
             <div className="p-4 sm:p-6 bg-gradient-to-r from-emerald-900/30 to-green-900/30 border border-emerald-600/50 rounded-2xl">

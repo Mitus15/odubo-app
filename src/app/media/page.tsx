@@ -22,6 +22,7 @@ async function getVideos(): Promise<Video[]> {
   try {
     const videos = await queryDatabase(`
       SELECT * FROM videos
+      WHERE is_public = 1
       ORDER BY created_at DESC
     `);
     return videos || [];

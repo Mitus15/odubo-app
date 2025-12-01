@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from 'react';
 export default function CartPage() {
   type CartItem = { variantId: string; qty: number; title: string; price: number; image?: string };
   const [items, setItems] = useState<CartItem[]>([]);
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
   useEffect(() => {
     try {
@@ -37,55 +38,125 @@ export default function CartPage() {
     save(items.filter(i => i.variantId !== variantId));
   };
 
-  const checkoutUrl = useMemo(() => {
-    if (items.length === 0) return 'https://odubostudio.myshopify.com/cart';
-    const pairs = items.map(i => {
-      const numericId = (i.variantId.split('/').pop() || '').replace(/[^0-9]/g, '');
-      return `${numericId}:${i.qty}`;
+  const handleCheckout = () => {
+    if (items.length === 0) return;
+    setIsRedirecting(true);
+    
+    // Construct Shopify Cart Permalink
+    // Format: https://{shop}.myshopify.com/cart/{variant_id}:{quantity},{variant_id}:{quantity}
+    const shopUrl = 'odubostudio.myshopify.com';
+    const variantString = items.map(i => {
+      // Ensure variant ID is just the numeric part if it comes as a GID
+      const id = i.variantId.split('/').pop(); 
+      return `${id}:${i.qty}`;
     }).join(',');
-    return `https://odubostudio.myshopify.com/cart/${pairs}`;
-  }, [items]);
+    
+    const checkoutUrl = `https://${shopUrl}/cart/${variantString}`;
+    window.location.href = checkoutUrl;
+  };
 
   return (
     <ScreenLayout>
-      <div className="fixed inset-0 -z-10 bg-gradient-to-br from-stone-950 via-stone-900 to-red-950" />
+      <div className="fixed inset-0 -z-10 bg-[#0c0a09]" />
       <ScrollContainer>
-        <div className="max-w-3xl mx-auto p-4">
-          <h1 className="text-2xl font-bold mb-4">Your Cart</h1>
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="flex items-center justify-between mb-12">
+            <h1 className="text-3xl font-medium text-[#ede8df] tracking-wide">Your Cart</h1>
+            <Link href="/store" className="text-xs uppercase tracking-widest text-[#b2a491] hover:text-[#ede8df] transition-colors">
+              Continue Shopping
+            </Link>
+          </div>
+
           {items.length === 0 ? (
-            <div className="glass-surface rounded-2xl p-6 border border-[#502d26]/30 text-[#b2a491]">
-              Your cart is empty.
-              <div className="mt-3">
-                <Link href="/store" className="text-[#ede8df] underline">Continue shopping</Link>
-              </div>
+            <div className="flex flex-col items-center justify-center py-20 border border-[#502d26]/20 rounded-sm bg-[#1c1a19]/20">
+              <p className="text-[#b2a491] uppercase tracking-widest text-sm mb-6">Your cart is empty</p>
+              <Link 
+                href="/store" 
+                className="px-8 py-3 bg-[#302927] text-[#ede8df] text-xs uppercase tracking-widest hover:bg-[#502d26] transition-colors"
+              >
+                Browse Store
+              </Link>
             </div>
           ) : (
-            <div className="space-y-4">
-              {items.map((it) => (
-                <div key={it.variantId} className="glass-surface rounded-2xl p-4 border border-[#502d26]/30 flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    {it.image && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={it.image} alt="item" className="w-14 h-14 rounded-lg object-cover" />
-                    )}
-                    <div>
-                      <div className="text-[#ede8df] font-medium max-w-xs line-clamp-2">{it.title}</div>
-                      <div className="text-[#b2a491] text-sm">${Number(it.price).toFixed(2)}</div>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+              {/* Cart Items */}
+              <div className="lg:col-span-2 space-y-8">
+                {items.map((it) => (
+                  <div key={it.variantId} className="flex gap-6 py-6 border-b border-[#502d26]/20 first:pt-0">
+                    <div className="w-24 h-32 bg-[#1c1a19]/20 flex-shrink-0">
+                      {it.image ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={it.image} alt={it.title} className="w-full h-full object-contain" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-[#502d26] text-[10px] uppercase">No Image</div>
+                      )}
+                    </div>
+                    
+                    <div className="flex-1 flex flex-col justify-between">
+                      <div>
+                        <div className="flex justify-between items-start mb-2">
+                          <h3 className="text-[#ede8df] font-medium text-lg tracking-wide">{it.title.split('—')[0]}</h3>
+                          <p className="text-[#ede8df] font-light tracking-widest">${(Number(it.price) * it.qty).toFixed(2)}</p>
+                        </div>
+                        <p className="text-[#b2a491] text-xs uppercase tracking-widest mb-4">{it.title.split('—')[1] || 'Default'}</p>
+                      </div>
+
+                      <div className="flex justify-between items-end">
+                        <div className="flex items-center border border-[#502d26]/40">
+                          <button 
+                            onClick={() => dec(it.variantId)} 
+                            className="w-8 h-8 flex items-center justify-center text-[#b2a491] hover:text-[#ede8df] hover:bg-[#502d26]/20 transition-colors"
+                          >
+                            -
+                          </button>
+                          <span className="w-8 text-center text-[#ede8df] text-sm">{it.qty}</span>
+                          <button 
+                            onClick={() => inc(it.variantId)} 
+                            className="w-8 h-8 flex items-center justify-center text-[#b2a491] hover:text-[#ede8df] hover:bg-[#502d26]/20 transition-colors"
+                          >
+                            +
+                          </button>
+                        </div>
+                        <button 
+                          onClick={() => remove(it.variantId)} 
+                          className="text-[10px] uppercase tracking-widest text-[#502d26] hover:text-red-400 transition-colors"
+                        >
+                          Remove
+                        </button>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <button onClick={() => dec(it.variantId)} className="w-8 h-8 rounded-full bg-[#302927]/60 hover:bg-[#502d26]/60 text-[#ede8df]">-</button>
-                    <span className="text-[#ede8df] w-6 text-center">{it.qty}</span>
-                    <button onClick={() => inc(it.variantId)} className="w-8 h-8 rounded-full bg-[#302927]/60 hover:bg-[#502d26]/60 text-[#ede8df]">+</button>
-                    <button onClick={() => remove(it.variantId)} className="ml-2 text-[#b2a491] hover:text-red-400">Remove</button>
-                  </div>
-                </div>
-              ))}
-              <div className="flex items-center justify-between pt-4 border-t border-[#502d26]/30">
-                <div className="text-[#b2a491]">Subtotal</div>
-                <div className="text-[#ede8df] font-medium">${subtotal.toFixed(2)}</div>
+                ))}
               </div>
-              <a href={checkoutUrl} className="block text-center py-3 rounded-xl bg-[#843c2d] text-[#ede8df] hover:bg-[#a0472f] transition-colors">Checkout</a>
+
+              {/* Summary */}
+              <div className="lg:col-span-1">
+                <div className="bg-[#1c1a19]/40 p-8 border border-[#502d26]/20 sticky top-24">
+                  <h2 className="text-[#ede8df] text-sm uppercase tracking-widest mb-6 pb-4 border-b border-[#502d26]/20">Order Summary</h2>
+                  
+                  <div className="flex justify-between items-center mb-4">
+                    <span className="text-[#b2a491] text-sm">Subtotal</span>
+                    <span className="text-[#ede8df] tracking-widest">${subtotal.toFixed(2)}</span>
+                  </div>
+                  
+                  <div className="flex justify-between items-center mb-8">
+                    <span className="text-[#b2a491] text-sm">Shipping</span>
+                    <span className="text-[#b2a491] text-[10px] uppercase tracking-widest text-right leading-tight">Calculated at<br/>checkout</span>
+                  </div>
+
+                  <button 
+                    onClick={handleCheckout}
+                    disabled={isRedirecting}
+                    className="w-full py-4 bg-[#843c2d] text-[#ede8df] text-sm uppercase tracking-[0.2em] hover:bg-[#a0472f] transition-colors disabled:opacity-50 disabled:cursor-wait"
+                  >
+                    {isRedirecting ? 'Redirecting...' : 'Checkout'}
+                  </button>
+                  
+                  <p className="mt-4 text-center text-[10px] text-[#502d26] uppercase tracking-widest">
+                    Secure checkout via Shopify
+                  </p>
+                </div>
+              </div>
             </div>
           )}
         </div>

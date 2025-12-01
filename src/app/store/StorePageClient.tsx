@@ -10,7 +10,11 @@ interface ProductCard {
   title: string;
   handle: string;
   image: string | null;
-  price: string | null;
+  price: number | null;
+  category: string;
+  available: boolean;
+  collections: string[];
+  createdAt: string;
 }
 
 interface StorePageClientProps {
@@ -27,11 +31,24 @@ export default function StorePageClient({ isStoreOpen, initialProducts }: StoreP
     seconds: 0
   });
 
+  const [isUnlocked, setIsUnlocked] = useState(false);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [unlockError, setUnlockError] = useState('');
+
   const [activeTab, setActiveTab] = useState<'clothes' | 'items'>('clothes');
   const [products, setProducts] = useState<ProductCard[]>(initialProducts);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [currentProductIndex, setCurrentProductIndex] = useState(0);
+
+  const handleUnlock = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (passwordInput === 'odubo') {
+      setIsUnlocked(true);
+      setUnlockError('');
+    } else {
+      setUnlockError('Incorrect password');
+    }
+  };
 
   useEffect(() => {
     const targetDate = new Date('2026-03-14T00:00:00').getTime();
@@ -59,70 +76,70 @@ export default function StorePageClient({ isStoreOpen, initialProducts }: StoreP
     return () => clearInterval(interval);
   }, []);
 
-  const loadProducts = async (type: 'clothes' | 'items') => {
-    try {
-      setLoading(true);
-      setError(null);
-      const res = await fetch(`/api/shopify/collections?type=${type}`, { cache: 'no-store' });
-      if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(`Load failed: ${res.status} ${txt}`);
-      }
-      const data = await res.json() as { products: ProductCard[] };
-      setProducts(data.products || []);
-      setCurrentProductIndex(0); // Reset to first product when switching tabs
-    } catch (e) {
-      const errorMsg = e instanceof Error ? e.message : 'Unknown error';
-      setError(errorMsg);
-      setProducts([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Filter products based on active tab
+  const filteredProducts = products.filter(p => {
+    const collections = p.collections || [];
+    const isClothing = collections.some(c => {
+      const lower = c.toLowerCase();
+      return lower.includes('cloth') || 
+             lower.includes('apparel') || 
+             lower.includes('shirt') || 
+             lower.includes('top') || 
+             lower.includes('hoodie') || 
+             lower.includes('wear');
+    });
 
-  useEffect(() => {
-    if (isStoreOpen) {
-      loadProducts(activeTab);
+    if (activeTab === 'clothes') {
+      // Include if it's clothing OR has NO collections (uncategorized fallback)
+      return isClothing || collections.length === 0;
+    } else {
+      // Items tab: anything NOT in clothing
+      return !isClothing && collections.length > 0;
     }
-  }, [activeTab, isStoreOpen]);
-
-  if (!isStoreOpen) {
+  });  if (!isStoreOpen && !isUnlocked) {
     return (
       <ScreenLayout>
         <div className="fixed inset-0 -z-10 bg-gradient-to-br from-stone-950 via-stone-900 to-red-950" />
         <ScrollContainer>
           <div className="max-w-4xl mx-auto px-6 py-20 text-center">
-            <div className="glass-surface rounded-3xl border border-[#502d26]/30 p-10">
-              <h1 className="text-3xl sm:text-4xl font-bold text-[#ede8df] mb-8">Store Opening Soon</h1>
+            <div className="glass-surface rounded-3xl border border-[#502d26]/30 p-10 backdrop-blur-md bg-[#1c1a19]/80">
+              <h1 className="text-3xl sm:text-4xl font-bold text-[#ede8df] mb-8 tracking-tight">Store Opening Soon</h1>
               
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-8">
-                <div className="glass-surface rounded-2xl border border-[#502d26]/20 p-4">
-                  <div className="text-3xl sm:text-4xl font-bold text-[#ede8df]">{timeLeft.weeks}</div>
-                  <div className="text-sm text-[#b2a491] mt-1">Weeks</div>
-                </div>
-                <div className="glass-surface rounded-2xl border border-[#502d26]/20 p-4">
-                  <div className="text-3xl sm:text-4xl font-bold text-[#ede8df]">{timeLeft.days}</div>
-                  <div className="text-sm text-[#b2a491] mt-1">Days</div>
-                </div>
-                <div className="glass-surface rounded-2xl border border-[#502d26]/20 p-4">
-                  <div className="text-3xl sm:text-4xl font-bold text-[#ede8df]">{timeLeft.hours}</div>
-                  <div className="text-sm text-[#b2a491] mt-1">Hours</div>
-                </div>
-                <div className="glass-surface rounded-2xl border border-[#502d26]/20 p-4">
-                  <div className="text-3xl sm:text-4xl font-bold text-[#ede8df]">{timeLeft.minutes}</div>
-                  <div className="text-sm text-[#b2a491] mt-1">Minutes</div>
-                </div>
-                <div className="glass-surface rounded-2xl border border-[#502d26]/20 p-4">
-                  <div className="text-3xl sm:text-4xl font-bold text-[#ede8df]">{timeLeft.seconds}</div>
-                  <div className="text-sm text-[#b2a491] mt-1">Seconds</div>
-                </div>
+                {Object.entries(timeLeft).map(([unit, value]) => (
+                  <div key={unit} className="glass-surface rounded-2xl border border-[#502d26]/20 p-4 bg-[#302927]/20">
+                    <div className="text-3xl sm:text-4xl font-bold text-[#ede8df] tabular-nums">{value}</div>
+                    <div className="text-xs text-[#b2a491] mt-1 uppercase tracking-wider">{unit}</div>
+                  </div>
+                ))}
               </div>
               
-              <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                <Link href="/" className="px-5 py-3 rounded-xl bg-[#302927] text-[#b2a491] hover:bg-[#502d26]/60">
+              <div className="flex flex-col sm:flex-row gap-3 justify-center mb-8">
+                <Link href="/" className="px-6 py-3 rounded-xl bg-[#302927] text-[#b2a491] hover:bg-[#502d26]/60 hover:text-[#ede8df] transition-all duration-300">
                   Return Home
                 </Link>
               </div>
+
+              {/* Designer Access */}
+              <form onSubmit={handleUnlock} className="max-w-xs mx-auto mt-12 pt-8 border-t border-[#502d26]/20">
+                <p className="text-[10px] text-[#b2a491] mb-3 uppercase tracking-[0.2em]">Designer Access</p>
+                <div className="flex gap-2">
+                  <input 
+                    type="password" 
+                    value={passwordInput}
+                    onChange={(e) => setPasswordInput(e.target.value)}
+                    placeholder="Enter password"
+                    className="flex-1 bg-[#171616] border border-[#502d26]/30 rounded-lg px-3 py-2 text-sm text-[#ede8df] focus:outline-none focus:border-[#843c2d] transition-colors placeholder:text-[#502d26]"
+                  />
+                  <button 
+                    type="submit"
+                    className="px-4 py-2 bg-[#843c2d]/20 text-[#ede8df] rounded-lg hover:bg-[#843c2d]/40 text-sm font-medium transition-colors"
+                  >
+                    Enter
+                  </button>
+                </div>
+                {unlockError && <p className="text-red-400 text-xs mt-2">{unlockError}</p>}
+              </form>
             </div>
           </div>
         </ScrollContainer>
@@ -132,124 +149,121 @@ export default function StorePageClient({ isStoreOpen, initialProducts }: StoreP
 
   return (
     <ScreenLayout>
-      <div className="fixed inset-0 -z-10 bg-gradient-to-br from-stone-950 via-stone-900 to-red-950" />
+      <div className="fixed inset-0 -z-10 bg-[#0c0a09]" />
       <ScrollContainer>
-        <div className="max-w-6xl mx-auto p-4">
-          <header className="mb-4 flex items-center justify-between">
-            {/* Tabs */}
-            <div className="glass-surface rounded-2xl p-1.5 inline-flex gap-1 border border-[#502d26]/30">
-            <button
-              onClick={() => setActiveTab('clothes')}
-              className={`px-4 py-2 rounded-xl text-sm ${activeTab === 'clothes' ? 'bg-[#843c2d]/20 text-[#ede8df]' : 'text-[#b2a491] hover:bg-[#843c2d]/10'}`}
-            >
-              Clothes
-            </button>
-            <button
-              onClick={() => setActiveTab('items')}
-              className={`px-4 py-2 rounded-xl text-sm ${activeTab === 'items' ? 'bg-[#843c2d]/20 text-[#ede8df]' : 'text-[#b2a491] hover:bg-[#843c2d]/10'}`}
-            >
-              Items
-            </button>
+        <div className="max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <header className="mb-8 sm:mb-16 sticky top-0 z-10 py-4 sm:py-6 bg-[#0c0a09]/90 backdrop-blur-md border-b border-[#502d26]/10">
+            <div className="max-w-7xl mx-auto flex items-center justify-between px-2 sm:px-0">
+              {/* Empty left side for balance if needed, or Logo */}
+              <div className="w-20 hidden sm:block"></div>
+
+              {/* Centered Tabs */}
+              <div className="flex-1 flex justify-center gap-6 sm:gap-12">
+                <button
+                  onClick={() => setActiveTab('clothes')}
+                  className={`text-xs sm:text-sm uppercase tracking-[0.2em] transition-all duration-300 ${
+                    activeTab === 'clothes' 
+                      ? 'text-[#ede8df] font-medium' 
+                      : 'text-[#502d26] hover:text-[#b2a491]'
+                  }`}
+                >
+                  Clothes
+                </button>
+                <button
+                  onClick={() => setActiveTab('items')}
+                  className={`text-xs sm:text-sm uppercase tracking-[0.2em] transition-all duration-300 ${
+                    activeTab === 'items' 
+                      ? 'text-[#ede8df] font-medium' 
+                      : 'text-[#502d26] hover:text-[#b2a491]'
+                  }`}
+                >
+                  Items
+                </button>
+              </div>
+
+              {/* Right side Cart */}
+              <Link href="/store/cart" className="w-auto sm:w-20 text-right text-[10px] sm:text-xs text-[#b2a491] hover:text-[#ede8df] uppercase tracking-widest transition-colors">
+                Cart (0)
+              </Link>
             </div>
-            <Link href="/store/cart" className="text-sm text-[#b2a491] hover:text-[#ede8df]">View Cart</Link>
           </header>
 
-          {/* Product Carousel - Single Large Product */}
-          <div className="relative flex items-center justify-center min-h-[60vh]">
+          {/* Product Grid */}
+          <div className="min-h-[60vh] max-w-7xl mx-auto">
             {loading && (
-              <div className="w-80 max-w-sm mx-auto">
-                <div className="aspect-[4/5] bg-[#302927]/40 animate-pulse rounded-lg" />
-              </div>
-            )}
-            {!loading && products.length > 0 && (
-              <div 
-                className="flex overflow-x-auto pb-4 scrollbar-hide snap-x snap-mandatory w-full"
-                onScroll={(e) => {
-                  const scrollLeft = e.currentTarget.scrollLeft;
-                  const itemWidth = e.currentTarget.scrollWidth / products.length;
-                  const index = Math.round(scrollLeft / itemWidth);
-                  setCurrentProductIndex(index);
-                }}
-              >
-                {products.map((p, index) => (
-                  <div key={p.id} className="flex-shrink-0 w-full flex justify-center snap-start">
-                    <Link 
-                      href={`/store/product/${p.handle}`} 
-                      className="group w-80 max-w-sm hover:scale-[1.02] transition-transform duration-300"
-                    >
-                      <div className="relative text-center">
-                        {p.image ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img 
-                            src={p.image} 
-                            alt={p.title} 
-                            className="w-full aspect-[4/5] object-cover rounded-lg mx-auto" 
-                          />
-                        ) : (
-                          <div className="w-full aspect-[4/5] bg-[#302927]/40 rounded-lg" />
-                        )}
-                        <div className="mt-6 space-y-2">
-                          <h3 className="text-xl font-semibold text-[#ede8df] line-clamp-2 leading-tight">
-                            {p.title}
-                          </h3>
-                          <div className="text-lg text-[#b2a491]">
-                            {p.price ? `$${Number(p.price).toFixed(2)}` : '—'}
-                          </div>
-                        </div>
-                      </div>
-                    </Link>
-                  </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="aspect-[3/4] bg-[#1c1a19]/20 animate-pulse rounded-sm" />
                 ))}
               </div>
             )}
-            {!loading && !error && products.length === 0 && (
-              <div className="text-center text-[#b2a491] py-8">No products found.</div>
+            
+            {!loading && filteredProducts.length > 0 && (
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-10 sm:gap-x-12 sm:gap-y-20">
+                {filteredProducts.map((p) => (
+                  <Link 
+                    key={p.id}
+                    href={`/store/product/${p.handle}`} 
+                    className={`group block ${p.available === false ? 'opacity-60' : ''}`}
+                  >
+                    {/* Removed background color to respect transparent images */}
+                    <div className="relative aspect-[3/4] overflow-hidden mb-4 sm:mb-8 flex items-center justify-center">
+                      {p.image ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img 
+                          src={p.image} 
+                          alt={p.title} 
+                          className="w-full h-full object-contain transition-transform duration-700 group-hover:scale-105" 
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-[#502d26] bg-[#1c1a19]/20">
+                          <span className="uppercase tracking-widest text-xs">No Image</span>
+                        </div>
+                      )}
+                      
+                      {/* New Badge */}
+                      {p.available && (new Date(p.createdAt).getTime() > Date.now() - 30 * 24 * 60 * 60 * 1000) && (
+                        <div className="absolute top-0 left-0 p-2 sm:p-4">
+                          <span className="px-1.5 py-0.5 sm:px-2 sm:py-1 bg-[#843c2d] text-[#ede8df] text-[8px] sm:text-[10px] uppercase tracking-widest">
+                            New
+                          </span>
+                        </div>
+                      )}
+
+                      {!p.available && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                          <span className="px-2 py-1 sm:px-3 sm:py-1 bg-[#1c1a19] text-[#ede8df] text-[10px] sm:text-xs uppercase tracking-widest border border-[#502d26]">
+                            Sold Out
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="space-y-1 sm:space-y-2 text-center">
+                      <h3 className="text-sm sm:text-lg font-medium text-[#ede8df] group-hover:text-[#843c2d] transition-colors duration-300 tracking-wide">
+                        {p.title}
+                      </h3>
+                      <div className="text-xs sm:text-sm text-[#b2a491] font-light tracking-widest">
+                        {p.available === false 
+                          ? 'SOLD OUT' 
+                          : (p.price !== null ? `$${p.price.toFixed(2)}` : 'PRICE ON REQUEST')}
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
             )}
+            
+            {!loading && !error && filteredProducts.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-32 text-[#502d26]">
+                <p className="uppercase tracking-widest text-sm">No products found in this category</p>
+              </div>
+            )}
+            
             {error && (
-              <div className="text-center text-[#b2a491] py-8">{error}</div>
+              <div className="text-center text-red-400 py-8">{error}</div>
             )}
           </div>
-
-          {/* Product Preview Thumbnails */}
-          {!loading && products.length > 0 && (
-            <div className="flex justify-center mt-8 mb-4">
-              <div className="flex gap-2 px-4 py-2 glass-surface rounded-full border border-[#502d26]/30">
-                {products.slice(0, 5).map((p, index) => (
-                  <button
-                    key={p.id}
-                    onClick={() => {
-                      const carousel = document.querySelector('.flex.overflow-x-auto.scrollbar-hide');
-                      if (carousel) {
-                        const itemWidth = carousel.scrollWidth / products.length;
-                        carousel.scrollTo({ left: index * itemWidth, behavior: 'smooth' });
-                      }
-                    }}
-                    className={`relative w-10 h-12 rounded overflow-hidden transition-all duration-300 ${
-                      currentProductIndex === index 
-                        ? 'ring-2 ring-[#843c2d] scale-110' 
-                        : 'opacity-60 hover:opacity-80'
-                    }`}
-                  >
-                    {p.image ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img 
-                        src={p.image} 
-                        alt={p.title} 
-                        className="w-full h-full object-cover" 
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-[#302927]/40" />
-                    )}
-                  </button>
-                ))}
-                {products.length > 5 && (
-                  <div className="flex items-center text-xs text-[#b2a491] ml-2">
-                    +{products.length - 5}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
         </div>
       </ScrollContainer>
     </ScreenLayout>

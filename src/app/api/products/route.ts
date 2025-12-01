@@ -1,18 +1,22 @@
-import { productSchema } from '../../../lib/validation';
 import { NextRequest, NextResponse } from 'next/server';
+import { getShopifyProducts } from '@/lib/shopify';
+
 export const runtime = 'edge';
 
-export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json();
-    const product = productSchema.parse(body);
-    // TODO: Insert product into DB (use parameterized queries)
-    return NextResponse.json({ message: 'Product created', product }, { status: 201 });
-  } catch (err: any) {
-    return NextResponse.json({ error: 'Invalid input', details: err.errors }, { status: 400 });
+export async function GET(req: NextRequest) {
+  const result = await getShopifyProducts();
+  
+  if (!result.success) {
+    return NextResponse.json(result, { status: 500 });
   }
+
+  return NextResponse.json(result);
 }
 
-export async function GET() {
-  return NextResponse.json({ message: 'Products endpoint placeholder' });
+export async function POST(req: NextRequest) {
+  return NextResponse.json({ 
+    success: false, 
+    error: 'Product creation is now managed via Shopify Admin Dashboard' 
+  }, { status: 405 });
 }
+

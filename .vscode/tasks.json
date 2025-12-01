@@ -7,6 +7,15 @@
 			"command": "npx wrangler d1 migrations apply odubo --remote",
 			"group": "build",
 			"isBackground": false
+		},
+		{
+			"label": "Apply Odubo Commerce Migration",
+			"type": "shell",
+			"command": "npx wrangler d1 migrations apply odubo --remote",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
 		}
 	]
 }

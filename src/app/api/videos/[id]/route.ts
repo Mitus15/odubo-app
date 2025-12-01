@@ -25,9 +25,9 @@ function safeJsonStringify(value: any): string | null {
   }
 }
 
-export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const id = params.id;
+    const { id } = await params;
     const rows = await queryDatabase(
       `SELECT 
         id,
@@ -78,16 +78,17 @@ const videoUpdateSchema = z.object({
   credits: z.union([z.string(), z.array(z.any())]).optional(),
   related_projects: z.union([z.string(), z.array(z.any())]).optional(),
   status: z.string().optional(),
+  ai_description: z.union([z.string(), z.record(z.string(), z.any())]).optional(),
 });
 
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = getUserFromRequest(req);
     if (!isAdminUser(user)) {
       return NextResponse.json({ error: 'Forbidden: Admins only' }, { status: 403 });
     }
 
-    const id = params.id;
+    const { id } = await params;
 
     const contentType = req.headers.get('content-type') || '';
     let body: any = {};
@@ -124,7 +125,10 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       credits: safeJsonStringify(body.credits),
       related_projects: safeJsonStringify(body.related_projects),
       status: body.status,
+      ai_description: safeJsonStringify(body.ai_description),
     } as Record<string, any>;
+
+    console.log('Updating video:', id, updatable);
 
     Object.entries(updatable).forEach(([column, value]) => {
       if (value !== null && value !== undefined) {
@@ -180,14 +184,14 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = getUserFromRequest(req);
     if (!isAdminUser(user)) {
       return NextResponse.json({ error: 'Forbidden: Admins only' }, { status: 403 });
     }
 
-    const id = params.id;
+    const { id } = await params;
 
     const rows = await queryDatabase('SELECT url, poster_url, thumbnail, stream_video_id FROM videos WHERE id = ?', [id]);
     if (!rows.length) {

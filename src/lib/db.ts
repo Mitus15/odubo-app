@@ -482,3 +482,26 @@ export async function deleteUser(id: string) {
     throw error;
   }
 }
+
+// Job status upsert for background clip generation pipeline
+// NOTE: Requires migration creating table `job_status` with columns:
+// jobId TEXT PRIMARY KEY, status TEXT, videoId INTEGER, cfVideoId TEXT, errorDetails TEXT, created_at TEXT, updated_at TEXT
+export async function updateJobStatus(
+  jobId: string,
+  status: 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED',
+  errorDetails: string | null = null,
+  videoId?: number,
+  cfVideoId?: string
+) {
+  const sql = `
+    INSERT INTO job_status (jobId, status, errorDetails, videoId, cfVideoId, updated_at)
+    VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+    ON CONFLICT(jobId) DO UPDATE SET
+      status = excluded.status,
+      errorDetails = excluded.errorDetails,
+      videoId = COALESCE(excluded.videoId, job_status.videoId),
+      cfVideoId = COALESCE(excluded.cfVideoId, job_status.cfVideoId),
+      updated_at = CURRENT_TIMESTAMP
+  `;
+  await executeQuery(sql, [jobId, status, errorDetails, videoId ?? null, cfVideoId ?? null]);
+}

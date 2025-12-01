@@ -4,18 +4,19 @@ import { getUserFromRequest, isAdminUser } from '@/lib/auth';
 export const runtime = 'nodejs';
 
 // GET /api/videos/[id]/analysis?uid= optional: returns latest videos_analysis row enriched
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const user = getUserFromRequest(req);
   if (!isAdminUser(user)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   try {
+    const { id } = await params;
     const url = new URL(req.url);
     const uidParam = url.searchParams.get('uid');
     let video;
     if (uidParam) {
       const vRows = await queryDatabase('SELECT id, uid FROM videos WHERE uid = ? LIMIT 1', [uidParam]);
       video = vRows[0];
-    } else if (params.id) {
-      const vRows = await queryDatabase('SELECT id, uid FROM videos WHERE id = ? LIMIT 1', [params.id]);
+    } else if (id) {
+      const vRows = await queryDatabase('SELECT id, uid FROM videos WHERE id = ? LIMIT 1', [id]);
       video = vRows[0];
     }
     if (!video) return NextResponse.json({ error: 'Video not found' }, { status: 404 });

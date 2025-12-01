@@ -2,32 +2,47 @@ import ScreenLayout from '@/components/ui/ScreenLayout';
 import ScrollContainer from '@/components/ui/ScrollContainer';
 import Link from 'next/link';
 import StorePageClient from './StorePageClient';
+import { getShopifyProducts } from '@/lib/shopify';
 
 // Temporary storefront gate – keeps all logic intact but shows a placeholder
-const STORE_OPEN = false;
+const STORE_OPEN = true;
 
 interface ProductCard {
   id: string;
   title: string;
   handle: string;
   image: string | null;
-  price: string | null;
+  price: number | null;
+  category: string;
+  available: boolean;
+  collections: string[];
+  createdAt: string;
 }
 
 // Server-side product fetching function
-async function loadProducts(type: 'clothes' | 'items'): Promise<ProductCard[]> {
+async function loadProducts(): Promise<ProductCard[]> {
   try {
-  // Resolve a robust base URL so server-side renders use the current host when possible
-  const getBaseUrl = (await import('@/lib/getBaseUrl')).default;
-  const baseUrl = getBaseUrl();
-  const res = await fetch(`${baseUrl}/api/shopify/collections?type=${type}`, { 
-      next: { revalidate: 300 } // Revalidate every 5 minutes
-    });
-    if (!res.ok) {
-      throw new Error(`Load failed: ${res.status}`);
+    // Fetch directly from Shopify library, bypassing internal API call
+    const data = await getShopifyProducts();
+
+    if (!data.success || !data.products) {
+      console.error('Failed to load products:', data.error);
+      return [];
     }
-    const data = await res.json() as { products: ProductCard[] };
-    return data.products || [];
+
+    // Map the API response to ProductCard format
+    return data.products.map((p: any) => ({
+      id: p.id,
+      title: p.title,
+      handle: p.handle,
+      image: p.images && p.images.length > 0 ? p.images[0] : null,
+      price: p.price || 0,
+      category: p.category || 'Uncategorized',
+      available: p.status === 'active',
+      collections: p.collections || [],
+      createdAt: p.createdAt || new Date().toISOString()
+    }));
+
   } catch (e) {
     console.error('Failed to load products:', e);
     return [];
@@ -40,7 +55,7 @@ export default async function StorePage() {
   }
 
   // Fetch initial products on the server
-  const initialProducts = await loadProducts('clothes');
+  const initialProducts = await loadProducts();
 
   return <StorePageClient isStoreOpen={true} initialProducts={initialProducts} />;
 }

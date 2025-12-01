@@ -85,9 +85,24 @@ export default function VideoLibrary({ videos }: VideoLibraryProps) {
     return filtered;
   }, [videos, selectedCategory, selectedType, sortBy]);
 
-  const formatDuration = (duration?: string) => {
+  const formatDuration = (duration?: string | number) => {
     if (!duration) return '';
-    return duration;
+    
+    // If it's already formatted as mm:ss or h:mm:ss, return it
+    if (typeof duration === 'string' && duration.includes(':')) return duration;
+
+    // Otherwise treat as seconds
+    const seconds = typeof duration === 'string' ? parseFloat(duration) : duration;
+    if (isNaN(seconds)) return String(duration);
+
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = Math.floor(seconds % 60);
+
+    if (h > 0) {
+      return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    }
+    return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
   const getVideoThumbnail = (video: Video) => {

@@ -1,7 +1,5 @@
 -- Migration 016: Create galleries and gallery_photos for Event Gallery (Moments)
 
-BEGIN TRANSACTION;
-
 CREATE TABLE IF NOT EXISTS galleries (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   code TEXT NOT NULL UNIQUE,
@@ -34,4 +32,3 @@ CREATE TABLE IF NOT EXISTS gallery_photos (
 CREATE INDEX IF NOT EXISTS idx_gallery_photos_gallery_id ON gallery_photos(gallery_id);
 CREATE INDEX IF NOT EXISTS idx_gallery_photos_uid ON gallery_photos(uid);
 
-COMMIT;
