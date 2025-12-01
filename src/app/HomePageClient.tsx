@@ -103,8 +103,8 @@ export default function HomePageClient({ verseOfTheDay }: HomePageClientProps) {
             )}
           </div>
           
-          {/* The Light Button - Links to Featured */}
-          <Link href="/featured" className="block">
+          {/* The Light Button - Links to Store */}
+          <Link href="/store" className="block">
             <div className="relative group">
               {/* Glowing background effect */}
               <div className="absolute inset-0 bg-gradient-to-r from-[#ede8df]/20 via-[#b2a491]/30 to-[#ede8df]/20 rounded-2xl blur-xl group-hover:blur-2xl transition-all duration-500 opacity-0 group-hover:opacity-100"></div>
@@ -115,7 +115,7 @@ export default function HomePageClient({ verseOfTheDay }: HomePageClientProps) {
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
                 
                 {/* Text with subtle shadow */}
-                <span className="relative z-10 drop-shadow-sm">Featured</span>
+                <span className="relative z-10 drop-shadow-sm">Store</span>
               </div>
               
               {/* Floating particles around the button */}
