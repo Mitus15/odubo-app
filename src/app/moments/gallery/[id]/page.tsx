@@ -177,6 +177,16 @@ export default function GalleryViewer({ params }: { params: Promise<{ id: string
               </svg>
               <span className="text-sm font-medium text-[#b2a491] group-hover:text-[#ede8df] transition-colors">Back</span>
             </Link>
+            <Link 
+              href="/clips"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#1f1e1d] border border-[#3b3733] hover:border-[#ede8df]/30 transition-colors group"
+            >
+              <svg className="w-4 h-4 text-[#b2a491] group-hover:text-[#ede8df] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14" />
+                <rect x="3" y="6" width="10" height="12" rx="2" ry="2" />
+              </svg>
+              <span className="text-sm font-medium text-[#b2a491] group-hover:text-[#ede8df] transition-colors">Clips</span>
+            </Link>
             <div className="flex-1">
               <h1 className="text-xl sm:text-2xl font-bold text-[#ede8df]">
                 {galleryInfo?.title || 'Gallery'}
