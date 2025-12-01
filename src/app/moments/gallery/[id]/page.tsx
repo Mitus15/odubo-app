@@ -2,6 +2,35 @@
 import { useEffect, useMemo, useState, useRef, use } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
+import type { Variants, Transition } from 'framer-motion';
+
+// Animation variants
+const containerVariants: Variants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.05
+    }
+  }
+};
+
+const springTransition: Transition = {
+  type: 'spring',
+  stiffness: 100,
+  damping: 15
+};
+
+const itemVariants: Variants = {
+  hidden: { opacity: 0, y: 20, scale: 0.95 },
+  show: { 
+    opacity: 1, 
+    y: 0, 
+    scale: 1,
+    transition: springTransition
+  }
+};
 
 // Skeleton loader component
 function PhotoSkeleton() {
@@ -189,16 +218,19 @@ export default function GalleryViewer({ params }: { params: Promise<{ id: string
         )}
 
         {photos.length > 0 && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
+          <motion.div 
+            variants={containerVariants}
+            initial="hidden"
+            animate="show"
+            className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4"
+          >
             {photos.map((p: any, i: number) => (
-              <figure 
-                key={p.id} 
-                className="group cursor-pointer relative overflow-hidden rounded-xl bg-[#1f1e1d] border border-[#3b3733] hover:border-[#ede8df]/40 transition-all duration-300 hover:shadow-xl hover:shadow-[#ff8a3d]/5"
+              <motion.figure 
+                key={p.id}
+                variants={itemVariants}
+                layoutId={`photo-${p.id}`}
+                className="group cursor-pointer relative overflow-hidden rounded-xl bg-[#1f1e1d] border border-[#3b3733] hover:border-[#ede8df]/40 transition-colors duration-300 hover:shadow-xl hover:shadow-[#ff8a3d]/5"
                 onClick={() => openAt(i)}
-                style={{
-                  animation: loadedImages.has(p.id) ? 'fadeInUp 0.4s ease-out' : 'none',
-                  opacity: loadedImages.has(p.id) ? 1 : 0
-                }}
               >
                 {p.media_type === 'video' ? (
                   <div className="relative aspect-square bg-black">
@@ -208,7 +240,7 @@ export default function GalleryViewer({ params }: { params: Promise<{ id: string
                       preload="metadata"
                     />
                     <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/20 transition-colors">
-                      <div className="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center">
+                      <div className="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center shadow-lg transform group-hover:scale-110 transition-transform">
                         <svg className="w-6 h-6 text-[#171616] ml-0.5" fill="currentColor" viewBox="0 0 24 24">
                           <path d="M8 5v14l11-7z" />
                         </svg>
@@ -217,10 +249,16 @@ export default function GalleryViewer({ params }: { params: Promise<{ id: string
                   </div>
                 ) : (
                   <div className="relative aspect-square bg-[#0a0908] overflow-hidden">
-                    <img 
+                    <motion.img 
                       src={p.thumbnail_url || p.r2_url} 
                       alt={p.original_filename || 'photo'} 
-                      className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300"
+                      className="w-full h-full object-cover"
+                      initial={{ opacity: 0, scale: 1.1 }}
+                      animate={{ 
+                        opacity: loadedImages.has(p.id) ? 1 : 0,
+                        scale: loadedImages.has(p.id) ? 1 : 1.1
+                      }}
+                      transition={{ duration: 0.4 }}
                       loading="lazy"
                       decoding="async"
                       fetchPriority={i < 4 ? "high" : "low"}
@@ -231,118 +269,125 @@ export default function GalleryViewer({ params }: { params: Promise<{ id: string
                 
                 {/* Overlay info */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <div className="absolute bottom-0 left-0 right-0 p-3 text-white">
+                  <div className="absolute bottom-0 left-0 right-0 p-3 text-white transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
                     <p className="text-sm font-medium truncate">{p.user_name || 'Anonymous'}</p>
                     <p className="text-xs opacity-75">{new Date(p.created_at).toLocaleDateString()}</p>
                   </div>
                 </div>
-              </figure>
+              </motion.figure>
             ))}
-          </div>
+          </motion.div>
         )}
       </main>
 
       {/* Lightbox viewer - positioned below navbar */}
-      {viewerOpen && photos[index] && (
-        <div className="fixed inset-x-0 top-0 bottom-0 z-30 bg-black">
-          {/* Main content area - starts below navbar (h-16) */}
-          <div className="pt-16 h-full flex flex-col">
-            {/* Top bar with info and close */}
-            <div className="flex-none bg-black/80 backdrop-blur-sm border-b border-white/10 px-4 py-3 flex items-center justify-between">
-              <div className="flex-1">
-                <p className="text-white font-medium text-sm">{photos[index].user_name || 'Anonymous'}</p>
-                <p className="text-white/60 text-xs">{new Date(photos[index].created_at).toLocaleString()}</p>
-              </div>
-              <button 
-                className="p-2 rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 transition-colors"
-                onClick={() => setViewerOpen(false)}
-              >
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            {/* Image/Video container - fills remaining space */}
-            <div className="flex-1 flex items-center justify-center px-4 py-4 overflow-hidden">
-              {photos[index].media_type === 'video' ? (
-                <video 
-                  src={photos[index].r2_url} 
-                  controls 
-                  autoPlay
-                  className="max-h-full max-w-full rounded-lg shadow-2xl"
-                />
-              ) : (
-                <img 
-                  src={photos[index].r2_url} 
-                  alt={photos[index].original_filename || 'photo'} 
-                  className="max-h-full max-w-full object-contain rounded-lg shadow-2xl"
-                />
-              )}
-            </div>
-
-            {/* Bottom controls */}
-            <div className="flex-none bg-black/80 backdrop-blur-sm border-t border-white/10 px-4 py-4">
-              <div className="flex items-center justify-center gap-3">
+      <AnimatePresence>
+        {viewerOpen && photos[index] && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-x-0 top-0 bottom-0 z-30 bg-black"
+          >
+            {/* Main content area - starts below navbar (h-16) */}
+            <div className="pt-16 h-full flex flex-col">
+              {/* Top bar with info and close */}
+              <div className="flex-none bg-black/80 backdrop-blur-sm border-b border-white/10 px-4 py-3 flex items-center justify-between">
+                <div className="flex-1">
+                  <p className="text-white font-medium text-sm">{photos[index].user_name || 'Anonymous'}</p>
+                  <p className="text-white/60 text-xs">{new Date(photos[index].created_at).toLocaleString()}</p>
+                </div>
                 <button 
-                  onClick={prev} 
-                  className="p-3 rounded-lg bg-white/10 border border-white/20 hover:bg-white/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  disabled={photos.length <= 1}
+                  className="p-2 rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 transition-colors"
+                  onClick={() => setViewerOpen(false)}
                 >
                   <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
-                
-                <span className="px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white text-sm font-medium min-w-[100px] text-center">
-                  {index + 1} / {photos.length}
-                </span>
+              </div>
 
-                {photos[index].media_type !== 'video' && (
-                  <a 
-                    href={photos[index].r2_url} 
-                    download
-                    className="p-3 rounded-lg bg-white/10 border border-white/20 hover:bg-white/20 transition-colors"
-                    title="Download photo"
+              {/* Image/Video container - fills remaining space */}
+              <div className="flex-1 flex items-center justify-center px-4 py-4 overflow-hidden">
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={photos[index].id}
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                    className="w-full h-full flex items-center justify-center"
+                  >
+                    {photos[index].media_type === 'video' ? (
+                      <video 
+                        src={photos[index].r2_url} 
+                        controls 
+                        autoPlay
+                        className="max-h-full max-w-full rounded-lg shadow-2xl"
+                      />
+                    ) : (
+                      <img 
+                        src={photos[index].r2_url} 
+                        alt={photos[index].original_filename || 'photo'} 
+                        className="max-h-full max-w-full object-contain rounded-lg shadow-2xl"
+                      />
+                    )}
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+
+              {/* Bottom controls */}
+              <div className="flex-none bg-black/80 backdrop-blur-sm border-t border-white/10 px-4 py-4">
+                <div className="flex items-center justify-center gap-3">
+                  <button 
+                    onClick={prev} 
+                    className="p-3 rounded-lg bg-white/10 border border-white/20 hover:bg-white/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={photos.length <= 1}
                   >
                     <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                     </svg>
-                  </a>
-                )}
+                  </button>
+                  
+                  <span className="px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white text-sm font-medium min-w-[100px] text-center">
+                    {index + 1} / {photos.length}
+                  </span>
+
+                  {photos[index].media_type !== 'video' && (
+                    <a 
+                      href={photos[index].r2_url} 
+                      download
+                      className="p-3 rounded-lg bg-white/10 border border-white/20 hover:bg-white/20 transition-colors"
+                      title="Download photo"
+                    >
+                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                      </svg>
+                    </a>
+                  )}
+                  
+                  <button 
+                    onClick={next} 
+                    className="p-3 rounded-lg bg-white/10 border border-white/20 hover:bg-white/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={photos.length <= 1}
+                  >
+                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </div>
                 
-                <button 
-                  onClick={next} 
-                  className="p-3 rounded-lg bg-white/10 border border-white/20 hover:bg-white/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  disabled={photos.length <= 1}
-                >
-                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-              </div>
-              
-              {/* Keyboard hint */}
-              <div className="text-center text-white/40 text-xs mt-3 hidden sm:block">
-                Use arrow keys to navigate • ESC to close
+                {/* Keyboard hint */}
+                <div className="text-center text-white/40 text-xs mt-3 hidden sm:block">
+                  Use arrow keys to navigate • ESC to close
+                </div>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      <style jsx global>{`
-        @keyframes fadeInUp {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-      `}</style>
     </div>
   );
 }
