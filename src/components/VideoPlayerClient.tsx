@@ -39,7 +39,16 @@ export default function VideoPlayerClient({ video, relatedVideos }: VideoPlayerC
 
   const streamVideoId = getStreamVideoId(video.url);
 
-  const formatDuration = (seconds: number) => {
+  const formatDuration = (duration: string | number) => {
+    if (!duration) return '';
+    
+    // If it's already formatted as mm:ss or h:mm:ss, return it
+    if (typeof duration === 'string' && duration.includes(':')) return duration;
+
+    // Otherwise treat as seconds
+    const seconds = typeof duration === 'string' ? parseFloat(duration) : duration;
+    if (isNaN(seconds)) return String(duration);
+
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     const secs = Math.floor(seconds % 60);
@@ -81,7 +90,7 @@ export default function VideoPlayerClient({ video, relatedVideos }: VideoPlayerC
               {video.type && <span className="capitalize">{video.type}</span>}
               {(video.type || video.category) && <span className="text-stone-500">•</span>}
               {video.category && <span className="capitalize">{video.category}</span>}
-              {video.duration && <span className="text-stone-500">• {video.duration}</span>}
+              {video.duration && <span className="text-stone-500">• {formatDuration(video.duration)}</span>}
             </div>
             <p className="text-stone-400 text-sm line-clamp-2">
               {video.description || 'A short description will appear here. This is placeholder copy to keep the layout balanced while we wire up metadata.'}
@@ -111,7 +120,15 @@ export default function VideoPlayerClient({ video, relatedVideos }: VideoPlayerC
                     <h3 className="font-medium text-white group-hover:text-red-400 transition-colors line-clamp-2 text-sm">
                       {relatedVideos[0].title}
                     </h3>
-                    <p className="text-xs text-stone-400 capitalize">{relatedVideos[0].type}</p>
+                    <div className="flex items-center gap-2 text-xs text-stone-400">
+                      <span className="capitalize">{relatedVideos[0].type}</span>
+                      {relatedVideos[0].duration && (
+                        <>
+                          <span>•</span>
+                          <span>{formatDuration(relatedVideos[0].duration)}</span>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
               </Link>

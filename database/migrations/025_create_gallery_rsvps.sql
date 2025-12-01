@@ -1,7 +1,5 @@
 -- Migration 025: Create gallery_rsvps table for Moments RSVP and reminders
 
-BEGIN TRANSACTION;
-
 CREATE TABLE IF NOT EXISTS gallery_rsvps (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   gallery_id INTEGER NOT NULL,
@@ -18,4 +16,3 @@ CREATE TABLE IF NOT EXISTS gallery_rsvps (
 CREATE INDEX IF NOT EXISTS idx_gallery_rsvps_gallery_id ON gallery_rsvps(gallery_id);
 CREATE INDEX IF NOT EXISTS idx_gallery_rsvps_email ON gallery_rsvps(email);
 
-COMMIT;

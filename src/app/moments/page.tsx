@@ -523,6 +523,17 @@ function CapturePanel({ onOpenCamera, galleryId, setGalleryId, ig, setIg }: { on
                 >
                   Open Camera
                 </button>
+              ) : afterEnd ? (
+                <div className="w-full text-center py-4 bg-white/5 rounded-xl border border-white/10">
+                  <p className="text-[#ede8df] font-bold text-lg mb-2">Event Ended</p>
+                  <p className="text-[#9f9381] text-sm mb-4">This event is over, but you can view the photos.</p>
+                  <Link 
+                    href={`/moments/gallery/${galleryId}`}
+                    className="inline-block px-6 py-2.5 rounded-full bg-[#ede8df] text-[#171616] font-extrabold tracking-wide hover:bg-white transition-colors"
+                  >
+                    View Gallery
+                  </Link>
+                </div>
               ) : (
                 <div className="w-full">
                   <div className="text-sm font-semibold mb-2">RSVP to Get Reminders</div>

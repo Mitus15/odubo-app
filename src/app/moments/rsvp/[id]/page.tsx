@@ -52,6 +52,7 @@ export default function MomentsRsvpPage() {
   const startsAt = useMemo(() => gallery?.starts_at ? new Date(gallery.starts_at) : null, [gallery?.starts_at]);
   const endsAt = useMemo(() => gallery?.ends_at ? new Date(gallery.ends_at) : null, [gallery?.ends_at]);
   const beforeStart = startsAt ? Date.now() < +startsAt : false;
+  const isOver = useMemo(() => endsAt && Date.now() > +endsAt, [endsAt]);
 
   function toggle(m: number) {
     setOffsets(prev => prev.includes(m) ? prev.filter(x => x !== m) : [...prev, m].sort((a,b) => a-b));
@@ -95,6 +96,26 @@ export default function MomentsRsvpPage() {
 
   if (loading) return <div className="min-h-[80vh] grid place-items-center text-[#ede8df]">Loading…</div>;
   if (!gallery) return <div className="min-h-[80vh] grid place-items-center text-[#ede8df]">Not found</div>;
+
+  if (isOver) {
+    return (
+      <div className="min-h-[100dvh] bg-gradient-to-b from-[#171616] via-[#1b1a19] to-[#171616] text-[#ede8df] flex items-center justify-center">
+        <div className="max-w-md w-full px-6 text-center">
+          <h1 className="text-2xl font-extrabold mb-4">{gallery.title}</h1>
+          <div className="p-6 rounded-2xl bg-white/5 border border-white/10">
+            <p className="text-lg font-medium mb-2">This event has ended</p>
+            <p className="text-sm text-[#cfc2ae] mb-6">RSVPs are closed, but you can view the photos!</p>
+            <a 
+              href={`/moments/gallery/${id}`}
+              className="block w-full py-3 rounded-full bg-[#ede8df] text-[#171616] font-bold hover:bg-white transition-colors"
+            >
+              View Gallery
+            </a>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-[100dvh] bg-gradient-to-b from-[#171616] via-[#1b1a19] to-[#171616] text-[#ede8df]">

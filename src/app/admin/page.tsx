@@ -8,7 +8,9 @@ import TabContent from "./TabContent";
 export default function AdminPage() {
   const router = useRouter();
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'music-library' | 'video-library' | 'moments' | 'analytics'>('overview');
+  const [activeTab, setActiveTab] = useState<string>('overview');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [expandedItems, setExpandedItems] = useState<string[]>([]);
 
   useEffect(() => {
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
@@ -24,6 +26,101 @@ export default function AdminPage() {
     }
   }, [router]);
 
+  const toggleExpand = (id: string, siblings: string[]) => {
+    setExpandedItems(prev => {
+      // Remove all siblings from expanded list (closing them)
+      const withoutSiblings = prev.filter(i => !siblings.includes(i));
+      
+      // If it was already expanded, we just closed it (by removing it above if it's in siblings).
+      // But we need to check if it WAS in prev to decide whether to toggle it off or on.
+      const wasExpanded = prev.includes(id);
+      
+      if (wasExpanded) {
+        return withoutSiblings; // It's already removed
+      } else {
+        return [...withoutSiblings, id]; // Add it back
+      }
+    });
+  };
+
+  const navItems = [
+    { id: 'overview', label: 'Home', icon: '🏠' },
+    { 
+      id: 'cms', 
+      label: 'CMS', 
+      icon: '📚',
+      children: [
+        { id: 'content', label: 'Content', icon: '📝' },
+        { id: 'music-library', label: 'Music', icon: '🎶' },
+        { id: 'video-library', label: 'Videos', icon: '📹' },
+        { id: 'moments', label: 'Moments', icon: '📸' },
+      ]
+    },
+    { 
+      id: 'analytics', 
+      label: 'Analytics', 
+      icon: '📊',
+      children: [
+        { id: 'analytics-overview', label: 'Web Analytics' },
+        { id: 'analytics-music', label: 'Music' },
+        { id: 'analytics-video', label: 'Video' },
+        { id: 'analytics-moments', label: 'Moments' },
+        { id: 'analytics-gallery', label: 'Gallery' },
+        { id: 'analytics-users', label: 'Users' },
+      ]
+    },
+    {
+      id: 'apps',
+      label: 'Apps',
+      icon: '🔌',
+      children: [
+        { id: 'apps-installed', label: 'Installed Apps' },
+        { id: 'apps-store', label: 'App Store' },
+        { id: 'apps-api', label: 'API Keys' },
+      ]
+    },
+  ];
+
+  const renderNavItem = (item: any, depth = 0, siblings: string[] = []) => {
+    const hasChildren = item.children && item.children.length > 0;
+    const isExpanded = expandedItems.includes(item.id);
+    const isActive = activeTab === item.id;
+
+    return (
+      <div key={item.id}>
+        <button
+          onClick={() => {
+            setActiveTab(item.id);
+            if (hasChildren) {
+              toggleExpand(item.id, siblings);
+            } else {
+              setIsSidebarOpen(false);
+            }
+          }}
+          className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+            isActive
+              ? 'bg-[#302927] text-[#ede8df]'
+              : 'text-[#b2a491] hover:bg-[#302927]/50 hover:text-[#ede8df]'
+          }`}
+          style={{ paddingLeft: `${depth * 12 + 12}px` }}
+        >
+          <div className="flex items-center gap-3">
+            {item.icon && <span>{item.icon}</span>}
+            <span>{item.label}</span>
+          </div>
+          {hasChildren && (
+            <span className="text-xs opacity-50">{isExpanded ? '▼' : '▶'}</span>
+          )}
+        </button>
+        {hasChildren && isExpanded && (
+          <div className="mt-1 space-y-1">
+            {item.children.map((child: any) => renderNavItem(child, depth + 1, item.children.map((c: any) => c.id)))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   if (isAdmin === null) {
     return (
       <div className="h-full w-full bg-gradient-to-br from-[#302927] via-[#171616] to-[#302927] flex items-center justify-center">
@@ -31,62 +128,56 @@ export default function AdminPage() {
       </div>
     );
   }
-  if (!isAdmin) return null;
-
-  const tabs = [
-    { id: 'overview', label: 'Overview', icon: '📊' },
-    { id: 'music-library', label: 'Music Library', icon: '🎶' },
-    { id: 'video-library', label: 'Video Library', icon: '📹' },
-    { id: 'moments', label: 'Moments', icon: '📸' },
-    { id: 'analytics', label: 'Analytics', icon: '📈' }
-  ];
 
   return (
-    <ScreenLayout className="bg-gradient-to-br from-[#302927] via-[#171616] to-[#302927] text-[#ede8df]">
-      {/* FIXED HEADER SECTION - Never scrolls */}
-      <div className="flex-shrink-0">
-        {/* Header */}
-        <div className="bg-gradient-to-br from-[#302927] via-[#171616] to-[#302927] backdrop-blur-sm border-b border-[#502d26]/40">
-          <div className="px-3 sm:px-6 py-3 sm:py-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-xl sm:text-2xl font-bold text-[#ede8df]">Admin Studio</h1>
-                <p className="text-[#b2a491] text-xs sm:text-sm">Manage your content and platform</p>
-              </div>
-              <div className="flex items-center space-x-1 sm:space-x-2">
-                <div className="w-2 h-2 sm:w-3 sm:h-3 bg-green-500 rounded-full animate-pulse"></div>
-                <span className="text-[#b2a491] text-xs sm:text-sm">Live</span>
-              </div>
-            </div>
+    <ScreenLayout className="bg-[#171616] text-[#ede8df] flex flex-row">
+      {/* Sidebar - Desktop */}
+      <div className="hidden md:flex flex-col w-64 bg-[#1c1a19] border-r border-[#502d26]/30 h-full flex-shrink-0">
+        <div className="p-4 border-b border-[#502d26]/30">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-[#843c2d] rounded-lg flex items-center justify-center font-bold">O</div>
+            <span className="font-bold text-lg">Odubo Admin</span>
           </div>
-
-          {/* Tab Navigation */}
-          <div className="px-3 sm:px-6 pb-3">
-            <div className="flex space-x-2 overflow-x-auto scrollbar-hide">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id as 'overview' | 'music-library' | 'video-library' | 'moments' | 'analytics')}
-                  className={`px-3 sm:px-4 py-2 rounded-2xl text-xs sm:text-sm font-medium whitespace-nowrap transition-all flex items-center space-x-1 sm:space-x-2 flex-shrink-0 ${
-                    activeTab === tab.id
-                      ? 'bg-[#ede8df] text-[#171616] shadow-lg'
-                      : 'bg-[#302927]/50 border border-[#502d26]/40 text-[#b2a491] hover:bg-[#502d26]/40 hover:text-[#ede8df]'
-                  }`}
-                >
-                  <span className="text-sm sm:text-base">{tab.icon}</span>
-                  <span className="hidden sm:inline">{tab.label}</span>
-                  <span className="sm:hidden text-xs">{tab.label.split(' ')[0]}</span>
-                </button>
-              ))}
-            </div>
+        </div>
+        <div className="flex-1 overflow-y-auto py-4 px-2 space-y-1">
+          {navItems.map((item) => renderNavItem(item, 0, navItems.map(i => i.id)))}
+        </div>
+        <div className="p-4 border-t border-[#502d26]/30">
+          <div className="flex items-center gap-2 text-sm text-[#b2a491]">
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+            <span>Store is Live</span>
           </div>
         </div>
       </div>
 
-      {/* SCROLLABLE CONTENT AREA - Only this section scrolls */}
-      <ScrollContainer>
-        <TabContent activeTab={activeTab} />
-      </ScrollContainer>
+      {/* Mobile Header & Drawer Overlay */}
+      <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-[#1c1a19] border-b border-[#502d26]/30 p-4 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="text-[#ede8df]">
+            ☰
+          </button>
+          <span className="font-bold">Odubo Admin</span>
+        </div>
+      </div>
+
+      {isSidebarOpen && (
+        <div className="md:hidden fixed inset-0 z-40 bg-black/50" onClick={() => setIsSidebarOpen(false)}>
+          <div className="absolute top-0 left-0 bottom-0 w-64 bg-[#1c1a19] p-4" onClick={e => e.stopPropagation()}>
+             <div className="space-y-1 mt-12">
+              {navItems.map((item) => renderNavItem(item, 0, navItems.map(i => i.id)))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col h-full overflow-hidden md:static pt-14 md:pt-0">
+        <ScrollContainer>
+          <div className="min-h-full">
+            <TabContent activeTab={activeTab as any} />
+          </div>
+        </ScrollContainer>
+      </div>
     </ScreenLayout>
   );
 }

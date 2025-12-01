@@ -1,3 +1,5 @@
+import { FormData, Blob } from 'formdata-node';
+
 // Cloudflare Stream API utilities
 // For uploading and managing videos with Cloudflare Stream
 
@@ -157,7 +159,56 @@ class CloudflareStreamAPI {
 
     return this.makeRequest<StreamUploadResponse>('', {
       method: 'POST',
-      body: formData,
+      body: formData as any,
+    });
+  }
+
+  /**
+   * Upload a video stream directly to Cloudflare Stream
+   * @param stream - The video stream to upload
+   * @param metadata - Optional metadata for the video
+   */
+  async uploadVideoStream(
+    stream: any, 
+    metadata: {
+      name?: string;
+      requireSignedURLs?: boolean;
+      allowedOrigins?: string[];
+      thumbnailTimestampPct?: number;
+      watermark?: string;
+      meta?: Record<string, any>;
+    } = {}
+  ): Promise<StreamUploadResponse> {
+    const formData = new FormData();
+    
+    let fileToUpload = stream;
+    if (Buffer.isBuffer(stream)) {
+      fileToUpload = new Blob([stream]);
+    }
+    
+    formData.append('file', fileToUpload, 'video.mp4');
+
+    // Add metadata
+    if (metadata.name) formData.append('name', metadata.name);
+    if (metadata.requireSignedURLs !== undefined) {
+      formData.append('requireSignedURLs', metadata.requireSignedURLs.toString());
+    }
+    if (metadata.allowedOrigins) {
+      formData.append('allowedOrigins', JSON.stringify(metadata.allowedOrigins));
+    }
+    if (metadata.thumbnailTimestampPct !== undefined) {
+      formData.append('thumbnailTimestampPct', metadata.thumbnailTimestampPct.toString());
+    }
+    if (metadata.watermark) {
+      formData.append('watermark', metadata.watermark);
+    }
+    if (metadata.meta) {
+      formData.append('meta', JSON.stringify(metadata.meta));
+    }
+
+    return this.makeRequest<StreamUploadResponse>('', {
+      method: 'POST',
+      body: formData as any,
     });
   }
 
@@ -447,6 +498,41 @@ class CloudflareStreamAPI {
   /** Delete a Live Input */
   async deleteLiveInput(uid: string) {
     return this.makeRequest(`/live_inputs/${uid}`, { method: 'DELETE' });
+  }
+
+  /**
+   * Enable MP4 downloads for a video
+   */
+  async enableDownloads(uid: string): Promise<{ result: { default: { status: string; url: string; percentComplete: number } }; success: boolean }> {
+    return this.makeRequest(`/${uid}/downloads`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: 'default' }),
+    });
+  }
+
+  /**
+   * Disable MP4 downloads for a video
+   */
+  async disableDownloads(uid: string): Promise<{ success: boolean }> {
+    return this.makeRequest(`/${uid}/downloads/default`, {
+      method: 'DELETE',
+    });
+  }
+
+  /**
+   * Get download URL (if enabled)
+   */
+  async getDownloadUrl(uid: string): Promise<string | null> {
+    try {
+      const res = await this.makeRequest<{ result: { default?: { status: string; url: string } } }>(`/${uid}/downloads`);
+      if (res.result?.default?.status === 'ready') {
+        return res.result.default.url;
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
   }
 }
 

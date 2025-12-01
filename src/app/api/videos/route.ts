@@ -12,14 +12,23 @@ export async function GET(req: NextRequest) {
     const limit = Math.max(0, Math.min(200, Number(url.searchParams.get('limit') || '50')));
     const offset = Math.max(0, Number(url.searchParams.get('offset') || '0'));
     const publicationStatus = url.searchParams.get('publication_status');
+    const uid = url.searchParams.get('uid');
     const hasFilter = publicationStatus === 'live' || publicationStatus === 'archived';
 
     // Try with full schema first, fallback to basic schema if columns don't exist
     let videos;
     try {
-      const where = hasFilter ? 'WHERE COALESCE(publication_status,\'archived\') = ?' : '';
+      let where = '';
       const paramsFull: any[] = [];
-      if (hasFilter) paramsFull.push(publicationStatus);
+      
+      if (uid) {
+        where = 'WHERE uid = ?';
+        paramsFull.push(uid);
+      } else if (hasFilter) {
+        where = 'WHERE COALESCE(publication_status,\'archived\') = ?';
+        paramsFull.push(publicationStatus);
+      }
+
       paramsFull.push(limit);
       paramsFull.push(offset);
 
@@ -62,7 +71,17 @@ export async function GET(req: NextRequest) {
     } catch (schemaError) {
       // Fallback to basic schema if new columns don't exist
       console.log('Using fallback query for videos table');
-      const paramsBasic: any[] = [limit, offset];
+      const paramsBasic: any[] = [];
+      let whereBasic = '';
+      
+      if (uid) {
+        whereBasic = 'WHERE uid = ?';
+        paramsBasic.push(uid);
+      }
+
+      paramsBasic.push(limit);
+      paramsBasic.push(offset);
+
       videos = await queryDatabase(
         `SELECT 
           id,
@@ -81,6 +100,7 @@ export async function GET(req: NextRequest) {
           related_projects,
           created_at
         FROM videos 
+        ${whereBasic}
         ORDER BY created_at DESC
         LIMIT ? OFFSET ?`,
         paramsBasic
@@ -127,9 +147,10 @@ export async function GET(req: NextRequest) {
     });
 
     const res = NextResponse.json({ success: true, videos: transformedVideos });
-    res.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');
-    res.headers.set('CDN-Cache-Control', 'public, max-age=300');
-    res.headers.set('Vary', 'Accept-Encoding');
+    // Disable caching for admin/API routes to ensure fresh data
+    res.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.headers.set('Pragma', 'no-cache');
+    res.headers.set('Expires', '0');
     return res;
   } catch (error) {
     console.error('Error fetching videos:', error);
@@ -198,6 +219,7 @@ export async function POST(req: NextRequest) {
     const status = (body.status || 'draft').trim();
     const publication_status: 'live' | 'archived' = (body.publication_status || 'archived') as any;
   const thumbnail_timestamp_pct = (body.thumbnail_timestamp_pct === '' ? null : (body.thumbnail_timestamp_pct as any));
+    const uid = (body as any).uid || '';
 
     if (!title || !url) {
       return NextResponse.json(
@@ -209,9 +231,9 @@ export async function POST(req: NextRequest) {
     await executeQuery(
       `INSERT INTO videos (
         title, artist_name, description, short_description, long_description, ai_description, tags,
-        url, poster_url, thumbnail, duration, duration_seconds, category, is_public, type, mood,
+        url, uid, poster_url, thumbnail, duration, duration_seconds, category, is_public, type, mood,
         credits, related_projects, status, publication_status, thumbnail_timestamp_pct, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
       [
         title,
         artist_name,
@@ -221,6 +243,7 @@ export async function POST(req: NextRequest) {
         ai_description,
         tagsJson,
         url,
+        uid,
         poster_url,
         thumbnail,
         String(duration),

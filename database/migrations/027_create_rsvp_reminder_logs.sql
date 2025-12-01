@@ -1,7 +1,5 @@
 -- Migration 027: Create reminder logs to prevent duplicates and track delivery
 
-BEGIN TRANSACTION;
-
 CREATE TABLE IF NOT EXISTS gallery_rsvp_reminder_logs (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   rsvp_id INTEGER NOT NULL,
@@ -23,4 +21,3 @@ CREATE TABLE IF NOT EXISTS gallery_rsvp_reminder_logs (
 CREATE INDEX IF NOT EXISTS idx_rsvp_logs_gallery ON gallery_rsvp_reminder_logs(gallery_id);
 CREATE INDEX IF NOT EXISTS idx_rsvp_logs_status ON gallery_rsvp_reminder_logs(status);
 
-COMMIT;

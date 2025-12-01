@@ -49,6 +49,7 @@ export async function POST(req: NextRequest) {
     const video = rows[0];
     const streamUid = uid || video.uid;
     if (!streamUid) {
+      console.error(`[Thumbnail] No Stream UID available for video ${videoId}. Video record:`, video);
       return NextResponse.json({ error: "No Stream UID available" }, { status: 400 });
     }
 
@@ -111,8 +112,9 @@ export async function POST(req: NextRequest) {
 
 Respond with JSON: { "score": <number 1-10>, "rationale": "<brief explanation>" }`;
 
-          const model = 'gemini-2.0-flash';
-          const geminiUrl = `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
+          // Use the SDK-compatible model name
+          const model = 'gemini-2.5-flash';
+          const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
           
           const result = await fetch(geminiUrl, {
             method: 'POST',
