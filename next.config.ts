@@ -16,6 +16,7 @@ const nextConfig: NextConfig = {
     'http://192.168.3.92:3000',
     'http://192.168.3.92:3001',
     'http://localhost:3000',
+    'http://10.50.78.202:3000',
   ],
   images: {
     // Enable Next.js Image Optimization (remove unoptimized: true)

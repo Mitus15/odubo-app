@@ -44,7 +44,7 @@ function MomentsIndex() {
   const prefillCode = params?.get('code') ?? '';
   const wantOpen = params?.get('open') === '1';
   const [galleries, setGalleries] = useState<Array<{ id: number; title: string; created_at?: string; cover_url?: string | null; cover_thumb_url?: string | null; photo_count?: number; preview_photos?: Array<{id: number; thumbnail_url?: string; r2_url: string}> }>>([]);
-  const [galleryLoading, setGalleryLoading] = useState(false);
+  const [galleryLoading, setGalleryLoading] = useState(true);
   const [galleryError, setGalleryError] = useState('');
   const [galleryId, setGalleryId] = useState<string>(prefillGalleryId);
   const [ig, setIg] = useState<string>(prefillIg ? (prefillIg.startsWith('@') ? prefillIg : `@${prefillIg}`) : '');
@@ -345,6 +345,19 @@ function GalleryCard({ gallery }: { gallery: { id: number; title: string; create
 }
 
 function GalleryGrid({ galleries, loading, error }: { galleries: Array<{ id: number; title: string; created_at?: string; cover_url?: string | null; cover_thumb_url?: string | null; photo_count?: number; preview_photos?: Array<{id: number; thumbnail_url?: string; r2_url: string}> }>; loading: boolean; error: string }) {
+  const [emptyReady, setEmptyReady] = useState(false);
+  useEffect(() => {
+    let t: any;
+    if (loading) {
+      setEmptyReady(false);
+    } else if (!loading && (!galleries || galleries.length === 0)) {
+      t = setTimeout(() => setEmptyReady(true), 3000);
+    } else {
+      setEmptyReady(false);
+    }
+    return () => { if (t) clearTimeout(t); };
+  }, [loading, galleries?.length]);
+
   if (loading) {
     return (
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -370,6 +383,21 @@ function GalleryGrid({ galleries, loading, error }: { galleries: Array<{ id: num
   }
   
   if (!galleries?.length) {
+    if (!emptyReady) {
+      return (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {[...Array(8)].map((_, i) => (
+            <div key={i} className="animate-pulse rounded-2xl overflow-hidden bg-[#1f1e1d] border border-[#3b3733]">
+              <div className="aspect-square bg-gradient-to-br from-[#2a2626] to-[#1f1e1d]" />
+              <div className="p-4 space-y-2">
+                <div className="h-4 bg-[#3b3733] rounded w-3/4" />
+                <div className="h-3 bg-[#3b3733] rounded w-1/2" />
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    }
     return (
       <div className="text-center py-20">
         <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-[#1f1e1d] border border-[#3b3733] flex items-center justify-center">

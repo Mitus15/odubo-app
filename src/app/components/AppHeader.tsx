@@ -5,6 +5,7 @@ import { useState } from "react";
 export default function AppHeader() {
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [navMenuOpen, setNavMenuOpen] = useState(false);
+  const [navSubmenu, setNavSubmenu] = useState<"root" | "media" | "moments">("root");
   // const { isAuthenticated, user, logout } = useAuth();
   const isAuthenticated = false;
   const user: any = null;
@@ -31,10 +32,10 @@ export default function AppHeader() {
         {/* Desktop Navigation - Center/Right */}
         <nav className="hidden md:flex items-center gap-6 relative z-10">
           <a href="/featured" className="text-[#ede8df] hover:text-[#b2a491] transition-colors">Featured</a>
-          <a href="/music" className="text-[#ede8df] hover:text-[#b2a491] transition-colors">Music</a>
-          <a href="/media" className="text-[#ede8df] hover:text-[#b2a491] transition-colors">Video</a>
+          {/* Consolidated Media hub (Music + Video) */}
+          <a href="/media" className="text-[#ede8df] hover:text-[#b2a491] transition-colors">Media</a>
+          {/* Consolidated Moments hub (Moments + Clips) */}
           <a href="/moments" className="text-[#ede8df] hover:text-[#b2a491] transition-colors">Moments</a>
-          <a href="/clips" className="text-[#ede8df] hover:text-[#b2a491] transition-colors">Clips</a>
           <a href="/store" className="text-[#ede8df] hover:text-[#b2a491] transition-colors">Store</a>
         </nav>
 
@@ -43,7 +44,11 @@ export default function AppHeader() {
           <button
             className="w-9 h-9 flex items-center justify-center text-[#ede8df] focus:outline-none rounded-lg hover:bg-[#843c2d]/10 hover:scale-105 transition-all duration-200"
             aria-label="Open navigation menu"
-            onClick={() => setNavMenuOpen(!navMenuOpen)}
+            onClick={() => {
+              const next = !navMenuOpen;
+              setNavMenuOpen(next);
+              if (!next) setNavSubmenu("root");
+            }}
           >
             {/* Hamburger icon */}
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -59,7 +64,7 @@ export default function AppHeader() {
           {/* Enhanced Backdrop */}
           <div 
             className="absolute inset-0 bg-black/60 backdrop-blur-sm" 
-            onClick={() => setNavMenuOpen(false)} 
+            onClick={() => { setNavMenuOpen(false); setNavSubmenu("root"); }} 
           />
           
           {/* Navigation Menu Panel */}
@@ -67,54 +72,88 @@ export default function AppHeader() {
             <div className="glass-surface rounded-3xl shadow-2xl border border-[#502d26]/30 overflow-hidden">
               {/* Navigation Links */}
               <div className="relative p-8 space-y-6">
-                <div className="text-center mb-8">
-                  <h2 className="text-2xl font-bold text-[#ede8df] mb-2">Explore</h2>
+                {/* Submenu header: Back only when inside a hub */}
+                <div className="mb-4 flex items-center justify-start">
+                  {navSubmenu !== "root" && (
+                    <button
+                      className="px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-[#ede8df] transition-colors"
+                      onClick={() => setNavSubmenu("root")}
+                      aria-label="Back to main menu"
+                    >
+                      Back
+                    </button>
+                  )}
                 </div>
-                
-                <nav className="space-y-4">
-                  <a 
-                    href="/featured" 
-                    className="block w-full p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-all duration-200 text-center text-[#ede8df] font-medium hover:scale-105"
-                    onClick={() => setNavMenuOpen(false)}
-                  >
-                    Featured
-                  </a>
-                  <a 
-                    href="/music" 
-                    className="block w-full p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-all duration-200 text-center text-[#ede8df] font-medium hover:scale-105"
-                    onClick={() => setNavMenuOpen(false)}
-                  >
-                    Music
-                  </a>
-                  <a 
-                    href="/media" 
-                    className="block w-full p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-all duration-200 text-center text-[#ede8df] font-medium hover:scale-105"
-                    onClick={() => setNavMenuOpen(false)}
-                  >
-                    Video
-                  </a>
-                  <a 
-                    href="/moments" 
-                    className="block w-full p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-all duration-200 text-center text-[#ede8df] font-medium hover:scale-105"
-                    onClick={() => setNavMenuOpen(false)}
-                  >
-                    Moments
-                  </a>
-                  <a 
-                    href="/clips" 
-                    className="block w-full p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-all duration-200 text-center text-[#ede8df] font-medium hover:scale-105"
-                    onClick={() => setNavMenuOpen(false)}
-                  >
-                    Clips
-                  </a>
-                  <a 
-                    href="/store" 
-                    className="block w-full p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-all duration-200 text-center text-[#ede8df] font-medium hover:scale-105"
-                    onClick={() => setNavMenuOpen(false)}
-                  >
-                    Store
-                  </a>
-                </nav>
+
+                {/* Root or Submenus */}
+                {navSubmenu === "root" && (
+                  <nav className="space-y-4">
+                    <a 
+                      href="/featured" 
+                      className="block w-full p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-all duration-200 text-center text-[#ede8df] font-medium hover:scale-105"
+                      onClick={() => { setNavMenuOpen(false); setNavSubmenu("root"); }}
+                    >
+                      Featured
+                    </a>
+                    <button 
+                      className="block w-full p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-all duration-200 text-center text-[#ede8df] font-medium hover:scale-105"
+                      onClick={() => setNavSubmenu("media")}
+                    >
+                      Media
+                    </button>
+                    <button 
+                      className="block w-full p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-all duration-200 text-center text-[#ede8df] font-medium hover:scale-105"
+                      onClick={() => setNavSubmenu("moments")}
+                    >
+                      Moments
+                    </button>
+                    <a 
+                      href="/store" 
+                      className="block w-full p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-all duration-200 text-center text-[#ede8df] font-medium hover:scale-105"
+                      onClick={() => { setNavMenuOpen(false); setNavSubmenu("root"); }}
+                    >
+                      Store
+                    </a>
+                  </nav>
+                )}
+
+                {navSubmenu === "media" && (
+                  <nav className="space-y-4">
+                    <a 
+                      href="/music" 
+                      className="block w-full p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-all duration-200 text-center text-[#ede8df] font-medium hover:scale-105"
+                      onClick={() => { setNavMenuOpen(false); setNavSubmenu("root"); }}
+                    >
+                      Music
+                    </a>
+                    <a 
+                      href="/media" 
+                      className="block w-full p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-all duration-200 text-center text-[#ede8df] font-medium hover:scale-105"
+                      onClick={() => { setNavMenuOpen(false); setNavSubmenu("root"); }}
+                    >
+                      Video
+                    </a>
+                  </nav>
+                )}
+
+                {navSubmenu === "moments" && (
+                  <nav className="space-y-4">
+                    <a 
+                      href="/moments" 
+                      className="block w-full p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-all duration-200 text-center text-[#ede8df] font-medium hover:scale-105"
+                      onClick={() => { setNavMenuOpen(false); setNavSubmenu("root"); }}
+                    >
+                      Moments
+                    </a>
+                    <a 
+                      href="/clips" 
+                      className="block w-full p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-all duration-200 text-center text-[#ede8df] font-medium hover:scale-105"
+                      onClick={() => { setNavMenuOpen(false); setNavSubmenu("root"); }}
+                    >
+                      Clips
+                    </a>
+                  </nav>
+                )}
               </div>
             </div>
           </div>

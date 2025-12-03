@@ -1,8 +1,9 @@
 "use client";
 import { useEffect, useMemo, useState, useRef, use } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import type { Variants, Transition } from 'framer-motion';
 
 // Animation variants
@@ -53,12 +54,17 @@ export default function GalleryViewer({ params }: { params: Promise<{ id: string
   const [code, setCode] = useState<string>(codeFromUrl);
   const [photos, setPhotos] = useState<Array<any>>([]);
   const [error, setError] = useState<string>('');
-  const [loading, setLoading] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
   const [viewerOpen, setViewerOpen] = useState(false);
   const [index, setIndex] = useState(0);
   const [galleryInfo, setGalleryInfo] = useState<{title?: string; description?: string} | null>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const [loadedImages, setLoadedImages] = useState<Set<number>>(new Set());
+  const closeBtnRef = useRef<HTMLButtonElement | null>(null);
+  const viewerContentRef = useRef<HTMLDivElement | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+  const reduceMotion = useReducedMotion();
+  const [emptyReady, setEmptyReady] = useState(false);
 
   const canFetch = useMemo(() => Number.isFinite(id), [id]);
 
@@ -67,8 +73,12 @@ export default function GalleryViewer({ params }: { params: Promise<{ id: string
     setLoading(true);
     setError('');
     try {
+      // Cancel any in-flight request to avoid race conditions
+      abortRef.current?.abort();
+      const ac = new AbortController();
+      abortRef.current = ac;
       // Fetch gallery info
-      const infoRes = await fetch(`/api/moments/galleries/${id}`);
+      const infoRes = await fetch(`/api/moments/galleries/${id}` , { signal: ac.signal });
       if (infoRes.ok) {
         const infoData: any = await infoRes.json().catch(() => ({}));
         if (infoData?.gallery) {
@@ -84,7 +94,7 @@ export default function GalleryViewer({ params }: { params: Promise<{ id: string
       url.searchParams.set('galleryId', String(id));
       if (code) url.searchParams.set('code', code);
       url.searchParams.set('limit', '200');
-      const res = await fetch(url.toString());
+      const res = await fetch(url.toString(), { signal: ac.signal, headers: { 'Accept': 'application/json' } });
       const data: any = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || 'Failed to load photos');
       // Client-side safety: hide rejected if server ever returns them to public views
@@ -92,7 +102,9 @@ export default function GalleryViewer({ params }: { params: Promise<{ id: string
       const filtered = list.filter((p: any) => p.moderated !== 2);
       setPhotos(filtered);
     } catch (e: any) {
-      setError(e?.message || String(e));
+      if (e?.name !== 'AbortError') {
+        setError(e?.message || String(e));
+      }
     } finally {
       setLoading(false);
     }
@@ -162,6 +174,36 @@ export default function GalleryViewer({ params }: { params: Promise<{ id: string
     };
   }, [viewerOpen, photos.length]);
 
+  // Lock body scroll and focus close button when viewer opens
+  useEffect(() => {
+    if (viewerOpen) {
+      const prevOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      // focus close button on open for accessibility
+      setTimeout(() => closeBtnRef.current?.focus(), 0);
+      return () => {
+        document.body.style.overflow = prevOverflow;
+      };
+    }
+  }, [viewerOpen]);
+
+  // Prefetch adjacent images for smoother navigation
+  const nextIdx = (index + 1) % Math.max(photos.length, 1);
+  const prevIdx = (index - 1 + Math.max(photos.length, 1)) % Math.max(photos.length, 1);
+
+  // Debounce empty state so it never flashes during brief loads
+  useEffect(() => {
+    let t: any;
+    if (loading) {
+      setEmptyReady(false);
+    } else if (!loading && photos.length === 0) {
+      t = setTimeout(() => setEmptyReady(true), 3000);
+    } else {
+      setEmptyReady(false);
+    }
+    return () => { if (t) clearTimeout(t); };
+  }, [loading, photos.length]);
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#0a0908] via-[#171616] to-[#0a0908]">
       {/* Header with back button */}
@@ -176,16 +218,6 @@ export default function GalleryViewer({ params }: { params: Promise<{ id: string
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
               <span className="text-sm font-medium text-[#b2a491] group-hover:text-[#ede8df] transition-colors">Back</span>
-            </Link>
-            <Link 
-              href="/clips"
-              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#1f1e1d] border border-[#3b3733] hover:border-[#ede8df]/30 transition-colors group"
-            >
-              <svg className="w-4 h-4 text-[#b2a491] group-hover:text-[#ede8df] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14" />
-                <rect x="3" y="6" width="10" height="12" rx="2" ry="2" />
-              </svg>
-              <span className="text-sm font-medium text-[#b2a491] group-hover:text-[#ede8df] transition-colors">Clips</span>
             </Link>
             <div className="flex-1">
               <h1 className="text-xl sm:text-2xl font-bold text-[#ede8df]">
@@ -209,13 +241,13 @@ export default function GalleryViewer({ params }: { params: Promise<{ id: string
           </div>
         )}
 
-        {loading && photos.length === 0 && (
+        {(loading || (!loading && photos.length === 0 && !emptyReady)) && (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
             {[...Array(10)].map((_, i) => <PhotoSkeleton key={i} />)}
           </div>
         )}
 
-        {photos.length === 0 && !loading && (
+        {photos.length === 0 && !loading && emptyReady && (
           <div className="text-center py-20">
             <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[#1f1e1d] border border-[#3b3733] flex items-center justify-center">
               <svg className="w-8 h-8 text-[#666461]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -230,7 +262,7 @@ export default function GalleryViewer({ params }: { params: Promise<{ id: string
         {photos.length > 0 && (
           <motion.div 
             variants={containerVariants}
-            initial="hidden"
+            initial={reduceMotion ? false : "hidden"}
             animate="show"
             className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4"
           >
@@ -242,40 +274,28 @@ export default function GalleryViewer({ params }: { params: Promise<{ id: string
                 className="group cursor-pointer relative overflow-hidden rounded-xl bg-[#1f1e1d] border border-[#3b3733] hover:border-[#ede8df]/40 transition-colors duration-300 hover:shadow-xl hover:shadow-[#ff8a3d]/5"
                 onClick={() => openAt(i)}
               >
-                {p.media_type === 'video' ? (
-                  <div className="relative aspect-square bg-black">
-                    <video 
-                      src={p.thumbnail_url || p.r2_url} 
-                      className="w-full h-full object-cover"
-                      preload="metadata"
+                <div className="relative aspect-square bg-[#0a0908] overflow-hidden">
+                  <motion.div initial={reduceMotion ? false : { opacity: 0, scale: 1.03 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.35 }} className="absolute inset-0">
+                    <Image 
+                      src={(p.media_type === 'video' ? (p.thumbnail_url || p.r2_url) : (p.thumbnail_url || p.r2_url))}
+                      alt={p.original_filename || 'photo'}
+                      fill
+                      sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
+                      priority={i < 4}
+                      quality={75}
+                      className="object-cover"
                     />
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/20 transition-colors">
+                  </motion.div>
+                  {p.media_type === 'video' && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/10 transition-colors">
                       <div className="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center shadow-lg transform group-hover:scale-110 transition-transform">
                         <svg className="w-6 h-6 text-[#171616] ml-0.5" fill="currentColor" viewBox="0 0 24 24">
                           <path d="M8 5v14l11-7z" />
                         </svg>
                       </div>
                     </div>
-                  </div>
-                ) : (
-                  <div className="relative aspect-square bg-[#0a0908] overflow-hidden">
-                    <motion.img 
-                      src={p.thumbnail_url || p.r2_url} 
-                      alt={p.original_filename || 'photo'} 
-                      className="w-full h-full object-cover"
-                      initial={{ opacity: 0, scale: 1.1 }}
-                      animate={{ 
-                        opacity: loadedImages.has(p.id) ? 1 : 0,
-                        scale: loadedImages.has(p.id) ? 1 : 1.1
-                      }}
-                      transition={{ duration: 0.4 }}
-                      loading="lazy"
-                      decoding="async"
-                      fetchPriority={i < 4 ? "high" : "low"}
-                      onLoad={() => setLoadedImages(prev => new Set(prev).add(p.id))}
-                    />
-                  </div>
-                )}
+                  )}
+                </div>
                 
                 {/* Overlay info */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
@@ -299,9 +319,13 @@ export default function GalleryViewer({ params }: { params: Promise<{ id: string
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             className="fixed inset-x-0 top-0 bottom-0 z-30 bg-black"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Media viewer"
+            onClick={() => setViewerOpen(false)}
           >
             {/* Main content area - starts below navbar (h-16) */}
-            <div className="pt-16 h-full flex flex-col">
+            <div className="pt-16 h-full flex flex-col" onClick={(e) => e.stopPropagation()} ref={viewerContentRef}>
               {/* Top bar with info and close */}
               <div className="flex-none bg-black/80 backdrop-blur-sm border-b border-white/10 px-4 py-3 flex items-center justify-between">
                 <div className="flex-1">
@@ -311,6 +335,8 @@ export default function GalleryViewer({ params }: { params: Promise<{ id: string
                 <button 
                   className="p-2 rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 transition-colors"
                   onClick={() => setViewerOpen(false)}
+                  ref={closeBtnRef}
+                  aria-label="Close viewer"
                 >
                   <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -334,14 +360,20 @@ export default function GalleryViewer({ params }: { params: Promise<{ id: string
                         src={photos[index].r2_url} 
                         controls 
                         autoPlay
+                        playsInline
                         className="max-h-full max-w-full rounded-lg shadow-2xl"
                       />
                     ) : (
-                      <img 
-                        src={photos[index].r2_url} 
-                        alt={photos[index].original_filename || 'photo'} 
-                        className="max-h-full max-w-full object-contain rounded-lg shadow-2xl"
-                      />
+                      <div className="relative w-full h-full">
+                        <Image 
+                          src={photos[index].r2_url}
+                          alt={photos[index].original_filename || 'photo'}
+                          fill
+                          sizes="100vw"
+                          priority
+                          className="object-contain rounded-lg shadow-2xl"
+                        />
+                      </div>
                     )}
                   </motion.div>
                 </AnimatePresence>
@@ -394,6 +426,14 @@ export default function GalleryViewer({ params }: { params: Promise<{ id: string
                 </div>
               </div>
             </div>
+
+            {/* Hidden prefetchers for next/prev images */}
+            {photos[nextIdx] && photos[nextIdx].media_type !== 'video' && (
+              <link rel="prefetch" as="image" href={photos[nextIdx].r2_url} />
+            )}
+            {photos[prevIdx] && photos[prevIdx].media_type !== 'video' && (
+              <link rel="prefetch" as="image" href={photos[prevIdx].r2_url} />
+            )}
           </motion.div>
         )}
       </AnimatePresence>

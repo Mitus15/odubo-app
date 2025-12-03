@@ -51,6 +51,11 @@ export default function RootLayout({
       <body 
         className={`${geistSans.variable} ${geistMono.variable} overflow-hidden bg-gradient-to-br from-[#302927] via-[#171616] to-[#302927] text-[#ede8df] font-serif`}
         suppressHydrationWarning={true}
+        style={{
+          overscrollBehaviorY: 'none',
+          touchAction: 'pan-y',
+          WebkitOverflowScrolling: 'touch'
+        }}
       >
         {/* <AuthProvider> */}
           <MusicPlayerProvider>
