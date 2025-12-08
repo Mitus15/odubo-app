@@ -130,34 +130,8 @@ export default function VideoLibrary({ videos }: VideoLibraryProps) {
 
   return (
     <div className="h-full w-full flex flex-col">
-      {/* FIXED HEADER SECTION - Never scrolls */}
+      {/* FILTER BAR (centered) */}
       <div className="flex-shrink-0 px-4 pt-4">
-        {/* Compact Mobile Header */}
-        <motion.div 
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: "easeOut" }}
-          className="pb-2"
-        >
-          <div className="relative overflow-hidden rounded-2xl glass-morphism shadow-lg">
-            <div className="absolute inset-0 overflow-hidden">
-              <div className="absolute -top-2 -left-2 w-8 h-8 bg-[#843c2d]/10 rounded-full blur-lg animate-pulse"></div>
-              <div className="absolute -bottom-2 -right-2 w-6 h-6 bg-[#ede8df]/10 rounded-full blur-md animate-pulse" style={{ animationDelay: '1s' }}></div>
-            </div>
-            
-            <div className="relative p-2 sm:p-3">
-              <h1 className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-[#ede8df] via-[#b2a491] to-[#ede8df] bg-clip-text text-transparent mb-0.5">
-                Video Vault
-              </h1>
-              <div className="flex items-center space-x-2 text-xs sm:text-sm">
-                <span className="text-[#b2a491]/80">Latest Collection</span>
-                <span className="text-[#726d6c]/60">•</span>
-                <span className="text-[#b2a491]/80">{videos.length} video{videos.length !== 1 ? 's' : ''}</span>
-              </div>
-            </div>
-          </div>
-        </motion.div>
-
         {/* Video Type Tabs and Sort */}
         <motion.div 
           initial={{ opacity: 0, y: -20 }}
@@ -166,8 +140,8 @@ export default function VideoLibrary({ videos }: VideoLibraryProps) {
           className="px-0 pb-2.5 space-y-2"
         >
           {/* Video Type Tabs */}
-          <div className="glass-card rounded-2xl p-1">
-            <div className="flex">
+          <div className="glass-card rounded-2xl p-1 mx-auto max-w-md">
+            <div className="flex justify-center gap-2">
               <button
                 onClick={() => setSelectedType('music-video')}
                 className={`flex-1 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
@@ -192,8 +166,8 @@ export default function VideoLibrary({ videos }: VideoLibraryProps) {
           </div>
 
           {/* Sort Options */}
-          <div className="glass-card rounded-2xl p-1">
-            <div className="flex gap-1">
+          <div className="glass-card rounded-2xl p-1 mx-auto max-w-md">
+            <div className="flex gap-1 justify-center">
               <button
                 onClick={() => setSortBy('newest')}
                 className={`px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 ${
