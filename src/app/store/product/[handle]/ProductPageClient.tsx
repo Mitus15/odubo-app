@@ -148,9 +148,9 @@ export default function ProductPageClient({ product }: ProductPageClientProps) {
         <div className="absolute bottom-0 right-0 h-80 w-80 rounded-full bg-gradient-to-tr from-[#b2a49122] via-[#ede8df14] to-transparent blur-3xl" />
       </div>
       <ScrollContainer>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-12 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
           {/* Breadcrumb / Back */}
-          <div className="mb-8 flex items-center justify-between">
+          <div className="mb-4 sm:mb-8 flex items-center justify-between">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/brand-logos/baad.png" alt="B.A.A.D" className="h-5 w-auto opacity-80" />
             <a href="/store" className="text-xs uppercase tracking-widest text-[#b2a491] hover:text-[#ede8df] transition-colors">
@@ -160,8 +160,8 @@ export default function ProductPageClient({ product }: ProductPageClientProps) {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20">
             {/* Media Gallery */}
-            <div className="space-y-4">
-              <div className="aspect-[3/4] overflow-hidden flex items-center justify-center rounded-2xl p-[1px] bg-gradient-to-br from-[#ffffff0a] via-[#843c2d33] to-[#ffffff08]">
+            <div className="space-y-3 sm:space-y-4">
+              <div className="h-[72svh] sm:h-auto sm:aspect-[3/4] overflow-hidden flex items-center justify-center rounded-2xl p-[1px] bg-gradient-to-br from-[#ffffff0a] via-[#843c2d33] to-[#ffffff08]">
                 <div className="relative w-full h-full rounded-2xl bg-[#0e0d0d]/60 backdrop-blur-sm flex items-center justify-center">
                 {(() => {
                   const src = activeImage || selectedVariant?.image?.src || product?.images?.[0]?.src;
@@ -172,7 +172,7 @@ export default function ProductPageClient({ product }: ProductPageClientProps) {
               </div>
               {/* Thumbnails if multiple images exist */}
               {product?.images && product.images.length > 1 && (
-                <div className="grid grid-cols-4 gap-4">
+                <div className="grid grid-cols-4 gap-3 sm:gap-4 max-w-[92vw] mx-auto pb-[env(safe-area-inset-bottom)]">
                   {product.images.slice(0, 4).map((img, idx) => (
                     <button 
                       key={idx} 
