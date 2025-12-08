@@ -36,7 +36,7 @@ export default function AppHeader() {
           <a href="/media" className="text-[#ede8df] hover:text-[#b2a491] transition-colors">Video</a>
           <a href="/moments" className="text-[#ede8df] hover:text-[#b2a491] transition-colors">Moments</a>
           <a href="/clips" className="text-[#ede8df] hover:text-[#b2a491] transition-colors">Clips</a>
-          <a href="/store" className="text-[#ede8df] hover:text-[#b2a491] transition-colors">Store</a>
+          <a href="/store" className="text-[#ede8df] hover:text-[#b2a491] transition-colors">Shop</a>
         </nav>
 
         {/* Mobile Navigation button - Right Side */}
@@ -112,7 +112,7 @@ export default function AppHeader() {
                       className="block w-full p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-all duration-200 text-center text-[#ede8df] font-medium hover:scale-105"
                       onClick={() => { setNavMenuOpen(false); setNavSubmenu("root"); }}
                     >
-                      Store
+                      Shop
                     </a>
                   </nav>
                 )}

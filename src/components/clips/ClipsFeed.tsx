@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ClipItem, ClipApiRow } from '@/types/clips';
 import { mapClipRows } from '@/lib/clipsMapper';
 import { shuffleArray } from '@/lib/utils';
-import { addPrefetchHints, removePrefetchHints } from '@/lib/hlsPrefetch';
+import { addPrefetchHints, removePrefetchHints, prefetchFirstSegment, prefetchManifest } from '@/lib/hlsPrefetch';
 import ClipCard from '@/components/clips/ClipCard';
 
 const PAGE_SIZE = 8;
@@ -14,6 +14,7 @@ export default function ClipsFeed({ navHeight }: { navHeight: number }) {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
   const [isMuted, setIsMuted] = useState<boolean>(true);
+  const [hasUserMutePref, setHasUserMutePref] = useState<boolean>(false);
   const [activeId, setActiveId] = useState<number | null>(null);
   const [activeIndex, setActiveIndex] = useState<number>(0);
   const [lastAutoScrollIndex, setLastAutoScrollIndex] = useState<number>(-1);
@@ -23,12 +24,32 @@ export default function ClipsFeed({ navHeight }: { navHeight: number }) {
   const inflightRef = useRef<number>(0);
   const abortRef = useRef<AbortController | null>(null);
   const seedRef = useRef<string>(Math.random().toString(36).substring(2, 9));
+  const isScrollingRef = useRef<boolean>(false);
+  const scrollTimerRef = useRef<number | null>(null);
+  const pendingActiveKeyRef = useRef<string | null>(null);
+  const switchTimerRef = useRef<number | null>(null);
+  const initializedRef = useRef<boolean>(false);
+  const soundArmedRef = useRef<boolean>(false);
 
   // Persist mute
   useEffect(() => {
-    try { const v = localStorage.getItem('clips:isMuted'); if (v != null) setIsMuted(v === 'true'); } catch {}
+    try {
+      const v = localStorage.getItem('clips:isMuted');
+      if (v != null) {
+        setIsMuted(v === 'true');
+        setHasUserMutePref(true);
+      }
+    } catch {}
   }, []);
-  useEffect(() => { try { localStorage.setItem('clips:isMuted', String(isMuted)); } catch {} }, [isMuted]);
+  useEffect(() => {
+    try {
+      localStorage.setItem('clips:isMuted', String(isMuted));
+      if (!hasUserMutePref) {
+        // Persist that a preference exists once user changes it
+        // We also flip this when user explicitly toggles
+      }
+    } catch {}
+  }, [isMuted, hasUserMutePref]);
 
   const fetchPage = useCallback(async (p: number) => {
     if (inflightRef.current > 0) return;
@@ -74,6 +95,12 @@ export default function ClipsFeed({ navHeight }: { navHeight: number }) {
             ...clip,
             uniqueKey: `${idx}-${clip.id}-${seedRef.current}`
           })));
+          // Force-initialize active on first item to avoid waiting for IO
+          if (!initializedRef.current) {
+            initializedRef.current = true;
+            setActiveIndex(0);
+            setActiveId(shuffled[0].id);
+          }
         }
         return combined;
       });
@@ -94,6 +121,22 @@ export default function ClipsFeed({ navHeight }: { navHeight: number }) {
       removePrefetchHints(); // Cleanup prefetch hints on unmount
     };
   }, [fetchPage]);
+
+  useEffect(() => {
+    try { soundArmedRef.current = sessionStorage.getItem('clips:soundArmed') === 'true'; } catch {}
+  }, []);
+
+  // Track scroll state to suppress heavy work during fast scrolls
+  useEffect(() => {
+    const root = rootRef.current; if (!root) return;
+    const onScroll = () => {
+      isScrollingRef.current = true;
+      if (scrollTimerRef.current) window.clearTimeout(scrollTimerRef.current);
+      scrollTimerRef.current = window.setTimeout(() => { isScrollingRef.current = false; }, 120) as unknown as number;
+    };
+    root.addEventListener('scroll', onScroll, { passive: true });
+    return () => root.removeEventListener('scroll', onScroll as any);
+  }, []);
 
   // Append new shuffled block when reaching the end
   const handleLoadMore = useCallback(() => {
@@ -149,16 +192,20 @@ export default function ClipsFeed({ navHeight }: { navHeight: number }) {
         const indexAttr = (topEntry.target as HTMLElement).dataset.clipIndex;
         const id = idAttr ? parseInt(idAttr, 10) : NaN;
         const index = indexAttr ? parseInt(indexAttr, 10) : NaN;
-        
+        // Debounce active switching to reduce thrash
         if (Number.isFinite(id)) {
-          setActiveId(id);
-          if (Number.isFinite(index)) setActiveIndex(index);
-          if (keyAttr) handleClipEnter(keyAttr);
+          if (switchTimerRef.current) window.clearTimeout(switchTimerRef.current);
+          pendingActiveKeyRef.current = keyAttr || null;
+          switchTimerRef.current = window.setTimeout(() => {
+            setActiveId(id);
+            if (Number.isFinite(index)) setActiveIndex(index);
+            if (keyAttr) handleClipEnter(keyAttr);
+          }, 80) as unknown as number;
         }
       }
     }, { 
       root, 
-      threshold: [0.7, 0.85, 0.95], 
+      threshold: [0.5, 0.75, 0.95], 
       rootMargin: `-${navHeight}px 0px 0px 0px` 
     });
     
@@ -169,17 +216,77 @@ export default function ClipsFeed({ navHeight }: { navHeight: number }) {
   // TikTok Strategy: Prefetch next 2-3 clips using browser link hints
   useEffect(() => {
     if (!displayClips.length || activeIndex < 0) return;
+    if (isScrollingRef.current) return; // suppress during fast scroll
     
-    // Get next 2 clips to prefetch
-    const nextClips = displayClips.slice(activeIndex + 1, activeIndex + 3);
+    // Network-aware policy
+    const conn: any = (typeof navigator !== 'undefined' && (navigator as any).connection) || null;
+    const saveData = !!conn?.saveData;
+    const effectiveType = conn?.effectiveType || '4g';
+    const downlink = typeof conn?.downlink === 'number' ? conn.downlink : 10;
+    const goodNetwork = !saveData && effectiveType === '4g' && downlink >= 4;
+
+    // Prefetch window: next 2 on good network, next 1 otherwise (manifest only)
+    const prefetchCount = goodNetwork ? 2 : 1;
+    const nextClips = displayClips.slice(activeIndex + 1, activeIndex + 1 + prefetchCount);
     const hlsUrls = nextClips.map(clip => clip.hlsUrl).filter(Boolean);
-    
+
     if (hlsUrls.length > 0) {
+      // Always add prefetch hints for manifests
       addPrefetchHints(hlsUrls);
+      // Also explicitly fetch manifest to warm SW cache (best-effort)
+      hlsUrls.forEach(u => prefetchManifest(u));
+    }
+
+    // For the immediate next clip, prefetch first segment only on good networks
+    const next = displayClips[activeIndex + 1];
+    if (goodNetwork && next?.hlsUrl) {
+      prefetchFirstSegment(next.hlsUrl);
     }
     
     // Cleanup is handled by addPrefetchHints (removes old hints automatically)
   }, [activeIndex, displayClips]);
+
+  // Enforce single active playback; apply global mute only to the active video
+  useEffect(() => {
+    const root = rootRef.current; if (!root) return;
+    const videos = Array.from(root.querySelectorAll('section video')) as HTMLVideoElement[];
+    videos.forEach(v => {
+      const section = v.closest('section');
+      const isActive = section?.getAttribute('data-active') === '1';
+      try {
+        if (isActive) {
+          // Apply current global mute preference to the active video only
+          v.muted = isMuted;
+          if (isMuted) {
+            v.play().catch(() => {});
+          } else {
+            if (soundArmedRef.current) v.play().catch(() => {});
+          }
+        } else {
+          v.pause();
+        }
+      } catch {}
+    });
+  }, [activeId, isMuted]);
+
+  // Pause/resume active video on tab visibility changes to save CPU/bandwidth
+  useEffect(() => {
+    const onVis = () => {
+      const root = rootRef.current; if (!root) return;
+      const v = root.querySelector('section[data-active="1"] video') as HTMLVideoElement | null;
+      if (!v) return;
+      if (document.hidden) {
+        try { v.pause(); } catch {}
+      } else {
+        // Only attempt autoplay on resume if currently muted; otherwise wait for gesture
+        if (v.muted) {
+          v.play().catch(() => {});
+        }
+      }
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, []);
 
   return (
     <div
@@ -194,10 +301,28 @@ export default function ClipsFeed({ navHeight }: { navHeight: number }) {
         scrollbarWidth: 'none',
         msOverflowStyle: 'none'
       }}
+      onClick={() => {
+        if (!soundArmedRef.current) {
+          soundArmedRef.current = true;
+          try { sessionStorage.setItem('clips:soundArmed', 'true'); } catch {}
+          const root = rootRef.current; if (!root) return;
+          const v = root.querySelector('section[data-active="1"] video') as HTMLVideoElement | null;
+          if (v) { try { v.muted = isMuted; v.play().catch(() => {}); } catch {} }
+        }
+      }}
     >
       {displayClips.map((clip, index) => {
-        // TikTok-style windowing: only render heavy components for active ± 2 clips
-        const isNearActive = Math.abs(activeIndex - index) <= 2;
+        // Network-aware windowing: shrink on weak networks
+        const conn: any = (typeof navigator !== 'undefined' && (navigator as any).connection) || null;
+        const saveData = !!conn?.saveData;
+        const effectiveType = conn?.effectiveType || '4g';
+        const downlink = typeof conn?.downlink === 'number' ? conn.downlink : 10;
+        const goodNetwork = !saveData && effectiveType === '4g' && downlink >= 4;
+        const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
+        const isIOS = /iP(ad|hone|od)/.test(ua) || (typeof navigator !== 'undefined' && (navigator as any).platform === 'MacIntel' && (navigator as any).maxTouchPoints > 1);
+        const isMobile = isIOS || (typeof window !== 'undefined' && window.innerWidth < 768);
+        const windowRadius = isMobile ? 1 : (goodNetwork ? 2 : 1);
+        const isNearActive = Math.abs(activeIndex - index) <= windowRadius;
         // Aggressive preloading: buffer the next video while current plays
         const shouldPreload = index === activeIndex + 1;
         
@@ -207,6 +332,7 @@ export default function ClipsFeed({ navHeight }: { navHeight: number }) {
             data-clip-key={clip.uniqueKey}
             data-clip-id={String(clip.id)}
             data-clip-index={String(index)}
+            data-active={activeId === clip.id ? '1' : '0'}
             className="flex items-center justify-center"
             style={{ 
               height: `calc(100svh - ${navHeight}px)`, 
@@ -220,7 +346,10 @@ export default function ClipsFeed({ navHeight }: { navHeight: number }) {
                 active={activeId === clip.id}
                 shouldPreload={shouldPreload}
                 muted={isMuted} 
-                onToggleMute={() => setIsMuted(m => !m)} 
+                onToggleMute={() => { setIsMuted(m => !m); setHasUserMutePref(true); try { localStorage.setItem('clips:isMuted', String(!isMuted)); } catch {} }} 
+                onAutoMute={() => { if (!hasUserMutePref) { setIsMuted(true); try { localStorage.setItem('clips:isMuted', 'true'); } catch {} } }}
+                onSyncMute={(actual) => { if (actual !== isMuted) { setIsMuted(actual); if (!hasUserMutePref) try { localStorage.setItem('clips:isMuted', String(actual)); } catch {} } }}
+                hasUserMutePref={hasUserMutePref}
                 onEnded={handleLoadMore}
                 currentIndex={index}
                 lastAutoScrollIndex={lastAutoScrollIndex}
@@ -228,11 +357,12 @@ export default function ClipsFeed({ navHeight }: { navHeight: number }) {
               />
             ) : (
               // Lightweight placeholder maintains scroll height without memory overhead
-              <div className="w-full h-full bg-black flex items-center justify-center">
+              <div className="w-full h-full bg-black flex items-center justify-center" style={{ contentVisibility: 'auto', containIntrinsicSize: `calc(100svh - ${navHeight}px) 100vw` }}>
                 <img 
                   src={clip.poster ?? undefined} 
                   alt="" 
-                  className="w-full h-full object-cover opacity-40 blur-sm"
+                  className="w-full h-full object-cover opacity-40"
+                  fetchPriority="low"
                   loading="lazy"
                 />
               </div>

@@ -498,7 +498,7 @@ const DetailModal = ({ video, onClose, onUpdate }: { video: Video; onClose: () =
       setLoadingProducts(true);
       try {
         const res = await fetch('/api/products');
-        const data = await res.json();
+        const data: any = await res.json();
         if (data.success && data.products) {
           setShopifyProducts(data.products);
         }
@@ -600,16 +600,16 @@ const DetailModal = ({ video, onClose, onUpdate }: { video: Video; onClose: () =
         headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
         body: JSON.stringify({ videoId: video.id, cfVideoId: uid })
       });
-      const data = await res.json();
+      const data: any = await res.json();
       if (!data.success || !data.jobId) throw new Error(data.error || 'Failed to queue job');
 
       // 2. Poll for completion
-      const jobId = data.jobId;
+      const jobId = data.jobId as string;
       let attempts = 0;
       while (attempts < 60) { // 3 minutes max
         await new Promise(r => setTimeout(r, 3000));
         const jobRes = await fetch(`/api/jobs/${jobId}`, { headers: token ? { 'Authorization': `Bearer ${token}` } : {} });
-        const jobData = await jobRes.json();
+        const jobData: any = await jobRes.json();
         if (jobData.job?.status === 'COMPLETED') break;
         if (jobData.job?.status === 'FAILED') throw new Error(jobData.job?.errorDetails || 'Job failed');
         attempts++;

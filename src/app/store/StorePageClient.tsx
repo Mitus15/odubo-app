@@ -149,42 +149,50 @@ export default function StorePageClient({ isStoreOpen, initialProducts }: StoreP
 
   return (
     <ScreenLayout>
-      <div className="fixed inset-0 -z-10 bg-[#0c0a09]" />
+      {/* BAAD by Odubo background: soft gradients and glow lights */}
+      <div className="fixed inset-0 -z-10 bg-gradient-to-br from-[#0b0b0b] via-[#111111] to-[#0b0b0b]" />
+      <div className="pointer-events-none fixed inset-0 -z-10">
+        <div className="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-gradient-to-br from-[#843c2d33] via-[#ff8a4a22] to-transparent blur-3xl" />
+        <div className="absolute top-1/3 right-0 h-80 w-80 rounded-full bg-gradient-to-br from-[#b2a49122] via-[#ede8df1a] to-transparent blur-3xl" />
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 h-96 w-[36rem] rounded-[999px] bg-gradient-to-tr from-[#843c2d22] via-transparent to-[#ede8df11] blur-3xl" />
+      </div>
       <ScrollContainer>
         <div className="max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <header className="mb-8 sm:mb-16 sticky top-0 z-10 py-4 sm:py-6 bg-[#0c0a09]/90 backdrop-blur-md border-b border-[#502d26]/10">
-            <div className="max-w-7xl mx-auto flex items-center justify-between px-2 sm:px-0">
-              {/* Empty left side for balance if needed, or Logo */}
-              <div className="w-20 hidden sm:block"></div>
-
-              {/* Centered Tabs */}
-              <div className="flex-1 flex justify-center gap-6 sm:gap-12">
-                <button
-                  onClick={() => setActiveTab('clothes')}
-                  className={`text-xs sm:text-sm uppercase tracking-[0.2em] transition-all duration-300 ${
-                    activeTab === 'clothes' 
-                      ? 'text-[#ede8df] font-medium' 
-                      : 'text-[#502d26] hover:text-[#b2a491]'
-                  }`}
-                >
-                  Clothes
-                </button>
-                <button
-                  onClick={() => setActiveTab('items')}
-                  className={`text-xs sm:text-sm uppercase tracking-[0.2em] transition-all duration-300 ${
-                    activeTab === 'items' 
-                      ? 'text-[#ede8df] font-medium' 
-                      : 'text-[#502d26] hover:text-[#b2a491]'
-                  }`}
-                >
-                  Items
-                </button>
+          {/* Hero / Brand Header */}
+          <header className="mb-6 sm:mb-10 py-4 sm:py-6">
+            <div className="w-full grid grid-cols-3 items-center px-4 sm:px-6 lg:px-8">
+              {/* Left spacer */}
+              <div />
+              {/* Center brand */}
+              <div className="flex flex-col items-center text-center">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/brand-logos/baad.png" alt="B.A.A.D" className="h-8 sm:h-10 w-auto" />
               </div>
-
-              {/* Right side Cart */}
-              <Link href="/store/cart" className="w-auto sm:w-20 text-right text-[10px] sm:text-xs text-[#b2a491] hover:text-[#ede8df] uppercase tracking-widest transition-colors">
-                Cart (0)
-              </Link>
+              {/* Right actions (flush right) */}
+              <div className="flex justify-end">
+                <Link href="/store/cart" className="text-[10px] sm:text-xs text-[#ede8df]/80 hover:text-[#ede8df] uppercase tracking-widest transition-colors">
+                  Cart
+                </Link>
+              </div>
+            </div>
+            {/* Category toggles without box */}
+            <div className="mt-3 flex justify-center gap-6">
+              <button
+                onClick={() => setActiveTab('clothes')}
+                className={`text-[10px] sm:text-xs uppercase tracking-[0.2em] transition-colors ${
+                  activeTab === 'clothes' ? 'text-[#ede8df]' : 'text-[#b2a491] hover:text-[#ede8df]'
+                }`}
+              >
+                Clothes
+              </button>
+              <button
+                onClick={() => setActiveTab('items')}
+                className={`text-[10px] sm:text-xs uppercase tracking-[0.2em] transition-colors ${
+                  activeTab === 'items' ? 'text-[#ede8df]' : 'text-[#b2a491] hover:text-[#ede8df]'
+                }`}
+              >
+                Items
+              </button>
             </div>
           </header>
 
@@ -199,32 +207,31 @@ export default function StorePageClient({ isStoreOpen, initialProducts }: StoreP
             )}
             
             {!loading && filteredProducts.length > 0 && (
-              <div className="grid grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-10 sm:gap-x-12 sm:gap-y-20">
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-10 sm:gap-x-10 sm:gap-y-16">
                 {filteredProducts.map((p) => (
                   <Link 
                     key={p.id}
                     href={`/store/product/${p.handle}`} 
                     className={`group block ${p.available === false ? 'opacity-60' : ''}`}
                   >
-                    {/* Removed background color to respect transparent images */}
-                    <div className="relative aspect-[3/4] overflow-hidden mb-4 sm:mb-8 flex items-center justify-center">
+                    {/* Image only, no card background */}
+                    <div className="relative aspect-[3/4] overflow-hidden mb-1 sm:mb-2 flex items-center justify-center">
                       {p.image ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img 
                           src={p.image} 
                           alt={p.title} 
-                          className="w-full h-full object-contain transition-transform duration-700 group-hover:scale-105" 
+                          className="w-full h-full object-contain transition-transform duration-700 group-hover:scale-[1.02]" 
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-[#502d26] bg-[#1c1a19]/20">
                           <span className="uppercase tracking-widest text-xs">No Image</span>
                         </div>
                       )}
-                      
                       {/* New Badge */}
                       {p.available && (new Date(p.createdAt).getTime() > Date.now() - 30 * 24 * 60 * 60 * 1000) && (
-                        <div className="absolute top-0 left-0 p-2 sm:p-4">
-                          <span className="px-1.5 py-0.5 sm:px-2 sm:py-1 bg-[#843c2d] text-[#ede8df] text-[8px] sm:text-[10px] uppercase tracking-widest">
+                        <div className="absolute top-0 left-0 p-2 sm:p-3">
+                          <span className="px-2 py-1 rounded-full bg-gradient-to-r from-[#843c2d] to-[#b26a4a] text-[#ede8df] text-[9px] sm:text-[10px] uppercase tracking-widest">
                             New
                           </span>
                         </div>
@@ -232,18 +239,18 @@ export default function StorePageClient({ isStoreOpen, initialProducts }: StoreP
 
                       {!p.available && (
                         <div className="absolute inset-0 flex items-center justify-center bg-black/40">
-                          <span className="px-2 py-1 sm:px-3 sm:py-1 bg-[#1c1a19] text-[#ede8df] text-[10px] sm:text-xs uppercase tracking-widest border border-[#502d26]">
+                          <span className="px-3 py-1.5 sm:px-3 sm:py-1 bg-[#1c1a19]/80 rounded-full text-[#ede8df] text-[10px] sm:text-xs uppercase tracking-widest border border-[#502d26]">
                             Sold Out
                           </span>
                         </div>
                       )}
                     </div>
                     
-                    <div className="space-y-1 sm:space-y-2 text-center">
-                      <h3 className="text-sm sm:text-lg font-medium text-[#ede8df] group-hover:text-[#843c2d] transition-colors duration-300 tracking-wide">
+                    <div className="space-y-0 text-center">
+                      <h3 className="text-sm sm:text-lg font-medium text-[#ede8df] group-hover:text-[#ede8df] transition-colors duration-300 tracking-wide">
                         {p.title}
                       </h3>
-                      <div className="text-xs sm:text-sm text-[#b2a491] font-light tracking-widest">
+                      <div className="text-xs sm:text-sm text-[#b2a491] font-light tracking-widest mt-0.5">
                         {p.available === false 
                           ? 'SOLD OUT' 
                           : (p.price !== null ? `$${p.price.toFixed(2)}` : 'PRICE ON REQUEST')}

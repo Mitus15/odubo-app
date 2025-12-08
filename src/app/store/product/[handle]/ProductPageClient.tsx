@@ -141,25 +141,34 @@ export default function ProductPageClient({ product }: ProductPageClientProps) {
 
   return (
     <ScreenLayout>
-      <div className="fixed inset-0 -z-10 bg-[#0c0a09]" />
+      {/* BAAD by Odubo product background with soft lights */}
+      <div className="fixed inset-0 -z-10 bg-gradient-to-br from-[#0b0b0b] via-[#111111] to-[#0b0b0b]" />
+      <div className="pointer-events-none fixed inset-0 -z-10">
+        <div className="absolute -top-20 left-1/2 -translate-x-1/2 h-64 w-[36rem] rounded-[999px] bg-gradient-to-tr from-[#843c2d22] via-transparent to-[#ede8df11] blur-3xl" />
+        <div className="absolute bottom-0 right-0 h-80 w-80 rounded-full bg-gradient-to-tr from-[#b2a49122] via-[#ede8df14] to-transparent blur-3xl" />
+      </div>
       <ScrollContainer>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
           {/* Breadcrumb / Back */}
-          <div className="mb-8">
+          <div className="mb-8 flex items-center justify-between">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/brand-logos/baad.png" alt="B.A.A.D" className="h-5 w-auto opacity-80" />
             <a href="/store" className="text-xs uppercase tracking-widest text-[#b2a491] hover:text-[#ede8df] transition-colors">
-              ← Back to Store
+              Back to Shop
             </a>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20">
             {/* Media Gallery */}
             <div className="space-y-4">
-              <div className="aspect-[3/4] bg-[#1c1a19]/20 overflow-hidden flex items-center justify-center">
+              <div className="aspect-[3/4] overflow-hidden flex items-center justify-center rounded-2xl p-[1px] bg-gradient-to-br from-[#ffffff0a] via-[#843c2d33] to-[#ffffff08]">
+                <div className="relative w-full h-full rounded-2xl bg-[#0e0d0d]/60 backdrop-blur-sm flex items-center justify-center">
                 {(() => {
                   const src = activeImage || selectedVariant?.image?.src || product?.images?.[0]?.src;
                   if (!src) return <div className="text-[#502d26] text-xs uppercase tracking-widest">No Image</div>;
-                  return <img src={src} alt={product?.title || 'Product'} className="w-full h-full object-contain transition-all duration-500" />;
+                  return <img src={src} alt={product?.title || 'Product'} className="w-full h-full object-contain transition-all duration-500 drop-shadow-[0_10px_18px_rgba(0,0,0,0.35)]" />;
                 })()}
+                </div>
               </div>
               {/* Thumbnails if multiple images exist */}
               {product?.images && product.images.length > 1 && (
@@ -168,8 +177,8 @@ export default function ProductPageClient({ product }: ProductPageClientProps) {
                     <button 
                       key={idx} 
                       onClick={() => handleThumbnailClick(img.src)}
-                      className={`aspect-square bg-[#1c1a19]/20 overflow-hidden border transition-all duration-300 ${
-                        activeImage === img.src ? 'border-[#843c2d] opacity-100' : 'border-transparent opacity-60 hover:opacity-100'
+                      className={`aspect-square overflow-hidden rounded-xl border transition-all duration-300 ${
+                        activeImage === img.src ? 'border-[#843c2d] opacity-100' : 'border-[#1c1a19] opacity-70 hover:opacity-100'
                       }`}
                     >
                       <img src={img.src} alt="" className="w-full h-full object-cover" />
@@ -181,7 +190,8 @@ export default function ProductPageClient({ product }: ProductPageClientProps) {
 
             {/* Details */}
             <div className="flex flex-col justify-center">
-              <h1 className="text-3xl sm:text-4xl font-medium text-[#ede8df] mb-4 tracking-wide">{product?.title || 'Product'}</h1>
+              <h1 className="text-3xl sm:text-4xl font-medium text-[#ede8df] mb-2 tracking-wide drop-shadow-[0_2px_12px_rgba(132,60,45,0.35)]">{product?.title || 'Product'}</h1>
+              <p className="text-[10px] uppercase tracking-[0.22em] text-[#b2a491] mb-4">B.A.A.D by Odubo · Fashion</p>
               
               {selectedVariant && (
                 <div className="text-xl text-[#b2a491] font-light tracking-widest mb-8">
@@ -198,7 +208,7 @@ export default function ProductPageClient({ product }: ProductPageClientProps) {
                 <div className="space-y-6 mb-10">
                   {product.options.map((opt) => (
                     <div key={opt.name}>
-                      <div className="text-xs uppercase tracking-widest text-[#502d26] mb-3">{opt.name}</div>
+                      <div className="text-xs uppercase tracking-widest text-[#b2a491] mb-3">{opt.name}</div>
                       <div className="flex flex-wrap gap-3">
                         {opt.values.map(val => {
                           const isSelected = selectedOptions[opt.name] === val;
@@ -216,9 +226,9 @@ export default function ProductPageClient({ product }: ProductPageClientProps) {
                             <button
                               key={val}
                               onClick={() => !disabled && setSelectedOptions(prev => ({ ...prev, [opt.name]: val }))}
-                              className={`min-w-[3rem] px-4 py-2 text-sm border transition-all duration-300 ${
+                              className={`min-w-[3rem] px-4 py-2 text-sm rounded-full transition-all duration-300 border ${
                                 isSelected 
-                                  ? 'bg-[#ede8df] text-[#0c0a09] border-[#ede8df]' 
+                                  ? 'border-transparent bg-gradient-to-r from-[#843c2d] to-[#b26a4a] text-[#ede8df] shadow-[0_0_20px_#843c2d55]'
                                   : disabled 
                                     ? 'border-[#302927] text-[#302927] cursor-not-allowed decoration-slice line-through' 
                                     : 'border-[#502d26] text-[#b2a491] hover:border-[#b2a491] hover:text-[#ede8df]'
@@ -240,12 +250,12 @@ export default function ProductPageClient({ product }: ProductPageClientProps) {
                 <button
                   onClick={addToCart}
                   disabled={!selectedVariant?.available}
-                  className={`w-full py-4 text-sm uppercase tracking-[0.2em] transition-all duration-300 ${
+                  className={`w-full py-4 text-sm uppercase tracking-[0.2em] rounded-full transition-all duration-300 ${
                     !selectedVariant?.available 
                       ? 'bg-[#1c1a19] text-[#502d26] cursor-not-allowed border border-[#302927]'
                       : justAdded
                         ? 'bg-[#502d26] text-[#ede8df]'
-                        : 'bg-[#843c2d] text-[#ede8df] hover:bg-[#a0472f]'
+                        : 'bg-gradient-to-r from-[#843c2d] to-[#b26a4a] text-[#ede8df] shadow-[0_10px_30px_#843c2d40] hover:shadow-[0_12px_36px_#843c2d55]'
                   }`}
                 >
                   {justAdded ? 'Added to Cart' : (!selectedVariant?.available ? 'Sold Out' : 'Add to Cart')}
@@ -254,7 +264,7 @@ export default function ProductPageClient({ product }: ProductPageClientProps) {
                 {hasCartItems && (
                   <a
                     href="/store/cart"
-                    className="w-full py-4 text-center text-sm uppercase tracking-[0.2em] border border-[#502d26] text-[#b2a491] hover:text-[#ede8df] hover:border-[#b2a491] transition-all duration-300"
+                    className="w-full py-4 text-center text-sm uppercase tracking-[0.2em] rounded-full border border-[#502d26] text-[#b2a491] hover:text-[#ede8df] hover:border-[#b2a491] transition-all duration-300"
                   >
                     View Cart
                   </a>
@@ -262,7 +272,7 @@ export default function ProductPageClient({ product }: ProductPageClientProps) {
               </div>
 
               {/* Shipping Info */}
-              <div className="mt-12 pt-8 border-t border-[#502d26]/20 text-xs text-[#502d26] uppercase tracking-widest space-y-2">
+              <div className="mt-12 pt-8 border-t border-[#502d26]/20 text-xs text-[#b2a491] uppercase tracking-widest space-y-2">
                 <p>Free shipping on orders over $150</p>
                 <p>Ships from Canada</p>
               </div>

@@ -1,8 +1,17 @@
 "use client";
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import ClipsFeed from '@/components/clips/ClipsFeed';
+import dynamic from 'next/dynamic';
+import PerformanceDebugger from '@/components/clips/PerformanceDebugger';
+
+// Virtualized feed is currently disabled; focus on standard feed
+// const VirtuosoFeed = dynamic(() => import('@/components/clips/VirtuosoFeed'), { ssr: false });
 
 export default function ClipsPage() {
+  const params = useSearchParams();
+  const useVirtual = false; // force standard feed
+  const debug = params?.get('debug') || '';
   // Read app nav height from CSS var if available
   const [navHeight, setNavHeight] = useState<number>(0);
   useEffect(() => {
@@ -35,6 +44,7 @@ export default function ClipsPage() {
         className="pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
       >
         <ClipsFeed navHeight={navHeight} />
+        {(debug === '1' || debug === 'clips') && <PerformanceDebugger />}
       </div>
     </div>
   );

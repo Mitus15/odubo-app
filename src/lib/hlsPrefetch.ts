@@ -10,14 +10,72 @@
  * This loads the first 2-6 seconds of video into browser cache
  * before the user scrolls to it.
  */
+const inflightManifests = new Set<string>();
+const inflightSegments = new Set<string>();
+
+// Prefetch concurrency limiter to avoid bandwidth spikes on mobile
+const MAX_PREFETCH_CONCURRENCY = 1;
+let activePrefetch = 0;
+const prefetchWaiters: Array<() => void> = [];
+
+async function withPrefetchSlot<T>(fn: () => Promise<T>): Promise<T> {
+  if (activePrefetch >= MAX_PREFETCH_CONCURRENCY) {
+    await new Promise<void>(resolve => prefetchWaiters.push(resolve));
+  }
+  activePrefetch++;
+  try {
+    return await fn();
+  } finally {
+    activePrefetch--;
+    const next = prefetchWaiters.shift();
+    if (next) next();
+  }
+}
+
+function ensurePreconnect(url: string) {
+  try {
+    const u = new URL(url);
+    const origin = `${u.protocol}//${u.host}`;
+    if (document.querySelector(`link[data-preconnect-origin="${origin}"]`)) return;
+    const preconnect = document.createElement('link');
+    preconnect.rel = 'preconnect';
+    preconnect.href = origin;
+    preconnect.crossOrigin = 'anonymous';
+    preconnect.setAttribute('data-preconnect-origin', origin);
+    document.head.appendChild(preconnect);
+    const dns = document.createElement('link');
+    dns.rel = 'dns-prefetch';
+    dns.href = origin;
+    dns.setAttribute('data-preconnect-origin', origin);
+    document.head.appendChild(dns);
+  } catch {}
+}
+
 export async function prefetchFirstSegment(hlsUrl: string): Promise<void> {
   try {
+    // Respect user's data saver and weak networks
+    const conn: any = (typeof navigator !== 'undefined' && (navigator as any).connection) || null;
+    const saveData = !!conn?.saveData;
+    const effectiveType = conn?.effectiveType || '4g';
+    const downlink = typeof conn?.downlink === 'number' ? conn.downlink : 10;
+    const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
+    const isIOS = /iP(ad|hone|od)/.test(ua) || ((navigator as any)?.platform === 'MacIntel' && (navigator as any)?.maxTouchPoints > 1);
+    const isMobile = isIOS || (typeof window !== 'undefined' && window.innerWidth < 768);
+    const isWeak = saveData || effectiveType !== '4g' || downlink < 3 || isMobile;
+    if (isWeak) {
+      // On weak networks, skip segment prefetch to avoid stalling active playback
+      return;
+    }
+
     // Fetch manifest with low priority (don't block active video)
-    const manifestRes = await fetch(hlsUrl, { 
+    ensurePreconnect(hlsUrl);
+    if (inflightManifests.has(hlsUrl)) return;
+    inflightManifests.add(hlsUrl);
+    const manifestRes = await withPrefetchSlot(() => fetch(hlsUrl, { 
       priority: 'low' as any,
       mode: 'cors',
       credentials: 'omit'
-    });
+    }));
     
     if (!manifestRes.ok) return;
     
@@ -41,7 +99,7 @@ export async function prefetchFirstSegment(hlsUrl: string): Promise<void> {
         
         // If it's a nested playlist (multi-bitrate), fetch that and find first segment
         if (firstSegmentUrl.endsWith('.m3u8')) {
-          const nestedRes = await fetch(firstSegmentUrl, { priority: 'low' as any, mode: 'cors' });
+          const nestedRes = await withPrefetchSlot(() => fetch(firstSegmentUrl, { priority: 'low' as any, mode: 'cors' }));
           if (nestedRes.ok) {
             const nestedText = await nestedRes.text();
             const nestedLines = nestedText.split('\n');
@@ -62,15 +120,20 @@ export async function prefetchFirstSegment(hlsUrl: string): Promise<void> {
     }
     
     if (firstSegmentUrl && !firstSegmentUrl.endsWith('.m3u8')) {
+      if (inflightSegments.has(firstSegmentUrl)) { inflightManifests.delete(hlsUrl); return; }
+      inflightSegments.add(firstSegmentUrl);
       // Prefetch the actual video segment into browser cache
-      fetch(firstSegmentUrl, { 
+      await withPrefetchSlot(() => fetch(firstSegmentUrl, { 
         priority: 'low' as any,
         mode: 'cors',
         credentials: 'omit'
-      }).catch(() => {}); // Silent fail - prefetch is best-effort
+      })).catch(() => {}).finally(() => { inflightSegments.delete(firstSegmentUrl); }); // Silent fail - prefetch is best-effort
     }
+    inflightManifests.delete(hlsUrl);
   } catch (e) {
     // Silent fail - prefetch is best-effort, don't break the app
+  } finally {
+    inflightManifests.delete(hlsUrl);
   }
 }
 
@@ -80,11 +143,17 @@ export async function prefetchFirstSegment(hlsUrl: string): Promise<void> {
  */
 export async function prefetchManifest(hlsUrl: string): Promise<void> {
   try {
-    await fetch(hlsUrl, { 
+    // Only prefetch manifest if user hasn't enabled data saver
+    const conn: any = (typeof navigator !== 'undefined' && (navigator as any).connection) || null;
+    if (conn?.saveData) return;
+    ensurePreconnect(hlsUrl);
+    if (inflightManifests.has(hlsUrl)) return;
+    inflightManifests.add(hlsUrl);
+    await withPrefetchSlot(() => fetch(hlsUrl, { 
       priority: 'low' as any,
       mode: 'cors',
       credentials: 'omit'
-    });
+    })).finally(() => { inflightManifests.delete(hlsUrl); });
   } catch (e) {
     // Silent fail
   }
@@ -100,6 +169,7 @@ export function addPrefetchHints(hlsUrls: string[]): void {
   
   // Add new prefetch hints for next videos
   hlsUrls.forEach((url, index) => {
+    try { ensurePreconnect(url); } catch {}
     const link = document.createElement('link');
     link.rel = 'prefetch';
     link.href = url;

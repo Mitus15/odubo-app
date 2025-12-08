@@ -1,13 +1,38 @@
 // Clips Feed Service Worker - HLS Manifest Caching
 // Enables instant playback on repeat views by caching manifests
 
-const CACHE_VERSION = 'clips-v1';
-const HLS_MANIFEST_CACHE = 'hls-manifests-v1';
-const SEGMENT_CACHE = 'hls-segments-v1';
+const CACHE_VERSION = 'clips-v2';
+const HLS_MANIFEST_CACHE = 'hls-manifests-v2';
+const SEGMENT_CACHE = 'hls-segments-v2';
 
 // Cache duration: 5 minutes for manifests, 30 minutes for segments
 const MANIFEST_MAX_AGE = 5 * 60 * 1000;
 const SEGMENT_MAX_AGE = 30 * 60 * 1000;
+
+// Entry limits to prevent unbounded growth
+const MANIFEST_MAX_ENTRIES = 60; // ~several pages worth
+const SEGMENT_MAX_ENTRIES = 400; // small rolling window
+
+async function pruneCache(cacheName, maxEntries) {
+  try {
+    const cache = await caches.open(cacheName);
+    const requests = await cache.keys();
+    if (requests.length <= maxEntries) return;
+
+    const items = await Promise.all(
+      requests.map(async (req) => {
+        const res = await cache.match(req);
+        const ts = res && res.headers.get('sw-cached-time');
+        return { req, ts: ts ? parseInt(ts, 10) : 0 };
+      })
+    );
+    items.sort((a, b) => a.ts - b.ts); // oldest first
+    const toDelete = items.slice(0, Math.max(0, items.length - maxEntries));
+    await Promise.all(toDelete.map(({ req }) => cache.delete(req)));
+  } catch (e) {
+    // Best effort only
+  }
+}
 
 // Install event - setup caches
 self.addEventListener('install', (event) => {
@@ -42,8 +67,9 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   
-  // Only handle HLS content from videodelivery.net (Cloudflare Stream)
-  if (!url.hostname.includes('videodelivery.net')) {
+  // Only handle HLS content from videodelivery.net or Cloudflare Stream customer domains
+  const isStreamHost = url.hostname.includes('videodelivery.net') || url.hostname.includes('cloudflarestream.com');
+  if (!isStreamHost) {
     return; // Let browser handle normally
   }
   
@@ -87,6 +113,8 @@ self.addEventListener('fetch', (event) => {
         })
       )
     );
+    // Best-effort prune after responding
+    event.waitUntil(pruneCache(HLS_MANIFEST_CACHE, MANIFEST_MAX_ENTRIES));
     return;
   }
   
@@ -125,6 +153,8 @@ self.addEventListener('fetch', (event) => {
         })
       )
     );
+    // Best-effort prune after responding
+    event.waitUntil(pruneCache(SEGMENT_CACHE, SEGMENT_MAX_ENTRIES));
     return;
   }
 });

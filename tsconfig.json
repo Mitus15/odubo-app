@@ -15,7 +15,7 @@
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "jsx": "preserve",
+    "jsx": "react-jsx",
     "incremental": true,
     "plugins": [
       {
@@ -61,6 +61,8 @@
     ".next/types/**/*.ts"
     // Exclude Next-generated type files to avoid strict route param checks breaking tsc
     // ".next/types/**/*.ts"
+    ,
+    ".next/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",

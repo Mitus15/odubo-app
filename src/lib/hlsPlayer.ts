@@ -31,6 +31,11 @@ export async function attachHls(video: HTMLVideoElement, src: string, preloadOnl
   const connection = (navigator as any)?.connection;
   const effectiveType = connection?.effectiveType || '4g';
   const isSlow = effectiveType === 'slow-2g' || effectiveType === '2g' || effectiveType === '3g';
+  const downlink: number = typeof connection?.downlink === 'number' ? connection.downlink : 10;
+  const autoCap = isSlow || downlink < 3 ? 2 : -1; // cap at lower levels on weak connections
+  const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
+  const isIOS = /iP(ad|hone|od)/.test(ua) || ((navigator as any)?.platform === 'MacIntel' && (navigator as any)?.maxTouchPoints > 1);
+  const isMobile = isIOS || (typeof window !== 'undefined' && window.innerWidth < 768);
   
   // TikTok's Secret: Get cached quality preference for warm start
   const getCachedQuality = (): number => {
@@ -59,12 +64,14 @@ export async function attachHls(video: HTMLVideoElement, src: string, preloadOnl
     abrEwmaDefaultEstimate: 500000, // ~0.5 Mbps starting point
     
     // MINIMAL buffers for short-form video
-    maxBufferLength: preloadOnly ? 2 : (isSlow ? 3 : 4), // Reduced from 3/4/8
-    maxMaxBufferLength: preloadOnly ? 4 : (isSlow ? 6 : 8), // Reduced from 6/8/12
-    maxBufferSize: 10 * 1000 * 1000, // 10MB max buffer size (prevent memory bloat)
+    maxBufferLength: preloadOnly ? 1.5 : (isMobile ? 2.5 : (isSlow ? 3 : 4)),
+    maxMaxBufferLength: preloadOnly ? 3 : (isMobile ? 5 : (isSlow ? 6 : 8)),
+    maxBufferSize: isMobile ? 7 * 1000 * 1000 : 10 * 1000 * 1000,
+    backBufferLength: isMobile ? 0 : 0.1,
     
     // Cap initial bitrate to avoid stalls
     capLevelToPlayerSize: true,
+    autoLevelCapping: autoCap,
     
     // INSTANT start - fail fast if network is slow
     manifestLoadingTimeOut: 2000, // 2s timeout for manifest (was infinite)
@@ -96,11 +103,19 @@ export async function attachHls(video: HTMLVideoElement, src: string, preloadOnl
   
   // Resilient error handling
   hls.on((Hls as any).Events.ERROR, (_event: any, data: any) => {
-    if (data?.fatal) {
-      try { hls.destroy(); } catch {}
-      // Fallback: try native or direct src
-      try { video.src = src; } catch {}
-    }
+    try {
+      const H = Hls as any;
+      if (data?.fatal) {
+        try { hls.destroy(); } catch {}
+        try { video.src = src; } catch {}
+        return;
+      }
+      // On buffer stalls or fragment load issues, temporarily cap to lowest level
+      const detail = data?.details || '';
+      if (detail === 'bufferStalledError' || detail === 'fragLoadError' || detail === 'fragLoadTimeout') {
+        try { (hls as any).currentLevel = 0; } catch {}
+      }
+    } catch {}
   });
   return { destroy: () => { try { hls.destroy(); } catch {} } };
 }
