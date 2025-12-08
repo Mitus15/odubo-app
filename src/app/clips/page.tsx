@@ -1,4 +1,5 @@
 "use client";
+import { Suspense } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import ClipsFeed from '@/components/clips/ClipsFeed';
@@ -8,7 +9,7 @@ import PerformanceDebugger from '@/components/clips/PerformanceDebugger';
 // Virtualized feed is currently disabled; focus on standard feed
 // const VirtuosoFeed = dynamic(() => import('@/components/clips/VirtuosoFeed'), { ssr: false });
 
-export default function ClipsPage() {
+function ClipsPageInner() {
   const params = useSearchParams();
   const useVirtual = false; // force standard feed
   const debug = params?.get('debug') || '';
@@ -47,5 +48,13 @@ export default function ClipsPage() {
         {(debug === '1' || debug === 'clips') && <PerformanceDebugger />}
       </div>
     </div>
+  );
+}
+
+export default function ClipsPage() {
+  return (
+    <Suspense fallback={<div style={{height:'100svh',background:'#000'}} />}> 
+      <ClipsPageInner />
+    </Suspense>
   );
 }
