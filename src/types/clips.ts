@@ -8,6 +8,7 @@ export type ClipApiRow = {
   artist_name?: string | null;
   duration_seconds?: number | null;
   created_at?: string | null;
+  shopify_product_handle?: string | null;
 };
 
 export type ClipItem = {
@@ -18,4 +19,5 @@ export type ClipItem = {
   artist: string;
   duration: number | null;
   createdAt: string | null;
+  productHandle?: string | null;
 };

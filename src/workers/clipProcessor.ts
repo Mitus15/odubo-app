@@ -1,4 +1,3 @@
-import ffmpeg from 'fluent-ffmpeg';
 import fs from 'fs/promises';
 import fsSync from 'fs';
 import path from 'path';
@@ -96,11 +95,11 @@ export async function processClipJob(job: ClipJobPayload) {
 
     // Optional: update video metadata with analysis summary
     try {
+      // User requested: AI should NOT replace original video name or artist.
+      // Only update description, mood, category, ai_description, tags.
       await executeQuery(
         `UPDATE videos SET 
-          title = COALESCE(?, title),
           description = COALESCE(?, description),
-          artist_name = COALESCE(?, artist_name),
           mood = COALESCE(?, mood),
           category = COALESCE(?, category),
           ai_description = ?,
@@ -108,9 +107,7 @@ export async function processClipJob(job: ClipJobPayload) {
           updated_at = datetime('now')
          WHERE id = ?`,
         [
-          analysis.title,
           analysis.description,
-          analysis.artist_name,
           analysis.mood,
           analysis.category,
           JSON.stringify(analysis),
@@ -122,7 +119,9 @@ export async function processClipJob(job: ClipJobPayload) {
       console.warn('[Worker] Failed to update video analysis fields');
     }
 
-    // Cleanup existing clips for this video
+    // Cleanup existing clips for this video - DISABLED per user request for new workflow
+    // The user wants to manually manage clips.
+    /*
     try {
       const oldClips = await queryDatabase(
         `SELECT id, uid FROM videos WHERE type = 'clip' AND related_projects LIKE ?`,
@@ -135,135 +134,22 @@ export async function processClipJob(job: ClipJobPayload) {
     } catch (e) {
       console.warn('[Worker] Clip cleanup failed', e);
     }
+    */
 
-    // Generate and upload clips — prefer manual markers; if present they define exact boundaries
+    // Generate and upload clips — DISABLED per user request
+    // The user wants to manually upload clips.
+    /*
     const minDur = 1; // minimal sanity: skip zero/negative
     const maxDur = videoDuration || 10_000; // no artificial cap when using markers
     const targetDur = 30; // only used in AI fallback
 
-    // 1) Check manual markers
-    const markers: Array<{ timestamp: number; label?: string }> = await queryDatabase(
-      `SELECT timestamp, label FROM video_markers WHERE video_id = ? ORDER BY timestamp ASC`,
-      [videoId]
-    );
-
-    let finalClips: Array<{ startTime: number; endTime: number; priority?: any; reason?: any }> = [];
-
-    if (markers && markers.length > 0 && videoDuration && videoDuration > 0) {
-      // Strict segmentation: consecutive marker timestamps define boundaries.
-      // If the first marker is not at 0, prepend 0. Always ensure final segment ends at videoDuration unless a marker equals duration.
-      const markerTimes = markers
-        .map(m => Number(m.timestamp))
-        .filter(n => !Number.isNaN(n) && n >= 0 && n <= videoDuration)
-        .sort((a,b) => a-b);
-      if (markerTimes[0] !== 0) markerTimes.unshift(0);
-      if (markerTimes[markerTimes.length - 1] !== videoDuration) markerTimes.push(videoDuration);
-      for (let i = 0; i < markerTimes.length - 1; i++) {
-        const s = markerTimes[i];
-        const e = markerTimes[i+1];
-        if (e <= s) continue;
-        const dur = e - s;
-        if (dur < minDur) continue; // ignore zero-length spans
-        finalClips.push({ startTime: s, endTime: e, priority: 'marker', reason: 'manual boundary' });
-      }
-    } else {
-      // Fallback: AI suggestions (no minimum count padding now)
-      const rawClips = Array.isArray(analysis.suggestedClips) ? analysis.suggestedClips : [];
-      const normalized: Array<{ startTime: number; endTime: number; priority?: any; reason?: any }> = [];
-      for (const c of rawClips) {
-        let s = parseTime((c as any).startTime);
-        let e = parseTime((c as any).endTime);
-        if (Number.isNaN(s) || Number.isNaN(e) || e <= s) continue;
-        if (videoDuration > 0) {
-          if (s >= videoDuration) continue;
-          if (e > videoDuration) e = videoDuration;
-        }
-        if (videoDuration > 0 && e === videoDuration) e = Math.max(s + 0.1, videoDuration - 0.05);
-        // Accept directly; do not enforce artificial min/max when AI-driven.
-        if (e > s) normalized.push({ startTime: s, endTime: e, priority: (c as any).priority, reason: (c as any).reason });
-      }
-      normalized.sort((a, b) => a.startTime - b.startTime);
-      finalClips = normalized;
-    }
-
-    for (const clip of finalClips) {
-      let { startTime, endTime } = clip;
-
-      // Simplified, comma-free 9:16 crop for 16:9 sources (centered):
-      // w = trunc(ih*9/16/2)*2 (even), h = ih, x = (iw - w)/2, y = 0
-      // This avoids commas in expressions which can confuse filter parsing.
-      const cropFilter = `crop=trunc(ih*9/16/2)*2:ih:(iw - trunc(ih*9/16/2)*2)/2:0`;
-      const tmpOut = path.join(os.tmpdir(), `clip-${Date.now()}-${Math.random().toString(36).slice(2)}.mp4`);
-
-      await new Promise((resolve, reject) => {
-        ffmpeg(tmpInput)
-          .inputOptions([
-            '-analyzeduration', '2000000', // ~2s
-            '-probesize', '50M'
-          ])
-          .setStartTime(startTime)
-          .setDuration(endTime - startTime)
-          .format('mp4')
-          .videoCodec('libx264')
-          .audioCodec('aac')
-          .outputOptions([
-            '-map 0:v:0',
-            '-map 0:a?', // include audio if present
-            '-shortest',
-            '-movflags +faststart',
-            '-vf', `${cropFilter},format=yuv420p`,
-            '-pix_fmt yuv420p',
-            '-preset ultrafast',
-            '-crf 23',
-            '-max_muxing_queue_size 1024',
-            '-avoid_negative_ts make_zero',
-            '-vsync 2'
-          ])
-          .on('start', (cmd: string) => {
-            console.log('[FFmpeg] start:', cmd);
-          })
-          .on('stderr', (line: string) => {
-            if (line) console.log('[FFmpeg]', line);
-          })
-          .on('error', (err: any) => {
-            console.error('[FFmpeg] error:', err?.message || err);
-            reject(err);
-          })
-          .on('end', () => resolve(null))
-          .save(tmpOut);
-      });
-
-      const outBuf = await fs.readFile(tmpOut);
-      try {
-        const upload = await stream.uploadVideoStream(outBuf, {
-          name: `Clip: ${analysis.title || ''} - ${clip.priority || ''}`.trim(),
-          meta: { source: 'gemini-auto-clip', originalVideoId: cfVideoId }
-        });
-        if (upload.success && upload.result) {
-          const clipData = upload.result;
-          const thumb = stream.getThumbnailUrl(clipData.uid);
-          await executeQuery(
-            `INSERT INTO videos (title, uid, url, poster_url, thumbnail, duration, status, type, is_public, publication_status, related_projects, created_at, updated_at)
-             VALUES (?, ?, ?, ?, ?, ?, 'published', 'clip', 1, 'live', ?, datetime('now'), datetime('now'))`,
-            [
-              `Clip: ${analysis.title || ''} - ${clip.priority || ''}`.trim(),
-              clipData.uid,
-              clipData.preview,
-              thumb,
-              thumb,
-              endTime - startTime,
-              JSON.stringify([`parent_id:${videoId}`, `style:vertical`])
-            ]
-          );
-        } else {
-          console.error('[Worker] Upload failed:', upload);
-        }
-      } finally {
-        try { await fs.unlink(tmpOut); } catch {}
-      }
-    }
-
+    // ... (rest of clip generation logic) ...
+    */
+    
+    console.log(`[Worker] Analysis complete for video ${videoId}. Clip generation skipped.`);
     await updateJobStatus(jobId, 'COMPLETED', null, videoId, cfVideoId);
+
+
   } catch (err: any) {
     console.error(`[Worker] Job ${jobId} failed:`, err);
     await updateJobStatus(jobId, 'FAILED', err?.message || String(err), videoId, cfVideoId);

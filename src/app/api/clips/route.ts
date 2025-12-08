@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
     const orderBy = random ? 'ORDER BY RANDOM()' : 'ORDER BY created_at DESC, id DESC';
     // Primary query: public/live published clips
     let rows = await queryDatabase(
-      `SELECT id, title, description, url, uid, duration, poster_url, thumbnail, created_at
+      `SELECT id, title, artist_name, description, url, uid, duration, poster_url, thumbnail, created_at, shopify_product_handle
        FROM videos
        WHERE type = 'clip' AND (is_public = 1 OR status = 'published' OR publication_status = 'live')
        ${orderBy}
@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
     let feedSource: 'clips' | 'videos_fallback' = 'clips';
     if ((!rows || rows.length === 0) && offset === 0) {
       rows = await queryDatabase(
-        `SELECT id, title, description, url, uid, duration, poster_url, thumbnail, created_at
+        `SELECT id, title, artist_name, description, url, uid, duration, poster_url, thumbnail, created_at, shopify_product_handle
          FROM videos
          WHERE (is_public = 1 OR publication_status = 'live') AND status = 'published'
          ${orderBy}

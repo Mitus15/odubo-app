@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from 'react';
 import ClipsFeed from '@/components/clips/ClipsFeed';
-import PerformanceDebugger from '@/components/clips/PerformanceDebugger';
 
 export default function ClipsPage() {
   // Read app nav height from CSS var if available
@@ -37,8 +36,6 @@ export default function ClipsPage() {
       >
         <ClipsFeed navHeight={navHeight} />
       </div>
-      {/* Performance debugger (toggle with Cmd+Shift+P) */}
-      {process.env.NODE_ENV === 'development' && <PerformanceDebugger />}
     </div>
   );
 }

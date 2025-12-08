@@ -115,7 +115,7 @@ export default function HomePageClient({ verseOfTheDay }: HomePageClientProps) {
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
                 
                 {/* Text with subtle shadow */}
-                <span className="relative z-10 drop-shadow-sm">Store</span>
+                <span className="relative z-10 drop-shadow-sm">Shop</span>
               </div>
               
               {/* Floating particles around the button */}

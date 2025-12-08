@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { createPortal } from "react-dom";
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
+import ClipsManager from './ClipsManager';
 
 // --- Types ---
 type Video = {
@@ -26,6 +27,8 @@ type Video = {
   mood?: string;
   type?: string;
   ai_description?: string | any;
+  shopify_product_id?: string;
+  shopify_product_handle?: string;
 };
 
 const getVideoUid = (video: Video) => {
@@ -262,56 +265,29 @@ const AddVideoModal = ({ onClose, onComplete }: { onClose: () => void; onComplet
     setStep('transcribe'); // Using 'transcribe' slot for 'analysis' to keep UI simple for now
     addLog('Running Gemini Deep Semantic Analysis (this may take a minute)...');
     try {
-      const res = await fetch('/api/analyze-video', { 
+      const res = await fetch('/api/analyze-video-now', { 
         method: 'POST', 
         headers: { 'Content-Type': 'application/json', ...headers } as HeadersInit,
         body: JSON.stringify({ videoId, cfVideoId: videoUid })
       });
       
-      if (res.status === 202) {
-        const data: any = await res.json().catch(() => ({}));
-        const jobId = data.jobId;
-        addLog(`Analysis enqueued (jobId: ${jobId || 'unknown'}).`);
-        // Poll job status every 3s until completion/failure
-        if (jobId) {
-          const token = localStorage.getItem('token');
-          const pollHeaders: HeadersInit = token ? { 'Authorization': `Bearer ${token}` } : {};
-          let attempts = 0;
-          const poll = async () => {
-            attempts++;
-            try {
-              const st = await fetch(`/api/jobs/${jobId}/status`, { headers: pollHeaders });
-              const stData: any = await st.json().catch(() => ({}));
-              if (st.ok && (stData.status === 'COMPLETED' || stData.status === 'FAILED')) {
-                if (stData.status === 'COMPLETED') {
-                  addLog('Background analysis completed. Refreshing clips...');
-                  // Reload clips list
-                  const clipsRes = await fetch(`/api/videos/${videoId}/clips`, { headers: pollHeaders });
-                  const clipsJson: any = await clipsRes.json().catch(() => ({}));
-                  setClips(clipsJson.clips || []);
-                  setStep('complete');
-                } else {
-                  addLog(`Background analysis failed: ${stData.errorDetails || 'Unknown error'}`);
-                  setStep('error');
-                }
-                return;
-              }
-            } catch {}
-            if (attempts < 200) setTimeout(poll, 3000); // ~10 minutes max
-          };
-          setTimeout(poll, 3000);
-        }
-      } else if (!res.ok) {
+      if (!res.ok) {
         let errText = await res.text();
         try { const j = JSON.parse(errText); errText = j.error || errText; } catch {}
         throw new Error(errText || 'Analysis failed');
-      } else {
-        const data: any = await res.json().catch(() => ({}));
-        addLog('Analysis complete.');
-        if (data.createdClips?.length) {
-          addLog(`Created ${data.createdClips.length} clips on Cloudflare.`);
-        }
       }
+      
+      const data: any = await res.json().catch(() => ({}));
+      addLog('Analysis complete.');
+      
+      // Reload clips list
+      const token = localStorage.getItem('token');
+      const pollHeaders: HeadersInit = token ? { 'Authorization': `Bearer ${token}` } : {};
+      const clipsRes = await fetch(`/api/videos/${videoId}/clips`, { headers: pollHeaders });
+      const clipsJson: any = await clipsRes.json().catch(() => ({}));
+      setClips(clipsJson.clips || []);
+      addLog(`Generated ${clipsJson.clips?.length || 0} clips.`);
+      
     } catch (e: any) { 
       addLog(`Analysis failed: ${e.message}`); 
     }
@@ -424,6 +400,9 @@ const DetailModal = ({ video, onClose, onUpdate }: { video: Video; onClose: () =
   const dragActiveRef = useRef(false);
   const [undoStack, setUndoStack] = useState<Array<Array<{ id: number; timestamp: number; label?: string }>>>([]);
   const [redoStack, setRedoStack] = useState<Array<Array<{ id: number; timestamp: number; label?: string }>>>([]);
+  const [isPlayerMinimized, setIsPlayerMinimized] = useState(false);
+  const [shopifyProducts, setShopifyProducts] = useState<any[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(false);
 
   const pushHistory = (prev: Array<{ id: number; timestamp: number; label?: string }>) => {
     // Push a shallow copy of previous markers state onto undo stack and clear redo
@@ -458,7 +437,9 @@ const DetailModal = ({ video, onClose, onUpdate }: { video: Video; onClose: () =
     mood: video.mood || '',
     category: video.category || 'music-video',
     duration: video.duration || '',
-    ai_description: video.ai_description || null
+    ai_description: video.ai_description || null,
+    shopify_product_id: video.shopify_product_id || '',
+    shopify_product_handle: video.shopify_product_handle || ''
   });
   const [currentTime, setCurrentTime] = useState<number>(0);
   const timelineRef = useRef<HTMLDivElement | null>(null);
@@ -510,6 +491,25 @@ const DetailModal = ({ video, onClose, onUpdate }: { video: Video; onClose: () =
     };
     loadData();
   }, [video.id]);
+
+  // Fetch Shopify products
+  useEffect(() => {
+    const fetchProducts = async () => {
+      setLoadingProducts(true);
+      try {
+        const res = await fetch('/api/products');
+        const data = await res.json();
+        if (data.success && data.products) {
+          setShopifyProducts(data.products);
+        }
+      } catch (e) {
+        console.error('Failed to fetch products', e);
+      } finally {
+        setLoadingProducts(false);
+      }
+    };
+    fetchProducts();
+  }, []);
 
   // Subscribe to time updates from Cloudflare Stream iframe (if supported)
   useEffect(() => {
@@ -591,16 +591,31 @@ const DetailModal = ({ video, onClose, onUpdate }: { video: Video; onClose: () =
     if (!confirm('Re-run full analysis (Gemini + Thumbnails)?')) return;
     setIsProcessing(true);
     try {
-      // Use the new pipeline
       const token = localStorage.getItem('token');
       const uid = getVideoUid(video);
-      await fetch('/api/analyze-video', {
+      
+      // 1. Queue Analysis Job
+      const res = await fetch('/api/analyze-video-now', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
         body: JSON.stringify({ videoId: video.id, cfVideoId: uid })
       });
-      
-      // Also run thumbnails
+      const data = await res.json();
+      if (!data.success || !data.jobId) throw new Error(data.error || 'Failed to queue job');
+
+      // 2. Poll for completion
+      const jobId = data.jobId;
+      let attempts = 0;
+      while (attempts < 60) { // 3 minutes max
+        await new Promise(r => setTimeout(r, 3000));
+        const jobRes = await fetch(`/api/jobs/${jobId}`, { headers: token ? { 'Authorization': `Bearer ${token}` } : {} });
+        const jobData = await jobRes.json();
+        if (jobData.job?.status === 'COMPLETED') break;
+        if (jobData.job?.status === 'FAILED') throw new Error(jobData.job?.errorDetails || 'Job failed');
+        attempts++;
+      }
+
+      // 3. Also run thumbnails (optional, can be async)
       await fetch('/api/videos/thumbnail/generate', { 
         method: 'POST', 
         headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
@@ -609,9 +624,10 @@ const DetailModal = ({ video, onClose, onUpdate }: { video: Video; onClose: () =
 
       onUpdate();
       onClose(); // Close to refresh list
-    } catch (e) {
+      alert('Analysis complete!');
+    } catch (e: any) {
       console.error(e);
-      alert('Analysis failed');
+      alert(`Analysis failed: ${e.message}`);
     } finally {
       setIsProcessing(false);
     }
@@ -946,15 +962,32 @@ const DetailModal = ({ video, onClose, onUpdate }: { video: Video; onClose: () =
       <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
         <motion.div layoutId={`card-${video.id}`} className="w-full max-w-4xl bg-[#171616] border border-[#b2a491]/20 rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
           {/* Header / Player */}
-          <div className="aspect-video bg-black relative group">
-            <iframe 
-              ref={playerFrameRef}
-              src={`https://iframe.videodelivery.net/${getVideoUid(video)}?autoplay=true&muted=true`}
-              className="w-full h-full"
-              allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;" 
-              allowFullScreen
-            />
-            <button onClick={onClose} className="absolute top-4 right-4 w-8 h-8 bg-black/50 rounded-full text-white flex items-center justify-center hover:bg-black/80">✕</button>
+          <div className={`bg-black relative group transition-all duration-300 ease-in-out ${isPlayerMinimized ? 'h-14 shrink-0' : 'aspect-video shrink-0'}`}>
+            <div className={`w-full h-full transition-opacity duration-300 ${isPlayerMinimized ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+              <iframe 
+                ref={playerFrameRef}
+                src={`https://iframe.videodelivery.net/${getVideoUid(video)}?autoplay=true&muted=true`}
+                className="w-full h-full"
+                allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;" 
+                allowFullScreen
+              />
+            </div>
+            
+            <div className="absolute top-3 right-4 flex items-center gap-2 z-20">
+              <button 
+                onClick={() => setIsPlayerMinimized(!isPlayerMinimized)} 
+                className="px-3 py-1.5 bg-black/50 backdrop-blur-md rounded-lg text-xs text-[#ede8df] hover:bg-black/80 border border-white/10 transition-colors"
+              >
+                {isPlayerMinimized ? 'Expand Player' : 'Minimize'}
+              </button>
+              <button onClick={onClose} className="w-8 h-8 bg-black/50 backdrop-blur-md rounded-full text-white flex items-center justify-center hover:bg-black/80 border border-white/10">✕</button>
+            </div>
+            
+            {isPlayerMinimized && (
+               <div className="absolute inset-0 flex items-center px-6 pointer-events-none">
+                  <span className="text-[#ede8df] font-medium text-sm">{video.title}</span>
+               </div>
+            )}
           </div>
 
           {/* Interactive Timeline */}
@@ -1077,6 +1110,32 @@ const DetailModal = ({ video, onClose, onUpdate }: { video: Video; onClose: () =
                     className="w-full bg-[#302927]/30 border border-[#b2a491]/20 rounded-lg px-4 py-2 text-[#ede8df] focus:outline-none focus:border-[#ede8df]"
                   />
                 </div>
+
+                <div>
+                  <label className="block text-xs text-[#b2a491] mb-1">Associated Product</label>
+                  <select
+                    value={formData.shopify_product_id}
+                    onChange={e => {
+                      const pid = e.target.value;
+                      const prod = shopifyProducts.find(p => p.id === pid);
+                      setFormData(f => ({ 
+                        ...f, 
+                        shopify_product_id: pid,
+                        shopify_product_handle: prod ? prod.handle : ''
+                      }));
+                    }}
+                    className="w-full bg-[#302927]/30 border border-[#b2a491]/20 rounded-lg px-4 py-2 text-[#ede8df] focus:outline-none focus:border-[#ede8df]"
+                  >
+                    <option value="">-- None --</option>
+                    {loadingProducts ? (
+                      <option disabled>Loading products...</option>
+                    ) : (
+                      shopifyProducts.map(p => (
+                        <option key={p.id} value={p.id}>{p.title}</option>
+                      ))
+                    )}
+                  </select>
+                </div>
                 
                 <div className="bg-[#302927]/20 rounded-lg p-4 border border-[#b2a491]/10 space-y-3">
                   <h3 className="text-xs font-medium text-[#b2a491] uppercase tracking-wider">Visibility & Status</h3>
@@ -1134,118 +1193,7 @@ const DetailModal = ({ video, onClose, onUpdate }: { video: Video; onClose: () =
                 </div>
               </div>
             ) : activeTab === 'clips' ? (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between bg-[#302927]/20 p-3 rounded-lg border border-[#b2a491]/10">
-                  <label 
-                    className="flex items-center gap-2 cursor-pointer select-none"
-                    onClick={() => setSocialReady(!socialReady)}
-                  >
-                    <div className={`w-10 h-6 rounded-full p-1 transition-colors duration-200 ${socialReady ? 'bg-indigo-500' : 'bg-[#302927] border border-[#b2a491]/20'}`}>
-                      <div className={`w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-200 ${socialReady ? 'translate-x-4' : ''}`} />
-                    </div>
-                    <span className="text-xs font-medium text-[#ede8df]">Social Ready (9:16 Crop)</span>
-                  </label>
-                  
-                  <button 
-                    onClick={handleDownloadAll}
-                    disabled={isDownloadingAll || clips.length === 0}
-                    className="text-xs px-4 py-2 bg-[#ede8df] text-[#171616] rounded font-medium hover:bg-[#d9d3c9] disabled:opacity-50 flex items-center gap-2"
-                  >
-                    {isDownloadingAll ? (
-                      <>
-                        <svg className="w-3 h-3 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                        Zipping...
-                      </>
-                    ) : (
-                      <>
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                        Download All (.zip)
-                      </>
-                    )}
-                  </button>
-                </div>
-
-                {/* Markers Manager */}
-                <div className="mb-5 bg-[#302927]/20 rounded-lg p-4 border border-[#b2a491]/10">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-xs text-[#b2a491] uppercase tracking-wider">Markers</h4>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={resetAllMarkers}
-                        className="text-[11px] px-2 py-1 bg-red-600/20 text-red-300 rounded hover:bg-red-600/30"
-                      >
-                        Reset Markers
-                      </button>
-                      <button
-                        onClick={() => {
-                          // Re-run analysis which now respects markers
-                          handleReprocess();
-                        }}
-                        className="text-[11px] px-2 py-1 bg-indigo-600/20 text-indigo-300 rounded hover:bg-indigo-600/30"
-                      >
-                        Re-Analyze with Markers
-                      </button>
-                    </div>
-                  </div>
-                  <div className="flex gap-2 mb-3">
-                    <input
-                      value={newMarkerTs}
-                      onChange={e => setNewMarkerTs(e.target.value)}
-                      placeholder="Time (s or mm:ss)"
-                      className="w-40 bg-[#302927]/30 border border-[#b2a491]/20 rounded px-3 py-2 text-[#ede8df] text-sm"
-                    />
-                    <input
-                      value={newMarkerLabel}
-                      onChange={e => setNewMarkerLabel(e.target.value)}
-                      placeholder="Label (optional)"
-                      className="flex-1 bg-[#302927]/30 border border-[#b2a491]/20 rounded px-3 py-2 text-[#ede8df] text-sm"
-                    />
-                    <button onClick={addMarker} className="px-3 py-2 bg-[#ede8df] text-[#171616] rounded text-xs hover:bg-[#d9d3c9]">Add</button>
-                  </div>
-                  {markers.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {markers.map(m => (
-                        <EditableMarkerRow key={m.id} marker={m} onSave={(u) => updateMarker(m.id, u)} onDelete={() => deleteMarker(m.id)} onSelect={() => setSelectedMarkerId(m.id)} selected={selectedMarkerId === m.id} />
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-xs text-[#b2a491]">No markers yet. Add some to define clip boundaries.</div>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                  {clips.length === 0 ? (
-                    <div className="col-span-full text-center py-10 text-[#b2a491]">
-                      No clips generated yet. Run AI Analysis to generate clips.
-                    </div>
-                  ) : (
-                    clips.map(clip => (
-                      <div key={clip.id} className="bg-[#302927]/20 rounded-lg overflow-hidden border border-[#b2a491]/10 group flex flex-col">
-                        <div className="aspect-[9/16] bg-black relative">
-                          <iframe 
-                            src={`https://iframe.videodelivery.net/${getVideoUid(clip)}?autoplay=false&muted=true`}
-                            className="w-full h-full"
-                            allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;" 
-                            allowFullScreen
-                          />
-                        </div>
-                        <div className="p-3 flex-1 flex flex-col">
-                          <div className="text-xs font-medium text-[#ede8df] truncate" title={clip.title}>{clip.title}</div>
-                          <div className="text-[10px] text-[#b2a491] mt-1 mb-3">{formatDuration(clip.duration)}</div>
-                          
-                          <button 
-                            onClick={() => handleDownload(clip.id, clip.title)}
-                            className="mt-auto w-full py-2 bg-[#302927] hover:bg-[#ede8df] hover:text-[#171616] text-[#b2a491] text-xs rounded transition-colors flex items-center justify-center gap-2"
-                          >
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                            Download
-                          </button>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
+              <ClipsManager videoId={video.id} videoTitle={video.title} videoArtist={video.artist_name || 'Unknown'} />
             ) : (
               <div className="space-y-6">
                 <div className="flex items-center justify-between">

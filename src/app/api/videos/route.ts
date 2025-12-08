@@ -5,6 +5,7 @@ export const runtime = 'nodejs';
 import { deleteFile } from '@/worker/upload';
 import { z } from 'zod';
 import { writeAuditLog } from '@/lib/audit';
+import CloudflareStreamAPI from '@/lib/cloudflareStream';
 
 export async function GET(req: NextRequest) {
   try {
@@ -60,6 +61,8 @@ export async function GET(req: NextRequest) {
           COALESCE(publication_status, 'archived') as publication_status,
           ai_description,
           thumbnail_timestamp_pct,
+          shopify_product_id,
+          shopify_product_handle,
           created_at,
           COALESCE(updated_at, created_at) as updated_at
         FROM videos 
@@ -384,6 +387,40 @@ export async function DELETE(req: NextRequest) {
       } catch (error) {
         console.error('Error deleting thumbnail from R2:', error);
       }
+    }
+
+    // Delete from Cloudflare Stream if UID exists
+    if (video.uid) {
+      try {
+        const stream = new CloudflareStreamAPI();
+        await stream.deleteVideo(video.uid);
+      } catch (e) {
+        console.error('Failed to delete from Cloudflare Stream:', e);
+      }
+    }
+
+    // Delete associated clips
+    try {
+      const clips = await queryDatabase(
+        `SELECT id, uid FROM videos WHERE type = 'clip' AND related_projects LIKE ?`,
+        [`%parent_id:${id}%`]
+      );
+      
+      if (clips.length > 0) {
+        const stream = new CloudflareStreamAPI();
+        for (const clip of clips) {
+          if (clip.uid) {
+            try {
+              await stream.deleteVideo(clip.uid);
+            } catch (e) {
+              console.error(`Failed to delete clip ${clip.id} from Stream:`, e);
+            }
+          }
+          await executeQuery('DELETE FROM videos WHERE id = ?', [clip.id]);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to delete associated clips:', e);
     }
 
     // Delete video from database

@@ -16,6 +16,7 @@ export default function ClipsFeed({ navHeight }: { navHeight: number }) {
   const [isMuted, setIsMuted] = useState<boolean>(true);
   const [activeId, setActiveId] = useState<number | null>(null);
   const [activeIndex, setActiveIndex] = useState<number>(0);
+  const [lastAutoScrollIndex, setLastAutoScrollIndex] = useState<number>(-1);
   const [page, setPage] = useState<number>(0);
   const [hasMore, setHasMore] = useState<boolean>(true);
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -42,6 +43,7 @@ export default function ClipsFeed({ navHeight }: { navHeight: number }) {
         const url = new URL('/api/clips', window.location.origin);
         url.searchParams.set('limit', String(PAGE_SIZE));
         url.searchParams.set('offset', String(p * PAGE_SIZE));
+        url.searchParams.set('random', 'true');
         return await fetch(url.toString(), { 
           headers: { 'Accept': 'application/json' }, 
           signal: ctrl.signal, 
@@ -220,6 +222,9 @@ export default function ClipsFeed({ navHeight }: { navHeight: number }) {
                 muted={isMuted} 
                 onToggleMute={() => setIsMuted(m => !m)} 
                 onEnded={handleLoadMore}
+                currentIndex={index}
+                lastAutoScrollIndex={lastAutoScrollIndex}
+                onAutoScroll={(idx) => setLastAutoScrollIndex(idx)}
               />
             ) : (
               // Lightweight placeholder maintains scroll height without memory overhead

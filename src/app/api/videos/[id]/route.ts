@@ -46,6 +46,8 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
         credits,
         related_projects,
         COALESCE(status, 'published') as status,
+        shopify_product_id,
+        shopify_product_handle,
         created_at,
         COALESCE(updated_at, created_at) as updated_at
       FROM videos WHERE id = ? LIMIT 1`,
@@ -79,6 +81,8 @@ const videoUpdateSchema = z.object({
   related_projects: z.union([z.string(), z.array(z.any())]).optional(),
   status: z.string().optional(),
   ai_description: z.union([z.string(), z.record(z.string(), z.any())]).optional(),
+  shopify_product_id: z.string().optional().nullable(),
+  shopify_product_handle: z.string().optional().nullable(),
 });
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -125,7 +129,10 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       credits: safeJsonStringify(body.credits),
       related_projects: safeJsonStringify(body.related_projects),
       status: body.status,
+      publication_status: body.publication_status,
       ai_description: safeJsonStringify(body.ai_description),
+      shopify_product_id: body.shopify_product_id,
+      shopify_product_handle: body.shopify_product_handle,
     } as Record<string, any>;
 
     console.log('Updating video:', id, updatable);
@@ -148,6 +155,58 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       `UPDATE videos SET ${fields.join(', ')} WHERE id = ?`,
       [...paramsList, id]
     );
+
+    // Propagate visibility/status to clips
+    if (updatable.is_public !== undefined || updatable.status !== undefined || updatable.publication_status !== undefined) {
+      const clipUpdates: string[] = [];
+      const clipParams: any[] = [];
+      
+      if (updatable.is_public !== undefined) {
+        clipUpdates.push('is_public = ?');
+        clipParams.push(updatable.is_public);
+      }
+      if (updatable.status !== undefined) {
+        clipUpdates.push('status = ?');
+        clipParams.push(updatable.status);
+      }
+      if (updatable.publication_status !== undefined) {
+        clipUpdates.push('publication_status = ?');
+        clipParams.push(updatable.publication_status);
+      }
+      
+      if (clipUpdates.length > 0) {
+        clipUpdates.push("updated_at = datetime('now')");
+        await executeQuery(
+          `UPDATE videos SET ${clipUpdates.join(', ')} WHERE type = 'clip' AND related_projects LIKE ?`,
+          [...clipParams, `%parent_id:${id}%`]
+        );
+      }
+    }
+
+    // Propagate Shopify product info to child clips if updated
+    if (body.shopify_product_id !== undefined || body.shopify_product_handle !== undefined) {
+      const productFields = [];
+      const productParams = [];
+      
+      if (body.shopify_product_id !== undefined) {
+        productFields.push('shopify_product_id = ?');
+        productParams.push(body.shopify_product_id);
+      }
+      if (body.shopify_product_handle !== undefined) {
+        productFields.push('shopify_product_handle = ?');
+        productParams.push(body.shopify_product_handle);
+      }
+      
+      if (productFields.length > 0) {
+        console.log(`Propagating product info to clips of video ${id}`);
+        await executeQuery(
+          `UPDATE videos 
+           SET ${productFields.join(', ')}, updated_at = datetime('now')
+           WHERE type = 'clip' AND related_projects LIKE ?`,
+          [...productParams, `%parent_id:${id}%`]
+        );
+      }
+    }
 
     // Best-effort sync to Cloudflare Stream metadata if we have a stream_video_id
     try {

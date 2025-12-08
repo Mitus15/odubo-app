@@ -9,12 +9,13 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const runtime = 'nodejs';
 
-export async function GET(req: NextRequest, { params }: Params) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await getUserFromRequest(req);
     if (!isAdminUser(user)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-    const videoId = Number(params.id);
+    const { id } = await params;
+    const videoId = Number(id);
     if (!videoId) return NextResponse.json({ error: 'Invalid video id' }, { status: 400 });
 
     const markers = await queryDatabase(
@@ -29,12 +30,13 @@ export async function GET(req: NextRequest, { params }: Params) {
   }
 }
 
-export async function POST(req: NextRequest, { params }: Params) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await getUserFromRequest(req);
     if (!isAdminUser(user)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-    const videoId = Number(params.id);
+    const { id } = await params;
+    const videoId = Number(id);
     if (!videoId) return NextResponse.json({ error: 'Invalid video id' }, { status: 400 });
 
     const body = await req.json().catch(() => ({}));
@@ -96,12 +98,13 @@ export async function DELETE(req: NextRequest, { params }: Params) {
   }
 }
 
-export async function PUT(req: NextRequest, { params }: Params) {
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await getUserFromRequest(req);
     if (!isAdminUser(user)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-    const videoId = Number(params.id);
+    const { id } = await params;
+    const videoId = Number(id);
     if (!videoId) return NextResponse.json({ error: 'Invalid video id' }, { status: 400 });
 
     const body = await req.json().catch(() => ({}));

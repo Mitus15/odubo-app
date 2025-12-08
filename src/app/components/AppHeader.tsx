@@ -32,10 +32,10 @@ export default function AppHeader() {
         {/* Desktop Navigation - Center/Right */}
         <nav className="hidden md:flex items-center gap-6 relative z-10">
           <a href="/featured" className="text-[#ede8df] hover:text-[#b2a491] transition-colors">Featured</a>
-          {/* Consolidated Media hub (Music + Video) */}
-          <a href="/media" className="text-[#ede8df] hover:text-[#b2a491] transition-colors">Media</a>
-          {/* Consolidated Moments hub (Moments + Clips) */}
+          <a href="/music" className="text-[#ede8df] hover:text-[#b2a491] transition-colors">Music</a>
+          <a href="/media" className="text-[#ede8df] hover:text-[#b2a491] transition-colors">Video</a>
           <a href="/moments" className="text-[#ede8df] hover:text-[#b2a491] transition-colors">Moments</a>
+          <a href="/clips" className="text-[#ede8df] hover:text-[#b2a491] transition-colors">Clips</a>
           <a href="/store" className="text-[#ede8df] hover:text-[#b2a491] transition-colors">Store</a>
         </nav>
 
