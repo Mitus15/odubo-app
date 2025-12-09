@@ -80,11 +80,8 @@ export default function HomePageClient({ verseOfTheDay }: HomePageClientProps) {
         
         {/* The Words - Bible Verse Widget */}
         <div className="max-w-2xl mx-auto text-center">
-          {/* Header */}
+          {/* Clock */}
           <div className="mb-8">
-            <h1 className="text-5xl md:text-7xl font-bold bg-gradient-to-r from-[#ede8df] to-[#b2a491] bg-clip-text text-transparent mb-4">
-              The Words
-            </h1>
             <p className="text-sm text-[#726d6c]/70 font-mono">
               {currentTime ? formatTime(currentTime) : 'Loading...'}
             </p>
