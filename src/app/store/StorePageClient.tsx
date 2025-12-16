@@ -290,8 +290,8 @@ export default function StorePageClient({ isStoreOpen, initialProducts }: StoreP
             </div>
           </header>
 
-          {/* Product Grid */}
-          <div className="min-h-[60vh] max-w-7xl mx-auto">
+          {/* Product Grid - bottom padding accounts for fixed footer (~140px) + safe area */}
+          <div className="min-h-[60vh] max-w-7xl mx-auto" style={{ paddingBottom: 'calc(160px + env(safe-area-inset-bottom, 0px))' }}>
             {loading && (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-0.5 sm:gap-x-5 sm:gap-y-1">
                 {[1, 2, 3].map((i) => (
@@ -355,51 +355,69 @@ export default function StorePageClient({ isStoreOpen, initialProducts }: StoreP
               <div className="text-center text-red-400 py-8">{error}</div>
             )}
           </div>
-
-          {/* Footer (persistent, content flows behind) */}
-          <footer className="fixed bottom-0 left-0 right-0 z-30 pointer-events-none">
-            <div className="pointer-events-auto max-w-7xl mx-auto px-4 sm:px-6">
-              <div className="rounded-t-2xl border border-[#502d26]/25 bg-[#0b0b0b]/70 backdrop-blur supports-[backdrop-filter]:backdrop-blur px-4 sm:px-6 py-6 text-center space-y-4">
-                <p className="text-[10px] sm:text-xs uppercase tracking-[0.3em] text-[#b2a491]/70">
-                  B.A.A.D by Odubo
-                </p>
-                <div className="flex items-center justify-center gap-6 text-[10px] sm:text-xs text-[#b2a491]/60">
-                  <Link href="/legal" className="hover:text-[#ede8df] transition-colors">
-                    Privacy Policy
-                  </Link>
-                  <span className="text-[#502d26]/30">•</span>
-                  <Link href="/legal?tab=terms" className="hover:text-[#ede8df] transition-colors">
-                    Terms of Service
-                  </Link>
-                  <span className="text-[#502d26]/30">•</span>
-                  <Link href="/legal?tab=shipping" className="hover:text-[#ede8df] transition-colors">
-                    Shipping & Returns
-                  </Link>
-                </div>
-                <p className="text-[9px] text-[#502d26]/40">
-                  © {new Date().getFullYear()} Odubo Studio. All rights reserved.
-                </p>
-              </div>
-            </div>
-          </footer>
         </div>
       </ScrollContainer>
 
-      {/* Modal viewer (rebuilt) */}
+      {/* Footer - OUTSIDE ScrollContainer, truly fixed at bottom with safe area */}
+      <footer 
+        className="fixed bottom-0 left-0 right-0 z-30 pointer-events-none"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+      >
+        <div className="pointer-events-auto max-w-7xl mx-auto px-4 sm:px-6">
+          <div className="rounded-t-2xl border border-[#502d26]/25 bg-[#0b0b0b]/95 backdrop-blur-xl px-4 sm:px-6 py-4 text-center space-y-3">
+            <p className="text-[10px] sm:text-xs uppercase tracking-[0.3em] text-[#b2a491]/70">
+              B.A.A.D by Odubo
+            </p>
+            <div className="flex items-center justify-center gap-6 text-[10px] sm:text-xs text-[#b2a491]/60">
+              <Link href="/legal" className="hover:text-[#ede8df] transition-colors">
+                Privacy Policy
+              </Link>
+              <span className="text-[#502d26]/30">•</span>
+              <Link href="/legal?tab=terms" className="hover:text-[#ede8df] transition-colors">
+                Terms of Service
+              </Link>
+              <span className="text-[#502d26]/30">•</span>
+              <Link href="/legal?tab=shipping" className="hover:text-[#ede8df] transition-colors">
+                Shipping & Returns
+              </Link>
+            </div>
+            <p className="text-[9px] text-[#502d26]/40">
+              © {new Date().getFullYear()} Odubo Studio. All rights reserved.
+            </p>
+          </div>
+        </div>
+      </footer>
+
+      {/* Modal viewer (rebuilt) - accounts for safe viewport areas on mobile Safari/Chrome */}
       {selectedIndex !== null && filteredProducts[selectedIndex] && (
-        <div key={`modal-${selectedIndex}`} className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6" role="dialog" aria-modal="true" aria-label={selectedProduct?.title || 'Product detail'}>
-          <div className="absolute inset-0 bg-black/85" aria-hidden />
+        <div 
+          key={`modal-${selectedIndex}`} 
+          className="fixed inset-0 z-50 flex items-start sm:items-center justify-center" 
+          role="dialog" 
+          aria-modal="true" 
+          aria-label={selectedProduct?.title || 'Product detail'}
+          style={{ 
+            paddingTop: 'max(1rem, env(safe-area-inset-top, 16px))', 
+            paddingBottom: 'max(1rem, env(safe-area-inset-bottom, 16px))',
+            paddingLeft: 'max(1rem, env(safe-area-inset-left, 16px))',
+            paddingRight: 'max(1rem, env(safe-area-inset-right, 16px))'
+          }}
+        >
+          <div className="absolute inset-0 bg-black/85" aria-hidden onClick={() => setSelectedIndex(null)} />
           <div className="absolute inset-0 backdrop-blur-xl" aria-hidden />
 
-          <div className="relative w-full max-w-6xl">
-            <div className="relative w-full max-h-[90vh] overflow-y-auto rounded-3xl glass-surface border border-white/10 bg-[#0f0b0b]/95 shadow-[0_30px_120px_rgba(0,0,0,0.45)]">
-              <button
-                aria-label="Close"
-                onClick={() => setSelectedIndex(null)}
-                className="absolute top-4 right-4 z-20 text-[#0b0b0b] bg-[#f8f2ea] hover:bg-white rounded-full p-3 border border-white/60 shadow-2xl"
-              >
-                ✕
-              </button>
+          <div className="relative w-full max-w-6xl max-h-full flex flex-col">
+            {/* Close button - fixed at top right, always visible above modal content */}
+            <button
+              aria-label="Close"
+              onClick={() => setSelectedIndex(null)}
+              className="absolute top-0 right-0 z-30 text-[#0b0b0b] bg-[#f8f2ea] hover:bg-white rounded-full p-3 border border-white/60 shadow-2xl"
+              style={{ marginTop: '0.5rem', marginRight: '0.5rem' }}
+            >
+              ✕
+            </button>
+            
+            <div className="relative w-full max-h-[calc(100dvh-4rem)] sm:max-h-[90vh] overflow-y-auto rounded-3xl glass-surface border border-white/10 bg-[#0f0b0b]/95 shadow-[0_30px_120px_rgba(0,0,0,0.45)] pt-12 sm:pt-4">
 
               <div className="grid md:grid-cols-[1.1fr_1fr] gap-0">
                 <div className="w-full h-full bg-[#0f0b0b] flex items-center justify-center p-4 sm:p-8">
