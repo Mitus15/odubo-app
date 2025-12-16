@@ -13,9 +13,7 @@ interface ProductCard {
   handle: string;
   image: string | null;
   price: number | null;
-  category: string;
   available: boolean;
-  collections: string[];
   createdAt: string;
 }
 
@@ -37,9 +35,7 @@ async function loadProducts(): Promise<ProductCard[]> {
       handle: p.handle,
       image: p.images && p.images.length > 0 ? p.images[0] : null,
       price: p.price || 0,
-      category: p.category || 'Uncategorized',
       available: p.status === 'active',
-      collections: p.collections || [],
       createdAt: p.createdAt || new Date().toISOString()
     }));
 

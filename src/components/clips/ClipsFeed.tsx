@@ -1,29 +1,39 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import type { ClipItem, ClipApiRow } from '@/types/clips';
 import { mapClipRows } from '@/lib/clipsMapper';
 import { shuffleArray } from '@/lib/utils';
 import { addPrefetchHints, removePrefetchHints, prefetchFirstSegment, prefetchManifest } from '@/lib/hlsPrefetch';
 import ClipCard from '@/components/clips/ClipCard';
+import { useAudio } from '@/contexts/AudioContext';
 
 const PAGE_SIZE = 8;
 
 export default function ClipsFeed({ navHeight }: { navHeight: number }) {
+  const { isMuted, toggleMute } = useAudio();
   const [baseClips, setBaseClips] = useState<ClipItem[]>([]);
   const [displayClips, setDisplayClips] = useState<Array<ClipItem & { uniqueKey: string }>>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
-  const [isMuted, setIsMuted] = useState<boolean>(true);
   const [hasUserMutePref, setHasUserMutePref] = useState<boolean>(false);
   const [activeId, setActiveId] = useState<number | null>(null);
   const [activeIndex, setActiveIndex] = useState<number>(0);
   const [lastAutoScrollIndex, setLastAutoScrollIndex] = useState<number>(-1);
   const [page, setPage] = useState<number>(0);
   const [hasMore, setHasMore] = useState<boolean>(true);
+  const [isMounted, setIsMounted] = useState<boolean>(false);
+  const [showVolumeIcon, setShowVolumeIcon] = useState<boolean>(false);
+  const volumeIconTimerRef = useRef<number | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const inflightRef = useRef<number>(0);
   const abortRef = useRef<AbortController | null>(null);
   const seedRef = useRef<string>(Math.random().toString(36).substring(2, 9));
+  const keyCounterRef = useRef<number>(0);
+  const deckRef = useRef<ClipItem[]>([]);
+  const seenIdsRef = useRef<Set<number>>(new Set());
+  const prevBaseClipsRef = useRef<ClipItem[]>([]);
+    const loggedIdsRef = useRef<Set<number>>(new Set());
   const isScrollingRef = useRef<boolean>(false);
   const scrollTimerRef = useRef<number | null>(null);
   const pendingActiveKeyRef = useRef<string | null>(null);
@@ -31,28 +41,19 @@ export default function ClipsFeed({ navHeight }: { navHeight: number }) {
   const initializedRef = useRef<boolean>(false);
   const soundArmedRef = useRef<boolean>(false);
 
-  // Persist mute
+  // Check if user has explicitly set a mute preference
   useEffect(() => {
+    setIsMounted(true);
     try {
       const v = localStorage.getItem('clips:isMuted');
       if (v != null) {
-        setIsMuted(v === 'true');
         setHasUserMutePref(true);
       }
     } catch {}
   }, []);
-  useEffect(() => {
-    try {
-      localStorage.setItem('clips:isMuted', String(isMuted));
-      if (!hasUserMutePref) {
-        // Persist that a preference exists once user changes it
-        // We also flip this when user explicitly toggles
-      }
-    } catch {}
-  }, [isMuted, hasUserMutePref]);
 
-  const fetchPage = useCallback(async (p: number) => {
-    if (inflightRef.current > 0) return;
+  const fetchPage = useCallback(async (p: number): Promise<boolean | void> => {
+    if (inflightRef.current > 0) return false;
     inflightRef.current++;
     setLoading(true); setError('');
     abortRef.current?.abort();
@@ -64,13 +65,12 @@ export default function ClipsFeed({ navHeight }: { navHeight: number }) {
         const url = new URL('/api/clips', window.location.origin);
         url.searchParams.set('limit', String(PAGE_SIZE));
         url.searchParams.set('offset', String(p * PAGE_SIZE));
-        url.searchParams.set('random', 'true');
         return await fetch(url.toString(), { 
           headers: { 'Accept': 'application/json' }, 
           signal: ctrl.signal, 
           cache: 'no-store' as any 
         });
-      } catch (e) {
+      } catch (e: any) {
         if (attempt < 2) {
           await new Promise(r => setTimeout(r, 300 * (attempt + 1)));
           return retry(attempt + 1);
@@ -85,29 +85,13 @@ export default function ClipsFeed({ navHeight }: { navHeight: number }) {
       if (!res.ok) throw new Error(data?.error || 'Failed to load clips');
       const rows: ClipApiRow[] = Array.isArray(data?.clips) ? data.clips : [];
       const mapped = mapClipRows(rows);
-      
-      setBaseClips(prev => {
-        const combined = p === 0 ? mapped : dedupeById(prev.concat(mapped));
-        // Initialize display clips with first shuffled block
-        if (p === 0 && combined.length > 0) {
-          const shuffled = shuffleArray(combined);
-          setDisplayClips(shuffled.map((clip, idx) => ({
-            ...clip,
-            uniqueKey: `${idx}-${clip.id}-${seedRef.current}`
-          })));
-          // Force-initialize active on first item to avoid waiting for IO
-          if (!initializedRef.current) {
-            initializedRef.current = true;
-            setActiveIndex(0);
-            setActiveId(shuffled[0].id);
-          }
-        }
-        return combined;
-      });
+      setBaseClips(prev => p === 0 ? mapped : dedupeById(prev.concat(mapped)));
       
       setHasMore(mapped.length > 0);
+      return mapped.length > 0;
     } catch (e: any) {
       if (e?.name !== 'AbortError') setError(e?.message || String(e));
+      return false;
     } finally {
       inflightRef.current--;
       setLoading(false);
@@ -121,6 +105,23 @@ export default function ClipsFeed({ navHeight }: { navHeight: number }) {
       removePrefetchHints(); // Cleanup prefetch hints on unmount
     };
   }, [fetchPage]);
+
+  // Eagerly load all pages once to build a full first-cycle deck (avoid early repeats)
+  useEffect(() => {
+    let cancelled = false;
+    // Only start after first page has populated something or hasMore flipped false
+    if (baseClips.length === 0 && hasMore) return;
+    (async () => {
+      let pageToFetch = 1;
+      let more = hasMore;
+      while (!cancelled && more) {
+        const got = await fetchPage(pageToFetch);
+        more = !!got;
+        pageToFetch += 1;
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [baseClips.length, hasMore, fetchPage]);
 
   useEffect(() => {
     try { soundArmedRef.current = sessionStorage.getItem('clips:soundArmed') === 'true'; } catch {}
@@ -138,27 +139,124 @@ export default function ClipsFeed({ navHeight }: { navHeight: number }) {
     return () => root.removeEventListener('scroll', onScroll as any);
   }, []);
 
-  // Append new shuffled block when reaching the end
+  const buildFairDeck = useCallback((clips: ClipItem[], exclude: Set<number>) => {
+    // Bucket by parentId; unknown parent gets its own bucket per clip
+    const buckets = new Map<string, ClipItem[]>();
+    for (const c of clips) {
+      if (exclude.has(c.id)) continue;
+      const key = c.parentId != null ? `p:${c.parentId}` : `u:${c.id}`;
+      if (!buckets.has(key)) buckets.set(key, []);
+      buckets.get(key)!.push(c);
+    }
+    // Shuffle within each bucket to avoid ordering bias
+    for (const [k, arr] of buckets.entries()) {
+      buckets.set(k, shuffleArray(arr));
+    }
+    const deck: ClipItem[] = [];
+    while (buckets.size > 0) {
+      const keys = shuffleArray(Array.from(buckets.keys()));
+      for (const key of keys) {
+        const bucket = buckets.get(key);
+        if (!bucket || bucket.length === 0) {
+          buckets.delete(key);
+          continue;
+        }
+        const clip = bucket.shift()!;
+        deck.push(clip);
+        if (bucket.length === 0) buckets.delete(key);
+      }
+    }
+    return deck;
+  }, []);
+
+  const appendFromDeck = useCallback((count: number, resetDisplay = false) => {
+    const ensureQueue = () => {
+      if (deckRef.current.length === 0) {
+        deckRef.current = buildFairDeck(baseClips, seenIdsRef.current);
+        // If still empty but more pages exist, fetch and wait
+        if (deckRef.current.length === 0 && hasMore) {
+          setPage(p => {
+            const np = p + 1;
+            fetchPage(np);
+            return np;
+          });
+        }
+        // If no more pages and nothing left unseen, start a new cycle
+        if (deckRef.current.length === 0 && !hasMore) {
+          seenIdsRef.current.clear();
+          deckRef.current = buildFairDeck(baseClips, seenIdsRef.current);
+        }
+      }
+    };
+
+    ensureQueue();
+    const out: Array<ClipItem & { uniqueKey: string }> = [];
+
+    for (let i = 0; i < count; i++) {
+      if (!deckRef.current.length) break;
+      const clip = deckRef.current.shift()!;
+      seenIdsRef.current.add(clip.id);
+      const uniqueKey = `${keyCounterRef.current++}-${clip.id}-${seedRef.current}`;
+      out.push({ ...clip, uniqueKey });
+
+      if (!deckRef.current.length && hasMore) {
+        // fetch more before continuing; stop filling this batch
+        setPage(p => {
+          const np = p + 1;
+          fetchPage(np);
+          return np;
+        });
+        break;
+      }
+
+      if (!deckRef.current.length && !hasMore) {
+        // Cycle complete: rebuild fresh deck for next batch if needed
+        deckRef.current = buildFairDeck(baseClips, seenIdsRef.current);
+      }
+    }
+
+    if (!out.length) return;
+    setDisplayClips(prev => resetDisplay ? out : [...prev, ...out]);
+    if (resetDisplay && out[0]) {
+      setActiveId(out[0].id);
+    }
+  }, [baseClips, buildFairDeck, fetchPage, hasMore]);
+
+  // Append new block when reaching the end
   const handleLoadMore = useCallback(() => {
     if (!baseClips.length) return;
-    
-    const shuffled = shuffleArray(baseClips);
-    const newBlock = shuffled.map((clip, idx) => ({
-      ...clip,
-      uniqueKey: `${displayClips.length + idx}-${clip.id}-${seedRef.current}`
-    }));
-    
-    setDisplayClips(prev => [...prev, ...newBlock]);
-    
-    // Fetch more data from API if available
-    if (hasMore) {
+    appendFromDeck(PAGE_SIZE);
+
+    // Prefetch more data if we're near the deck end and server has more
+    const remaining = deckRef.current.length;
+    if (hasMore && remaining <= PAGE_SIZE) {
       setPage(p => {
         const np = p + 1;
         fetchPage(np);
         return np;
       });
     }
-  }, [baseClips, displayClips.length, hasMore, fetchPage]);
+  }, [appendFromDeck, baseClips.length, hasMore, fetchPage]);
+
+  // Rebuild deck when base clips change
+  useEffect(() => {
+    if (!baseClips.length) return;
+
+    const prev = prevBaseClipsRef.current;
+    const prevIds = new Set(prev.map(c => c.id));
+    const queuedIds = new Set(deckRef.current.map(c => c.id));
+    const newClips = baseClips.filter(c => !prevIds.has(c.id) && !queuedIds.has(c.id));
+    if (newClips.length) {
+      const shuffled = shuffleArray(dedupeById(newClips));
+      deckRef.current.push(...shuffled);
+    }
+    prevBaseClipsRef.current = baseClips;
+
+    if (!initializedRef.current) {
+      appendFromDeck(PAGE_SIZE, true);
+      initializedRef.current = true;
+    }
+  }, [appendFromDeck, baseClips]);
 
   // Detect when active clip is near the end
   const handleClipEnter = useCallback((uniqueKey: string) => {
@@ -269,6 +367,30 @@ export default function ClipsFeed({ navHeight }: { navHeight: number }) {
     });
   }, [activeId, isMuted]);
 
+  // Debug: log first-time activations to server (enable with NEXT_PUBLIC_CLIP_DEBUG=1 or localStorage clips:debug=1)
+  useEffect(() => {
+    const debugFlag = process.env.NEXT_PUBLIC_CLIP_DEBUG === '1' || (() => {
+      try { return localStorage.getItem('clips:debug') === '1'; } catch { return false; }
+    })();
+    if (!debugFlag) return;
+    if (activeId == null) return;
+    if (loggedIdsRef.current.has(activeId)) return;
+    const clip = displayClips.find(c => c.id === activeId);
+    if (!clip) return;
+    loggedIdsRef.current.add(activeId);
+    fetch('/api/clip-debug', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: clip.id,
+        title: clip.title,
+        parentId: clip.parentId ?? null,
+        createdAt: clip.createdAt ?? null,
+        productHandle: clip.productHandle ?? null,
+      }),
+    }).catch(() => {});
+  }, [activeId, displayClips]);
+
   // Pause/resume active video on tab visibility changes to save CPU/bandwidth
   useEffect(() => {
     const onVis = () => {
@@ -288,15 +410,46 @@ export default function ClipsFeed({ navHeight }: { navHeight: number }) {
     return () => document.removeEventListener('visibilitychange', onVis);
   }, []);
 
+  const handleToggleMute = () => {
+    toggleMute();
+    setHasUserMutePref(true);
+    soundArmedRef.current = true;
+    try { sessionStorage.setItem('clips:soundArmed', 'true'); } catch {}
+    
+    // Flash the volume icon with graceful animation
+    setShowVolumeIcon(true);
+    if (volumeIconTimerRef.current) {
+      window.clearTimeout(volumeIconTimerRef.current);
+    }
+    volumeIconTimerRef.current = window.setTimeout(() => {
+      setShowVolumeIcon(false);
+    }, 1200) as unknown as number;
+    
+    // Ensure active video reflects change immediately
+    const v = rootRef.current?.querySelector('section[data-active="1"] video') as HTMLVideoElement | null;
+    if (v) { try { v.muted = !isMuted; v.play().catch(() => {}); } catch {} }
+  };
+
   return (
-    <div
-      ref={rootRef}
-      className="overflow-y-auto h-full"
+    <>
+      <style jsx>{`
+        .icon-glow::before {
+          content: '';
+          position: absolute;
+          inset: -14px;
+          border-radius: 9999px;
+          background: radial-gradient(closest-side, rgba(255,255,255,0.22), rgba(255,255,255,0.0));
+          filter: blur(6px);
+        }
+      `}</style>
+      <div
+        ref={rootRef}
+        className="overflow-y-auto h-full relative"
       style={{ 
         scrollSnapType: 'y mandatory', 
         WebkitOverflowScrolling: 'touch', 
         overscrollBehavior: 'contain', 
-        scrollPaddingTop: `${navHeight}px`, 
+        scrollPaddingTop: '0px', 
         scrollPaddingBottom: 'env(safe-area-inset-bottom)',
         scrollbarWidth: 'none',
         msOverflowStyle: 'none'
@@ -311,6 +464,66 @@ export default function ClipsFeed({ navHeight }: { navHeight: number }) {
         }
       }}
     >
+      {/* Volume state flash indicator - mobile-friendly, springy and subtle */}
+      <AnimatePresence>
+        {isMounted && showVolumeIcon && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8, y: 8 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.92, y: 4 }}
+            transition={{ type: 'spring', stiffness: 260, damping: 22 }}
+            className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 pointer-events-none"
+          >
+            <motion.div
+              initial={{ filter: 'blur(2px)' }}
+              animate={{ filter: 'blur(0px)' }}
+              exit={{ filter: 'blur(2px)' }}
+              transition={{ duration: 0.25 }}
+              className="relative p-4 rounded-full bg-black/55 backdrop-blur-md border border-white/15 shadow-[0_20px_60px_rgba(0,0,0,0.55)] icon-glow"
+            >
+              {isMuted ? (
+                <motion.svg
+                  key="muted"
+                  className="w-12 h-12 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  initial={{ rotate: -8 }}
+                  animate={{ rotate: 0 }}
+                  exit={{ rotate: 6 }}
+                  transition={{ type: 'spring', stiffness: 220, damping: 18 }}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+                </motion.svg>
+              ) : (
+                <motion.svg
+                  key="unmuted"
+                  className="w-12 h-12 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  initial={{ rotate: 8 }}
+                  animate={{ rotate: 0 }}
+                  exit={{ rotate: -6 }}
+                  transition={{ type: 'spring', stiffness: 220, damping: 18 }}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                </motion.svg>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      
+      {loading && displayClips.length === 0 && (
+        <div className="flex items-center justify-center h-full">
+          <div className="flex flex-col items-center gap-3 text-white/60">
+            <div className="w-12 h-12 border-4 border-white/20 border-t-white/60 rounded-full animate-spin" />
+            <p className="text-sm">Loading clips...</p>
+          </div>
+        </div>
+      )}
       {displayClips.map((clip, index) => {
         // Network-aware windowing: shrink on weak networks
         const conn: any = (typeof navigator !== 'undefined' && (navigator as any).connection) || null;
@@ -339,6 +552,7 @@ export default function ClipsFeed({ navHeight }: { navHeight: number }) {
               scrollSnapAlign: 'start', 
               scrollSnapStop: 'always' 
             }}
+            onClick={handleToggleMute}
           >
             {isNearActive ? (
               <ClipCard 
@@ -346,9 +560,17 @@ export default function ClipsFeed({ navHeight }: { navHeight: number }) {
                 active={activeId === clip.id}
                 shouldPreload={shouldPreload}
                 muted={isMuted} 
-                onToggleMute={() => { setIsMuted(m => !m); setHasUserMutePref(true); try { localStorage.setItem('clips:isMuted', String(!isMuted)); } catch {} }} 
-                onAutoMute={() => { if (!hasUserMutePref) { setIsMuted(true); try { localStorage.setItem('clips:isMuted', 'true'); } catch {} } }}
-                onSyncMute={(actual) => { if (actual !== isMuted) { setIsMuted(actual); if (!hasUserMutePref) try { localStorage.setItem('clips:isMuted', String(actual)); } catch {} } }}
+                onAutoMute={() => { 
+                  if (!hasUserMutePref) { 
+                    toggleMute(); 
+                    try { sessionStorage.setItem('clips:soundArmed', 'true'); } catch {}
+                  } 
+                }}
+                onSyncMute={(actual) => { 
+                  if (actual !== isMuted && !hasUserMutePref) { 
+                    toggleMute(); 
+                  } 
+                }}
                 hasUserMutePref={hasUserMutePref}
                 onEnded={handleLoadMore}
                 currentIndex={index}
@@ -377,6 +599,7 @@ export default function ClipsFeed({ navHeight }: { navHeight: number }) {
         </div>
       )}
     </div>
+    </>
   );
 }
 

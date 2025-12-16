@@ -6,20 +6,22 @@ const protectedRoutes = ['/account'];
 const adminRoutes = ['/admin'];
 const getSecret = () => new TextEncoder().encode(getJwtSecret());
 
-export async function middleware(request: NextRequest) {
+export default async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // Dev/HMR and Next assets: always allow
+  if (pathname.startsWith('/_next') || pathname.startsWith('/__next') || pathname.startsWith('/__nextjs')) {
+    return NextResponse.next();
+  }
 
   // Temporary redirect: /music -> /featured until 2025-11-15 (UTC)
   try {
     const cutoff = Date.parse('2025-11-15T00:00:00Z');
     if (Date.now() < cutoff) {
-      // Option A (recommended): QR code adds a flag, e.g. /music?qr=1 or /music?utm_source=qr
       const url = new URL(request.url);
       const viaQr = url.searchParams.get('qr') === '1' || url.searchParams.get('utm_source') === 'qr';
 
-      // Option B: dedicated QR path /music/qr that always redirects during the window
       if ((pathname === '/music' && viaQr) || pathname === '/music/qr') {
-        // First-visit only: set a cookie so subsequent visits are not redirected
         const seenCookie = request.cookies.get('odubo_music_seen')?.value === '1';
         if (!seenCookie) {
           const to = new URL('/featured', request.url);
@@ -31,11 +33,6 @@ export async function middleware(request: NextRequest) {
         return NextResponse.next();
       }
 
-      // Option C (fallback if QR already points to /music without params):
-      // Heuristic — redirect when request likely came from a QR scan:
-      // - No same-origin referrer (direct/open-in-browser)
-      // - Mobile user agent (iOS/Android)
-      // This avoids redirecting internal navigation clicks.
       if (pathname === '/music') {
         const referer = request.headers.get('referer') || '';
         const origin = url.origin;
@@ -57,8 +54,6 @@ export async function middleware(request: NextRequest) {
     }
   } catch {}
 
-  // end temporary redirect logic
-
   // Admin routes: require auth and admin role/flag
   if (adminRoutes.some(route => pathname.startsWith(route))) {
     const token = request.cookies.get('token')?.value || request.headers.get('authorization')?.replace('Bearer ', '') || '';
@@ -75,7 +70,7 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(homeUrl);
       }
     } catch (error) {
-      console.error('Middleware authentication error:', error);
+      console.error('Proxy authentication error:', error);
       const loginUrl = new URL('/login', request.url);
       return NextResponse.redirect(loginUrl);
     }

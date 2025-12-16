@@ -39,7 +39,20 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     const { id } = await params;
     const body = await req.json();
-    const { uid, title, artist_name, duration, thumbnail, url, is_public } = body;
+    const { uid, title, duration, thumbnail, url, is_public } = body;
+
+    // Inherit visibility/status/artist from parent video
+    const parent = await queryDatabase(
+      `SELECT is_public, status, publication_status, artist_name AS parent_artist
+       FROM videos WHERE id = ? LIMIT 1`,
+      [id]
+    );
+    const parentRow = Array.isArray(parent) ? parent[0] : null;
+    const parentPublic = parentRow?.is_public === 1 || parentRow?.is_public === true;
+    const parentStatus = parentRow?.status || 'published';
+    const parentPublication = parentRow?.publication_status || 'live';
+    // Always use parent's artist_name for clips
+    const parentArtist = parentRow?.parent_artist || 'Mani Odubo';
 
     if (!uid || !title) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -57,15 +70,21 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       )`,
       [
         title,
-        artist_name || 'Unknown Artist',
+        parentArtist,
         uid,
         url || '',
         thumbnail || '',
         thumbnail || '',
         duration || 0,
-        is_public ? 1 : 0,
+        (is_public ? 1 : undefined) ?? (parentPublic ? 1 : 0),
         JSON.stringify([`parent_id:${id}`, `style:vertical`])
       ]
+    );
+
+    // Ensure status/publication match parent for gating
+    await executeQuery(
+      `UPDATE videos SET status = ?, publication_status = ?, updated_at = datetime('now') WHERE uid = ?`,
+      [parentStatus, parentPublication, uid]
     );
 
     return NextResponse.json({ success: true });

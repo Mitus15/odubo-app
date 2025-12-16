@@ -6,6 +6,16 @@ function buildHlsUrl(row: ClipApiRow): string | null {
   return null;
 }
 
+function parseParentId(related?: string | null): number | null {
+  if (!related) return null;
+  const m = related.match(/parent_id:(\d+)/);
+  if (m) {
+    const n = Number(m[1]);
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
+}
+
 export function mapClipRow(row: ClipApiRow): ClipItem | null {
   const hls = buildHlsUrl(row);
   if (!hls) return null;
@@ -24,6 +34,7 @@ export function mapClipRow(row: ClipApiRow): ClipItem | null {
     duration: row.duration_seconds ?? null,
     createdAt: row.created_at ?? null,
     productHandle: row.shopify_product_handle || null,
+    parentId: parseParentId(row.related_projects),
   };
 }
 

@@ -1,5 +1,6 @@
 "use client";
 import ScreenLayout from "@/components/ui/ScreenLayout";
+import UserProvider, { useUser } from "./UserProvider";
 import ScrollContainer from "@/components/ui/ScrollContainer";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -12,17 +13,34 @@ export default function AdminPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
 
+  // Removed SW unregister to avoid reload loops
+
   useEffect(() => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-    if (!token) { setIsAdmin(false); router.replace("/login"); return; }
+    const getCookieToken = () => {
+      try {
+        const all = typeof document !== 'undefined' ? document.cookie : '';
+        const match = all.split(';').map(s => s.trim()).find(s => s.startsWith('token='));
+        return match ? decodeURIComponent(match.split('=')[1]) : null;
+      } catch { return null; }
+    };
+
+    const lsToken = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    const token = lsToken || getCookieToken();
+
+    if (!token) { setIsAdmin(false); router.replace('/login'); return; }
+
     try {
-      const payload = JSON.parse(atob(token.split(".")[1]));
-      const ok = !!payload.is_admin || payload.role === 'admin';
+      const base64Url = token.split('.')[1] || '';
+      const pad = (s: string) => s + '==='.slice((s.length + 3) % 4);
+      const base64 = pad(base64Url.replace(/-/g, '+').replace(/_/g, '/'));
+      const payload = JSON.parse(typeof atob === 'function' ? atob(base64) : Buffer.from(base64, 'base64').toString('utf-8'));
+      const ok = !!payload?.is_admin || payload?.role === 'admin';
       setIsAdmin(ok);
-      if (!ok) router.replace("/");
-    } catch {
+      if (!ok) router.replace('/');
+    } catch (e) {
+      console.error('Token decode failed:', e);
       setIsAdmin(false);
-      router.replace("/login");
+      router.replace('/login');
     }
   }, [router]);
 
@@ -130,7 +148,8 @@ export default function AdminPage() {
   }
 
   return (
-    <ScreenLayout className="bg-[#171616] text-[#ede8df] flex flex-row">
+    <UserProvider>
+      <ScreenLayout className="bg-[#171616] text-[#ede8df] flex flex-row">
       {/* Sidebar - Desktop */}
       <div className="hidden md:flex flex-col w-64 bg-[#1c1a19] border-r border-[#502d26]/30 h-full flex-shrink-0">
         <div className="p-4 border-b border-[#502d26]/30">
@@ -142,12 +161,7 @@ export default function AdminPage() {
         <div className="flex-1 overflow-y-auto py-4 px-2 space-y-1">
           {navItems.map((item) => renderNavItem(item, 0, navItems.map(i => i.id)))}
         </div>
-        <div className="p-4 border-t border-[#502d26]/30">
-          <div className="flex items-center gap-2 text-sm text-[#b2a491]">
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-            <span>Store is Live</span>
-          </div>
-        </div>
+        <AdminFooterStatus />
       </div>
 
       {/* Mobile Header & Drawer Overlay */}
@@ -178,6 +192,28 @@ export default function AdminPage() {
           </div>
         </ScrollContainer>
       </div>
-    </ScreenLayout>
+      </ScreenLayout>
+    </UserProvider>
+  );
+}
+
+function AdminFooterStatus() {
+  const { user } = useUser();
+  return (
+    <div className="p-4 border-t border-[#502d26]/30">
+      <div className="flex items-center justify-between text-sm text-[#b2a491]">
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+          <span>Store is Live</span>
+        </div>
+        <div className="text-xs">
+          {user ? (
+            <span>Signed in as {user.email}{user.is_admin ? ' • Admin' : ''}</span>
+          ) : (
+            <span>Not signed in</span>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }

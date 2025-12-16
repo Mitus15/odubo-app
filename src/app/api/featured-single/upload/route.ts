@@ -30,10 +30,11 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData();
     const file = formData.get('file') as File | null;
     const kind = String(formData.get('kind') || ''); // 'cover' | 'background'
+    const mode = String(formData.get('mode') || 'event');
     if (!file || !kind || (kind !== 'cover' && kind !== 'background')) return NextResponse.json({ error: 'file and kind required' }, { status: 400 });
 
-    // Lookup current URLs
-    const rows = await queryDatabase('SELECT cover_image_url, background_video_url FROM featured_pages LIMIT 1', []);
+    // Lookup current URLs for this mode
+    const rows = await queryDatabase('SELECT cover_image_url, background_video_url FROM featured_pages WHERE mode = ? LIMIT 1', [mode]);
     const current = rows[0] || {} as any;
 
     // Build versioned key to bust caches
@@ -57,7 +58,7 @@ export async function POST(req: NextRequest) {
 
     // Update DB
     const field = kind === 'cover' ? 'cover_image_url' : 'background_video_url';
-    await executeQuery(`UPDATE featured_pages SET ${field} = ?, updated_at = datetime('now') WHERE rowid = (SELECT rowid FROM featured_pages LIMIT 1)`, [publicUrl]);
+    await executeQuery(`UPDATE featured_pages SET ${field} = ?, updated_at = datetime('now') WHERE mode = ?`, [publicUrl, mode]);
 
     // Delete previous object if same base path (best-effort)
     const oldUrl: string | null = current[field] || null;

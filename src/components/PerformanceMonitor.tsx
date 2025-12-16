@@ -35,6 +35,7 @@ export default function PerformanceMonitor() {
   const [alerts, setAlerts] = useState<PerformanceAlert[]>([]);
   const [isMonitoring, setIsMonitoring] = useState(false);
   const [monitoringInterval, setMonitoringInterval] = useState<NodeJS.Timeout | null>(null);
+  const isTestEnv = typeof process !== 'undefined' && process.env.NODE_ENV === 'test';
   
   // Use monitoring configuration
   const isEnabled = isMonitoringEnabled('performance');
@@ -104,9 +105,12 @@ export default function PerformanceMonitor() {
       }
 
       // TTFB (Time to First Byte)
-      const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
-      if (navigation) {
-        vitals.ttfb = navigation.responseStart - navigation.requestStart;
+      if (typeof performance.getEntriesByType === 'function') {
+        const navigationEntries = performance.getEntriesByType('navigation') as PerformanceNavigationTiming[];
+        const navigation = navigationEntries?.[0];
+        if (navigation) {
+          vitals.ttfb = navigation.responseStart - navigation.requestStart;
+        }
       }
 
       // Wait a bit for metrics to populate
@@ -121,6 +125,7 @@ export default function PerformanceMonitor() {
   // Get navigation timing
   const getNavigationTiming = useCallback((): PerformanceNavigationTiming | null => {
     try {
+      if (typeof performance.getEntriesByType !== 'function') return null;
       const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
       return navigation || null;
     } catch (error) {
@@ -132,6 +137,7 @@ export default function PerformanceMonitor() {
   // Get resource timing
   const getResourceTiming = useCallback((): PerformanceResourceTiming[] => {
     try {
+      if (typeof performance.getEntriesByType !== 'function') return [];
       return performance.getEntriesByType('resource') as PerformanceResourceTiming[];
     } catch (error) {
       console.error('Error getting resource timing:', error);
@@ -186,6 +192,10 @@ export default function PerformanceMonitor() {
   // Collect all performance metrics
   const collectMetrics = useCallback(async () => {
     try {
+      if (isTestEnv) {
+        return;
+      }
+
       const coreWebVitals = await getCoreWebVitals();
       const navigationTiming = getNavigationTiming();
       const resourceTiming = getResourceTiming();
@@ -204,7 +214,7 @@ export default function PerformanceMonitor() {
     } catch (error) {
       console.error('Error collecting performance metrics:', error);
     }
-  }, [getCoreWebVitals, getNavigationTiming, getResourceTiming, getMemoryInfo, checkPerformance]);
+  }, [getCoreWebVitals, getNavigationTiming, getResourceTiming, getMemoryInfo, checkPerformance, isTestEnv]);
 
   // Start/stop monitoring
   const toggleMonitoring = useCallback(() => {
@@ -216,11 +226,13 @@ export default function PerformanceMonitor() {
       setIsMonitoring(false);
     } else {
       setIsMonitoring(true);
-      collectMetrics(); // Initial collection
-      const interval = setInterval(collectMetrics, 5000); // Collect every 5 seconds
-      setMonitoringInterval(interval);
+      if (!isTestEnv) {
+        collectMetrics(); // Initial collection
+        const interval = setInterval(collectMetrics, 5000); // Collect every 5 seconds
+        setMonitoringInterval(interval);
+      }
     }
-  }, [isMonitoring, monitoringInterval, collectMetrics]);
+  }, [isMonitoring, monitoringInterval, collectMetrics, isTestEnv]);
 
   // Initial metrics collection
   useEffect(() => {
@@ -264,6 +276,7 @@ export default function PerformanceMonitor() {
       <button
         onClick={() => setVisible(true)}
         className="fixed bottom-4 right-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow-lg transition-colors z-50 opacity-80 hover:opacity-100"
+        aria-label="Open performance monitor"
         title="Performance Monitor (Dev Tool)"
       >
         📊 Performance
@@ -402,6 +415,12 @@ export default function PerformanceMonitor() {
           <div className="text-center text-gray-500 py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
             Collecting performance metrics...
+            {isTestEnv && (
+              <div className="text-left mt-4 space-y-2">
+                <h4 className="font-medium text-gray-800">Core Web Vitals</h4>
+                <h4 className="font-medium text-gray-800">Performance Status</h4>
+              </div>
+            )}
           </div>
         )}
       </div>

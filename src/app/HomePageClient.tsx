@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
+import ClipsFeed from '@/components/clips/ClipsFeed';
+import { AudioProvider } from '@/contexts/AudioContext';
 
 interface VerseOfTheDay {
   text: string;
@@ -14,117 +15,125 @@ interface HomePageClientProps {
 }
 
 export default function HomePageClient({ verseOfTheDay }: HomePageClientProps) {
-  // Real-time clock state
+  const HEADER_HEIGHT = 56;
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
-  // Mobile available height (window.innerHeight - fixed header)
-  const [mobileAvailableHeight, setMobileAvailableHeight] = useState<number | null>(null);
+  const [navHeight, setNavHeight] = useState<number>(HEADER_HEIGHT);
+  const [showOverlay, setShowOverlay] = useState<boolean>(true);
 
-  // Update clock every millisecond - but only after client mount
   useEffect(() => {
-    // Set initial time immediately on mount
     setCurrentTime(new Date());
-    
-    const interval = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 1); // Update every millisecond
-
+    const interval = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(interval);
   }, []);
 
-  // Format time with milliseconds
   const formatTime = (date: Date | null) => {
     if (!date) return '';
-    
-    const year = date.getFullYear();
-    const month = date.toLocaleString('en-US', { month: 'short' });
-    const day = date.getDate();
-    const hours = date.getHours().toString().padStart(2, '0');
-    const minutes = date.getMinutes().toString().padStart(2, '0');
-    const seconds = date.getSeconds().toString().padStart(2, '0');
+    const parts = new Intl.DateTimeFormat('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+      timeZoneName: 'shortGeneric'
+    }).formatToParts(date);
+
+    const map: Record<string, string> = {};
+    parts.forEach(p => { if (p.type !== 'literal') map[p.type] = p.value; });
     const milliseconds = date.getMilliseconds().toString().padStart(3, '0');
-    
-    return `${year} ${month} ${day} ${hours}:${minutes}:${seconds}.${milliseconds}`;
+    return `${map.weekday} ${map.month} ${map.day} ${map.hour}:${map.minute}:${map.second}.${milliseconds}`;
   };
 
-  // Compute mobile available height so we can perfectly center content beneath the fixed header
   useEffect(() => {
-    const headerHeight = 56; // px - keep in sync with header height
-
-    function updateHeight() {
-      if (typeof window === 'undefined') return;
-      const width = window.innerWidth;
-      // apply only for small viewports (mobile)
-      if (width < 768) {
-        setMobileAvailableHeight(window.innerHeight - headerHeight);
-      } else {
-        setMobileAvailableHeight(null);
+    const updateNavHeight = () => {
+      try {
+        const v = getComputedStyle(document.documentElement).getPropertyValue('--app-nav-height');
+        const px = parseInt(v || `${HEADER_HEIGHT}`, 10);
+        setNavHeight(Number.isFinite(px) ? px : HEADER_HEIGHT);
+      } catch {
+        setNavHeight(HEADER_HEIGHT);
       }
+    };
+
+    updateNavHeight();
+    window.addEventListener('resize', updateNavHeight);
+    window.addEventListener('orientationchange', updateNavHeight);
+
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
+      navigator.serviceWorker.register('/clips-sw.js').catch(() => {});
     }
 
-    updateHeight();
-    window.addEventListener('resize', updateHeight);
-    window.addEventListener('orientationchange', updateHeight);
     return () => {
-      window.removeEventListener('resize', updateHeight);
-      window.removeEventListener('orientationchange', updateHeight);
+      window.removeEventListener('resize', updateNavHeight);
+      window.removeEventListener('orientationchange', updateNavHeight);
+      document.body.style.overflow = prevOverflow;
     };
   }, []);
 
   return (
-    <div className="h-screen bg-gradient-to-br from-[#302927] via-[#171616] to-[#302927] overflow-hidden">
-      {/* Main Container - Centered content */}
-      <div
-        className="flex flex-col justify-center items-center p-8 md:h-full"
-        style={mobileAvailableHeight ? { height: `${mobileAvailableHeight}px` } : undefined}
-      >
-        
-        {/* The Words - Bible Verse Widget */}
-        <div className="max-w-2xl mx-auto text-center">
-          {/* Clock */}
-          <div className="mb-8">
-            <p className="text-sm text-[#726d6c]/70 font-mono">
-              {currentTime ? formatTime(currentTime) : 'Loading...'}
-            </p>
-          </div>
-          
-          {/* Verse Content */}
-          <div className="mb-8">
-            <blockquote className="text-lg md:text-xl text-[#ede8df] leading-relaxed italic mb-4">
-              "{verseOfTheDay.text}"
+    <AudioProvider>
+      <div className="relative bg-black text-[#ede8df] min-h-[100svh]">
+        {/* Overlay toggle button (top-right) */}
+        <div
+          className="fixed right-4 z-30 pointer-events-none"
+          style={{ top: navHeight + 12 }}
+        >
+          <button
+            onClick={() => setShowOverlay(v => !v)}
+            className="pointer-events-auto inline-flex items-center gap-2 px-3.5 py-2 rounded-full bg-white/12 border border-white/20 text-white shadow-[0_12px_40px_rgba(0,0,0,0.45)] backdrop-blur-xl hover:bg-white/18 active:scale-95 transition-all"
+            aria-pressed={showOverlay}
+            aria-label={showOverlay ? 'Hide proverb overlay' : 'Show proverb overlay'}
+          >
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <path d="M5 5h14v10H7l-2 2z" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <span className="text-xs font-semibold uppercase tracking-[0.08em]">{showOverlay ? 'Hide' : 'Show'}</span>
+          </button>
+        </div>
+
+        {/* Clips layer */}
+        <div
+          style={{ position: 'fixed', top: navHeight, left: 0, right: 0, bottom: 0, backgroundColor: '#000', overflow: 'hidden' }}
+          className="pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
+        >
+          <ClipsFeed navHeight={navHeight} />
+        </div>
+
+        {/* Verse + Clock overlay */}
+        <div
+          className={`pointer-events-none fixed left-0 right-0 flex items-center justify-center px-6 transition-all duration-300 ease-out ${showOverlay ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-3'}`}
+          style={{ top: navHeight, bottom: 0 }}
+        >
+          <div className="w-full max-w-3xl flex flex-col items-center gap-4 text-center">
+            <blockquote className="glass-text text-[1.25rem] md:text-[1.5rem] leading-relaxed drop-shadow-[0_8px_26px_rgba(0,0,0,0.65)]">
+              “{verseOfTheDay.text}”
             </blockquote>
-            
+
+            <div
+              className="relative rounded-lg px-3 py-1.5 backdrop-blur-xl border border-white/12 text-white/80 font-mono text-[0.52rem] md:text-[0.6rem] shadow-[0_10px_40px_rgba(0,0,0,0.45)]"
+              style={{
+                background: 'linear-gradient(120deg, rgba(255,255,255,0.08), rgba(255,255,255,0.025))',
+                mixBlendMode: 'screen'
+              }}
+            >
+              <div className="absolute inset-0 bg-white/4" />
+              <span className="relative" style={{ letterSpacing: '0.06em' }}>
+                {currentTime ? formatTime(currentTime) : '— — : — — : — — . — — —'}
+              </span>
+            </div>
+
             {verseOfTheDay.error && (
-              <p className="text-sm text-[#843c2d]/80 italic mt-2">
+              <p className="text-xs text-amber-100/80 drop-shadow-[0_4px_20px_rgba(0,0,0,0.45)]">
                 {verseOfTheDay.error}
               </p>
             )}
           </div>
-          
-          {/* The Light Button - Links to Store */}
-          <Link href="/store" className="block">
-            <div className="relative group">
-              {/* Glowing background effect */}
-              <div className="absolute inset-0 bg-gradient-to-r from-[#ede8df]/20 via-[#b2a491]/30 to-[#ede8df]/20 rounded-2xl blur-xl group-hover:blur-2xl transition-all duration-500 opacity-0 group-hover:opacity-100"></div>
-              
-              {/* Main button */}
-              <div className="relative px-12 py-4 bg-gradient-to-r from-[#ede8df] via-[#b2a491] to-[#ede8df] text-[#171616] font-bold text-lg rounded-2xl shadow-2xl transform group-hover:scale-105 group-hover:shadow-[0_0_40px_rgba(237,232,223,0.3)] transition-all duration-500 border border-[#ede8df]/50 overflow-hidden cursor-pointer">
-                {/* Inner light effect */}
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                
-                {/* Text with subtle shadow */}
-                <span className="relative z-10 drop-shadow-sm">Shop</span>
-              </div>
-              
-              {/* Floating particles around the button */}
-              <div className="absolute inset-0 pointer-events-none">
-                <div className="absolute -top-2 -left-2 w-2 h-2 bg-[#ede8df]/40 rounded-full blur-sm animate-pulse" style={{ animationDelay: '0s', animationDuration: '3s' }}></div>
-                <div className="absolute -top-1 -right-1 w-1.5 h-1.5 bg-[#b2a491]/50 rounded-full blur-sm animate-pulse" style={{ animationDelay: '1s', animationDuration: '4s' }}></div>
-                <div className="absolute -bottom-2 left-1/2 w-1 h-1 bg-[#ede8df]/30 rounded-full blur-sm animate-pulse" style={{ animationDelay: '2s', animationDuration: '3.5s' }}></div>
-              </div>
-            </div>
-          </Link>
         </div>
       </div>
-    </div>
+    </AudioProvider>
   );
 }

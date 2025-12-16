@@ -39,7 +39,7 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(HLS_MANIFEST_CACHE).then(() => {
       console.log('[SW] Caches initialized');
-      self.skipWaiting(); // Activate immediately
+      // Do not auto-skip waiting; avoid unexpected client reloads
     })
   );
 });
@@ -58,7 +58,7 @@ self.addEventListener('activate', (event) => {
       );
     }).then(() => {
       console.log('[SW] Activated');
-      return self.clients.claim(); // Take control immediately
+      // Do not claim clients automatically; new SW will take control on next navigation
     })
   );
 });

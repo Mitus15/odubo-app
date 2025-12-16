@@ -14,12 +14,18 @@ export async function GET(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   const actor = getUserFromRequest(req);
   if (!isAdminUser(actor)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  const body = await req.json() as { userId: string; role?: 'admin'|'viewer'; is_active?: boolean };
+  const body = await req.json() as { userId: string; role?: 'admin' | 'editor' | 'viewer'; is_active?: boolean };
   if (!body.userId) return NextResponse.json({ error: 'userId required' }, { status: 400 });
 
   const fields: string[] = [];
   const params: any[] = [];
-  if (body.role) { fields.push('role = ?'); params.push(body.role); fields.push('is_admin = ?'); params.push(body.role === 'admin' ? 1 : 0); }
+  if (body.role) {
+    fields.push('role = ?');
+    params.push(body.role);
+    // Only treat role === 'admin' as is_admin = 1; editor/viewer are non-admins
+    fields.push('is_admin = ?');
+    params.push(body.role === 'admin' ? 1 : 0);
+  }
   if (typeof body.is_active === 'boolean') { fields.push('is_active = ?'); params.push(body.is_active ? 1 : 0); }
   if (fields.length === 0) return NextResponse.json({ error: 'No updates' }, { status: 400 });
   params.push(body.userId);

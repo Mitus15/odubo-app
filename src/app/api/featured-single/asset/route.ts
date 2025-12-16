@@ -21,14 +21,15 @@ export async function DELETE(req: NextRequest) {
   try {
     const url = new URL(req.url);
     const kind = String(url.searchParams.get('kind') || '');
+    const mode = String(url.searchParams.get('mode') || 'event');
     if (!['cover','background'].includes(kind)) return NextResponse.json({ error: 'Invalid kind' }, { status: 400 });
 
     const field = kind === 'cover' ? 'cover_image_url' : 'background_video_url';
-    const rows = await queryDatabase(`SELECT ${field} FROM featured_pages LIMIT 1`, []);
+    const rows = await queryDatabase(`SELECT ${field} FROM featured_pages WHERE mode = ? LIMIT 1`, [mode]);
     const current = rows[0] || {} as any;
     const currentUrl: string | null = current[field] || null;
 
-    await executeQuery(`UPDATE featured_pages SET ${field} = NULL, updated_at = datetime('now') WHERE rowid = (SELECT rowid FROM featured_pages LIMIT 1)`, []);
+    await executeQuery(`UPDATE featured_pages SET ${field} = NULL, updated_at = datetime('now') WHERE mode = ?`, [mode]);
 
     if (currentUrl) {
       try {

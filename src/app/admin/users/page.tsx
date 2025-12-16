@@ -36,7 +36,7 @@ export default function AdminUsersPage() {
 
   useEffect(() => { load(); }, []);
 
-  const setRole = async (userId: string, role: 'admin'|'viewer') => {
+  const setRole = async (userId: string, role: 'admin' | 'editor' | 'viewer') => {
     setLoading(true);
     try {
       const res = await fetch('/api/admin/users', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId, role }) });
@@ -104,6 +104,7 @@ export default function AdminUsersPage() {
                     <td className="p-3">{u.email_verified ? 'Yes' : 'No'}</td>
                     <td className="p-3 flex gap-2">
                       <button className="px-3 py-1 rounded bg-[#302927] text-[#b2a491] hover:bg-[#502d26]/60" onClick={() => setRole(u.id, 'admin')}>Make Admin</button>
+                      <button className="px-3 py-1 rounded bg-[#302927] text-[#b2a491] hover:bg-[#502d26]/60" onClick={() => setRole(u.id, 'editor')}>Make Editor</button>
                       <button className="px-3 py-1 rounded bg-[#302927] text-[#b2a491] hover:bg-[#502d26]/60" onClick={() => setRole(u.id, 'viewer')}>Make Viewer</button>
                     </td>
                   </tr>

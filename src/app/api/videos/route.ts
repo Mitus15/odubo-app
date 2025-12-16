@@ -183,8 +183,8 @@ const videoCreateSchema = z.object({
   mood: z.string().optional().default(''),
   credits: z.union([z.string(), z.array(z.any())]).optional().default('[]'),
   related_projects: z.union([z.string(), z.array(z.any())]).optional().default('[]'),
-  status: z.string().optional().default('draft'),
-  publication_status: z.enum(['live','archived']).optional().default('archived'),
+  status: z.string().optional().default('published'),
+  publication_status: z.enum(['live','archived']).optional().default('live'),
   thumbnail_timestamp_pct: z.union([z.number(), z.string()]).optional().nullable(),
 });
 
@@ -219,8 +219,8 @@ export async function POST(req: NextRequest) {
     const mood = body.mood || '';
     const credits = typeof body.credits === 'string' ? body.credits : JSON.stringify(body.credits || []);
     const related_projects = typeof body.related_projects === 'string' ? body.related_projects : JSON.stringify(body.related_projects || []);
-    const status = (body.status || 'draft').trim();
-    const publication_status: 'live' | 'archived' = (body.publication_status || 'archived') as any;
+    const status = 'published';
+    const publication_status: 'live' | 'archived' = 'live';
   const thumbnail_timestamp_pct = (body.thumbnail_timestamp_pct === '' ? null : (body.thumbnail_timestamp_pct as any));
     const uid = (body as any).uid || '';
 
@@ -257,15 +257,21 @@ export async function POST(req: NextRequest) {
         mood,
         credits,
         related_projects,
-        status || 'draft',
+        status,
         publication_status,
         thumbnail_timestamp_pct
       ]
     );
+    // Resolve inserted ID by UID (safer across runtimes)
+    let inserted: any = null;
+    try {
+      const rows = await queryDatabase('SELECT id FROM videos WHERE uid = ? ORDER BY created_at DESC LIMIT 1', [uid]);
+      inserted = rows?.[0] || null;
+    } catch {}
+
     // Audit
     await writeAuditLog(req, user, 'videos.create', title, { publication_status });
-
-    return NextResponse.json({ success: true }, { status: 201 });
+    return NextResponse.json({ success: true, id: inserted?.id ?? null, uid }, { status: 201 });
   } catch (error) {
     console.error('Error creating video:', error);
     return NextResponse.json(

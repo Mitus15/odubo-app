@@ -3,7 +3,6 @@
 import { useState, useMemo } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { motion, AnimatePresence } from 'framer-motion';
 
 interface Video {
   id: number;
@@ -27,47 +26,20 @@ interface VideoLibraryProps {
   videos: Video[];
 }
 
-// Helper function to convert "mm:ss" or "h:mm:ss" to seconds
 const durationToSeconds = (durationStr?: string): number => {
   if (!durationStr) return 0;
   const parts = durationStr.split(':').map(Number);
-  if (parts.length === 3) { // h:mm:ss
-    return parts[0] * 3600 + parts[1] * 60 + parts[2];
-  }
-  if (parts.length === 2) { // mm:ss
-    return parts[0] * 60 + parts[1];
-  }
+  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  if (parts.length === 2) return parts[0] * 60 + parts[1];
   return 0;
 };
 
 export default function VideoLibrary({ videos }: VideoLibraryProps) {
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [selectedType, setSelectedType] = useState<string>('music-video');
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'title' | 'duration'>('newest');
 
-  const { categories, types } = useMemo(() => {
-    const categorySet = new Set<string>();
-    const typeSet = new Set<string>();
-    
-    videos.forEach(video => {
-      if (video.category) categorySet.add(video.category);
-      if (video.type) typeSet.add(video.type);
-    });
-
-    return {
-      categories: Array.from(categorySet).sort(),
-      types: Array.from(typeSet).sort()
-    };
-  }, [videos]);
-
-  const filteredAndSortedVideos = useMemo(() => {
-    let filtered = videos.filter(video => {
-      const matchesCategory = selectedCategory === 'all' || video.category === selectedCategory;
-      const matchesType = selectedType === 'all' || video.type === selectedType;
-      return matchesCategory && matchesType;
-    });
-
-    filtered.sort((a, b) => {
+  const sortedVideos = useMemo(() => {
+    const sorted = [...videos];
+    sorted.sort((a, b) => {
       switch (sortBy) {
         case 'newest':
           return new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime();
@@ -81,40 +53,27 @@ export default function VideoLibrary({ videos }: VideoLibraryProps) {
           return 0;
       }
     });
-
-    return filtered;
-  }, [videos, selectedCategory, selectedType, sortBy]);
+    return sorted;
+  }, [videos, sortBy]);
 
   const formatDuration = (duration?: string | number) => {
     if (!duration) return '';
-    
-    // If it's already formatted as mm:ss or h:mm:ss, return it
     if (typeof duration === 'string' && duration.includes(':')) return duration;
-
-    // Otherwise treat as seconds
     const seconds = typeof duration === 'string' ? parseFloat(duration) : duration;
     if (isNaN(seconds)) return String(duration);
-
     const h = Math.floor(seconds / 3600);
     const m = Math.floor((seconds % 3600) / 60);
     const s = Math.floor(seconds % 60);
-
-    if (h > 0) {
-      return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-    }
+    if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
   const getVideoThumbnail = (video: Video) => {
-    // 1) Use explicit poster/thumbnail if present
     if (video.poster_url) return video.poster_url;
     if (video.thumbnail) return video.thumbnail;
-
-    // 2) Fallback to Cloudflare Stream frame if we have a UID
     if (video.uid) {
       const pct = typeof video.thumbnail_timestamp_pct === 'number' && video.thumbnail_timestamp_pct >= 0 && video.thumbnail_timestamp_pct <= 1
-        ? video.thumbnail_timestamp_pct
-        : 0.5;
+        ? video.thumbnail_timestamp_pct : 0.5;
       const dur = typeof video.duration_seconds === 'number' && isFinite(video.duration_seconds) ? Math.max(0, video.duration_seconds) : null;
       const timeSec = dur ? Math.max(0, Math.floor(pct * dur)) : null;
       const base = `https://videodelivery.net/${video.uid}/thumbnails/thumbnail.jpg`;
@@ -123,172 +82,81 @@ export default function VideoLibrary({ videos }: VideoLibraryProps) {
       if (timeSec !== null) params.set('time', `${timeSec}s`);
       return `${base}?${params.toString()}`;
     }
-
-    // 3) Placeholder
-    return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgdmlld0JveD0iMCAwIDQwMCAzMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iMzAwIiBmaWxsPSIjMUExQTFBIi8+CjxwYXRoIGQ9Ik0xNTAgMTIwTDI1MCA4NVYyMTVMMTUwIDE4MFYxMjBaIiBmaWxsPSIjNEM0QzRDIi8+CjxjaXJjbGUgY3g9IjIwMCIgY3k9IjE1MCIgcj0iMjAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzRDNEM0QyIgc3Ryb2tlLXdpZHRoPSIyIi8+Cjx0ZXh0IHg9IjIwMCIgeT0iMjgwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNEM0QzRDIiBmb250LXNpemU9IjE0IiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiI+VmlkZW88L3RleHQ+Cjwvc3ZnPgo=';
+    return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgdmlld0JveD0iMCAwIDQwMCAzMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iMzAwIiBmaWxsPSIjMUExQTFBIi8+PC9zdmc+';
   };
 
   return (
-    <div className="h-full w-full flex flex-col">
-      {/* FILTER BAR (centered) */}
-      <div className="flex-shrink-0 px-4 pt-4">
-        {/* Video Type Tabs and Sort */}
-        <motion.div 
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          className="px-0 pb-2.5 space-y-2"
-        >
-          {/* Video Type Tabs */}
-          <div className="glass-card rounded-2xl p-1 mx-auto max-w-md">
-            <div className="flex justify-center gap-2">
+    <div className="absolute inset-0 flex flex-col">
+      {/* Sort Bar - Fixed at top */}
+      <div className="flex-shrink-0 p-4 pb-2">
+        <div className="glass-card rounded-2xl p-1 mx-auto max-w-md">
+          <div className="flex gap-1 justify-center">
+            {(['newest', 'oldest', 'title', 'duration'] as const).map((option) => (
               <button
-                onClick={() => setSelectedType('music-video')}
-                className={`flex-1 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
-                  selectedType === 'music-video'
-                    ? 'bg-[#843c2d] text-[#ede8df] shadow-lg'
+                key={option}
+                onClick={() => setSortBy(option)}
+                className={`px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 capitalize ${
+                  sortBy === option
+                    ? 'bg-[#843c2d] text-[#ede8df]'
                     : 'text-[#b2a491] hover:text-[#ede8df] hover:bg-[#302927]/50'
                 }`}
               >
-                Music Videos
+                {option}
               </button>
-              <button
-                onClick={() => setSelectedType('film')}
-                className={`flex-1 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
-                  selectedType === 'film'
-                    ? 'bg-[#843c2d] text-[#ede8df] shadow-lg'
-                    : 'text-[#b2a491] hover:text-[#ede8df] hover:bg-[#302927]/50'
-                }`}
-              >
-                Film
-              </button>
-            </div>
+            ))}
           </div>
-
-          {/* Sort Options */}
-          <div className="glass-card rounded-2xl p-1 mx-auto max-w-md">
-            <div className="flex gap-1 justify-center">
-              <button
-                onClick={() => setSortBy('newest')}
-                className={`px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 ${
-                  sortBy === 'newest'
-                    ? 'bg-[#843c2d] text-[#ede8df]'
-                    : 'text-[#b2a491] hover:text-[#ede8df] hover:bg-[#302927]/50'
-                }`}
-              >
-                Newest
-              </button>
-              <button
-                onClick={() => setSortBy('oldest')}
-                className={`px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 ${
-                  sortBy === 'oldest'
-                    ? 'bg-[#843c2d] text-[#ede8df]'
-                    : 'text-[#b2a491] hover:text-[#ede8df] hover:bg-[#302927]/50'
-                }`}
-              >
-                Oldest
-              </button>
-              <button
-                onClick={() => setSortBy('title')}
-                className={`px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 ${
-                  sortBy === 'title'
-                    ? 'bg-[#843c2d] text-[#ede8df]'
-                    : 'text-[#b2a491] hover:text-[#ede8df] hover:bg-[#302927]/50'
-                }`}
-              >
-                Title
-              </button>
-              <button
-                onClick={() => setSortBy('duration')}
-                className={`px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 ${
-                  sortBy === 'duration'
-                    ? 'bg-[#843c2d] text-[#ede8df]'
-                    : 'text-[#b2a491] hover:text-[#ede8df] hover:bg-[#302927]/50'
-                }`}
-              >
-                Duration
-              </button>
-            </div>
-          </div>
-        </motion.div>
+        </div>
       </div>
 
-      {/* SCROLLABLE CONTENT AREA - Only this section scrolls */}
-      <div className="flex-1 min-h-0 px-4 pb-24">
-        <div className="h-full overflow-hidden rounded-2xl glass-surface border border-[#502d26]/20">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={`${selectedCategory}-${selectedType}-${sortBy}`}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-              className="h-full overflow-y-auto scrollable-container p-4"
-            >
-              {filteredAndSortedVideos.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
-                  {filteredAndSortedVideos.map((video) => (
-                    <motion.div
-                      key={video.id}
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ duration: 0.3 }}
-                      className="group glass-surface rounded-2xl overflow-hidden border border-[#502d26]/30 hover:border-[#843c2d]/50 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-[#843c2d]/10"
-                    >
-                      <Link href={`/media/${video.id}`} className="block">
-                        <div className="aspect-video relative overflow-hidden">
-                          <Image
-                            src={getVideoThumbnail(video)}
-                            alt={video.title}
-                            fill
-                            className="object-cover group-hover:scale-110 transition-transform duration-500"
-                            sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                          />
-                          <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors duration-300 flex items-center justify-center">
-                            <div className="w-12 h-12 rounded-full glass-surface flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                              <svg className="w-6 h-6 text-[#ede8df] ml-0.5" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M8 5v14l11-7z"/>
-                              </svg>
-                            </div>
-                          </div>
-                          {video.duration && (
-                            <div className="absolute bottom-2 right-2 px-2 py-0.5 bg-black/80 text-white text-xs rounded-md">
-                              {formatDuration(video.duration)}
-                            </div>
-                          )}
-                          {/* Video title overlaid on image */}
-                          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-2.5 pt-8">
-                            <h3 className="text-sm font-semibold text-white group-hover:text-[#ede8df] transition-colors line-clamp-2 leading-tight">
-                              {video.title}
-                            </h3>
-                          </div>
-                        </div>
-                      </Link>
-                    </motion.div>
-                  ))}
-                </div>
-              ) : (
-                <div className="h-full flex items-center justify-center">
-                  <div className="text-center py-8 space-y-4 max-w-sm">
-                    <div className="w-16 h-16 mx-auto glass-surface rounded-full flex items-center justify-center mb-4">
-                      <svg className="w-8 h-8 text-[#726d6c]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+      {/* Scrollable Video Grid */}
+      <div className="flex-1 overflow-y-auto overscroll-contain px-4 pb-6">
+        {sortedVideos.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {sortedVideos.map((video) => (
+              <Link 
+                key={video.id} 
+                href={`/media/${video.id}`}
+                className="group block rounded-2xl overflow-hidden border border-[#502d26]/30 hover:border-[#843c2d]/50 transition-all duration-300 bg-[#1a1615]/60 hover:bg-[#1a1615]/80 hover:scale-[1.02] hover:shadow-xl hover:shadow-black/30"
+              >
+                <div className="aspect-video relative">
+                  <Image
+                    src={getVideoThumbnail(video)}
+                    alt={video.title}
+                    fill
+                    className="object-cover group-hover:scale-105 transition-transform duration-500"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                  />
+                  {/* Play button overlay on hover - desktop only */}
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black/20">
+                    <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30">
+                      <svg className="w-8 h-8 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M8 5v14l11-7z"/>
                       </svg>
                     </div>
-                    <div className="space-y-3">
-                      <h3 className="text-lg font-semibold text-[#b2a491]">
-                        {'No videos found'}
-                      </h3>
-                      <p className="text-sm text-[#726d6c] leading-relaxed">
-                        {'Try adjusting your filters to find what you\'re looking for.'}
-                      </p>
+                  </div>
+                  {/* Duration badge */}
+                  {video.duration && (
+                    <div className="absolute bottom-3 right-3 px-2 py-1 bg-black/80 text-white text-xs rounded-md">
+                      {formatDuration(video.duration)}
                     </div>
+                  )}
+                  {/* Title overlay */}
+                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-3 pt-10">
+                    <h3 className="text-base font-semibold text-white line-clamp-2 group-hover:text-[#ede8df] transition-colors">
+                      {video.title}
+                    </h3>
                   </div>
                 </div>
-              )}
-            </motion.div>
-          </AnimatePresence>
-        </div>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center py-8">
+              <p className="text-[#b2a491]">No videos found</p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

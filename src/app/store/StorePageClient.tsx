@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import ScreenLayout from '@/components/ui/ScreenLayout';
 import ScrollContainer from '@/components/ui/ScrollContainer';
 import Link from 'next/link';
@@ -11,9 +11,7 @@ interface ProductCard {
   handle: string;
   image: string | null;
   price: number | null;
-  category: string;
   available: boolean;
-  collections: string[];
   createdAt: string;
 }
 
@@ -34,11 +32,19 @@ export default function StorePageClient({ isStoreOpen, initialProducts }: StoreP
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [passwordInput, setPasswordInput] = useState('');
   const [unlockError, setUnlockError] = useState('');
-
-  const [activeTab, setActiveTab] = useState<'clothes' | 'items'>('clothes');
   const [products, setProducts] = useState<ProductCard[]>(initialProducts);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [productDetails, setProductDetails] = useState<Record<string, any>>({});
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState<string | null>(null);
+  const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
+  const [openOption, setOpenOption] = useState<string | null>(null);
+  const [optionsHandle, setOptionsHandle] = useState<string | null>(null);
+  const [addFeedback, setAddFeedback] = useState<string | null>(null);
+  const [ctaReady, setCtaReady] = useState(false);
+  const prevSelectedIndex = useRef<number | null>(null);
 
   const handleUnlock = (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,27 +82,137 @@ export default function StorePageClient({ isStoreOpen, initialProducts }: StoreP
     return () => clearInterval(interval);
   }, []);
 
-  // Filter products based on active tab
-  const filteredProducts = products.filter(p => {
-    const collections = p.collections || [];
-    const isClothing = collections.some(c => {
-      const lower = c.toLowerCase();
-      return lower.includes('cloth') || 
-             lower.includes('apparel') || 
-             lower.includes('shirt') || 
-             lower.includes('top') || 
-             lower.includes('hoodie') || 
-             lower.includes('wear');
-    });
+  const filteredProducts = useMemo(() => products.filter(Boolean), [products]);
 
-    if (activeTab === 'clothes') {
-      // Include if it's clothing OR has NO collections (uncategorized fallback)
-      return isClothing || collections.length === 0;
-    } else {
-      // Items tab: anything NOT in clothing
-      return !isClothing && collections.length > 0;
+  const selectedProduct = selectedIndex !== null ? filteredProducts[selectedIndex] : null;
+  const selectedDetail = selectedProduct ? productDetails[selectedProduct.handle] : null;
+
+  const selectedVariant = useMemo(() => {
+    if (!selectedDetail?.variants?.length || !selectedDetail?.options) return null;
+    return selectedDetail.variants.find((v: any) => {
+      return Object.entries(selectedOptions).every(([k, val]) => v.selectedOptions?.[k] === val);
+    }) || selectedDetail.variants[0];
+  }, [selectedDetail, selectedOptions]);
+
+  const ensureDetail = async (handle: string) => {
+    if (productDetails[handle]) return;
+    try {
+      setDetailLoading(true);
+      setDetailError(null);
+      const STORE_URL = process.env.NEXT_PUBLIC_SHOPIFY_STORE_URL || 'https://odubostudio.myshopify.com';
+      const PUBLIC_TOKEN = process.env.NEXT_PUBLIC_SHOPIFY_API_KEY;
+      if (!PUBLIC_TOKEN) throw new Error('Missing Shopify token');
+
+      const query = `#graphql\n        query Product($handle: String!) {\n          product(handle: $handle) {\n            id title handle description availableForSale\n            images(first: 10) { edges { node { url } } }\n            options { name values }\n            variants(first: 30) { edges { node {\n              id title availableForSale quantityAvailable\n              price { amount currencyCode }\n              selectedOptions { name value }\n              image { url }\n            }}}\n          }\n        }`;
+
+      const res = await fetch(`${STORE_URL}/api/2024-07/graphql.json`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Shopify-Storefront-Access-Token': PUBLIC_TOKEN,
+        },
+        body: JSON.stringify({ query, variables: { handle } }),
+      });
+
+      if (!res.ok) throw new Error(`Shopify ${res.status}`);
+      const data = await res.json();
+      const p = data?.data?.product;
+      if (!p) throw new Error('Product not found');
+
+      const detail = {
+        id: p.id,
+        title: p.title,
+        handle: p.handle,
+        images: p.images?.edges?.map((e: any) => e.node.url) || [],
+        options: p.options || [],
+        variants: p.variants?.edges?.map(({ node: v }: any) => ({
+          id: v.id,
+          title: v.title,
+          price: parseFloat(v.price.amount),
+          currency: v.price.currencyCode,
+          available: v.availableForSale,
+          quantityAvailable: v.quantityAvailable,
+          selectedOptions: v.selectedOptions?.reduce((acc: any, cur: any) => ({ ...acc, [cur.name]: cur.value }), {}),
+          image: v.image?.url || null,
+        })) || [],
+      };
+
+      setProductDetails(prev => ({ ...prev, [handle]: detail }));
+      // Initialize options to first variant
+      if (detail.options?.length) {
+        const initial: Record<string, string> = {};
+        detail.options.forEach((opt: any) => { initial[opt.name] = opt.values?.[0]; });
+        setSelectedOptions(initial);
+        setOpenOption(detail.options[0]?.name || null);
+      }
+    } catch (e: any) {
+      setDetailError(e?.message || 'Failed to load product');
+    } finally {
+      setDetailLoading(false);
     }
-  });  if (!isStoreOpen && !isUnlocked) {
+  };
+
+  useEffect(() => {
+    if (selectedProduct) {
+      ensureDetail(selectedProduct.handle);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedProduct?.handle]);
+
+  // Reset ALL modal state when selectedIndex changes (open, close, or switch)
+  useEffect(() => {
+    // Always reset on any change to selectedIndex
+    setOpenOption(null);
+    setCtaReady(false);
+    setAddFeedback(null);
+    setSelectedOptions({});
+  }, [selectedIndex]);
+
+  // Initialize default options when product details load (after reset above)
+  useEffect(() => {
+    if (!selectedProduct) return;
+
+    const detail = productDetails[selectedProduct.handle];
+    if (!detail?.options?.length) return;
+
+    // Set defaults for this product
+    const defaults: Record<string, string> = {};
+    detail.options.forEach((opt: any) => {
+      defaults[opt.name] = opt.values?.[0];
+    });
+    setSelectedOptions(defaults);
+  }, [selectedProduct?.handle, productDetails]);
+
+  const updateOption = (name: string, value: string) => {
+    setSelectedOptions(prev => ({ ...prev, [name]: value }));
+  };
+
+  const addToCart = () => {
+    if (!selectedProduct || !selectedVariant) return;
+    try {
+      const raw = localStorage.getItem('cart') || '[]';
+      const parsed = JSON.parse(raw);
+      const cart: any[] = Array.isArray(parsed) ? parsed : [];
+      const existing = cart.find((c) => c.variantId === selectedVariant.id);
+      const base = {
+        variantId: selectedVariant.id,
+        qty: 1,
+        title: `${selectedProduct.title} — ${selectedVariant.title}`,
+        price: selectedVariant.price,
+        image: selectedVariant.image || selectedProduct.image,
+      };
+      const nextCart = existing
+        ? cart.map(c => c.variantId === selectedVariant.id ? { ...c, qty: c.qty + 1 } : c)
+        : [...cart, base];
+      localStorage.setItem('cart', JSON.stringify(nextCart));
+      setAddFeedback('✓ Added to bag');
+      setTimeout(() => setAddFeedback(null), 1800);
+    } catch (e) {
+      console.error('Add to cart failed', e);
+    }
+  };
+
+  if (!isStoreOpen && !isUnlocked) {
     return (
       <ScreenLayout>
         <div className="fixed inset-0 -z-10 bg-gradient-to-br from-stone-950 via-stone-900 to-red-950" />
@@ -157,49 +273,27 @@ export default function StorePageClient({ isStoreOpen, initialProducts }: StoreP
         <div className="absolute bottom-0 left-1/2 -translate-x-1/2 h-96 w-[36rem] rounded-[999px] bg-gradient-to-tr from-[#843c2d22] via-transparent to-[#ede8df11] blur-3xl" />
       </div>
       <ScrollContainer>
-        <div className="max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* Hero / Brand Header */}
-          <header className="mb-6 sm:mb-10 py-4 sm:py-6">
-            <div className="w-full grid grid-cols-3 items-center px-4 sm:px-6 lg:px-8">
-              {/* Left spacer */}
-              <div />
-              {/* Center brand */}
-              <div className="flex flex-col items-center text-center">
+        <div className="max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-6">
+          {/* Brand row under nav */}
+          <header className="mb-6 mt-2">
+            <div className="flex items-center justify-between px-1 sm:px-2 lg:px-4">
+              <div className="flex items-center">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src="/brand-logos/baad.png" alt="B.A.A.D" className="h-8 sm:h-10 w-auto" />
               </div>
-              {/* Right actions (flush right) */}
-              <div className="flex justify-end">
-                <Link href="/store/cart" className="text-[10px] sm:text-xs text-[#ede8df]/80 hover:text-[#ede8df] uppercase tracking-widest transition-colors">
-                  Cart
-                </Link>
-              </div>
-            </div>
-            {/* Category toggles without box */}
-            <div className="mt-3 flex justify-center gap-6">
-              <button
-                onClick={() => setActiveTab('clothes')}
-                className={`text-[10px] sm:text-xs uppercase tracking-[0.2em] transition-colors ${
-                  activeTab === 'clothes' ? 'text-[#ede8df]' : 'text-[#b2a491] hover:text-[#ede8df]'
-                }`}
+              <Link
+                href="/store/cart"
+                className="text-[10px] sm:text-xs uppercase tracking-widest text-[#ede8df]/80 hover:text-[#ede8df] transition-colors"
               >
-                Clothes
-              </button>
-              <button
-                onClick={() => setActiveTab('items')}
-                className={`text-[10px] sm:text-xs uppercase tracking-[0.2em] transition-colors ${
-                  activeTab === 'items' ? 'text-[#ede8df]' : 'text-[#b2a491] hover:text-[#ede8df]'
-                }`}
-              >
-                Items
-              </button>
+                Bag
+              </Link>
             </div>
           </header>
 
           {/* Product Grid */}
           <div className="min-h-[60vh] max-w-7xl mx-auto">
             {loading && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-0.5 sm:gap-x-5 sm:gap-y-1">
                 {[1, 2, 3].map((i) => (
                   <div key={i} className="aspect-[3/4] bg-[#1c1a19]/20 animate-pulse rounded-sm" />
                 ))}
@@ -207,21 +301,22 @@ export default function StorePageClient({ isStoreOpen, initialProducts }: StoreP
             )}
             
             {!loading && filteredProducts.length > 0 && (
-              <div className="grid grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-10 sm:gap-x-10 sm:gap-y-16">
-                {filteredProducts.map((p) => (
-                  <Link 
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-0.5 sm:gap-x-5 sm:gap-y-1">
+                {filteredProducts.map((p, idx) => (
+                  <button
                     key={p.id}
-                    href={`/store/product/${p.handle}`} 
-                    className={`group block ${p.available === false ? 'opacity-60' : ''}`}
+                    type="button"
+                    onClick={() => setSelectedIndex(idx)}
+                    className={`group block text-left w-full ${p.available === false ? 'opacity-60' : ''}`}
                   >
                     {/* Image only, no card background */}
-                    <div className="relative aspect-[3/4] overflow-hidden mb-1 sm:mb-2 flex items-center justify-center">
+                    <div className="relative aspect-[3/4] overflow-hidden mb-1 sm:mb-2 flex items-center justify-center bg-transparent isolate">
                       {p.image ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img 
                           src={p.image} 
                           alt={p.title} 
-                          className="w-full h-full object-contain transition-transform duration-700 group-hover:scale-[1.02]" 
+                          className="w-full h-full object-contain transition-transform duration-700 group-hover:scale-[1.02] mix-blend-multiply brightness-[1.05] contrast-[1.1]" 
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-[#502d26] bg-[#1c1a19]/20">
@@ -245,25 +340,14 @@ export default function StorePageClient({ isStoreOpen, initialProducts }: StoreP
                         </div>
                       )}
                     </div>
-                    
-                    <div className="space-y-0 text-center">
-                      <h3 className="text-sm sm:text-lg font-medium text-[#ede8df] group-hover:text-[#ede8df] transition-colors duration-300 tracking-wide">
-                        {p.title}
-                      </h3>
-                      <div className="text-xs sm:text-sm text-[#b2a491] font-light tracking-widest mt-0.5">
-                        {p.available === false 
-                          ? 'SOLD OUT' 
-                          : (p.price !== null ? `$${p.price.toFixed(2)}` : 'PRICE ON REQUEST')}
-                      </div>
-                    </div>
-                  </Link>
+                  </button>
                 ))}
               </div>
             )}
             
             {!loading && !error && filteredProducts.length === 0 && (
               <div className="flex flex-col items-center justify-center py-32 text-[#502d26]">
-                <p className="uppercase tracking-widest text-sm">No products found in this category</p>
+                <p className="uppercase tracking-widest text-sm">No products available</p>
               </div>
             )}
             
@@ -271,8 +355,144 @@ export default function StorePageClient({ isStoreOpen, initialProducts }: StoreP
               <div className="text-center text-red-400 py-8">{error}</div>
             )}
           </div>
+
+          {/* Footer (persistent, content flows behind) */}
+          <footer className="fixed bottom-0 left-0 right-0 z-30 pointer-events-none">
+            <div className="pointer-events-auto max-w-7xl mx-auto px-4 sm:px-6">
+              <div className="rounded-t-2xl border border-[#502d26]/25 bg-[#0b0b0b]/70 backdrop-blur supports-[backdrop-filter]:backdrop-blur px-4 sm:px-6 py-6 text-center space-y-4">
+                <p className="text-[10px] sm:text-xs uppercase tracking-[0.3em] text-[#b2a491]/70">
+                  B.A.A.D by Odubo
+                </p>
+                <div className="flex items-center justify-center gap-6 text-[10px] sm:text-xs text-[#b2a491]/60">
+                  <Link href="/legal" className="hover:text-[#ede8df] transition-colors">
+                    Privacy Policy
+                  </Link>
+                  <span className="text-[#502d26]/30">•</span>
+                  <Link href="/legal?tab=terms" className="hover:text-[#ede8df] transition-colors">
+                    Terms of Service
+                  </Link>
+                  <span className="text-[#502d26]/30">•</span>
+                  <Link href="/legal?tab=shipping" className="hover:text-[#ede8df] transition-colors">
+                    Shipping & Returns
+                  </Link>
+                </div>
+                <p className="text-[9px] text-[#502d26]/40">
+                  © {new Date().getFullYear()} Odubo Studio. All rights reserved.
+                </p>
+              </div>
+            </div>
+          </footer>
         </div>
       </ScrollContainer>
+
+      {/* Modal viewer (rebuilt) */}
+      {selectedIndex !== null && filteredProducts[selectedIndex] && (
+        <div key={`modal-${selectedIndex}`} className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6" role="dialog" aria-modal="true" aria-label={selectedProduct?.title || 'Product detail'}>
+          <div className="absolute inset-0 bg-black/85" aria-hidden />
+          <div className="absolute inset-0 backdrop-blur-xl" aria-hidden />
+
+          <div className="relative w-full max-w-6xl">
+            <div className="relative w-full max-h-[90vh] overflow-y-auto rounded-3xl glass-surface border border-white/10 bg-[#0f0b0b]/95 shadow-[0_30px_120px_rgba(0,0,0,0.45)]">
+              <button
+                aria-label="Close"
+                onClick={() => setSelectedIndex(null)}
+                className="absolute top-4 right-4 z-20 text-[#0b0b0b] bg-[#f8f2ea] hover:bg-white rounded-full p-3 border border-white/60 shadow-2xl"
+              >
+                ✕
+              </button>
+
+              <div className="grid md:grid-cols-[1.1fr_1fr] gap-0">
+                <div className="w-full h-full bg-[#0f0b0b] flex items-center justify-center p-4 sm:p-8">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={(selectedVariant?.image || selectedProduct?.image || selectedDetail?.images?.[0]) ?? ''}
+                    alt={selectedProduct?.title || ''}
+                    className="w-full h-full max-h-[70vh] object-contain"
+                  />
+                </div>
+
+                <div className="w-full p-6 sm:p-8 text-[#ede8df] space-y-5 pb-10">
+                  <div className="space-y-1">
+                    <h2 className="text-base sm:text-lg font-semibold leading-tight text-[#f7f3ec] line-clamp-2">{selectedProduct?.title}</h2>
+                    {selectedVariant && (
+                      <p className="text-sm sm:text-base font-medium text-[#f7f3ec]">{selectedVariant.price !== null ? `$${selectedVariant.price.toFixed(2)}` : 'Price on request'}</p>
+                    )}
+                    {selectedVariant?.available === false && (
+                      <p className="text-xs text-red-200/80">Currently unavailable</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-3 pb-4">
+                    {selectedDetail?.options?.map((opt: any) => {
+                      const open = openOption === opt.name;
+                      return (
+                        <div key={opt.name} className="glass-surface border border-white/10 rounded-2xl bg-white/5 overflow-hidden">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setOpenOption(open ? null : opt.name);
+                              setCtaReady(true);
+                            }}
+                            className="w-full flex items-center justify-between px-4 py-3 text-left text-sm font-semibold text-[#f7f3ec]"
+                          >
+                            <span>{opt.name}</span>
+                            <span className="text-[#d7cfc3] text-xs">{open ? '−' : '+'}</span>
+                          </button>
+                          {open && (
+                            <div className="px-4 pb-3 flex flex-wrap gap-2">
+                              {opt.values?.map((val: string) => {
+                                const active = selectedOptions[opt.name] === val;
+                                return (
+                                  <button
+                                    key={val}
+                                    type="button"
+                                    onClick={() => updateOption(opt.name, val)}
+                                    className={`px-3 py-1.5 rounded-xl text-sm transition-all border ${active ? 'bg-gradient-to-r from-[#843c2d] via-[#a44e3a] to-[#52241d] text-[#f8f2ea] border-[#c58a70]/60 shadow-[0_10px_28px_rgba(0,0,0,0.35)]' : 'text-[#e1d6c8] border-white/15 bg-white/5 hover:bg-white/10'}`}
+                                  >
+                                    {val}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {detailLoading && (
+                    <p className="text-xs text-[#c7b8a8]">Loading variants…</p>
+                  )}
+                  {detailError && (
+                    <p className="text-xs text-red-300">{detailError}</p>
+                  )}
+
+                  {ctaReady && openOption === null && (
+                    <div className="flex flex-wrap justify-center gap-3 text-center">
+                      <button
+                        type="button"
+                        onClick={addToCart}
+                        disabled={!selectedVariant || selectedVariant.available === false}
+                        className={`px-5 py-3 rounded-xl text-sm font-semibold transition-all border ${selectedVariant?.available !== false ? 'bg-gradient-to-r from-[#843c2d] via-[#a44e3a] to-[#52241d] text-[#f8f2ea] border-[#c58a70]/50 shadow-[0_12px_30px_rgba(0,0,0,0.35)] hover:scale-[1.02]' : 'bg-white/5 text-[#c7b8a8] border-white/10 cursor-not-allowed'}`}
+                      >
+                        {addFeedback || (selectedVariant?.available === false ? 'Unavailable' : 'Add to Bag')}
+                      </button>
+
+                      <Link
+                        href="/store/cart"
+                        className="px-5 py-3 rounded-xl border border-white/20 text-[#f8f2ea] bg-white/5 hover:bg-white/10 transition-colors text-sm"
+                        onClick={() => setSelectedIndex(null)}
+                      >
+                        Go to Bag
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </ScreenLayout>
   );
 }

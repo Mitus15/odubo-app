@@ -587,14 +587,14 @@ export async function POST(req: NextRequest) {
       console.log('Validation passed, user data:', user);
       const hashedPassword = await bcrypt.hash(user.password, 10);
       const id = uuidv4();
-      // Check if user should be admin based on environment variable
+      
+      // Only check ADMIN_EMAILS env var - ignore any is_admin flag in body for security
       const adminEmails = process.env.ADMIN_EMAILS?.split(',').map(email => email.trim().toLowerCase()) || [];
-      const is_admin = adminEmails.includes(user.email.toLowerCase()) || 
-                      (typeof body.is_admin === 'boolean' ? body.is_admin : false);
+      const is_admin = adminEmails.includes(user.email.toLowerCase());
       
       console.log(`User ${user.email} admin status: ${is_admin} (admin emails: ${adminEmails.join(', ')})`);
       
-      // Create user account
+      // Create user account with role 'viewer' by default (admins get 'admin' via ADMIN_EMAILS or invites)
       await insertUser({
         id,
         email: user.email,
@@ -604,6 +604,13 @@ export async function POST(req: NextRequest) {
         last_name: user.last_name,
         is_admin,
       });
+      
+      // Set default role to 'viewer' for regular signups
+      if (!is_admin) {
+        await updateUser(id, { role: 'viewer' as any });
+      } else {
+        await updateUser(id, { role: 'admin' as any });
+      }
       
       // Automatically link to Shopify customer if exists
       let shopifyLinkResult = null;

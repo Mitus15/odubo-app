@@ -72,6 +72,7 @@ const videoUpdateSchema = z.object({
   url: z.string().optional(),
   poster_url: z.string().optional(),
   thumbnail: z.string().optional(),
+  // Allow empty string and coerce to number when possible
   duration: z.union([z.string(), z.number()]).optional(),
   category: z.string().optional(),
   is_public: z.union([z.boolean(), z.number(), z.string()]).optional(),
@@ -80,9 +81,12 @@ const videoUpdateSchema = z.object({
   credits: z.union([z.string(), z.array(z.any())]).optional(),
   related_projects: z.union([z.string(), z.array(z.any())]).optional(),
   status: z.string().optional(),
-  ai_description: z.union([z.string(), z.record(z.string(), z.any())]).optional(),
+  publication_status: z.string().optional(),
+  // Accept any JSON-compatible value to avoid strict rejection
+  ai_description: z.any().optional(),
   shopify_product_id: z.string().optional().nullable(),
   shopify_product_handle: z.string().optional().nullable(),
+  set_poster_from_time: z.number().optional(),
 });
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -110,6 +114,16 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         body[key] = typeof value === 'string' ? value : undefined;
       });
     }
+    // Fetch current row for UID (for poster generation)
+    const existingRows = await queryDatabase('SELECT uid, stream_video_id, url FROM videos WHERE id = ? LIMIT 1', [id]);
+    const current = existingRows?.[0] || {};
+    
+    // Extract UID from URL if not stored directly
+    let videoUid = current.uid || current.stream_video_id;
+    if (!videoUid && current.url) {
+      const match = current.url.match(/cloudflarestream\.com\/([a-f0-9]{32})/);
+      if (match) videoUid = match[1];
+    }
 
     const fields: string[] = [];
     const paramsList: any[] = [];
@@ -121,19 +135,36 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       url: body.url || body.video_url,
       poster_url: body.poster_url || body.thumbnail_url,
       thumbnail: body.thumbnail,
-      duration: body.duration,
+      duration: ((): any => {
+        const d = body.duration;
+        if (d === '' || d === null || d === undefined) return undefined;
+        if (typeof d === 'number') return d;
+        const n = parseFloat(String(d));
+        return Number.isFinite(n) ? n : undefined;
+      })(),
       category: body.category,
       is_public: toIntBoolean(body.is_public),
       type: body.type,
       mood: body.mood,
       credits: safeJsonStringify(body.credits),
       related_projects: safeJsonStringify(body.related_projects),
-      status: body.status,
-      publication_status: body.publication_status,
+      status: 'published',
+      publication_status: body.is_public === undefined ? undefined : (toIntBoolean(body.is_public) ? 'live' : 'archived'),
       ai_description: safeJsonStringify(body.ai_description),
       shopify_product_id: body.shopify_product_id,
       shopify_product_handle: body.shopify_product_handle,
     } as Record<string, any>;
+
+    // Derived poster from time
+    if (body.set_poster_from_time !== undefined) {
+      if (videoUid) {
+        updatable.poster_url = `https://videodelivery.net/${videoUid}/thumbnails/thumbnail.jpg?time=${body.set_poster_from_time}`;
+        // Also save the UID if it was extracted from URL
+        if (!current.uid && videoUid) {
+          updatable.uid = videoUid;
+        }
+      }
+    }
 
     console.log('Updating video:', id, updatable);
 
@@ -165,10 +196,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         clipUpdates.push('is_public = ?');
         clipParams.push(updatable.is_public);
       }
-      if (updatable.status !== undefined) {
-        clipUpdates.push('status = ?');
-        clipParams.push(updatable.status);
-      }
+      clipUpdates.push('status = ?');
+      clipParams.push('published');
       if (updatable.publication_status !== undefined) {
         clipUpdates.push('publication_status = ?');
         clipParams.push(updatable.publication_status);
@@ -210,8 +239,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
     // Best-effort sync to Cloudflare Stream metadata if we have a stream_video_id
     try {
-      const rows = await queryDatabase('SELECT stream_video_id FROM videos WHERE id = ? LIMIT 1', [id]);
-      const uid = rows?.[0]?.stream_video_id as string | undefined;
+      const uid = current.stream_video_id as string | undefined;
       if (uid) {
         const { default: CloudflareStreamAPI } = await import('@/lib/cloudflareStream');
         const stream = new CloudflareStreamAPI();

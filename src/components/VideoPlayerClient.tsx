@@ -91,7 +91,7 @@ export default function VideoPlayerClient({ video, relatedVideos }: VideoPlayerC
       {/* Header with Back Button */}
       <header className="flex-shrink-0 z-10 p-4">
         <button
-          onClick={() => router.back()}
+          onClick={() => router.push('/media')}
           className="inline-flex items-center gap-2 text-[#b2a491] hover:text-[#ede8df] transition-colors group glass-card p-2 rounded-xl"
           aria-label="Back to Media"
         >

@@ -106,13 +106,13 @@ export default async function AlbumPage({ params }: AlbumPageProps) {
         <div className="px-3 pt-1 sm:px-4 sm:pt-2">
           <a
             href="/music"
-            className="inline-flex items-center gap-2 p-2 rounded-2xl glass-morphism text-[#ede8df] hover:bg-[#302927]/60 transition-all duration-300 backdrop-blur-xl shadow-lg border border-[#502d26]/30"
-            title="Back to Music Vault"
+            className="inline-flex items-center gap-2 text-[#b2a491] hover:text-[#ede8df] transition-colors group glass-card p-2 rounded-xl"
+            title="Back to Media"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            <svg className="w-5 h-5 group-hover:transform group-hover:-translate-x-1 transition-transform" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
             </svg>
-            <span className="text-sm font-medium">Music Vault</span>
+            <span className="font-medium text-sm">Back to Media</span>
           </a>
         </div>
 

@@ -138,6 +138,22 @@ const formatDuration = (duration?: string | number) => {
   return `${m}:${s.toString().padStart(2, '0')}`;
 };
 
+const parseTimeToSeconds = (time: string | number | undefined | null): number | null => {
+  if (time === undefined || time === null || time === '') return null;
+  if (typeof time === 'number') return isFinite(time) ? time : null;
+  const trimmed = time.trim();
+  if (/^\d+(?:\.\d+)?$/.test(trimmed)) return parseFloat(trimmed);
+  const parts = trimmed.split(':').map(p => p.trim()).filter(Boolean);
+  if (parts.length === 2 || parts.length === 3) {
+    const nums = parts.map(p => parseFloat(p)).filter(n => !isNaN(n));
+    if (nums.length !== parts.length) return null;
+    const [hOrM, mOrS, maybeS] = nums;
+    if (parts.length === 2) return hOrM * 60 + mOrS;
+    return hOrM * 3600 + mOrS * 60 + (maybeS || 0);
+  }
+  return null;
+};
+
 const VideoCard = ({ video, onClick }: { video: Video; onClick: () => void }) => (
   <motion.div 
     layoutId={`card-${video.id}`}
@@ -172,6 +188,109 @@ const Portal = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => setMounted(true), []);
   if (!mounted) return null;
   return createPortal(children, document.body);
+};
+
+const ThumbnailPicker = ({ video, onPosterSet, currentPoster }: { video: Video; onPosterSet: (seconds: number) => Promise<void>; currentPoster?: string | null }) => {
+  const [customTime, setCustomTime] = useState('');
+  const [settingTime, setSettingTime] = useState<number | null>(null);
+
+  const uid = getVideoUid(video);
+  const durationSeconds = useMemo(() => parseTimeToSeconds(video.duration) || null, [video.duration]);
+
+  const suggestedTimes = useMemo(() => {
+    const times: number[] = [];
+
+    // Fallback evenly spaced frames
+    if (durationSeconds && durationSeconds > 0) {
+      const fractions = [0.05, 0.15, 0.3, 0.45, 0.6, 0.75, 0.9];
+      fractions.forEach(f => times.push(Math.max(0, Math.min(durationSeconds, parseFloat((durationSeconds * f).toFixed(2))))));
+    } else {
+      times.push(5, 15, 30, 45, 60);
+    }
+
+    // Deduplicate and sort
+    const unique = Array.from(new Set(times.map(t => parseFloat(t.toFixed(2)))));
+    unique.sort((a, b) => a - b);
+    return unique;
+  }, [durationSeconds]);
+
+  const thumbnailUrls = useMemo(() => {
+    if (!uid) return [] as { time: number; url: string }[];
+    return suggestedTimes.map(time => ({
+      time,
+      url: `https://videodelivery.net/${uid}/thumbnails/thumbnail.jpg?time=${time}s&height=720`
+    }));
+  }, [suggestedTimes, uid]);
+
+  const handleSetPoster = async (time: number) => {
+    setSettingTime(time);
+    try {
+      await onPosterSet(time);
+    } finally {
+      setSettingTime(null);
+    }
+  };
+
+  const handleCustomSubmit = async () => {
+    const parsed = parseTimeToSeconds(customTime);
+    if (parsed === null) {
+      alert('Enter a valid timestamp (seconds or mm:ss)');
+      return;
+    }
+    await handleSetPoster(parsed);
+    setCustomTime('');
+  };
+
+  if (!uid) {
+    return (
+      <div className="text-sm text-[#b2a491]">No Cloudflare UID found for this video.</div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-3">
+        <div className="flex-1">
+          <label className="block text-xs text-[#b2a491] mb-1">Custom Timestamp</label>
+          <div className="flex gap-2">
+            <input
+              value={customTime}
+              onChange={e => setCustomTime(e.target.value)}
+              placeholder="e.g. 45 or 1:05"
+              className="flex-1 bg-[#302927]/30 border border-[#b2a491]/20 rounded-lg px-3 py-2 text-[#ede8df] text-sm focus:outline-none focus:border-[#ede8df]"
+            />
+            <button
+              onClick={handleCustomSubmit}
+              className="px-4 py-2 bg-[#302927] text-[#ede8df] rounded-lg text-sm hover:bg-[#302927]/80"
+              disabled={settingTime !== null}
+            >Set Poster</button>
+          </div>
+        </div>
+        {currentPoster && (
+          <div className="w-36 text-xs text-[#b2a491]">
+            <div className="mb-1">Current Poster</div>
+            <img src={currentPoster} className="w-full aspect-video object-cover rounded border border-[#b2a491]/20" alt="Current poster" />
+          </div>
+        )}
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        {thumbnailUrls.map(item => (
+          <div key={item.time} className={`relative rounded-lg overflow-hidden border ${currentPoster && currentPoster.includes(`time=${item.time}`) ? 'border-[#ede8df]' : 'border-[#b2a491]/20'} bg-[#000]/20`}>
+            <img src={item.url} className="w-full aspect-video object-cover" alt={`Frame at ${item.time}s`} />
+            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-2 flex items-center justify-between text-xs text-[#ede8df]">
+              <span>{formatDuration(item.time)}</span>
+              <button
+                onClick={() => handleSetPoster(item.time)}
+                disabled={settingTime === item.time}
+                className="text-[11px] px-2 py-1 rounded bg-[#ede8df] text-[#171616] hover:bg-[#d9d3c9]"
+              >{settingTime === item.time ? 'Setting...' : 'Use'}</button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 };
 
 const AddVideoModal = ({ onClose, onComplete }: { onClose: () => void; onComplete: () => void }) => {
@@ -307,8 +426,13 @@ const AddVideoModal = ({ onClose, onComplete }: { onClose: () => void; onComplet
 
   return (
     <Portal>
-      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm">
-        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-md bg-[#171616] border border-[#b2a491]/20 rounded-2xl p-8 shadow-2xl">
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm"
+      >
+        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="w-full max-w-md bg-[#171616] border border-[#b2a491]/20 rounded-2xl p-8 shadow-2xl">
           <h2 className="text-xl font-bold text-[#ede8df] mb-6">Add Video</h2>
           
           {logs.length === 0 ? (
@@ -381,16 +505,16 @@ const AddVideoModal = ({ onClose, onComplete }: { onClose: () => void; onComplet
             </div>
           )}
         </motion.div>
-      </div>
+      </motion.div>
     </Portal>
   );
 };
 
 const DetailModal = ({ video, onClose, onUpdate }: { video: Video; onClose: () => void; onUpdate: () => void }) => {
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isGeneratingThumbs, setIsGeneratingThumbs] = useState(false);
   const [isDownloadingAll, setIsDownloadingAll] = useState(false);
   const [socialReady, setSocialReady] = useState(false);
-  const [transcript, setTranscript] = useState<any>(null);
   const [clips, setClips] = useState<Video[]>([]);
   const [markers, setMarkers] = useState<Array<{ id: number; timestamp: number; label?: string }>>([]);
   const [newMarkerTs, setNewMarkerTs] = useState<string>("");
@@ -403,6 +527,7 @@ const DetailModal = ({ video, onClose, onUpdate }: { video: Video; onClose: () =
   const [isPlayerMinimized, setIsPlayerMinimized] = useState(false);
   const [shopifyProducts, setShopifyProducts] = useState<any[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
+  const [posterUrl, setPosterUrl] = useState<string | undefined>(video.poster_url || video.thumbnail || undefined);
 
   const pushHistory = (prev: Array<{ id: number; timestamp: number; label?: string }>) => {
     // Push a shallow copy of previous markers state onto undo stack and clear redo
@@ -426,13 +551,12 @@ const DetailModal = ({ video, onClose, onUpdate }: { video: Video; onClose: () =
       alert(`Failed to persist markers: ${e.message || e}`);
     }
   };
-  const [activeTab, setActiveTab] = useState<'details' | 'ai' | 'clips'>('details');
+  const [activeTab, setActiveTab] = useState<'details' | 'thumbnails' | 'clips'>('details');
   const [formData, setFormData] = useState({ 
     title: video.title, 
     artist_name: video.artist_name || '',
     description: video.description,
     is_public: Boolean(video.is_public),
-    status: video.status || 'draft',
     type: video.type || video.category || 'music-video',
     mood: video.mood || '',
     category: video.category || 'music-video',
@@ -450,30 +574,21 @@ const DetailModal = ({ video, onClose, onUpdate }: { video: Video; onClose: () =
     return Number.isFinite(n) ? n : 0;
   }, [formData.duration]);
   const playerFrameRef = useRef<HTMLIFrameElement | null>(null);
+  const videoWithPoster = useMemo(() => ({
+    ...video,
+    poster_url: posterUrl || video.poster_url || video.thumbnail,
+    thumbnail: video.thumbnail || video.poster_url,
+  }), [posterUrl, video]);
 
-  const analysisData = useMemo(() => {
-    if (!formData.ai_description) return null;
-    try {
-      return typeof formData.ai_description === 'string' ? JSON.parse(formData.ai_description) : formData.ai_description;
-    } catch {
-      return null;
-    }
-  }, [formData.ai_description]);
+  useEffect(() => {
+    setPosterUrl(video.poster_url || video.thumbnail || undefined);
+  }, [video.id, video.poster_url, video.thumbnail]);
 
-  // Load transcript and clips on mount
+  // Load clips and markers on mount
   useEffect(() => {
     const loadData = async () => {
       const token = localStorage.getItem('token');
       const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-      
-      // Load Analysis
-      const res = await fetch(`/api/videos/${video.id}/analysis`, { headers: headers as HeadersInit });
-      if (res.ok) {
-        const data: any = await res.json().catch(() => ({}));
-        if (data.analysis?.transcript_json) {
-          setTranscript(data.analysis.transcript_json);
-        }
-      }
 
       // Load Clips
       const clipsRes = await fetch(`/api/videos/${video.id}/clips`, { headers: headers as HeadersInit });
@@ -566,11 +681,17 @@ const DetailModal = ({ video, onClose, onUpdate }: { video: Video; onClose: () =
   const handleSave = async () => {
     try {
       const token = localStorage.getItem('token');
-      console.log('Saving video:', video.id, formData);
+      const saveData = {
+        ...formData,
+        poster_url: posterUrl, // Include the current poster URL
+        status: 'published',
+        publication_status: formData.is_public ? 'live' : 'archived'
+      };
+      console.log('Saving video:', video.id, saveData);
       const res = await fetch(`/api/videos/${video.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) } as HeadersInit,
-        body: JSON.stringify(formData)
+        body: JSON.stringify(saveData)
       });
 
       if (!res.ok) {
@@ -587,49 +708,65 @@ const DetailModal = ({ video, onClose, onUpdate }: { video: Video; onClose: () =
     }
   };
 
-  const handleReprocess = async () => {
-    if (!confirm('Re-run full analysis (Gemini + Thumbnails)?')) return;
-    setIsProcessing(true);
+  const handleSetPosterFromTime = async (time: number) => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      // Add timeout to prevent hanging
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+      
+      const res = await fetch(`/api/videos/${video.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) } as HeadersInit,
+        body: JSON.stringify({ set_poster_from_time: time }),
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(txt || 'Failed to set poster');
+      }
+      
+      const uid = getVideoUid(videoWithPoster);
+      const newUrl = uid ? `https://videodelivery.net/${uid}/thumbnails/thumbnail.jpg?time=${time}s` : videoWithPoster.poster_url;
+      setPosterUrl(newUrl || undefined);
+      
+      // Update in background, don't wait
+      void onUpdate();
+    } catch (e: any) {
+      console.error('Failed to set poster:', e);
+      if (e.name === 'AbortError') {
+        alert('Request timed out. Please try again.');
+      } else {
+        alert(e.message || 'Failed to set poster');
+      }
+    }
+  };
+
+  const handleGenerateThumbnails = async () => {
+    setIsGeneratingThumbs(true);
     try {
       const token = localStorage.getItem('token');
       const uid = getVideoUid(video);
-      
-      // 1. Queue Analysis Job
-      const res = await fetch('/api/analyze-video-now', {
+      const res = await fetch('/api/videos/thumbnail/generate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
-        body: JSON.stringify({ videoId: video.id, cfVideoId: uid })
-      });
-      const data: any = await res.json();
-      if (!data.success || !data.jobId) throw new Error(data.error || 'Failed to queue job');
-
-      // 2. Poll for completion
-      const jobId = data.jobId as string;
-      let attempts = 0;
-      while (attempts < 60) { // 3 minutes max
-        await new Promise(r => setTimeout(r, 3000));
-        const jobRes = await fetch(`/api/jobs/${jobId}`, { headers: token ? { 'Authorization': `Bearer ${token}` } : {} });
-        const jobData: any = await jobRes.json();
-        if (jobData.job?.status === 'COMPLETED') break;
-        if (jobData.job?.status === 'FAILED') throw new Error(jobData.job?.errorDetails || 'Job failed');
-        attempts++;
-      }
-
-      // 3. Also run thumbnails (optional, can be async)
-      await fetch('/api/videos/thumbnail/generate', { 
-        method: 'POST', 
         headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
         body: JSON.stringify({ videoId: video.id, uid })
       });
-
-      onUpdate();
-      onClose(); // Close to refresh list
-      alert('Analysis complete!');
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(txt || 'Failed to generate thumbnails');
+      }
+      await onUpdate();
+      alert('Thumbnails refreshed');
     } catch (e: any) {
       console.error(e);
-      alert(`Analysis failed: ${e.message}`);
+      alert(e.message || 'Failed to generate thumbnails');
     } finally {
-      setIsProcessing(false);
+      setIsGeneratingThumbs(false);
     }
   };
 
@@ -959,8 +1096,21 @@ const DetailModal = ({ video, onClose, onUpdate }: { video: Video; onClose: () =
 
   return (
     <Portal>
-      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-        <motion.div layoutId={`card-${video.id}`} className="w-full max-w-4xl bg-[#171616] border border-[#b2a491]/20 rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.2 }}
+        className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+        onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      >
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.95 }}
+          transition={{ duration: 0.2 }}
+          className="w-full max-w-4xl bg-[#171616] border border-[#b2a491]/20 rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]"
+        >
           {/* Header / Player */}
           <div className={`bg-black relative group transition-all duration-300 ease-in-out ${isPlayerMinimized ? 'h-14 shrink-0' : 'aspect-video shrink-0'}`}>
             <div className={`w-full h-full transition-opacity duration-300 ${isPlayerMinimized ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
@@ -1016,10 +1166,6 @@ const DetailModal = ({ video, onClose, onUpdate }: { video: Video; onClose: () =
                     onClick={resetAllMarkers}
                     className="text-[11px] px-2 py-1 rounded bg-red-600/20 text-red-300 hover:bg-red-600/30"
                   >Reset Markers</button>
-                <button
-                  onClick={handleReprocess}
-                  className="text-[11px] px-2 py-1 rounded bg-indigo-600/20 text-indigo-300 hover:bg-indigo-600/30"
-                >Re-Analyze w/ Markers</button>
               </div>
             </div>
             <div
@@ -1057,7 +1203,7 @@ const DetailModal = ({ video, onClose, onUpdate }: { video: Video; onClose: () =
           {/* Tabs */}
           <div className="flex border-b border-[#b2a491]/10">
             <button onClick={() => setActiveTab('details')} className={`flex-1 py-4 text-sm font-medium ${activeTab === 'details' ? 'text-[#ede8df] border-b-2 border-[#ede8df]' : 'text-[#b2a491]'}`}>Details</button>
-            <button onClick={() => setActiveTab('ai')} className={`flex-1 py-4 text-sm font-medium ${activeTab === 'ai' ? 'text-[#ede8df] border-b-2 border-[#ede8df]' : 'text-[#b2a491]'}`}>AI Analysis</button>
+            <button onClick={() => setActiveTab('thumbnails')} className={`flex-1 py-4 text-sm font-medium ${activeTab === 'thumbnails' ? 'text-[#ede8df] border-b-2 border-[#ede8df]' : 'text-[#b2a491]'}`}>Thumbnails</button>
             <button onClick={() => setActiveTab('clips')} className={`flex-1 py-4 text-sm font-medium ${activeTab === 'clips' ? 'text-[#ede8df] border-b-2 border-[#ede8df]' : 'text-[#b2a491]'}`}>Clips ({clips.length})</button>
           </div>
 
@@ -1138,20 +1284,8 @@ const DetailModal = ({ video, onClose, onUpdate }: { video: Video; onClose: () =
                 </div>
                 
                 <div className="bg-[#302927]/20 rounded-lg p-4 border border-[#b2a491]/10 space-y-3">
-                  <h3 className="text-xs font-medium text-[#b2a491] uppercase tracking-wider">Visibility & Status</h3>
+                  <h3 className="text-xs font-medium text-[#b2a491] uppercase tracking-wider">Visibility</h3>
                   <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs text-[#b2a491] mb-1">Status</label>
-                      <select
-                        value={formData.status}
-                        onChange={e => setFormData(f => ({ ...f, status: e.target.value }))}
-                        className="w-full bg-[#302927]/50 border border-[#b2a491]/20 rounded-lg px-3 py-2 text-[#ede8df] focus:outline-none focus:border-[#ede8df]"
-                      >
-                        <option value="draft">Draft</option>
-                        <option value="published">Published</option>
-                        <option value="archived">Archived</option>
-                      </select>
-                    </div>
                     <div>
                       <label className="block text-xs text-[#b2a491] mb-1">Type</label>
                       <select
@@ -1179,7 +1313,7 @@ const DetailModal = ({ video, onClose, onUpdate }: { video: Video; onClose: () =
                         </div>
                         <div className="flex flex-col">
                           <span className="text-sm font-medium text-[#ede8df]">Publicly Visible</span>
-                          <span className="text-[10px] text-[#b2a491]">Show on media page</span>
+                          <span className="text-[10px] text-[#b2a491]">Show on media & clips</span>
                         </div>
                         <input 
                           type="checkbox" 
@@ -1192,86 +1326,25 @@ const DetailModal = ({ video, onClose, onUpdate }: { video: Video; onClose: () =
                   </div>
                 </div>
               </div>
+            ) : activeTab === 'thumbnails' ? (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-[#ede8df] font-medium">Thumbnails</h3>
+                  <button
+                    onClick={handleGenerateThumbnails}
+                    disabled={isGeneratingThumbs}
+                    className="text-xs px-3 py-1.5 bg-indigo-600/20 text-indigo-300 rounded hover:bg-indigo-600/30 disabled:opacity-60"
+                  >{isGeneratingThumbs ? 'Generating...' : 'Generate Thumbnails'}</button>
+                </div>
+                <ThumbnailPicker
+                  video={videoWithPoster}
+                  onPosterSet={handleSetPosterFromTime}
+                  currentPoster={posterUrl || videoWithPoster.poster_url || null}
+                />
+              </div>
             ) : activeTab === 'clips' ? (
               <ClipsManager videoId={video.id} videoTitle={video.title} videoArtist={video.artist_name || 'Unknown'} />
-            ) : (
-              <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-[#ede8df] font-medium">AI Analysis</h3>
-                  <button onClick={handleReprocess} disabled={isProcessing} className="text-xs px-3 py-1.5 bg-indigo-600/20 text-indigo-300 rounded hover:bg-indigo-600/30">
-                    {isProcessing ? 'Processing...' : 'Re-Analyze Video'}
-                  </button>
-                </div>
-                
-                {analysisData ? (
-                  <div className="space-y-6">
-                    {/* Summary */}
-                    <div className="bg-[#302927]/20 rounded-lg p-4 border border-[#b2a491]/10">
-                      <h4 className="text-xs text-[#b2a491] uppercase tracking-wider mb-2">Summary (Editable)</h4>
-                      <textarea 
-                        value={analysisData.description || analysisData.title || ''}
-                        onChange={(e) => {
-                          const newVal = e.target.value;
-                          const newJson = { ...analysisData, description: newVal };
-                          setFormData(f => ({ ...f, ai_description: JSON.stringify(newJson) }));
-                        }}
-                        rows={4}
-                        className="w-full bg-[#302927]/30 border border-[#b2a491]/20 rounded-lg px-3 py-2 text-[#ede8df] text-sm focus:outline-none focus:border-[#ede8df]"
-                      />
-                      {analysisData.tags && (
-                        <div className="flex flex-wrap gap-2 mt-3">
-                          {analysisData.tags.map((t: string) => (
-                            <span key={t} className="text-xs px-2 py-1 bg-[#b2a491]/10 text-[#b2a491] rounded-full">#{t}</span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Suggested Clips */}
-                    {analysisData.suggestedClips && (
-                      <div>
-                        <h4 className="text-xs text-[#b2a491] uppercase tracking-wider mb-3">Suggested Clips</h4>
-                        <div className="grid gap-3">
-                          {analysisData.suggestedClips.map((clip: any, i: number) => (
-                            <div key={i} className="bg-[#302927]/20 rounded-lg p-3 border border-[#b2a491]/10 flex justify-between items-center">
-                              <div>
-                                <div className="text-sm font-medium text-[#ede8df]">{clip.priority}</div>
-                                <div className="text-xs text-[#b2a491]">{clip.reason}</div>
-                              </div>
-                              <div className="text-xs font-mono text-[#b2a491] bg-[#000]/30 px-2 py-1 rounded">
-                                {clip.startTime}s - {clip.endTime}s
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Sections */}
-                    {analysisData.sections && (
-                      <div>
-                        <h4 className="text-xs text-[#b2a491] uppercase tracking-wider mb-3">Timeline</h4>
-                        <div className="space-y-2">
-                          {analysisData.sections.map((sec: any, i: number) => (
-                            <div key={i} className="flex gap-3 text-sm">
-                              <div className="w-16 font-mono text-[#b2a491] text-xs pt-1">{sec.startTime}</div>
-                              <div className="flex-1">
-                                <div className="text-[#ede8df]">{sec.musicalPhase}</div>
-                                <div className="text-xs text-[#b2a491]">{sec.description}</div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="bg-[#000]/30 rounded-lg p-4 text-sm text-[#b2a491] font-mono max-h-60 overflow-y-auto">
-                    {transcript ? (transcript.text || JSON.stringify(transcript, null, 2)) : 'No analysis available.'}
-                  </div>
-                )}
-              </div>
-            )}
+            ) : null}
           </div>
 
           {/* Footer */}
@@ -1280,7 +1353,7 @@ const DetailModal = ({ video, onClose, onUpdate }: { video: Video; onClose: () =
             <button onClick={handleSave} className="px-6 py-2 rounded-lg bg-[#ede8df] text-[#171616] font-medium hover:bg-[#d9d3c9]">Save Changes</button>
           </div>
         </motion.div>
-      </div>
+      </motion.div>
     </Portal>
   );
 };

@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 
 interface Clip {
@@ -24,6 +24,8 @@ export default function ClipsManager({ videoId, videoTitle, videoArtist }: Clips
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<string>('');
+  const dragFileIndex = useRef<number | null>(null);
+  const dragClipIndex = useRef<number | null>(null);
 
   useEffect(() => {
     fetchClips();
@@ -59,6 +61,14 @@ export default function ClipsManager({ videoId, videoTitle, videoArtist }: Clips
     setSelectedFiles(newFiles);
   };
 
+  const reorderFiles = (from: number, to: number) => {
+    if (from === null || to === null || from === to) return;
+    const newFiles = [...selectedFiles];
+    const [moved] = newFiles.splice(from, 1);
+    newFiles.splice(to, 0, moved);
+    setSelectedFiles(newFiles);
+  };
+
   const moveClip = async (index: number, direction: 'up' | 'down') => {
     const newClips = [...clips];
     if (direction === 'up' && index > 0) {
@@ -71,6 +81,24 @@ export default function ClipsManager({ videoId, videoTitle, videoArtist }: Clips
     setClips(newClips);
 
     // Save new order
+    try {
+      const payload = newClips.map((clip, idx) => ({ id: clip.id, position: idx }));
+      await fetch(`/api/videos/${videoId}/clips`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clips: payload })
+      });
+    } catch (error) {
+      console.error('Failed to save order:', error);
+    }
+  };
+
+  const reorderClips = async (from: number, to: number) => {
+    if (from === null || to === null || from === to) return;
+    const newClips = [...clips];
+    const [moved] = newClips.splice(from, 1);
+    newClips.splice(to, 0, moved);
+    setClips(newClips);
     try {
       const payload = newClips.map((clip, idx) => ({ id: clip.id, position: idx }));
       await fetch(`/api/videos/${videoId}/clips`, {
@@ -178,7 +206,18 @@ export default function ClipsManager({ videoId, videoTitle, videoArtist }: Clips
         ) : (
           <div className="space-y-2">
             {clips.map((clip, index) => (
-              <div key={clip.id} className="flex items-center justify-between bg-[#000]/20 p-2 rounded">
+              <div
+                key={clip.id}
+                className="flex items-center justify-between bg-[#000]/20 p-2 rounded"
+                draggable
+                onDragStart={() => { dragClipIndex.current = index; }}
+                onDragOver={(e) => { e.preventDefault(); }}
+                onDrop={() => {
+                  const from = dragClipIndex.current;
+                  dragClipIndex.current = null;
+                  reorderClips(from as number, index);
+                }}
+              >
                 <div className="flex items-center gap-3">
                   {clip.thumbnail && (
                     <div className="w-16 h-9 relative bg-black">
@@ -236,7 +275,18 @@ export default function ClipsManager({ videoId, videoTitle, videoArtist }: Clips
         {selectedFiles.length > 0 && (
           <div className="space-y-2 mb-4">
             {selectedFiles.map((file, index) => (
-              <div key={index} className="flex items-center justify-between bg-[#000]/20 p-2 rounded">
+              <div
+                key={index}
+                className="flex items-center justify-between bg-[#000]/20 p-2 rounded"
+                draggable
+                onDragStart={() => { dragFileIndex.current = index; }}
+                onDragOver={(e) => { e.preventDefault(); }}
+                onDrop={() => {
+                  const from = dragFileIndex.current;
+                  dragFileIndex.current = null;
+                  reorderFiles(from as number, index);
+                }}
+              >
                 <span className="text-[#ede8df] text-sm truncate flex-1">{file.name}</span>
                 <div className="flex items-center gap-2">
                   <button onClick={() => moveFile(index, 'up')} disabled={index === 0} className="text-[#888] hover:text-[#ede8df] disabled:opacity-30">↑</button>

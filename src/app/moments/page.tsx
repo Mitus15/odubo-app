@@ -141,18 +141,27 @@ function MomentsIndex() {
   return (
     // Scroll within the app layout's overflow-hidden main area
     <div className="h-full overflow-y-auto bg-gradient-to-b from-[#171616] via-[#1b1a19] to-[#171616]">
-      {/* Sticky minimal tabs */}
-      <div className="sticky top-0 z-30 bg-[#141312]/80 backdrop-blur supports-[backdrop-filter]:backdrop-blur border-b border-[#262321]">
-        <div className="max-w-6xl mx-auto px-6 py-3 flex items-center gap-6">
-          {(['view','capture'] as MomentsTab[]).map((k) => (
-            <button
-              key={k}
-              onClick={() => setTab(k)}
-              className={'text-[15px] font-semibold transition-colors ' + (tab === k ? 'text-[#ede8df]' : 'text-[#8f8271] hover:text-[#cfc2ae]')}
-            >
-              {k === 'view' ? 'View' : 'Capture'}
-            </button>
-          ))}
+      {/* Sticky branded tabs */}
+      <div className="sticky top-0 z-30 bg-gradient-to-b from-[#141312]/90 via-[#141312]/85 to-[#0f0d0d]/80 backdrop-blur border-b border-[#2b1b18]/60 shadow-[0_12px_30px_rgba(0,0,0,0.35)]">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3">
+          <div className="flex items-center gap-2 bg-[#120f0f]/80 border border-[#2b1b18]/60 rounded-2xl p-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.45)] backdrop-blur-2xl w-full max-w-lg">
+            {(['view','capture'] as MomentsTab[]).map((k) => {
+              const isActive = tab === k;
+              return (
+                <button
+                  key={k}
+                  onClick={() => setTab(k)}
+                  className={`flex-1 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+                    isActive
+                      ? 'bg-gradient-to-r from-[#a44e3a] via-[#843c2d] to-[#52241d] text-[#f8f2ea] shadow-[0_10px_32px_rgba(132,60,45,0.45)] border border-[#c58a70]/40'
+                      : 'text-[#c7b8a8] hover:text-[#f8f2ea] hover:bg-white/5 border border-transparent'
+                  }`}
+                >
+                  {k === 'view' ? 'View' : 'Capture'}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 

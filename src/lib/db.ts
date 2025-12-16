@@ -505,3 +505,9 @@ export async function updateJobStatus(
   `;
   await executeQuery(sql, [jobId, status, errorDetails, videoId ?? null, cfVideoId ?? null]);
 }
+
+// Append a job event for timeline
+export async function appendJobEvent(jobId: string, step: string, message?: string) {
+  const sql = `INSERT INTO job_status_events (jobId, step, message, created_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)`;
+  await executeQuery(sql, [jobId, step, message ?? null]);
+}

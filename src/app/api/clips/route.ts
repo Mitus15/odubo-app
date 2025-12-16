@@ -10,36 +10,22 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const limit = Math.min(Math.max(Number(searchParams.get('limit')) || 10, 1), 50);
     const offset = Math.max(Number(searchParams.get('offset')) || 0, 0);
-    const random = (searchParams.get('random') || '').toLowerCase() === 'true';
+    const orderBy = 'ORDER BY created_at DESC, id DESC';
 
-    // Base query: public clips only
-    // Note: assumes clips are stored in `videos` table with type='clip'
-    const orderBy = random ? 'ORDER BY RANDOM()' : 'ORDER BY created_at DESC, id DESC';
-    // Primary query: public/live published clips
-    let rows = await queryDatabase(
-      `SELECT id, title, artist_name, description, url, uid, duration, poster_url, thumbnail, created_at, shopify_product_handle
+    // Include public clips, treating legacy/null status values as published/live
+    const rows = await queryDatabase(
+      `SELECT id, title, artist_name, description, url, uid, duration, duration_seconds, poster_url, thumbnail, created_at, shopify_product_handle, related_projects
        FROM videos
-       WHERE type = 'clip' AND (is_public = 1 OR status = 'published' OR publication_status = 'live')
+       WHERE type = 'clip'
+         AND (is_public = 1 OR is_public IS NULL)
+         AND COALESCE(status, 'published') != 'archived'
+         AND COALESCE(publication_status, 'live') = 'live'
        ${orderBy}
        LIMIT ? OFFSET ?`,
-      [limit, random ? 0 : offset] // for random ignore offset to avoid duplicates
+      [limit, offset]
     );
 
-    // Fallback to any published non-clip videos if no clips yet
-    let feedSource: 'clips' | 'videos_fallback' = 'clips';
-    if ((!rows || rows.length === 0) && offset === 0) {
-      rows = await queryDatabase(
-        `SELECT id, title, artist_name, description, url, uid, duration, poster_url, thumbnail, created_at, shopify_product_handle
-         FROM videos
-         WHERE (is_public = 1 OR publication_status = 'live') AND status = 'published'
-         ${orderBy}
-         LIMIT ? OFFSET ?`,
-        [limit, offset]
-      );
-      feedSource = 'videos_fallback';
-    }
-
-    return NextResponse.json({ clips: rows, feedSource, nextOffset: offset + (rows?.length || 0), hasMore: rows?.length === limit });
+    return NextResponse.json({ clips: rows, feedSource: 'clips', nextOffset: offset + (rows?.length || 0), hasMore: rows?.length === limit });
   } catch (err: any) {
     return NextResponse.json({ error: err?.message || 'Internal error' }, { status: 500 });
   }

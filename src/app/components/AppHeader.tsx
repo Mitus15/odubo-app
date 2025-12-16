@@ -1,20 +1,16 @@
 "use client";
 import { useState } from "react";
-// import { useAuth } from "@/contexts/AuthContext";
 
 export default function AppHeader() {
-  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [navMenuOpen, setNavMenuOpen] = useState(false);
-  const [navSubmenu, setNavSubmenu] = useState<"root" | "media" | "moments">("root");
-  // const { isAuthenticated, user, logout } = useAuth();
-  const isAuthenticated = false;
-  const user: any = null;
-  const logout = () => {};
 
   return (
     <>
       {/* Liquid Glass Header */}
-      <header className="w-full h-14 px-4 flex items-center justify-between glass-surface fixed top-0 left-0 right-0 z-40 border-b border-[#502d26]/30 overflow-hidden safe-area-header">
+      <header
+        className="w-full h-14 px-4 flex items-center justify-between glass-surface fixed top-0 left-0 right-0 z-40 border-b border-[#502d26]/30 overflow-hidden safe-area-header"
+        style={{ ['--app-nav-height' as any]: '56px' }}
+      >
         {/* Ambient background gradient */}
         <div className="absolute inset-0 bg-gradient-to-br from-[#843c2d]/5 via-transparent to-[#502d26]/5"></div>
         
@@ -31,12 +27,10 @@ export default function AppHeader() {
 
         {/* Desktop Navigation - Center/Right */}
         <nav className="hidden md:flex items-center gap-6 relative z-10">
-          <a href="/featured" className="text-[#ede8df] hover:text-[#b2a491] transition-colors">Featured</a>
-          <a href="/music" className="text-[#ede8df] hover:text-[#b2a491] transition-colors">Music</a>
-          <a href="/media" className="text-[#ede8df] hover:text-[#b2a491] transition-colors">Video</a>
+          <a href="/media" className="text-[#ede8df] hover:text-[#b2a491] transition-colors">Media</a>
           <a href="/moments" className="text-[#ede8df] hover:text-[#b2a491] transition-colors">Moments</a>
-          <a href="/clips" className="text-[#ede8df] hover:text-[#b2a491] transition-colors">Clips</a>
-          <a href="/store" className="text-[#ede8df] hover:text-[#b2a491] transition-colors">Shop</a>
+          <a href="/store" className="text-[#ede8df] hover:text-[#b2a491] transition-colors">Maison</a>
+          <a href="/login" className="text-[#b2a491]/60 hover:text-[#b2a491] transition-colors text-xs">sign in</a>
         </nav>
 
         {/* Mobile Navigation button - Right Side */}
@@ -47,7 +41,6 @@ export default function AppHeader() {
             onClick={() => {
               const next = !navMenuOpen;
               setNavMenuOpen(next);
-              if (!next) setNavSubmenu("root");
             }}
           >
             {/* Hamburger icon */}
@@ -64,7 +57,7 @@ export default function AppHeader() {
           {/* Enhanced Backdrop */}
           <div 
             className="absolute inset-0 bg-black/60 backdrop-blur-sm" 
-            onClick={() => { setNavMenuOpen(false); setNavSubmenu("root"); }} 
+            onClick={() => { setNavMenuOpen(false); }} 
           />
           
           {/* Navigation Menu Panel */}
@@ -72,105 +65,37 @@ export default function AppHeader() {
             <div className="glass-surface rounded-3xl shadow-2xl border border-[#502d26]/30 overflow-hidden">
               {/* Navigation Links */}
               <div className="relative p-8 space-y-6">
-                {/* Submenu header: Back only when inside a hub */}
-                <div className="mb-4 flex items-center justify-start">
-                  {navSubmenu !== "root" && (
-                    <button
-                      className="px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-[#ede8df] transition-colors"
-                      onClick={() => setNavSubmenu("root")}
-                      aria-label="Back to main menu"
-                    >
-                      Back
-                    </button>
-                  )}
-                </div>
-
-                {/* Root or Submenus */}
-                {navSubmenu === "root" && (
-                  <nav className="space-y-4">
-                    <a 
-                      href="/featured" 
-                      className="block w-full p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-all duration-200 text-center text-[#ede8df] font-medium hover:scale-105"
-                      onClick={() => { setNavMenuOpen(false); setNavSubmenu("root"); }}
-                    >
-                      Featured
-                    </a>
-                    <button 
-                      className="block w-full p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-all duration-200 text-center text-[#ede8df] font-medium hover:scale-105"
-                      onClick={() => setNavSubmenu("media")}
-                    >
-                      Media
-                    </button>
-                    <button 
-                      className="block w-full p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-all duration-200 text-center text-[#ede8df] font-medium hover:scale-105"
-                      onClick={() => setNavSubmenu("moments")}
-                    >
-                      Moments
-                    </button>
-                    <a 
-                      href="/store" 
-                      className="block w-full p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-all duration-200 text-center text-[#ede8df] font-medium hover:scale-105"
-                      onClick={() => { setNavMenuOpen(false); setNavSubmenu("root"); }}
-                    >
-                      Shop
-                    </a>
-                  </nav>
-                )}
-
-                {navSubmenu === "media" && (
-                  <nav className="space-y-4">
-                    <a 
-                      href="/music" 
-                      className="block w-full p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-all duration-200 text-center text-[#ede8df] font-medium hover:scale-105"
-                      onClick={() => { setNavMenuOpen(false); setNavSubmenu("root"); }}
-                    >
-                      Music
-                    </a>
-                    <a 
-                      href="/media" 
-                      className="block w-full p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-all duration-200 text-center text-[#ede8df] font-medium hover:scale-105"
-                      onClick={() => { setNavMenuOpen(false); setNavSubmenu("root"); }}
-                    >
-                      Video
-                    </a>
-                  </nav>
-                )}
-
-                {navSubmenu === "moments" && (
-                  <nav className="space-y-4">
-                    <a 
-                      href="/moments" 
-                      className="block w-full p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-all duration-200 text-center text-[#ede8df] font-medium hover:scale-105"
-                      onClick={() => { setNavMenuOpen(false); setNavSubmenu("root"); }}
-                    >
-                      Moments
-                    </a>
-                    <a 
-                      href="/clips" 
-                      className="block w-full p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-all duration-200 text-center text-[#ede8df] font-medium hover:scale-105"
-                      onClick={() => { setNavMenuOpen(false); setNavSubmenu("root"); }}
-                    >
-                      Clips
-                    </a>
-                  </nav>
-                )}
+                <nav className="space-y-4">
+                  <a 
+                    href="/media" 
+                    className="block w-full p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-all duration-200 text-center text-[#ede8df] font-medium hover:scale-105"
+                    onClick={() => { setNavMenuOpen(false); }}
+                  >
+                    Media
+                  </a>
+                  <a 
+                    href="/moments" 
+                    className="block w-full p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-all duration-200 text-center text-[#ede8df] font-medium hover:scale-105"
+                    onClick={() => { setNavMenuOpen(false); }}
+                  >
+                    Moments
+                  </a>
+                  <a 
+                    href="/store" 
+                    className="block w-full p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-all duration-200 text-center text-[#ede8df] font-medium hover:scale-105"
+                    onClick={() => { setNavMenuOpen(false); }}
+                  >
+                    Maison
+                  </a>
+                  <a 
+                    href="/login" 
+                    className="block w-full text-center text-[#b2a491]/60 hover:text-[#b2a491] transition-colors text-xs mt-4"
+                    onClick={() => { setNavMenuOpen(false); }}
+                  >
+                    sign in
+                  </a>
+                </nav>
               </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Profile Menu Dropdown */}
-      {profileMenuOpen && (
-        <div className="fixed top-16 left-4 z-50">
-          <div className="glass-surface rounded-2xl shadow-2xl border border-[#502d26]/30 overflow-hidden">
-            <div className="p-4 space-y-2">
-              <button
-                onClick={logout}
-                className="w-full px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors text-[#ede8df] text-left"
-              >
-                Logout
-              </button>
             </div>
           </div>
         </div>
