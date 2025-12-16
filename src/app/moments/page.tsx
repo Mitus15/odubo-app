@@ -371,11 +371,24 @@ function GalleryGrid({ galleries, loading, error }: { galleries: Array<{ id: num
     return (
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {[...Array(8)].map((_, i) => (
-          <div key={i} className="animate-pulse rounded-2xl overflow-hidden bg-[#1f1e1d] border border-[#3b3733]">
-            <div className="aspect-square bg-gradient-to-br from-[#2a2626] to-[#1f1e1d]" />
+          <div 
+            key={i} 
+            className="rounded-2xl overflow-hidden bg-[#1f1e1d] border border-[#3b3733] opacity-0 animate-[fadeIn_0.6s_ease-out_forwards]"
+            style={{ animationDelay: `${i * 80}ms` }}
+          >
+            <div className="aspect-square bg-gradient-to-br from-[#2a2626] to-[#1f1e1d] relative overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-[shimmer_2s_ease-in-out_infinite]" 
+                   style={{ transform: 'translateX(-100%)' }} />
+            </div>
             <div className="p-4 space-y-2">
-              <div className="h-4 bg-[#3b3733] rounded w-3/4" />
-              <div className="h-3 bg-[#3b3733] rounded w-1/2" />
+              <div className="h-4 bg-[#3b3733]/50 rounded w-3/4 relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-[shimmer_2s_ease-in-out_infinite]" 
+                     style={{ transform: 'translateX(-100%)' }} />
+              </div>
+              <div className="h-3 bg-[#3b3733]/50 rounded w-1/2 relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-[shimmer_2s_ease-in-out_infinite]" 
+                     style={{ transform: 'translateX(-100%)' }} />
+              </div>
             </div>
           </div>
         ))}
@@ -396,11 +409,24 @@ function GalleryGrid({ galleries, loading, error }: { galleries: Array<{ id: num
       return (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {[...Array(8)].map((_, i) => (
-            <div key={i} className="animate-pulse rounded-2xl overflow-hidden bg-[#1f1e1d] border border-[#3b3733]">
-              <div className="aspect-square bg-gradient-to-br from-[#2a2626] to-[#1f1e1d]" />
+            <div 
+              key={i} 
+              className="rounded-2xl overflow-hidden bg-[#1f1e1d] border border-[#3b3733] opacity-0 animate-[fadeIn_0.6s_ease-out_forwards]"
+              style={{ animationDelay: `${i * 80}ms` }}
+            >
+              <div className="aspect-square bg-gradient-to-br from-[#2a2626] to-[#1f1e1d] relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-[shimmer_2s_ease-in-out_infinite]" 
+                     style={{ transform: 'translateX(-100%)' }} />
+              </div>
               <div className="p-4 space-y-2">
-                <div className="h-4 bg-[#3b3733] rounded w-3/4" />
-                <div className="h-3 bg-[#3b3733] rounded w-1/2" />
+                <div className="h-4 bg-[#3b3733]/50 rounded w-3/4 relative overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-[shimmer_2s_ease-in-out_infinite]" 
+                       style={{ transform: 'translateX(-100%)' }} />
+                </div>
+                <div className="h-3 bg-[#3b3733]/50 rounded w-1/2 relative overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-[shimmer_2s_ease-in-out_infinite]" 
+                       style={{ transform: 'translateX(-100%)' }} />
+                </div>
               </div>
             </div>
           ))}

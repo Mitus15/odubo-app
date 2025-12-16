@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import { queryDatabase } from '@/lib/db';
-import VideoLibraryClientWrapper from './VideoLibraryClientWrapper';
+import MediaHubClient from './MediaHubClient';
+import type { Album } from '@/types/music';
 
 export const revalidate = 300; // 5 minutes
 
@@ -23,7 +24,10 @@ async function getVideos(): Promise<Video[]> {
   try {
     const videos = await queryDatabase(`
       SELECT * FROM videos
-      WHERE is_public = 1 AND status = 'published' AND publication_status = 'live'
+      WHERE is_public = 1 
+        AND status = 'published' 
+        AND publication_status = 'live'
+        AND type != 'clip'
       ORDER BY created_at DESC
     `);
     return videos || [];
@@ -34,20 +38,24 @@ async function getVideos(): Promise<Video[]> {
   }
 }
 
+async function getAlbums(): Promise<Album[]> {
+  try {
+    const albums = await queryDatabase('SELECT * FROM albums ORDER BY created_at DESC');
+    return albums || [];
+  } catch (error) {
+    console.error('Error fetching albums:', error);
+    return [];
+  }
+}
+
 export default async function MediaPage() {
-  const videos = await getVideos();
+  const [videos, albums] = await Promise.all([getVideos(), getAlbums()]);
 
   return (
     <div className="flex flex-col h-full min-h-0">
       <div className="fixed inset-0 -z-10 bg-gradient-to-br from-stone-950 via-stone-900 to-red-950" />
       <div className="relative z-10 flex-1 min-h-0 overflow-hidden p-4">
-        <Suspense fallback={
-          <div className="flex items-center justify-center h-full">
-            <div className="text-[#ede8df] text-sm">Loading media...</div>
-          </div>
-        }>
-          <VideoLibraryClientWrapper videos={videos} />
-        </Suspense>
+        <MediaHubClient videos={videos} albums={albums} />
       </div>
     </div>
   );
