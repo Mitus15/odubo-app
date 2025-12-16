@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import VideoLibraryClientWrapper from './VideoLibraryClientWrapper';
 import MusicLibraryClientWrapper from '../music/MusicLibraryClientWrapper';
@@ -21,7 +21,7 @@ type Video = {
   created_at: string;
 };
 
-export default function MediaHubClient({ videos, albums }: { videos: Video[]; albums: Album[] }) {
+function MediaHubClientInner({ videos, albums }: { videos: Video[]; albums: Album[] }) {
   const tabs: Array<{ key: 'videos' | 'music'; label: string }> = useMemo(
     () => [
       { key: 'videos', label: 'Video' },
@@ -84,5 +84,17 @@ export default function MediaHubClient({ videos, albums }: { videos: Video[]; al
         )}
       </div>
     </div>
+  );
+}
+
+export default function MediaHubClient({ videos, albums }: { videos: Video[]; albums: Album[] }) {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center h-full">
+        <div className="text-[#ede8df] text-sm">Loading media hub...</div>
+      </div>
+    }>
+      <MediaHubClientInner videos={videos} albums={albums} />
+    </Suspense>
   );
 }
