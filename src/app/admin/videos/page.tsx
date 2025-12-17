@@ -380,6 +380,21 @@ const AddVideoModal = ({ onClose, onComplete }: { onClose: () => void; onComplet
   };
 
   const runAnalysisPipeline = async (videoId: number, videoUid: string, headers: any) => {
+    // Step 0: Audio Normalization (runs in background, non-blocking)
+    addLog('Starting audio normalization (background)...');
+    fetch(`/api/videos/${videoId}/normalize`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...headers }
+    }).then(res => {
+      if (res.ok) {
+        addLog('✓ Audio normalized to -16 LUFS');
+      } else {
+        addLog('⚠ Audio normalization queued for retry');
+      }
+    }).catch(() => {
+      addLog('⚠ Audio normalization will retry later');
+    });
+    
     // Step 1: Gemini Analysis
     setStep('transcribe'); // Using 'transcribe' slot for 'analysis' to keep UI simple for now
     addLog('Running Gemini Deep Semantic Analysis (this may take a minute)...');
@@ -1364,7 +1379,32 @@ export default function AdminVideosPage() {
   const [videos, setVideos] = useState<Video[]>([]);
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isNormalizing, setIsNormalizing] = useState(false);
+  const [normalizeStatus, setNormalizeStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const handleNormalizePending = async () => {
+    setIsNormalizing(true);
+    setNormalizeStatus('Normalizing audio...');
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch('/api/videos/normalize-pending', {
+        method: 'POST',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      const data: { normalized?: number; error?: string } = await res.json();
+      if (res.ok) {
+        setNormalizeStatus(`✓ ${data.normalized || 0} videos normalized`);
+        setTimeout(() => setNormalizeStatus(null), 3000);
+      } else {
+        setNormalizeStatus(`⚠ ${data.error || 'Failed'}`);
+      }
+    } catch (e: any) {
+      setNormalizeStatus(`⚠ ${e.message}`);
+    } finally {
+      setIsNormalizing(false);
+    }
+  };
 
   const loadVideos = useCallback(async () => {
     setLoading(true);
@@ -1393,13 +1433,27 @@ export default function AdminVideosPage() {
               <h1 className="text-3xl font-bold text-[#ede8df] tracking-tight">Video Library</h1>
               <p className="text-[#b2a491] mt-1">Manage, analyze, and publish your content.</p>
             </div>
-            <button 
-              onClick={() => setIsUploading(true)}
-              className="flex items-center gap-2 px-6 py-3 bg-[#ede8df] text-[#171616] rounded-full font-medium hover:bg-[#d9d3c9] transition-transform hover:scale-105 shadow-lg shadow-[#ede8df]/10"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-              Add Video
-            </button>
+            <div className="flex items-center gap-3">
+              {normalizeStatus && (
+                <span className="text-sm text-[#b2a491] animate-pulse">{normalizeStatus}</span>
+              )}
+              <button 
+                onClick={handleNormalizePending}
+                disabled={isNormalizing}
+                className="flex items-center gap-2 px-4 py-3 bg-[#302927] text-[#ede8df] rounded-full font-medium hover:bg-[#3d3533] transition-transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Normalize audio on all pending videos to -16 LUFS"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" /></svg>
+                {isNormalizing ? 'Normalizing...' : 'Normalize Audio'}
+              </button>
+              <button 
+                onClick={() => setIsUploading(true)}
+                className="flex items-center gap-2 px-6 py-3 bg-[#ede8df] text-[#171616] rounded-full font-medium hover:bg-[#d9d3c9] transition-transform hover:scale-105 shadow-lg shadow-[#ede8df]/10"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                Add Video
+              </button>
+            </div>
           </div>
 
           {/* Grid */}

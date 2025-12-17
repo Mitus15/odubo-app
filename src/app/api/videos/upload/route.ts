@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 export const runtime = 'nodejs';
 import CloudflareStreamAPI from "@/lib/cloudflareStream";
 import { rateLimit } from "@/lib/rateLimit";
-import { executeQuery } from "@/lib/db";
+import { executeQuery, queryDatabase } from "@/lib/db";
 import { writeAuditLog } from "@/lib/audit";
 
 // Configure larger request size limit for video uploads
@@ -101,13 +101,24 @@ export async function POST(req: NextRequest) {
 
     await executeQuery(sql, params);
 
+    // Get the inserted video ID for normalization
+    const insertedRows = await queryDatabase(
+      'SELECT id FROM videos WHERE uid = ? LIMIT 1',
+      [streamVideoId]
+    );
+    const videoId = insertedRows?.[0]?.id;
+
     // Audit
     try { await writeAuditLog(req, authUser, 'videos.upload', streamVideoId, { title, category, type, mood, is_public }); } catch {}
 
+    // Note: Audio normalization should be triggered separately after Stream processing completes
+    // Call POST /api/videos/{id}/normalize to normalize audio to -16 LUFS
+
     return NextResponse.json({
       success: true,
-      message: "Video uploaded to Cloudflare Stream and recorded.",
+      message: "Video uploaded to Cloudflare Stream and recorded. Call /api/videos/{id}/normalize to normalize audio.",
       video: {
+        id: videoId,
         uid: streamVideoId,
         title: title || videoFile.name,
         artist_name,
@@ -124,7 +135,9 @@ export async function POST(req: NextRequest) {
         related_projects,
         status: 'published',
         stream_video_id: streamVideoId,
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
+        audio_normalized: false,
+        normalize_url: videoId ? `/api/videos/${videoId}/normalize` : null
       }
     }, { status: 200 });
 
