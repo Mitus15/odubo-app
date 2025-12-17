@@ -3,25 +3,56 @@
 
 export default function AccountPage() {
   return (
-    <div className="h-full w-full flex items-center justify-center bg-black text-white overflow-hidden">
-      {/* Background */}
-      <div className="fixed inset-0 -z-10">
-        <div className="absolute inset-0 bg-gradient-to-br from-stone-950 via-stone-900 to-red-950" />
-        <div className="absolute top-20 left-10 w-32 h-32 rounded-full glass-surface liquid-orb opacity-20" />
-        <div className="absolute bottom-40 left-20 w-40 h-40 rounded-full liquid-glass liquid-orb opacity-25" />
-        <div className="absolute inset-0 glass-morphism opacity-40" />
+    <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-[#302927] via-[#171616] to-[#302927] text-[#ede8df] overflow-hidden relative">
+      {/* Ambient light effects */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-1/3 left-1/4 w-80 h-80 bg-[#843c2d]/10 rounded-full blur-[100px]" />
+        <div className="absolute bottom-1/3 right-1/4 w-64 h-64 bg-[#b2a491]/8 rounded-full blur-[80px]" />
       </div>
 
-      <div className="glass-surface border border-white/10 rounded-2xl p-8 w-full max-w-md z-10 text-center">
-        <div className="w-16 h-16 bg-[#843c2d]/20 rounded-full flex items-center justify-center mx-auto mb-6">
-          <svg className="w-8 h-8 text-[#843c2d]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-          </svg>
+      <div className="relative z-10 w-full max-w-md px-6">
+        <div className="glass-surface border border-[#502d26]/30 rounded-2xl p-8 text-center shadow-[0_20px_60px_rgba(0,0,0,0.4)]">
+          {/* Icon */}
+          <div className="w-20 h-20 glass-surface border border-[#843c2d]/20 rounded-full flex items-center justify-center mx-auto mb-6 shadow-[0_0_40px_rgba(132,60,45,0.15)]">
+            <svg className="w-9 h-9 text-[#843c2d]" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+            </svg>
+          </div>
+
+          {/* Title */}
+          <h2 className="text-2xl font-serif font-medium text-[#ede8df] mb-3 tracking-wide">
+            Account
+          </h2>
+
+          {/* Status badge */}
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 glass-surface border border-[#502d26]/20 rounded-full mb-6">
+            <div className="w-2 h-2 bg-[#b2a491] rounded-full" />
+            <span className="text-[10px] text-[#b2a491] uppercase tracking-[0.15em]">
+              Coming Soon
+            </span>
+          </div>
+
+          {/* Description */}
+          <p className="text-[#b2a491] text-sm leading-relaxed mb-8">
+            Account functionality is being refined for the best experience. Check back soon for personalized features, order history, and more.
+          </p>
+
+          {/* Actions */}
+          <div className="flex flex-col gap-3">
+            <a
+              href="/"
+              className="w-full py-3 glass-surface border border-[#502d26]/30 rounded-xl text-sm text-[#ede8df] hover:bg-[#843c2d]/10 hover:border-[#843c2d]/30 transition-all duration-300 font-medium"
+            >
+              Return Home
+            </a>
+            <a
+              href="/store"
+              className="w-full py-3 bg-[#ede8df] text-[#302927] rounded-xl text-sm font-medium hover:bg-[#ede8df]/90 transition-all duration-300"
+            >
+              Browse Store
+            </a>
+          </div>
         </div>
-        <h2 className="text-2xl font-bold text-white mb-4">Account Temporarily Disabled</h2>
-        <p className="text-stone-400">
-          Account functionality is currently disabled for MVP. Please check back later.
-        </p>
       </div>
     </div>
   );

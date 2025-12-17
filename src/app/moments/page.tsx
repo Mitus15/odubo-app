@@ -1,114 +1,54 @@
 "use client";
 import Link from 'next/link';
-import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import Image from 'next/image';
+import { Suspense, useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 
-// Minimal inline icons (no extra deps)
-function IconCamera(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" {...props}>
-      <path d="M3 8.5h3l1.5-2h8L17 8.5h4a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2Z"/>
-      <circle cx="12" cy="14" r="3.5"/>
-    </svg>
-  );
-}
-function IconKey(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" {...props}>
-      <circle cx="8" cy="9" r="3"/>
-      <path d="M10.5 10.5l5 5v2h2v-2h2v-2l-5-5"/>
-    </svg>
-  );
-}
-function IconQr(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" {...props}>
-      <path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM17 14h4v4h-4zM14 18h2v3h-2z"/>
-    </svg>
-  );
-}
-function IconFolder(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" {...props}>
-      <path d="M3 7h6l2 2h10v9a2 2 0 0 1-2 2H3z"/>
-    </svg>
-  );
-}
-
 type MomentsTab = 'view' | 'capture';
+
+interface Gallery {
+  id: number;
+  title: string;
+  code?: string;
+  created_at?: string;
+  photo_count?: number;
+  preview_photos?: Array<{ id: number; thumbnail_url?: string; r2_url: string }>;
+}
 
 function MomentsIndex() {
   const params = useSearchParams();
   const prefillGalleryId = params?.get('galleryId') ?? '';
   const prefillIg = params?.get('ig') ?? '';
   const prefillCode = params?.get('code') ?? '';
-  const wantOpen = params?.get('open') === '1';
-  const [galleries, setGalleries] = useState<Array<{ id: number; title: string; created_at?: string; cover_url?: string | null; cover_thumb_url?: string | null; photo_count?: number; preview_photos?: Array<{id: number; thumbnail_url?: string; r2_url: string}> }>>([]);
+
+  const [galleries, setGalleries] = useState<Gallery[]>([]);
   const [galleryLoading, setGalleryLoading] = useState(true);
-  const [galleryError, setGalleryError] = useState('');
   const [galleryId, setGalleryId] = useState<string>(prefillGalleryId);
   const [ig, setIg] = useState<string>(prefillIg ? (prefillIg.startsWith('@') ? prefillIg : `@${prefillIg}`) : '');
   const [eventCode, setEventCode] = useState<string>(prefillCode);
-  const captureRef = useRef<HTMLDivElement | null>(null);
   const [tab, setTab] = useState<MomentsTab>('view');
   const [showCameraModal, setShowCameraModal] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
 
-  const handleOpenCamera = () => {
-    setShowTermsModal(true);
-  };
+  const handleOpenCamera = () => setShowTermsModal(true);
+  const handleAcceptTerms = () => { setShowTermsModal(false); setShowCameraModal(true); };
+  const handleDeclineTerms = () => setShowTermsModal(false);
 
-  const handleAcceptTerms = () => {
-    setShowTermsModal(false);
-    setShowCameraModal(true);
-  };
-
-  const handleDeclineTerms = () => {
-    setShowTermsModal(false);
-  };
-
-  // Function to refresh galleries list
-  const refreshGalleries = async () => {
+  const refreshGalleries = useCallback(async () => {
     try {
       setGalleryLoading(true);
       const res = await fetch('/api/moments/galleries/public?limit=12&preview=true');
-      const data: any = await res.json().catch(() => ({}));
-      if (res.ok && Array.isArray(data.galleries)) {
-        setGalleries(data.galleries);
-      }
-    } catch (e: any) {
-      console.error('Failed to refresh galleries:', e);
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && Array.isArray(data.galleries)) setGalleries(data.galleries);
+    } catch {
     } finally {
       setGalleryLoading(false);
     }
-  };
-
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      try {
-        setGalleryLoading(true);
-        setGalleryError('');
-        // Request with preview=true to get photo counts and preview photos in single request
-        const res = await fetch('/api/moments/galleries/public?limit=12&preview=true');
-        const data: any = await res.json().catch(() => ({}));
-        if (!active) return;
-        if (res.ok && Array.isArray(data.galleries)) {
-          setGalleries(data.galleries);
-        } else if (!res.ok) {
-          setGalleryError(data?.error || 'Failed to load galleries');
-        }
-      } catch (e: any) {
-        if (active) setGalleryError(e?.message || 'Failed to load galleries');
-      } finally {
-        if (active) setGalleryLoading(false);
-      }
-    })();
-    return () => { active = false; };
   }, []);
 
+  useEffect(() => { refreshGalleries(); }, [refreshGalleries]);
+
   useEffect(() => {
-    // Prefill IG from URL or localStorage
     if (prefillIg) {
       try { localStorage.setItem('instagramHandle', prefillIg.replace(/^@/, '')); } catch {}
     } else {
@@ -117,150 +57,72 @@ function MomentsIndex() {
         if (stored && !ig) setIg(stored.startsWith('@') ? stored : `@${stored}`);
       } catch {}
     }
-    // Removed auto-switch to capture; user can manually open camera.
-    // Removed auto-open camera gating via IG handle.
-  }, [prefillGalleryId, prefillIg]);
+  }, [prefillIg, ig]);
 
-  // If a galleryId is known but code is missing, resolve it for smoother uploads (Featured deep-link or manual ID)
   useEffect(() => {
-    let active = true;
-    (async () => {
-      if (!galleryId || eventCode) return;
-      try {
-        const res = await fetch(`/api/moments/galleries/${encodeURIComponent(galleryId)}`);
-        const data: any = await res.json().catch(() => ({}));
-        if (!active) return;
-        if (res.ok && data?.gallery?.code) {
-          setEventCode(String(data.gallery.code));
-        }
-      } catch {}
-    })();
-    return () => { active = false; };
+    if (!galleryId || eventCode) return;
+    fetch(`/api/moments/galleries/${encodeURIComponent(galleryId)}`)
+      .then(res => res.json())
+      .then(data => { if (data?.gallery?.code) setEventCode(String(data.gallery.code)); })
+      .catch(() => {});
   }, [galleryId, eventCode]);
 
   return (
-    // Scroll within the app layout's overflow-hidden main area
-    <div className="h-full overflow-y-auto bg-gradient-to-b from-[#171616] via-[#1b1a19] to-[#171616]">
-      {/* Sticky branded tabs */}
-      <div className="sticky top-0 z-30 bg-gradient-to-b from-[#141312]/90 via-[#141312]/85 to-[#0f0d0d]/80 backdrop-blur border-b border-[#2b1b18]/60 shadow-[0_12px_30px_rgba(0,0,0,0.35)]">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3">
-          <div className="flex items-center gap-2 bg-[#120f0f]/80 border border-[#2b1b18]/60 rounded-2xl p-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.45)] backdrop-blur-2xl w-full max-w-lg">
-            {(['view','capture'] as MomentsTab[]).map((k) => {
-              const isActive = tab === k;
-              return (
-                <button
-                  key={k}
-                  onClick={() => setTab(k)}
-                  className={`flex-1 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-                    isActive
-                      ? 'bg-gradient-to-r from-[#a44e3a] via-[#843c2d] to-[#52241d] text-[#f8f2ea] shadow-[0_10px_32px_rgba(132,60,45,0.45)] border border-[#c58a70]/40'
-                      : 'text-[#c7b8a8] hover:text-[#f8f2ea] hover:bg-white/5 border border-transparent'
-                  }`}
-                >
-                  {k === 'view' ? 'View' : 'Capture'}
-                </button>
-              );
-            })}
+    <div className="min-h-full bg-[#171616]">
+      {/* Tab Navigation */}
+      <div className="sticky top-0 z-30 bg-[#171616]/95 backdrop-blur-md border-b border-[#502d26]/20">
+        <div className="max-w-5xl mx-auto px-4 py-4">
+          <div className="inline-flex p-1 rounded-xl bg-[#1a1918]/80 border border-[#502d26]/30 backdrop-blur-sm">
+            {(['view', 'capture'] as MomentsTab[]).map(t => (
+              <button
+                key={t}
+                onClick={() => setTab(t)}
+                className={`px-5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 ${
+                  tab === t
+                    ? 'bg-gradient-to-r from-[#843c2d] via-[#9a4535] to-[#6d3224] text-[#f8f2ea] shadow-lg shadow-[#843c2d]/25'
+                    : 'text-[#b2a491] hover:text-[#ede8df] hover:bg-white/5'
+                }`}
+              >
+                {t === 'view' ? 'Galleries' : 'Capture'}
+              </button>
+            ))}
           </div>
         </div>
       </div>
 
-      <main className="max-w-6xl mx-auto px-6 pb-24">
-        <div className="mt-6">
-          {tab === 'view' ? (
-            <section>
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-[18px] font-semibold text-[#ede8df]">Galleries</h2>
-              </div>
-              <GalleryGrid galleries={galleries} loading={galleryLoading} error={galleryError} />
-            </section>
-          ) : (
-            <section ref={captureRef}>
-              <CapturePanel onOpenCamera={handleOpenCamera} galleryId={galleryId} setGalleryId={setGalleryId} ig={ig} setIg={setIg} />
-            </section>
-          )}
-        </div>
+      <main className="max-w-5xl mx-auto px-4 py-6 pb-24">
+        {tab === 'view' ? (
+          <GalleryGrid galleries={galleries} loading={galleryLoading} />
+        ) : (
+          <CapturePanel
+            onOpenCamera={handleOpenCamera}
+            galleryId={galleryId}
+            setGalleryId={setGalleryId}
+            ig={ig}
+            setIg={setIg}
+          />
+        )}
       </main>
 
-      {/* Terms and Conditions Modal - positioned below navbar */}
+      {/* Terms Modal */}
       {showTermsModal && (
-        <div className="fixed inset-x-0 top-0 bottom-0 z-30 bg-black/80 backdrop-blur-sm">
-          <div className="pt-16 h-full flex items-center justify-center p-4">
-            <div className="bg-gradient-to-br from-[#1f1e1d] to-[#171616] border border-[#3b3733] rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden">
-              {/* Header */}
-              <div className="bg-gradient-to-r from-[#ff8a3d] to-[#d97028] px-6 py-4">
-                <h2 className="text-xl font-bold text-white">Terms & Conditions</h2>
-                <p className="text-white/90 text-sm mt-1">Please read before uploading</p>
-              </div>
-
-              {/* Content */}
-              <div className="px-6 py-6 max-h-[50vh] overflow-y-auto">
-                <div className="space-y-4 text-[#ede8df]">
-                  <p className="text-sm leading-relaxed">
-                    By uploading photos or videos to Moments, you acknowledge and agree to the following:
-                  </p>
-
-                  <div className="space-y-3 text-sm">
-                    <div className="flex gap-3">
-                      <div className="flex-shrink-0 w-6 h-6 rounded-full bg-[#ff8a3d]/20 flex items-center justify-center text-[#ff8a3d] text-xs font-bold mt-0.5">
-                        1
-                      </div>
-                      <p className="leading-relaxed">
-                        <span className="font-semibold text-[#ff8a3d]">Content License:</span> You grant Odubo Studio and event organizers a perpetual, worldwide, royalty-free license to use, reproduce, distribute, display, and publish your uploaded content for any lawful purpose.
-                      </p>
-                    </div>
-
-                    <div className="flex gap-3">
-                      <div className="flex-shrink-0 w-6 h-6 rounded-full bg-[#ff8a3d]/20 flex items-center justify-center text-[#ff8a3d] text-xs font-bold mt-0.5">
-                        2
-                      </div>
-                      <p className="leading-relaxed">
-                        <span className="font-semibold text-[#ff8a3d]">Public Display:</span> Your content may be publicly displayed in event galleries, shared on social media, used in marketing materials, or published by any party associated with the event.
-                      </p>
-                    </div>
-
-                    <div className="flex gap-3">
-                      <div className="flex-shrink-0 w-6 h-6 rounded-full bg-[#ff8a3d]/20 flex items-center justify-center text-[#ff8a3d] text-xs font-bold mt-0.5">
-                        3
-                      </div>
-                      <p className="leading-relaxed">
-                        <span className="font-semibold text-[#ff8a3d]">Rights & Ownership:</span> You confirm that you own all rights to the content or have obtained necessary permissions, and that your content does not violate any third-party rights.
-                      </p>
-                    </div>
-
-                    <div className="flex gap-3">
-                      <div className="flex-shrink-0 w-6 h-6 rounded-full bg-[#ff8a3d]/20 flex items-center justify-center text-[#ff8a3d] text-xs font-bold mt-0.5">
-                        4
-                      </div>
-                      <p className="leading-relaxed">
-                        <span className="font-semibold text-[#ff8a3d]">Content Standards:</span> You agree not to upload content that is illegal, offensive, defamatory, or violates any applicable laws or regulations.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="pt-3 border-t border-[#3b3733]">
-                    <p className="text-xs text-[#b2a491] leading-relaxed">
-                      By clicking "I Agree," you acknowledge that you have read, understood, and agree to be bound by these terms. If you do not agree, please click "Decline."
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="px-6 py-4 bg-[#0a0908] border-t border-[#3b3733] flex gap-3">
-                <button
-                  onClick={handleDeclineTerms}
-                  className="flex-1 px-4 py-3 rounded-xl border border-[#3b3733] text-[#b2a491] font-medium hover:border-[#ede8df]/30 hover:text-[#ede8df] transition-all"
-                >
-                  Decline
-                </button>
-                <button
-                  onClick={handleAcceptTerms}
-                  className="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-[#ff8a3d] to-[#d97028] text-white font-semibold hover:shadow-lg hover:shadow-[#ff8a3d]/30 transition-all"
-                >
-                  I Agree
-                </button>
-              </div>
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#171616] border border-[#502d26]/40 rounded-2xl max-w-md w-full overflow-hidden">
+            <div className="px-6 py-5 border-b border-[#502d26]/30">
+              <h2 className="text-lg font-semibold text-[#ede8df]">Terms</h2>
+            </div>
+            <div className="px-6 py-4 text-sm text-[#b2a491] space-y-3 max-h-[40vh] overflow-y-auto">
+              <p>By uploading, you grant a perpetual license to use your content for any lawful purpose.</p>
+              <p>Your content may be publicly displayed, shared on social media, or used in marketing materials.</p>
+              <p>You confirm you own the content and it does not violate any third-party rights.</p>
+            </div>
+            <div className="px-6 py-4 border-t border-[#502d26]/30 flex gap-3">
+              <button onClick={handleDeclineTerms} className="flex-1 py-2.5 rounded-lg border border-[#502d26]/40 text-[#b2a491] text-sm font-medium hover:border-[#ede8df]/30 transition-colors">
+                Decline
+              </button>
+              <button onClick={handleAcceptTerms} className="flex-1 py-2.5 rounded-lg bg-[#ede8df] text-[#171616] text-sm font-semibold">
+                Agree
+              </button>
             </div>
           </div>
         </div>
@@ -281,392 +143,224 @@ function MomentsIndex() {
 
 export default function MomentsPage() {
   return (
-    <Suspense fallback={<div className="max-w-6xl mx-auto px-6 py-10 text-[#b2a491]">Loading…</div>}>
+    <Suspense fallback={<div className="min-h-screen bg-[#171616] flex items-center justify-center"><div className="w-6 h-6 border-2 border-[#843c2d] border-t-transparent rounded-full animate-spin" /></div>}>
       <MomentsIndex />
     </Suspense>
   );
 }
 
-function GalleryCard({ gallery }: { gallery: { id: number; title: string; created_at?: string; cover_url?: string | null; cover_thumb_url?: string | null; photo_count?: number; preview_photos?: Array<{id: number; thumbnail_url?: string; r2_url: string}> } }) {
-  // Use data from API instead of separate fetch - massive performance win!
-  const photoCount = gallery.photo_count || 0;
-  const recentPhotos = gallery.preview_photos || [];
-
-  return (
-    <Link 
-      href={`/moments/gallery/${gallery.id}`}
-      className="group block rounded-2xl overflow-hidden border border-[#3b3733] bg-gradient-to-br from-[#1f1e1d] to-[#171616] hover:border-[#ede8df]/40 transition-all duration-300 hover:shadow-xl hover:shadow-[#ff8a3d]/10"
-    >
-      {/* Photo Grid Preview */}
-      <div className="aspect-square bg-[#0a0908] overflow-hidden relative">
-        {recentPhotos.length > 0 ? (
-          <div className="grid grid-cols-2 gap-0.5 h-full">
-            {recentPhotos.slice(0, 4).map((photo, idx) => (
-              <div key={photo.id} className="relative overflow-hidden bg-[#0a0908]">
-                <img 
-                  src={photo.thumbnail_url || photo.r2_url} 
-                  alt=""
-                  loading="lazy"
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                  style={{ transitionDelay: `${idx * 50}ms` }}
-                />
-              </div>
-            ))}
-            {/* Fill empty slots if less than 4 photos */}
-            {[...Array(Math.max(0, 4 - recentPhotos.length))].map((_, idx) => (
-              <div key={`empty-${idx}`} className="bg-gradient-to-br from-[#2a2626] to-[#1f1e1d]" />
-            ))}
-          </div>
-        ) : (
-          <div className="absolute inset-0 bg-gradient-to-br from-[#502d26] to-[#6b4c3b] flex items-center justify-center">
-            <svg className="w-12 h-12 text-white/20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-          </div>
-        )}
-        
-        {/* Photo count badge */}
-        {photoCount > 0 && (
-          <div className="absolute top-2 right-2 px-2.5 py-1 rounded-lg bg-black/70 backdrop-blur-sm border border-white/10 text-white text-xs font-medium">
-            {photoCount} {photoCount === 1 ? 'photo' : 'photos'}
-          </div>
-        )}
-      </div>
-
-      {/* Gallery Info */}
-      <div className="p-4">
-        <h3 className="text-base font-bold text-[#ede8df] line-clamp-2 mb-1 group-hover:text-[#ff8a3d] transition-colors">
-          {gallery.title}
-        </h3>
-        <div className="flex items-center gap-2 text-xs text-[#8f8271]">
-          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-          </svg>
-          {gallery.created_at ? new Date(gallery.created_at).toLocaleDateString('en-US', { 
-            month: 'short', 
-            day: 'numeric', 
-            year: 'numeric' 
-          }) : 'Date unknown'}
-        </div>
-      </div>
-    </Link>
-  );
-}
-
-function GalleryGrid({ galleries, loading, error }: { galleries: Array<{ id: number; title: string; created_at?: string; cover_url?: string | null; cover_thumb_url?: string | null; photo_count?: number; preview_photos?: Array<{id: number; thumbnail_url?: string; r2_url: string}> }>; loading: boolean; error: string }) {
-  const [emptyReady, setEmptyReady] = useState(false);
-  useEffect(() => {
-    let t: any;
-    if (loading) {
-      setEmptyReady(false);
-    } else if (!loading && (!galleries || galleries.length === 0)) {
-      t = setTimeout(() => setEmptyReady(true), 3000);
-    } else {
-      setEmptyReady(false);
-    }
-    return () => { if (t) clearTimeout(t); };
-  }, [loading, galleries?.length]);
-
+function GalleryGrid({ galleries, loading }: { galleries: Gallery[]; loading: boolean }) {
   if (loading) {
     return (
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        {[...Array(8)].map((_, i) => (
-          <div 
-            key={i} 
-            className="rounded-2xl overflow-hidden bg-[#1f1e1d] border border-[#3b3733] opacity-0 animate-[fadeIn_0.6s_ease-out_forwards]"
-            style={{ animationDelay: `${i * 80}ms` }}
-          >
-            <div className="aspect-square bg-gradient-to-br from-[#2a2626] to-[#1f1e1d] relative overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-[shimmer_2s_ease-in-out_infinite]" 
-                   style={{ transform: 'translateX(-100%)' }} />
-            </div>
-            <div className="p-4 space-y-2">
-              <div className="h-4 bg-[#3b3733]/50 rounded w-3/4 relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-[shimmer_2s_ease-in-out_infinite]" 
-                     style={{ transform: 'translateX(-100%)' }} />
-              </div>
-              <div className="h-3 bg-[#3b3733]/50 rounded w-1/2 relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-[shimmer_2s_ease-in-out_infinite]" 
-                     style={{ transform: 'translateX(-100%)' }} />
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  }
-  
-  if (error) {
-    return (
-      <div className="p-6 rounded-2xl border border-red-600/50 bg-red-900/20 text-red-300 text-sm">
-        {error}
-      </div>
-    );
-  }
-  
-  if (!galleries?.length) {
-    if (!emptyReady) {
-      return (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {[...Array(8)].map((_, i) => (
-            <div 
-              key={i} 
-              className="rounded-2xl overflow-hidden bg-[#1f1e1d] border border-[#3b3733] opacity-0 animate-[fadeIn_0.6s_ease-out_forwards]"
-              style={{ animationDelay: `${i * 80}ms` }}
-            >
-              <div className="aspect-square bg-gradient-to-br from-[#2a2626] to-[#1f1e1d] relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-[shimmer_2s_ease-in-out_infinite]" 
-                     style={{ transform: 'translateX(-100%)' }} />
-              </div>
-              <div className="p-4 space-y-2">
-                <div className="h-4 bg-[#3b3733]/50 rounded w-3/4 relative overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-[shimmer_2s_ease-in-out_infinite]" 
-                       style={{ transform: 'translateX(-100%)' }} />
-                </div>
-                <div className="h-3 bg-[#3b3733]/50 rounded w-1/2 relative overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-[shimmer_2s_ease-in-out_infinite]" 
-                       style={{ transform: 'translateX(-100%)' }} />
-                </div>
-              </div>
+      <div className="space-y-8">
+        {/* Hero skeleton */}
+        <div className="animate-pulse">
+          <div className="aspect-[16/9] sm:aspect-[21/9] rounded-2xl bg-[#252221]" />
+        </div>
+        {/* Grid skeleton */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-6">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="animate-pulse">
+              <div className="aspect-[4/5] rounded-xl bg-[#252221]" />
             </div>
           ))}
         </div>
-      );
-    }
-    return (
-      <div className="text-center py-20">
-        <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-[#1f1e1d] border border-[#3b3733] flex items-center justify-center">
-          <svg className="w-8 h-8 text-[#666461]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-          </svg>
-        </div>
-        <p className="text-lg font-medium text-[#b2a491]">No galleries yet</p>
-        <p className="text-sm text-[#8f8271] mt-1">Create your first event to get started</p>
       </div>
     );
   }
-  
+
+  if (galleries.length === 0) {
+    return (
+      <div className="text-center py-20">
+        <div className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-[#302927] to-[#252221] flex items-center justify-center border border-[#502d26]/20">
+          <svg className="w-10 h-10 text-[#726d6c]" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+          </svg>
+        </div>
+        <h3 className="text-lg font-semibold text-[#ede8df] mb-1">No galleries yet</h3>
+        <p className="text-sm text-[#726d6c]">Check back soon for event photos</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-      {galleries.map((g) => (
-        <GalleryCard key={g.id} gallery={g} />
-      ))}
+    <div className="space-y-6">
+      {/* Gallery Grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+        {galleries.map((gallery, index) => (
+          <Link
+            key={gallery.id}
+            href={`/moments/gallery/${gallery.id}`}
+            className={`group block ${index === 0 ? 'col-span-2 sm:col-span-2' : ''}`}
+          >
+            <div className={`relative rounded-xl overflow-hidden bg-[#1a1918] border border-[#502d26]/20 group-hover:border-[#843c2d]/40 transition-colors ${
+              index === 0 ? 'aspect-video' : 'aspect-square'
+            }`}>
+              {gallery.preview_photos && gallery.preview_photos.length > 0 ? (
+                <>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={gallery.preview_photos[0].thumbnail_url || gallery.preview_photos[0].r2_url}
+                    alt={gallery.title}
+                    className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                </>
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-[#252221] to-[#1a1918]">
+                  <svg className="w-12 h-12 text-[#502d26]" fill="none" stroke="currentColor" strokeWidth={1} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+                  </svg>
+                </div>
+              )}
+
+              {/* Photo count badge */}
+              {gallery.photo_count !== undefined && gallery.photo_count > 0 && (
+                <div className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-sm text-xs text-white font-medium flex items-center gap-1.5">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909" />
+                  </svg>
+                  {gallery.photo_count}
+                </div>
+              )}
+
+              {/* Featured badge for first item */}
+              {index === 0 && (
+                <div className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-[#843c2d] text-xs text-white font-semibold uppercase tracking-wide">
+                  Featured
+                </div>
+              )}
+
+              {/* Content overlay */}
+              <div className="absolute bottom-0 left-0 right-0 p-4">
+                <h3 className={`font-semibold text-white mb-1 line-clamp-2 group-hover:text-[#f0e4d8] transition-colors ${
+                  index === 0 ? 'text-lg sm:text-xl' : 'text-sm sm:text-base'
+                }`}>
+                  {gallery.title}
+                </h3>
+                <div className="flex items-center gap-2 text-xs text-white/70">
+                  {gallery.created_at && (
+                    <span>{new Date(gallery.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                  )}
+                  {gallery.photo_count !== undefined && gallery.photo_count > 0 && index === 0 && (
+                    <>
+                      <span className="w-1 h-1 rounded-full bg-white/40" />
+                      <span>{gallery.photo_count} photos</span>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          </Link>
+        ))}
+      </div>
     </div>
   );
 }
 
-function CapturePanel({ onOpenCamera, galleryId, setGalleryId, ig, setIg }: { onOpenCamera: () => void; galleryId: string; setGalleryId: (v: string) => void; ig: string; setIg: (v: string) => void }) {
+function CapturePanel({ onOpenCamera, galleryId, setGalleryId, ig, setIg }: {
+  onOpenCamera: () => void;
+  galleryId: string;
+  setGalleryId: (v: string) => void;
+  ig: string;
+  setIg: (v: string) => void;
+}) {
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const canOpenCamera = !!(galleryId && galleryId.trim().length > 0);
   const [startsAt, setStartsAt] = useState<Date | null>(null);
   const [endsAt, setEndsAt] = useState<Date | null>(null);
   const [scheduleLoading, setScheduleLoading] = useState(false);
-  const [rsvpEmail, setRsvpEmail] = useState('');
-  const [rsvpIg, setRsvpIg] = useState('');
-  const [rsvpIgOptIn, setRsvpIgOptIn] = useState(true);
-  const [rsvpPhone, setRsvpPhone] = useState('');
-  const [rsvpSmsOptIn, setRsvpSmsOptIn] = useState(false);
-  const [rsvpSubmitting, setRsvpSubmitting] = useState(false);
-  const [rsvpDone, setRsvpDone] = useState(false);
-  const [rsvpOffsets, setRsvpOffsets] = useState<number[]>([]);
 
-  // Fetch gallery schedule when galleryId entered
   useEffect(() => {
-    let active = true;
-    async function load() {
-      if (!galleryId || !galleryId.trim()) { setStartsAt(null); setEndsAt(null); return; }
-      setScheduleLoading(true);
-      try {
-        const res = await fetch(`/api/moments/galleries/${encodeURIComponent(galleryId)}`);
-        const data: any = await res.json().catch(() => ({}));
-        if (!active) return;
-        if (res.ok && data.gallery) {
+    if (!galleryId?.trim()) { setStartsAt(null); setEndsAt(null); return; }
+    setScheduleLoading(true);
+    fetch(`/api/moments/galleries/${encodeURIComponent(galleryId)}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data?.gallery) {
           setStartsAt(data.gallery.starts_at ? new Date(data.gallery.starts_at) : null);
           setEndsAt(data.gallery.ends_at ? new Date(data.gallery.ends_at) : null);
         }
-      } finally {
-        if (active) setScheduleLoading(false);
-      }
-    }
-    load();
-    return () => { active = false; };
+      })
+      .catch(() => {})
+      .finally(() => setScheduleLoading(false));
   }, [galleryId]);
 
   const now = new Date();
   const beforeStart = startsAt ? now < startsAt : false;
   const afterEnd = endsAt ? now > endsAt : false;
   const windowOpen = !beforeStart && !afterEnd;
-
-  async function submitRsvp() {
-  if (!galleryId || (!rsvpEmail && !rsvpIg && !rsvpPhone)) { setError('Enter email, Instagram, or phone'); return; }
-    setRsvpSubmitting(true); setError('');
-    try {
-      const body: any = { galleryId: Number(galleryId), reminder_offsets: rsvpOffsets };
-  if (rsvpEmail) body.email = rsvpEmail.trim();
-  if (rsvpIg) body.instagram_handle = rsvpIg.trim();
-  if (rsvpPhone) body.phone = rsvpPhone.trim();
-      body.instagram_opt_in = rsvpIgOptIn;
-  body.sms_opt_in = rsvpSmsOptIn;
-      const res = await fetch('/api/moments/rsvp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-      const data: any = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error || 'RSVP failed');
-      setRsvpDone(true);
-      setSuccess('RSVP saved');
-    } catch (e: any) {
-      setError(e?.message || 'Failed');
-    } finally {
-      setRsvpSubmitting(false);
-    }
-  }
-
-  function toggleOffset(mins: number) {
-    setRsvpOffsets(prev => prev.includes(mins) ? prev.filter(m => m !== mins) : prev.concat(mins).sort((a,b) => a-b));
-  }
+  const canOpen = !!(galleryId?.trim());
 
   return (
-    <div className="relative text-[#ede8df] rounded-3xl overflow-hidden min-h-[60vh] md:min-h-[50vh] border border-[#3b3733]/60 bg-gradient-to-b from-[#1a1511] via-[#141110] to-[#0c0b0a]">
-      {/* Ambient liquid highlights */}
-      <div
-        className="pointer-events-none absolute -top-20 -right-16 h-72 w-72 rounded-full blur-3xl opacity-30"
-        style={{ background: 'radial-gradient(60% 60% at 50% 50%, #ff8a3d, rgba(255,138,61,0.2) 70%, transparent 100%)' }}
-      />
-      <div
-        className="pointer-events-none absolute bottom-[-80px] left-[-40px] h-72 w-72 rounded-full blur-3xl opacity-20"
-        style={{ background: 'radial-gradient(60% 60% at 50% 50%, #6b4c3b, rgba(107,76,59,0.15) 70%, transparent 100%)' }}
-      />
+    <div className="max-w-md mx-auto">
+      <div className="rounded-2xl border border-[#502d26]/30 bg-[#1a1918] p-6">
+        <h2 className="text-lg font-semibold text-[#ede8df] mb-4">Capture Photos</h2>
 
-      {/* Glass panel for controls */}
-      <div className="relative p-5 md:p-8">
-        <div className="mx-auto max-w-2xl rounded-2xl bg-white/5 supports-[backdrop-filter]:backdrop-blur border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
-          <div className="p-5 md:p-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-extrabold tracking-tight">Capture</h2>
-            </div>
-            <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-              <label className="text-sm col-span-1 md:col-span-1">Event ID
-                <input
-                  value={galleryId}
-                  onChange={(e) => setGalleryId(e.target.value)}
-                  placeholder="123"
-                  className="mt-1 w-full rounded-lg bg-[#1f1a17]/80 border border-white/10 px-4 py-2.5 text-[#efe9df] placeholder-[#9f9381] focus:outline-none focus:ring-2 focus:ring-[#ff8a3d]/50 focus:border-[#ff8a3d]/40"
-                />
-              </label>
-              <label className="text-sm col-span-1 md:col-span-2">Instagram (optional)
-                <input
-                  value={ig}
-                  onChange={(e) => { const v = e.target.value.trim(); setIg(v.startsWith('@')? v : (v ? `@${v}` : '')); try { localStorage.setItem('instagramHandle', (e.target.value || '').replace(/^@/, '')); } catch {} }}
-                  placeholder="@yourhandle"
-                  className="mt-1 w-full rounded-lg bg-[#1f1a17]/80 border border-white/10 px-4 py-2.5 text-[#efe9df] placeholder-[#9f9381] focus:outline-none focus:ring-2 focus:ring-[#ff8a3d]/50 focus:border-[#ff8a3d]/40"
-                />
-              </label>
-            </div>
-
-            {/* Schedule status */}
-            <div className="mt-4 text-xs text-[#c9b9a5]">
-              {scheduleLoading && <span>Checking schedule…</span>}
-              {!scheduleLoading && startsAt && (
-                <span>Window: {startsAt.toLocaleString()} – {endsAt ? endsAt.toLocaleString() : '—'} ({beforeStart ? 'Not started' : afterEnd ? 'Ended' : 'Live'})</span>
-              )}
-              {!scheduleLoading && !startsAt && galleryId && <span>No schedule set for this gallery.</span>}
-            </div>
-
-            {error && <div className="mt-4 p-3 rounded-lg border border-red-700/70 bg-red-900/30 text-red-200">{error}</div>}
-
-            {/* Actions */}
-            <div className="mt-5 flex flex-wrap gap-3">
-              {windowOpen ? (
-                <button
-                  onClick={() => {
-                    if (!canOpenCamera) { setError('Enter Event ID to open camera'); return; }
-                    onOpenCamera();
-                  }}
-                  disabled={!canOpenCamera}
-                  className="px-5 py-2.5 rounded-full bg-[#ede8df] text-[#171616] font-extrabold tracking-wide shadow-[0_10px_28px_rgba(237,232,223,0.25)] enabled:active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Open Camera
-                </button>
-              ) : afterEnd ? (
-                <div className="w-full text-center py-4 bg-white/5 rounded-xl border border-white/10">
-                  <p className="text-[#ede8df] font-bold text-lg mb-2">Event Ended</p>
-                  <p className="text-[#9f9381] text-sm mb-4">This event is over, but you can view the photos.</p>
-                  <Link 
-                    href={`/moments/gallery/${galleryId}`}
-                    className="inline-block px-6 py-2.5 rounded-full bg-[#ede8df] text-[#171616] font-extrabold tracking-wide hover:bg-white transition-colors"
-                  >
-                    View Gallery
-                  </Link>
-                </div>
-              ) : (
-                <div className="w-full">
-                  <div className="text-sm font-semibold mb-2">RSVP to Get Reminders</div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <label className="text-xs md:col-span-2">Email (optional)
-                      <input
-                        value={rsvpEmail}
-                        onChange={(e) => setRsvpEmail(e.target.value)}
-                        placeholder="you@example.com"
-                        className="mt-1 w-full rounded-md bg-[#1f1a17]/80 border border-white/10 px-3 py-2 text-[#efe9df] placeholder-[#9f9381] focus:outline-none focus:ring-2 focus:ring-[#ff8a3d]/40"
-                      />
-                    </label>
-                    <label className="text-xs">Instagram (optional)
-                      <input
-                        value={rsvpIg}
-                        onChange={(e) => setRsvpIg(e.target.value)}
-                        placeholder="@yourhandle"
-                        className="mt-1 w-full rounded-md bg-[#1f1a17]/80 border border-white/10 px-3 py-2 text-[#efe9df] placeholder-[#9f9381] focus:outline-none focus:ring-2 focus:ring-[#ff8a3d]/40"
-                      />
-                    </label>
-                    <label className="text-xs">Phone (optional)
-                      <input
-                        value={rsvpPhone}
-                        onChange={(e) => setRsvpPhone(e.target.value)}
-                        placeholder="+15551234567"
-                        className="mt-1 w-full rounded-md bg-[#1f1a17]/80 border border-white/10 px-3 py-2 text-[#efe9df] placeholder-[#9f9381] focus:outline-none focus:ring-2 focus:ring-[#ff8a3d]/40"
-                      />
-                    </label>
-                    <div className="text-xs md:col-span-3 flex items-center gap-2">
-                      <input id="optin" type="checkbox" checked={rsvpIgOptIn} onChange={(e) => setRsvpIgOptIn(e.target.checked)} />
-                      <label htmlFor="optin">Consent to be tagged on Instagram</label>
-                    </div>
-                    <div className="text-xs md:col-span-3 flex items-center gap-2">
-                      <input id="smsopt" type="checkbox" checked={rsvpSmsOptIn} onChange={(e) => setRsvpSmsOptIn(e.target.checked)} />
-                      <label htmlFor="smsopt">Opt in to SMS reminders</label>
-                    </div>
-                    <div className="text-xs md:col-span-3">Select reminders
-                      <div className="mt-1 flex flex-wrap gap-2">
-                        {[1440, 60, 15].map((m) => (
-                          <button
-                            key={m}
-                            type="button"
-                            onClick={() => toggleOffset(m)}
-                            className={`px-3 py-1.5 rounded-full text-xs border ${rsvpOffsets.includes(m) ? 'bg-[#ff8a3d] border-[#ff8a3d] text-[#171616]' : 'bg-[#1f1a17]/70 border-white/10 text-[#efe9df]'}`}
-                          >
-                            {m === 1440 ? '24h' : m === 60 ? '1h' : `${m}m`}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                  <button
-                    onClick={submitRsvp}
-                    disabled={(!rsvpEmail && !rsvpIg && !rsvpPhone) || rsvpSubmitting}
-                    className="mt-3 px-5 py-2.5 rounded-full bg-[#ede8df] text-[#171616] font-extrabold tracking-wide shadow-[0_10px_28px_rgba(237,232,223,0.25)] disabled:opacity-50"
-                  >
-                    {rsvpSubmitting ? 'Submitting…' : rsvpDone ? 'RSVP Saved' : beforeStart ? 'Notify Me' : 'Ended'}
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {success && <div className="mt-4 p-3 rounded-lg border border-emerald-700/60 bg-emerald-900/30 text-emerald-200">{success}</div>}
+        <div className="space-y-4">
+          <div>
+            <label className="block text-xs text-[#726d6c] mb-1.5">Event ID</label>
+            <input
+              value={galleryId}
+              onChange={e => setGalleryId(e.target.value)}
+              placeholder="Enter gallery ID"
+              className="w-full px-3 py-2.5 rounded-lg bg-[#302927] border border-[#502d26]/30 text-[#ede8df] placeholder-[#726d6c] text-sm focus:outline-none focus:border-[#843c2d]/50"
+            />
           </div>
+
+          <div>
+            <label className="block text-xs text-[#726d6c] mb-1.5">Instagram (optional)</label>
+            <input
+              value={ig}
+              onChange={e => {
+                const v = e.target.value.trim();
+                setIg(v.startsWith('@') ? v : (v ? `@${v}` : ''));
+                try { localStorage.setItem('instagramHandle', v.replace(/^@/, '')); } catch {}
+              }}
+              placeholder="@yourhandle"
+              className="w-full px-3 py-2.5 rounded-lg bg-[#302927] border border-[#502d26]/30 text-[#ede8df] placeholder-[#726d6c] text-sm focus:outline-none focus:border-[#843c2d]/50"
+            />
+          </div>
+
+          {scheduleLoading && <p className="text-xs text-[#726d6c]">Checking schedule...</p>}
+          {!scheduleLoading && startsAt && (
+            <p className="text-xs text-[#726d6c]">
+              {beforeStart ? `Opens ${startsAt.toLocaleString()}` : afterEnd ? 'Event ended' : 'Live now'}
+            </p>
+          )}
+
+          {error && <p className="text-xs text-red-400">{error}</p>}
+
+          {windowOpen ? (
+            <button
+              onClick={() => {
+                if (!canOpen) { setError('Enter Event ID'); return; }
+                setError('');
+                onOpenCamera();
+              }}
+              disabled={!canOpen}
+              className="w-full py-3 rounded-lg bg-[#ede8df] text-[#171616] font-semibold text-sm disabled:opacity-50"
+            >
+              Open Camera
+            </button>
+          ) : afterEnd ? (
+            <Link
+              href={`/moments/gallery/${galleryId}`}
+              className="block w-full py-3 rounded-lg bg-[#302927] text-[#b2a491] font-medium text-sm text-center"
+            >
+              View Gallery
+            </Link>
+          ) : (
+            <div className="text-center py-4 text-[#726d6c] text-sm">
+              Event not yet open
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 }
 
+// Camera Modal types
 type UploadQueueItem = {
   id: string;
   preview: string;
@@ -675,92 +369,64 @@ type UploadQueueItem = {
   error?: string;
 };
 
-function CameraModal({ galleryId, ig, code, onClose, onUploadSuccess }: { galleryId: string; ig: string; code?: string; onClose: () => void; onUploadSuccess?: () => void | Promise<void> }) {
+function CameraModal({ galleryId, ig, code, onClose, onUploadSuccess }: {
+  galleryId: string;
+  ig: string;
+  code?: string;
+  onClose: () => void;
+  onUploadSuccess?: () => void | Promise<void>;
+}) {
   const [aspect, setAspect] = useState<'9:16' | '3:4'>('9:16');
   const [facing, setFacing] = useState<'environment' | 'user'>('environment');
-  const [flashMode, setFlashMode] = useState<'off' | 'on' | 'auto'>('off');
+  const [flashMode, setFlashMode] = useState<'off' | 'on'>('off');
   const [hasFlash, setHasFlash] = useState(false);
   const [videoRef, setVideoRef] = useState<HTMLVideoElement | null>(null);
   const [canvasRef, setCanvasRef] = useState<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [error, setError] = useState('');
-  const headerRef = useRef<HTMLDivElement | null>(null);
-  const controlsRef = useRef<HTMLDivElement | null>(null);
-  const [boxSize, setBoxSize] = useState<{width: number; height: number}>({ width: 0, height: 0 });
-  const [isStarting, setIsStarting] = useState(false);
   const [uploadQueue, setUploadQueue] = useState<UploadQueueItem[]>([]);
   const [isBatchUploading, setIsBatchUploading] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [isStarting, setIsStarting] = useState(false);
 
-  const aspectRatio = useMemo(() => (aspect === '9:16' ? 9/16 : 3/4), [aspect]);
-
-  async function waitForVideoReady(video: HTMLVideoElement) {
-    if (video.readyState >= 2 && video.videoWidth > 0 && video.videoHeight > 0) return;
-    await new Promise<void>((resolve) => {
-      const onReady = () => {
-        if (video.videoWidth > 0 && video.videoHeight > 0) {
-          video.removeEventListener('loadedmetadata', onReady);
-          video.removeEventListener('canplay', onReady);
-          resolve();
-        }
-      };
-      video.addEventListener('loadedmetadata', onReady);
-      video.addEventListener('canplay', onReady);
-      setTimeout(() => { video.removeEventListener('loadedmetadata', onReady); video.removeEventListener('canplay', onReady); resolve(); }, 2500);
-    });
-  }
+  const aspectRatio = useMemo(() => (aspect === '9:16' ? 9 / 16 : 3 / 4), [aspect]);
 
   async function startCamera() {
     try {
       if (typeof window !== 'undefined' && !window.isSecureContext) {
-        setError('Camera requires HTTPS (or localhost).');
+        setError('Camera requires HTTPS');
         return;
       }
-      // Stop any existing
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(t => t.stop());
         streamRef.current = null;
       }
-      // Prefer high quality while avoiding iOS Safari zooming; avoid aspectRatio constraint to prevent forced crop/zoom
-      const idealWidth = facing === 'environment' ? 1920 : 1280;
-      const idealHeight = facing === 'environment' ? 1080 : 720;
       const constraints: MediaStreamConstraints = {
         video: {
-          facingMode: { ideal: facing } as any,
-          width: { ideal: idealWidth } as any,
-          height: { ideal: idealHeight } as any,
-          frameRate: { ideal: 30, max: 30 } as any
+          facingMode: { ideal: facing },
+          width: { ideal: facing === 'environment' ? 1920 : 1280 },
+          height: { ideal: facing === 'environment' ? 1080 : 720 },
         },
-        audio: false
+        audio: false,
       };
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = stream;
-      
-      // Check if flash/torch is available
+
       const videoTrack = stream.getVideoTracks()[0];
       if (videoTrack) {
         const capabilities = videoTrack.getCapabilities?.() as any;
-        setHasFlash(!!(capabilities && capabilities.torch));
-        
-        // Apply flash mode if supported
-        if (capabilities && capabilities.torch && flashMode !== 'off') {
-          try {
-            await videoTrack.applyConstraints({
-              advanced: [{ torch: flashMode === 'on' } as any]
-            });
-          } catch (e) {
-            console.warn('Flash not supported:', e);
-          }
+        setHasFlash(!!(capabilities?.torch));
+        if (capabilities?.torch && flashMode === 'on') {
+          await videoTrack.applyConstraints({ advanced: [{ torch: true } as any] }).catch(() => {});
         }
       }
-      
+
       if (videoRef) {
-        (videoRef as any).srcObject = stream;
-        (videoRef as any).playsInline = true;
-        (videoRef as any).muted = true;
-        (videoRef as any).autoplay = true;
-        try { await waitForVideoReady(videoRef); } catch {}
-        await (videoRef as any).play?.().catch(() => {});
+        videoRef.srcObject = stream;
+        videoRef.playsInline = true;
+        videoRef.muted = true;
+        videoRef.autoplay = true;
+        await videoRef.play().catch(() => {});
       }
       setError('');
     } catch (e: any) {
@@ -768,88 +434,39 @@ function CameraModal({ galleryId, ig, code, onClose, onUploadSuccess }: { galler
     }
   }
 
-  // Attach stream to video if ref becomes available after starting
   useEffect(() => {
     if (videoRef && streamRef.current) {
-      try {
-        (videoRef as any).srcObject = streamRef.current;
-        (videoRef as any).playsInline = true;
-        (videoRef as any).muted = true;
-        (videoRef as any).autoplay = true;
-        (videoRef as any).play?.().catch(() => {});
-      } catch {}
+      videoRef.srcObject = streamRef.current;
+      videoRef.play().catch(() => {});
     }
   }, [videoRef]);
 
-  // Restart camera when facing/aspect change, but only after user starts once
   useEffect(() => {
-    if (streamRef.current) {
-      startCamera();
-    }
-    return () => {};
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (streamRef.current) startCamera();
   }, [facing, aspect]);
 
-  // Update flash when flashMode changes
   useEffect(() => {
     if (!streamRef.current) return;
     const videoTrack = streamRef.current.getVideoTracks()[0];
     if (!videoTrack) return;
-    
     const capabilities = videoTrack.getCapabilities?.() as any;
-    if (capabilities && capabilities.torch) {
-      videoTrack.applyConstraints({
-        advanced: [{ torch: flashMode === 'on' } as any]
-      }).catch((e) => {
-        console.warn('Failed to toggle flash:', e);
-      });
+    if (capabilities?.torch) {
+      videoTrack.applyConstraints({ advanced: [{ torch: flashMode === 'on' } as any] }).catch(() => {});
     }
   }, [flashMode]);
 
-  // Compute a preview box that fits in viewport along with header and controls (no scrolling needed for controls)
-  useEffect(() => {
-    function compute() {
-      const vw = Math.min(window.innerWidth, document.documentElement.clientWidth || window.innerWidth);
-      const vh = Math.min(window.innerHeight, document.documentElement.clientHeight || window.innerHeight);
-      const headerH = headerRef.current?.offsetHeight || 0;
-      const controlsH = controlsRef.current?.offsetHeight || 0;
-      const sidePadding = 16 * 2; // px-4 left+right
-      const verticalGaps = 12 + 12; // approximate top/bottom gaps around box
-      const availableH = Math.max(120, vh - headerH - controlsH - verticalGaps);
-      // Width limited by viewport minus padding, and by available height * aspect
-      const maxByHeight = availableH * aspectRatio;
-      const maxByWidth = vw - sidePadding;
-      const width = Math.max(240, Math.min(maxByWidth, maxByHeight));
-      const height = Math.round(width / aspectRatio);
-      setBoxSize({ width: Math.round(width), height });
-    }
-    compute();
-    const ro = new ResizeObserver(compute);
-    ro.observe(document.documentElement);
-    window.addEventListener('orientationchange', compute);
-    window.addEventListener('resize', compute);
-    return () => {
-      try { ro.disconnect(); } catch {}
-      window.removeEventListener('orientationchange', compute);
-      window.removeEventListener('resize', compute);
-    };
-  }, [aspectRatio]);
-
-  function cropAndDrawToCanvas() {
+  function cropAndDraw() {
     if (!videoRef || !canvasRef) return null;
-    const vw = (videoRef as any).videoWidth || 0;
-    const vh = (videoRef as any).videoHeight || 0;
+    const vw = videoRef.videoWidth || 0;
+    const vh = videoRef.videoHeight || 0;
     if (!vw || !vh) return null;
-    // Compute crop to desired aspect
-    const target = aspect === '9:16' ? 9/16 : 3/4;
+    const target = aspect === '9:16' ? 9 / 16 : 3 / 4;
     const srcAspect = vw / vh;
     let sw = vw, sh = vh, sx = 0, sy = 0;
     if (srcAspect > target) {
-      // too wide, crop width
       sw = Math.round(vh * target);
       sx = Math.round((vw - sw) / 2);
     } else if (srcAspect < target) {
-      // too tall, crop height
       sh = Math.round(vw / target);
       sy = Math.round((vh - sh) / 2);
     }
@@ -871,20 +488,16 @@ function CameraModal({ galleryId, ig, code, onClose, onUploadSuccess }: { galler
   }
 
   function takePhoto() {
-    const dataUrl = cropAndDrawToCanvas();
+    const dataUrl = cropAndDraw();
     if (!dataUrl) return;
     const b = dataURLToBlob(dataUrl);
-    
-    // Add to queue for review (not uploaded yet)
     const queueItem: UploadQueueItem = {
       id: `${Date.now()}_${Math.random()}`,
       preview: dataUrl,
       blob: b,
-      status: 'pending'
+      status: 'pending',
     };
-    
     setUploadQueue(prev => [...prev, queueItem]);
-    // Camera stays live, user can continue capturing
   }
 
   function removeFromQueue(id: string) {
@@ -907,14 +520,13 @@ function CameraModal({ galleryId, ig, code, onClose, onUploadSuccess }: { galler
   }
 
   async function tryDirectUpload(filename: string, blob: Blob) {
-    // Get presigned URL
     const u = await timeoutFetch('/api/moments/upload-url', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ galleryId, fileName: filename, mediaType: 'photo' })
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ galleryId, fileName: filename, mediaType: 'photo' }),
     });
     const uj: any = await u.json();
     if (!u.ok) throw new Error(uj?.error || 'Upload URL failed');
-    // PUT to R2
     await timeoutFetch(uj.uploadUrl, { method: 'PUT', headers: { 'Content-Type': 'image/jpeg' }, body: blob }, 20000);
     return uj.key as string;
   }
@@ -932,328 +544,176 @@ function CameraModal({ galleryId, ig, code, onClose, onUploadSuccess }: { galler
     return pj.key as string;
   }
 
-  async function uploadQueueItem(item: UploadQueueItem) {
+  async function uploadItem(item: UploadQueueItem) {
     if (!galleryId) throw new Error('Missing gallery ID');
-    
     const filename = `photo_${Date.now()}.jpg`;
     let key: string | null = null;
-    const online = typeof navigator !== 'undefined' ? navigator.onLine : true;
-    
-    // Try direct first (2 attempts), then proxy (2 attempts)
-    const attempts: Array<() => Promise<string>> = [
+    const attempts = [
       () => tryDirectUpload(filename, item.blob),
       () => tryDirectUpload(filename, item.blob),
       () => tryProxyUpload(filename, item.blob),
-      () => tryProxyUpload(filename, item.blob)
+      () => tryProxyUpload(filename, item.blob),
     ];
-    if (!online) {
-      attempts.unshift(() => tryProxyUpload(filename, item.blob));
-    }
-    
     let lastErr: any = null;
     for (const fn of attempts) {
-      try { key = await fn(); break; } catch (e) { lastErr = e; continue; }
+      try { key = await fn(); break; } catch (e) { lastErr = e; }
     }
     if (!key) throw lastErr || new Error('Upload failed');
-
-    const r = await timeoutFetch('/api/moments/record', { 
-      method: 'POST', 
-      headers: { 'Content-Type': 'application/json' }, 
-      body: JSON.stringify({ 
-        galleryId, 
-        r2_key: key, 
-        original_filename: filename, 
-        user_name: ig || undefined, 
-        media_type: 'photo' 
-      }) 
+    const r = await timeoutFetch('/api/moments/record', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ galleryId, r2_key: key, original_filename: filename, user_name: ig || undefined, media_type: 'photo' }),
     });
     const rj: any = await r.json();
     if (!r.ok) throw new Error(rj?.error || 'Record failed');
-    
-    // Record client-side rate stamp
-    try {
-      const k = `moments:rate:${galleryId}`;
-      const now = Date.now();
-      const arr = JSON.parse(localStorage.getItem(k) || '[]').filter((t: number) => now - t < 120000);
-      arr.push(now);
-      localStorage.setItem(k, JSON.stringify(arr));
-    } catch {}
   }
 
-  // Batch upload all pending photos
   async function batchUploadAll() {
     const pending = uploadQueue.filter(item => item.status === 'pending');
     if (pending.length === 0) return;
-    
     setIsBatchUploading(true);
     setError('');
-    
-    // Upload up to 3 at a time
-    const uploadBatch = async (items: UploadQueueItem[]) => {
-      for (const item of items) {
-        // Mark as uploading
-        setUploadQueue(prev => prev.map(i => 
-          i.id === item.id ? { ...i, status: 'uploading' } : i
-        ));
-        
-        try {
-          await uploadQueueItem(item);
-          setUploadQueue(prev => prev.map(i => 
-            i.id === item.id ? { ...i, status: 'success' } : i
-          ));
-          // Remove from queue after 1.5 seconds
-          setTimeout(() => {
-            setUploadQueue(prev => prev.filter(i => i.id !== item.id));
-          }, 1500);
-        } catch (e: any) {
-          setUploadQueue(prev => prev.map(i => 
-            i.id === item.id ? { ...i, status: 'error', error: e?.message || 'Upload failed' } : i
-          ));
-        }
+    for (const item of pending) {
+      setUploadQueue(prev => prev.map(i => (i.id === item.id ? { ...i, status: 'uploading' } : i)));
+      try {
+        await uploadItem(item);
+        setUploadQueue(prev => prev.map(i => (i.id === item.id ? { ...i, status: 'success' } : i)));
+        setTimeout(() => setUploadQueue(prev => prev.filter(i => i.id !== item.id)), 1500);
+      } catch (e: any) {
+        setUploadQueue(prev => prev.map(i => (i.id === item.id ? { ...i, status: 'error', error: e?.message } : i)));
       }
-    };
-    
-    // Process in batches of 3
-    for (let i = 0; i < pending.length; i += 3) {
-      const batch = pending.slice(i, i + 3);
-      await uploadBatch(batch);
     }
-    
     setIsBatchUploading(false);
-    
-    // Refresh galleries after successful uploads
-    if (onUploadSuccess) {
-      onUploadSuccess();
-    }
+    if (onUploadSuccess) onUploadSuccess();
   }
 
+  const pendingCount = uploadQueue.filter(i => i.status === 'pending').length;
+
   return (
-    <div className="fixed top-14 left-0 right-0 bottom-0 z-40 bg-gradient-to-b from-[#1a1511]/95 via-[#0f0d0c]/90 to-[#0b0a09]/90 supports-[backdrop-filter]:backdrop-blur">
-      {/* Full height container with flexbox - no scrolling needed */}
-      <div className="h-full flex flex-col">
-        {/* Header with upload queue - positioned below app navbar - Mobile optimized */}
-        <div ref={headerRef} className="flex-none bg-[#1a1511]/70 supports-[backdrop-filter]:backdrop-blur border-b border-[#3b3733]/70">
-          <div className="flex items-center justify-between px-3 sm:px-4 py-2.5 sm:py-3">
-            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-              <span className="text-[#ede8df] font-semibold text-sm sm:text-base">Camera</span>
-              {galleryId && (
-                <>
-                  <span className="text-[#666461] hidden sm:inline">•</span>
-                  <Link 
-                    href={`/moments/gallery/${galleryId}`}
-                    className="text-xs sm:text-sm text-[#ff8a3d] hover:text-[#ffb067] transition-colors truncate"
-                  >
-                    <span className="hidden sm:inline">View Gallery</span>
-                    <span className="sm:hidden">Gallery</span>
-                  </Link>
-                </>
-              )}
-            </div>
-            <button onClick={onClose} className="px-3 py-1.5 rounded-lg bg-white/5 supports-[backdrop-filter]:backdrop-blur border border-[#3b3733] text-[#ede8df] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] text-sm active:scale-95 transition-transform">Close</button>
-          </div>
-          
-          {/* Upload Queue with delete buttons - Mobile optimized */}
-          {uploadQueue.length > 0 && (
-            <div className="px-3 pb-3">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs sm:text-sm text-[#b2a491] font-medium">
-                  {uploadQueue.filter(i => i.status === 'pending').length} photo{uploadQueue.filter(i => i.status === 'pending').length !== 1 ? 's' : ''} ready
-                </span>
-                {uploadQueue.filter(i => i.status === 'pending').length > 0 && (
-                  <button
-                    onClick={batchUploadAll}
-                    disabled={isBatchUploading}
-                    className="px-4 py-1.5 rounded-full bg-gradient-to-r from-[#ff8a3d] to-[#d97028] text-white text-xs sm:text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 transition-all shadow-lg"
-                  >
-                    {isBatchUploading ? 'Uploading...' : `Upload ${uploadQueue.filter(i => i.status === 'pending').length}`}
-                  </button>
-                )}
-              </div>
-              <div className="flex gap-2 overflow-x-auto pb-1 -mx-3 px-3" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                {uploadQueue.map((item) => (
-                  <div 
-                    key={item.id}
-                    onClick={() => setPreviewImage(item.preview)}
-                    className="relative flex-shrink-0 w-24 h-24 sm:w-20 sm:h-20 rounded-xl overflow-hidden border-2 transition-all cursor-pointer active:scale-95"
-                    style={{
-                      borderColor: item.status === 'uploading' ? '#ff8a3d' : item.status === 'success' ? '#10b981' : item.status === 'error' ? '#ef4444' : '#666461',
-                      animation: item.status === 'success' ? 'pulse 0.5s ease-out' : 'none'
-                    }}
-                  >
-                    <img src={item.preview} alt="" className="w-full h-full object-cover" />
-                    
-                    {/* Delete button for pending items - Always visible on mobile */}
-                    {item.status === 'pending' && (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); removeFromQueue(item.id); }}
-                        className="absolute top-1 right-1 w-7 h-7 sm:w-6 sm:h-6 rounded-full bg-red-500 active:bg-red-600 text-white flex items-center justify-center shadow-lg sm:opacity-0 sm:group-hover:opacity-100 transition-opacity z-10"
-                        aria-label="Delete photo"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
-                    )}
-                    
-                    {/* Status overlay */}
-                    {item.status !== 'pending' && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-                        {item.status === 'uploading' && (
-                          <div className="w-7 h-7 sm:w-6 sm:h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        )}
-                        {item.status === 'success' && (
-                          <svg className="w-7 h-7 sm:w-6 sm:h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                          </svg>
-                        )}
-                        {item.status === 'error' && (
-                          <svg className="w-7 h-7 sm:w-6 sm:h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
+    <div className="fixed inset-0 z-50 bg-[#171616] flex flex-col">
+      {/* Header */}
+      <div className="flex-none flex items-center justify-between px-4 py-3 border-b border-[#502d26]/30">
+        <span className="text-[#ede8df] font-medium text-sm">Camera</span>
+        <div className="flex items-center gap-3">
+          {galleryId && (
+            <Link href={`/moments/gallery/${galleryId}`} className="text-xs text-[#843c2d]">
+              View Gallery
+            </Link>
           )}
-        </div>
-
-        {/* Preview area - fills available space */}
-        <div className="flex-1 flex items-center justify-center px-4 py-4 overflow-hidden">
-          <div
-            className="rounded-2xl overflow-hidden border border-[#3b3733]/70 relative bg-[#0f0d0c] shadow-[0_10px_40px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.05)]"
-            style={{ width: boxSize.width ? `${boxSize.width}px` : undefined, height: boxSize.height ? `${boxSize.height}px` : undefined }}
-          >
-            <video
-              ref={setVideoRef}
-              autoPlay
-              playsInline
-              muted
-              className={`h-full w-full ${facing==='user' ? 'object-contain' : 'object-cover'}`}
-              style={facing==='user' ? { transform: 'scaleX(-1)' } : undefined}
-            />
-            {(!streamRef.current && !isStarting) && (
-              <div className="absolute inset-0 grid place-items-center bg-[#0b0a09]/50">
-                <button
-                  onClick={() => { setIsStarting(true); startCamera().catch(() => setIsStarting(false)); }}
-                  className="px-5 py-3 rounded-full bg-gradient-to-b from-[#ffb067] to-[#ff7a1a] text-[#171616] font-extrabold tracking-wide shadow-[0_10px_30px_rgba(255,122,26,0.25)] active:scale-95"
-                >
-                  Open Camera
-                </button>
-              </div>
-            )}
-            <canvas ref={setCanvasRef} className="hidden" />
-          </div>
-          {error && <div className="absolute bottom-2 left-0 right-0 text-center text-red-300 text-sm px-4">{error}</div>}
-        </div>
-
-        {/* Bottom controls bar - Mobile optimized */}
-        <div ref={controlsRef} className="flex-none px-2 sm:px-3 pb-[calc(8px+env(safe-area-inset-bottom))] sm:pb-[calc(12px+env(safe-area-inset-bottom))] pt-2 bg-gradient-to-t from-[#140f0c]/90 to-[#0c0b0a]/50 supports-[backdrop-filter]:backdrop-blur border-t border-[#3b3733]/70">
-          <div className="mx-auto max-w-[min(100vw,900px)] flex flex-wrap items-center justify-center gap-1.5 sm:gap-2">
-            {/* Aspect ratio buttons */}
-            <div className="inline-flex rounded-full overflow-hidden border border-[#3b3733]/80 bg-white/5">
-              <button 
-                onClick={() => setAspect('9:16')} 
-                className={`px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm font-medium transition-colors ${aspect==='9:16'?'bg-[#ff8a3d]/30 text-[#ffeedd]':'text-[#e8ded2]'}`}
-              >
-                9:16
-              </button>
-              <button 
-                onClick={() => setAspect('3:4')} 
-                className={`px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm font-medium transition-colors ${aspect==='3:4'?'bg-[#ff8a3d]/30 text-[#ffeedd]':'text-[#e8ded2]'}`}
-              >
-                3:4
-              </button>
-            </div>
-            
-            {/* Flash button */}
-            {hasFlash && (
-              <button 
-                onClick={() => setFlashMode(m => m === 'off' ? 'on' : 'off')}
-                className={`p-2 sm:px-3 sm:py-1.5 rounded-full supports-[backdrop-filter]:backdrop-blur border transition-all active:scale-95 ${
-                  flashMode === 'on' 
-                    ? 'bg-[#ff8a3d]/30 border-[#ff8a3d] text-[#ffeedd]' 
-                    : 'bg-white/5 border-[#3b3733]/80 text-[#ede8df]'
-                }`}
-                aria-label={flashMode === 'on' ? 'Flash On' : 'Flash Off'}
-              >
-                <svg className="w-5 h-5 sm:w-4 sm:h-4" fill="currentColor" viewBox="0 0 24 24">
-                  {flashMode === 'on' ? (
-                    <path d="M7 2v11h3v9l7-12h-4l4-8z" />
-                  ) : (
-                    <>
-                      <path d="M7 2v11h3v9l7-12h-4l4-8z" opacity="0.3" />
-                      <path d="M3 3l18 18M17 10l-2.5-5H7" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" />
-                    </>
-                  )}
-                </svg>
-              </button>
-            )}
-            
-            {/* Switch camera button */}
-            <button 
-              onClick={() => { setFacing(f => f==='environment'?'user':'environment'); }} 
-              className="px-3 sm:px-3 py-1.5 rounded-full bg-white/5 supports-[backdrop-filter]:backdrop-blur border border-[#3b3733]/80 text-[#ede8df] text-xs sm:text-sm font-medium active:scale-95 transition-transform"
-            >
-              <span className="hidden xs:inline">Switch</span>
-              <svg className="w-5 h-5 xs:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-            </button>
-            
-            {/* Capture button - larger on mobile */}
-            <button 
-              onClick={takePhoto}
-              disabled={isBatchUploading}
-              className="px-5 sm:px-4 py-2.5 sm:py-2 rounded-full bg-[#ede8df] text-[#171616] font-extrabold text-sm sm:text-base tracking-wide shadow-[0_10px_28px_rgba(237,232,223,0.25)] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed transition-transform"
-            >
-              Capture
-            </button>
-          </div>
-          
-          {/* Status messages - Mobile friendly */}
-          {uploadQueue.length > 0 && (
-            <div className="mt-2 text-center text-[10px] sm:text-xs text-[#b2a491] px-2">
-              {uploadQueue.filter(i => i.status === 'uploading').length > 0 && (
-                <span className="text-[#ff8a3d] font-medium">Uploading {uploadQueue.filter(i => i.status === 'uploading').length}...</span>
-              )}
-              {uploadQueue.filter(i => i.status === 'success').length > 0 && uploadQueue.filter(i => i.status === 'uploading').length === 0 && uploadQueue.filter(i => i.status === 'pending').length === 0 && (
-                <span className="text-green-400 font-medium">✓ All uploaded successfully</span>
-              )}
-              {uploadQueue.filter(i => i.status === 'pending').length > 0 && uploadQueue.filter(i => i.status === 'uploading').length === 0 && (
-                <span className="font-medium">
-                  <span className="hidden sm:inline">Tap photos to review, then upload when ready</span>
-                  <span className="sm:hidden">Review photos, then tap Upload</span>
-                </span>
-              )}
-            </div>
-          )}
+          <button onClick={onClose} className="text-[#b2a491] hover:text-[#ede8df]">
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <path d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
       </div>
 
-      {/* Image Preview Modal */}
-      {previewImage && (
-        <div 
-          className="fixed top-14 left-0 right-0 bottom-0 z-50 bg-black/95 flex items-center justify-center p-4"
-          onClick={() => setPreviewImage(null)}
-        >
-          <button
-            onClick={() => setPreviewImage(null)}
-            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors"
-            aria-label="Close preview"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+      {/* Upload queue */}
+      {uploadQueue.length > 0 && (
+        <div className="flex-none px-4 py-3 border-b border-[#502d26]/20">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs text-[#726d6c]">{pendingCount} ready</span>
+            {pendingCount > 0 && (
+              <button
+                onClick={batchUploadAll}
+                disabled={isBatchUploading}
+                className="px-3 py-1 rounded-full bg-[#843c2d] text-white text-xs font-medium disabled:opacity-50"
+              >
+                {isBatchUploading ? 'Uploading...' : `Upload ${pendingCount}`}
+              </button>
+            )}
+          </div>
+          <div className="flex gap-2 overflow-x-auto">
+            {uploadQueue.map(item => (
+              <div
+                key={item.id}
+                onClick={() => setPreviewImage(item.preview)}
+                className={`relative flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 cursor-pointer ${
+                  item.status === 'uploading' ? 'border-[#843c2d]' : item.status === 'success' ? 'border-green-500' : item.status === 'error' ? 'border-red-500' : 'border-[#502d26]/40'
+                }`}
+              >
+                <img src={item.preview} alt="" className="w-full h-full object-cover" />
+                {item.status === 'pending' && (
+                  <button
+                    onClick={e => { e.stopPropagation(); removeFromQueue(item.id); }}
+                    className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center"
+                  >
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                      <path d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
+                {item.status !== 'pending' && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                    {item.status === 'uploading' && <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+                    {item.status === 'success' && <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" /></svg>}
+                    {item.status === 'error' && <svg className="w-5 h-5 text-red-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" /></svg>}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Viewfinder */}
+      <div className="flex-1 flex items-center justify-center bg-black p-4 overflow-hidden">
+        <div className="relative rounded-xl overflow-hidden bg-[#0a0908]" style={{ aspectRatio: aspectRatio.toString(), maxHeight: '100%', maxWidth: '100%', width: 'auto', height: 'auto' }}>
+          <video
+            ref={setVideoRef}
+            autoPlay
+            playsInline
+            muted
+            className="w-full h-full object-cover"
+            style={facing === 'user' ? { transform: 'scaleX(-1)' } : undefined}
+          />
+          {!streamRef.current && !isStarting && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <button
+                onClick={() => { setIsStarting(true); startCamera().finally(() => setIsStarting(false)); }}
+                className="px-5 py-2.5 rounded-full bg-[#ede8df] text-[#171616] font-semibold text-sm"
+              >
+                Start Camera
+              </button>
+            </div>
+          )}
+          <canvas ref={setCanvasRef} className="hidden" />
+        </div>
+        {error && <p className="absolute bottom-4 left-0 right-0 text-center text-red-400 text-xs">{error}</p>}
+      </div>
+
+      {/* Controls */}
+      <div className="flex-none px-4 py-4 pb-[calc(16px+env(safe-area-inset-bottom))] border-t border-[#502d26]/30 flex items-center justify-center gap-3">
+        <div className="flex rounded-full overflow-hidden border border-[#502d26]/40">
+          <button onClick={() => setAspect('9:16')} className={`px-3 py-1.5 text-xs ${aspect === '9:16' ? 'bg-[#302927] text-[#ede8df]' : 'text-[#726d6c]'}`}>9:16</button>
+          <button onClick={() => setAspect('3:4')} className={`px-3 py-1.5 text-xs ${aspect === '3:4' ? 'bg-[#302927] text-[#ede8df]' : 'text-[#726d6c]'}`}>3:4</button>
+        </div>
+        {hasFlash && (
+          <button onClick={() => setFlashMode(m => m === 'off' ? 'on' : 'off')} className={`p-2 rounded-full border ${flashMode === 'on' ? 'border-[#843c2d] text-[#843c2d]' : 'border-[#502d26]/40 text-[#726d6c]'}`}>
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M7 2v11h3v9l7-12h-4l4-8z" />
             </svg>
           </button>
-          <img 
-            src={previewImage} 
-            alt="Preview" 
-            className="max-w-full max-h-full object-contain rounded-lg"
-            onClick={(e) => e.stopPropagation()}
-          />
+        )}
+        <button onClick={() => setFacing(f => f === 'environment' ? 'user' : 'environment')} className="p-2 rounded-full border border-[#502d26]/40 text-[#726d6c]">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+        </button>
+        <button onClick={takePhoto} disabled={isBatchUploading} className="px-6 py-2.5 rounded-full bg-[#ede8df] text-[#171616] font-semibold text-sm disabled:opacity-50">
+          Capture
+        </button>
+      </div>
+
+      {/* Preview modal */}
+      {previewImage && (
+        <div className="fixed inset-0 z-60 bg-black/95 flex items-center justify-center p-4" onClick={() => setPreviewImage(null)}>
+          <button onClick={() => setPreviewImage(null)} className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+          <img src={previewImage} alt="" className="max-w-full max-h-full object-contain rounded-lg" onClick={e => e.stopPropagation()} />
         </div>
       )}
     </div>

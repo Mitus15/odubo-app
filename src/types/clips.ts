@@ -10,6 +10,12 @@ export type ClipApiRow = {
   created_at?: string | null;
   shopify_product_handle?: string | null;
   related_projects?: string | null;
+  // Engagement fields (optional, only present when withEngagement=true)
+  view_count?: number;
+  completion_count?: number;
+  share_count?: number;
+  shop_click_count?: number;
+  engagement_score?: number;
 };
 
 export type ClipItem = {
@@ -22,4 +28,8 @@ export type ClipItem = {
   createdAt: string | null;
   productHandle?: string | null;
   parentId?: number | null;
+  // Engagement data (optional)
+  engagementScore?: number;
+  viewCount?: number;
+  completionCount?: number;
 };

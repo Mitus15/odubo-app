@@ -4,6 +4,9 @@ import "./globals.css";
 import MusicPlayerLayout from "./components/MusicPlayerLayout";
 import AppHeader from "./components/AppHeader";
 import { MusicPlayerProvider } from "@/contexts/MusicPlayerContext";
+import { OmniShopProvider } from "@/contexts/OmniShopContext";
+import OmniShopOrchestrator from "@/components/shop/OmniShopOrchestrator";
+// FloatingBagIndicator removed - cart access via header/modals
 // import { AuthProvider } from "@/contexts/AuthContext";
 // import ClientCapabilities } from "./components/ClientCapabilities";
 import SecurityMonitor from "../components/SecurityMonitor";
@@ -61,20 +64,24 @@ export default function RootLayout({
       >
         {/* <AuthProvider> */}
           <MusicPlayerProvider>
-            {/* <ClientCapabilities /> */}
-            <ServiceWorkerRegistration />
-            <OfflineIndicator />
-            <div className="h-full w-full flex flex-col overflow-hidden">
-              <AppHeader />
-              <main className="flex-1 min-h-0 pt-14 safe-area-header pb-24 safe-area-bottom overflow-y-auto">
-                {children}
-              </main>
-              <MusicPlayerLayout />
-              {/* <SecurityMonitor /> */}
-              <GDPRConsent />
-              {/* <PerformanceMonitor /> */}
-              {/* <AccessibilityEnhancer /> */}
-            </div>
+            <OmniShopProvider>
+              {/* <ClientCapabilities /> */}
+              <ServiceWorkerRegistration />
+              <OfflineIndicator />
+              <div className="h-full w-full flex flex-col overflow-hidden">
+                <AppHeader />
+                <main className="flex-1 min-h-0 pt-14 safe-area-header pb-24 safe-area-bottom overflow-y-auto">
+                  {children}
+                </main>
+                <MusicPlayerLayout />
+                {/* <SecurityMonitor /> */}
+                <GDPRConsent />
+                {/* <PerformanceMonitor /> */}
+                {/* <AccessibilityEnhancer /> */}
+              </div>
+              {/* Omni-Shop modals - rendered at root level to overlay everything */}
+              <OmniShopOrchestrator />
+            </OmniShopProvider>
           </MusicPlayerProvider>
         {/* </AuthProvider> */}
       </body>

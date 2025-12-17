@@ -5,6 +5,10 @@ import { fetchVerseOfTheDay } from '@/lib/gemini';
 export const dynamic = 'force-dynamic';
 export const revalidate = 3600; // ISR: regenerate every hour
 
+interface PageProps {
+  searchParams: Promise<{ clip?: string }>;
+}
+
 // Server-side verse fetching function - calls Gemini logic directly
 async function getVerse() {
   try {
@@ -13,7 +17,7 @@ async function getVerse() {
 
     // Call the shared logic directly (no HTTP fetch needed)
     const result = await fetchVerseOfTheDay(timestamp, requestId);
-    
+
     return {
       text: result.text,
       reference: result.reference,
@@ -30,8 +34,13 @@ async function getVerse() {
 }
 
 // Server component - note the 'async' keyword
-export default async function HomePage() {
+export default async function HomePage({ searchParams }: PageProps) {
+  const params = await searchParams;
   const verseOfTheDay = await getVerse();
 
-  return <HomePageClient verseOfTheDay={verseOfTheDay} />;
+  // Parse clip ID for deep linking (e.g., /?clip=123 for ad campaigns)
+  const initialClipId = params.clip ? parseInt(params.clip, 10) : null;
+  const validClipId = initialClipId && Number.isFinite(initialClipId) ? initialClipId : null;
+
+  return <HomePageClient verseOfTheDay={verseOfTheDay} initialClipId={validClipId} />;
 }

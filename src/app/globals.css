@@ -30,6 +30,173 @@
   mix-blend-mode: screen;
 }
 
+/* Clip text overlay - forced contrast glass effect */
+/* Works over any video background by using dark shadow + light glow */
+.clip-text-container {
+  position: relative;
+  padding: 12px 14px;
+  border-radius: 12px;
+}
+
+/* Backdrop blur layer behind text */
+.clip-text-container::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(0, 0, 0, 0.45) 0%,
+    rgba(0, 0, 0, 0.25) 50%,
+    rgba(0, 0, 0, 0.35) 100%
+  );
+  backdrop-filter: blur(12px) saturate(1.1);
+  -webkit-backdrop-filter: blur(12px) saturate(1.1);
+  border-radius: inherit;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  z-index: -1;
+}
+
+/* Title text - glassy with forced contrast */
+.clip-title-glass {
+  position: relative;
+  color: #fff;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  /* Multi-layer shadow for depth and contrast */
+  text-shadow:
+    /* Dark halo for contrast */
+    0 2px 4px rgba(0, 0, 0, 0.9),
+    0 4px 12px rgba(0, 0, 0, 0.6),
+    /* Subtle light glow for glass effect */
+    0 0 20px rgba(255, 255, 255, 0.15),
+    0 0 40px rgba(255, 255, 255, 0.08);
+}
+
+/* Artist/subtitle text - softer glass */
+.clip-subtitle-glass {
+  position: relative;
+  color: rgba(255, 255, 255, 0.85);
+  font-weight: 400;
+  letter-spacing: 0.03em;
+  text-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.9),
+    0 3px 10px rgba(0, 0, 0, 0.5),
+    0 0 15px rgba(255, 255, 255, 0.1);
+}
+
+/* Chromatic shimmer accent on title */
+.clip-title-glass::after {
+  content: '';
+  position: absolute;
+  inset: -2px -8px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.03) 25%,
+    rgba(255, 255, 255, 0.06) 50%,
+    rgba(255, 255, 255, 0.03) 75%,
+    transparent 100%
+  );
+  border-radius: 4px;
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* Film Grain Noise Textures */
+.noise-texture {
+  position: relative;
+}
+
+.noise-texture::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.04;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  border-radius: inherit;
+  z-index: 1;
+}
+
+.noise-subtle {
+  position: relative;
+}
+
+.noise-subtle::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.025;
+  mix-blend-mode: soft-light;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  border-radius: inherit;
+  z-index: 1;
+}
+
+.noise-heavy {
+  position: relative;
+}
+
+.noise-heavy::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.06;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='5' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  border-radius: inherit;
+  z-index: 1;
+}
+
+/* Refined liquid glass with enhanced depth */
+.liquid-glass-refined {
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(24px) saturate(1.2);
+  -webkit-backdrop-filter: blur(24px) saturate(1.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 0 20px rgba(255, 255, 255, 0.015);
+}
+
+/* Chromatic edge glow on hover */
+.glass-chromatic {
+  position: relative;
+  overflow: visible;
+}
+
+.glass-chromatic::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 120, 120, 0.08) 0%,
+    rgba(120, 255, 180, 0.04) 50%,
+    rgba(120, 150, 255, 0.08) 100%
+  );
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.glass-chromatic:hover::before,
+.glass-chromatic:active::before {
+  opacity: 1;
+}
+
 /* Liquid Glass Effects */
 @keyframes liquid-float {
   0%, 100% { transform: translateY(0px) rotate(0deg); }

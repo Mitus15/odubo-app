@@ -1,15 +1,18 @@
 "use client";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Virtuoso, type VirtuosoHandle } from 'react-virtuoso';
 import type { ClipItem, ClipApiRow } from '@/types/clips';
 import { mapClipRows } from '@/lib/clipsMapper';
 import { shuffleArray } from '@/lib/utils';
 import ClipCard from '@/components/clips/ClipCard';
 import { addPrefetchHints, prefetchManifest, prefetchFirstSegment, removePrefetchHints } from '@/lib/hlsPrefetch';
+import { useAudio } from '@/contexts/AudioContext';
+import { getNetworkInfo, getRenderWindowRadius, getPrefetchWindow } from '@/lib/deviceInfo';
 
 const PAGE_SIZE = 8;
 
 export default function VirtuosoFeed({ navHeight }: { navHeight: number }) {
+  const { armAudio } = useAudio();
   const virtuosoRef = useRef<VirtuosoHandle | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
@@ -19,8 +22,6 @@ export default function VirtuosoFeed({ navHeight }: { navHeight: number }) {
   const [hasMore, setHasMore] = useState<boolean>(true);
   const [activeIndex, setActiveIndex] = useState<number>(0);
   const [activeId, setActiveId] = useState<number | null>(null);
-  const [isMuted, setIsMuted] = useState<boolean>(true);
-  const [hasUserMutePref, setHasUserMutePref] = useState<boolean>(false);
   const inflightRef = useRef<number>(0);
   const abortRef = useRef<AbortController | null>(null);
   const seedRef = useRef<string>(Math.random().toString(36).substring(2, 9));
@@ -28,12 +29,6 @@ export default function VirtuosoFeed({ navHeight }: { navHeight: number }) {
   const scrollTimerRef = useRef<number | null>(null);
   const switchTimerRef = useRef<number | null>(null);
   const initializedRef = useRef<boolean>(false);
-  const soundArmedRef = useRef<boolean>(false);
-
-  useEffect(() => {
-    try { const v = localStorage.getItem('clips:isMuted'); if (v != null) { setIsMuted(v === 'true'); setHasUserMutePref(true); } } catch {}
-  }, []);
-  useEffect(() => { try { localStorage.setItem('clips:isMuted', String(isMuted)); } catch {} }, [isMuted]);
 
   const fetchPage = useCallback(async (p: number) => {
     if (inflightRef.current > 0) return;
@@ -89,9 +84,6 @@ export default function VirtuosoFeed({ navHeight }: { navHeight: number }) {
     fetchPage(0);
     return () => { abortRef.current?.abort(); removePrefetchHints(); };
   }, [fetchPage]);
-
-  // Restore session-level sound arming so unmuted clips can auto-play after a user gesture
-  useEffect(() => { try { soundArmedRef.current = sessionStorage.getItem('clips:soundArmed') === 'true'; } catch {} }, []);
 
   // Track scroll state for prefetch suppression
   useEffect(() => {
@@ -151,57 +143,24 @@ export default function VirtuosoFeed({ navHeight }: { navHeight: number }) {
   useEffect(() => {
     if (!displayClips.length || activeIndex < 0) return;
     if (isScrollingRef.current) return; // suppress during fast scroll
-    const conn: any = (typeof navigator !== 'undefined' && (navigator as any).connection) || null;
-    const saveData = !!conn?.saveData;
-    const effectiveType = conn?.effectiveType || '4g';
-    const downlink = typeof conn?.downlink === 'number' ? conn.downlink : 10;
-    const good = !saveData && effectiveType === '4g' && downlink >= 4;
-    const count = good ? 2 : 1;
-    const next = displayClips.slice(activeIndex + 1, activeIndex + 1 + count).map(c => c.hlsUrl);
+    const { manifestCount, shouldPrefetchSegments } = getPrefetchWindow();
+    const next = displayClips.slice(activeIndex + 1, activeIndex + 1 + manifestCount).map(c => c.hlsUrl);
     if (next.length) {
       addPrefetchHints(next);
       next.forEach(u => prefetchManifest(u));
-      if (good && displayClips[activeIndex + 1]?.hlsUrl) {
+      if (shouldPrefetchSegments && displayClips[activeIndex + 1]?.hlsUrl) {
         prefetchFirstSegment(displayClips[activeIndex + 1].hlsUrl);
       }
     }
   }, [activeIndex, displayClips]);
 
-  // Enforce single active playback and global mute across all videos
-  useEffect(() => {
-    const root = containerRef.current; if (!root) return;
-    const videos = Array.from(root.querySelectorAll('section video')) as HTMLVideoElement[];
-    videos.forEach(v => {
-      const section = v.closest('section');
-      const isActive = section?.getAttribute('data-active') === '1';
-      try {
-        v.muted = isMuted;
-        if (isActive) {
-          if (isMuted) {
-            v.play().catch(() => {});
-          } else {
-            if (soundArmedRef.current) v.play().catch(() => {});
-          }
-        } else {
-          v.pause();
-        }
-      } catch {}
-    });
-  }, [activeId, isMuted]);
+  // Note: ClipCard now handles all playback control via its own useEffects
 
   const itemContent = useCallback((index: number) => {
     const clip = displayClips[index];
     if (!clip) return null;
-    // Network-aware render radius
-    const conn: any = (typeof navigator !== 'undefined' && (navigator as any).connection) || null;
-    const saveData = !!conn?.saveData;
-    const effectiveType = conn?.effectiveType || '4g';
-    const downlink = typeof conn?.downlink === 'number' ? conn.downlink : 10;
-    const good = !saveData && effectiveType === '4g' && downlink >= 4;
-    const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
-    const isIOS = /iP(ad|hone|od)/.test(ua) || (typeof navigator !== 'undefined' && (navigator as any).platform === 'MacIntel' && (navigator as any).maxTouchPoints > 1);
-    const isMobile = isIOS || (typeof window !== 'undefined' && window.innerWidth < 768);
-    const radius = isMobile ? 1 : (good ? 2 : 1);
+    // Network-aware render radius using centralized deviceInfo
+    const radius = getRenderWindowRadius();
     const isNearActive = Math.abs(activeIndex - index) <= radius;
     const shouldPreload = index === activeIndex + 1;
     return (
@@ -218,11 +177,6 @@ export default function VirtuosoFeed({ navHeight }: { navHeight: number }) {
             clip={clip}
             active={activeId === clip.id}
             shouldPreload={shouldPreload}
-            muted={isMuted}
-            onToggleMute={() => { setIsMuted(m => !m); setHasUserMutePref(true); try { localStorage.setItem('clips:isMuted', String(!isMuted)); } catch {} }}
-            onAutoMute={() => { if (!hasUserMutePref) { setIsMuted(true); try { localStorage.setItem('clips:isMuted', 'true'); } catch {} } }}
-            onSyncMute={(actual) => { if (actual !== isMuted) { setIsMuted(actual); if (!hasUserMutePref) try { localStorage.setItem('clips:isMuted', String(actual)); } catch {} } }}
-            hasUserMutePref={hasUserMutePref}
             onEnded={loadMoreBlock}
             currentIndex={index}
             lastAutoScrollIndex={-1}
@@ -235,28 +189,20 @@ export default function VirtuosoFeed({ navHeight }: { navHeight: number }) {
         )}
       </section>
     );
-  }, [displayClips, navHeight, activeIndex, activeId, isMuted, loadMoreBlock]);
+  }, [displayClips, navHeight, activeIndex, activeId, loadMoreBlock]);
 
   return (
     <div
       ref={containerRef}
       className="h-full w-full"
       style={{ scrollSnapType: 'y mandatory', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}
-      onClick={() => {
-        if (!soundArmedRef.current) {
-          soundArmedRef.current = true;
-          try { sessionStorage.setItem('clips:soundArmed', 'true'); } catch {}
-          const root = containerRef.current; if (!root) return;
-          const v = root.querySelector('section[data-active="1"] video') as HTMLVideoElement | null;
-          if (v) { try { v.muted = isMuted; v.play().catch(() => {}); } catch {} }
-        }
-      }}
+      onClick={() => armAudio()}
     >
       <Virtuoso
         ref={virtuosoRef}
         style={{ height: '100%', width: '100%' }}
         totalCount={displayClips.length}
-        overscan={(typeof navigator !== 'undefined' && (navigator as any).connection?.effectiveType) === '4g' ? 1 : 0}
+        overscan={getNetworkInfo().isGoodNetwork ? 1 : 0}
         itemContent={itemContent}
         endReached={() => { if (displayClips.length > 0) loadMoreBlock(); }}
       />

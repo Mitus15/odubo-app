@@ -10,6 +10,12 @@ import {
 } from '@/lib/audioStreaming';
 
 // Types for the music player context
+export interface ListenHistoryEntry {
+  track: Track;
+  album: Album | null;
+  playedAt: number; // timestamp
+}
+
 export interface PlayerState {
   // Current playback
   currentTrack: Track | null;
@@ -17,19 +23,22 @@ export interface PlayerState {
   isPlaying: boolean;
   isPaused: boolean;
   isLoading: boolean;
-  
+
   // Audio properties
   currentTime: number;
   duration: number;
   volume: number;
   isMuted: boolean;
-  
+
   // Queue and playback modes
   queue: Track[];
   originalQueue: Track[];
   currentIndex: number;
   isShuffled: boolean;
   repeatMode: 'none' | 'one' | 'all';
+
+  // Listen history
+  listenHistory: ListenHistoryEntry[];
   // When shuffle + Repeat All are active, reshuffle the order at loop end
   reshuffleOnLoopEnd: boolean;
   // Shuffle management
@@ -75,7 +84,11 @@ export type PlayerAction =
   | { type: 'SET_LIBRARY_TRACKS'; payload: Track[] }
   | { type: 'ENTER_LIBRARY_SHUFFLE_MODE' }
   | { type: 'EXIT_LIBRARY_SHUFFLE_MODE' }
-  | { type: 'TOGGLE_RESHUFFLE_ON_LOOP_END' };
+  | { type: 'TOGGLE_RESHUFFLE_ON_LOOP_END' }
+  | { type: 'ADD_TO_HISTORY'; payload: { track: Track; album: Album | null } }
+  | { type: 'CLEAR_HISTORY' }
+  | { type: 'SHUFFLE_QUEUE' }
+  | { type: 'SHUFFLE_ALL_LIBRARY' };
 
 const initialState: PlayerState = {
   currentTrack: null,
@@ -92,6 +105,7 @@ const initialState: PlayerState = {
   currentIndex: -1,
   isShuffled: false,
   repeatMode: 'none',
+  listenHistory: [],
   reshuffleOnLoopEnd: true,
   shuffledOrder: [],
   shuffledPointer: -1,
@@ -628,7 +642,67 @@ const playerReducer = (state: PlayerState, action: PlayerAction): PlayerState =>
         isLibraryShuffleMode: false,
       };
     }
-    
+
+    case 'ADD_TO_HISTORY': {
+      const { track, album } = action.payload;
+      const entry: ListenHistoryEntry = { track, album, playedAt: Date.now() };
+      // Keep last 100 entries, avoid duplicates in quick succession
+      const filtered = state.listenHistory.filter(
+        h => h.track.id !== track.id || Date.now() - h.playedAt > 30000
+      );
+      return {
+        ...state,
+        listenHistory: [entry, ...filtered].slice(0, 100),
+      };
+    }
+
+    case 'CLEAR_HISTORY': {
+      return {
+        ...state,
+        listenHistory: [],
+      };
+    }
+
+    case 'SHUFFLE_QUEUE': {
+      if (state.queue.length <= 1) return state;
+      const currentTrack = state.currentTrack;
+      const currentIdx = state.currentIndex;
+      // Keep current track at position 0, shuffle the rest
+      const remainder = state.queue.filter((_, i) => i !== currentIdx);
+      const shuffledRemainder = shuffleArray(remainder);
+      const newQueue = currentTrack ? [currentTrack, ...shuffledRemainder] : shuffledRemainder;
+      return {
+        ...state,
+        queue: newQueue,
+        currentIndex: 0,
+        isShuffled: true,
+        shuffledOrder: newQueue.map((_, i) => i),
+        shuffledPointer: 0,
+      };
+    }
+
+    case 'SHUFFLE_ALL_LIBRARY': {
+      if (state.libraryTracks.length === 0) return state;
+      const availableTracks = state.libraryTracks.filter(t => t.audio_url);
+      if (availableTracks.length === 0) return state;
+      const shuffled = shuffleArray(availableTracks);
+      const firstTrack = shuffled[0];
+      return {
+        ...state,
+        queue: shuffled,
+        originalQueue: shuffled,
+        currentTrack: firstTrack,
+        currentIndex: 0,
+        isPlaying: true,
+        isLoading: true,
+        isShuffled: true,
+        isLibraryShuffleMode: true,
+        currentAlbum: null,
+        shuffledOrder: shuffled.map((_, i) => i),
+        shuffledPointer: 0,
+      };
+    }
+
     default:
       return state;
   }
@@ -662,7 +736,15 @@ interface MusicPlayerContextType {
   loadLibraryTracks: () => Promise<void>;
   enterLibraryShuffleMode: () => void;
   exitLibraryShuffleMode: () => void;
-  
+
+  // History methods
+  addToHistory: (track: Track, album: Album | null) => void;
+  clearHistory: () => void;
+
+  // Shuffle methods
+  shuffleQueue: () => void;
+  shuffleAllLibrary: () => void;
+
   // Utility methods
   testAudioUrl: (url: string) => Promise<boolean>;
 }
@@ -1399,6 +1481,29 @@ export const MusicPlayerProvider: React.FC<MusicPlayerProviderProps> = ({ childr
     dispatch({ type: 'EXIT_LIBRARY_SHUFFLE_MODE' });
   };
 
+  const addToHistory = (track: Track, album: Album | null) => {
+    dispatch({ type: 'ADD_TO_HISTORY', payload: { track, album } });
+  };
+
+  const clearHistory = () => {
+    dispatch({ type: 'CLEAR_HISTORY' });
+  };
+
+  const shuffleQueue = () => {
+    dispatch({ type: 'SHUFFLE_QUEUE' });
+  };
+
+  const shuffleAllLibrary = () => {
+    const audio = audioRef.current;
+    if (audio) {
+      advancingRef.current = true;
+      try { audio.pause(); } catch {}
+      try { audio.currentTime = 0; } catch {}
+      try { audio.src = ''; } catch {}
+    }
+    dispatch({ type: 'SHUFFLE_ALL_LIBRARY' });
+  };
+
   // Test audio URL accessibility with enhanced checking
   const testAudioUrl = async (url: string): Promise<boolean> => {
     try {
@@ -1441,6 +1546,13 @@ export const MusicPlayerProvider: React.FC<MusicPlayerProviderProps> = ({ childr
     loadLibraryTracks();
   }, []);
 
+  // Add to history when a new track starts playing
+  useEffect(() => {
+    if (state.currentTrack && state.isPlaying && !state.isLoading) {
+      dispatch({ type: 'ADD_TO_HISTORY', payload: { track: state.currentTrack, album: state.currentAlbum } });
+    }
+  }, [state.currentTrack?.id, state.isPlaying, state.isLoading]);
+
   const contextValue: MusicPlayerContextType = {
     state,
     dispatch,
@@ -1465,6 +1577,10 @@ export const MusicPlayerProvider: React.FC<MusicPlayerProviderProps> = ({ childr
     loadLibraryTracks,
     enterLibraryShuffleMode,
     exitLibraryShuffleMode,
+    addToHistory,
+    clearHistory,
+    shuffleQueue,
+    shuffleAllLibrary,
     testAudioUrl,
   };
 

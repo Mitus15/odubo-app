@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import VideoLibraryClientWrapper from './VideoLibraryClientWrapper';
 import MusicLibraryClientWrapper from '../music/MusicLibraryClientWrapper';
@@ -22,27 +22,24 @@ type Video = {
 };
 
 function MediaHubClientInner({ videos, albums }: { videos: Video[]; albums: Album[] }) {
-  const tabs: Array<{ key: 'videos' | 'music'; label: string }> = useMemo(
-    () => [
-      { key: 'videos', label: 'Video' },
-      { key: 'music', label: 'Music' },
-    ],
-    []
-  );
+  const tabs = [
+    { key: 'videos' as const, label: 'Video' },
+    { key: 'music' as const, label: 'Music' },
+  ];
 
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const router = useRouter();
 
   const initialTab = (() => {
-    const tabParam = searchParams.get('tab');
+    const tabParam = searchParams?.get('tab');
     return tabParam === 'music' || tabParam === 'videos' ? tabParam : 'videos';
   })();
 
   const [active, setActive] = useState<'videos' | 'music'>(initialTab);
 
   useEffect(() => {
-    const tabParam = searchParams.get('tab');
+    const tabParam = searchParams?.get('tab');
     if (tabParam === 'music' || tabParam === 'videos') {
       setActive(tabParam);
     }
@@ -50,33 +47,34 @@ function MediaHubClientInner({ videos, albums }: { videos: Video[]; albums: Albu
 
   const handleTabChange = (tab: 'videos' | 'music') => {
     setActive(tab);
-    const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams(searchParams?.toString() || '');
     params.set('tab', tab);
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
   return (
-    <div className="h-full flex flex-col gap-3">
-      <div className="flex items-center gap-2 bg-[#120f0f]/80 border border-[#2b1b18]/60 rounded-2xl p-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.45)] backdrop-blur-2xl w-full max-w-md mx-auto">
-        {tabs.map(tab => {
-          const isActive = active === tab.key;
-          return (
+    <div className="h-full flex flex-col">
+      {/* Tab Navigation */}
+      <div className="flex-shrink-0 px-4 py-4">
+        <div className="inline-flex p-1 rounded-xl bg-[#1a1918]/80 border border-[#502d26]/30 backdrop-blur-sm">
+          {tabs.map(tab => (
             <button
               key={tab.key}
               onClick={() => handleTabChange(tab.key)}
-              className={`flex-1 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-                isActive
-                  ? 'bg-gradient-to-r from-[#a44e3a] via-[#843c2d] to-[#52241d] text-[#f8f2ea] shadow-[0_10px_32px_rgba(132,60,45,0.45)] border border-[#c58a70]/40'
-                  : 'text-[#c7b8a8] hover:text-[#f8f2ea] hover:bg-white/5 border border-transparent'
+              className={`px-5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 ${
+                active === tab.key
+                  ? 'bg-gradient-to-r from-[#843c2d] via-[#9a4535] to-[#6d3224] text-[#f8f2ea] shadow-lg shadow-[#843c2d]/25'
+                  : 'text-[#b2a491] hover:text-[#ede8df] hover:bg-white/5'
               }`}
             >
               {tab.label}
             </button>
-          );
-        })}
+          ))}
+        </div>
       </div>
 
-      <div className="flex-1 min-h-0 relative rounded-2xl border border-[#2b1b18]/50 bg-gradient-to-br from-[#0e0b0b]/80 via-[#120f0f]/70 to-[#1a0f0c]/80 backdrop-blur-2xl shadow-[0_16px_60px_rgba(0,0,0,0.55)]">
+      {/* Content */}
+      <div className="flex-1 min-h-0 relative">
         {active === 'videos' ? (
           <VideoLibraryClientWrapper videos={videos} />
         ) : (
@@ -91,7 +89,7 @@ export default function MediaHubClient({ videos, albums }: { videos: Video[]; al
   return (
     <Suspense fallback={
       <div className="flex items-center justify-center h-full">
-        <div className="text-[#ede8df] text-sm">Loading media hub...</div>
+        <div className="w-6 h-6 border-2 border-[#502d26]/30 border-t-[#726d6c] rounded-full animate-spin" />
       </div>
     }>
       <MediaHubClientInner videos={videos} albums={albums} />

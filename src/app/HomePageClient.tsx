@@ -1,8 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import ClipsFeed from '@/components/clips/ClipsFeed';
 import { AudioProvider } from '@/contexts/AudioContext';
+import FilmGrain from '@/components/ui/FilmGrain';
 
 interface VerseOfTheDay {
   text: string;
@@ -12,19 +14,36 @@ interface VerseOfTheDay {
 
 interface HomePageClientProps {
   verseOfTheDay: VerseOfTheDay;
+  initialClipId?: number | null;
 }
 
-export default function HomePageClient({ verseOfTheDay }: HomePageClientProps) {
+export default function HomePageClient({ verseOfTheDay, initialClipId }: HomePageClientProps) {
   const HEADER_HEIGHT = 56;
+  const INTRO_DURATION = 4000; // Show verse for 4 seconds before collapsing
+
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
   const [navHeight, setNavHeight] = useState<number>(HEADER_HEIGHT);
-  const [showOverlay, setShowOverlay] = useState<boolean>(true);
 
+  // Verse overlay states
+  const [phase, setPhase] = useState<'intro' | 'collapsed' | 'expanded'>('intro');
+  const [hasInteracted, setHasInteracted] = useState(false);
+
+  // Clock update
   useEffect(() => {
     setCurrentTime(new Date());
     const interval = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(interval);
   }, []);
+
+  // Auto-collapse after intro
+  useEffect(() => {
+    if (phase === 'intro') {
+      const timer = setTimeout(() => {
+        setPhase('collapsed');
+      }, INTRO_DURATION);
+      return () => clearTimeout(timer);
+    }
+  }, [phase]);
 
   const formatTime = (date: Date | null) => {
     if (!date) return '';
@@ -63,8 +82,6 @@ export default function HomePageClient({ verseOfTheDay }: HomePageClientProps) {
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
 
-    // Service workers are now registered globally in ServiceWorkerRegistration component
-
     return () => {
       window.removeEventListener('resize', updateNavHeight);
       window.removeEventListener('orientationchange', updateNavHeight);
@@ -72,65 +89,144 @@ export default function HomePageClient({ verseOfTheDay }: HomePageClientProps) {
     };
   }, []);
 
+  // Toggle expanded/collapsed
+  const handlePillClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    setHasInteracted(true);
+    setPhase(p => p === 'expanded' ? 'collapsed' : 'expanded');
+  }, []);
+
+  // Collapse when tapping video area (only if expanded)
+  const handleBackdropClick = useCallback(() => {
+    if (phase === 'expanded') {
+      setPhase('collapsed');
+    }
+    // Also collapse intro early on first interaction
+    if (phase === 'intro' && !hasInteracted) {
+      setHasInteracted(true);
+      setPhase('collapsed');
+    }
+  }, [phase, hasInteracted]);
+
+  const isShowingVerse = phase === 'intro' || phase === 'expanded';
+
   return (
     <AudioProvider>
       <div className="relative bg-black text-[#ede8df] min-h-[100svh]">
-        {/* Overlay toggle button (top-right) */}
-        <div
-          className="fixed right-4 z-30 pointer-events-none"
-          style={{ top: navHeight + 12 }}
-        >
-          <button
-            onClick={() => setShowOverlay(v => !v)}
-            className="pointer-events-auto inline-flex items-center gap-2 px-3.5 py-2 rounded-full bg-white/12 border border-white/20 text-white shadow-[0_12px_40px_rgba(0,0,0,0.45)] backdrop-blur-xl hover:bg-white/18 active:scale-95 transition-all"
-            aria-pressed={showOverlay}
-            aria-label={showOverlay ? 'Hide proverb overlay' : 'Show proverb overlay'}
-          >
-            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-              <path d="M5 5h14v10H7l-2 2z" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            <span className="text-xs font-semibold uppercase tracking-[0.08em]">{showOverlay ? 'Hide' : 'Show'}</span>
-          </button>
-        </div>
+        {/* Animated film grain overlay */}
+        <FilmGrain opacity={0.03} />
 
         {/* Clips layer */}
         <div
-          style={{ position: 'fixed', top: navHeight, left: 0, right: 0, bottom: 0, backgroundColor: '#000', overflow: 'hidden' }}
-          className="pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
+          className="fixed inset-0 bg-black"
+          style={{
+            top: navHeight,
+            touchAction: 'pan-y',
+            overscrollBehavior: 'none',
+            overflow: 'hidden'
+          }}
+          onClick={handleBackdropClick}
         >
-          <ClipsFeed navHeight={navHeight} />
+          <ClipsFeed navHeight={navHeight} initialClipId={initialClipId} />
         </div>
 
-        {/* Verse + Clock overlay */}
-        <div
-          className={`pointer-events-none fixed left-0 right-0 flex items-center justify-center px-6 transition-all duration-300 ease-out ${showOverlay ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-3'}`}
-          style={{ top: navHeight, bottom: 0 }}
-        >
-          <div className="w-full max-w-3xl flex flex-col items-center gap-4 text-center">
-            <blockquote className="glass-text text-[1.25rem] md:text-[1.5rem] leading-relaxed drop-shadow-[0_8px_26px_rgba(0,0,0,0.65)]">
-              “{verseOfTheDay.text}”
-            </blockquote>
-
-            <div
-              className="relative rounded-lg px-3 py-1.5 backdrop-blur-xl border border-white/12 text-white/80 font-mono text-[0.52rem] md:text-[0.6rem] shadow-[0_10px_40px_rgba(0,0,0,0.45)]"
+        {/* Word Button - Single transforming button */}
+        <AnimatePresence mode="wait">
+          {phase !== 'intro' && (
+            <motion.button
+              key={phase}
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+              onClick={handlePillClick}
+              className="fixed left-4 z-40 flex items-center justify-center rounded-full bg-black/40 backdrop-blur-xl border border-white/10 text-white shadow-lg active:scale-90 transition-transform"
               style={{
-                background: 'linear-gradient(120deg, rgba(255,255,255,0.08), rgba(255,255,255,0.025))',
-                mixBlendMode: 'screen'
+                top: navHeight + 12,
+                touchAction: 'manipulation',
+                WebkitTapHighlightColor: 'transparent',
+                minWidth: 44,
+                minHeight: 44,
+                padding: phase === 'expanded' ? 10 : '8px 14px',
               }}
+              aria-label={phase === 'expanded' ? 'Close verse' : 'Show verse'}
             >
-              <div className="absolute inset-0 bg-white/4" />
-              <span className="relative" style={{ letterSpacing: '0.06em' }}>
-                {currentTime ? formatTime(currentTime) : '— — : — — : — — . — — —'}
-              </span>
-            </div>
+              {phase === 'expanded' ? (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-white/80" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-white/70">Word</span>
+                </div>
+              )}
+            </motion.button>
+          )}
+        </AnimatePresence>
 
-            {verseOfTheDay.error && (
-              <p className="text-xs text-amber-100/80 drop-shadow-[0_4px_20px_rgba(0,0,0,0.45)]">
-                {verseOfTheDay.error}
-              </p>
-            )}
-          </div>
-        </div>
+        {/* Full Verse Overlay (intro & expanded states) */}
+        <AnimatePresence>
+          {isShowingVerse && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="fixed inset-0 flex items-center justify-center px-6 bg-black/60 backdrop-blur-sm"
+              style={{ top: navHeight, zIndex: 35 }}
+              onClick={handleBackdropClick}
+            >
+              <motion.div
+                className="w-full max-w-2xl flex flex-col items-center gap-5 text-center"
+                initial={{ opacity: 0, y: 30, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -20, scale: 0.95 }}
+                transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Verse text */}
+                <blockquote className="text-[1.15rem] md:text-[1.4rem] leading-[1.7] font-light text-white drop-shadow-[0_4px_20px_rgba(0,0,0,0.8)]">
+                  "{verseOfTheDay.text}"
+                </blockquote>
+
+                {/* Reference */}
+                {verseOfTheDay.reference && (
+                  <p className="text-xs font-medium uppercase tracking-[0.15em] text-white/60">
+                    — {verseOfTheDay.reference}
+                  </p>
+                )}
+
+                {/* Clock */}
+                <div className="rounded-lg px-3 py-1.5 bg-white/5 backdrop-blur-sm border border-white/10 text-white/50 font-mono text-[0.5rem] md:text-[0.55rem]">
+                  <span style={{ letterSpacing: '0.08em' }}>
+                    {currentTime ? formatTime(currentTime) : '— — : — — : — — . — — —'}
+                  </span>
+                </div>
+
+                {/* Tap hint during intro */}
+                {phase === 'intro' && (
+                  <motion.p
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 1.5 }}
+                    className="text-[10px] text-white/40 uppercase tracking-widest"
+                  >
+                    Tap anywhere to browse
+                  </motion.p>
+                )}
+
+                {verseOfTheDay.error && (
+                  <p className="text-xs text-amber-200/60">
+                    {verseOfTheDay.error}
+                  </p>
+                )}
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </AudioProvider>
   );

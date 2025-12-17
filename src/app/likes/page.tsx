@@ -13,8 +13,8 @@ async function getUserLikes() {
       SELECT t.*, a.title as album_title, a.artist_name, a.cover_art_url,
              utl.liked_at,
              GROUP_CONCAT(
-               CASE WHEN tc.id IS NOT NULL 
-               THEN json_object('id', tc.id, 'role', tc.role, 'name', tc.name, 'is_featured', tc.is_featured) 
+               CASE WHEN tc.id IS NOT NULL
+               THEN json_object('id', tc.id, 'role', tc.role, 'name', tc.name, 'is_featured', tc.is_featured)
                END
              ) as credits_json
       FROM user_track_likes utl
@@ -51,7 +51,7 @@ async function getUserLikes() {
     // Parse credits for tracks
     const processedTracks = likedTracks.map((track: any) => ({
       ...track,
-      credits: track.credits_json ? 
+      credits: track.credits_json ?
         track.credits_json.split(',').map((creditStr: string) => {
           try {
             return JSON.parse(creditStr);
@@ -80,35 +80,43 @@ export default async function LikesPage() {
   const likes = await getUserLikes();
 
   return (
-    <div className="flex flex-col h-full min-h-0 bg-gradient-to-br from-gray-900 via-black to-gray-900 text-white">
-      {/* Header (fixed within layout) */}
+    <div className="flex flex-col h-full min-h-0 bg-gradient-to-br from-[#302927] via-[#171616] to-[#302927] text-[#ede8df]">
+      {/* Header - warm glass with subtle glow */}
       <div className="flex-shrink-0 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-red-600/20 to-pink-600/20"></div>
+        {/* Ambient light effects */}
+        <div className="absolute inset-0 bg-gradient-to-r from-[#843c2d]/15 via-transparent to-[#502d26]/15" />
+        <div className="absolute top-0 left-1/4 w-64 h-64 bg-[#843c2d]/10 rounded-full blur-3xl" />
+        <div className="absolute top-0 right-1/4 w-48 h-48 bg-[#b2a491]/8 rounded-full blur-3xl" />
+
         <div className="relative px-4 py-8 sm:py-12">
           <div className="text-center">
-            <div className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-red-500 to-pink-500 rounded-full mb-6">
-              <svg className="w-8 h-8 sm:w-10 sm:h-10 text-white" fill="currentColor" viewBox="0 0 24 24">
+            {/* Heart icon - warm glass treatment */}
+            <div className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 glass-surface border border-[#843c2d]/30 rounded-full mb-6 shadow-[0_0_40px_rgba(132,60,45,0.2)]">
+              <svg className="w-8 h-8 sm:w-10 sm:h-10 text-[#843c2d]" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
               </svg>
             </div>
-            <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold mb-4 bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-serif font-medium mb-4 text-[#ede8df] tracking-wide">
               Your Likes
             </h1>
-            <p className="text-base sm:text-lg md:text-xl text-gray-300 max-w-2xl mx-auto">
+            <p className="text-sm sm:text-base md:text-lg text-[#b2a491] max-w-2xl mx-auto font-light tracking-wide">
               All your favorite music, albums, and videos in one place.
             </p>
-            <div className="mt-6 sm:mt-8 flex items-center justify-center space-x-6 sm:space-x-8 text-sm text-gray-400">
-              <div className="flex items-center">
-                <div className="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
-                {likes.tracks.length} Tracks
+
+            {/* Stats - warm glass pills */}
+            <div className="mt-6 sm:mt-8 flex items-center justify-center gap-4 sm:gap-6">
+              <div className="flex items-center gap-2 px-3 py-1.5 glass-surface border border-[#502d26]/30 rounded-full">
+                <div className="w-2 h-2 bg-[#843c2d] rounded-full shadow-[0_0_8px_rgba(132,60,45,0.5)]" />
+                <span className="text-xs text-[#b2a491]">{likes.tracks.length} Tracks</span>
               </div>
-              <div className="flex items-center">
-                <div className="w-3 h-3 bg-purple-500 rounded-full mr-2"></div>
-                {likes.albums.length} Albums
+              <div className="flex items-center gap-2 px-3 py-1.5 glass-surface border border-[#502d26]/30 rounded-full">
+                <div className="w-2 h-2 bg-[#b2a491] rounded-full shadow-[0_0_8px_rgba(178,164,145,0.4)]" />
+                <span className="text-xs text-[#b2a491]">{likes.albums.length} Albums</span>
               </div>
-              <div className="flex items-center">
-                <div className="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
-                {likes.videos.length} Videos
+              <div className="flex items-center gap-2 px-3 py-1.5 glass-surface border border-[#502d26]/30 rounded-full">
+                <div className="w-2 h-2 bg-[#ede8df] rounded-full shadow-[0_0_8px_rgba(237,232,223,0.3)]" />
+                <span className="text-xs text-[#b2a491]">{likes.videos.length} Videos</span>
               </div>
             </div>
           </div>
@@ -118,7 +126,7 @@ export default async function LikesPage() {
       {/* Likes Content (scrollable) */}
       <div className="flex-1 min-h-0 overflow-y-auto scrollable-container px-4 pb-8">
         <div className="max-w-7xl mx-auto">
-          <UserLikesClient 
+          <UserLikesClient
             tracks={likes.tracks}
             albums={likes.albums}
             videos={likes.videos}

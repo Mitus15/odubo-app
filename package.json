@@ -5,6 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "next dev --turbopack",
+    "dev:https": "next dev --turbopack --experimental-https",
+    "dev:network": "next dev --turbopack -H 0.0.0.0",
+    "dev:network:https": "next dev --turbopack -H 0.0.0.0 --experimental-https",
     "build": "next build",
     "build:deploy": "npx --yes @cloudflare/next-on-pages",
     "start": "next start",
@@ -60,6 +63,7 @@
     "formdata-node": "^6.0.3",
     "formidable": "^3.5.4",
     "framer-motion": "^12.23.12",
+    "grained": "^0.0.2",
     "gsap": "^3.12.5",
     "hls.js": "^1.5.15",
     "jest": "^29.7.0",

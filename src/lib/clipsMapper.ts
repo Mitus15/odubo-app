@@ -35,6 +35,10 @@ export function mapClipRow(row: ClipApiRow): ClipItem | null {
     createdAt: row.created_at ?? null,
     productHandle: row.shopify_product_handle || null,
     parentId: parseParentId(row.related_projects),
+    // Include engagement data if present
+    engagementScore: row.engagement_score,
+    viewCount: row.view_count,
+    completionCount: row.completion_count,
   };
 }
 

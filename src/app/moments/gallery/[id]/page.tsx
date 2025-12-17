@@ -1,49 +1,23 @@
 "use client";
-import { useEffect, useMemo, useState, useRef, use } from 'react';
+import { useEffect, useMemo, useState, useRef, use, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
-import type { Variants, Transition } from 'framer-motion';
 
-// Animation variants
-const containerVariants: Variants = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.05
-    }
-  }
-};
+interface Photo {
+  id: number;
+  r2_url: string;
+  thumbnail_url?: string;
+  original_filename?: string;
+  user_name?: string;
+  created_at: string;
+  media_type?: string;
+  moderated?: number;
+}
 
-const springTransition: Transition = {
-  type: 'spring',
-  stiffness: 100,
-  damping: 15
-};
-
-const itemVariants: Variants = {
-  hidden: { opacity: 0, y: 20, scale: 0.95 },
-  show: { 
-    opacity: 1, 
-    y: 0, 
-    scale: 1,
-    transition: springTransition
-  }
-};
-
-// Skeleton loader component
-function PhotoSkeleton() {
-  return (
-    <div className="animate-pulse rounded-xl overflow-hidden bg-[#1f1e1d] border border-[#3b3733]">
-      <div className="aspect-square bg-gradient-to-br from-[#2a2626] to-[#1f1e1d]" />
-      <div className="p-3 space-y-2">
-        <div className="h-3 bg-[#3b3733] rounded w-3/4" />
-        <div className="h-2 bg-[#3b3733] rounded w-1/2" />
-      </div>
-    </div>
-  );
+interface GalleryInfo {
+  title?: string;
+  description?: string;
 }
 
 export default function GalleryViewer({ params }: { params: Promise<{ id: string }> }) {
@@ -51,36 +25,39 @@ export default function GalleryViewer({ params }: { params: Promise<{ id: string
   const id = Number(idParam);
   const sp = useSearchParams();
   const codeFromUrl = sp?.get('code') || '';
-  const [code, setCode] = useState<string>(codeFromUrl);
-  const [photos, setPhotos] = useState<Array<any>>([]);
+  const [code] = useState<string>(codeFromUrl);
+  const [photos, setPhotos] = useState<Photo[]>([]);
   const [error, setError] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [viewerOpen, setViewerOpen] = useState(false);
   const [index, setIndex] = useState(0);
-  const [galleryInfo, setGalleryInfo] = useState<{title?: string; description?: string} | null>(null);
-  const observerRef = useRef<IntersectionObserver | null>(null);
-  const [loadedImages, setLoadedImages] = useState<Set<number>>(new Set());
-  const closeBtnRef = useRef<HTMLButtonElement | null>(null);
-  const viewerContentRef = useRef<HTMLDivElement | null>(null);
+  const [galleryInfo, setGalleryInfo] = useState<GalleryInfo | null>(null);
   const abortRef = useRef<AbortController | null>(null);
-  const reduceMotion = useReducedMotion();
-  const [emptyReady, setEmptyReady] = useState(false);
+  const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
+
+  // Setup portal root on mount
+  useEffect(() => {
+    setPortalRoot(document.body);
+  }, []);
+
+  // Touch handling for swipe
+  const touchStartX = useRef(0);
+  const touchEndX = useRef(0);
 
   const canFetch = useMemo(() => Number.isFinite(id), [id]);
 
-  async function fetchPhotos() {
+  const fetchPhotos = useCallback(async () => {
     if (!canFetch) return;
     setLoading(true);
     setError('');
     try {
-      // Cancel any in-flight request to avoid race conditions
       abortRef.current?.abort();
       const ac = new AbortController();
       abortRef.current = ac;
-      // Fetch gallery info
-      const infoRes = await fetch(`/api/moments/galleries/${id}` , { signal: ac.signal });
+
+      const infoRes = await fetch(`/api/moments/galleries/${id}`, { signal: ac.signal });
       if (infoRes.ok) {
-        const infoData: any = await infoRes.json().catch(() => ({}));
+        const infoData = await infoRes.json().catch(() => ({}));
         if (infoData?.gallery) {
           setGalleryInfo({
             title: infoData.gallery.title,
@@ -89,18 +66,15 @@ export default function GalleryViewer({ params }: { params: Promise<{ id: string
         }
       }
 
-      // Fetch photos
       const url = new URL('/api/moments/list', window.location.origin);
       url.searchParams.set('galleryId', String(id));
       if (code) url.searchParams.set('code', code);
       url.searchParams.set('limit', '200');
-      const res = await fetch(url.toString(), { signal: ac.signal, headers: { 'Accept': 'application/json' } });
-      const data: any = await res.json().catch(() => ({}));
+      const res = await fetch(url.toString(), { signal: ac.signal });
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || 'Failed to load photos');
-      // Client-side safety: hide rejected if server ever returns them to public views
       const list = Array.isArray(data?.photos) ? data.photos : [];
-      const filtered = list.filter((p: any) => p.moderated !== 2);
-      setPhotos(filtered);
+      setPhotos(list.filter((p: Photo) => p.moderated !== 2));
     } catch (e: any) {
       if (e?.name !== 'AbortError') {
         setError(e?.message || String(e));
@@ -108,350 +82,341 @@ export default function GalleryViewer({ params }: { params: Promise<{ id: string
     } finally {
       setLoading(false);
     }
-  }
+  }, [canFetch, id, code]);
 
   useEffect(() => {
     if (canFetch) fetchPhotos();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [canFetch]);
+  }, [canFetch, fetchPhotos]);
 
-  // Auto-refresh while tab is visible - reduced from 12s to 30s for better performance
   useEffect(() => {
     if (!canFetch) return;
-    let timer: any;
-    let cancelled = false;
-    function onVisibility() {
-      if (document.hidden) return;
-      fetchPhotos();
-    }
-    // Increased interval from 12s to 30s to reduce server load
-    function start() {
-      clearInterval(timer);
-      timer = setInterval(() => {
-        if (!document.hidden) fetchPhotos();
-      }, 30000); // Changed from 12000 to 30000
-    }
-    start();
-    document.addEventListener('visibilitychange', onVisibility);
-    return () => {
-      cancelled = true;
-      clearInterval(timer);
-      document.removeEventListener('visibilitychange', onVisibility);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [canFetch, id, code]);
+    const timer = setInterval(() => {
+      if (!document.hidden) fetchPhotos();
+    }, 30000);
+    return () => clearInterval(timer);
+  }, [canFetch, fetchPhotos]);
 
-  function openAt(i: number) {
+  const openAt = (i: number) => {
     setIndex(i);
     setViewerOpen(true);
-  }
+  };
 
-  function prev() { setIndex(i => (i - 1 + photos.length) % photos.length); }
-  function next() { setIndex(i => (i + 1) % photos.length); }
+  const closeViewer = () => {
+    setViewerOpen(false);
+  };
 
-  // Swipe handling and keyboard navigation
+  const prev = useCallback(() => {
+    if (photos.length <= 1) return;
+    setIndex(i => (i - 1 + photos.length) % photos.length);
+  }, [photos.length]);
+
+  const next = useCallback(() => {
+    if (photos.length <= 1) return;
+    setIndex(i => (i + 1) % photos.length);
+  }, [photos.length]);
+
+  // Handle touch swipe
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    touchEndX.current = e.changedTouches[0].clientX;
+    const diff = touchStartX.current - touchEndX.current;
+    if (Math.abs(diff) > 50) {
+      if (diff > 0) {
+        next();
+      } else {
+        prev();
+      }
+    }
+  };
+
+  // Keyboard navigation
   useEffect(() => {
     if (!viewerOpen) return;
-    
-    let startX = 0; let dx = 0;
-    function onTouchStart(e: TouchEvent) { startX = e.changedTouches[0].clientX; }
-    function onTouchEnd(e: TouchEvent) {
-      dx = e.changedTouches[0].clientX - startX;
-      if (Math.abs(dx) > 40) { dx < 0 ? next() : prev(); }
-    }
-    function onKeyDown(e: KeyboardEvent) {
+    const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowLeft') prev();
       if (e.key === 'ArrowRight') next();
-      if (e.key === 'Escape') setViewerOpen(false);
-    }
-    document.addEventListener('touchstart', onTouchStart, { passive: true });
-    document.addEventListener('touchend', onTouchEnd, { passive: true });
-    document.addEventListener('keydown', onKeyDown);
-    return () => {
-      document.removeEventListener('touchstart', onTouchStart as any);
-      document.removeEventListener('touchend', onTouchEnd as any);
-      document.removeEventListener('keydown', onKeyDown);
+      if (e.key === 'Escape') closeViewer();
     };
-  }, [viewerOpen, photos.length]);
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [viewerOpen, prev, next]);
 
-  // Lock body scroll and focus close button when viewer opens
+  // Lock body scroll when viewer is open
   useEffect(() => {
     if (viewerOpen) {
-      const prevOverflow = document.body.style.overflow;
       document.body.style.overflow = 'hidden';
-      // focus close button on open for accessibility
-      setTimeout(() => closeBtnRef.current?.focus(), 0);
-      return () => {
-        document.body.style.overflow = prevOverflow;
-      };
+      return () => { document.body.style.overflow = ''; };
     }
   }, [viewerOpen]);
 
-  // Prefetch adjacent images for smoother navigation
-  const nextIdx = (index + 1) % Math.max(photos.length, 1);
-  const prevIdx = (index - 1 + Math.max(photos.length, 1)) % Math.max(photos.length, 1);
-
-  // Debounce empty state so it never flashes during brief loads
-  useEffect(() => {
-    let t: any;
-    if (loading) {
-      setEmptyReady(false);
-    } else if (!loading && photos.length === 0) {
-      t = setTimeout(() => setEmptyReady(true), 3000);
-    } else {
-      setEmptyReady(false);
-    }
-    return () => { if (t) clearTimeout(t); };
-  }, [loading, photos.length]);
+  const currentPhoto = photos[index];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#0a0908] via-[#171616] to-[#0a0908]">
-      {/* Header with back button */}
-      <header className="sticky top-0 z-40 bg-[#141312]/95 backdrop-blur supports-[backdrop-filter]:backdrop-blur border-b border-[#262321]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
-          <div className="flex items-center gap-4">
-            {viewerOpen ? (
-              <button
-                type="button"
-                onClick={() => setViewerOpen(false)}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#1f1e1d] border border-[#3b3733] hover:border-[#ede8df]/30 transition-colors group"
-                aria-label="Back to grid"
-              >
-                <svg className="w-4 h-4 text-[#b2a491] group-hover:text-[#ede8df] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-                <span className="text-sm font-medium text-[#b2a491] group-hover:text-[#ede8df] transition-colors">Back</span>
-              </button>
-            ) : (
-              <Link 
-                href="/moments"
-                className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#1f1e1d] border border-[#3b3733] hover:border-[#ede8df]/30 transition-colors group"
-              >
-                <svg className="w-4 h-4 text-[#b2a491] group-hover:text-[#ede8df] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-                <span className="text-sm font-medium text-[#b2a491] group-hover:text-[#ede8df] transition-colors">Back</span>
-              </Link>
-            )}
-            <div className="flex-1">
-              <h1 className="text-xl sm:text-2xl font-bold text-[#ede8df]">
-                {galleryInfo?.title || 'Gallery'}
-              </h1>
-              {galleryInfo?.description && (
-                <p className="text-sm text-[#b2a491] mt-0.5">{galleryInfo.description}</p>
-              )}
-            </div>
-            <div className="text-xs text-[#8f8271]">
-              {photos.length} {photos.length === 1 ? 'photo' : 'photos'}
-            </div>
+    <div className="min-h-screen bg-[#0a0a0a] flex flex-col">
+      {/* Gallery Header - scrolls with content, below app header */}
+      <header className="bg-[#0a0a0a] border-b border-[#252221]">
+        <div className="flex items-center gap-3 px-4 py-3">
+          <Link
+            href="/moments"
+            className="w-10 h-10 flex items-center justify-center rounded-full bg-[#1a1918] hover:bg-[#252221] transition-colors"
+          >
+            <svg className="w-5 h-5 text-[#ede8df]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+          </Link>
+
+          <div className="flex-1 min-w-0">
+            <h1 className="text-base font-semibold text-[#ede8df] truncate">
+              {galleryInfo?.title || 'Gallery'}
+            </h1>
           </div>
+
+          <span className="text-sm text-[#726d6c] tabular-nums">{photos.length}</span>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 pb-24">
+      {/* Scrollable content */}
+      <main className="flex-1 px-1 pb-24">
         {error && (
-          <div className="mb-6 p-4 rounded-xl border border-red-600/50 bg-red-900/20 text-red-300 text-sm">
+          <div className="mx-2 mb-4 p-3 rounded-lg border border-red-500/30 bg-red-500/10 text-red-300 text-sm">
             {error}
           </div>
         )}
 
-        {(loading || (!loading && photos.length === 0 && !emptyReady)) && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
-            {[...Array(10)].map((_, i) => <PhotoSkeleton key={i} />)}
+        {/* Loading */}
+        {loading && (
+          <div className="grid grid-cols-3 gap-0.5">
+            {[...Array(12)].map((_, i) => (
+              <div key={i} className="aspect-square bg-[#252221] animate-pulse" />
+            ))}
           </div>
         )}
 
-        {photos.length === 0 && !loading && emptyReady && (
-          <div className="text-center py-20">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[#1f1e1d] border border-[#3b3733] flex items-center justify-center">
-              <svg className="w-8 h-8 text-[#666461]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        {/* Empty */}
+        {!loading && photos.length === 0 && !error && (
+          <div className="text-center py-16 px-4">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[#252221] flex items-center justify-center">
+              <svg className="w-8 h-8 text-[#502d26]" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
               </svg>
             </div>
-            <p className="text-lg font-medium text-[#b2a491]">No photos yet</p>
-            <p className="text-sm text-[#8f8271] mt-1">Be the first to capture a moment!</p>
+            <p className="text-[#ede8df] font-medium mb-1">No photos yet</p>
+            <p className="text-sm text-[#726d6c] mb-4">Be the first to capture a moment</p>
+            <Link
+              href={`/moments?galleryId=${id}`}
+              className="inline-block px-4 py-2 rounded-lg bg-[#843c2d] text-white text-sm font-medium"
+            >
+              Open Camera
+            </Link>
           </div>
         )}
 
-        {photos.length > 0 && (
-          <motion.div 
-            variants={containerVariants}
-            initial={reduceMotion ? false : "hidden"}
-            animate="show"
-            className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4"
-          >
-            {photos.map((p: any, i: number) => (
-              <motion.figure 
-                key={p.id}
-                variants={itemVariants}
-                layoutId={`photo-${p.id}`}
-                className="group cursor-pointer relative overflow-hidden rounded-xl bg-[#1f1e1d] border border-[#3b3733] hover:border-[#ede8df]/40 transition-colors duration-300 hover:shadow-xl hover:shadow-[#ff8a3d]/5"
+        {/* Photo Grid */}
+        {!loading && photos.length > 0 && (
+          <div className="grid grid-cols-3 gap-0.5">
+            {photos.map((photo, i) => (
+              <button
+                key={photo.id}
                 onClick={() => openAt(i)}
+                className="relative aspect-square bg-[#1a1918] overflow-hidden focus:outline-none focus:ring-2 focus:ring-[#843c2d] focus:ring-inset"
               >
-                <div className="relative aspect-square bg-[#0a0908] overflow-hidden">
-                  <motion.div initial={reduceMotion ? false : { opacity: 0, scale: 1.03 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.35 }} className="absolute inset-0">
-                    <Image 
-                      src={(p.media_type === 'video' ? (p.thumbnail_url || p.r2_url) : (p.thumbnail_url || p.r2_url))}
-                      alt={p.original_filename || 'photo'}
-                      fill
-                      sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
-                      priority={i < 4}
-                      quality={75}
-                      className="object-cover"
-                    />
-                  </motion.div>
-                  {p.media_type === 'video' && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/10 transition-colors">
-                      <div className="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center shadow-lg transform group-hover:scale-110 transition-transform">
-                        <svg className="w-6 h-6 text-[#171616] ml-0.5" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M8 5v14l11-7z" />
-                        </svg>
-                      </div>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={photo.thumbnail_url || photo.r2_url}
+                  alt=""
+                  loading={i < 12 ? 'eager' : 'lazy'}
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+                {photo.media_type === 'video' && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                    <div className="w-8 h-8 rounded-full bg-black/60 flex items-center justify-center">
+                      <svg className="w-4 h-4 text-white ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M8 5v14l11-7z" />
+                      </svg>
                     </div>
-                  )}
-                </div>
-                
-                {/* Overlay info */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <div className="absolute bottom-0 left-0 right-0 p-3 text-white transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
-                    <p className="text-sm font-medium truncate">{p.user_name || 'Anonymous'}</p>
-                    <p className="text-xs opacity-75">{new Date(p.created_at).toLocaleDateString()}</p>
                   </div>
-                </div>
-              </motion.figure>
+                )}
+              </button>
             ))}
-          </motion.div>
+          </div>
         )}
       </main>
 
-      {/* Lightbox viewer - positioned below navbar */}
-      <AnimatePresence>
-        {viewerOpen && photos[index] && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-x-0 top-0 bottom-0 z-30 bg-black"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Media viewer"
-            onClick={() => setViewerOpen(false)}
+      {/* Fullscreen Viewer - rendered via Portal to escape all stacking contexts */}
+      {viewerOpen && currentPhoto && portalRoot && createPortal(
+        <div className="photo-lightbox-portal">
+          {/* Black overlay that covers entire viewport */}
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              backgroundColor: 'black',
+              zIndex: 99999,
+            }}
+            onClick={closeViewer}
+          />
+
+          {/* Viewer content */}
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              zIndex: 100000,
+              display: 'flex',
+              flexDirection: 'column',
+            }}
           >
-            {/* Main content area - starts below navbar (h-16) */}
-            <div className="pt-16 h-full flex flex-col" onClick={(e) => e.stopPropagation()} ref={viewerContentRef}>
-              {/* Top bar with info and close */}
-              <div className="flex-none bg-black/80 backdrop-blur-sm border-b border-white/10 px-4 py-3 flex items-center justify-between">
-                <div className="flex-1">
-                  <p className="text-white font-medium text-sm">{photos[index].user_name || 'Anonymous'}</p>
-                  <p className="text-white/60 text-xs">{new Date(photos[index].created_at).toLocaleString()}</p>
-                </div>
-                <button 
-                  className="p-2 rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 transition-colors"
-                  onClick={() => setViewerOpen(false)}
-                  ref={closeBtnRef}
-                  aria-label="Close viewer"
-                >
-                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
+            {/* Close button - top left, always visible */}
+            <button
+              onClick={closeViewer}
+              style={{
+                position: 'absolute',
+                top: 'calc(16px + env(safe-area-inset-top, 0px))',
+                left: '16px',
+                width: '48px',
+                height: '48px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: '50%',
+                backgroundColor: 'rgba(0,0,0,0.6)',
+                border: '1px solid rgba(255,255,255,0.2)',
+                zIndex: 100001,
+              }}
+              aria-label="Close"
+            >
+              <svg style={{ width: '28px', height: '28px', color: 'white' }} fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
 
-              {/* Image/Video container - fills remaining space */}
-              <div className="flex-1 flex items-center justify-center px-4 py-4 overflow-hidden">
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={photos[index].id}
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                    className="w-full h-full flex items-center justify-center"
-                  >
-                    {photos[index].media_type === 'video' ? (
-                      <video 
-                        src={photos[index].r2_url} 
-                        controls 
-                        autoPlay
-                        playsInline
-                        className="max-h-full max-w-full rounded-lg shadow-2xl"
-                      />
-                    ) : (
-                      <div className="relative w-full h-full">
-                        <Image 
-                          src={photos[index].r2_url}
-                          alt={photos[index].original_filename || 'photo'}
-                          fill
-                          sizes="100vw"
-                          priority
-                          className="object-contain rounded-lg shadow-2xl"
-                        />
-                      </div>
-                    )}
-                  </motion.div>
-                </AnimatePresence>
-              </div>
+            {/* Download button - top right */}
+            {currentPhoto.media_type !== 'video' && (
+              <a
+                href={currentPhoto.r2_url}
+                download
+                style={{
+                  position: 'absolute',
+                  top: 'calc(16px + env(safe-area-inset-top, 0px))',
+                  right: '16px',
+                  width: '48px',
+                  height: '48px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: '50%',
+                  backgroundColor: 'rgba(0,0,0,0.6)',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  zIndex: 100001,
+                }}
+                aria-label="Download"
+              >
+                <svg style={{ width: '24px', height: '24px', color: 'white' }} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                </svg>
+              </a>
+            )}
 
-              {/* Bottom controls */}
-              <div className="flex-none bg-black/80 backdrop-blur-sm border-t border-white/10 px-4 py-4">
-                <div className="flex items-center justify-center gap-3">
-                  <button 
-                    onClick={prev} 
-                    className="p-3 rounded-lg bg-white/10 border border-white/20 hover:bg-white/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    disabled={photos.length <= 1}
-                  >
-                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                    </svg>
-                  </button>
-                  
-                  <span className="px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white text-sm font-medium min-w-[100px] text-center">
-                    {index + 1} / {photos.length}
-                  </span>
-
-                  {photos[index].media_type !== 'video' && (
-                    <a 
-                      href={photos[index].r2_url} 
-                      download
-                      className="p-3 rounded-lg bg-white/10 border border-white/20 hover:bg-white/20 transition-colors"
-                      title="Download photo"
-                    >
-                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                      </svg>
-                    </a>
-                  )}
-                  
-                  <button 
-                    onClick={next} 
-                    className="p-3 rounded-lg bg-white/10 border border-white/20 hover:bg-white/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    disabled={photos.length <= 1}
-                  >
-                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </button>
-                </div>
-                
-                {/* Keyboard hint */}
-                <div className="text-center text-white/40 text-xs mt-3 hidden sm:block">
-                  Use arrow keys to navigate • ESC to close
-                </div>
-              </div>
+            {/* Image area - fills the screen */}
+            <div
+              style={{
+                flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '60px 0',
+              }}
+              onTouchStart={handleTouchStart}
+              onTouchEnd={handleTouchEnd}
+            >
+              {currentPhoto.media_type === 'video' ? (
+                <video
+                  key={currentPhoto.id}
+                  src={currentPhoto.r2_url}
+                  controls
+                  autoPlay
+                  playsInline
+                  style={{ maxHeight: '100%', maxWidth: '100%' }}
+                />
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  key={currentPhoto.id}
+                  src={currentPhoto.r2_url}
+                  alt=""
+                  style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain' }}
+                />
+              )}
             </div>
 
-            {/* Hidden prefetchers for next/prev images */}
-            {photos[nextIdx] && photos[nextIdx].media_type !== 'video' && (
-              <link rel="prefetch" as="image" href={photos[nextIdx].r2_url} />
-            )}
-            {photos[prevIdx] && photos[prevIdx].media_type !== 'video' && (
-              <link rel="prefetch" as="image" href={photos[prevIdx].r2_url} />
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
+            {/* Bottom controls */}
+            <div
+              style={{
+                position: 'absolute',
+                bottom: 0,
+                left: 0,
+                right: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '24px',
+                padding: '16px',
+                paddingBottom: 'max(16px, env(safe-area-inset-bottom, 0px))',
+                background: 'linear-gradient(to top, rgba(0,0,0,0.8), transparent)',
+              }}
+            >
+              <button
+                onClick={prev}
+                disabled={photos.length <= 1}
+                style={{
+                  width: '48px',
+                  height: '48px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: '50%',
+                  backgroundColor: 'rgba(0,0,0,0.6)',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  opacity: photos.length <= 1 ? 0.3 : 1,
+                }}
+              >
+                <svg style={{ width: '24px', height: '24px', color: 'white' }} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+                </svg>
+              </button>
 
+              <span style={{ color: 'white', fontSize: '16px', fontWeight: 500, minWidth: '80px', textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>
+                {index + 1} / {photos.length}
+              </span>
+
+              <button
+                onClick={next}
+                disabled={photos.length <= 1}
+                style={{
+                  width: '48px',
+                  height: '48px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: '50%',
+                  backgroundColor: 'rgba(0,0,0,0.6)',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  opacity: photos.length <= 1 ? 0.3 : 1,
+                }}
+              >
+                <svg style={{ width: '24px', height: '24px', color: 'white' }} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>,
+        portalRoot
+      )}
     </div>
   );
 }

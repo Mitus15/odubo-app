@@ -1,3 +1,5 @@
+import { getDeviceInfo, getNetworkInfo, getHLSBufferConfig } from './deviceInfo';
+
 let HlsCtor: any = null;
 
 async function ensureHls() {
@@ -13,29 +15,52 @@ async function ensureHls() {
 
 export type HlsHandle = {
   destroy: () => void;
+  isActive: () => boolean;
 };
 
+// Track active HLS instances to prevent memory leaks
+const activeInstances = new WeakMap<HTMLVideoElement, any>();
+
 export async function attachHls(video: HTMLVideoElement, src: string, preloadOnly: boolean = false): Promise<HlsHandle | null> {
-  // Native HLS (Safari/iOS)
+  // Cleanup any existing instance on this video element
+  const existing = activeInstances.get(video);
+  if (existing) {
+    try { existing.destroy(); } catch {}
+    activeInstances.delete(video);
+  }
+
+  // Native HLS (Safari/iOS) - most reliable for autoplay
   if (video.canPlayType('application/vnd.apple.mpegurl')) {
     video.src = src;
-    return { destroy: () => { try { video.removeAttribute('src'); video.load(); } catch {} } };
+    // Pre-load for faster start
+    video.load();
+    return {
+      destroy: () => {
+        try {
+          video.pause();
+          video.removeAttribute('src');
+          video.load();
+        } catch {}
+      },
+      isActive: () => !!video.src
+    };
   }
+
   const Hls = await ensureHls();
   if (!Hls || !Hls.isSupported?.()) {
     // Fallback: set src directly (may work for MP4 or if browser supports HLS)
     video.src = src;
-    return { destroy: () => { try { video.removeAttribute('src'); video.load(); } catch {} } };
+    return {
+      destroy: () => { try { video.removeAttribute('src'); video.load(); } catch {} },
+      isActive: () => !!video.src
+    };
   }
-  // Adaptive buffering: smaller buffers for preload, network-aware for active playback
-  const connection = (navigator as any)?.connection;
-  const effectiveType = connection?.effectiveType || '4g';
-  const isSlow = effectiveType === 'slow-2g' || effectiveType === '2g' || effectiveType === '3g';
-  const downlink: number = typeof connection?.downlink === 'number' ? connection.downlink : 10;
-  const autoCap = isSlow || downlink < 3 ? 2 : -1; // cap at lower levels on weak connections
-  const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
-  const isIOS = /iP(ad|hone|od)/.test(ua) || ((navigator as any)?.platform === 'MacIntel' && (navigator as any)?.maxTouchPoints > 1);
-  const isMobile = isIOS || (typeof window !== 'undefined' && window.innerWidth < 768);
+
+  // Use centralized device and network detection
+  const { isMobile } = getDeviceInfo();
+  const { isSlowNetwork, downlink } = getNetworkInfo();
+  const bufferConfig = getHLSBufferConfig(preloadOnly);
+  const autoCap = isSlowNetwork || downlink < 3 ? 2 : -1;
   
   // TikTok's Secret: Get cached quality preference for warm start
   const getCachedQuality = (): number => {
@@ -56,36 +81,46 @@ export async function attachHls(video: HTMLVideoElement, src: string, preloadOnl
     // TikTok Strategy: Start at lowest quality for INSTANT playback
     lowLatencyMode: true,
     startLevel: getCachedQuality(), // Start low, upgrade fast
-    
+
     // AGGRESSIVE quality upgrade (TikTok-style)
     abrEwmaFastLive: 1.0, // Upgrade quality faster (was 2.0)
     abrEwmaSlowLive: 9.0,
     abrMaxWithRealBitrate: true, // Use measured bandwidth
     abrEwmaDefaultEstimate: 500000, // ~0.5 Mbps starting point
-    
-    // MINIMAL buffers for short-form video
-    maxBufferLength: preloadOnly ? 1.5 : (isMobile ? 2.5 : (isSlow ? 3 : 4)),
-    maxMaxBufferLength: preloadOnly ? 3 : (isMobile ? 5 : (isSlow ? 6 : 8)),
-    maxBufferSize: isMobile ? 7 * 1000 * 1000 : 10 * 1000 * 1000,
-    backBufferLength: isMobile ? 0 : 0.1,
-    
+
+    // MINIMAL buffers for short-form video - optimized for seamless scrolling
+    // Using centralized buffer config from deviceInfo
+    maxBufferLength: bufferConfig.maxBufferLength,
+    maxMaxBufferLength: bufferConfig.maxMaxBufferLength,
+    maxBufferSize: bufferConfig.maxBufferSize,
+    backBufferLength: 0, // No back buffer needed for clips
+
     // Cap initial bitrate to avoid stalls
     capLevelToPlayerSize: true,
     autoLevelCapping: autoCap,
-    
-    // INSTANT start - fail fast if network is slow
-    manifestLoadingTimeOut: 2000, // 2s timeout for manifest (was infinite)
-    levelLoadingTimeOut: 2000, // 2s timeout for quality playlist
-    fragLoadingTimeOut: 3000, // 3s timeout for segments
-    
+
+    // Faster timeouts for snappy experience
+    manifestLoadingTimeOut: 3000,
+    levelLoadingTimeOut: 3000,
+    fragLoadingTimeOut: 4000,
+
+    // More aggressive retry for reliability
+    manifestLoadingMaxRetry: 3,
+    levelLoadingMaxRetry: 3,
+    fragLoadingMaxRetry: 4,
+
     // Reduce latency by loading small fragments quickly
     fragLoadPolicy: {
       default: {
-        maxTimeToFirstByteMs: isSlow ? 1200 : 800,
-        maxLoadDurationMs: isSlow ? 1500 : 1000,
+        maxTimeToFirstByteMs: isSlowNetwork ? 1500 : 1000,
+        maxLoadDurationMs: isSlowNetwork ? 2000 : 1500,
       },
     } as any,
   });
+  
+  // Track this instance
+  activeInstances.set(video, hls);
+  
   hls.loadSource(src);
   hls.attachMedia(video);
   
@@ -101,15 +136,26 @@ export async function attachHls(video: HTMLVideoElement, src: string, preloadOnl
     });
   }
   
-  // Resilient error handling
+  // Resilient error handling with automatic recovery
   hls.on((Hls as any).Events.ERROR, (_event: any, data: any) => {
     try {
-      const H = Hls as any;
       if (data?.fatal) {
-        try { hls.destroy(); } catch {}
-        try { video.src = src; } catch {}
+        // Try to recover from fatal errors
+        if (data.type === 'networkError') {
+          // Network error - try to recover
+          hls.startLoad();
+        } else if (data.type === 'mediaError') {
+          // Media error - try to recover
+          hls.recoverMediaError();
+        } else {
+          // Other fatal error - fallback to direct src
+          try { hls.destroy(); } catch {}
+          activeInstances.delete(video);
+          try { video.src = src; } catch {}
+        }
         return;
       }
+      
       // On buffer stalls or fragment load issues, temporarily cap to lowest level
       const detail = data?.details || '';
       if (detail === 'bufferStalledError' || detail === 'fragLoadError' || detail === 'fragLoadTimeout') {
@@ -117,5 +163,14 @@ export async function attachHls(video: HTMLVideoElement, src: string, preloadOnl
       }
     } catch {}
   });
-  return { destroy: () => { try { hls.destroy(); } catch {} } };
+  
+  return { 
+    destroy: () => { 
+      try { 
+        hls.destroy(); 
+        activeInstances.delete(video);
+      } catch {} 
+    },
+    isActive: () => activeInstances.has(video)
+  };
 }

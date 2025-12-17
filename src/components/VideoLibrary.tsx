@@ -34,6 +34,7 @@ const durationToSeconds = (durationStr?: string): number => {
   return 0;
 };
 
+
 export default function VideoLibrary({ videos }: VideoLibraryProps) {
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'title' | 'duration'>('newest');
 
@@ -87,76 +88,106 @@ export default function VideoLibrary({ videos }: VideoLibraryProps) {
 
   return (
     <div className="absolute inset-0 flex flex-col">
-      {/* Sort Bar - Fixed at top */}
-      <div className="flex-shrink-0 p-4 pb-2">
-        <div className="glass-card rounded-2xl p-1 mx-auto max-w-md">
-          <div className="flex gap-1 justify-center">
-            {(['newest', 'oldest', 'title', 'duration'] as const).map((option) => (
-              <button
-                key={option}
-                onClick={() => setSortBy(option)}
-                className={`px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 capitalize ${
-                  sortBy === option
-                    ? 'bg-[#843c2d] text-[#ede8df]'
-                    : 'text-[#b2a491] hover:text-[#ede8df] hover:bg-[#302927]/50'
-                }`}
-              >
-                {option}
-              </button>
-            ))}
-          </div>
-        </div>
+      {/* Sort - minimal left-aligned */}
+      <div className="flex-shrink-0 px-4 py-3 flex gap-4">
+        {(['newest', 'oldest', 'title'] as const).map((option) => (
+          <button
+            key={option}
+            onClick={() => setSortBy(option)}
+            className={`text-xs transition-colors ${
+              sortBy === option
+                ? 'text-[#ede8df]'
+                : 'text-[#726d6c] hover:text-[#b2a491]'
+            }`}
+          >
+            {option === 'newest' ? 'Latest' : option === 'oldest' ? 'Oldest' : 'A–Z'}
+          </button>
+        ))}
       </div>
 
-      {/* Scrollable Video Grid */}
-      <div className="flex-1 overflow-y-auto overscroll-contain px-4 pb-6">
+      {/* Video Grid */}
+      <div className="flex-1 overflow-y-auto overscroll-contain pb-6">
+        {/* For You Section */}
+        <div className="px-4 mb-4">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-1 h-5 rounded-full bg-gradient-to-b from-[#843c2d] to-[#502d26]" />
+            <h2 className="text-sm font-semibold text-[#ede8df] uppercase tracking-wider">
+              For You
+            </h2>
+          </div>
+          <div className="p-6 rounded-2xl glass-surface border border-[#502d26]/30 text-center">
+            <svg className="w-10 h-10 mx-auto mb-3 text-[#502d26]" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
+            </svg>
+            <p className="text-sm text-[#b2a491]">Personalized recommendations coming soon</p>
+            <p className="text-xs text-[#726d6c] mt-1">We&apos;ll learn your taste as you watch</p>
+          </div>
+        </div>
+
+        {/* All Videos Label */}
+        {sortedVideos.length > 0 && (
+          <div className="flex items-center gap-3 px-4 mb-3">
+            <div className="w-1 h-5 rounded-full bg-gradient-to-b from-[#726d6c] to-[#502d26]" />
+            <h2 className="text-sm font-semibold text-[#ede8df] uppercase tracking-wider">
+              All Videos
+            </h2>
+          </div>
+        )}
+
+        <div className="px-4">
         {sortedVideos.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {sortedVideos.map((video) => (
-              <Link 
-                key={video.id} 
+              <Link
+                key={video.id}
                 href={`/media/${video.id}`}
-                className="group block rounded-2xl overflow-hidden border border-[#502d26]/30 hover:border-[#843c2d]/50 transition-all duration-300 bg-[#1a1615]/60 hover:bg-[#1a1615]/80 hover:scale-[1.02] hover:shadow-xl hover:shadow-black/30"
+                className="group block rounded-xl overflow-hidden border border-[#502d26]/20 hover:border-[#843c2d]/30 transition-all duration-300"
               >
-                <div className="aspect-video relative">
+                <div className="aspect-video relative bg-[#0a0908]">
                   <Image
                     src={getVideoThumbnail(video)}
                     alt={video.title}
                     fill
-                    className="object-cover group-hover:scale-105 transition-transform duration-500"
-                    sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                    className="object-cover group-hover:scale-[1.02] transition-transform duration-500"
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                   />
-                  {/* Play button overlay on hover - desktop only */}
-                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black/20">
-                    <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30">
-                      <svg className="w-8 h-8 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
+
+                  {/* Play icon on hover */}
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <div className="w-12 h-12 rounded-full bg-[#171616]/60 backdrop-blur-sm flex items-center justify-center">
+                      <svg className="w-5 h-5 text-[#ede8df] ml-0.5" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M8 5v14l11-7z"/>
                       </svg>
                     </div>
                   </div>
-                  {/* Duration badge */}
+
+                  {/* Duration */}
                   {video.duration && (
-                    <div className="absolute bottom-3 right-3 px-2 py-1 bg-black/80 text-white text-xs rounded-md">
+                    <div className="absolute bottom-2 right-2 px-1.5 py-0.5 bg-[#171616]/80 text-[#ede8df] text-[11px] rounded">
                       {formatDuration(video.duration)}
                     </div>
                   )}
-                  {/* Title overlay */}
-                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-3 pt-10">
-                    <h3 className="text-base font-semibold text-white line-clamp-2 group-hover:text-[#ede8df] transition-colors">
-                      {video.title}
-                    </h3>
-                  </div>
+                </div>
+
+                {/* Title only */}
+                <div className="p-3">
+                  <h3 className="text-sm text-[#ede8df] line-clamp-2 leading-snug">
+                    {video.title}
+                  </h3>
                 </div>
               </Link>
             ))}
           </div>
         ) : (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center py-8">
-              <p className="text-[#b2a491]">No videos found</p>
+          <div className="flex items-center justify-center h-40">
+            <div className="w-16 h-16 rounded-xl border border-[#502d26]/20 flex items-center justify-center">
+              <svg className="w-8 h-8 text-[#726d6c]" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="m15.75 10.5 4.72-4.72a.75.75 0 0 1 1.28.53v11.38a.75.75 0 0 1-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25h-9A2.25 2.25 0 0 0 2.25 7.5v9a2.25 2.25 0 0 0 2.25 2.25Z" />
+              </svg>
             </div>
           </div>
         )}
+        </div>
       </div>
     </div>
   );
