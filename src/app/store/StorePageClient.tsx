@@ -272,89 +272,105 @@ export default function StorePageClient({ isStoreOpen, initialProducts }: StoreP
         <div className="absolute top-1/3 right-0 h-80 w-80 rounded-full bg-gradient-to-br from-[#b2a49122] via-[#ede8df1a] to-transparent blur-3xl" />
         <div className="absolute bottom-0 left-1/2 -translate-x-1/2 h-96 w-[36rem] rounded-[999px] bg-gradient-to-tr from-[#843c2d22] via-transparent to-[#ede8df11] blur-3xl" />
       </div>
-      <ScrollContainer>
-        <div className="max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-6">
-          {/* Brand row under nav */}
-          <header className="mb-6 mt-2">
-            <div className="flex items-center justify-between px-1 sm:px-2 lg:px-4">
-              <div className="flex items-center">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/brand-logos/baad.png" alt="B.A.A.D" className="h-8 sm:h-10 w-auto" />
-              </div>
-              <Link
-                href="/store/cart"
-                className="text-[10px] sm:text-xs uppercase tracking-widest text-[#ede8df]/80 hover:text-[#ede8df] transition-colors"
-              >
-                Bag
-              </Link>
+      {/* Fixed Header - BAAD logo + Bag button - positioned below main AppHeader (56px / h-14) */}
+      <header className="fixed left-0 right-0 z-30 bg-[#0b0b0b] top-14">
+        <div className="max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8 py-3">
+          <div className="flex items-center justify-between px-1 sm:px-2 lg:px-4">
+            <div className="flex items-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/brand-logos/baad.png" alt="B.A.A.D" className="h-8 sm:h-10 w-auto" />
             </div>
-          </header>
+            <Link
+              href="/store/cart"
+              className="text-[10px] sm:text-xs uppercase tracking-widest text-[#ede8df]/80 hover:text-[#ede8df] transition-colors"
+            >
+              Bag
+            </Link>
+          </div>
+        </div>
+      </header>
 
-          {/* Product Grid - bottom padding accounts for fixed footer (~140px) + safe area */}
-          <div className="min-h-[60vh] max-w-7xl mx-auto" style={{ paddingBottom: 'calc(160px + env(safe-area-inset-bottom, 0px))' }}>
-            {loading && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-0.5 sm:gap-x-5 sm:gap-y-1">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="aspect-[3/4] bg-[#1c1a19]/20 animate-pulse rounded-sm" />
+      <ScrollContainer>
+        {/* Content area with consistent spacing */}
+        <div 
+          className="pt-16 pb-40"
+          style={{ paddingBottom: 'calc(160px + env(safe-area-inset-bottom, 0px))' }}
+        >
+          {/* Loading state */}
+          {loading && (
+            <div className="p-3">
+              <div 
+                className="grid grid-cols-2 lg:grid-cols-3"
+                style={{ gap: '12px' }}
+              >
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <div 
+                    key={i} 
+                    className="aspect-square rounded-lg bg-[#1a1614] animate-pulse"
+                  />
                 ))}
               </div>
-            )}
-            
-            {!loading && filteredProducts.length > 0 && (
-              <div className="grid grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-0.5 sm:gap-x-5 sm:gap-y-1">
+            </div>
+          )}
+
+          {/* Product Grid */}
+          {!loading && filteredProducts.length > 0 && (
+            <div className="p-3">
+              <div 
+                className="grid grid-cols-2 lg:grid-cols-3"
+                style={{ gap: '12px' }}
+              >
                 {filteredProducts.map((p, idx) => (
                   <button
                     key={p.id}
                     type="button"
                     onClick={() => setSelectedIndex(idx)}
-                    className={`group block text-left w-full ${p.available === false ? 'opacity-60' : ''}`}
+                    className="group relative aspect-square rounded-lg overflow-hidden bg-[#0d0b0a] focus:outline-none focus:ring-2 focus:ring-[#843c2d]/50"
                   >
-                    {/* Image only, no card background */}
-                    <div className="relative aspect-[3/4] overflow-hidden mb-1 sm:mb-2 flex items-center justify-center bg-transparent isolate">
-                      {p.image ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img 
-                          src={p.image} 
-                          alt={p.title} 
-                          className="w-full h-full object-contain transition-transform duration-700 group-hover:scale-[1.02] mix-blend-multiply brightness-[1.05] contrast-[1.1]" 
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-[#502d26] bg-[#1c1a19]/20">
-                          <span className="uppercase tracking-widest text-xs">No Image</span>
-                        </div>
-                      )}
-                      {/* New Badge */}
-                      {p.available && (new Date(p.createdAt).getTime() > Date.now() - 30 * 24 * 60 * 60 * 1000) && (
-                        <div className="absolute top-0 left-0 p-2 sm:p-3">
-                          <span className="px-2 py-1 rounded-full bg-gradient-to-r from-[#843c2d] to-[#b26a4a] text-[#ede8df] text-[9px] sm:text-[10px] uppercase tracking-widest">
-                            New
-                          </span>
-                        </div>
-                      )}
+                    {/* Product Image */}
+                    {p.image ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img 
+                        src={p.image} 
+                        alt={p.title} 
+                        className="absolute inset-0 w-full h-full object-contain transition-transform duration-500 ease-out group-hover:scale-[1.03]" 
+                      />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center bg-[#1a1614]">
+                        <span className="text-[#502d26] text-[10px] uppercase tracking-widest">No Image</span>
+                      </div>
+                    )}
 
-                      {!p.available && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/40">
-                          <span className="px-3 py-1.5 sm:px-3 sm:py-1 bg-[#1c1a19]/80 rounded-full text-[#ede8df] text-[10px] sm:text-xs uppercase tracking-widest border border-[#502d26]">
-                            Sold Out
-                          </span>
-                        </div>
-                      )}
-                    </div>
+                    {/* Sold Out Overlay */}
+                    {!p.available && (
+                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                        <span className="px-3 py-1.5 bg-[#0d0b0a]/90 rounded-full text-[#ede8df] text-[10px] uppercase tracking-widest border border-[#502d26]/50">
+                          Sold Out
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Subtle hover glow */}
+                    <div className="absolute inset-0 rounded-lg ring-1 ring-inset ring-white/5 group-hover:ring-[#843c2d]/30 transition-all duration-300" />
                   </button>
                 ))}
               </div>
-            )}
-            
-            {!loading && !error && filteredProducts.length === 0 && (
-              <div className="flex flex-col items-center justify-center py-32 text-[#502d26]">
-                <p className="uppercase tracking-widest text-sm">No products available</p>
-              </div>
-            )}
-            
-            {error && (
-              <div className="text-center text-red-400 py-8">{error}</div>
-            )}
-          </div>
+            </div>
+          )}
+
+          {/* Empty state */}
+          {!loading && !error && filteredProducts.length === 0 && (
+            <div className="flex flex-col items-center justify-center min-h-[50vh] text-[#502d26]">
+              <p className="text-xs uppercase tracking-widest">No products available</p>
+            </div>
+          )}
+
+          {/* Error state */}
+          {error && (
+            <div className="flex items-center justify-center min-h-[50vh]">
+              <p className="text-red-400/80 text-sm">{error}</p>
+            </div>
+          )}
         </div>
       </ScrollContainer>
 
@@ -388,7 +404,7 @@ export default function StorePageClient({ isStoreOpen, initialProducts }: StoreP
         </div>
       </footer>
 
-      {/* Modal viewer (rebuilt) - accounts for safe viewport areas on mobile Safari/Chrome */}
+      {/* Modal viewer - z-50 above footer (z-30) and header (z-40) */}
       {selectedIndex !== null && filteredProducts[selectedIndex] && (
         <div 
           key={`modal-${selectedIndex}`} 
@@ -397,67 +413,66 @@ export default function StorePageClient({ isStoreOpen, initialProducts }: StoreP
           aria-modal="true" 
           aria-label={selectedProduct?.title || 'Product detail'}
           style={{ 
-            paddingTop: 'max(1rem, env(safe-area-inset-top, 16px))', 
+            paddingTop: 'calc(80px + env(safe-area-inset-top, 0px))',
             paddingBottom: 'max(1rem, env(safe-area-inset-bottom, 16px))',
             paddingLeft: 'max(1rem, env(safe-area-inset-left, 16px))',
             paddingRight: 'max(1rem, env(safe-area-inset-right, 16px))'
           }}
         >
-          <div className="absolute inset-0 bg-black/85" aria-hidden onClick={() => setSelectedIndex(null)} />
+          <div className="absolute inset-0 bg-black/90" aria-hidden onClick={() => setSelectedIndex(null)} />
           <div className="absolute inset-0 backdrop-blur-xl" aria-hidden />
 
           <div className="relative w-full max-w-6xl max-h-full flex flex-col">
-            {/* Close button - fixed at top right, always visible above modal content */}
+            {/* Close button - positioned at top right of modal card */}
             <button
               aria-label="Close"
               onClick={() => setSelectedIndex(null)}
-              className="absolute top-0 right-0 z-30 text-[#0b0b0b] bg-[#f8f2ea] hover:bg-white rounded-full p-3 border border-white/60 shadow-2xl"
-              style={{ marginTop: '0.5rem', marginRight: '0.5rem' }}
+              className="absolute -top-2 -right-2 z-30 text-[#0b0b0b] bg-[#f8f2ea] hover:bg-white rounded-full p-2.5 border border-white/60 shadow-2xl"
             >
               ✕
             </button>
             
-            <div className="relative w-full max-h-[calc(100dvh-4rem)] sm:max-h-[90vh] overflow-y-auto rounded-3xl glass-surface border border-white/10 bg-[#0f0b0b]/95 shadow-[0_30px_120px_rgba(0,0,0,0.45)] pt-12 sm:pt-4">
+            <div className="relative w-full max-h-[calc(100dvh-140px)] sm:max-h-[80vh] overflow-y-auto rounded-2xl sm:rounded-3xl glass-surface border border-white/10 bg-[#0f0b0b]/95 shadow-[0_30px_120px_rgba(0,0,0,0.45)]">
 
-              <div className="grid md:grid-cols-[1.1fr_1fr] gap-0">
-                <div className="w-full h-full bg-[#0f0b0b] flex items-center justify-center p-4 sm:p-8">
+              <div className="grid md:grid-cols-[1fr_1fr] gap-0">
+                <div className="w-full bg-[#0f0b0b] flex items-center justify-center p-3 sm:p-5">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={(selectedVariant?.image || selectedProduct?.image || selectedDetail?.images?.[0]) ?? ''}
                     alt={selectedProduct?.title || ''}
-                    className="w-full h-full max-h-[70vh] object-contain"
+                    className="w-full max-h-[35vh] sm:max-h-[45vh] object-contain"
                   />
                 </div>
 
-                <div className="w-full p-6 sm:p-8 text-[#ede8df] space-y-5 pb-10">
-                  <div className="space-y-1">
-                    <h2 className="text-base sm:text-lg font-semibold leading-tight text-[#f7f3ec] line-clamp-2">{selectedProduct?.title}</h2>
+                <div className="w-full p-4 sm:p-6 text-[#ede8df] space-y-3 pb-6">
+                  <div className="space-y-0.5">
+                    <h2 className="text-sm sm:text-base font-semibold leading-tight text-[#f7f3ec] line-clamp-2">{selectedProduct?.title}</h2>
                     {selectedVariant && (
-                      <p className="text-sm sm:text-base font-medium text-[#f7f3ec]">{selectedVariant.price !== null ? `$${selectedVariant.price.toFixed(2)}` : 'Price on request'}</p>
+                      <p className="text-sm font-medium text-[#f7f3ec]">{selectedVariant.price !== null ? `$${selectedVariant.price.toFixed(2)}` : 'Price on request'}</p>
                     )}
                     {selectedVariant?.available === false && (
                       <p className="text-xs text-red-200/80">Currently unavailable</p>
                     )}
                   </div>
 
-                  <div className="space-y-3 pb-4">
+                  <div className="space-y-2 pb-2">
                     {selectedDetail?.options?.map((opt: any) => {
                       const open = openOption === opt.name;
                       return (
-                        <div key={opt.name} className="glass-surface border border-white/10 rounded-2xl bg-white/5 overflow-hidden">
+                        <div key={opt.name} className="glass-surface border border-white/10 rounded-xl bg-white/5 overflow-hidden">
                           <button
                             type="button"
                             onClick={() => {
                               setOpenOption(open ? null : opt.name);
                               setCtaReady(true);
                             }}
-                            className="w-full flex items-center justify-between px-4 py-3 text-left text-sm font-semibold text-[#f7f3ec]"
+                            className="w-full flex items-center justify-between px-3 py-2 text-left text-sm font-semibold text-[#f7f3ec]"
                           >
                             <span>{opt.name}</span>
                             <span className="text-[#d7cfc3] text-xs">{open ? '−' : '+'}</span>
                           </button>
                           {open && (
-                            <div className="px-4 pb-3 flex flex-wrap gap-2">
+                            <div className="px-3 pb-2 flex flex-wrap gap-1.5">
                               {opt.values?.map((val: string) => {
                                 const active = selectedOptions[opt.name] === val;
                                 return (
@@ -465,7 +480,7 @@ export default function StorePageClient({ isStoreOpen, initialProducts }: StoreP
                                     key={val}
                                     type="button"
                                     onClick={() => updateOption(opt.name, val)}
-                                    className={`px-3 py-1.5 rounded-xl text-sm transition-all border ${active ? 'bg-gradient-to-r from-[#843c2d] via-[#a44e3a] to-[#52241d] text-[#f8f2ea] border-[#c58a70]/60 shadow-[0_10px_28px_rgba(0,0,0,0.35)]' : 'text-[#e1d6c8] border-white/15 bg-white/5 hover:bg-white/10'}`}
+                                    className={`px-2.5 py-1 rounded-lg text-xs transition-all border ${active ? 'bg-gradient-to-r from-[#843c2d] via-[#a44e3a] to-[#52241d] text-[#f8f2ea] border-[#c58a70]/60 shadow-[0_10px_28px_rgba(0,0,0,0.35)]' : 'text-[#e1d6c8] border-white/15 bg-white/5 hover:bg-white/10'}`}
                                   >
                                     {val}
                                   </button>
@@ -485,20 +500,21 @@ export default function StorePageClient({ isStoreOpen, initialProducts }: StoreP
                     <p className="text-xs text-red-300">{detailError}</p>
                   )}
 
-                  {ctaReady && openOption === null && (
-                    <div className="flex flex-wrap justify-center gap-3 text-center">
+                  {/* CTA buttons only visible when all variant sections are minimized */}
+                  {openOption === null && (
+                    <div className="flex flex-wrap justify-center gap-2 text-center pt-2">
                       <button
                         type="button"
                         onClick={addToCart}
                         disabled={!selectedVariant || selectedVariant.available === false}
-                        className={`px-5 py-3 rounded-xl text-sm font-semibold transition-all border ${selectedVariant?.available !== false ? 'bg-gradient-to-r from-[#843c2d] via-[#a44e3a] to-[#52241d] text-[#f8f2ea] border-[#c58a70]/50 shadow-[0_12px_30px_rgba(0,0,0,0.35)] hover:scale-[1.02]' : 'bg-white/5 text-[#c7b8a8] border-white/10 cursor-not-allowed'}`}
+                        className={`px-4 py-2.5 rounded-lg text-sm font-semibold transition-all border ${selectedVariant?.available !== false ? 'bg-gradient-to-r from-[#843c2d] via-[#a44e3a] to-[#52241d] text-[#f8f2ea] border-[#c58a70]/50 shadow-[0_12px_30px_rgba(0,0,0,0.35)] hover:scale-[1.02]' : 'bg-white/5 text-[#c7b8a8] border-white/10 cursor-not-allowed'}`}
                       >
                         {addFeedback || (selectedVariant?.available === false ? 'Unavailable' : 'Add to Bag')}
                       </button>
 
                       <Link
                         href="/store/cart"
-                        className="px-5 py-3 rounded-xl border border-white/20 text-[#f8f2ea] bg-white/5 hover:bg-white/10 transition-colors text-sm"
+                        className="px-4 py-2.5 rounded-lg border border-white/20 text-[#f8f2ea] bg-white/5 hover:bg-white/10 transition-colors text-sm"
                         onClick={() => setSelectedIndex(null)}
                       >
                         Go to Bag

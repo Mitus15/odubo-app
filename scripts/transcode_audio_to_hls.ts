@@ -87,10 +87,52 @@ function resolveFfmpegBinary(): string {
   return 'ffmpeg';
 }
 
+async function analyzeLoudness(srcPath: string, ffmpegBin: string): Promise<{ i: number; tp: number; lra: number }> {
+  console.log('Analyzing loudness levels...');
+  return new Promise((resolve, reject) => {
+    let stderr = '';
+    const p = spawn(ffmpegBin, [
+      '-i', srcPath,
+      '-af', 'loudnorm=I=-16:TP=-1.5:LRA=11:print_format=json',
+      '-f', 'null',
+      '-'
+    ], { stdio: ['pipe', 'pipe', 'pipe'] });
+    
+    p.stderr?.on('data', (data) => { stderr += data.toString(); });
+    p.on('error', reject);
+    p.on('exit', (code) => {
+      if (code !== 0) return reject(new Error(`ffmpeg loudnorm analysis failed with ${code}`));
+      // Parse loudnorm JSON output from stderr
+      const match = stderr.match(/\{[\s\S]*?"input_i"[\s\S]*?\}/);
+      if (!match) {
+        console.warn('Could not parse loudnorm output, using defaults');
+        return resolve({ i: -24, tp: -2, lra: 7 }); // Safe defaults
+      }
+      try {
+        const json = JSON.parse(match[0]);
+        resolve({
+          i: parseFloat(json.input_i) || -24,
+          tp: parseFloat(json.input_tp) || -2,
+          lra: parseFloat(json.input_lra) || 7,
+        });
+      } catch {
+        resolve({ i: -24, tp: -2, lra: 7 });
+      }
+    });
+  });
+}
+
 async function transcodeToHlsVariants(srcPath: string, workDir: string) {
   await fs.mkdir(workDir, { recursive: true });
   const ffmpegBin = resolveFfmpegBinary();
   console.log(`Using ffmpeg: ${ffmpegBin}`);
+
+  // Analyze loudness for normalization (Apple Music standard: -16 LUFS)
+  const loudnessData = await analyzeLoudness(srcPath, ffmpegBin);
+  console.log(`Input loudness: ${loudnessData.i.toFixed(1)} LUFS, TP: ${loudnessData.tp.toFixed(1)} dB, LRA: ${loudnessData.lra.toFixed(1)}`);
+  
+  // Loudness normalization filter - target -16 LUFS (Apple Music), -1.5 dB true peak
+  const loudnormFilter = `loudnorm=I=-16:TP=-1.5:LRA=11:measured_I=${loudnessData.i}:measured_TP=${loudnessData.tp}:measured_LRA=${loudnessData.lra}:linear=true`;
 
   // Variants: 64k, 128k, 256k AAC LC
   const variants = [
@@ -104,6 +146,8 @@ async function transcodeToHlsVariants(srcPath: string, workDir: string) {
     '-y',
     '-i', srcPath,
     '-vn',
+    // Apply loudness normalization filter to input
+    '-af', loudnormFilter,
   ];
 
   variants.forEach((v, i) => {

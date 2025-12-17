@@ -63,9 +63,7 @@ export default function HomePageClient({ verseOfTheDay }: HomePageClientProps) {
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
 
-    if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
-      navigator.serviceWorker.register('/clips-sw.js').catch(() => {});
-    }
+    // Service workers are now registered globally in ServiceWorkerRegistration component
 
     return () => {
       window.removeEventListener('resize', updateNavHeight);

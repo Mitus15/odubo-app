@@ -56,11 +56,53 @@ async function downloadToTemp(url: string): Promise<string> {
 async function transcodeToAacM4a(inputPath: string, title: string): Promise<string> {
   if (!ffmpegPath || !existsSync(ffmpegPath)) throw new Error('ffmpeg-static binary not found');
   const outPath = path.join(os.tmpdir(), `odubo_${Date.now()}.m4a`);
+  
+  // Two-pass loudness normalization to -16 LUFS (Apple Music standard)
+  // Pass 1: Analyze loudness
+  console.log('Analyzing loudness levels...');
+  const loudnessData = await new Promise<{ i: number; tp: number; lra: number }>((resolve, reject) => {
+    let stderr = '';
+    const p = spawn(ffmpegPath as string, [
+      '-i', inputPath,
+      '-af', 'loudnorm=I=-16:TP=-1.5:LRA=11:print_format=json',
+      '-f', 'null',
+      '-'
+    ], { stdio: ['pipe', 'pipe', 'pipe'] });
+    
+    p.stderr?.on('data', (data) => { stderr += data.toString(); });
+    p.on('error', reject);
+    p.on('exit', (code) => {
+      if (code !== 0) return reject(new Error(`ffmpeg loudnorm analysis failed with ${code}`));
+      // Parse loudnorm JSON output from stderr
+      const match = stderr.match(/\{[\s\S]*?"input_i"[\s\S]*?\}/);
+      if (!match) {
+        console.warn('Could not parse loudnorm output, using defaults');
+        return resolve({ i: -24, tp: -2, lra: 7 }); // Safe defaults
+      }
+      try {
+        const json = JSON.parse(match[0]);
+        resolve({
+          i: parseFloat(json.input_i) || -24,
+          tp: parseFloat(json.input_tp) || -2,
+          lra: parseFloat(json.input_lra) || 7,
+        });
+      } catch {
+        resolve({ i: -24, tp: -2, lra: 7 });
+      }
+    });
+  });
+  
+  console.log(`Input loudness: ${loudnessData.i.toFixed(1)} LUFS, TP: ${loudnessData.tp.toFixed(1)} dB, LRA: ${loudnessData.lra.toFixed(1)}`);
+  
+  // Pass 2: Apply normalization and encode
+  console.log('Applying loudness normalization to -16 LUFS...');
   await new Promise<void>((resolve, reject) => {
     const args = [
       '-y',
       '-i', inputPath,
       '-vn',
+      // Loudness normalization filter - target -16 LUFS (Apple Music), -1.5 dB true peak
+      '-af', `loudnorm=I=-16:TP=-1.5:LRA=11:measured_I=${loudnessData.i}:measured_TP=${loudnessData.tp}:measured_LRA=${loudnessData.lra}:linear=true`,
       '-acodec', 'aac',
       '-profile:a', 'aac_low',
       '-b:a', '256k',

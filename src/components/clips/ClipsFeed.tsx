@@ -111,6 +111,7 @@ export default function ClipsFeed({ navHeight }: { navHeight: number }) {
     let cancelled = false;
     // Only start after first page has populated something or hasMore flipped false
     if (baseClips.length === 0 && hasMore) return;
+    
     (async () => {
       let pageToFetch = 1;
       let more = hasMore;
@@ -222,6 +223,17 @@ export default function ClipsFeed({ navHeight }: { navHeight: number }) {
     }
   }, [baseClips, buildFairDeck, fetchPage, hasMore]);
 
+  // Initialize display once all clips are loaded (hasMore becomes false)
+  useEffect(() => {
+    // Wait until we have clips AND no more to fetch
+    if (initializedRef.current || baseClips.length === 0 || hasMore) return;
+    
+    // All clips loaded - build fair deck with truly random parent distribution
+    deckRef.current = buildFairDeck(baseClips, seenIdsRef.current);
+    appendFromDeck(PAGE_SIZE, true);
+    initializedRef.current = true;
+  }, [baseClips, hasMore, buildFairDeck, appendFromDeck]);
+
   // Append new block when reaching the end
   const handleLoadMore = useCallback(() => {
     if (!baseClips.length) return;
@@ -238,7 +250,7 @@ export default function ClipsFeed({ navHeight }: { navHeight: number }) {
     }
   }, [appendFromDeck, baseClips.length, hasMore, fetchPage]);
 
-  // Rebuild deck when base clips change
+  // Rebuild deck when base clips change (for subsequent pages after init)
   useEffect(() => {
     if (!baseClips.length) return;
 
@@ -246,17 +258,30 @@ export default function ClipsFeed({ navHeight }: { navHeight: number }) {
     const prevIds = new Set(prev.map(c => c.id));
     const queuedIds = new Set(deckRef.current.map(c => c.id));
     const newClips = baseClips.filter(c => !prevIds.has(c.id) && !queuedIds.has(c.id));
-    if (newClips.length) {
-      const shuffled = shuffleArray(dedupeById(newClips));
-      deckRef.current.push(...shuffled);
+    
+    // Only add new clips to deck AFTER initialization (init handles first full shuffle)
+    if (newClips.length && initializedRef.current) {
+      // Use fair bucket insertion for new clips too
+      const newBuckets = new Map<string, ClipItem[]>();
+      for (const c of newClips) {
+        const key = c.parentId != null ? `p:${c.parentId}` : `u:${c.id}`;
+        if (!newBuckets.has(key)) newBuckets.set(key, []);
+        newBuckets.get(key)!.push(c);
+      }
+      // Shuffle within new buckets and interleave fairly into existing deck
+      const toInsert: ClipItem[] = [];
+      for (const [, arr] of newBuckets.entries()) {
+        toInsert.push(...shuffleArray(arr));
+      }
+      // Randomly intersperse new clips throughout the deck for variety
+      const shuffledNew = shuffleArray(toInsert);
+      for (const clip of shuffledNew) {
+        const insertPos = Math.floor(Math.random() * (deckRef.current.length + 1));
+        deckRef.current.splice(insertPos, 0, clip);
+      }
     }
     prevBaseClipsRef.current = baseClips;
-
-    if (!initializedRef.current) {
-      appendFromDeck(PAGE_SIZE, true);
-      initializedRef.current = true;
-    }
-  }, [appendFromDeck, baseClips]);
+  }, [baseClips]);
 
   // Detect when active clip is near the end
   const handleClipEnter = useCallback((uniqueKey: string) => {

@@ -5,10 +5,12 @@ import MusicPlayerLayout from "./components/MusicPlayerLayout";
 import AppHeader from "./components/AppHeader";
 import { MusicPlayerProvider } from "@/contexts/MusicPlayerContext";
 // import { AuthProvider } from "@/contexts/AuthContext";
-// import ClientCapabilities from "./components/ClientCapabilities";
+// import ClientCapabilities } from "./components/ClientCapabilities";
 import SecurityMonitor from "../components/SecurityMonitor";
 import GDPRConsent from "../components/GDPRConsent";
 import PerformanceMonitor from "../components/PerformanceMonitor";
+import ServiceWorkerRegistration from "../components/ServiceWorkerRegistration";
+import OfflineIndicator from "../components/OfflineIndicator";
 // import AccessibilityEnhancer from "./components/AccessibilityEnhancer";
 
 const geistSans = Geist({
@@ -60,6 +62,8 @@ export default function RootLayout({
         {/* <AuthProvider> */}
           <MusicPlayerProvider>
             {/* <ClientCapabilities /> */}
+            <ServiceWorkerRegistration />
+            <OfflineIndicator />
             <div className="h-full w-full flex flex-col overflow-hidden">
               <AppHeader />
               <main className="flex-1 min-h-0 pt-14 safe-area-header pb-24 safe-area-bottom overflow-y-auto">

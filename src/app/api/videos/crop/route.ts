@@ -26,6 +26,8 @@ export async function POST(req: NextRequest) {
       .outputOptions([
         '-movflags frag_keyframe+empty_moov', // Essential for streaming MP4
         '-vf crop=trunc(ih*9/16/2)*2:ih:(iw-ow)/2:0', // Center crop to 9:16, width divisible by 2
+        // Audio loudness normalization to -16 LUFS (Apple Music standard)
+        '-af loudnorm=I=-16:TP=-1.5:LRA=11',
         '-preset ultrafast', // Fast processing
         '-crf 23' // Reasonable quality
       ])
