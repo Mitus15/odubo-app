@@ -14,9 +14,10 @@ const PAGE_SIZE = 8;
 interface ClipsFeedProps {
   navHeight: number;
   initialClipId?: number | null;
+  onActiveClipChange?: (clip: ClipItem | null) => void;
 }
 
-export default function ClipsFeed({ navHeight, initialClipId }: ClipsFeedProps) {
+export default function ClipsFeed({ navHeight, initialClipId, onActiveClipChange }: ClipsFeedProps) {
   const { armAudio } = useAudio();
 
   const [baseClips, setBaseClips] = useState<ClipItem[]>([]);
@@ -70,7 +71,19 @@ export default function ClipsFeed({ navHeight, initialClipId }: ClipsFeedProps) 
       setHasMore(mapped.length > 0);
       return mapped.length > 0;
     } catch (e: any) {
-      if (e?.name !== 'AbortError') setError(e?.message || String(e));
+      if (e?.name !== 'AbortError') {
+        // Parse error type for user-friendly messages
+        const msg = e?.message || String(e);
+        if (!navigator.onLine || msg.includes('network') || msg.includes('fetch')) {
+          setError('Connection lost. Check your internet and try again.');
+        } else if (msg.includes('404') || msg.includes('not found')) {
+          setError('Content not found.');
+        } else if (msg.includes('500') || msg.includes('server')) {
+          setError('Server error. Please try again later.');
+        } else {
+          setError(msg);
+        }
+      }
       return false;
     } finally {
       inflightRef.current--;
@@ -250,6 +263,13 @@ export default function ClipsFeed({ navHeight, initialClipId }: ClipsFeedProps) 
     return () => observer.disconnect();
   }, [displayClips, handleLoadMore]);
 
+  // Notify parent of active clip change
+  useEffect(() => {
+    if (!onActiveClipChange) return;
+    const activeClip = displayClips.find(c => c.id === activeId);
+    onActiveClipChange(activeClip || null);
+  }, [activeId, displayClips, onActiveClipChange]);
+
   // Prefetch next clips
   useEffect(() => {
     if (!displayClips.length || activeIndex < 0) return;
@@ -341,10 +361,19 @@ export default function ClipsFeed({ navHeight, initialClipId }: ClipsFeedProps) 
         );
       })}
 
-      {/* Error state */}
+      {/* Error state with retry */}
       {error && (
-        <div className="mx-auto max-w-md my-4 p-3 rounded-xl border border-red-700/60 bg-red-900/30 text-red-200 text-sm text-center">
-          {error}
+        <div className="mx-auto max-w-md my-4 p-4 rounded-xl border border-red-700/60 bg-red-900/30 text-red-200 text-sm text-center">
+          <p className="mb-3">{error}</p>
+          <button
+            onClick={() => {
+              setError('');
+              fetchPage(0);
+            }}
+            className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white text-sm font-medium transition-colors"
+          >
+            Try Again
+          </button>
         </div>
       )}
     </div>

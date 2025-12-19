@@ -56,7 +56,17 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     if (!rows.length) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
     }
-    const video = rows[0];
+    const video = rows[0] as Record<string, any>;
+    
+    // Try to extract UID from URL if uid column is empty
+    if (!video.uid && video.url) {
+      // Pattern: cloudflarestream.com/<UID> or videodelivery.net/<UID>
+      const match = video.url.match(/(?:cloudflarestream\.com|videodelivery\.net)\/([a-f0-9]{32})/i);
+      if (match) {
+        video.uid = match[1];
+      }
+    }
+    
     try { await writeAuditLog(_req, getUserFromRequest(_req), 'videos.get', String(id)); } catch {}
     return NextResponse.json({ success: true, video });
   } catch (error) {

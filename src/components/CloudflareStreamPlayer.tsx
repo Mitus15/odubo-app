@@ -352,9 +352,9 @@ export default function CloudflareStreamPlayer({
         </div>
       )}
 
-      {/* Play Button Overlay */}
-      {!isPlaying && !isLoading && (
-        <div 
+      {/* Play Button Overlay - only show when controls are disabled to avoid duplicate buttons */}
+      {!isPlaying && !isLoading && !controls && (
+        <div
           className="absolute inset-0 flex items-center justify-center bg-black/30 cursor-pointer transition-opacity"
           onClick={togglePlay}
         >

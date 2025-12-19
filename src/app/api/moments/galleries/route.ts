@@ -8,24 +8,47 @@ export async function GET(req: Request) {
   try {
     const url = new URL(req.url);
     const code = url.searchParams.get('code');
-    
+    const id = url.searchParams.get('id');
+
     // Public endpoint when querying by code (for attendees to validate event code)
     if (code) {
       const rl = await rateLimit({ key: `galleries:bycode:${code}`, limit: 30, windowMs: 60_000 });
       if (!rl.allowed) return NextResponse.json({ error: 'Rate limited' }, { status: 429 });
-      
+
       const rows = await queryDatabase(
         'SELECT id, code, title, description, starts_at, ends_at, created_at FROM galleries WHERE code = ? LIMIT 1',
         [code.trim().toUpperCase()]
       );
-      
+
       if (rows.length === 0) {
         return NextResponse.json({ error: 'Invalid event code' }, { status: 404 });
       }
-      
+
       return NextResponse.json({ galleries: rows });
     }
-    
+
+    // Public endpoint when querying by ID (for camera modal to get gallery info)
+    if (id) {
+      const galleryId = parseInt(id, 10);
+      if (isNaN(galleryId)) {
+        return NextResponse.json({ error: 'Invalid gallery ID' }, { status: 400 });
+      }
+
+      const rl = await rateLimit({ key: `galleries:byid:${id}`, limit: 30, windowMs: 60_000 });
+      if (!rl.allowed) return NextResponse.json({ error: 'Rate limited' }, { status: 429 });
+
+      const rows = await queryDatabase(
+        'SELECT id, code, title, description, starts_at, ends_at, created_at FROM galleries WHERE id = ? LIMIT 1',
+        [galleryId]
+      );
+
+      if (rows.length === 0) {
+        return NextResponse.json({ error: 'Gallery not found' }, { status: 404 });
+      }
+
+      return NextResponse.json({ galleries: rows });
+    }
+
     // Admin-only endpoint for listing all galleries
     const user = getUserFromRequest(req as any);
     console.log('[galleries/GET] Auth check:', { 

@@ -53,7 +53,8 @@ export interface PlayerState {
   // UI state
   isPlayerVisible: boolean;
   isQueueVisible: boolean;
-  
+  isPlayerModalOpen: boolean;
+
   // Error handling
   error: string | null;
 }
@@ -88,7 +89,9 @@ export type PlayerAction =
   | { type: 'ADD_TO_HISTORY'; payload: { track: Track; album: Album | null } }
   | { type: 'CLEAR_HISTORY' }
   | { type: 'SHUFFLE_QUEUE' }
-  | { type: 'SHUFFLE_ALL_LIBRARY' };
+  | { type: 'SHUFFLE_ALL_LIBRARY' }
+  | { type: 'OPEN_PLAYER_MODAL' }
+  | { type: 'CLOSE_PLAYER_MODAL' };
 
 const initialState: PlayerState = {
   currentTrack: null,
@@ -114,6 +117,7 @@ const initialState: PlayerState = {
   libraryTracks: [],
   isPlayerVisible: false,
   isQueueVisible: false,
+  isPlayerModalOpen: false,
   error: null,
 };
 
@@ -703,6 +707,20 @@ const playerReducer = (state: PlayerState, action: PlayerAction): PlayerState =>
       };
     }
 
+    case 'OPEN_PLAYER_MODAL': {
+      return {
+        ...state,
+        isPlayerModalOpen: true,
+      };
+    }
+
+    case 'CLOSE_PLAYER_MODAL': {
+      return {
+        ...state,
+        isPlayerModalOpen: false,
+      };
+    }
+
     default:
       return state;
   }
@@ -744,6 +762,10 @@ interface MusicPlayerContextType {
   // Shuffle methods
   shuffleQueue: () => void;
   shuffleAllLibrary: () => void;
+
+  // Player modal methods
+  openPlayerModal: () => void;
+  closePlayerModal: () => void;
 
   // Utility methods
   testAudioUrl: (url: string) => Promise<boolean>;
@@ -1504,6 +1526,14 @@ export const MusicPlayerProvider: React.FC<MusicPlayerProviderProps> = ({ childr
     dispatch({ type: 'SHUFFLE_ALL_LIBRARY' });
   };
 
+  const openPlayerModal = () => {
+    dispatch({ type: 'OPEN_PLAYER_MODAL' });
+  };
+
+  const closePlayerModal = () => {
+    dispatch({ type: 'CLOSE_PLAYER_MODAL' });
+  };
+
   // Test audio URL accessibility with enhanced checking
   const testAudioUrl = async (url: string): Promise<boolean> => {
     try {
@@ -1581,6 +1611,8 @@ export const MusicPlayerProvider: React.FC<MusicPlayerProviderProps> = ({ childr
     clearHistory,
     shuffleQueue,
     shuffleAllLibrary,
+    openPlayerModal,
+    closePlayerModal,
     testAudioUrl,
   };
 

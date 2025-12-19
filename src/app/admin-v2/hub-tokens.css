@@ -1,0 +1,501 @@
+/**
+ * The Hub - Design Tokens
+ * Enterprise Business Operating System for Odubo
+ *
+ * Dark Luxury Aesthetic - Mobile First
+ */
+
+/* =============================================================================
+   CSS VARIABLES / DESIGN TOKENS
+   ============================================================================= */
+
+:root {
+  /* -------------------------------------------------------------------------
+     COLORS - Dark Luxury Palette
+     ------------------------------------------------------------------------- */
+
+  /* Background hierarchy */
+  --hub-bg-base: #0b0b0b;
+  --hub-bg-primary: #171616;
+  --hub-bg-secondary: #1f1e1d;
+  --hub-bg-tertiary: #302927;
+  --hub-bg-elevated: #3b3733;
+  --hub-bg-hover: #453f3a;
+
+  /* Text hierarchy */
+  --hub-text-primary: #ede8df;
+  --hub-text-secondary: #b2a491;
+  --hub-text-muted: #726d6c;
+  --hub-text-disabled: #4a4643;
+
+  /* Brand accent */
+  --hub-accent: #843c2d;
+  --hub-accent-hover: #a04a38;
+  --hub-accent-active: #b85d47;
+  --hub-accent-muted: #502d26;
+
+  /* Semantic colors */
+  --hub-success: #22c55e;
+  --hub-success-bg: rgba(34, 197, 94, 0.1);
+  --hub-warning: #f59e0b;
+  --hub-warning-bg: rgba(245, 158, 11, 0.1);
+  --hub-error: #ef4444;
+  --hub-error-bg: rgba(239, 68, 68, 0.1);
+  --hub-info: #3b82f6;
+  --hub-info-bg: rgba(59, 130, 246, 0.1);
+
+  /* Border colors */
+  --hub-border-subtle: rgba(80, 45, 38, 0.2);
+  --hub-border-default: rgba(80, 45, 38, 0.3);
+  --hub-border-strong: rgba(80, 45, 38, 0.5);
+  --hub-border-accent: rgba(132, 60, 45, 0.5);
+
+  /* -------------------------------------------------------------------------
+     TYPOGRAPHY
+     ------------------------------------------------------------------------- */
+
+  --hub-font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --hub-font-serif: 'Baskerville', 'Times New Roman', serif;
+  --hub-font-mono: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+
+  /* Font sizes - Mobile first */
+  --hub-text-xs: 0.75rem;    /* 12px */
+  --hub-text-sm: 0.875rem;   /* 14px */
+  --hub-text-base: 1rem;     /* 16px */
+  --hub-text-lg: 1.125rem;   /* 18px */
+  --hub-text-xl: 1.25rem;    /* 20px */
+  --hub-text-2xl: 1.5rem;    /* 24px */
+  --hub-text-3xl: 1.875rem;  /* 30px */
+
+  /* Line heights */
+  --hub-leading-tight: 1.25;
+  --hub-leading-normal: 1.5;
+  --hub-leading-relaxed: 1.75;
+
+  /* Font weights */
+  --hub-font-normal: 400;
+  --hub-font-medium: 500;
+  --hub-font-semibold: 600;
+  --hub-font-bold: 700;
+
+  /* -------------------------------------------------------------------------
+     SPACING
+     ------------------------------------------------------------------------- */
+
+  --hub-space-0: 0;
+  --hub-space-1: 0.25rem;   /* 4px */
+  --hub-space-2: 0.5rem;    /* 8px */
+  --hub-space-3: 0.75rem;   /* 12px */
+  --hub-space-4: 1rem;      /* 16px */
+  --hub-space-5: 1.25rem;   /* 20px */
+  --hub-space-6: 1.5rem;    /* 24px */
+  --hub-space-8: 2rem;      /* 32px */
+  --hub-space-10: 2.5rem;   /* 40px */
+  --hub-space-12: 3rem;     /* 48px */
+  --hub-space-16: 4rem;     /* 64px */
+
+  /* -------------------------------------------------------------------------
+     LAYOUT
+     ------------------------------------------------------------------------- */
+
+  /* Touch targets (mobile) */
+  --hub-touch-target: 44px;
+  --hub-touch-target-sm: 36px;
+
+  /* Navigation */
+  --hub-nav-height-mobile: 64px;
+  --hub-nav-height-desktop: 0px;
+  --hub-sidebar-width: 260px;
+  --hub-sidebar-collapsed: 72px;
+
+  /* Header */
+  --hub-header-height: 56px;
+
+  /* Content */
+  --hub-content-max-width: 1400px;
+  --hub-content-padding: var(--hub-space-4);
+
+  /* Safe areas (iOS) */
+  --hub-safe-top: env(safe-area-inset-top, 0px);
+  --hub-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --hub-safe-left: env(safe-area-inset-left, 0px);
+  --hub-safe-right: env(safe-area-inset-right, 0px);
+
+  /* -------------------------------------------------------------------------
+     EFFECTS
+     ------------------------------------------------------------------------- */
+
+  /* Border radius */
+  --hub-radius-sm: 6px;
+  --hub-radius-md: 8px;
+  --hub-radius-lg: 12px;
+  --hub-radius-xl: 16px;
+  --hub-radius-full: 9999px;
+
+  /* Shadows */
+  --hub-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --hub-shadow-md: 0 4px 6px rgba(0, 0, 0, 0.4), 0 2px 4px rgba(0, 0, 0, 0.3);
+  --hub-shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.5), 0 4px 6px rgba(0, 0, 0, 0.3);
+  --hub-shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.6), 0 8px 10px rgba(0, 0, 0, 0.4);
+  --hub-shadow-inner: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+
+  /* Glass effect */
+  --hub-glass-bg: rgba(31, 30, 29, 0.8);
+  --hub-glass-bg-light: rgba(31, 30, 29, 0.6);
+  --hub-glass-blur: 12px;
+  --hub-glass-border: rgba(255, 255, 255, 0.05);
+
+  /* Transitions */
+  --hub-transition-fast: 100ms ease;
+  --hub-transition-normal: 200ms ease;
+  --hub-transition-slow: 300ms ease;
+  --hub-transition-spring: 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* -------------------------------------------------------------------------
+     Z-INDEX SCALE
+     ------------------------------------------------------------------------- */
+
+  --hub-z-base: 0;
+  --hub-z-dropdown: 100;
+  --hub-z-sticky: 200;
+  --hub-z-overlay: 300;
+  --hub-z-modal: 400;
+  --hub-z-toast: 500;
+  --hub-z-tooltip: 600;
+}
+
+/* =============================================================================
+   BASE STYLES
+   ============================================================================= */
+
+.hub-app {
+  min-height: 100dvh;
+  background: var(--hub-bg-base);
+  color: var(--hub-text-primary);
+  font-family: var(--hub-font-sans);
+  font-size: var(--hub-text-base);
+  line-height: var(--hub-leading-normal);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Hide scrollbar but keep functionality */
+.hub-scroll-hidden {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.hub-scroll-hidden::-webkit-scrollbar {
+  display: none;
+}
+
+/* Custom scrollbar for desktop */
+@media (min-width: 1024px) {
+  .hub-scroll-styled::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .hub-scroll-styled::-webkit-scrollbar-track {
+    background: var(--hub-bg-secondary);
+    border-radius: var(--hub-radius-full);
+  }
+
+  .hub-scroll-styled::-webkit-scrollbar-thumb {
+    background: var(--hub-border-default);
+    border-radius: var(--hub-radius-full);
+  }
+
+  .hub-scroll-styled::-webkit-scrollbar-thumb:hover {
+    background: var(--hub-border-strong);
+  }
+}
+
+/* =============================================================================
+   COMPONENT STYLES
+   ============================================================================= */
+
+/* Card component */
+.hub-card {
+  background: var(--hub-bg-secondary);
+  border: 1px solid var(--hub-border-subtle);
+  border-radius: var(--hub-radius-lg);
+  padding: var(--hub-space-4);
+  transition: all var(--hub-transition-normal);
+}
+
+.hub-card:hover {
+  background: var(--hub-bg-tertiary);
+  border-color: var(--hub-border-default);
+}
+
+.hub-card-elevated {
+  background: var(--hub-bg-tertiary);
+  box-shadow: var(--hub-shadow-md);
+}
+
+/* Glass card */
+.hub-glass {
+  background: var(--hub-glass-bg);
+  backdrop-filter: blur(var(--hub-glass-blur));
+  -webkit-backdrop-filter: blur(var(--hub-glass-blur));
+  border: 1px solid var(--hub-glass-border);
+  border-radius: var(--hub-radius-lg);
+}
+
+/* Button base */
+.hub-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--hub-space-2);
+  min-height: var(--hub-touch-target);
+  padding: var(--hub-space-2) var(--hub-space-4);
+  font-family: var(--hub-font-sans);
+  font-size: var(--hub-text-sm);
+  font-weight: var(--hub-font-medium);
+  line-height: 1;
+  border-radius: var(--hub-radius-md);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all var(--hub-transition-fast);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hub-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Button variants */
+.hub-btn-primary {
+  background: var(--hub-accent);
+  color: var(--hub-text-primary);
+  border-color: var(--hub-accent);
+}
+
+.hub-btn-primary:hover:not(:disabled) {
+  background: var(--hub-accent-hover);
+  border-color: var(--hub-accent-hover);
+}
+
+.hub-btn-primary:active:not(:disabled) {
+  background: var(--hub-accent-active);
+}
+
+.hub-btn-secondary {
+  background: var(--hub-bg-tertiary);
+  color: var(--hub-text-primary);
+  border-color: var(--hub-border-default);
+}
+
+.hub-btn-secondary:hover:not(:disabled) {
+  background: var(--hub-bg-elevated);
+  border-color: var(--hub-border-strong);
+}
+
+.hub-btn-ghost {
+  background: transparent;
+  color: var(--hub-text-secondary);
+  border-color: transparent;
+}
+
+.hub-btn-ghost:hover:not(:disabled) {
+  background: var(--hub-bg-tertiary);
+  color: var(--hub-text-primary);
+}
+
+/* Icon button */
+.hub-btn-icon {
+  padding: var(--hub-space-2);
+  min-width: var(--hub-touch-target);
+  border-radius: var(--hub-radius-md);
+}
+
+/* Input base */
+.hub-input {
+  display: block;
+  width: 100%;
+  min-height: var(--hub-touch-target);
+  padding: var(--hub-space-2) var(--hub-space-3);
+  font-family: var(--hub-font-sans);
+  font-size: var(--hub-text-base);
+  color: var(--hub-text-primary);
+  background: var(--hub-bg-tertiary);
+  border: 1px solid var(--hub-border-default);
+  border-radius: var(--hub-radius-md);
+  transition: all var(--hub-transition-fast);
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.hub-input::placeholder {
+  color: var(--hub-text-muted);
+}
+
+.hub-input:focus {
+  outline: none;
+  border-color: var(--hub-accent);
+  box-shadow: 0 0 0 2px var(--hub-accent-muted);
+}
+
+.hub-input:disabled {
+  background: var(--hub-bg-secondary);
+  color: var(--hub-text-disabled);
+  cursor: not-allowed;
+}
+
+/* Select base */
+.hub-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23b2a491' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--hub-space-3) center;
+  padding-right: var(--hub-space-10);
+}
+
+/* Badge */
+.hub-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--hub-space-1) var(--hub-space-2);
+  font-size: var(--hub-text-xs);
+  font-weight: var(--hub-font-medium);
+  border-radius: var(--hub-radius-full);
+  white-space: nowrap;
+}
+
+.hub-badge-default {
+  background: var(--hub-bg-tertiary);
+  color: var(--hub-text-secondary);
+}
+
+.hub-badge-success {
+  background: var(--hub-success-bg);
+  color: var(--hub-success);
+}
+
+.hub-badge-warning {
+  background: var(--hub-warning-bg);
+  color: var(--hub-warning);
+}
+
+.hub-badge-error {
+  background: var(--hub-error-bg);
+  color: var(--hub-error);
+}
+
+.hub-badge-accent {
+  background: var(--hub-accent-muted);
+  color: var(--hub-accent-active);
+}
+
+/* =============================================================================
+   UTILITY CLASSES
+   ============================================================================= */
+
+/* Text utilities */
+.hub-text-primary { color: var(--hub-text-primary); }
+.hub-text-secondary { color: var(--hub-text-secondary); }
+.hub-text-muted { color: var(--hub-text-muted); }
+.hub-text-accent { color: var(--hub-accent-active); }
+.hub-text-success { color: var(--hub-success); }
+.hub-text-warning { color: var(--hub-warning); }
+.hub-text-error { color: var(--hub-error); }
+
+/* Background utilities */
+.hub-bg-base { background: var(--hub-bg-base); }
+.hub-bg-primary { background: var(--hub-bg-primary); }
+.hub-bg-secondary { background: var(--hub-bg-secondary); }
+.hub-bg-tertiary { background: var(--hub-bg-tertiary); }
+.hub-bg-elevated { background: var(--hub-bg-elevated); }
+
+/* Border utilities */
+.hub-border { border: 1px solid var(--hub-border-default); }
+.hub-border-subtle { border: 1px solid var(--hub-border-subtle); }
+.hub-border-strong { border: 1px solid var(--hub-border-strong); }
+
+/* =============================================================================
+   MOBILE-SPECIFIC STYLES
+   ============================================================================= */
+
+@media (max-width: 767px) {
+  /* Increase touch targets on mobile */
+  .hub-input,
+  .hub-select {
+    min-height: 48px;
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+
+  /* Full-width buttons on mobile */
+  .hub-btn-mobile-full {
+    width: 100%;
+  }
+
+  /* Tighter spacing on mobile */
+  .hub-content-mobile {
+    padding: var(--hub-space-3);
+  }
+}
+
+/* =============================================================================
+   ANIMATIONS
+   ============================================================================= */
+
+@keyframes hub-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes hub-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes hub-slide-down {
+  from {
+    opacity: 0;
+    transform: translateY(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes hub-scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes hub-spin {
+  to { transform: rotate(360deg); }
+}
+
+.hub-animate-fade-in { animation: hub-fade-in var(--hub-transition-normal) ease; }
+.hub-animate-slide-up { animation: hub-slide-up var(--hub-transition-normal) ease; }
+.hub-animate-slide-down { animation: hub-slide-down var(--hub-transition-normal) ease; }
+.hub-animate-scale-in { animation: hub-scale-in var(--hub-transition-spring) ease; }
+.hub-animate-spin { animation: hub-spin 1s linear infinite; }
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

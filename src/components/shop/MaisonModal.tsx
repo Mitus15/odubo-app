@@ -1,84 +1,133 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { motion, PanInfo } from 'framer-motion';
+import { useEffect, useState, useRef, useCallback } from 'react';
+import { motion } from 'framer-motion';
 import { useOmniShop, type ProductCard } from '@/contexts/OmniShopContext';
+
+const PRODUCTS_PER_PAGE = 12;
 
 export default function MaisonModal() {
   const { products, setProducts, openProduct, openCart, closeAll, cartCount } = useOmniShop();
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hasNextPage, setHasNextPage] = useState(true);
+  const [endCursor, setEndCursor] = useState<string | null>(null);
 
-  // Swipe-to-dismiss handler
-  const handleDragEnd = (_: any, info: PanInfo) => {
-    if (info.offset.y > 100 || info.velocity.y > 500) {
-      closeAll();
-    }
-  };
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+  const observerRef = useRef<IntersectionObserver | null>(null);
 
-  // Fetch products on mount if not already loaded
-  useEffect(() => {
-    if (products.length > 0) return;
+  // Fetch products with optional cursor for pagination
+  const fetchProducts = useCallback(async (cursor?: string | null) => {
+    const isInitialLoad = !cursor;
 
-    const fetchProducts = async () => {
+    if (isInitialLoad) {
       setLoading(true);
-      setError(null);
+    } else {
+      setLoadingMore(true);
+    }
+    setError(null);
 
-      try {
-        const STORE_URL = process.env.NEXT_PUBLIC_SHOPIFY_STORE_URL || 'https://odubostudio.myshopify.com';
-        const PUBLIC_TOKEN = process.env.NEXT_PUBLIC_SHOPIFY_API_KEY;
+    try {
+      const STORE_URL = process.env.NEXT_PUBLIC_SHOPIFY_STORE_URL || 'https://odubostudio.myshopify.com';
+      const PUBLIC_TOKEN = process.env.NEXT_PUBLIC_SHOPIFY_API_KEY;
 
-        if (!PUBLIC_TOKEN) throw new Error('Store configuration error');
+      if (!PUBLIC_TOKEN) throw new Error('Store configuration error');
 
-        const query = `#graphql
-          query Products {
-            products(first: 50, sortKey: CREATED_AT, reverse: true) {
-              edges {
-                node {
-                  id
-                  title
-                  handle
-                  availableForSale
-                  images(first: 1) { edges { node { url } } }
-                  variants(first: 1) { edges { node { price { amount } } } }
-                }
+      const query = `#graphql
+        query Products($first: Int!, $after: String) {
+          products(first: $first, after: $after, sortKey: CREATED_AT, reverse: true) {
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
+            edges {
+              node {
+                id
+                title
+                handle
+                availableForSale
+                images(first: 1) { edges { node { url } } }
+                variants(first: 1) { edges { node { price { amount } } } }
               }
             }
-          }`;
+          }
+        }`;
 
-        const res = await fetch(`${STORE_URL}/api/2024-07/graphql.json`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Shopify-Storefront-Access-Token': PUBLIC_TOKEN,
+      const res = await fetch(`${STORE_URL}/api/2024-07/graphql.json`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Shopify-Storefront-Access-Token': PUBLIC_TOKEN,
+        },
+        body: JSON.stringify({
+          query,
+          variables: {
+            first: PRODUCTS_PER_PAGE,
+            after: cursor || null,
           },
-          body: JSON.stringify({ query }),
-        });
+        }),
+      });
 
-        if (!res.ok) throw new Error('Failed to load products');
-        const data = await res.json();
+      if (!res.ok) throw new Error('Failed to load products');
+      const data = await res.json();
 
-        const mapped: ProductCard[] = data?.data?.products?.edges?.map(({ node: p }: any) => ({
-          id: p.id,
-          title: p.title,
-          handle: p.handle,
-          image: p.images?.edges?.[0]?.node?.url || null,
-          price: p.variants?.edges?.[0]?.node?.price?.amount
-            ? parseFloat(p.variants.edges[0].node.price.amount)
-            : null,
-          available: p.availableForSale,
-        })) || [];
+      const pageInfo = data?.data?.products?.pageInfo;
+      const mapped: ProductCard[] = data?.data?.products?.edges?.map(({ node: p }: any) => ({
+        id: p.id,
+        title: p.title,
+        handle: p.handle,
+        image: p.images?.edges?.[0]?.node?.url || null,
+        price: p.variants?.edges?.[0]?.node?.price?.amount
+          ? parseFloat(p.variants.edges[0].node.price.amount)
+          : null,
+        available: p.availableForSale,
+      })) || [];
 
+      if (isInitialLoad) {
         setProducts(mapped);
-      } catch (e: any) {
-        setError(e?.message || 'Failed to load products');
-      } finally {
-        setLoading(false);
+      } else {
+        setProducts((prev) => [...prev, ...mapped]);
       }
-    };
 
+      setHasNextPage(pageInfo?.hasNextPage ?? false);
+      setEndCursor(pageInfo?.endCursor ?? null);
+    } catch (e: any) {
+      setError(e?.message || 'Failed to load products');
+    } finally {
+      if (isInitialLoad) {
+        setLoading(false);
+      } else {
+        setLoadingMore(false);
+      }
+    }
+  }, [setProducts]);
+
+  // Initial load
+  useEffect(() => {
+    if (products.length > 0) return;
     fetchProducts();
-  }, [products.length, setProducts]);
+  }, [products.length, fetchProducts]);
+
+  // Intersection Observer for infinite scroll
+  useEffect(() => {
+    if (!loadMoreRef.current || !hasNextPage || loading || loadingMore) return;
+
+    observerRef.current = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && hasNextPage && !loadingMore && endCursor) {
+          fetchProducts(endCursor);
+        }
+      },
+      { threshold: 0.1, rootMargin: '100px' }
+    );
+
+    observerRef.current.observe(loadMoreRef.current);
+
+    return () => {
+      observerRef.current?.disconnect();
+    };
+  }, [hasNextPage, loading, loadingMore, endCursor, fetchProducts]);
 
   return (
     <motion.div
@@ -88,21 +137,11 @@ export default function MaisonModal() {
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
       className="fixed inset-0 z-[110] flex flex-col bg-gradient-to-br from-[#302927] via-[#1a1817] to-[#302927]"
     >
-      {/* Drag handle - swipe down to dismiss */}
-      <motion.div
-        drag="y"
-        dragConstraints={{ top: 0, bottom: 200 }}
-        dragElastic={{ top: 0, bottom: 0.8 }}
-        dragSnapToOrigin
-        onDragEnd={handleDragEnd}
-        className="w-full flex justify-center pt-3 pb-1 cursor-grab active:cursor-grabbing touch-none"
+      {/* Header - glass surface */}
+      <header
+        className="flex items-center justify-between px-4 py-3 glass-surface border-b border-[#502d26]/30"
         style={{ paddingTop: 'max(12px, env(safe-area-inset-top, 0px))' }}
       >
-        <div className="w-10 h-1 rounded-full bg-[#ede8df]/30" />
-      </motion.div>
-
-      {/* Header - glass surface */}
-      <header className="flex items-center justify-between px-4 py-2 glass-surface border-b border-[#502d26]/30">
         <button
           onClick={closeAll}
           className="w-10 h-10 flex items-center justify-center text-[#ede8df]/60 hover:text-[#ede8df] transition-colors rounded-full hover:bg-[#843c2d]/10"
@@ -114,9 +153,12 @@ export default function MaisonModal() {
           </svg>
         </button>
 
-        <h1 className="text-xs font-medium uppercase tracking-[0.25em] text-[#ede8df]/80">
-          Maison
-        </h1>
+        <img
+          src="/brand-logos/baad.png"
+          alt="B.A.A.D Brand Logo"
+          className="h-6 w-auto"
+          draggable={false}
+        />
 
         <button
           onClick={openCart}
@@ -138,13 +180,17 @@ export default function MaisonModal() {
       {/* Content */}
       <div
         className="flex-1 overflow-y-auto overscroll-contain"
-        style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+        style={{
+          paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)',
+          WebkitOverflowScrolling: 'touch',
+          touchAction: 'pan-y',
+        }}
       >
         {/* Loading state */}
         {loading && (
           <div className="p-3">
-            <div className="grid grid-cols-2 gap-[1px]">
-              {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-[1px]">
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((i) => (
                 <div key={i} className="aspect-square bg-[#302927]/50 animate-pulse" />
               ))}
             </div>
@@ -164,50 +210,67 @@ export default function MaisonModal() {
           </div>
         )}
 
-        {/* Product Grid - warm, organic gaps */}
+        {/* Product Grid - responsive with desktop scaling */}
         {!loading && !error && products.length > 0 && (
-          <div className="grid grid-cols-2 gap-[1px] bg-[#502d26]/20">
-            {products.map((product) => (
-              <button
-                key={product.id}
-                onClick={() => openProduct(product.handle)}
-                className="group relative aspect-square bg-gradient-to-br from-[#1a1817] to-[#252220] overflow-hidden focus:outline-none"
-                style={{ touchAction: 'manipulation' }}
-              >
-                {/* Product Image */}
-                {product.image ? (
-                  <img
-                    src={product.image}
-                    alt={product.title}
-                    className="absolute inset-0 w-full h-full object-contain transition-transform duration-500 ease-out group-hover:scale-[1.03] group-active:scale-[0.98]"
-                    loading="lazy"
-                    draggable={false}
-                  />
-                ) : (
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-[#b2a491]/30 text-[10px] uppercase tracking-widest">No Image</span>
-                  </div>
-                )}
-
-                {/* Sold Out Overlay */}
-                {!product.available && (
-                  <div className="absolute inset-0 bg-[#1a1817]/80 flex items-center justify-center">
-                    <span className="px-3 py-1.5 glass-surface rounded-full text-[#b2a491] text-[10px] uppercase tracking-widest border border-[#502d26]/30">
-                      Sold Out
-                    </span>
-                  </div>
-                )}
-
-                {/* Hover overlay with title */}
-                <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-[#1a1817]/90 via-[#1a1817]/60 to-transparent opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity">
-                  <p className="text-[#ede8df] text-xs font-medium truncate">{product.title}</p>
-                  {product.price !== null && (
-                    <p className="text-[#b2a491] text-[10px]">${product.price.toFixed(2)}</p>
+          <>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-[1px] lg:gap-1 bg-[#502d26]/20">
+              {products.map((product) => (
+                <button
+                  key={product.id}
+                  onClick={() => openProduct(product.handle)}
+                  className="group relative aspect-square bg-gradient-to-br from-[#1a1817] to-[#252220] overflow-hidden focus:outline-none"
+                  style={{ touchAction: 'manipulation' }}
+                >
+                  {/* Product Image */}
+                  {product.image ? (
+                    <img
+                      src={product.image}
+                      alt={product.title}
+                      className="absolute inset-0 w-full h-full object-contain transition-transform duration-500 ease-out group-hover:scale-[1.03] group-active:scale-[0.98]"
+                      loading="lazy"
+                      draggable={false}
+                    />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="text-[#b2a491]/30 text-[10px] uppercase tracking-widest">No Image</span>
+                    </div>
                   )}
-                </div>
-              </button>
-            ))}
-          </div>
+
+                  {/* Sold Out Overlay */}
+                  {!product.available && (
+                    <div className="absolute inset-0 bg-[#1a1817]/80 flex items-center justify-center">
+                      <span className="px-3 py-1.5 glass-surface rounded-full text-[#b2a491] text-[10px] uppercase tracking-widest border border-[#502d26]/30">
+                        Sold Out
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Hover overlay with title */}
+                  <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-[#1a1817]/90 via-[#1a1817]/60 to-transparent opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity">
+                    <p className="text-[#ede8df] text-xs font-medium truncate">{product.title}</p>
+                    {product.price !== null && (
+                      <p className="text-[#b2a491] text-[10px]">${product.price.toFixed(2)}</p>
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            {/* Infinite scroll trigger */}
+            {hasNextPage && (
+              <div
+                ref={loadMoreRef}
+                className="flex justify-center py-8"
+              >
+                {loadingMore ? (
+                  <div className="w-6 h-6 border-2 border-[#843c2d]/30 border-t-[#843c2d] rounded-full animate-spin" />
+                ) : (
+                  /* Invisible trigger */
+                  <div className="h-8" />
+                )}
+              </div>
+            )}
+          </>
         )}
 
         {/* Empty state */}
@@ -216,6 +279,47 @@ export default function MaisonModal() {
             <p className="text-[#b2a491]/40 text-xs uppercase tracking-widest">No products available</p>
           </div>
         )}
+
+        {/* Legal Footer */}
+        <footer className="px-4 py-6 mt-8 border-t border-[#502d26]/20">
+          <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 mb-4">
+            <a
+              href="https://odubostudio.myshopify.com/policies/privacy-policy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[10px] text-[#b2a491]/60 hover:text-[#b2a491] transition-colors uppercase tracking-wider"
+            >
+              Privacy
+            </a>
+            <a
+              href="https://odubostudio.myshopify.com/policies/terms-of-service"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[10px] text-[#b2a491]/60 hover:text-[#b2a491] transition-colors uppercase tracking-wider"
+            >
+              Terms
+            </a>
+            <a
+              href="https://odubostudio.myshopify.com/policies/shipping-policy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[10px] text-[#b2a491]/60 hover:text-[#b2a491] transition-colors uppercase tracking-wider"
+            >
+              Shipping
+            </a>
+            <a
+              href="https://odubostudio.myshopify.com/policies/refund-policy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[10px] text-[#b2a491]/60 hover:text-[#b2a491] transition-colors uppercase tracking-wider"
+            >
+              Refunds
+            </a>
+          </div>
+          <p className="text-center text-[9px] text-[#b2a491]/40 tracking-wider">
+            &copy; {new Date().getFullYear()} Odubo Studio. All rights reserved.
+          </p>
+        </footer>
       </div>
     </motion.div>
   );

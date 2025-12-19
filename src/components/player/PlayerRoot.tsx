@@ -1,17 +1,21 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect } from 'react';
 import { useMusicPlayer } from '@/contexts/MusicPlayerContext';
-import { AnimatePresence } from 'framer-motion';
-import MiniBar from '@/components/player/MiniBar';
-import ExpandedView from '@/components/player/ExpandedView';
-import QueueDrawer from '@/components/player/QueueDrawer';
+import MusicPlayerModal from '@/components/player/MusicPlayerModal';
 import Toasts from '@/components/player/Toasts';
 
+/**
+ * PlayerRoot - Global music player root component
+ *
+ * Handles:
+ * - Media Session API integration (for OS-level controls)
+ * - Keyboard shortcuts (space, arrows, M for mute)
+ * - MusicPlayerModal (opened via VinylMiniPlayer)
+ * - Toast notifications
+ */
 export default function PlayerRoot() {
-  const { state, togglePlayPause, nextTrack, previousTrack, seekTo, setVolume, toggleMute } = useMusicPlayer();
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [isQueueOpen, setIsQueueOpen] = useState(false);
+  const { state, togglePlayPause, nextTrack, previousTrack, seekTo, toggleMute } = useMusicPlayer();
 
   // Media Session integration
   useEffect(() => {
@@ -67,49 +71,10 @@ export default function PlayerRoot() {
     return () => window.removeEventListener('keydown', onKey);
   }, [state.currentTime, state.duration]);
 
-  // Optionally surface state.error via the Toasts component API in the future.
-
-  if (!state.currentTrack) return null;
-
+  // MusicPlayerModal and Toasts always render (modal controls its own visibility)
   return (
     <>
-      <MiniBar
-        isLoading={state.isLoading}
-        isPlaying={state.isPlaying}
-        track={state.currentTrack}
-        album={state.currentAlbum}
-        currentTime={state.currentTime}
-        duration={state.duration}
-        error={state.error}
-        onRetry={() => {
-          // Simple retry logic: re-trigger play on current track if error present
-          if (state.currentTrack) {
-            togglePlayPause(); // pause if playing
-            setTimeout(() => {
-              togglePlayPause(); // attempt play again
-            }, 150);
-          }
-        }}
-        onPlayPause={togglePlayPause}
-        onNext={nextTrack}
-        onPrev={previousTrack}
-        onOpenExpanded={() => setIsExpanded(true)}
-        onToggleQueue={() => setIsQueueOpen((v) => !v)}
-      />
-
-      <AnimatePresence>
-        {isExpanded && (
-          <ExpandedView
-            key="expanded"
-            isOpen={isExpanded}
-            onClose={() => setIsExpanded(false)}
-            onOpenQueue={() => setIsQueueOpen(true)}
-          />
-        )}
-      </AnimatePresence>
-
-      <QueueDrawer isOpen={isQueueOpen} onClose={() => setIsQueueOpen(false)} />
-
+      <MusicPlayerModal />
       <Toasts />
     </>
   );

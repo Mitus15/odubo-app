@@ -2,16 +2,20 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import MusicPlayerLayout from "./components/MusicPlayerLayout";
-import AppHeader from "./components/AppHeader";
+// AppHeader removed - navigation via expandable logo menu on clips
+import { AudioProvider } from "@/contexts/AudioContext";
 import { MusicPlayerProvider } from "@/contexts/MusicPlayerContext";
 import { OmniShopProvider } from "@/contexts/OmniShopContext";
 import OmniShopOrchestrator from "@/components/shop/OmniShopOrchestrator";
-// FloatingBagIndicator removed - cart access via header/modals
+import { UnifiedMediaProvider } from "@/contexts/UnifiedMediaContext";
+import OmniMediaOrchestrator from "@/components/media/OmniMediaOrchestrator";
+import { AuthModalProvider } from "@/contexts/AuthModalContext";
+import AuthModal from "@/components/auth/AuthModal";
+import MediaPriorityBridge from "@/components/player/MediaPriorityBridge";
+import DesktopSidebar from "@/components/layout/DesktopSidebar";
 // import { AuthProvider } from "@/contexts/AuthContext";
 // import ClientCapabilities } from "./components/ClientCapabilities";
-import SecurityMonitor from "../components/SecurityMonitor";
 import GDPRConsent from "../components/GDPRConsent";
-import PerformanceMonitor from "../components/PerformanceMonitor";
 import ServiceWorkerRegistration from "../components/ServiceWorkerRegistration";
 import OfflineIndicator from "../components/OfflineIndicator";
 // import AccessibilityEnhancer from "./components/AccessibilityEnhancer";
@@ -53,7 +57,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body 
+      <body
         className={`${geistSans.variable} ${geistMono.variable} overflow-hidden bg-gradient-to-br from-[#302927] via-[#171616] to-[#302927] text-[#ede8df] font-serif`}
         suppressHydrationWarning={true}
         style={{
@@ -63,26 +67,38 @@ export default function RootLayout({
         }}
       >
         {/* <AuthProvider> */}
-          <MusicPlayerProvider>
-            <OmniShopProvider>
-              {/* <ClientCapabilities /> */}
-              <ServiceWorkerRegistration />
-              <OfflineIndicator />
-              <div className="h-full w-full flex flex-col overflow-hidden">
-                <AppHeader />
-                <main className="flex-1 min-h-0 pt-14 safe-area-header pb-24 safe-area-bottom overflow-y-auto">
-                  {children}
-                </main>
-                <MusicPlayerLayout />
-                {/* <SecurityMonitor /> */}
-                <GDPRConsent />
-                {/* <PerformanceMonitor /> */}
-                {/* <AccessibilityEnhancer /> */}
-              </div>
-              {/* Omni-Shop modals - rendered at root level to overlay everything */}
-              <OmniShopOrchestrator />
-            </OmniShopProvider>
-          </MusicPlayerProvider>
+          <AudioProvider>
+            <MusicPlayerProvider>
+              {/* Media priority bridge - connects AudioContext and MusicPlayerContext */}
+              <MediaPriorityBridge />
+              <OmniShopProvider>
+                <UnifiedMediaProvider>
+                  <AuthModalProvider>
+                    {/* <ClientCapabilities /> */}
+                    <ServiceWorkerRegistration />
+                    <OfflineIndicator />
+                    {/* Desktop sidebar - persistent navigation on lg+ */}
+                    <DesktopSidebar />
+
+                    {/* Clips-first layout - no header, full screen content */}
+                    <div className="h-full w-full flex flex-col overflow-hidden lg:ml-20 xl:ml-64">
+                      {/* Main content - full height, accounts for mini-bar dynamically */}
+                      <main className="flex-1 min-h-0 safe-area-top safe-area-bottom minibar-aware overflow-y-auto">
+                        {children}
+                      </main>
+                      {/* Music player - renders modal via VinylMiniPlayer */}
+                      <MusicPlayerLayout />
+                      <GDPRConsent />
+                    </div>
+                    {/* Modal orchestrators - rendered at root level */}
+                    <OmniShopOrchestrator />
+                    <OmniMediaOrchestrator />
+                    <AuthModal />
+                  </AuthModalProvider>
+                </UnifiedMediaProvider>
+              </OmniShopProvider>
+            </MusicPlayerProvider>
+          </AudioProvider>
         {/* </AuthProvider> */}
       </body>
     </html>

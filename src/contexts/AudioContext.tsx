@@ -1,25 +1,32 @@
 "use client";
-import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, ReactNode, useRef } from 'react';
 
 /**
- * Unified Audio State Management
+ * Unified Audio State Management with Media Priority
  *
- * Consolidates all audio state that was previously fragmented across:
- * - clips:isMuted (localStorage)
- * - clips:soundArmed (sessionStorage)
- * - clips:volume (localStorage)
- * - globalUserInteracted (module-level in ClipCard)
- * - hasUserMutePref (ClipsFeed state)
+ * Consolidates all audio state and implements media priority system:
+ * - Single audio source at a time
+ * - Music playing → clips muted but can browse
+ * - User unmutes clips → music stops
+ * - Video plays → everything else stops
  *
- * Now uses single storage key: odubo:audio
+ * Storage key: odubo:audio
  */
+
+type ActiveMediaSource = 'idle' | 'clips' | 'music' | 'video';
 
 interface AudioState {
   isMuted: boolean;
   volume: number;
   hasUserPreference: boolean;  // User explicitly set mute/unmute
   isArmed: boolean;            // User has interacted, enabling unmuted autoplay
+  activeMediaSource: ActiveMediaSource;
+  isMusicPlaying: boolean;     // True when music player is active
 }
+
+// Callback types for cross-context coordination
+type MusicPauseCallback = () => void;
+type VideoStopCallback = () => void;
 
 interface AudioContextType extends AudioState {
   setIsMuted: (muted: boolean) => void;
@@ -27,10 +34,20 @@ interface AudioContextType extends AudioState {
   toggleMute: () => void;
   armAudio: () => void;
   syncFromVideo: (actualMuted: boolean) => void;
+  // Media priority methods
+  setMusicPlaying: (playing: boolean) => void;
+  setVideoPlaying: (playing: boolean) => void;
+  registerMusicPauseCallback: (cb: MusicPauseCallback) => void;
+  registerVideoStopCallback: (cb: VideoStopCallback) => void;
+  requestClipAudio: () => boolean; // Returns true if clips can play unmuted
 }
 
 const STORAGE_KEY = 'odubo:audio';
 const SESSION_KEY = 'odubo:audioArmed';
+
+// In-memory flag to ensure THIS tab specifically has received a gesture
+// (sessionStorage can be duplicated when opening new tabs)
+let tabArmedInMemory = false;
 
 // Legacy keys to migrate from
 const LEGACY_KEYS = {
@@ -85,9 +102,13 @@ function loadStoredState(): Partial<StoredAudioState> {
 function loadArmedState(): boolean {
   if (typeof window === 'undefined') return false;
 
+  // In-memory flag takes precedence - ensures THIS tab had a gesture
+  if (tabArmedInMemory) return true;
+
   try {
-    // Try new key first
+    // Check sessionStorage (for page refreshes within same tab)
     if (sessionStorage.getItem(SESSION_KEY) === 'true') {
+      // Note: Don't set tabArmedInMemory here - require fresh gesture after tab duplication
       return true;
     }
 
@@ -115,6 +136,9 @@ function saveStoredState(state: StoredAudioState): void {
 function saveArmedState(armed: boolean): void {
   if (typeof window === 'undefined') return;
 
+  // Always update in-memory flag first
+  tabArmedInMemory = armed;
+
   try {
     if (armed) {
       sessionStorage.setItem(SESSION_KEY, 'true');
@@ -133,6 +157,14 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   const [hasUserPreference, setHasUserPreference] = useState<boolean>(false);
   const [isArmed, setIsArmed] = useState<boolean>(false);
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
+
+  // Media priority state
+  const [activeMediaSource, setActiveMediaSource] = useState<ActiveMediaSource>('idle');
+  const [isMusicPlaying, setIsMusicPlayingState] = useState<boolean>(false);
+
+  // Callbacks for cross-context coordination
+  const musicPauseCallbackRef = useRef<MusicPauseCallback | null>(null);
+  const videoStopCallbackRef = useRef<VideoStopCallback | null>(null);
 
   // Initialize from storage
   useEffect(() => {
@@ -196,10 +228,32 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const toggleMute = useCallback(() => {
-    setIsMutedState(prev => !prev);
+    const newMuted = !isMuted;
+
+    // If unmuting clips while music is playing, pause music first
+    if (!newMuted && isMusicPlaying && musicPauseCallbackRef.current) {
+      musicPauseCallbackRef.current();
+      setIsMusicPlayingState(false);
+      setActiveMediaSource('clips');
+    }
+
+    // If unmuting clips while video is playing, stop video first
+    if (!newMuted && activeMediaSource === 'video' && videoStopCallbackRef.current) {
+      videoStopCallbackRef.current();
+      setActiveMediaSource('clips');
+    }
+
+    setIsMutedState(newMuted);
     setHasUserPreference(true);
     setIsArmed(true); // Toggle implies interaction
-  }, []);
+
+    // Update active media source
+    if (!newMuted) {
+      setActiveMediaSource('clips');
+    } else if (activeMediaSource === 'clips') {
+      setActiveMediaSource('idle');
+    }
+  }, [isMuted, isMusicPlaying, activeMediaSource]);
 
   /**
    * Call when user explicitly interacts with audio controls.
@@ -219,6 +273,76 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     }
   }, [hasUserPreference, isMuted]);
 
+  // ============================================================================
+  // Media Priority Methods
+  // ============================================================================
+
+  /**
+   * Called when music player starts/stops playing.
+   * When music plays, clips should be muted.
+   */
+  const setMusicPlaying = useCallback((playing: boolean) => {
+    setIsMusicPlayingState(playing);
+    if (playing) {
+      setActiveMediaSource('music');
+      // Mute clips when music starts (but don't set user preference)
+      setIsMutedState(true);
+    } else if (activeMediaSource === 'music') {
+      setActiveMediaSource('idle');
+    }
+  }, [activeMediaSource]);
+
+  /**
+   * Called when video player starts/stops playing.
+   * When video plays, everything else stops.
+   */
+  const setVideoPlaying = useCallback((playing: boolean) => {
+    if (playing) {
+      setActiveMediaSource('video');
+      // Pause music if playing
+      if (isMusicPlaying && musicPauseCallbackRef.current) {
+        musicPauseCallbackRef.current();
+      }
+      // Mute clips
+      setIsMutedState(true);
+    } else if (activeMediaSource === 'video') {
+      setActiveMediaSource('idle');
+    }
+  }, [activeMediaSource, isMusicPlaying]);
+
+  /**
+   * Register callback to pause music (called from MusicPlayerContext).
+   */
+  const registerMusicPauseCallback = useCallback((cb: MusicPauseCallback) => {
+    musicPauseCallbackRef.current = cb;
+  }, []);
+
+  /**
+   * Register callback to stop video (called from video player).
+   */
+  const registerVideoStopCallback = useCallback((cb: VideoStopCallback) => {
+    videoStopCallbackRef.current = cb;
+  }, []);
+
+  /**
+   * Request to unmute clips. Returns true if allowed.
+   * If music is playing, this will pause music first.
+   */
+  const requestClipAudio = useCallback((): boolean => {
+    // If music is playing, pause it
+    if (isMusicPlaying && musicPauseCallbackRef.current) {
+      musicPauseCallbackRef.current();
+      setIsMusicPlayingState(false);
+    }
+    // If video is playing, stop it
+    if (activeMediaSource === 'video' && videoStopCallbackRef.current) {
+      videoStopCallbackRef.current();
+    }
+    // Switch to clips
+    setActiveMediaSource('clips');
+    return true;
+  }, [isMusicPlaying, activeMediaSource]);
+
   return (
     <AudioContext.Provider
       value={{
@@ -226,11 +350,18 @@ export function AudioProvider({ children }: { children: ReactNode }) {
         volume,
         hasUserPreference,
         isArmed,
+        activeMediaSource,
+        isMusicPlaying,
         setIsMuted,
         setVolume,
         toggleMute,
         armAudio,
         syncFromVideo,
+        setMusicPlaying,
+        setVideoPlaying,
+        registerMusicPauseCallback,
+        registerVideoStopCallback,
+        requestClipAudio,
       }}
     >
       {children}

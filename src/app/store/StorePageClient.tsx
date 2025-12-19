@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import ScreenLayout from '@/components/ui/ScreenLayout';
 import ScrollContainer from '@/components/ui/ScrollContainer';
+import VinylMiniPlayer from '@/components/player/VinylMiniPlayer';
 import Link from 'next/link';
 
 interface ProductCard {
@@ -374,8 +375,19 @@ export default function StorePageClient({ isStoreOpen, initialProducts }: StoreP
         </div>
       </ScrollContainer>
 
+      {/* Floating Vinyl Player - shows when music is playing */}
+      <div
+        className="fixed z-40 pointer-events-auto"
+        style={{
+          left: '1rem',
+          bottom: 'calc(140px + env(safe-area-inset-bottom, 0px))'
+        }}
+      >
+        <VinylMiniPlayer />
+      </div>
+
       {/* Footer - OUTSIDE ScrollContainer, truly fixed at bottom with safe area */}
-      <footer 
+      <footer
         className="fixed bottom-0 left-0 right-0 z-30 pointer-events-none"
         style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
       >

@@ -7,7 +7,7 @@ import { attachHls, type HlsHandle } from '@/lib/hlsPlayer';
 import { prefetchFirstSegment } from '@/lib/hlsPrefetch';
 import { getDeviceInfo, getScrollBehavior } from '@/lib/deviceInfo';
 import { useAudio } from '@/contexts/AudioContext';
-import { useOmniShop } from '@/contexts/OmniShopContext';
+import VinylMiniPlayer from '../player/VinylMiniPlayer';
 
 interface ClipCardProps {
   clip: ClipItem;
@@ -29,7 +29,6 @@ export default function ClipCard({
   onAutoScroll,
 }: ClipCardProps) {
   const { isMuted, armAudio, syncFromVideo, toggleMute } = useAudio();
-  const { openMaison, openCart } = useOmniShop();
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<HlsHandle | null>(null);
@@ -94,42 +93,16 @@ export default function ClipCard({
       setIsUserPaused(true);
       v.pause();
       setShowPauseIcon(true);
-      setTimeout(() => setShowPauseIcon(false), 250);
+      setTimeout(() => setShowPauseIcon(false), 150); // Match exit animation duration
     }
   }, [active, armAudio, attemptPlay]);
 
-  // Mute toggle
+  // Mute toggle - context is single source of truth, useEffect syncs to video
   const handleMute = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     armAudio();
     toggleMute();
-    if (videoRef.current) videoRef.current.muted = !isMuted;
-  }, [armAudio, toggleMute, isMuted]);
-
-  // Shop button - always opens Maison store
-  const handleShop = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    openMaison();
-  }, [openMaison]);
-
-  // Cart button
-  const handleCart = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    openCart();
-  }, [openCart]);
-
-  // Share button
-  const handleShare = useCallback(async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    const url = `${window.location.origin}/?clip=${clip.id}`;
-    try {
-      if (navigator.share) {
-        await navigator.share({ title: clip.title, text: `${clip.title} • ${clip.artist}`, url });
-      } else {
-        await navigator.clipboard.writeText(url);
-      }
-    } catch {}
-  }, [clip]);
+  }, [armAudio, toggleMute]);
 
   // Play button click
   const handlePlayButton = useCallback((e: React.MouseEvent) => {
@@ -185,11 +158,13 @@ export default function ClipCard({
       v.muted = isMuted;
 
       const timer = setTimeout(() => {
-        if (mountedRef.current && active) attemptPlay(v);
+        // Respect user pause even during initial play attempt
+        if (mountedRef.current && active && !userPausedRef.current) attemptPlay(v);
       }, 100);
 
       const watchdog = setInterval(() => {
         if (!mountedRef.current) return;
+        // Only auto-resume if not user-paused and not in background
         if (v.paused && !v.ended && !userPausedRef.current && !document.hidden) {
           attemptPlay(v, false);
         }
@@ -310,9 +285,32 @@ export default function ClipCard({
         }}
       />
 
-      {/* Buffering spinner */}
+      {/* Play button overlay - shown when autoplay fails or user paused */}
       <AnimatePresence>
-        {active && isBuffering && !showPlayButton && (
+        {showPlayOverlay && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            transition={{ duration: 0.15 }}
+            className="absolute inset-0 flex items-center justify-center pointer-events-none z-20"
+          >
+            <button
+              onClick={handlePlayButton}
+              className="p-5 rounded-full bg-black/50 backdrop-blur-sm pointer-events-auto active:scale-95 transition-transform"
+              aria-label="Play video"
+            >
+              <svg className="w-12 h-12 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Buffering spinner - hidden when play button is visible */}
+      <AnimatePresence>
+        {active && isBuffering && !showPlayOverlay && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -344,35 +342,27 @@ export default function ClipCard({
       </AnimatePresence>
 
 
-      {/* Top right buttons: Cart above Mute */}
+      {/* Top-right: Mute button */}
       {active && (
-        <div className="absolute top-4 right-4 z-20 flex flex-col gap-2">
-          {/* Cart button */}
-          <button
-            onClick={handleCart}
-            className="p-2.5 rounded-full bg-black/30 backdrop-blur-sm text-white/90 hover:bg-black/50 active:scale-95 transition-all"
-            aria-label="Open cart"
-            style={{ touchAction: 'manipulation', minWidth: 44, minHeight: 44 }}
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
-            </svg>
-          </button>
-
+        <div
+          className="absolute right-4 z-20"
+          style={{ top: 'max(env(safe-area-inset-top, 16px), 16px)' }}
+          onClick={(e) => e.stopPropagation()} // Prevent clip pause when tapping button area
+        >
           {/* Mute button */}
           <button
             onClick={handleMute}
-            className="p-2.5 rounded-full bg-black/30 backdrop-blur-sm text-white/90 hover:bg-black/50 active:scale-95 transition-all"
+            className="w-11 h-11 flex items-center justify-center rounded-full bg-black/30 backdrop-blur-sm active:scale-95 transition-transform"
             aria-label={isMuted ? 'Unmute' : 'Mute'}
-            style={{ touchAction: 'manipulation', minWidth: 44, minHeight: 44 }}
+            style={{ touchAction: 'manipulation' }}
           >
             {isMuted ? (
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
                 <path strokeLinecap="round" strokeLinejoin="round" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
               </svg>
             ) : (
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
               </svg>
             )}
@@ -380,67 +370,30 @@ export default function ClipCard({
         </div>
       )}
 
-      {/* Bottom overlay container */}
+      {/* Bottom-left: Title & Artist info box */}
       <div
-        className="absolute inset-x-0 bottom-0 z-20 pointer-events-none"
-        style={{
-          paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 16px)',
-          paddingLeft: 16,
-          paddingRight: 16
-        }}
+        className="absolute left-4 z-20 pointer-events-auto"
+        style={{ bottom: 'max(env(safe-area-inset-bottom, 16px), 16px)' }}
+        onClick={(e) => e.stopPropagation()} // Prevent clip pause when tapping info area
       >
-        <div className="flex items-end justify-between gap-4">
-          {/* Left side: Title & Artist */}
-          <div className="flex-1 min-w-0 pointer-events-auto pb-1">
-            {/* Shoppable indicator */}
-            {clip.productHandle && (
-              <div className="flex items-center gap-1.5 mb-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.6)]" />
-                <span className="text-[10px] font-medium text-emerald-400/80 uppercase tracking-wider">Shop</span>
-              </div>
-            )}
-            <h3 className="text-base font-semibold text-white truncate drop-shadow-lg">
-              {clip.title}
-            </h3>
-            <p className="text-sm text-white/70 truncate drop-shadow-md mt-0.5">
-              {clip.artist}
-            </p>
-          </div>
+        {/* Vinyl Mini Player - shows when music is playing */}
+        <VinylMiniPlayer className="mb-3" />
 
-          {/* Right side: Action buttons */}
-          <div className="flex flex-col gap-3 items-center pointer-events-auto pb-1">
-            {/* Shop button - Baad icon in brand color with shape-hugging glow */}
-            <button
-              onClick={handleShop}
-              className="p-2 active:scale-90 transition-transform"
-              aria-label="Open shop"
-              style={{
-                touchAction: 'manipulation',
-                minWidth: 48,
-                minHeight: 48,
-              }}
-            >
-              <img
-                src="/brand-logos/baad-icon.svg"
-                alt="Shop"
-                className="w-12 h-12"
-                style={{
-                  filter: 'brightness(0) saturate(100%) invert(24%) sepia(60%) saturate(900%) hue-rotate(340deg) brightness(95%) drop-shadow(0 0 2px rgba(132, 60, 45, 0.6)) drop-shadow(0 0 6px rgba(132, 60, 45, 0.3))',
-                }}
-                draggable={false}
-              />
-            </button>
-            <button
-              onClick={handleShare}
-              className="p-3 rounded-full bg-white/10 backdrop-blur-xl border border-white/15 text-white/80 shadow-lg active:scale-95 transition-all"
-              aria-label="Share clip"
-              style={{ touchAction: 'manipulation', minWidth: 48, minHeight: 48 }}
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
-              </svg>
-            </button>
-          </div>
+        {/* Info container - no background, text shadows for legibility */}
+        <div className="max-w-[240px]">
+          {/* Shoppable indicator */}
+          {clip.productHandle && (
+            <div className="flex items-center gap-1.5 mb-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.5)]" />
+              <span className="text-[9px] font-medium text-emerald-400 uppercase tracking-wider drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">Shop</span>
+            </div>
+          )}
+          <h3 className="text-sm font-semibold text-white truncate drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+            {clip.title}
+          </h3>
+          <p className="text-xs text-white/80 truncate mt-0.5 drop-shadow-[0_1px_3px_rgba(0,0,0,0.8)]">
+            {clip.artist}
+          </p>
         </div>
       </div>
     </div>

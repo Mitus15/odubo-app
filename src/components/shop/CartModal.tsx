@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { motion, PanInfo } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useOmniShop } from '@/contexts/OmniShopContext';
 
 export default function CartModal() {
@@ -19,13 +19,6 @@ export default function CartModal() {
   const [isRedirecting, setIsRedirecting] = useState(false);
 
   const hasBackStack = modalStack.length > 1;
-
-  // Swipe-to-dismiss handler
-  const handleDragEnd = (_: any, info: PanInfo) => {
-    if (info.offset.y > 100 || info.velocity.y > 500) {
-      closeAll();
-    }
-  };
 
   const handleCheckout = () => {
     if (cart.length === 0) return;
@@ -52,21 +45,11 @@ export default function CartModal() {
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
       className="fixed inset-0 z-[130] flex flex-col bg-gradient-to-br from-[#302927] via-[#1a1817] to-[#302927]"
     >
-      {/* Drag handle - swipe down to dismiss */}
-      <motion.div
-        drag="y"
-        dragConstraints={{ top: 0, bottom: 200 }}
-        dragElastic={{ top: 0, bottom: 0.8 }}
-        dragSnapToOrigin
-        onDragEnd={handleDragEnd}
-        className="w-full flex justify-center pt-3 pb-1 cursor-grab active:cursor-grabbing touch-none"
+      {/* Header - glass surface */}
+      <header
+        className="flex items-center justify-between px-4 py-3 glass-surface border-b border-[#502d26]/30"
         style={{ paddingTop: 'max(12px, env(safe-area-inset-top, 0px))' }}
       >
-        <div className="w-10 h-1 rounded-full bg-[#ede8df]/30" />
-      </motion.div>
-
-      {/* Header - glass surface */}
-      <header className="flex items-center justify-between px-4 py-2 glass-surface border-b border-[#502d26]/30">
         <button
           onClick={hasBackStack ? goBack : closeAll}
           className="w-10 h-10 flex items-center justify-center text-[#ede8df]/60 hover:text-[#ede8df] transition-colors rounded-full hover:bg-[#843c2d]/10"
@@ -84,9 +67,12 @@ export default function CartModal() {
           )}
         </button>
 
-        <h1 className="text-xs font-medium uppercase tracking-[0.25em] text-[#ede8df]/80">
-          Your Bag
-        </h1>
+        <img
+          src="/brand-logos/baad.png"
+          alt="B.A.A.D Brand Logo"
+          className="h-6 w-auto"
+          draggable={false}
+        />
 
         <div className="w-10" />
       </header>
@@ -94,7 +80,11 @@ export default function CartModal() {
       {/* Content */}
       <div
         className="flex-1 overflow-y-auto overscroll-contain"
-        style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+        style={{
+          paddingBottom: cart.length > 0 ? 'calc(env(safe-area-inset-bottom, 0px) + 200px)' : 'env(safe-area-inset-bottom, 0px)',
+          WebkitOverflowScrolling: 'touch',
+          touchAction: 'pan-y',
+        }}
       >
         {/* Empty state */}
         {cart.length === 0 && (
@@ -224,6 +214,42 @@ export default function CartModal() {
           >
             Continue Shopping
           </button>
+
+          {/* Legal links */}
+          <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 pt-2 border-t border-[#502d26]/10">
+            <a
+              href="https://odubostudio.myshopify.com/policies/privacy-policy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[9px] text-[#b2a491]/40 hover:text-[#b2a491]/70 transition-colors uppercase tracking-wider"
+            >
+              Privacy
+            </a>
+            <a
+              href="https://odubostudio.myshopify.com/policies/terms-of-service"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[9px] text-[#b2a491]/40 hover:text-[#b2a491]/70 transition-colors uppercase tracking-wider"
+            >
+              Terms
+            </a>
+            <a
+              href="https://odubostudio.myshopify.com/policies/shipping-policy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[9px] text-[#b2a491]/40 hover:text-[#b2a491]/70 transition-colors uppercase tracking-wider"
+            >
+              Shipping
+            </a>
+            <a
+              href="https://odubostudio.myshopify.com/policies/refund-policy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[9px] text-[#b2a491]/40 hover:text-[#b2a491]/70 transition-colors uppercase tracking-wider"
+            >
+              Refunds
+            </a>
+          </div>
         </div>
       )}
     </motion.div>

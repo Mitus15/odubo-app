@@ -130,8 +130,17 @@ export async function GET(req: NextRequest) {
     const transformedVideos = (videos as any[]).map((video) => {
       let parsedTags: any = [];
       try { parsedTags = Array.isArray(video.tags) ? video.tags : JSON.parse(String(video.tags || '[]')); } catch { parsedTags = []; }
+      
+      // Extract UID from URL if uid column is empty
+      let videoUid = video.uid || video.stream_video_id || '';
+      if (!videoUid && video.url) {
+        const match = video.url.match(/(?:cloudflarestream\.com|videodelivery\.net)\/([a-f0-9]{32})/i);
+        if (match) videoUid = match[1];
+      }
+      
       return {
         ...video,
+        uid: videoUid,
         status: video.status || 'published',
         artist_name: video.artist_name || '',
         duration: Number.parseInt(String(video.duration)) || 0,

@@ -355,3 +355,57 @@ When asking for clarification:
 This is not just a web app. It is a **digital sanctuary** — the intersection of art, technology, and the human soul. Every pixel, every millisecond, every interaction is an opportunity to create something transcendent.
 
 Build with excellence. Ship with confidence. Iterate with humility.
+
+---
+
+## Owner UI/UX Preferences (Updated: 2025-12-17)
+
+The owner is a musician, not a developer/designer. Think through details and make informed design decisions. Filter raw ideas through professional UX knowledge.
+
+### Modal Behavior
+- **NO drag-to-close** — Too clunky, requires precise movement
+- **Always X button** — Consistent close mechanism on all modals
+- **Keep animations** — Spring entry/exit animations are good
+
+### Navigation
+- **Draggable logo button** — Like iPhone Accessibility button
+- **Snap positions** — Middle-left, middle-right, bottom-right
+- **Smart menu direction** — Opens toward available space
+
+### Menu Order
+Main Logo → Store (BAAD) → Media → Share → Account
+
+### Media Priority
+- Single audio source at a time
+- Last-played takes priority
+- Music can play while browsing clips (clips muted)
+- User unmuting clips stops music
+- Video playback stops everything else
+
+### Music Player
+- **No MiniBar** — Use vinyl indicator on clips instead
+- Vinyl tap opens full music player modal
+- Player modal takes full precedence when open
+
+### Visual Style
+- Remove background from clip info box
+- Word button: book icon only, no text
+- Video player: Netflix/Disney+ reference
+- Blur background when modals open
+
+### Scroll & Touch
+- Everything must scroll smoothly on mobile
+- No scroll blocking in modals
+- Touch targets minimum 44px
+
+### Reference Platforms
+- TikTok: Clips feed behavior
+- Instagram: Vinyl player style
+- Netflix/Disney+: Video player UI
+- iPhone: Draggable button behavior
+
+### Documentation
+- Log all audits in `/docs/`
+- Log all UI decisions
+- Log all changes made
+- Keep session notes

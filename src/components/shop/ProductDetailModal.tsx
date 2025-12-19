@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { motion, PanInfo } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useOmniShop, type ProductDetail } from '@/contexts/OmniShopContext';
 
 interface ProductDetailModalProps {
@@ -27,13 +27,6 @@ export default function ProductDetailModal({ productHandle }: ProductDetailModal
 
   // Check if we came from Maison (show back button) or directly (show close)
   const hasBackStack = modalStack.length > 1;
-
-  // Swipe-to-dismiss handler
-  const handleDragEnd = (_: any, info: PanInfo) => {
-    if (info.offset.y > 100 || info.velocity.y > 500) {
-      closeAll();
-    }
-  };
 
   // Fetch product
   useEffect(() => {
@@ -174,21 +167,11 @@ export default function ProductDetailModal({ productHandle }: ProductDetailModal
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
       className="fixed inset-0 z-[120] flex flex-col bg-gradient-to-br from-[#302927] via-[#1a1817] to-[#302927]"
     >
-      {/* Drag handle - swipe down to dismiss */}
-      <motion.div
-        drag="y"
-        dragConstraints={{ top: 0, bottom: 200 }}
-        dragElastic={{ top: 0, bottom: 0.8 }}
-        dragSnapToOrigin
-        onDragEnd={handleDragEnd}
-        className="w-full flex justify-center pt-3 pb-1 cursor-grab active:cursor-grabbing touch-none"
+      {/* Header - glass surface */}
+      <header
+        className="relative flex items-center justify-between px-4 py-3 glass-surface border-b border-[#502d26]/30"
         style={{ paddingTop: 'max(12px, env(safe-area-inset-top, 0px))' }}
       >
-        <div className="w-10 h-1 rounded-full bg-[#ede8df]/30" />
-      </motion.div>
-
-      {/* Header - glass surface */}
-      <header className="flex items-center justify-between px-4 py-2 glass-surface border-b border-[#502d26]/30">
         <button
           onClick={hasBackStack ? goBack : closeAll}
           className="w-10 h-10 flex items-center justify-center text-[#ede8df]/60 hover:text-[#ede8df] transition-colors rounded-full hover:bg-[#843c2d]/10"
@@ -206,13 +189,26 @@ export default function ProductDetailModal({ productHandle }: ProductDetailModal
           )}
         </button>
 
+        {/* Centered logo */}
+        <img
+          src="/brand-logos/baad.png"
+          alt="B.A.A.D Brand Logo"
+          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-6 w-auto"
+          style={{ marginTop: 'calc(env(safe-area-inset-top, 0px) / 2)' }}
+          draggable={false}
+        />
+
         <div className="w-10" />
       </header>
 
       {/* Content */}
       <div
         className="flex-1 overflow-y-auto overscroll-contain"
-        style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+        style={{
+          paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)',
+          WebkitOverflowScrolling: 'touch',
+          touchAction: 'pan-y',
+        }}
       >
         {/* Loading state */}
         {loading && (
@@ -236,9 +232,9 @@ export default function ProductDetailModal({ productHandle }: ProductDetailModal
 
         {/* Product content */}
         {product && !loading && !error && (
-          <div className="flex flex-col">
-            {/* Product Image - warm, organic background */}
-            <div className="w-full aspect-[4/5] bg-gradient-to-b from-[#1a1817] to-[#252220] flex items-center justify-center relative overflow-hidden">
+          <div className="flex flex-col md:flex-row md:gap-6 md:p-6">
+            {/* Product Image - responsive sizing */}
+            <div className="w-full md:w-1/2 md:max-w-md aspect-[4/5] md:aspect-square md:rounded-xl bg-gradient-to-b from-[#1a1817] to-[#252220] flex items-center justify-center relative overflow-hidden md:sticky md:top-0">
               {displayImage ? (
                 <motion.img
                   key={displayImage}
@@ -257,8 +253,8 @@ export default function ProductDetailModal({ productHandle }: ProductDetailModal
               )}
             </div>
 
-            {/* Product Info - glass card */}
-            <div className="px-5 py-6 space-y-6">
+            {/* Product Info - responsive layout */}
+            <div className="px-5 py-6 space-y-6 md:flex-1 md:px-0">
               {/* Title and price */}
               <div className="space-y-2">
                 <h2 className="text-[#ede8df] text-lg font-medium tracking-wide">{product.title}</h2>
@@ -318,6 +314,44 @@ export default function ProductDetailModal({ productHandle }: ProductDetailModal
                   ))}
                 </div>
               )}
+
+              {/* Legal & Policies */}
+              <div className="pt-6 mt-6 border-t border-[#502d26]/20">
+                <div className="flex flex-wrap justify-center gap-x-4 gap-y-2">
+                  <a
+                    href="https://odubostudio.myshopify.com/policies/shipping-policy"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[10px] text-[#b2a491]/50 hover:text-[#b2a491] transition-colors uppercase tracking-wider"
+                  >
+                    Shipping
+                  </a>
+                  <a
+                    href="https://odubostudio.myshopify.com/policies/refund-policy"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[10px] text-[#b2a491]/50 hover:text-[#b2a491] transition-colors uppercase tracking-wider"
+                  >
+                    Returns
+                  </a>
+                  <a
+                    href="https://odubostudio.myshopify.com/policies/privacy-policy"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[10px] text-[#b2a491]/50 hover:text-[#b2a491] transition-colors uppercase tracking-wider"
+                  >
+                    Privacy
+                  </a>
+                  <a
+                    href="https://odubostudio.myshopify.com/policies/terms-of-service"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[10px] text-[#b2a491]/50 hover:text-[#b2a491] transition-colors uppercase tracking-wider"
+                  >
+                    Terms
+                  </a>
+                </div>
+              </div>
             </div>
           </div>
         )}
