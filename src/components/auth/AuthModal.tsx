@@ -128,8 +128,6 @@ export default function AuthModal() {
       const clientId = process.env.NEXT_PUBLIC_SHOPIFY_CLIENT_ID || '843046fe-e8cb-4fd1-9f46-ac5c8acd876b';
       const redirectUri = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://odubo.com'}/api/auth/shopify/callback`;
       
-      console.log('Initiating Shopify OAuth...', { shopifyStore, clientId, redirectUri });
-      
       const authUrl = new URL(`${shopifyStore}/account/authorize`);
       authUrl.searchParams.set('client_id', clientId);
       authUrl.searchParams.set('scope', 'openid email customer-account-api:full');
@@ -138,8 +136,16 @@ export default function AuthModal() {
       authUrl.searchParams.set('state', state);
       authUrl.searchParams.set('nonce', nonce);
       
-      console.log('OAuth URL:', authUrl.toString());
-      window.location.href = authUrl.toString();
+      const finalUrl = authUrl.toString();
+      console.log('Redirecting to:', finalUrl);
+      
+      // Close modal first, then redirect
+      close();
+      
+      // Use setTimeout to ensure modal close completes before redirect
+      setTimeout(() => {
+        window.location.assign(finalUrl);
+      }, 100);
     } catch (error) {
       console.error('Shopify OAuth error:', error);
       setError('Failed to initiate Shopify login. Please try again.');
@@ -187,8 +193,15 @@ export default function AuthModal() {
 
       {/* Shopify login */}
       <button
-        onClick={handleShopifyLogin}
-        className="w-full py-3 rounded-xl bg-white text-[#171616] font-medium hover:bg-white/90 transition-colors mb-3"
+        type="button"
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={(e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          console.log('🔵 Shopify button clicked!');
+          handleShopifyLogin();
+        }}
+        className="w-full py-3 rounded-xl bg-white text-[#171616] font-medium hover:bg-white/90 transition-colors mb-3 relative z-50"
       >
         Sign in with Shopify Account
       </button>
