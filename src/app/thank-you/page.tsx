@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 
-export default function ThankYouPage() {
+function ThankYouContent() {
   const searchParams = useSearchParams();
   const [orderInfo, setOrderInfo] = useState<any>(null);
   
@@ -125,5 +125,17 @@ export default function ThankYouPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ThankYouPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-[#1a1817] via-[#302927] to-[#1a1817] flex items-center justify-center">
+        <div className="text-[#ede8df]">Loading...</div>
+      </div>
+    }>
+      <ThankYouContent />
+    </Suspense>
   );
 }
