@@ -215,9 +215,9 @@ export default function ExpandableLogoMenu({
       velocity.y
     );
 
-    // Animate back to origin first (spring snap)
-    animate(x, 0, { type: 'spring', stiffness: 500, damping: 35 });
-    animate(y, 0, { type: 'spring', stiffness: 500, damping: 35 });
+    // Animate back to origin first (optimized spring for production)
+    animate(x, 0, { type: 'spring', stiffness: 400, damping: 40, mass: 0.8 });
+    animate(y, 0, { type: 'spring', stiffness: 400, damping: 40, mass: 0.8 });
 
     // If valid movement, change position after a tiny delay for visual feedback
     if (nextPos && nextPos !== position) {
@@ -272,19 +272,28 @@ export default function ExpandableLogoMenu({
   const handleMoments = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     collapse();
-    openHub('moments');
+    // Use requestAnimationFrame to prevent stuttering on production
+    requestAnimationFrame(() => {
+      openHub('moments');
+    });
   }, [collapse, openHub]);
 
   const handleShop = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     collapse();
-    openMaison();
+    // Use requestAnimationFrame to prevent stuttering on production
+    requestAnimationFrame(() => {
+      openMaison();
+    });
   }, [collapse, openMaison]);
 
   const handleAccount = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     collapse();
-    openSignIn();
+    // Use requestAnimationFrame to prevent stuttering on production
+    requestAnimationFrame(() => {
+      openSignIn();
+    });
   }, [collapse, openSignIn]);
 
   const handleConnect = useCallback((e: React.MouseEvent) => {
@@ -300,16 +309,16 @@ export default function ExpandableLogoMenu({
   const menuVariants = {
     collapsed: {
       transition: { 
-        staggerChildren: 0.04, 
+        staggerChildren: 0.03, 
         staggerDirection: -1,
         when: 'afterChildren',
       },
     },
     expanded: {
       transition: { 
-        staggerChildren: 0.04, 
+        staggerChildren: 0.03, 
         staggerDirection: 1, 
-        delayChildren: 0.12,
+        delayChildren: 0.08,
       },
     },
   };
@@ -317,13 +326,13 @@ export default function ExpandableLogoMenu({
   const itemVariants = {
     collapsed: {
       opacity: 0,
-      scale: 0.92,
-      y: -8,
+      scale: 0.95,
+      y: -6,
       transition: { 
         type: 'spring', 
-        stiffness: 350, 
-        damping: 30,
-        duration: 0.25,
+        stiffness: 280, 
+        damping: 35,
+        mass: 0.8,
       },
     },
     expanded: {
@@ -332,8 +341,9 @@ export default function ExpandableLogoMenu({
       y: 0,
       transition: { 
         type: 'spring', 
-        stiffness: 350, 
-        damping: 30,
+        stiffness: 280, 
+        damping: 35,
+        mass: 0.8,
       },
     },
   };
@@ -344,17 +354,19 @@ export default function ExpandableLogoMenu({
       scale: 1,
       transition: {
         type: 'spring',
-        stiffness: 320,
-        damping: 28,
+        stiffness: 260,
+        damping: 32,
+        mass: 0.9,
       },
     },
     expanded: { 
       rotate: 45, 
-      scale: 1.05,
+      scale: 1.03,
       transition: {
         type: 'spring',
-        stiffness: 320,
-        damping: 28,
+        stiffness: 260,
+        damping: 32,
+        mass: 0.9,
       },
     },
   };
