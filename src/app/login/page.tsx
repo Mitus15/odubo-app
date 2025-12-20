@@ -34,9 +34,32 @@ export default function LoginPage() {
   };
 
   const handleShopifyLogin = () => {
-    // Redirect to Shopify customer login
-    const shopifyStore = process.env.NEXT_PUBLIC_SHOPIFY_STORE_URL || 'https://odubostudio.myshopify.com';
-    window.location.href = `${shopifyStore}/account/login`;
+    // Use Shopify Customer Account API v2 OAuth
+    const state = Array.from(crypto.getRandomValues(new Uint8Array(32)))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+    const nonce = Array.from(crypto.getRandomValues(new Uint8Array(32)))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+    
+    // Store for verification in callback
+    sessionStorage.setItem('shopify_auth_state', state);
+    sessionStorage.setItem('shopify_auth_nonce', nonce);
+    
+    // Build OAuth authorization URL
+    const shopifyStore = process.env.NEXT_PUBLIC_SHOPIFY_STORE_URL || 'https://odubo.studio';
+    const clientId = process.env.NEXT_PUBLIC_SHOPIFY_CLIENT_ID || '843046fe-e8cb-4fd1-9f46-ac5c8acd876b';
+    const redirectUri = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://odubo.com'}/api/auth/shopify/callback`;
+    
+    const authUrl = new URL(`${shopifyStore}/account/authorize`);
+    authUrl.searchParams.set('client_id', clientId);
+    authUrl.searchParams.set('scope', 'openid email customer-account-api:full');
+    authUrl.searchParams.set('response_type', 'code');
+    authUrl.searchParams.set('redirect_uri', redirectUri);
+    authUrl.searchParams.set('state', state);
+    authUrl.searchParams.set('nonce', nonce);
+    
+    window.location.href = authUrl.toString();
   };
 
   return (

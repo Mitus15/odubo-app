@@ -20,21 +20,35 @@ export default function CartModal() {
 
   const hasBackStack = modalStack.length > 1;
 
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
     if (cart.length === 0) return;
     setIsRedirecting(true);
 
-    // Construct Shopify Cart Permalink
-    const shopUrl = 'odubostudio.myshopify.com';
-    const variantString = cart
-      .map((item) => {
-        const id = item.variantId.split('/').pop();
-        return `${id}:${item.qty}`;
-      })
-      .join(',');
+    try {
+      // Create checkout using Shopify Storefront API
+      const response = await fetch('/api/shopify/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lineItems: cart.map(item => ({
+            variantId: item.variantId,
+            quantity: item.qty
+          }))
+        })
+      });
 
-    const checkoutUrl = `https://${shopUrl}/cart/${variantString}`;
-    window.location.href = checkoutUrl;
+      const { checkoutUrl } = await response.json();
+      
+      if (checkoutUrl) {
+        window.location.href = checkoutUrl;
+      } else {
+        throw new Error('No checkout URL returned');
+      }
+    } catch (error) {
+      console.error('Checkout error:', error);
+      setIsRedirecting(false);
+      alert('Failed to create checkout. Please try again.');
+    }
   };
 
   return (

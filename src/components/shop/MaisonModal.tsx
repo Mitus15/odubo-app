@@ -3,11 +3,13 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useOmniShop, type ProductCard } from '@/contexts/OmniShopContext';
+import { useShopifyAuth } from '@/hooks/useShopifyAuth';
 
 const PRODUCTS_PER_PAGE = 12;
 
 export default function MaisonModal() {
   const { products, setProducts, openProduct, openCart, closeAll, cartCount } = useOmniShop();
+  const { customer, isLoggedIn, login: shopifyLogin } = useShopifyAuth();
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -153,12 +155,34 @@ export default function MaisonModal() {
           </svg>
         </button>
 
-        <img
-          src="/brand-logos/baad.png"
-          alt="B.A.A.D Brand Logo"
-          className="h-6 w-auto"
-          draggable={false}
-        />
+        <div className="flex items-center gap-3">
+          <img
+            src="/brand-logos/baad.png"
+            alt="B.A.A.D Brand Logo"
+            className="h-6 w-auto"
+            draggable={false}
+          />
+          
+          {/* Customer indicator */}
+          {isLoggedIn && customer?.email && (
+            <div className="hidden sm:flex items-center gap-2 px-2 py-1 bg-[#843c2d]/20 rounded-full">
+              <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+              <span className="text-[#ede8df]/80 text-xs">{customer.email.split('@')[0]}</span>
+            </div>
+          )}
+          
+          {!isLoggedIn && (
+            <button
+              onClick={shopifyLogin}
+              className="hidden sm:flex items-center gap-1 px-3 py-1.5 text-xs text-[#ede8df]/70 hover:text-[#ede8df] border border-[#502d26]/50 hover:border-[#843c2d]/50 rounded-full transition-colors"
+            >
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+              </svg>
+              Sign In
+            </button>
+          )}
+        </div>
 
         <button
           onClick={openCart}
