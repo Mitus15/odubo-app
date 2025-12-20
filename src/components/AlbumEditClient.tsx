@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { Album, Track } from '@/types/music';
-import AdminNavigation from './AdminNavigation';
 import AlbumModal from './AlbumModal';
 import Image from 'next/image';
 
@@ -98,8 +97,7 @@ export default function AlbumEditClient({ album, tracks }: AlbumEditClientProps)
   const totalDuration = currentTracks.reduce((total, track) => total + track.duration, 0);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#302927] via-[#171616] to-[#302927] text-white overflow-y-auto">
-      <AdminNavigation />
+    <div className="w-full min-h-screen text-white overflow-y-auto">
       
       <div className="pt-20 pb-6 px-4 max-w-7xl mx-auto">
         {/* Header */}

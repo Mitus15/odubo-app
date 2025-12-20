@@ -27,7 +27,8 @@ export default function AppHeader() {
 
         {/* Desktop Navigation - Center/Right */}
         <nav className="hidden md:flex items-center gap-6 relative z-10">
-          <a href="/media" className="text-[#ede8df] hover:text-[#b2a491] transition-colors">Media</a>
+          {/* ARCHIVED: Media page - UI hidden, use master button for Moments */}
+          {/* <a href="/media" className="text-[#ede8df] hover:text-[#b2a491] transition-colors">Media</a> */}
           <a href="/moments" className="text-[#ede8df] hover:text-[#b2a491] transition-colors">Moments</a>
           <a href="/store" className="text-[#ede8df] hover:text-[#b2a491] transition-colors">Maison</a>
           <a href="/login" className="text-[#b2a491]/60 hover:text-[#b2a491] transition-colors text-xs">sign in</a>
@@ -66,13 +67,14 @@ export default function AppHeader() {
               {/* Navigation Links */}
               <div className="relative p-8 space-y-6">
                 <nav className="space-y-4">
-                  <a 
+                  {/* ARCHIVED: Media page - UI hidden, use master button for Moments */}
+                  {/* <a 
                     href="/media" 
                     className="block w-full p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-all duration-200 text-center text-[#ede8df] font-medium hover:scale-105"
                     onClick={() => { setNavMenuOpen(false); }}
                   >
                     Media
-                  </a>
+                  </a> */}
                   <a 
                     href="/moments" 
                     className="block w-full p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-all duration-200 text-center text-[#ede8df] font-medium hover:scale-105"

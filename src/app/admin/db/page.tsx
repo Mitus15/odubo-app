@@ -1,6 +1,5 @@
 "use client";
 import { useEffect, useMemo, useState } from 'react';
-import AdminNavigation from '@/components/AdminNavigation';
 
 function isReadOnly(sql: string) {
   return /^(\s*)(select|pragma)\b/i.test(sql || '');
@@ -104,8 +103,7 @@ export default function AdminDbPage() {
   const canWrite = useMemo(() => !isReadOnly(sql), [sql]);
 
   return (
-    <div className="min-h-screen bg-[#0b0a0a] text-[#ede8df]">
-      <AdminNavigation />
+    <div className="w-full min-h-screen text-[#ede8df]">
       <div className="container mx-auto px-4 py-6">
         <div className="flex items-center gap-3 mb-4">
           <h1 className="text-2xl font-bold">Database</h1>

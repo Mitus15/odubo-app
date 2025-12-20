@@ -1,10 +1,8 @@
-import AdminNavigation from '@/components/AdminNavigation';
 import AlbumCreationWizard from '@/components/AlbumCreationWizard/AlbumCreationWizard';
 
 export default function CreateAlbumPage() {
   return (
-    <div className="min-h-screen bg-black text-white">
-      <AdminNavigation />
+    <div className="w-full min-h-screen text-white">
       
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">

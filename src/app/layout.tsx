@@ -13,6 +13,7 @@ import { AuthModalProvider } from "@/contexts/AuthModalContext";
 import AuthModal from "@/components/auth/AuthModal";
 import MediaPriorityBridge from "@/components/player/MediaPriorityBridge";
 import DesktopSidebar from "@/components/layout/DesktopSidebar";
+import MainContentWrapper from "@/components/layout/MainContentWrapper";
 // import { AuthProvider } from "@/contexts/AuthContext";
 // import ClientCapabilities } from "./components/ClientCapabilities";
 import GDPRConsent from "../components/GDPRConsent";
@@ -80,8 +81,8 @@ export default function RootLayout({
                     {/* Desktop sidebar - persistent navigation on lg+ */}
                     <DesktopSidebar />
 
-                    {/* Clips-first layout - no header, full screen content */}
-                    <div className="h-full w-full flex flex-col overflow-hidden lg:ml-20 xl:ml-64">
+                    {/* Main content wrapper - conditionally applies sidebar margin */}
+                    <MainContentWrapper>
                       {/* Main content - full height, accounts for mini-bar dynamically */}
                       <main className="flex-1 min-h-0 safe-area-top safe-area-bottom minibar-aware overflow-y-auto">
                         {children}
@@ -89,7 +90,7 @@ export default function RootLayout({
                       {/* Music player - renders modal via VinylMiniPlayer */}
                       <MusicPlayerLayout />
                       <GDPRConsent />
-                    </div>
+                    </MainContentWrapper>
                     {/* Modal orchestrators - rendered at root level */}
                     <OmniShopOrchestrator />
                     <OmniMediaOrchestrator />

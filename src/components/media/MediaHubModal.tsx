@@ -147,23 +147,8 @@ export default function MediaHubModal() {
           </svg>
         </button>
 
-        {/* Tab switcher - 3 tabs */}
-        <div className="flex gap-1 bg-white/5 rounded-full p-1">
-          {(['videos', 'music', 'moments'] as const).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                activeTab === tab
-                  ? 'bg-white/15 text-white'
-                  : 'text-white/50 hover:text-white/70'
-              }`}
-              style={{ touchAction: 'manipulation' }}
-            >
-              {tab.charAt(0).toUpperCase() + tab.slice(1)}
-            </button>
-          ))}
-        </div>
+        {/* Title - Moments only (videos/music archived from user-facing UI) */}
+        <h1 className="text-lg font-semibold text-white">Moments</h1>
 
         {/* Spacer to balance layout */}
         <div className="w-10 h-10" />
@@ -178,8 +163,8 @@ export default function MediaHubModal() {
           touchAction: 'pan-y',
         }}
       >
-        {/* Videos Tab */}
-        {activeTab === 'videos' && (
+        {/* Videos Tab - ARCHIVED (logic preserved, UI hidden) */}
+        {false && activeTab === 'videos' && (
           <>
             {isLoadingVideos && (
               <div className="p-3">
@@ -265,8 +250,8 @@ export default function MediaHubModal() {
           </>
         )}
 
-        {/* Music Tab */}
-        {activeTab === 'music' && (
+        {/* Music Tab - ARCHIVED (logic preserved, UI hidden) */}
+        {false && activeTab === 'music' && (
           <>
             {isLoadingAlbums && (
               <div className="p-3">
@@ -366,8 +351,8 @@ export default function MediaHubModal() {
           </>
         )}
 
-        {/* Moments Tab */}
-        {activeTab === 'moments' && <MomentsTabView />}
+        {/* Moments Tab - Active (only user-facing content) */}
+        <MomentsTabView />
       </div>
     </motion.div>
   );

@@ -1,4 +1,3 @@
-import AdminNavigation from '@/components/AdminNavigation';
 import AlbumsClientWrapper from './AlbumsClientWrapper';
 import { queryDatabase } from '@/lib/db';
 
@@ -16,8 +15,7 @@ export default async function AdminAlbumsPage() {
   const albums = await getAlbums();
 
   return (
-    <div className="bg-black text-white pt-16 pb-20">
-      <AdminNavigation />
+    <div className="w-full text-white pt-16 pb-20">
       
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">

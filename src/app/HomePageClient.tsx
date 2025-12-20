@@ -226,11 +226,14 @@ export default function HomePageClient({ verseOfTheDay, initialClipId }: HomePag
       </AnimatePresence>
 
       {/* Global floating menu - draggable like iPhone Accessibility button */}
-      <ExpandableLogoMenu
-        clipId={activeClip?.id}
-        clipTitle={activeClip?.title}
-        clipArtist={activeClip?.artist}
-      />
+      {/* Hidden on desktop (md breakpoint and above) - mobile only */}
+      <div className="md:hidden">
+        <ExpandableLogoMenu
+          clipId={activeClip?.id}
+          clipTitle={activeClip?.title}
+          clipArtist={activeClip?.artist}
+        />
+      </div>
     </div>
   );
 }

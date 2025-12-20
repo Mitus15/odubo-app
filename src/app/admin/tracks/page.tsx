@@ -1,5 +1,4 @@
 import { Suspense } from 'react';
-import AdminNavigation from '@/components/AdminNavigation';
 import TracksClient from '@/components/TracksClient';
 import { queryDatabase } from '@/lib/db';
 
@@ -27,9 +26,8 @@ export default async function AdminTracksPage() {
   const [tracks, albums] = await Promise.all([getTracks(), getAlbums()]);
 
   return (
-    <div className="bg-black text-white">
+    <div className="w-full text-white">
       <div className="container mx-auto px-4 py-8">
-        <AdminNavigation />
         
         <div className="mt-8">
           <div className="flex justify-between items-center mb-6">

@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useUser } from "../UserProvider";
 import { useRouter } from "next/navigation";
-import AdminNavigation from "@/components/AdminNavigation";
 
 type MeResponse = {
   authenticated: boolean;

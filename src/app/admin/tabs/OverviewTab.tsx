@@ -18,23 +18,96 @@ interface Activity {
   icon: string;
 }
 
-// Dummy API functions (replace with actual API calls)
+interface SystemMetrics {
+  database: { status: string; latency?: number; region?: string };
+  storage: { status: string; usedFormatted: string; totalFormatted: string };
+  cdn: { status: string; requests?: number; cacheHitRate?: number };
+  bandwidth: { usedFormatted: string; totalFormatted: string };
+  apiCalls: { usedFormatted: string; totalFormatted: string };
+}
+
+interface AdminStats {
+  content: {
+    albums: number;
+    tracks: number;
+    videos: number;
+    galleries: number;
+  };
+  commerce: {
+    products: number;
+    orders: number;
+    revenue: number;
+    averageOrderValue: number;
+  };
+  users: {
+    total: number;
+  };
+  activity: {
+    recentVideos: number;
+    recentGalleries: number;
+    recentOrders: number;
+  };
+}
+
+// Fetch stats from API
 const fetchQuickStats = async (): Promise<QuickStat[]> => {
-  // In a real app, you'd fetch this from your API
-  return Promise.resolve([
-    { label: 'Total Albums', value: '24', change: '+3 this week', icon: '🎵' },
-    { label: 'Total Videos', value: '156', change: '+12 this week', icon: '🎬' },
-    { label: 'Active Users', value: '1.2K', change: '+8% this month', icon: '👥' },
-    { label: 'Total Streams', value: '45.6K', change: '+15% this month', icon: '📈' }
-  ]);
+  try {
+    const res = await fetch('/api/admin/stats');
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error('Stats API error:', res.status, errorText);
+      throw new Error(`Failed to fetch stats: ${res.status}`);
+    }
+    
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+    
+    const stats: AdminStats = data.stats;
+    
+    return [
+      { 
+        label: 'Total Music', 
+        value: `${stats.content.albums}`, 
+        change: `${stats.content.tracks} tracks`, 
+        icon: '🎵' 
+      },
+      { 
+        label: 'Total Videos', 
+        value: `${stats.content.videos}`, 
+        change: `+${stats.activity.recentVideos} this week`, 
+        icon: '🎬' 
+      },
+      { 
+        label: 'Moments', 
+        value: `${stats.content.galleries}`, 
+        change: `+${stats.activity.recentGalleries} this week`, 
+        icon: '📸' 
+      },
+      { 
+        label: 'Total Orders', 
+        value: `${stats.commerce.orders}`, 
+        change: `$${stats.commerce.revenue.toFixed(2)} revenue`, 
+        icon: '📦' 
+      }
+    ];
+  } catch (error) {
+    console.error('Failed to fetch quick stats:', error);
+    // Return fallback data
+    return [
+      { label: 'Total Music', value: '0', change: 'Loading...', icon: '🎵' },
+      { label: 'Total Videos', value: '0', change: 'Loading...', icon: '🎬' },
+      { label: 'Moments', value: '0', change: 'Loading...', icon: '📸' },
+      { label: 'Total Orders', value: '0', change: 'Loading...', icon: '📦' }
+    ];
+  }
 };
 
 const fetchRecentActivity = async (): Promise<Activity[]> => {
-  // In a real app, you'd fetch this from your API
+  // TODO: Implement real activity tracking
   return Promise.resolve([
-    { action: 'New album created', item: 'Midnight Dreams', time: '2 hours ago', icon: '🎵' },
-    { action: 'Video uploaded', item: 'Behind the Scenes', time: '5 hours ago', icon: '🎬' },
-    { action: 'User registered', item: 'john.doe@example.com', time: '1 day ago', icon: '👥' }
+    { action: 'New video uploaded', item: 'Recent content', time: '2 hours ago', icon: '🎬' },
+    { action: 'Gallery created', item: 'Moments', time: '5 hours ago', icon: '📸' },
+    { action: 'Order received', item: 'E-commerce', time: '1 day ago', icon: '📦' }
   ]);
 };
 
@@ -42,11 +115,27 @@ const fetchRecentActivity = async (): Promise<Activity[]> => {
 export default function OverviewTab() {
   const [quickStats, setQuickStats] = useState<QuickStat[]>([]);
   const [recentActivity, setRecentActivity] = useState<Activity[]>([]);
+  const [systemMetrics, setSystemMetrics] = useState<SystemMetrics | null>(null);
 
   useEffect(() => {
     fetchQuickStats().then(setQuickStats);
     fetchRecentActivity().then(setRecentActivity);
+    fetchSystemMetrics();
   }, []);
+
+  const fetchSystemMetrics = async () => {
+    try {
+      const res = await fetch('/api/admin/system-metrics');
+      if (res.ok) {
+        const data = await res.json() as { success: boolean; metrics: SystemMetrics };
+        if (data.success) {
+          setSystemMetrics(data.metrics);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch system metrics:', error);
+    }
+  };
 
   return (
     <div className="px-3 sm:px-6 py-6">
@@ -110,45 +199,75 @@ export default function OverviewTab() {
       {/* System Status */}
       <div className="bg-[#302927]/60 border border-[#502d26]/40 rounded-xl sm:rounded-2xl p-4 sm:p-6 backdrop-blur-sm mb-6">
         <h3 className="text-base sm:text-lg font-bold text-[#ede8df] mb-3 sm:mb-4">System Status</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-[#b2a491] text-sm">Database</span>
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span className="text-green-400 text-xs">Healthy</span>
+        {systemMetrics ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[#b2a491] text-sm">Database</span>
+                <div className="flex items-center space-x-2">
+                  <div className={`w-2 h-2 rounded-full ${
+                    systemMetrics.database.status === 'healthy' ? 'bg-green-500' : 'bg-yellow-500'
+                  }`}></div>
+                  <span className={`text-xs ${
+                    systemMetrics.database.status === 'healthy' ? 'text-green-400' : 'text-yellow-400'
+                  }`}>
+                    {systemMetrics.database.status.charAt(0).toUpperCase() + systemMetrics.database.status.slice(1)}
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[#b2a491] text-sm">Storage</span>
+                <div className="flex items-center space-x-2">
+                  <div className={`w-2 h-2 rounded-full ${
+                    systemMetrics.storage.status === 'online' ? 'bg-green-500' : 'bg-red-500'
+                  }`}></div>
+                  <span className={`text-xs ${
+                    systemMetrics.storage.status === 'online' ? 'text-green-400' : 'text-red-400'
+                  }`}>
+                    {systemMetrics.storage.status.charAt(0).toUpperCase() + systemMetrics.storage.status.slice(1)}
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[#b2a491] text-sm">CDN</span>
+                <div className="flex items-center space-x-2">
+                  <div className={`w-2 h-2 rounded-full ${
+                    systemMetrics.cdn.status === 'active' ? 'bg-green-500' : 'bg-red-500'
+                  }`}></div>
+                  <span className={`text-xs ${
+                    systemMetrics.cdn.status === 'active' ? 'text-green-400' : 'text-red-400'
+                  }`}>
+                    {systemMetrics.cdn.status.charAt(0).toUpperCase() + systemMetrics.cdn.status.slice(1)}
+                  </span>
+                </div>
               </div>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-[#b2a491] text-sm">Storage</span>
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span className="text-green-400 text-xs">Online</span>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[#b2a491] text-sm">Storage Used</span>
+                <span className="text-[#ede8df] text-sm">
+                  {systemMetrics.storage.usedFormatted} / {systemMetrics.storage.totalFormatted}
+                </span>
               </div>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-[#b2a491] text-sm">CDN</span>
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span className="text-green-400 text-xs">Active</span>
+              <div className="flex items-center justify-between">
+                <span className="text-[#b2a491] text-sm">Bandwidth</span>
+                <span className="text-[#ede8df] text-sm">
+                  {systemMetrics.bandwidth.usedFormatted} / {systemMetrics.bandwidth.totalFormatted}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[#b2a491] text-sm">API Calls</span>
+                <span className="text-[#ede8df] text-sm">
+                  {systemMetrics.apiCalls.usedFormatted} / {systemMetrics.apiCalls.totalFormatted}
+                </span>
               </div>
             </div>
           </div>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-[#b2a491] text-sm">Storage Used</span>
-              <span className="text-[#ede8df] text-sm">2.4 GB / 10 GB</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-[#b2a491] text-sm">Bandwidth</span>
-              <span className="text-[#ede8df] text-sm">156 GB / 500 GB</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-[#b2a491] text-sm">API Calls</span>
-              <span className="text-[#ede8df] text-sm">12.3K / 50K</span>
-            </div>
+        ) : (
+          <div className="flex items-center justify-center py-8">
+            <div className="w-6 h-6 border-2 border-[#502d26]/30 border-t-[#843c2d] rounded-full animate-spin" />
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

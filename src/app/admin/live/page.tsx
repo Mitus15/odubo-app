@@ -41,7 +41,7 @@ export default function AdminLivePage() {
   useEffect(() => { load(); }, []);
 
   return (
-    <div className="min-h-screen bg-[#0b0a0a] text-[#ede8df]">
+    <div className="w-full min-h-screen text-[#ede8df]">
       <div className="max-w-3xl mx-auto p-6">
         <h1 className="text-2xl font-bold">Live Stream</h1>
         <p className="text-sm text-white/70 mt-1">Create/retrieve a Cloudflare Stream Live Input for event streaming. Recording is automatic.</p>

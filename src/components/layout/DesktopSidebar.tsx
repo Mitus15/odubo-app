@@ -20,6 +20,11 @@ export default function DesktopSidebar() {
   const { openMaison, cartCount } = useOmniShop();
   const { openSignIn } = useAuthModal();
 
+  // Hide on admin pages (they use AdminSidebar instead)
+  if (pathname.startsWith('/admin') || pathname.startsWith('/featured/manage')) {
+    return null;
+  }
+
   const navItems = [
     {
       id: 'home',

@@ -1,6 +1,5 @@
 "use client";
 import { useEffect, useMemo, useState } from 'react';
-import AdminNavigation from '@/components/AdminNavigation';
 
 type R2Item = { key?: string | null; size?: number | null; lastModified?: string | Date | null };
 
@@ -93,8 +92,7 @@ export default function StorageAdminPage() {
   const hasMore = useMemo(() => !!nextToken, [nextToken]);
 
   return (
-    <div className="min-h-screen bg-[#0b0a0a] text-[#ede8df]">
-      <AdminNavigation />
+    <div className="w-full min-h-screen text-[#ede8df]">
       <div className="container mx-auto px-4 py-6">
         <div className="flex items-center gap-3 mb-4">
           <h1 className="text-2xl font-bold">Storage</h1>

@@ -145,8 +145,8 @@ export function UnifiedMediaProvider({ children }: { children: ReactNode }) {
   // Modal stack state
   const [modalStack, setModalStack] = useState<ModalState[]>([]);
 
-  // Tab state - default to music
-  const [activeTab, setActiveTabState] = useState<MediaTab>('music');
+  // Tab state - default to moments (archived videos/music from user-facing UI)
+  const [activeTab, setActiveTabState] = useState<MediaTab>('moments');
 
   // Video data
   const [videos, setVideos] = useState<VideoCard[]>([]);
