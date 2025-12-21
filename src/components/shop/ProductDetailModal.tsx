@@ -165,16 +165,16 @@ export default function ProductDetailModal({ productHandle }: ProductDetailModal
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: '100%' }}
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-      className="fixed inset-0 z-[120] flex flex-col bg-gradient-to-br from-[#302927] via-[#1a1817] to-[#302927]"
+      className="fixed inset-0 z-[120] flex flex-col bg-gradient-to-br from-[#302927]/95 via-[#1a1817] to-[#302927]/95"
     >
       {/* Header - glass surface */}
       <header
-        className="relative flex items-center justify-between px-4 py-3 glass-surface border-b border-[#502d26]/30"
+        className="relative flex items-center justify-between px-4 py-3 glass-surface-light border-b border-white/5"
         style={{ paddingTop: 'max(12px, env(safe-area-inset-top, 0px))' }}
       >
         <button
           onClick={hasBackStack ? goBack : closeAll}
-          className="w-10 h-10 flex items-center justify-center text-[#ede8df]/60 hover:text-[#ede8df] transition-colors rounded-full hover:bg-[#843c2d]/10"
+          className="w-10 h-10 flex items-center justify-center text-[#ede8df]/60 hover:text-[#ede8df] transition-colors rounded-full hover:bg-white/5"
           aria-label={hasBackStack ? 'Back' : 'Close'}
           style={{ touchAction: 'manipulation' }}
         >
@@ -360,7 +360,7 @@ export default function ProductDetailModal({ productHandle }: ProductDetailModal
       {/* Fixed bottom CTA - glass with warm accent */}
       {product && !loading && !error && (
         <div
-          className="px-5 py-4 glass-surface border-t border-[#502d26]/30"
+          className="px-5 py-4 glass-surface-light border-t border-white/5"
           style={{ paddingBottom: 'max(16px, env(safe-area-inset-bottom, 0px))' }}
         >
           <button

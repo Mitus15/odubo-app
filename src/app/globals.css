@@ -328,6 +328,17 @@
   overflow: hidden;
 }
 
+/* Light glass - more transparent with subtle blur for shop UI */
+.glass-surface-light {
+  background: linear-gradient(135deg, 
+    rgba(255, 255, 255, 0.06) 0%, 
+    rgba(255, 255, 255, 0.03) 50%, 
+    rgba(255, 255, 255, 0.06) 100%
+  );
+  backdrop-filter: blur(16px) saturate(1.2);
+  -webkit-backdrop-filter: blur(16px) saturate(1.2);
+}
+
 .glass-surface::before {
   content: '';
   position: absolute;

@@ -1,11 +1,14 @@
 'use client';
 
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useOmniShop, type ProductCard } from '@/contexts/OmniShopContext';
 import { useShopifyAuth } from '@/hooks/useShopifyAuth';
+import ProductFeed from './ProductFeed';
 
 const PRODUCTS_PER_PAGE = 12;
+
+type ViewMode = 'grid' | 'swipe';
 
 export default function MaisonModal() {
   const { products, setProducts, openProduct, openCart, closeAll, cartCount } = useOmniShop();
@@ -15,6 +18,8 @@ export default function MaisonModal() {
   const [error, setError] = useState<string | null>(null);
   const [hasNextPage, setHasNextPage] = useState(true);
   const [endCursor, setEndCursor] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const [selectedProductIndex, setSelectedProductIndex] = useState(0);
 
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
@@ -131,22 +136,49 @@ export default function MaisonModal() {
     };
   }, [hasNextPage, loading, loadingMore, endCursor, fetchProducts]);
 
+  // Handle opening a product from grid - switches to swipe view
+  const handleProductClick = useCallback((handle: string, index: number) => {
+    setSelectedProductIndex(index);
+    setViewMode('swipe');
+  }, []);
+
+  // Toggle view mode
+  const toggleViewMode = useCallback(() => {
+    setViewMode(prev => prev === 'grid' ? 'swipe' : 'grid');
+  }, []);
+
+  // Exit swipe view
+  const exitSwipeView = useCallback(() => {
+    setViewMode('grid');
+  }, []);
+
+  // Render swipe feed when in swipe mode
+  if (viewMode === 'swipe' && products.length > 0) {
+    return (
+      <ProductFeed
+        products={products}
+        onClose={exitSwipeView}
+        initialIndex={selectedProductIndex}
+      />
+    );
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: '100%' }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: '100%' }}
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-      className="fixed inset-0 z-[110] flex flex-col bg-gradient-to-br from-[#302927] via-[#1a1817] to-[#302927]"
+      className="fixed inset-0 z-[110] flex flex-col bg-gradient-to-br from-[#302927]/95 via-[#1a1817] to-[#302927]/95"
     >
-      {/* Header - glass surface */}
+      {/* Header - improved glass surface */}
       <header
-        className="flex items-center justify-between px-4 py-3 glass-surface border-b border-[#502d26]/30"
+        className="flex items-center justify-between px-4 py-3 glass-surface-light border-b border-white/5"
         style={{ paddingTop: 'max(12px, env(safe-area-inset-top, 0px))' }}
       >
         <button
           onClick={closeAll}
-          className="w-10 h-10 flex items-center justify-center text-[#ede8df]/60 hover:text-[#ede8df] transition-colors rounded-full hover:bg-[#843c2d]/10"
+          className="w-10 h-10 flex items-center justify-center text-[#ede8df]/60 hover:text-[#ede8df] transition-colors rounded-full hover:bg-white/5"
           aria-label="Close"
           style={{ touchAction: 'manipulation' }}
         >
@@ -156,6 +188,30 @@ export default function MaisonModal() {
         </button>
 
         <div className="flex items-center gap-3">
+          {/* View toggle button */}
+          <button
+            onClick={toggleViewMode}
+            className="flex items-center gap-2 px-3 py-1.5 glass-surface-light rounded-full border border-white/10 text-[#ede8df]/70 hover:text-[#ede8df] transition-all"
+            style={{ touchAction: 'manipulation' }}
+            aria-label={viewMode === 'grid' ? 'Switch to swipe view' : 'Switch to grid view'}
+          >
+            {viewMode === 'grid' ? (
+              <>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
+                </svg>
+                <span className="text-xs hidden sm:inline">Grid</span>
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 7.5h-.75A2.25 2.25 0 004.5 9.75v7.5a2.25 2.25 0 002.25 2.25h7.5a2.25 2.25 0 002.25-2.25v-7.5a2.25 2.25 0 00-2.25-2.25h-.75m-6 3.75l3 3m0 0l3-3m-3 3V1.5m6 9h.75a2.25 2.25 0 012.25 2.25v7.5a2.25 2.25 0 01-2.25 2.25h-7.5a2.25 2.25 0 01-2.25-2.25v-.75" />
+                </svg>
+                <span className="text-xs hidden sm:inline">Swipe</span>
+              </>
+            )}
+          </button>
+
           <img
             src="/brand-logos/baad.png"
             alt="B.A.A.D Brand Logo"
@@ -165,7 +221,7 @@ export default function MaisonModal() {
           
           {/* Customer indicator */}
           {isLoggedIn && customer?.email && (
-            <div className="hidden sm:flex items-center gap-2 px-2 py-1 bg-[#843c2d]/20 rounded-full">
+            <div className="hidden sm:flex items-center gap-2 px-2 py-1 glass-surface-light rounded-full border border-white/10">
               <div className="w-2 h-2 bg-green-400 rounded-full"></div>
               <span className="text-[#ede8df]/80 text-xs">{customer.email.split('@')[0]}</span>
             </div>
@@ -173,8 +229,17 @@ export default function MaisonModal() {
           
           {!isLoggedIn && (
             <button
-              onClick={shopifyLogin}
-              className="hidden sm:flex items-center gap-1 px-3 py-1.5 text-xs text-[#ede8df]/70 hover:text-[#ede8df] border border-[#502d26]/50 hover:border-[#843c2d]/50 rounded-full transition-colors"
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setTimeout(() => {
+                  closeAll();
+                  shopifyLogin();
+                }, 100);
+              }}
+              className="hidden sm:flex items-center gap-1 px-3 py-1.5 text-xs text-[#ede8df]/70 hover:text-[#ede8df] glass-surface-light rounded-full border border-white/10 transition-colors"
+              style={{ touchAction: 'manipulation' }}
             >
               <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
@@ -186,7 +251,7 @@ export default function MaisonModal() {
 
         <button
           onClick={openCart}
-          className="relative w-10 h-10 flex items-center justify-center text-[#ede8df]/60 hover:text-[#ede8df] transition-colors rounded-full hover:bg-[#843c2d]/10"
+          className="relative w-10 h-10 flex items-center justify-center text-[#ede8df]/60 hover:text-[#ede8df] transition-colors rounded-full hover:bg-white/5"
           aria-label="Open cart"
           style={{ touchAction: 'manipulation' }}
         >
@@ -201,11 +266,11 @@ export default function MaisonModal() {
         </button>
       </header>
 
-      {/* Content */}
+      {/* Content - with space for persistent footer */}
       <div
         className="flex-1 overflow-y-auto overscroll-contain"
         style={{
-          paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)',
+          paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)',
           WebkitOverflowScrolling: 'touch',
           touchAction: 'pan-y',
         }}
@@ -234,50 +299,63 @@ export default function MaisonModal() {
           </div>
         )}
 
-        {/* Product Grid - responsive with desktop scaling */}
+        {/* Product Grid - improved proportions and glass aesthetic */}
         {!loading && !error && products.length > 0 && (
           <>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-[1px] lg:gap-1 bg-[#502d26]/20">
-              {products.map((product) => (
-                <button
-                  key={product.id}
-                  onClick={() => openProduct(product.handle)}
-                  className="group relative aspect-square bg-gradient-to-br from-[#1a1817] to-[#252220] overflow-hidden focus:outline-none"
-                  style={{ touchAction: 'manipulation' }}
-                >
-                  {/* Product Image */}
-                  {product.image ? (
-                    <img
-                      src={product.image}
-                      alt={product.title}
-                      className="absolute inset-0 w-full h-full object-contain transition-transform duration-500 ease-out group-hover:scale-[1.03] group-active:scale-[0.98]"
-                      loading="lazy"
-                      draggable={false}
-                    />
-                  ) : (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <span className="text-[#b2a491]/30 text-[10px] uppercase tracking-widest">No Image</span>
+            <div className="p-3 sm:p-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
+                {products.map((product, index) => (
+                  <button
+                    key={product.id}
+                    onClick={() => handleProductClick(product.handle, index)}
+                    className="group relative aspect-[3/4] glass-surface-light rounded-2xl overflow-hidden focus:outline-none border border-white/5 hover:border-white/10 transition-all"
+                    style={{ touchAction: 'manipulation' }}
+                  >
+                    {/* Product Image */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-[#1a1817] to-[#252220]">
+                      {product.image ? (
+                        <img
+                          src={product.image}
+                          alt={product.title}
+                          className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.05] group-active:scale-[0.98]"
+                          loading="lazy"
+                          draggable={false}
+                        />
+                      ) : (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <span className="text-[#b2a491]/30 text-[10px] uppercase tracking-widest">No Image</span>
+                        </div>
+                      )}
                     </div>
-                  )}
 
-                  {/* Sold Out Overlay */}
-                  {!product.available && (
-                    <div className="absolute inset-0 bg-[#1a1817]/80 flex items-center justify-center">
-                      <span className="px-3 py-1.5 glass-surface rounded-full text-[#b2a491] text-[10px] uppercase tracking-widest border border-[#502d26]/30">
-                        Sold Out
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Hover overlay with title */}
-                  <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-[#1a1817]/90 via-[#1a1817]/60 to-transparent opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity">
-                    <p className="text-[#ede8df] text-xs font-medium truncate">{product.title}</p>
-                    {product.price !== null && (
-                      <p className="text-[#b2a491] text-[10px]">${product.price.toFixed(2)}</p>
+                    {/* Sold Out Overlay */}
+                    {!product.available && (
+                      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center">
+                        <span className="px-3 py-1.5 glass-surface-light rounded-full text-[#ede8df]/80 text-[10px] uppercase tracking-widest border border-white/10">
+                          Sold Out
+                        </span>
+                      </div>
                     )}
-                  </div>
-                </button>
-              ))}
+
+                    {/* Bottom gradient overlay with product info */}
+                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent pt-12 pb-3 px-3">
+                      <p className="text-[#ede8df] text-xs font-medium truncate leading-tight">{product.title}</p>
+                      {product.price !== null && (
+                        <p className="text-[#ede8df]/70 text-[11px] mt-0.5">${product.price.toFixed(2)}</p>
+                      )}
+                    </div>
+
+                    {/* Swipe indicator - bottom right */}
+                    <div className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="w-6 h-6 flex items-center justify-center glass-surface-light rounded-full border border-white/10">
+                        <svg className="w-3 h-3 text-[#ede8df]/70" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 19.5l15-15m0 0H8.25m11.25 0v11.25" />
+                        </svg>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Infinite scroll trigger */}
@@ -304,47 +382,51 @@ export default function MaisonModal() {
           </div>
         )}
 
-        {/* Legal Footer */}
-        <footer className="px-4 py-6 mt-8 border-t border-[#502d26]/20">
-          <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 mb-4">
-            <a
-              href="https://odubostudio.myshopify.com/policies/privacy-policy"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[10px] text-[#b2a491]/60 hover:text-[#b2a491] transition-colors uppercase tracking-wider"
-            >
-              Privacy
-            </a>
-            <a
-              href="https://odubostudio.myshopify.com/policies/terms-of-service"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[10px] text-[#b2a491]/60 hover:text-[#b2a491] transition-colors uppercase tracking-wider"
-            >
-              Terms
-            </a>
-            <a
-              href="https://odubostudio.myshopify.com/policies/shipping-policy"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[10px] text-[#b2a491]/60 hover:text-[#b2a491] transition-colors uppercase tracking-wider"
-            >
-              Shipping
-            </a>
-            <a
-              href="https://odubostudio.myshopify.com/policies/refund-policy"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[10px] text-[#b2a491]/60 hover:text-[#b2a491] transition-colors uppercase tracking-wider"
-            >
-              Refunds
-            </a>
-          </div>
-          <p className="text-center text-[9px] text-[#b2a491]/40 tracking-wider">
-            &copy; {new Date().getFullYear()} Odubo Studio. All rights reserved.
-          </p>
-        </footer>
       </div>
+
+      {/* Persistent Footer - fixed at bottom */}
+      <footer 
+        className="glass-surface-light border-t border-white/5 px-4 py-3"
+        style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom, 0px))' }}
+      >
+        <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 mb-2">
+          <a
+            href="https://odubostudio.myshopify.com/policies/privacy-policy"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[10px] text-[#ede8df]/50 hover:text-[#ede8df]/80 transition-colors uppercase tracking-wider"
+          >
+            Privacy
+          </a>
+          <a
+            href="https://odubostudio.myshopify.com/policies/terms-of-service"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[10px] text-[#ede8df]/50 hover:text-[#ede8df]/80 transition-colors uppercase tracking-wider"
+          >
+            Terms
+          </a>
+          <a
+            href="https://odubostudio.myshopify.com/policies/shipping-policy"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[10px] text-[#ede8df]/50 hover:text-[#ede8df]/80 transition-colors uppercase tracking-wider"
+          >
+            Shipping
+          </a>
+          <a
+            href="https://odubostudio.myshopify.com/policies/refund-policy"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[10px] text-[#ede8df]/50 hover:text-[#ede8df]/80 transition-colors uppercase tracking-wider"
+          >
+            Refunds
+          </a>
+        </div>
+        <p className="text-center text-[9px] text-[#ede8df]/30 tracking-wider">
+          &copy; {new Date().getFullYear()} Odubo Studio. All rights reserved.
+        </p>
+      </footer>
     </motion.div>
   );
 }
