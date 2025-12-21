@@ -25,14 +25,30 @@ export default function ProductFeed({ products, onClose, initialIndex = 0 }: Pro
   const observersRef = useRef<Map<number, IntersectionObserver>>(new Map());
   const elementRefsRef = useRef<Map<number, HTMLDivElement>>(new Map());
 
-  // Memoize products to prevent unnecessary re-renders
-  const deduplicatedProducts = useMemo(() => {
-    const seen = new Set<string>();
-    return products.filter(p => {
-      if (seen.has(p.id)) return false;
-      seen.add(p.id);
-      return true;
-    });
+  // Memoize products to prevent unnecessary re-renders and create infinite scroll effect
+  const infiniteProducts = useMemo(() => {
+    if (products.length === 0) return [];
+    
+    // Shuffle function
+    const shuffle = (array: ProductCardType[]) => {
+      const shuffled = [...array];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      return shuffled;
+    };
+
+    // Create multiple shuffled copies for infinite scroll effect
+    const shuffledProducts = shuffle(products);
+    const copies = Array(10).fill(null).map((_, i) => 
+      shuffle(shuffledProducts).map((p, idx) => ({
+        ...p,
+        id: `${p.id}-copy-${i}-${idx}` // Unique ID for virtualization
+      }))
+    );
+    
+    return copies.flat();
   }, [products]);
 
   // Set up IntersectionObserver for each product card
@@ -95,7 +111,7 @@ export default function ProductFeed({ products, onClose, initialIndex = 0 }: Pro
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowDown' || e.key === 'j') {
         e.preventDefault();
-        const nextIndex = Math.min(activeIndex + 1, deduplicatedProducts.length - 1);
+        const nextIndex = activeIndex + 1;
         virtuosoRef.current?.scrollToIndex({ index: nextIndex, align: 'start', behavior: 'smooth' });
       } else if (e.key === 'ArrowUp' || e.key === 'k') {
         e.preventDefault();
@@ -108,7 +124,7 @@ export default function ProductFeed({ products, onClose, initialIndex = 0 }: Pro
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeIndex, deduplicatedProducts.length, onClose]);
+  }, [activeIndex, onClose]);
 
   // Item renderer
   const itemContent = useCallback(
@@ -156,7 +172,7 @@ export default function ProductFeed({ products, onClose, initialIndex = 0 }: Pro
         {/* Product count */}
         <div className="glass-surface-light px-4 py-2 rounded-full border border-white/10">
           <span className="text-[#ede8df]/70 text-xs font-light">
-            {activeIndex + 1} / {deduplicatedProducts.length}
+            {(activeIndex % products.length) + 1} / {products.length}
           </span>
         </div>
 
@@ -167,7 +183,7 @@ export default function ProductFeed({ products, onClose, initialIndex = 0 }: Pro
       {/* Virtuoso scroll container */}
       <Virtuoso
         ref={virtuosoRef}
-        data={deduplicatedProducts}
+        data={infiniteProducts}
         itemContent={itemContent}
         style={{
           height: '100dvh',
@@ -183,25 +199,7 @@ export default function ProductFeed({ products, onClose, initialIndex = 0 }: Pro
       />
 
       {/* Progress dots (for small number of products) */}
-      {deduplicatedProducts.length <= 10 && (
-        <div 
-          className="fixed right-3 top-1/2 -translate-y-1/2 z-20 flex flex-col gap-2"
-        >
-          {deduplicatedProducts.map((_, idx) => (
-            <button
-              key={idx}
-              onClick={() => virtuosoRef.current?.scrollToIndex({ index: idx, align: 'start', behavior: 'smooth' })}
-              className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                idx === activeIndex
-                  ? 'bg-[#ede8df] scale-125'
-                  : 'bg-[#ede8df]/30 hover:bg-[#ede8df]/50'
-              }`}
-              aria-label={`Go to product ${idx + 1}`}
-              style={{ touchAction: 'manipulation' }}
-            />
-          ))}
-        </div>
-      )}
+      {/* Removed - no longer needed */}
     </div>
   );
 }
