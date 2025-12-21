@@ -40,7 +40,8 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const { name, scopes } = await request.json();
+    const body = await request.json() as { name: string; scopes: string[] };
+    const { name, scopes } = body;
     
     // Generate a secure API key
     const keyBytes = randomBytes(24);

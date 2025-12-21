@@ -391,9 +391,6 @@ export default function ClipCard({
           <h3 className="text-sm font-semibold text-white truncate drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
             {clip.title}
           </h3>
-          <p className="text-xs text-white/80 truncate mt-0.5 drop-shadow-[0_1px_3px_rgba(0,0,0,0.8)]">
-            {clip.artist}
-          </p>
         </div>
       </div>
     </div>

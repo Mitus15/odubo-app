@@ -3,13 +3,13 @@
 -- Branded link aggregator for digital presence management
 -- ============================================================================
 
-CREATE TABLE IF NOT EXISTS linktree (
+CREATE TABLE linktree (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   
   -- Link Details
   title TEXT NOT NULL,
   url TEXT NOT NULL,
-  category TEXT NOT NULL CHECK(category IN ('streaming', 'social', 'video', 'fashion', 'admin', 'store', 'other')),
+  category TEXT NOT NULL,
   platform TEXT,                -- e.g., 'spotify', 'instagram', 'tiktok'
   icon_url TEXT,
   description TEXT,
@@ -27,17 +27,19 @@ CREATE TABLE IF NOT EXISTS linktree (
   
   -- Timestamps
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  
+  CHECK(category IN ('streaming', 'social', 'video', 'fashion', 'admin', 'store', 'other'))
 );
 
 -- Index for category-based queries
-CREATE INDEX IF NOT EXISTS idx_linktree_category ON linktree(category, display_order);
+CREATE INDEX idx_linktree_category ON linktree(category, display_order);
 
 -- Index for active links (user-facing queries)
-CREATE INDEX IF NOT EXISTS idx_linktree_active ON linktree(is_active, is_featured, display_order);
+CREATE INDEX idx_linktree_active ON linktree(is_active, is_featured, display_order);
 
 -- Index for analytics
-CREATE INDEX IF NOT EXISTS idx_linktree_clicks ON linktree(click_count DESC);
+CREATE INDEX idx_linktree_clicks ON linktree(click_count DESC);
 
 -- Sample data (your branded links)
 INSERT INTO linktree (title, url, category, platform, display_order, is_active, is_featured) VALUES

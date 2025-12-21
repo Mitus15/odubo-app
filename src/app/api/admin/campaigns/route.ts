@@ -42,7 +42,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const campaign = await request.json();
+    const campaign = await request.json() as Record<string, unknown>;
     
     // TODO: Save campaign to database
     console.log('Creating campaign:', campaign);

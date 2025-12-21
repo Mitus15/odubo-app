@@ -48,7 +48,7 @@ export default function LinkTreeModal({ isOpen, onClose }: LinkTreeModalProps) {
       setLoading(true);
       const res = await fetch('/api/linktree');
       if (res.ok) {
-        const data = await res.json();
+        const data = await res.json() as { links?: LinkTreeItem[] };
         setLinks(data.links || []);
       }
     } catch (error) {

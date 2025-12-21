@@ -50,7 +50,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const discount = await request.json();
+    const discount = await request.json() as Record<string, any>;
     
     // TODO: Save discount to database
     console.log('Creating discount:', discount);

@@ -16,6 +16,21 @@ interface ShopifyCustomer {
   };
 }
 
+interface ProfileData {
+  id: string;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  insights?: {
+    isNewCustomer: boolean;
+    isVIP: boolean;
+    totalLifetimeValue: number;
+    lastPurchaseDate: string | null;
+    averageOrderValue: number;
+  };
+}
+
 /**
  * Hook for managing Shopify customer authentication state
  * Uses Customer Account API v2 for seamless headless auth
@@ -37,7 +52,7 @@ export function useShopifyAuth() {
       });
 
       if (response.ok) {
-        const profileData = await response.json();
+        const profileData = await response.json() as ProfileData;
         setCustomer({
           id: profileData.id,
           email: profileData.email,

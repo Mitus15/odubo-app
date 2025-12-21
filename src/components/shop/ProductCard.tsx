@@ -28,19 +28,56 @@ function ProductCardComponent({ product, isActive, index }: ProductCardProps) {
     setIsDrawerOpen(true);
   }, []);
 
-  const handleQuickAddToBag = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+  const handleQuickAddToBag = useCallback(async (e: React.MouseEvent | React.TouchEvent) => {
     e.stopPropagation();
     if (!product.available) return;
     
-    // For quick add, we'll use the first available variant
-    // This is for cases where users want to skip variant selection
-    addToCart({
-      variantId: `${product.id}-default`, // Simplified for demo
-      title: product.title,
-      price: product.price || 0,
-      image: product.image,
-    });
-  }, [addToCart, product]);
+    try {
+      // Fetch product details to get real variant IDs
+      const STORE_URL = process.env.NEXT_PUBLIC_SHOPIFY_STORE_URL || 'https://odubostudio.myshopify.com';
+      const PUBLIC_TOKEN = process.env.NEXT_PUBLIC_SHOPIFY_API_KEY;
+
+      if (!PUBLIC_TOKEN) throw new Error('Store configuration error');
+
+      const query = `#graphql
+        query Product($handle: String!) {
+          product(handle: $handle) {
+            variants(first: 1) { edges { node {
+              id title availableForSale
+              price { amount currencyCode }
+              image { url }
+            }}}
+          }
+        }`;
+
+      const res = await fetch(`${STORE_URL}/api/2024-07/graphql.json`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Shopify-Storefront-Access-Token': PUBLIC_TOKEN,
+        },
+        body: JSON.stringify({ query, variables: { handle: product.handle } }),
+      });
+
+      if (!res.ok) throw new Error('Failed to load product');
+      const data = await res.json();
+      const firstVariant = data?.data?.product?.variants?.edges?.[0]?.node;
+      
+      if (!firstVariant) throw new Error('No variants found');
+      
+      // Add the first available variant to cart
+      addToCart({
+        variantId: firstVariant.id,
+        title: `${product.title} — ${firstVariant.title}`,
+        price: parseFloat(firstVariant.price.amount),
+        image: firstVariant.image?.url || product.image || undefined,
+      });
+    } catch (error) {
+      console.error('Quick add failed:', error);
+      // Fallback: open variant drawer instead
+      setIsDrawerOpen(true);
+    }
+  }, [addToCart, product, setIsDrawerOpen]);
 
   // Format price
   const formattedPrice = product.price !== null 

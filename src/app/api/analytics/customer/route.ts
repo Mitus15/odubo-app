@@ -20,59 +20,117 @@ export async function GET(request: NextRequest) {
     const orders = await getCustomerOrders(customerToken, 100);
 
     // Calculate analytics
-    const analytics = {
-      totalOrders: orders.length,
-      totalSpent: orders.reduce((sum, order) => 
-        sum + parseFloat(order.totalPrice.amount), 0
-      ),
-      averageOrderValue: orders.length > 0 
-        ? orders.reduce((sum, order) => sum + parseFloat(order.totalPrice.amount), 0) / orders.length
-        : 0,
-      
-      // Order status breakdown
-      ordersByStatus: orders.reduce((acc: any, order) => {
-        const status = order.fulfillmentStatus || 'pending';
-        acc[status] = (acc[status] || 0) + 1;
-        return acc;
-      }, {}),
-      
-      // Product analytics
-      productsPurchased: orders.flatMap(order => 
-        order.lineItems.edges.map((edge: any) => ({
-          title: edge.node.title,
-          quantity: edge.node.quantity,
-          price: parseFloat(edge.node.price.amount),
-          productType: edge.node.product?.productType,
-          vendor: edge.node.product?.vendor
-        }))
-      ),
-      
-      // Top products by quantity
-      topProducts: getTopProducts(orders),
-      
-      // Purchase frequency
-      firstOrderDate: orders.length > 0 ? orders[orders.length - 1].processedAt : null,
-      lastOrderDate: orders.length > 0 ? orders[0].processedAt : null,
-      
-      // Monthly spending trend
-      monthlySpending: getMonthlySpending(orders),
-      
-      // Customer lifetime value
-      customerLifetimeValue: orders.reduce((sum, order) => 
-        sum + parseFloat(order.totalPrice.amount), 0
-      ),
-      
-      // Recent orders (last 10)
-      recentOrders: orders.slice(0, 10).map(order => ({
-        id: order.id,
-        number: order.number,
-        date: order.processedAt,
-        total: parseFloat(order.totalPrice.amount),
-        currency: order.totalPrice.currencyCode,
-        status: order.fulfillmentStatus,
-        itemCount: order.lineItems.edges.length
-      }))
-    };
+    interface Order {
+        id: string;
+        number: number;
+        processedAt: string;
+        totalPrice: {
+            amount: string;
+            currencyCode: string;
+        };
+        fulfillmentStatus: string | null;
+        lineItems: {
+            edges: Array<{
+                node: {
+                    title: string;
+                    quantity: number;
+                    price: {
+                        amount: string;
+                    };
+                    product?: {
+                        productType?: string;
+                        vendor?: string;
+                    };
+                };
+            }>;
+        };
+    }
+
+    interface ProductPurchased {
+        title: string;
+        quantity: number;
+        price: number;
+        productType?: string;
+        vendor?: string;
+    }
+
+    interface RecentOrder {
+        id: string;
+        number: number;
+        date: string;
+        total: number;
+        currency: string;
+        status: string | null;
+        itemCount: number;
+    }
+
+    interface Analytics {
+        totalOrders: number;
+        totalSpent: number;
+        averageOrderValue: number;
+        ordersByStatus: Record<string, number>;
+        productsPurchased: ProductPurchased[];
+        topProducts: any[];
+        firstOrderDate: string | null;
+        lastOrderDate: string | null;
+        monthlySpending: any[];
+        customerLifetimeValue: number;
+        recentOrders: RecentOrder[];
+    }
+
+            const analytics: Analytics = {
+                totalOrders: orders.length,
+                totalSpent: orders.reduce((sum: number, order: Order) => 
+                    sum + parseFloat(order.totalPrice.amount), 0
+                ),
+                averageOrderValue: orders.length > 0 
+                    ? orders.reduce((sum: number, order: Order) => sum + parseFloat(order.totalPrice.amount), 0) / orders.length
+                    : 0,
+                
+                // Order status breakdown
+            ordersByStatus: orders.reduce((acc: Record<string, number>, order: Order) => {
+                const status: string = order.fulfillmentStatus || 'pending';
+                acc[status] = (acc[status] || 0) + 1;
+                return acc;
+            }, {} as Record<string, number>),
+                
+                // Product analytics
+                productsPurchased: orders.flatMap((order: Order) => 
+                    order.lineItems.edges.map((edge: any) => ({
+                        title: edge.node.title,
+                        quantity: edge.node.quantity,
+                        price: parseFloat(edge.node.price.amount),
+                        productType: edge.node.product?.productType,
+                        vendor: edge.node.product?.vendor
+                    }))
+                ),
+                
+                // Top products by quantity
+                topProducts: getTopProducts(orders),
+                
+                // Purchase frequency
+                firstOrderDate: orders.length > 0 ? orders[orders.length - 1].processedAt : null,
+                lastOrderDate: orders.length > 0 ? orders[0].processedAt : null,
+                
+                // Monthly spending trend
+                monthlySpending: getMonthlySpending(orders),
+                
+                // Customer lifetime value
+                customerLifetimeValue: orders.reduce((sum: number, order: Order) => 
+                    sum + parseFloat(order.totalPrice.amount), 0
+                ),
+                
+                // Recent orders (last 10)
+                recentOrders: orders.slice(0, 10).map((order: Order) => ({
+                    id: order.id,
+                    number: order.number,
+                    date: order.processedAt,
+                    total: parseFloat(order.totalPrice.amount),
+                    currency: order.totalPrice.currencyCode,
+                    status: order.fulfillmentStatus,
+                    itemCount: order.lineItems.edges.length
+                }))
+            };
 
     return NextResponse.json(analytics);
 

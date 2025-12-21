@@ -65,7 +65,7 @@ export default function ProductVariantDrawer({ productHandle, isOpen, onClose }:
         });
 
         if (!res.ok) throw new Error('Failed to load product');
-        const data = await res.json();
+        const data: any = await res.json();
         const p = data?.data?.product;
         if (!p) throw new Error('Product not found');
 

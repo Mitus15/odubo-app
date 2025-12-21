@@ -18,6 +18,17 @@ interface CustomerToken {
   refreshToken?: string;
 }
 
+interface TokenResponse {
+  access_token: string;
+  expires_in: number;
+  refresh_token?: string;
+}
+
+interface GraphQLResponse<T = any> {
+  data?: T;
+  errors?: Array<{ message: string }>;
+}
+
 /**
  * Generate authorization URL for Customer Account API
  * This is where you redirect users to login
@@ -66,7 +77,7 @@ export async function exchangeCodeForToken(code: string): Promise<CustomerToken>
     throw new Error('Failed to exchange code for token');
   }
 
-  const data = await response.json();
+  const data = await response.json() as TokenResponse;
   return {
     accessToken: data.access_token,
     expiresAt: new Date(Date.now() + data.expires_in * 1000).toISOString(),
@@ -150,7 +161,7 @@ export async function getCustomerData(accessToken: string) {
     throw new Error('Failed to fetch customer data');
   }
 
-  const { data, errors } = await response.json();
+  const { data, errors } = await response.json() as GraphQLResponse;
   
   if (errors) {
     throw new Error(errors[0].message);
@@ -220,7 +231,7 @@ export async function getCustomerOrders(accessToken: string, first: number = 50)
     throw new Error('Failed to fetch orders');
   }
 
-  const { data } = await response.json();
+  const { data } = await response.json() as GraphQLResponse;
   return data.customer.orders.edges.map((edge: any) => edge.node);
 }
 
@@ -263,7 +274,7 @@ export async function updateCustomerProfile(
     }),
   });
 
-  const { data } = await response.json();
+  const { data } = await response.json() as GraphQLResponse;
   return data.customerUpdate;
 }
 
