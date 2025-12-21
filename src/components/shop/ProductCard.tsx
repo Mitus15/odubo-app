@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useCallback, memo, useRef } from 'react';
+import { useState, useCallback, memo } from 'react';
 import { useOmniShop, type ProductCard as ProductCardType } from '@/contexts/OmniShopContext';
+import ProductVariantDrawer from './ProductVariantDrawer';
 
 interface ProductCardProps {
   product: ProductCardType;
@@ -13,25 +14,26 @@ interface ProductCardProps {
  * Full-screen swipeable product card (clips-style)
  * Features:
  * - Full-screen product image with glass overlay
- * - Tap to view details
+ * - Tap to open variant selection drawer
  * - Swipe up/down navigation handled by parent
  * - Glass aesthetic with gradient overlays
  */
 function ProductCardComponent({ product, isActive, index }: ProductCardProps) {
-  const { openProduct, addToCart } = useOmniShop();
+  const { addToCart } = useOmniShop();
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-  const handleViewDetails = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+  const handleOpenVariants = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     e.stopPropagation();
-    openProduct(product.handle);
-  }, [openProduct, product.handle]);
+    setIsDrawerOpen(true);
+  }, []);
 
-  const handleAddToCart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+  const handleQuickAddToBag = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     e.stopPropagation();
     if (!product.available) return;
     
     // For quick add, we'll use the first available variant
-    // In a real implementation, you might want to fetch product details first
+    // This is for cases where users want to skip variant selection
     addToCart({
       variantId: `${product.id}-default`, // Simplified for demo
       title: product.title,
@@ -109,19 +111,19 @@ function ProductCardComponent({ product, isActive, index }: ProductCardProps) {
         {/* Action button */}
         <button
           type="button"
-          onClick={handleViewDetails}
+          onClick={handleOpenVariants}
           className="w-full py-3.5 px-5 bg-[#ede8df] text-[#302927] rounded-xl text-sm font-medium uppercase tracking-[0.1em] active:scale-[0.98] transition-transform"
           style={{ touchAction: 'manipulation' }}
         >
-          View Details
+          Select Options
         </button>
       </div>
 
-      {/* Add to cart button - top right */}
+      {/* Add to bag button - top right */}
       <div className="absolute top-4 right-4" style={{ marginTop: 'env(safe-area-inset-top, 0px)' }}>
         <button
           type="button"
-          onClick={handleAddToCart}
+          onClick={handleQuickAddToBag}
           disabled={!product.available}
           className={`w-12 h-12 flex items-center justify-center glass-surface-light border border-white/10 rounded-xl transition-all ${
             product.available 
@@ -129,13 +131,20 @@ function ProductCardComponent({ product, isActive, index }: ProductCardProps) {
               : 'text-[#ede8df]/30 cursor-not-allowed'
           }`}
           style={{ touchAction: 'manipulation' }}
-          aria-label="Add to cart"
+          aria-label="Add to bag"
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
           </svg>
         </button>
       </div>
+
+      {/* Variant Selection Drawer */}
+      <ProductVariantDrawer
+        productHandle={product.handle}
+        isOpen={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+      />
     </div>
   );
 }
