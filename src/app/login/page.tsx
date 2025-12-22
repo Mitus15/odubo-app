@@ -48,7 +48,7 @@ export default function LoginPage() {
       // Build OAuth authorization URL
       const shopifyStore = process.env.NEXT_PUBLIC_SHOPIFY_STORE_URL || 'https://odubostudio.myshopify.com';
       const clientId = process.env.NEXT_PUBLIC_SHOPIFY_CLIENT_ID || '843046fe-e8cb-4fd1-9f46-ac5c8acd876b';
-      const redirectUri = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://odubo.com'}/api/auth/shopify/callback`;
+      const redirectUri = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://odubo.studio'}/api/auth/shopify/callback`;
       
       console.log('Initiating Shopify OAuth...', { shopifyStore, clientId, redirectUri });
       

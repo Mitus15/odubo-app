@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
           },
           {
             key: '_return_url',
-            value: process.env.NEXT_PUBLIC_SITE_URL || 'https://odubo.com'
+            value: process.env.NEXT_PUBLIC_SITE_URL || 'https://odubo.studio'
           }
         ]
       }
