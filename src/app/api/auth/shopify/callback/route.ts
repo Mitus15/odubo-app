@@ -40,12 +40,16 @@ export async function GET(request: NextRequest) {
     // Store in secure httpOnly cookies
     const cookieStore = await cookies();
     
+    // Cookie domain for cross-subdomain auth (account.odubo.studio → odubo.studio)
+    const cookieDomain = process.env.NODE_ENV === 'production' ? '.odubo.studio' : undefined;
+    
     cookieStore.set('shopify_customer_token', tokenData.accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 30, // 30 days
-      path: '/'
+      path: '/',
+      ...(cookieDomain && { domain: cookieDomain })
     });
 
     cookieStore.set('shopify_customer_id', customerData.id, {
@@ -53,7 +57,8 @@ export async function GET(request: NextRequest) {
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 30,
-      path: '/'
+      path: '/',
+      ...(cookieDomain && { domain: cookieDomain })
     });
 
     if (customerData.emailAddress?.emailAddress) {
@@ -62,7 +67,8 @@ export async function GET(request: NextRequest) {
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
         maxAge: 60 * 60 * 24 * 30,
-        path: '/'
+        path: '/',
+        ...(cookieDomain && { domain: cookieDomain })
       });
     }
 

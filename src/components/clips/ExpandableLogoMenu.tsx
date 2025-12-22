@@ -427,7 +427,15 @@ export default function ExpandableLogoMenu({
         {/* Main logo button */}
         <motion.button
           onClick={handleTap}
-          className="holo-button holo-button-lg relative overflow-hidden"
+          className="group relative overflow-hidden
+                     w-14 h-14 flex items-center justify-center rounded-full
+                     bg-black/15 backdrop-blur-xl border border-white/20
+                     shadow-[0_12px_32px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.15),inset_0_-1px_0_rgba(0,0,0,0.4)]
+                     hover:shadow-[0_16px_40px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.2),inset_0_-2px_0_rgba(0,0,0,0.5)]
+                     active:shadow-[0_6px_20px_rgba(0,0,0,0.8),inset_0_1px_0_rgba(255,255,255,0.1),inset_0_2px_6px_rgba(0,0,0,0.6)]
+                     transition-all duration-300 ease-out
+                     transform-gpu hover:scale-105 active:scale-95
+                     hover:bg-black/20"
           initial="collapsed"
           animate={isExpanded ? 'expanded' : 'collapsed'}
           variants={logoVariants}
@@ -437,12 +445,14 @@ export default function ExpandableLogoMenu({
             width: BUTTON_SIZE,
             height: BUTTON_SIZE,
             cursor: isDragging ? 'grabbing' : 'grab',
+            filter: 'drop-shadow(0 6px 12px rgba(0,0,0,0.4))',
           }}
         >
           <img
             src="/odubo_logo_emboss.png"
             alt=""
-            className="w-7 h-7 object-contain"
+            className="w-7 h-7 object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)] 
+                     transform transition-transform duration-300 group-hover:scale-110"
             draggable={false}
           />
 

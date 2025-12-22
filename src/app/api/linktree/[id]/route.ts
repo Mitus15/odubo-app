@@ -57,7 +57,7 @@ export async function PATCH(
       );
     }
 
-    const body = await request.json();
+    const body = await request.json() as Record<string, any>;
     const updates: string[] = [];
     const values: any[] = [];
 

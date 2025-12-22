@@ -60,7 +60,7 @@ function ProductCardComponent({ product, isActive, index }: ProductCardProps) {
       });
 
       if (!res.ok) throw new Error('Failed to load product');
-      const data = await res.json();
+      const data: any = await res.json();
       const firstVariant = data?.data?.product?.variants?.edges?.[0]?.node;
       
       if (!firstVariant) throw new Error('No variants found');

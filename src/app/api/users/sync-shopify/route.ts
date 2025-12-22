@@ -8,7 +8,14 @@ import { NextRequest, NextResponse } from 'next/server';
  */
 export async function POST(request: NextRequest) {
   try {
-    const { customerId, email, firstName, lastName, customerAccessToken } = await request.json();
+    const body = await request.json() as {
+      customerId?: string;
+      email?: string;
+      firstName?: string;
+      lastName?: string;
+      customerAccessToken?: string;
+    };
+    const { customerId, email, firstName, lastName, customerAccessToken } = body;
 
     if (!customerId || !email) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -38,7 +45,7 @@ export async function POST(request: NextRequest) {
         throw new Error(`Database query failed: ${response.status}`);
       }
 
-      const result = await response.json();
+      const result = await response.json() as { success: boolean; error?: string; result?: any };
       if (!result.success) {
         throw new Error(`Database error: ${result.error || 'Unknown error'}`);
       }

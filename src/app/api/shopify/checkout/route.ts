@@ -1,5 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+interface LineItem {
+  variantId: string;
+  quantity: number;
+}
+
+interface CheckoutRequestBody {
+  lineItems: LineItem[];
+}
+
+interface CheckoutResponse {
+  data?: {
+    checkoutCreate: {
+      checkout: {
+        id: string;
+        webUrl: string;
+      };
+      checkoutUserErrors: Array<{
+        code: string;
+        field: string[];
+        message: string;
+      }>;
+    };
+  };
+  errors?: any[];
+}
+
 /**
  * Shopify Checkout Creation API
  * 
@@ -8,7 +34,7 @@ import { NextRequest, NextResponse } from 'next/server';
  */
 export async function POST(request: NextRequest) {
   try {
-    const { lineItems } = await request.json();
+    const { lineItems } = await request.json() as CheckoutRequestBody;
 
     if (!lineItems || lineItems.length === 0) {
       return NextResponse.json(
@@ -73,12 +99,19 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify({ query: mutation, variables }),
     });
 
-    const { data, errors } = await response.json();
+    const { data, errors } = await response.json() as CheckoutResponse;
 
-    if (errors || data?.checkoutCreate?.checkoutUserErrors?.length > 0) {
-      console.error('Checkout creation errors:', errors || data.checkoutCreate.checkoutUserErrors);
+    if (errors || (data?.checkoutCreate?.checkoutUserErrors?.length ?? 0) > 0) {
+      console.error('Checkout creation errors:', errors || data?.checkoutCreate?.checkoutUserErrors);
       return NextResponse.json(
         { error: 'Failed to create checkout' },
+        { status: 500 }
+      );
+    }
+
+    if (!data) {
+      return NextResponse.json(
+        { error: 'No data returned from checkout creation' },
         { status: 500 }
       );
     }

@@ -8,7 +8,7 @@ import type { LinkTreeItem } from '@/types/linktree';
  */
 export async function GET() {
   try {
-    const links = await queryDatabase<LinkTreeItem>(`
+    const links = await queryDatabase(`
       SELECT * FROM linktree
       WHERE is_active = 1
       ORDER BY 
@@ -16,7 +16,7 @@ export async function GET() {
         category ASC,
         display_order ASC,
         title ASC
-    `);
+    `) as LinkTreeItem[];
 
     return NextResponse.json({ links });
   } catch (error) {
@@ -34,7 +34,19 @@ export async function GET() {
  */
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    const body = await request.json() as {
+      title?: string;
+      url?: string;
+      category?: string;
+      platform?: string;
+      icon_url?: string;
+      description?: string;
+      display_order?: number;
+      is_active?: number;
+      is_featured?: number;
+      managed_by?: string;
+      notes?: string;
+    };
     const {
       title,
       url,
