@@ -25,19 +25,19 @@ export async function GET(request: NextRequest) {
   // Check if there's a return_to URL from Shopify
   const returnTo = searchParams.get('return_to');
   
-  // If Shopify provided a return URL and it's safe (on Shopify domain), use it
+  // If Shopify provided a return URL and it's to their account page, honor it
+  // But prevent infinite loops by checking for new_login parameter
   if (returnTo) {
     try {
       const returnUrl = new URL(returnTo);
-      // Only allow redirects to Shopify's account subdomain or our own domain
-      const allowedHosts = [
-        'account.odubo.studio',
-        'odubo.studio',
-        'odubo.com',
-        'www.odubo.com',
-      ];
       
-      if (allowedHosts.includes(returnUrl.hostname)) {
+      // Only allow Shopify account subdomain to prevent redirect loops to our own domain
+      if (returnUrl.hostname === 'account.odubo.studio') {
+        // If it has new_login=1, it means they just logged in - redirect to home instead
+        // to prevent them from being stuck in the account portal
+        if (returnUrl.searchParams.get('new_login') === '1') {
+          return NextResponse.redirect('https://odubo.com/?logged_in=1');
+        }
         return NextResponse.redirect(returnUrl.toString());
       }
     } catch (e) {
@@ -46,13 +46,12 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // Default: redirect to Shopify's account page where they can see orders, etc.
-  // This is the safest option - they're already logged in with Shopify
-  return NextResponse.redirect('https://account.odubo.studio/');
+  // Default: redirect to home page with logged_in flag
+  return NextResponse.redirect('https://odubo.com/?logged_in=1');
 }
 
 // Also handle POST in case Shopify sends data that way
 export async function POST(request: NextRequest) {
-  // Redirect POST requests to GET handler behavior
-  return NextResponse.redirect('https://account.odubo.studio/');
+  // Redirect POST requests to home with logged_in flag
+  return NextResponse.redirect('https://odubo.com/?logged_in=1');
 }

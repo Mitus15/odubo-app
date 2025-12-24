@@ -3,7 +3,6 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOmniShop, type ProductCard } from '@/contexts/OmniShopContext';
-import { useShopifyAuth } from '@/hooks/useShopifyAuth';
 import ProductFeed from './ProductFeed';
 
 const PRODUCTS_PER_PAGE = 12;
@@ -12,7 +11,6 @@ type ViewMode = 'grid' | 'swipe';
 
 export default function MaisonModal() {
   const { products, setProducts, openProduct, openCart, closeAll, cartCount } = useOmniShop();
-  const { customer, isLoggedIn, login: shopifyLogin } = useShopifyAuth();
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -195,34 +193,16 @@ export default function MaisonModal() {
             draggable={false}
           />
           
-          {/* Customer indicator */}
-          {isLoggedIn && customer?.email && (
-            <div className="hidden sm:flex items-center gap-2 px-2 py-1 glass-surface-light rounded-full border border-white/10">
-              <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-              <span className="text-[#ede8df]/80 text-xs">{customer.email.split('@')[0]}</span>
-            </div>
-          )}
-          
-          {!isLoggedIn && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setTimeout(() => {
-                  closeAll();
-                  shopifyLogin();
-                }, 100);
-              }}
-              className="hidden sm:flex items-center gap-1 px-3 py-1.5 text-xs text-[#ede8df]/70 hover:text-[#ede8df] glass-surface-light rounded-full border border-white/10 transition-colors"
-              style={{ touchAction: 'manipulation' }}
-            >
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
-              </svg>
-              Sign In
-            </button>
-          )}
+          {/* Account link - redirects to Shopify */}
+          <a
+            href="https://account.odubo.studio"
+            className="hidden sm:flex items-center gap-1 px-3 py-1.5 text-xs text-[#ede8df]/70 hover:text-[#ede8df] glass-surface-light rounded-full border border-white/10 transition-colors"
+          >
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+            </svg>
+            Account
+          </a>
         </div>
 
         <button

@@ -110,46 +110,9 @@ export default function AuthModal() {
   }, [close]);
 
   const handleShopifyLogin = () => {
-    try {
-      // Generate state and nonce for CSRF protection
-      const state = Array.from(crypto.getRandomValues(new Uint8Array(32)))
-        .map(b => b.toString(16).padStart(2, '0'))
-        .join('');
-      const nonce = Array.from(crypto.getRandomValues(new Uint8Array(32)))
-        .map(b => b.toString(16).padStart(2, '0'))
-        .join('');
-      
-      // Store for verification
-      sessionStorage.setItem('shopify_auth_state', state);
-      sessionStorage.setItem('shopify_auth_nonce', nonce);
-      
-      // Build OAuth URL
-      const shopifyStore = process.env.NEXT_PUBLIC_SHOPIFY_STORE_URL || 'https://odubostudio.myshopify.com';
-      const clientId = process.env.NEXT_PUBLIC_SHOPIFY_CLIENT_ID || '843046fe-e8cb-4fd1-9f46-ac5c8acd876b';
-      const redirectUri = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://odubo.studio'}/api/auth/shopify/callback`;
-      
-      const authUrl = new URL(`${shopifyStore}/account/authorize`);
-      authUrl.searchParams.set('client_id', clientId);
-      authUrl.searchParams.set('scope', 'openid email customer-account-api:full');
-      authUrl.searchParams.set('response_type', 'code');
-      authUrl.searchParams.set('redirect_uri', redirectUri);
-      authUrl.searchParams.set('state', state);
-      authUrl.searchParams.set('nonce', nonce);
-      
-      const finalUrl = authUrl.toString();
-      console.log('Redirecting to:', finalUrl);
-      
-      // Close modal first, then redirect
-      close();
-      
-      // Use setTimeout to ensure modal close completes before redirect
-      setTimeout(() => {
-        window.location.assign(finalUrl);
-      }, 100);
-    } catch (error) {
-      console.error('Shopify OAuth error:', error);
-      setError('Failed to initiate Shopify login. Please try again.');
-    }
+    // New Customer Accounts - just redirect to Shopify's hosted login
+    close();
+    window.location.href = 'https://account.odubo.studio/login';
   };
 
   const handleAdminLogin = async (e: React.FormEvent) => {
