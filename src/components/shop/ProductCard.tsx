@@ -3,6 +3,7 @@
 import { useState, useCallback, memo } from 'react';
 import { useOmniShop, type ProductCard as ProductCardType } from '@/contexts/OmniShopContext';
 import ProductVariantDrawer from './ProductVariantDrawer';
+import { useImageLuminosity } from '@/hooks/useImageLuminosity';
 
 interface ProductCardProps {
   product: ProductCardType;
@@ -22,6 +23,9 @@ function ProductCardComponent({ product, isActive, index }: ProductCardProps) {
   const { addToCart } = useOmniShop();
   const [imageLoaded, setImageLoaded] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+  // Detect if background is dark or light for optimal text contrast
+  const isDarkBackground = useImageLuminosity(product.image, imageLoaded, 'bottom');
 
   const handleOpenVariants = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     e.stopPropagation();
@@ -127,21 +131,49 @@ function ProductCardComponent({ product, isActive, index }: ProductCardProps) {
       {/* Top gradient for header space */}
       <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/40 via-black/20 to-transparent pointer-events-none" />
 
-      {/* Bottom gradient for text readability */}
-      <div className="absolute inset-x-0 bottom-0 h-72 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-none" />
+      {/* Bottom gradient for text readability - adaptive */}
+      <div
+        className={`absolute inset-x-0 bottom-0 h-72 pointer-events-none transition-opacity duration-300 ${
+          isDarkBackground
+            ? 'bg-gradient-to-t from-black/80 via-black/40 to-transparent'
+            : 'bg-gradient-to-t from-white/90 via-white/50 to-transparent'
+        }`}
+      />
 
       {/* Product Info - Bottom overlay */}
-      <div 
+      <div
         className="absolute inset-x-0 bottom-0 p-6"
         style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 100px)' }}
       >
-        {/* Product title */}
-        <h2 className="text-[#ede8df] text-xl font-medium leading-tight mb-2 line-clamp-2">
+        {/* Product title - dynamic color based on background */}
+        <h2
+          className={`text-xl font-medium leading-tight mb-2 line-clamp-2 transition-colors duration-300 ${
+            isDarkBackground
+              ? 'text-[#ede8df]'
+              : 'text-[#1a1817]'
+          }`}
+          style={{
+            textShadow: isDarkBackground
+              ? '0 2px 8px rgba(0, 0, 0, 0.4), 0 4px 16px rgba(0, 0, 0, 0.3)'
+              : '0 2px 8px rgba(255, 255, 255, 0.8), 0 4px 16px rgba(255, 255, 255, 0.6)'
+          }}
+        >
           {product.title}
         </h2>
 
-        {/* Price */}
-        <p className="text-[#b2a491] text-lg font-medium mb-4">
+        {/* Price - dynamic color based on background */}
+        <p
+          className={`text-lg font-medium mb-4 transition-colors duration-300 ${
+            isDarkBackground
+              ? 'text-[#b2a491]'
+              : 'text-[#302927]'
+          }`}
+          style={{
+            textShadow: isDarkBackground
+              ? '0 2px 4px rgba(0, 0, 0, 0.3)'
+              : '0 2px 4px rgba(255, 255, 255, 0.6)'
+          }}
+        >
           {formattedPrice}
         </p>
 
