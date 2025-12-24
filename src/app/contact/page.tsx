@@ -95,9 +95,7 @@ export default function ContactPage() {
         {/* Quick Links */}
         <div className="grid grid-cols-2 gap-3 mb-10">
           <a
-            href="https://account.odubo.studio"
-            target="_blank"
-            rel="noopener noreferrer"
+            href="https://account.odubo.studio/login"
             className="glass-surface border border-[#502d26]/30 rounded-xl p-4 hover:border-[#843c2d]/50 transition-colors group"
           >
             <div className="flex items-center gap-3">
@@ -108,14 +106,12 @@ export default function ContactPage() {
               </div>
               <div>
                 <div className="text-sm font-medium text-[#ede8df]">Order History</div>
-                <div className="text-xs text-[#726d6c]">View via Shopify</div>
+                <div className="text-xs text-[#726d6c]">Sign in to view</div>
               </div>
             </div>
           </a>
           <a
-            href="https://account.odubo.studio"
-            target="_blank"
-            rel="noopener noreferrer"
+            href="https://account.odubo.studio/login"
             className="glass-surface border border-[#502d26]/30 rounded-xl p-4 hover:border-[#843c2d]/50 transition-colors group"
           >
             <div className="flex items-center gap-3">
@@ -126,7 +122,7 @@ export default function ContactPage() {
               </div>
               <div>
                 <div className="text-sm font-medium text-[#ede8df]">Track Order</div>
-                <div className="text-xs text-[#726d6c]">Check status</div>
+                <div className="text-xs text-[#726d6c]">Sign in to check</div>
               </div>
             </div>
           </a>

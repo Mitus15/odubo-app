@@ -88,6 +88,16 @@ export default function AuthModal() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Check if user is logged in via URL parameter
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      setIsLoggedIn(params.get('logged_in') === '1');
+    }
+  }, []);
 
   // Swipe-to-dismiss
   const containerRef = useRef<HTMLDivElement>(null);
@@ -154,23 +164,44 @@ export default function AuthModal() {
         <h2 className="text-xl font-medium text-white">Sign In</h2>
       </div>
 
-      {/* Shopify login */}
-      <button
-        type="button"
-        onPointerDown={(e) => e.stopPropagation()}
-        onClick={(e) => {
-          e.stopPropagation();
-          e.preventDefault();
-          console.log('🔵 Shopify button clicked!');
-          handleShopifyLogin();
-        }}
-        className="w-full py-3 rounded-xl bg-white text-[#171616] font-medium hover:bg-white/90 transition-colors mb-3 relative z-50"
-      >
-        Sign in with Shopify Account
-      </button>
-      <p className="text-[10px] text-white/40 text-center mb-6">
-        For customers and regular users
-      </p>
+      {/* Shopify login/account access */}
+      {isLoggedIn ? (
+        <>
+          <a
+            href="https://account.odubo.studio"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full py-3 rounded-xl bg-gradient-to-r from-[#843c2d] to-[#6d3224] text-white font-medium hover:opacity-90 transition-opacity mb-3 relative z-50 flex items-center justify-center gap-2"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+            View My Account
+          </a>
+          <p className="text-[10px] text-white/40 text-center mb-6">
+            Access orders, tracking & account details
+          </p>
+        </>
+      ) : (
+        <>
+          <button
+            type="button"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              console.log('🔵 Shopify button clicked!');
+              handleShopifyLogin();
+            }}
+            className="w-full py-3 rounded-xl bg-white text-[#171616] font-medium hover:bg-white/90 transition-colors mb-3 relative z-50"
+          >
+            Sign in with Shopify Account
+          </button>
+          <p className="text-[10px] text-white/40 text-center mb-6">
+            For customers and regular users
+          </p>
+        </>
+      )}
 
       {/* Divider */}
       <div className="relative mb-6">

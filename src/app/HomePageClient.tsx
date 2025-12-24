@@ -141,7 +141,7 @@ export default function HomePageClient({ verseOfTheDay, initialClipId }: HomePag
             exit={{ opacity: 0, scale: 0.8 }}
             transition={{ type: 'spring', stiffness: 500, damping: 30 }}
             onClick={handlePillClick}
-            className="fixed left-4 z-40 flex items-center justify-center rounded-full bg-black/40 backdrop-blur-xl border border-white/10 text-white shadow-lg active:scale-90 transition-transform"
+            className="fixed z-40 flex items-center justify-center rounded-full bg-black/40 backdrop-blur-xl border border-white/10 text-white shadow-lg active:scale-90 transition-transform left-4 md:left-auto md:right-4"
             style={{
               top: 'max(env(safe-area-inset-top, 12px), 12px)',
               touchAction: 'manipulation',
