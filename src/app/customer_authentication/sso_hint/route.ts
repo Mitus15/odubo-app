@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
         // If it has new_login=1, it means they just logged in - redirect to home instead
         // to prevent them from being stuck in the account portal
         if (returnUrl.searchParams.get('new_login') === '1') {
-          return NextResponse.redirect('https://odubo.com/?logged_in=1');
+          return NextResponse.redirect('https://odubo.studio/?logged_in=1');
         }
         return NextResponse.redirect(returnUrl.toString());
       }
@@ -47,11 +47,11 @@ export async function GET(request: NextRequest) {
   }
 
   // Default: redirect to home page with logged_in flag
-  return NextResponse.redirect('https://odubo.com/?logged_in=1');
+  return NextResponse.redirect('https://odubo.studio/?logged_in=1');
 }
 
 // Also handle POST in case Shopify sends data that way
 export async function POST(request: NextRequest) {
   // Redirect POST requests to home with logged_in flag
-  return NextResponse.redirect('https://odubo.com/?logged_in=1');
+  return NextResponse.redirect('https://odubo.studio/?logged_in=1');
 }
