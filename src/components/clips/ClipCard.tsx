@@ -342,11 +342,10 @@ export default function ClipCard({
       </AnimatePresence>
 
 
-      {/* Top-right: Mute button */}
+      {/* Top-right: Mute button - offset down on desktop to avoid Word button overlap */}
       {active && (
         <div
-          className="absolute right-4 z-20"
-          style={{ top: 'max(env(safe-area-inset-top, 16px), 16px)' }}
+          className="absolute right-4 z-20 top-4 md:top-20"
           onClick={(e) => e.stopPropagation()} // Prevent clip pause when tapping button area
         >
           {/* Mute button */}

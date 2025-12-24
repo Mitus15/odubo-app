@@ -11,7 +11,7 @@ import { useAuthModal } from '@/contexts/AuthModalContext';
  * Features:
  * - Icon-only at lg breakpoint (w-20)
  * - Icon + label at xl breakpoint (w-64)
- * - Nav items: Home, Store, Media, Moments, Account
+ * - Nav items: Home, Store, Moments, Account
  * - Cart badge on Store item
  * - Hidden on mobile (< 1024px)
  */
@@ -44,17 +44,6 @@ export default function DesktopSidebar() {
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
-        </svg>
-      ),
-    },
-    {
-      id: 'media',
-      label: 'Media',
-      href: '/media',
-      icon: (
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          <path strokeLinecap="round" strokeLinejoin="round" d="M15.91 11.672a.375.375 0 010 .656l-5.603 3.113a.375.375 0 01-.557-.328V8.887c0-.286.307-.466.557-.327l5.603 3.112z" />
         </svg>
       ),
     },

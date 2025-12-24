@@ -324,15 +324,7 @@ export default function ProductDetailModal({ productHandle }: ProductDetailModal
                     rel="noopener noreferrer"
                     className="text-[10px] text-[#b2a491]/50 hover:text-[#b2a491] transition-colors uppercase tracking-wider"
                   >
-                    Shipping
-                  </a>
-                  <a
-                    href="https://odubostudio.myshopify.com/policies/refund-policy"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-[10px] text-[#b2a491]/50 hover:text-[#b2a491] transition-colors uppercase tracking-wider"
-                  >
-                    Returns
+                    Shipping & Returns
                   </a>
                   <a
                     href="https://odubostudio.myshopify.com/policies/privacy-policy"

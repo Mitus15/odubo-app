@@ -69,8 +69,8 @@ function MomentsIndex() {
 
   return (
     <div className="min-h-full bg-[#171616]">
-      {/* Tab Navigation */}
-      <div className="sticky top-0 z-30 bg-[#171616]/95 backdrop-blur-md border-b border-[#502d26]/20">
+      {/* Tab Navigation - mobile only, desktop just shows Galleries */}
+      <div className="md:hidden sticky top-0 z-30 bg-[#171616]/95 backdrop-blur-md border-b border-[#502d26]/20">
         <div className="max-w-5xl mx-auto px-4 py-4">
           <div className="inline-flex p-1 rounded-xl bg-[#1a1918]/80 border border-[#502d26]/30 backdrop-blur-sm">
             {(['view', 'capture'] as MomentsTab[]).map(t => (
@@ -91,17 +91,23 @@ function MomentsIndex() {
       </div>
 
       <main className="max-w-5xl mx-auto px-4 py-6 pb-24">
-        {tab === 'view' ? (
+        {/* Desktop always shows galleries, mobile respects tab state */}
+        <div className="hidden md:block">
           <GalleryGrid galleries={galleries} loading={galleryLoading} />
-        ) : (
-          <CapturePanel
-            onOpenCamera={handleOpenCamera}
-            galleryId={galleryId}
-            setGalleryId={setGalleryId}
-            ig={ig}
-            setIg={setIg}
-          />
-        )}
+        </div>
+        <div className="md:hidden">
+          {tab === 'view' ? (
+            <GalleryGrid galleries={galleries} loading={galleryLoading} />
+          ) : (
+            <CapturePanel
+              onOpenCamera={handleOpenCamera}
+              galleryId={galleryId}
+              setGalleryId={setGalleryId}
+              ig={ig}
+              setIg={setIg}
+            />
+          )}
+        </div>
       </main>
 
       {/* Terms Modal */}

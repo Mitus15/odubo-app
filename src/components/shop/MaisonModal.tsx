@@ -185,41 +185,44 @@ export default function MaisonModal() {
           </svg>
         </button>
 
-        <div className="flex items-center gap-3">
-          <img
-            src="/brand-logos/baad.png"
-            alt="B.A.A.D Brand Logo"
-            className="h-6 w-auto"
-            draggable={false}
-          />
-          
-          {/* Account link - redirects to Shopify */}
+        {/* Center - Brand Logo */}
+        <img
+          src="/brand-logos/baad.png"
+          alt="B.A.A.D Brand Logo"
+          className="h-6 w-auto"
+          draggable={false}
+        />
+
+        {/* Right - Account & Cart */}
+        <div className="flex items-center gap-2">
+          {/* Account link - desktop only */}
           <a
             href="https://account.odubo.studio"
-            className="hidden sm:flex items-center gap-1 px-3 py-1.5 text-xs text-[#ede8df]/70 hover:text-[#ede8df] glass-surface-light rounded-full border border-white/10 transition-colors"
+            className="hidden md:flex w-10 h-10 items-center justify-center text-[#ede8df]/60 hover:text-[#ede8df] transition-colors rounded-full hover:bg-white/5"
+            aria-label="Account"
           >
-            <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
             </svg>
-            Account
           </a>
-        </div>
 
-        <button
-          onClick={openCart}
-          className="relative w-10 h-10 flex items-center justify-center text-[#ede8df]/60 hover:text-[#ede8df] transition-colors rounded-full hover:bg-white/5"
-          aria-label="Open cart"
-          style={{ touchAction: 'manipulation' }}
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
-          </svg>
-          {cartCount > 0 && (
-            <span className="absolute top-0.5 right-0.5 w-4 h-4 flex items-center justify-center bg-[#843c2d] text-[#ede8df] text-[9px] font-bold rounded-full">
-              {cartCount > 9 ? '9+' : cartCount}
-            </span>
-          )}
-        </button>
+          {/* Cart button */}
+          <button
+            onClick={openCart}
+            className="relative w-10 h-10 flex items-center justify-center text-[#ede8df]/60 hover:text-[#ede8df] transition-colors rounded-full hover:bg-white/5"
+            aria-label="Open cart"
+            style={{ touchAction: 'manipulation' }}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+            </svg>
+            {cartCount > 0 && (
+              <span className="absolute top-0.5 right-0.5 w-4 h-4 flex items-center justify-center bg-[#843c2d] text-[#ede8df] text-[9px] font-bold rounded-full">
+                {cartCount > 9 ? '9+' : cartCount}
+              </span>
+            )}
+          </button>
+        </div>
       </header>
 
       {/* View toggle button - positioned under header */}
@@ -313,14 +316,6 @@ export default function MaisonModal() {
                       </div>
                     )}
 
-                    {/* Bottom gradient overlay with product info */}
-                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent pt-12 pb-3 px-3">
-                      <p className="text-[#ede8df] text-xs font-medium truncate leading-tight">{product.title}</p>
-                      {product.price !== null && (
-                        <p className="text-[#ede8df]/70 text-[11px] mt-0.5">${product.price.toFixed(2)}</p>
-                      )}
-                    </div>
-
                     {/* Swipe indicator - bottom right */}
                     <div className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
                       <div className="w-6 h-6 flex items-center justify-center glass-surface-light rounded-full border border-white/10">
@@ -388,15 +383,7 @@ export default function MaisonModal() {
             rel="noopener noreferrer"
             className="text-[10px] text-[#ede8df]/50 hover:text-[#ede8df]/80 transition-colors uppercase tracking-wider"
           >
-            Shipping
-          </a>
-          <a
-            href="https://odubostudio.myshopify.com/policies/refund-policy"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[10px] text-[#ede8df]/50 hover:text-[#ede8df]/80 transition-colors uppercase tracking-wider"
-          >
-            Refunds
+            Shipping & Returns
           </a>
         </div>
         <p className="text-center text-[9px] text-[#ede8df]/30 tracking-wider">

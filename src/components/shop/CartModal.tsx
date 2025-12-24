@@ -253,15 +253,7 @@ export default function CartModal() {
               rel="noopener noreferrer"
               className="text-[9px] text-[#b2a491]/40 hover:text-[#b2a491]/70 transition-colors uppercase tracking-wider"
             >
-              Shipping
-            </a>
-            <a
-              href="https://odubostudio.myshopify.com/policies/refund-policy"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[9px] text-[#b2a491]/40 hover:text-[#b2a491]/70 transition-colors uppercase tracking-wider"
-            >
-              Refunds
+              Shipping & Returns
             </a>
           </div>
         </div>

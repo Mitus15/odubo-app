@@ -83,34 +83,54 @@ export default function AuthModal() {
     close,
   } = useAuthModal();
 
-  // Login form state
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  
-  // Check if user is logged in via URL parameter
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  
+
+  // Customer login state via httpOnly cookie
+  const [customerData, setCustomerData] = useState<{ email: string } | null>(null);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+
+  // Check if user is logged in via cookie
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      setIsLoggedIn(params.get('logged_in') === '1');
-    }
+    const checkAuth = async () => {
+      try {
+        const res = await fetch('/api/auth/customer-status');
+        const data = await res.json() as { loggedIn: boolean; email?: string };
+        if (data.loggedIn && data.email) {
+          setCustomerData({ email: data.email });
+        }
+      } catch {
+        // Silent fail
+      } finally {
+        setCheckingAuth(false);
+      }
+    };
+    checkAuth();
   }, []);
+
+  // Helper to extract first name from email
+  const getFirstName = (emailAddress: string) => {
+    const localPart = emailAddress.split('@')[0];
+    // Handle formats like john.doe, john_doe, johndoe
+    const name = localPart.split('.')[0].split('_')[0];
+    // Capitalize first letter
+    return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+  };
+
+  const displayName = customerData?.email ? getFirstName(customerData.email) : '';
+  const isLoggedIn = !!customerData;
+
+  // Handle customer sign out
+  const handleSignOut = async () => {
+    try {
+      await fetch('/api/auth/customer-logout', { method: 'POST' });
+      setCustomerData(null);
+    } catch {
+      // Silent fail - cookie will expire anyway
+    }
+  };
 
   // Swipe-to-dismiss
   const containerRef = useRef<HTMLDivElement>(null);
   const [dragY, setDragY] = useState(0);
-
-  // Reset form on view change
-  useEffect(() => {
-    if (currentView === 'signin' || currentView === 'signup') {
-      setEmail('');
-      setPassword('');
-      setError(null);
-    }
-  }, [currentView]);
 
   const handleDragEnd = useCallback((_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     if (info.offset.y > 150 || info.velocity.y > 500) {
@@ -125,47 +145,29 @@ export default function AuthModal() {
     window.location.href = 'https://account.odubo.studio/login';
   };
 
-  const handleAdminLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch('/api/users', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'login', email, password })
-      });
-      const data = await res.json() as { token?: string; is_admin?: boolean; error?: string };
-      if (!res.ok) throw new Error(data?.error || 'Login failed');
-
-      if (data.token) localStorage.setItem('token', data.token);
-
-      close();
-      // Optionally redirect for admins
-      if (data.is_admin) {
-        window.location.href = '/admin';
-      }
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Login failed');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const renderSignIn = () => (
     <div className="px-6 pb-8">
-      {/* Header */}
+      {/* Header - personalized when logged in */}
       <div className="text-center mb-6">
         <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-white/5 border border-white/10 flex items-center justify-center">
           <svg className="w-6 h-6 text-[#843c2d]" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
           </svg>
         </div>
-        <h2 className="text-xl font-medium text-white">Sign In</h2>
+        {isLoggedIn ? (
+          <h2 className="text-xl font-medium text-white">Hi, {displayName}</h2>
+        ) : (
+          <h2 className="text-xl font-medium text-white">Sign In</h2>
+        )}
       </div>
 
       {/* Shopify login/account access */}
-      {isLoggedIn ? (
+      {checkingAuth ? (
+        <div className="flex justify-center py-4">
+          <div className="w-6 h-6 border-2 border-[#843c2d] border-t-transparent rounded-full animate-spin" />
+        </div>
+      ) : isLoggedIn ? (
         <>
           <a
             href="https://account.odubo.studio"
@@ -203,61 +205,23 @@ export default function AuthModal() {
         </>
       )}
 
-      {/* Divider */}
-      <div className="relative mb-6">
-        <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-white/10"></div>
-        </div>
-        <div className="relative flex justify-center">
-          <span className="px-3 text-xs text-white/40 bg-[#0f0d0c]">or</span>
-        </div>
-      </div>
-
-      {/* Admin login */}
-      <form onSubmit={handleAdminLogin} className="space-y-3">
-        <p className="text-[10px] text-white/40 text-center uppercase tracking-wider">Admin Access</p>
-
-        <input
-          value={email}
-          onChange={e => setEmail(e.target.value)}
-          type="email"
-          required
-          className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/30 text-sm focus:outline-none focus:ring-2 focus:ring-[#843c2d]/50"
-          placeholder="Email"
-        />
-
-        <input
-          value={password}
-          onChange={e => setPassword(e.target.value)}
-          type="password"
-          required
-          className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/30 text-sm focus:outline-none focus:ring-2 focus:ring-[#843c2d]/50"
-          placeholder="Password"
-        />
-
-        {error && (
-          <div className="px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/30 text-red-300 text-sm">
-            {error}
-          </div>
-        )}
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full py-3 rounded-xl bg-white/5 border border-white/10 text-white font-medium hover:bg-white/10 transition-colors disabled:opacity-50"
-        >
-          {loading ? 'Signing in...' : 'Admin Sign In'}
-        </button>
-      </form>
-
       {/* Footer links */}
       <div className="mt-6 space-y-3">
-        <button
-          onClick={() => setView('signup')}
-          className="w-full text-sm text-white/50 hover:text-white transition-colors"
-        >
-          Don't have an account? <span className="text-white/80">Create one</span>
-        </button>
+        {isLoggedIn ? (
+          <button
+            onClick={handleSignOut}
+            className="w-full text-sm text-white/50 hover:text-white transition-colors"
+          >
+            Sign Out
+          </button>
+        ) : (
+          <button
+            onClick={() => setView('signup')}
+            className="w-full text-sm text-white/50 hover:text-white transition-colors"
+          >
+            Don't have an account? <span className="text-white/80">Create one</span>
+          </button>
+        )}
 
         <div className="flex justify-center gap-4 text-[10px] text-white/40">
           <button onClick={() => { setView('legal'); setLegalTab('privacy'); }} className="hover:text-white transition-colors">
@@ -269,7 +233,7 @@ export default function AuthModal() {
           </button>
           <span className="text-white/20">|</span>
           <button onClick={() => { setView('legal'); setLegalTab('shipping'); }} className="hover:text-white transition-colors">
-            Shipping
+            Shipping & Returns
           </button>
         </div>
       </div>

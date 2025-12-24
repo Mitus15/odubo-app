@@ -120,9 +120,9 @@ export default function HomePageClient({ verseOfTheDay, initialClipId }: HomePag
       {/* Animated film grain overlay */}
       <FilmGrain opacity={0.03} />
 
-      {/* Clips layer - edge to edge */}
+      {/* Clips layer - edge to edge, offset for sidebar on desktop */}
       <div
-        className="fixed inset-0 bg-black"
+        className="fixed inset-0 lg:left-20 xl:left-64 bg-black"
         style={{
           overscrollBehavior: 'none',
         }}
@@ -172,7 +172,7 @@ export default function HomePageClient({ verseOfTheDay, initialClipId }: HomePag
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
-            className="fixed inset-0 flex items-center justify-center px-6 bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 lg:left-20 xl:left-64 flex items-center justify-center px-6 bg-black/60 backdrop-blur-sm"
             style={{ top: 0, zIndex: 35 }}
             onClick={handleBackdropClick}
           >
