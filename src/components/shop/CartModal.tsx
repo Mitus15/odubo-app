@@ -58,6 +58,7 @@ export default function CartModal() {
       exit={{ opacity: 0, x: '100%' }}
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
       className="fixed inset-0 z-[130] flex flex-col bg-gradient-to-br from-[#302927]/95 via-[#1a1817] to-[#302927]/95"
+      style={{ touchAction: 'pan-y' }}
     >
       {/* Header - glass surface */}
       <header

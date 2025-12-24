@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
       }
     };
 
-    const response = await fetch(`${STORE_URL}/api/2024-10/graphql.json`, {
+    const response = await fetch(`${STORE_URL}/api/2024-07/graphql.json`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
