@@ -19,6 +19,16 @@ export default function MaisonModal() {
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [selectedProductIndex, setSelectedProductIndex] = useState(0);
 
+  // Screen size detection for desktop vs mobile behavior
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  useEffect(() => {
+    const checkDesktop = () => setIsDesktop(window.innerWidth >= 768);
+    checkDesktop();
+    window.addEventListener('resize', checkDesktop);
+    return () => window.removeEventListener('resize', checkDesktop);
+  }, []);
+
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
 
@@ -134,24 +144,25 @@ export default function MaisonModal() {
     };
   }, [hasNextPage, loading, loadingMore, endCursor, fetchProducts]);
 
-  // Handle opening a product from grid - switches to swipe view
+  // Handle opening a product from grid - desktop uses ProductDetailModal, mobile uses swipe view
   const handleProductClick = useCallback((handle: string, index: number) => {
-    setSelectedProductIndex(index);
-    setViewMode('swipe');
-  }, []);
-
-  // Toggle view mode
-  const toggleViewMode = useCallback(() => {
-    setViewMode(prev => prev === 'grid' ? 'swipe' : 'grid');
-  }, []);
+    if (isDesktop) {
+      // Desktop: Open ProductDetailModal via context
+      openProduct(handle);
+    } else {
+      // Mobile: Use swipe feed
+      setSelectedProductIndex(index);
+      setViewMode('swipe');
+    }
+  }, [isDesktop, openProduct]);
 
   // Exit swipe view
   const exitSwipeView = useCallback(() => {
     setViewMode('grid');
   }, []);
 
-  // Render swipe feed when in swipe mode
-  if (viewMode === 'swipe' && products.length > 0) {
+  // Render swipe feed when in swipe mode (mobile only)
+  if (!isDesktop && viewMode === 'swipe' && products.length > 0) {
     return (
       <ProductFeed
         products={products}
@@ -224,26 +235,6 @@ export default function MaisonModal() {
           </button>
         </div>
       </header>
-
-      {/* View toggle button - positioned under header */}
-      <div className="px-4 pt-3 pb-4">
-        <button
-          onClick={toggleViewMode}
-          className="w-10 h-10 flex items-center justify-center glass-surface-light rounded-full border border-white/10 text-[#ede8df]/70 hover:text-[#ede8df] transition-all"
-          style={{ touchAction: 'manipulation' }}
-          aria-label={viewMode === 'grid' ? 'Switch to swipe view' : 'Switch to grid view'}
-        >
-          {viewMode === 'grid' ? (
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 7.5h-.75A2.25 2.25 0 004.5 9.75v7.5a2.25 2.25 0 002.25 2.25h7.5a2.25 2.25 0 002.25-2.25v-7.5a2.25 2.25 0 00-2.25-2.25h-.75m-6 3.75l3 3m0 0l3-3m-3 3V1.5m6 9h.75a2.25 2.25 0 012.25 2.25v7.5a2.25 2.25 0 01-2.25 2.25h-7.5a2.25 2.25 0 01-2.25-2.25v-.75" />
-            </svg>
-          ) : (
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
-            </svg>
-          )}
-        </button>
-      </div>
 
       {/* Content - with space for persistent footer */}
       <div

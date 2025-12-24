@@ -88,6 +88,16 @@ export default function AuthModal() {
   const [customerData, setCustomerData] = useState<{ email: string } | null>(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
 
+  // Screen size detection for desktop vs mobile behavior
+  const [isMobile, setIsMobile] = useState(true);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   // Check if user is logged in via cookie
   useEffect(() => {
     const checkAuth = async () => {
@@ -411,19 +421,19 @@ export default function AuthModal() {
             animate={{ y: dragY }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            drag="y"
+            drag={isMobile ? "y" : false}
             dragConstraints={{ top: 0, bottom: 0 }}
             dragElastic={{ top: 0.1, bottom: 0.5 }}
             onDrag={(_, info) => setDragY(Math.max(0, info.offset.y))}
             onDragEnd={handleDragEnd}
-            className="fixed bottom-0 left-0 right-0 z-[110] bg-gradient-to-br from-[#1a1714] via-[#0f0d0c] to-[#1a1714] border-t border-white/10 rounded-t-3xl overflow-hidden"
+            className="fixed bottom-0 left-0 right-0 md:bottom-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:max-w-md md:rounded-3xl z-[110] bg-gradient-to-br from-[#1a1714] via-[#0f0d0c] to-[#1a1714] border-t md:border border-white/10 rounded-t-3xl overflow-hidden"
             style={{
               maxHeight: '85vh',
               paddingBottom: 'env(safe-area-inset-bottom, 0px)',
             }}
           >
-            {/* Drag handle */}
-            <div className="flex justify-center pt-3 pb-2">
+            {/* Drag handle - mobile only */}
+            <div className="md:hidden flex justify-center pt-3 pb-2">
               <div className="w-10 h-1 rounded-full bg-white/20" />
             </div>
 
