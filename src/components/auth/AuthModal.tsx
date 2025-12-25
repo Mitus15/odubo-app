@@ -150,9 +150,12 @@ export default function AuthModal() {
   }, [close]);
 
   const handleShopifyLogin = () => {
-    // New Customer Accounts - just redirect to Shopify's hosted login
+    // New Customer Accounts - redirect to Shopify's hosted login with return_to
     close();
-    window.location.href = 'https://account.odubo.studio/login';
+    const currentUrl = window.location.href;
+    const accountDomain = process.env.NEXT_PUBLIC_ACCOUNT_DOMAIN || 'https://account.odubo.studio';
+    const returnTo = encodeURIComponent(currentUrl);
+    window.location.href = `${accountDomain}/login?return_to=${returnTo}`;
   };
 
 

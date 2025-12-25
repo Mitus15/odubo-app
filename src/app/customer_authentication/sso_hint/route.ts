@@ -36,33 +36,51 @@ export async function GET(request: NextRequest) {
         timestamp: Date.now()
       }),
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      secure: process.env.COOKIE_SECURE === 'true' || process.env.NODE_ENV === 'production',
+      sameSite: (process.env.COOKIE_SAME_SITE as 'lax' | 'strict' | 'none') || 'lax',
+      domain: process.env.COOKIE_DOMAIN || '.odubo.studio', // ⭐ CRITICAL: Share cookie across all subdomains
       maxAge: 30 * 24 * 60 * 60, // 30 days
       path: '/'
     });
-    console.log('🍪 Set shopify_customer cookie for:', email.slice(0, 3) + '...');
+    console.log('🍪 Set shopify_customer cookie for:', email.slice(0, 3) + '...', `(domain: ${process.env.COOKIE_DOMAIN || '.odubo.studio'})`);
   }
+
+  // Helper functions for redirect security
+  const getAllowedDomains = (): string[] => {
+    const envDomains = process.env.ALLOWED_REDIRECT_DOMAINS ||
+      'odubo.studio,account.odubo.studio,checkout.odubo.studio';
+    return envDomains.split(',').map(d => d.trim());
+  };
+
+  const isAllowedRedirect = (url: string): boolean => {
+    try {
+      const parsedUrl = new URL(url);
+      return getAllowedDomains().some(domain => parsedUrl.hostname === domain);
+    } catch {
+      return false;
+    }
+  };
 
   // Check if there's a return_to URL from Shopify
   const returnTo = searchParams.get('return_to');
+  const mainDomain = process.env.NEXT_PUBLIC_MAIN_DOMAIN || 'https://odubo.studio';
+  const accountDomain = process.env.NEXT_PUBLIC_ACCOUNT_DOMAIN?.replace('https://', '') ||
+    'account.odubo.studio';
 
-  // If Shopify provided a return URL and it's to their account page, honor it
-  // But prevent infinite loops by checking for new_login parameter
-  if (returnTo) {
+  // If Shopify provided a return URL, validate and honor it
+  if (returnTo && isAllowedRedirect(returnTo)) {
     try {
       const returnUrl = new URL(returnTo);
 
-      // Only allow Shopify account subdomain to prevent redirect loops to our own domain
-      if (returnUrl.hostname === 'account.odubo.studio') {
-        // If it has new_login=1, it means they just logged in - redirect to home instead
-        // to prevent them from being stuck in the account portal
-        if (returnUrl.searchParams.get('new_login') === '1') {
-          // Redirect without URL param - cookie handles auth now
-          return NextResponse.redirect('https://odubo.studio/');
-        }
-        return NextResponse.redirect(returnUrl.toString());
+      // Prevent infinite loop to account portal
+      if (returnUrl.hostname === accountDomain &&
+          returnUrl.searchParams.get('new_login') === '1') {
+        console.log('🔄 Preventing infinite loop - redirecting to main domain instead');
+        return NextResponse.redirect(mainDomain);
       }
+
+      console.log('✅ Redirecting to allowed return_to:', returnUrl.toString());
+      return NextResponse.redirect(returnUrl.toString());
     } catch (e) {
       // Invalid URL, fall through to default redirect
       console.error('Invalid return_to URL:', returnTo);
@@ -70,11 +88,13 @@ export async function GET(request: NextRequest) {
   }
 
   // Default: redirect to home page (cookie handles auth state now)
-  return NextResponse.redirect('https://odubo.studio/');
+  console.log('🏠 Redirecting to main domain');
+  return NextResponse.redirect(mainDomain);
 }
 
 // Also handle POST in case Shopify sends data that way
 export async function POST() {
+  const mainDomain = process.env.NEXT_PUBLIC_MAIN_DOMAIN || 'https://odubo.studio';
   // Redirect POST requests to home
-  return NextResponse.redirect('https://odubo.studio/');
+  return NextResponse.redirect(mainDomain);
 }

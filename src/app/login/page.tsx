@@ -34,8 +34,11 @@ export default function LoginPage() {
   };
 
   const handleShopifyLogin = () => {
-    // New Customer Accounts - just redirect to Shopify's hosted login
-    window.location.href = 'https://account.odubo.studio/login';
+    // New Customer Accounts - redirect to Shopify's hosted login with return_to
+    const accountDomain = process.env.NEXT_PUBLIC_ACCOUNT_DOMAIN || 'https://account.odubo.studio';
+    const mainDomain = process.env.NEXT_PUBLIC_MAIN_DOMAIN || 'https://odubo.studio';
+    const returnTo = encodeURIComponent(mainDomain);
+    window.location.href = `${accountDomain}/login?return_to=${returnTo}`;
   };
 
   return (

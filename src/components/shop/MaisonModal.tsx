@@ -209,7 +209,7 @@ export default function MaisonModal() {
         <div className="flex items-center gap-2">
           {/* Account link - desktop only */}
           <a
-            href="https://account.odubo.studio"
+            href={process.env.NEXT_PUBLIC_ACCOUNT_DOMAIN || 'https://account.odubo.studio'}
             className="hidden md:flex w-10 h-10 items-center justify-center text-[#ede8df]/60 hover:text-[#ede8df] transition-colors rounded-full hover:bg-white/5"
             aria-label="Account"
           >

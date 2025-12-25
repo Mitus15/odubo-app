@@ -11,7 +11,8 @@ import { useEffect } from 'react';
 export default function AccountPage() {
   useEffect(() => {
     // Redirect to Shopify's hosted account page
-    window.location.href = 'https://account.odubo.studio';
+    const accountDomain = process.env.NEXT_PUBLIC_ACCOUNT_DOMAIN || 'https://account.odubo.studio';
+    window.location.href = accountDomain;
   }, []);
 
   // Show loading while redirecting

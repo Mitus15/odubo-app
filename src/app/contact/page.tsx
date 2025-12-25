@@ -95,7 +95,7 @@ export default function ContactPage() {
         {/* Quick Links */}
         <div className="grid grid-cols-2 gap-3 mb-10">
           <a
-            href="https://account.odubo.studio/login"
+            href={`${process.env.NEXT_PUBLIC_ACCOUNT_DOMAIN || 'https://account.odubo.studio'}/login`}
             className="glass-surface border border-[#502d26]/30 rounded-xl p-4 hover:border-[#843c2d]/50 transition-colors group"
           >
             <div className="flex items-center gap-3">
@@ -111,7 +111,7 @@ export default function ContactPage() {
             </div>
           </a>
           <a
-            href="https://account.odubo.studio/login"
+            href={`${process.env.NEXT_PUBLIC_ACCOUNT_DOMAIN || 'https://account.odubo.studio'}/login`}
             className="glass-surface border border-[#502d26]/30 rounded-xl p-4 hover:border-[#843c2d]/50 transition-colors group"
           >
             <div className="flex items-center gap-3">
