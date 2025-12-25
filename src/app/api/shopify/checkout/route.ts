@@ -9,14 +9,14 @@ interface CheckoutRequestBody {
   lineItems: LineItem[];
 }
 
-interface CheckoutResponse {
+interface CartResponse {
   data?: {
-    checkoutCreate: {
-      checkout: {
+    cartCreate: {
+      cart: {
         id: string;
-        webUrl: string;
+        checkoutUrl: string;
       };
-      checkoutUserErrors: Array<{
+      userErrors: Array<{
         code: string;
         field: string[];
         message: string;
@@ -56,15 +56,15 @@ export async function POST(request: NextRequest) {
 
     console.log('Creating checkout with store:', STORE_URL);
 
-    // Create checkout with Storefront API
+    // Create cart with Storefront API (new Cart API, not deprecated Checkout API)
     const mutation = `#graphql
-      mutation checkoutCreate($input: CheckoutCreateInput!) {
-        checkoutCreate(input: $input) {
-          checkout {
+      mutation cartCreate($input: CartInput!) {
+        cartCreate(input: $input) {
+          cart {
             id
-            webUrl
+            checkoutUrl
           }
-          checkoutUserErrors {
+          userErrors {
             code
             field
             message
@@ -75,12 +75,12 @@ export async function POST(request: NextRequest) {
 
     const variables = {
       input: {
-        lineItems: lineItems.map((item: any) => ({
-          variantId: item.variantId,
+        lines: lineItems.map((item: any) => ({
+          merchandiseId: item.variantId,
           quantity: item.quantity
         })),
         // Add custom attributes for tracking
-        customAttributes: [
+        attributes: [
           {
             key: '_source',
             value: 'odubo_headless_store'
@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
     const responseText = await response.text();
     console.log('Shopify response body:', responseText);
 
-    let parsedResponse: CheckoutResponse;
+    let parsedResponse: CartResponse;
     try {
       parsedResponse = JSON.parse(responseText);
     } catch (e) {
@@ -119,10 +119,10 @@ export async function POST(request: NextRequest) {
 
     const { data, errors } = parsedResponse;
 
-    if (errors || (data?.checkoutCreate?.checkoutUserErrors?.length ?? 0) > 0) {
-      console.error('Checkout creation errors:', JSON.stringify(errors || data?.checkoutCreate?.checkoutUserErrors, null, 2));
+    if (errors || (data?.cartCreate?.userErrors?.length ?? 0) > 0) {
+      console.error('Cart creation errors:', JSON.stringify(errors || data?.cartCreate?.userErrors, null, 2));
       return NextResponse.json(
-        { error: 'Failed to create checkout', details: errors || data?.checkoutCreate?.checkoutUserErrors },
+        { error: 'Failed to create cart', details: errors || data?.cartCreate?.userErrors },
         { status: 500 }
       );
     }
@@ -130,26 +130,26 @@ export async function POST(request: NextRequest) {
     if (!data) {
       console.error('No data in response:', responseText);
       return NextResponse.json(
-        { error: 'No data returned from checkout creation', details: responseText.substring(0, 200) },
+        { error: 'No data returned from cart creation', details: responseText.substring(0, 200) },
         { status: 500 }
       );
     }
 
-    if (!data.checkoutCreate?.checkout?.webUrl) {
-      console.error('No webUrl in checkout:', JSON.stringify(data, null, 2));
+    if (!data.cartCreate?.cart?.checkoutUrl) {
+      console.error('No checkoutUrl in cart:', JSON.stringify(data, null, 2));
       return NextResponse.json(
         { error: 'No checkout URL in response', details: data },
         { status: 500 }
       );
     }
 
-    const checkoutUrl = data.checkoutCreate.checkout.webUrl;
+    const checkoutUrl = data.cartCreate.cart.checkoutUrl;
 
-    // The webUrl will point to your custom domain if configured
+    // The checkoutUrl will point to your custom domain if configured
     // Otherwise it points to myshopify.com domain
-    return NextResponse.json({ 
+    return NextResponse.json({
       checkoutUrl,
-      checkoutId: data.checkoutCreate.checkout.id 
+      cartId: data.cartCreate.cart.id
     });
 
   } catch (error) {
