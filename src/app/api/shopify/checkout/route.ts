@@ -143,14 +143,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    let checkoutUrl = data.cartCreate.cart.checkoutUrl;
+    const checkoutUrl = data.cartCreate.cart.checkoutUrl;
 
-    // Replace custom domain with myshopify.com domain for checkout
-    // Shopify checkout only works on the myshopify.com domain
-    checkoutUrl = checkoutUrl.replace('https://odubo.studio', 'https://odubostudio.myshopify.com');
+    console.log('Shopify returned checkout URL:', checkoutUrl);
 
-    console.log('Final checkout URL:', checkoutUrl);
-
+    // Use the URL exactly as Shopify provides it
+    // This should be a valid checkout URL regardless of custom domain settings
     return NextResponse.json({
       checkoutUrl,
       cartId: data.cartCreate.cart.id
