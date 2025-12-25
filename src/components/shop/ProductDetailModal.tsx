@@ -316,58 +316,58 @@ export default function ProductDetailModal({ productHandle }: ProductDetailModal
                 </div>
               )}
 
-              {/* Legal & Policies */}
-              <div className="pt-6 mt-6 border-t border-[#502d26]/20">
-                <div className="flex flex-wrap justify-center gap-x-4 gap-y-2">
-                  <a
-                    href="https://odubostudio.myshopify.com/policies/shipping-policy"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-[10px] text-[#b2a491]/50 hover:text-[#b2a491] transition-colors uppercase tracking-wider"
-                  >
-                    Shipping & Returns
-                  </a>
-                  <a
-                    href="https://odubostudio.myshopify.com/policies/privacy-policy"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-[10px] text-[#b2a491]/50 hover:text-[#b2a491] transition-colors uppercase tracking-wider"
-                  >
-                    Privacy
-                  </a>
-                  <a
-                    href="https://odubostudio.myshopify.com/policies/terms-of-service"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-[10px] text-[#b2a491]/50 hover:text-[#b2a491] transition-colors uppercase tracking-wider"
-                  >
-                    Terms
-                  </a>
-                </div>
+              {/* Add to Bag Button - moved from bottom */}
+              <div className="pt-6 mt-6">
+                <button
+                  onClick={handleAddToCart}
+                  disabled={!selectedVariant || selectedVariant.available === false}
+                  className={`w-full py-4 rounded-xl text-xs uppercase tracking-[0.2em] font-medium transition-all ${
+                    selectedVariant?.available !== false
+                      ? 'bg-[#ede8df] text-[#302927] active:scale-[0.98] hover:bg-[#ede8df]/90'
+                      : 'bg-[#302927]/50 text-[#b2a491]/30 cursor-not-allowed'
+                  }`}
+                  style={{ touchAction: 'manipulation' }}
+                >
+                  {addFeedback || (selectedVariant?.available === false ? 'Sold Out' : 'Add to Bag')}
+                </button>
               </div>
             </div>
           </div>
         )}
       </div>
 
-      {/* Fixed bottom CTA - glass with warm accent */}
+      {/* Fixed bottom Legal Links - moved from middle */}
       {product && !loading && !error && (
         <div
           className="px-5 py-4 glass-surface-light border-t border-white/5"
           style={{ paddingBottom: 'max(16px, env(safe-area-inset-bottom, 0px))' }}
         >
-          <button
-            onClick={handleAddToCart}
-            disabled={!selectedVariant || selectedVariant.available === false}
-            className={`w-full py-4 rounded-xl text-xs uppercase tracking-[0.2em] font-medium transition-all ${
-              selectedVariant?.available !== false
-                ? 'bg-[#ede8df] text-[#302927] active:scale-[0.98] hover:bg-[#ede8df]/90'
-                : 'bg-[#302927]/50 text-[#b2a491]/30 cursor-not-allowed'
-            }`}
-            style={{ touchAction: 'manipulation' }}
-          >
-            {addFeedback || (selectedVariant?.available === false ? 'Sold Out' : 'Add to Bag')}
-          </button>
+          <div className="flex flex-wrap justify-center gap-x-4 gap-y-2">
+            <a
+              href="https://odubostudio.myshopify.com/policies/shipping-policy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[10px] text-[#b2a491]/50 hover:text-[#b2a491] transition-colors uppercase tracking-wider"
+            >
+              Shipping & Returns
+            </a>
+            <a
+              href="https://odubostudio.myshopify.com/policies/privacy-policy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[10px] text-[#b2a491]/50 hover:text-[#b2a491] transition-colors uppercase tracking-wider"
+            >
+              Privacy
+            </a>
+            <a
+              href="https://odubostudio.myshopify.com/policies/terms-of-service"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[10px] text-[#b2a491]/50 hover:text-[#b2a491] transition-colors uppercase tracking-wider"
+            >
+              Terms
+            </a>
+          </div>
         </div>
       )}
     </motion.div>
