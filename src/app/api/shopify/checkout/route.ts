@@ -43,7 +43,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const STORE_URL = process.env.SHOPIFY_STORE_URL || 'https://odubostudio.myshopify.com';
+    // Use myshopify.com domain for API calls, not custom domain
+    const STORE_URL = 'https://odubostudio.myshopify.com';
     const STOREFRONT_TOKEN = process.env.NEXT_PUBLIC_SHOPIFY_API_KEY;
 
     if (!STOREFRONT_TOKEN) {
@@ -52,6 +53,8 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    console.log('Creating checkout with store:', STORE_URL);
 
     // Create checkout with Storefront API
     const mutation = `#graphql
@@ -99,19 +102,43 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify({ query: mutation, variables }),
     });
 
-    const { data, errors } = await response.json() as CheckoutResponse;
+    console.log('Shopify response status:', response.status);
+    const responseText = await response.text();
+    console.log('Shopify response body:', responseText);
+
+    let parsedResponse: CheckoutResponse;
+    try {
+      parsedResponse = JSON.parse(responseText);
+    } catch (e) {
+      console.error('Failed to parse Shopify response:', e);
+      return NextResponse.json(
+        { error: 'Invalid response from Shopify', details: responseText.substring(0, 200) },
+        { status: 500 }
+      );
+    }
+
+    const { data, errors } = parsedResponse;
 
     if (errors || (data?.checkoutCreate?.checkoutUserErrors?.length ?? 0) > 0) {
-      console.error('Checkout creation errors:', errors || data?.checkoutCreate?.checkoutUserErrors);
+      console.error('Checkout creation errors:', JSON.stringify(errors || data?.checkoutCreate?.checkoutUserErrors, null, 2));
       return NextResponse.json(
-        { error: 'Failed to create checkout' },
+        { error: 'Failed to create checkout', details: errors || data?.checkoutCreate?.checkoutUserErrors },
         { status: 500 }
       );
     }
 
     if (!data) {
+      console.error('No data in response:', responseText);
       return NextResponse.json(
-        { error: 'No data returned from checkout creation' },
+        { error: 'No data returned from checkout creation', details: responseText.substring(0, 200) },
+        { status: 500 }
+      );
+    }
+
+    if (!data.checkoutCreate?.checkout?.webUrl) {
+      console.error('No webUrl in checkout:', JSON.stringify(data, null, 2));
+      return NextResponse.json(
+        { error: 'No checkout URL in response', details: data },
         { status: 500 }
       );
     }
