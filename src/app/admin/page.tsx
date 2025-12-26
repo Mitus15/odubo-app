@@ -182,8 +182,8 @@ const navItems: NavItem[] = [
       { id: 'live', label: 'Live Streams', icon: Icons.live },
     ]
   },
-  { 
-    id: 'commerce', 
+  {
+    id: 'commerce',
     label: 'Commerce',
     icon: Icons.commerce,
     children: [
@@ -191,6 +191,7 @@ const navItems: NavItem[] = [
       { id: 'orders', label: 'Orders', icon: Icons.orders },
       { id: 'customers', label: 'Customers', icon: Icons.customers },
       { id: 'discounts', label: 'Discounts', icon: Icons.discounts },
+      { id: 'store-settings', label: 'Store Settings', icon: Icons.system },
     ]
   },
   { 
