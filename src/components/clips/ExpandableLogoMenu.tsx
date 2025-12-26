@@ -334,7 +334,7 @@ export default function ExpandableLogoMenu({
   const menuVariants = useMemo(() => ({
     collapsed: {
       transition: {
-        staggerChildren: 0.03,
+        staggerChildren: 0.025, // Slightly faster stagger on close
         staggerDirection: -1,
         when: 'afterChildren',
       },
@@ -356,8 +356,8 @@ export default function ExpandableLogoMenu({
       y: -6,
       transition: {
         type: 'tween',
-        duration: 0.15,
-        ease: [0.32, 0.72, 0, 1],
+        duration: 0.18,
+        ease: [0.4, 0, 0.2, 1], // Smoother ease-out for closing
       },
     },
     expanded: {
@@ -372,16 +372,16 @@ export default function ExpandableLogoMenu({
     },
   }), []);
 
-  // Optimized: faster spring with lower mass
+  // Optimized: faster spring with lower mass, smoother close
   const logoVariants = useMemo(() => ({
     collapsed: {
       rotate: 0,
       scale: 1,
       transition: {
         type: 'spring',
-        stiffness: 400,
-        damping: 40,
-        mass: 0.5,
+        stiffness: 500,
+        damping: 35,
+        mass: 0.4,
       },
     },
     expanded: {
