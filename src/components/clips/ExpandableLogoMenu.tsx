@@ -52,10 +52,6 @@ export default function ExpandableLogoMenu({
   const [isDragging, setIsDragging] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false); // For backdrop-blur optimization
 
-  // Store access state
-  const [canAccessStore, setCanAccessStore] = useState(false);
-  const [checkingStore, setCheckingStore] = useState(true);
-
   const menuRef = useRef<HTMLDivElement>(null);
   const dragStartTime = useRef<number>(0);
 
@@ -64,7 +60,7 @@ export default function ExpandableLogoMenu({
   const y = useMotionValue(0);
 
   const { openHub } = useUnifiedMedia();
-  const { openMaison, cartCount } = useOmniShop();
+  const { openMaison, cartCount, storeAccessible, checkingStoreAccess } = useOmniShop();
 
   // ============================================================================
   // Position Management
@@ -80,26 +76,6 @@ export default function ExpandableLogoMenu({
     } catch {
       // Ignore localStorage errors
     }
-  }, []);
-
-  // Check store access on mount
-  useEffect(() => {
-    async function checkStoreAccess() {
-      try {
-        const res = await fetch('/api/store/status');
-        if (res.ok) {
-          const data = await res.json();
-          setCanAccessStore(data.accessGranted);
-        }
-      } catch (error) {
-        console.error('Failed to check store status:', error);
-        setCanAccessStore(false);
-      } finally {
-        setCheckingStore(false);
-      }
-    }
-
-    checkStoreAccess();
   }, []);
 
   // Save position to localStorage
@@ -521,7 +497,7 @@ export default function ExpandableLogoMenu({
                 }}
               >
               {/* Shop button with BAAD logo - conditionally rendered */}
-              {!checkingStore && canAccessStore && (
+              {!checkingStoreAccess && storeAccessible && (
                 <motion.button
                   variants={itemVariants}
                   onClick={handleShop}
@@ -570,18 +546,20 @@ export default function ExpandableLogoMenu({
                 </svg>
               </motion.button>
 
-              {/* Account button */}
-              <motion.button
-                variants={itemVariants}
-                onClick={handleAccount}
-                className="holo-button"
-                aria-label="Account"
-                style={{ touchAction: 'manipulation', willChange: 'transform, opacity', transform: 'translateZ(0)' }}
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-                </svg>
-              </motion.button>
+              {/* Account button - only shown when store is enabled */}
+              {!checkingStoreAccess && storeAccessible && (
+                <motion.button
+                  variants={itemVariants}
+                  onClick={handleAccount}
+                  className="holo-button"
+                  aria-label="Account"
+                  style={{ touchAction: 'manipulation', willChange: 'transform, opacity', transform: 'translateZ(0)' }}
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                  </svg>
+                </motion.button>
+              )}
             </motion.div>
             </>
           )}

@@ -3,6 +3,7 @@
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useOmniShop } from '@/contexts/OmniShopContext';
+import { useMemo } from 'react';
 
 /**
  * DesktopSidebar - Persistent navigation for desktop (lg+)
@@ -13,59 +14,66 @@ import { useOmniShop } from '@/contexts/OmniShopContext';
  * - Nav items: Home, Store, Moments, Account
  * - Cart badge on Store item
  * - Hidden on mobile (< 1024px)
+ * - Store/Account hidden when store is disabled
  */
 export default function DesktopSidebar() {
   const pathname = usePathname();
-  const { openMaison, cartCount } = useOmniShop();
+  const { openMaison, cartCount, storeAccessible, checkingStoreAccess } = useOmniShop();
 
   // Hide on admin pages (they use AdminSidebar instead)
   if (pathname.startsWith('/admin') || pathname.startsWith('/featured/manage')) {
     return null;
   }
 
-  const navItems = [
-    {
-      id: 'home',
-      label: 'Home',
-      href: '/',
-      icon: (
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
-        </svg>
-      ),
-    },
-    {
-      id: 'store',
-      label: 'Store',
-      action: openMaison,
-      badge: cartCount,
-      icon: (
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
-        </svg>
-      ),
-    },
-    {
-      id: 'moments',
-      label: 'Moments',
-      href: '/moments',
-      icon: (
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
-        </svg>
-      ),
-    },
-    {
-      id: 'account',
-      label: 'Account',
-      href: 'https://account.odubo.studio',
-      icon: (
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M17.982 18.725A7.488 7.488 0 0012 15.75a7.488 7.488 0 00-5.982 2.975m11.963 0a9 9 0 10-11.963 0m11.963 0A8.966 8.966 0 0112 21a8.966 8.966 0 01-5.982-2.275M15 9.75a3 3 0 11-6 0 3 3 0 016 0z" />
-        </svg>
-      ),
-    },
-  ];
+  // Nav items - memoized to filter based on store access
+  const navItems = useMemo(() => {
+    const items = [
+      {
+        id: 'home',
+        label: 'Home',
+        href: '/',
+        icon: (
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
+          </svg>
+        ),
+      },
+      // Store - only shown when store is enabled
+      ...(!checkingStoreAccess && storeAccessible ? [{
+        id: 'store',
+        label: 'Store',
+        action: openMaison,
+        badge: cartCount,
+        icon: (
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+          </svg>
+        ),
+      }] : []),
+      {
+        id: 'moments',
+        label: 'Moments',
+        href: '/moments',
+        icon: (
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+          </svg>
+        ),
+      },
+      // Account - only shown when store is enabled
+      ...(!checkingStoreAccess && storeAccessible ? [{
+        id: 'account',
+        label: 'Account',
+        href: 'https://account.odubo.studio',
+        icon: (
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M17.982 18.725A7.488 7.488 0 0012 15.75a7.488 7.488 0 00-5.982 2.975m11.963 0a9 9 0 10-11.963 0m11.963 0A8.966 8.966 0 0112 21a8.966 8.966 0 01-5.982-2.275M15 9.75a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+        ),
+      }] : []),
+    ];
+    return items;
+  }, [checkingStoreAccess, storeAccessible, openMaison, cartCount]);
 
   return (
     <aside className="hidden lg:flex fixed left-0 top-0 bottom-0 w-20 xl:w-64 flex-col bg-[#0d0c0a] border-r border-[#502d26]/20 z-40">

@@ -1,22 +1,15 @@
-'use client';
-
-import { useEffect } from 'react';
+import { redirect } from 'next/navigation';
+import { requireStoreAccess } from '@/lib/storeAccess';
 
 /**
  * Account Page
  * Redirects to Shopify's hosted account portal.
+ * Only accessible when store is enabled (tied to commerce).
  */
-export default function AccountPage() {
-  useEffect(() => {
-    window.location.href = 'https://account.odubo.studio';
-  }, []);
+export default async function AccountPage() {
+  // Check store access - redirects non-admins when store unpublished
+  await requireStoreAccess();
 
-  return (
-    <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-[#302927] via-[#171616] to-[#302927] text-[#ede8df]">
-      <div className="flex flex-col items-center">
-        <div className="w-8 h-8 border-2 border-[#843c2d] border-t-transparent rounded-full animate-spin" />
-        <span className="mt-4 text-[#b2a491] text-sm">Redirecting to account...</span>
-      </div>
-    </div>
-  );
+  // If store is accessible, redirect to Shopify account portal
+  redirect('https://account.odubo.studio');
 }

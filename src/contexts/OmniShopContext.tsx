@@ -46,6 +46,10 @@ interface ModalState {
 }
 
 interface OmniShopContextValue {
+  // Store access
+  storeAccessible: boolean;
+  checkingStoreAccess: boolean;
+
   // Modal stack
   modalStack: ModalState[];
   openMaison: () => void;
@@ -75,6 +79,10 @@ interface OmniShopContextValue {
 const OmniShopContext = createContext<OmniShopContextValue | null>(null);
 
 export function OmniShopProvider({ children }: { children: ReactNode }) {
+  // Store access state
+  const [storeAccessible, setStoreAccessible] = useState(false);
+  const [checkingStoreAccess, setCheckingStoreAccess] = useState(true);
+
   // Modal stack state
   const [modalStack, setModalStack] = useState<ModalState[]>([]);
 
@@ -86,6 +94,26 @@ export function OmniShopProvider({ children }: { children: ReactNode }) {
 
   // Product detail cache
   const [productCache, setProductCache] = useState<Map<string, ProductDetail>>(new Map());
+
+  // Check store access on mount
+  useEffect(() => {
+    async function checkStoreAccess() {
+      try {
+        const res = await fetch('/api/store/status');
+        if (res.ok) {
+          const data = await res.json();
+          setStoreAccessible(data.accessGranted);
+        }
+      } catch (error) {
+        console.error('Failed to check store status:', error);
+        setStoreAccessible(false);
+      } finally {
+        setCheckingStoreAccess(false);
+      }
+    }
+
+    checkStoreAccess();
+  }, []);
 
   // Load cart from localStorage on mount
   useEffect(() => {
@@ -196,6 +224,8 @@ export function OmniShopProvider({ children }: { children: ReactNode }) {
   return (
     <OmniShopContext.Provider
       value={{
+        storeAccessible,
+        checkingStoreAccess,
         modalStack,
         openMaison,
         openProduct,

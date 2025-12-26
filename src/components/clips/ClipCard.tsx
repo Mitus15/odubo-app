@@ -7,6 +7,7 @@ import { attachHls, type HlsHandle } from '@/lib/hlsPlayer';
 import { prefetchFirstSegment } from '@/lib/hlsPrefetch';
 import { getDeviceInfo, getScrollBehavior } from '@/lib/deviceInfo';
 import { useAudio } from '@/contexts/AudioContext';
+import { useOmniShop } from '@/contexts/OmniShopContext';
 import VinylMiniPlayer from '../player/VinylMiniPlayer';
 
 interface ClipCardProps {
@@ -29,6 +30,7 @@ export default function ClipCard({
   onAutoScroll,
 }: ClipCardProps) {
   const { isMuted, armAudio, syncFromVideo, toggleMute } = useAudio();
+  const { storeAccessible } = useOmniShop();
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<HlsHandle | null>(null);
@@ -380,11 +382,17 @@ export default function ClipCard({
 
         {/* Info container - no background, text shadows for legibility */}
         <div className="max-w-[240px]">
-          {/* Shoppable indicator */}
+          {/* Shoppable indicator - amber when store closed, green with label when open */}
           {clip.productHandle && (
             <div className="flex items-center gap-1.5 mb-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.5)]" />
-              <span className="text-[9px] font-medium text-emerald-400 uppercase tracking-wider drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">Shop</span>
+              {storeAccessible ? (
+                <>
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.5)]" />
+                  <span className="text-[9px] font-medium text-emerald-400 uppercase tracking-wider drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">Shop</span>
+                </>
+              ) : (
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.4)]" />
+              )}
             </div>
           )}
           <h3 className="text-sm font-semibold text-white truncate drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
