@@ -4,18 +4,13 @@ import { useEffect } from 'react';
 
 /**
  * Account Page
- *
- * With New Customer Accounts, Shopify handles all account functionality.
- * This page just redirects to Shopify's hosted account page.
+ * Redirects to Shopify's hosted account portal.
  */
 export default function AccountPage() {
   useEffect(() => {
-    // Redirect to Shopify's hosted account page
-    const accountDomain = process.env.NEXT_PUBLIC_ACCOUNT_DOMAIN || 'https://account.odubo.studio';
-    window.location.href = accountDomain;
+    window.location.href = 'https://account.odubo.studio';
   }, []);
 
-  // Show loading while redirecting
   return (
     <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-[#302927] via-[#171616] to-[#302927] text-[#ede8df]">
       <div className="flex flex-col items-center">

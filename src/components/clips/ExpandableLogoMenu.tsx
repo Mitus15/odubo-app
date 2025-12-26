@@ -4,7 +4,6 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
 import { useUnifiedMedia } from '@/contexts/UnifiedMediaContext';
 import { useOmniShop } from '@/contexts/OmniShopContext';
-import { useAuthModal } from '@/contexts/AuthModalContext';
 import LinkTreeModal from '@/components/linktree/LinkTreeModal';
 
 /**
@@ -61,7 +60,6 @@ export default function ExpandableLogoMenu({
 
   const { openHub } = useUnifiedMedia();
   const { openMaison, cartCount } = useOmniShop();
-  const { openSignIn } = useAuthModal();
 
   // ============================================================================
   // Position Management
@@ -290,11 +288,9 @@ export default function ExpandableLogoMenu({
   const handleAccount = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     collapse();
-    // Use requestAnimationFrame to prevent stuttering on production
-    requestAnimationFrame(() => {
-      openSignIn();
-    });
-  }, [collapse, openSignIn]);
+    // Redirect directly to Shopify account portal
+    window.location.href = 'https://account.odubo.studio';
+  }, [collapse]);
 
   const handleConnect = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();

@@ -9,8 +9,7 @@ import { OmniShopProvider } from "@/contexts/OmniShopContext";
 import OmniShopOrchestrator from "@/components/shop/OmniShopOrchestrator";
 import { UnifiedMediaProvider } from "@/contexts/UnifiedMediaContext";
 import OmniMediaOrchestrator from "@/components/media/OmniMediaOrchestrator";
-import { AuthModalProvider } from "@/contexts/AuthModalContext";
-import AuthModal from "@/components/auth/AuthModal";
+// Auth modal removed - customers redirected directly to account.odubo.studio
 import MediaPriorityBridge from "@/components/player/MediaPriorityBridge";
 import DesktopSidebar from "@/components/layout/DesktopSidebar";
 import MainContentWrapper from "@/components/layout/MainContentWrapper";
@@ -74,28 +73,25 @@ export default function RootLayout({
               <MediaPriorityBridge />
               <OmniShopProvider>
                 <UnifiedMediaProvider>
-                  <AuthModalProvider>
-                    {/* <ClientCapabilities /> */}
-                    <ServiceWorkerRegistration />
-                    <OfflineIndicator />
-                    {/* Desktop sidebar - persistent navigation on lg+ */}
-                    <DesktopSidebar />
+                  {/* <ClientCapabilities /> */}
+                  <ServiceWorkerRegistration />
+                  <OfflineIndicator />
+                  {/* Desktop sidebar - persistent navigation on lg+ */}
+                  <DesktopSidebar />
 
-                    {/* Main content wrapper - conditionally applies sidebar margin */}
-                    <MainContentWrapper>
-                      {/* Main content - full height, accounts for mini-bar dynamically */}
-                      <main className="flex-1 min-h-0 safe-area-top safe-area-bottom minibar-aware overflow-y-auto">
-                        {children}
-                      </main>
-                      {/* Music player - renders modal via VinylMiniPlayer */}
-                      <MusicPlayerLayout />
-                      <GDPRConsent />
-                    </MainContentWrapper>
-                    {/* Modal orchestrators - rendered at root level */}
-                    <OmniShopOrchestrator />
-                    <OmniMediaOrchestrator />
-                    <AuthModal />
-                  </AuthModalProvider>
+                  {/* Main content wrapper - conditionally applies sidebar margin */}
+                  <MainContentWrapper>
+                    {/* Main content - full height, accounts for mini-bar dynamically */}
+                    <main className="flex-1 min-h-0 safe-area-top safe-area-bottom minibar-aware overflow-y-auto">
+                      {children}
+                    </main>
+                    {/* Music player - renders modal via VinylMiniPlayer */}
+                    <MusicPlayerLayout />
+                    <GDPRConsent />
+                  </MainContentWrapper>
+                  {/* Modal orchestrators - rendered at root level */}
+                  <OmniShopOrchestrator />
+                  <OmniMediaOrchestrator />
                 </UnifiedMediaProvider>
               </OmniShopProvider>
             </MusicPlayerProvider>

@@ -1,7 +1,12 @@
 "use client";
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
+/**
+ * Admin Login Page
+ * Customer login handled by Shopify at account.odubo.studio
+ */
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
@@ -16,14 +21,11 @@ export default function LoginPage() {
       const res = await fetch('/api/users', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'login', email, password }) });
       const data = (await res.json()) as { token?: string; is_admin?: boolean; error?: string };
       if (!res.ok) throw new Error((data && data.error) || 'Login failed');
-      // Store token for client-side checks (cookie also set by server when possible)
       if (data.token) localStorage.setItem('token', data.token);
 
-      // Redirect based on role
       if (data.is_admin) {
         router.replace('/admin');
       } else {
-        // Regular users go to home or clips
         router.replace('/');
       }
     } catch (e: any) {
@@ -31,14 +33,6 @@ export default function LoginPage() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleShopifyLogin = () => {
-    // New Customer Accounts - redirect to Shopify's hosted login with return_to
-    const accountDomain = process.env.NEXT_PUBLIC_ACCOUNT_DOMAIN || 'https://account.odubo.studio';
-    const mainDomain = process.env.NEXT_PUBLIC_MAIN_DOMAIN || 'https://odubo.studio';
-    const returnTo = encodeURIComponent(mainDomain);
-    window.location.href = `${accountDomain}/login?return_to=${returnTo}`;
   };
 
   return (
@@ -55,39 +49,15 @@ export default function LoginPage() {
           <div className="text-center mb-8">
             <div className="w-16 h-16 glass-surface border border-[#843c2d]/20 rounded-full flex items-center justify-center mx-auto mb-4 shadow-[0_0_30px_rgba(132,60,45,0.15)]">
               <svg className="w-7 h-7 text-[#843c2d]" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
               </svg>
             </div>
-            <h2 className="text-2xl font-serif font-medium text-[#ede8df] tracking-wide">Sign In</h2>
+            <h2 className="text-2xl font-serif font-medium text-[#ede8df] tracking-wide">Admin Login</h2>
+            <p className="mt-2 text-sm text-[#726d6c]">Authorized personnel only</p>
           </div>
 
-          {/* Regular User - Shopify Account */}
-          <div className="mb-6">
-            <button
-              onClick={handleShopifyLogin}
-              className="w-full py-3.5 rounded-xl bg-[#ede8df] text-[#302927] font-medium hover:bg-[#ede8df]/90 transition-all duration-300 shadow-lg"
-            >
-              Sign in with Shopify Account
-            </button>
-            <p className="mt-2 text-xs text-[#726d6c] text-center">
-              For customers and regular users
-            </p>
-          </div>
-
-          {/* Divider */}
-          <div className="relative mb-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-[#502d26]/30"></div>
-            </div>
-            <div className="relative flex justify-center">
-              <span className="px-3 text-xs text-[#726d6c] bg-transparent">or</span>
-            </div>
-          </div>
-
-          {/* Admin Login */}
+          {/* Admin Login Form */}
           <form onSubmit={submit} className="space-y-4">
-            <p className="text-[10px] text-[#726d6c] text-center uppercase tracking-[0.15em]">Admin Access</p>
-
             <div>
               <label className="block text-xs text-[#b2a491] mb-1.5 uppercase tracking-wider">Email</label>
               <input
@@ -96,7 +66,7 @@ export default function LoginPage() {
                 type="email"
                 required
                 className="w-full px-4 py-3 rounded-xl bg-[#1a1817]/50 border border-[#502d26]/30 text-[#ede8df] placeholder-[#502d26] focus:outline-none focus:border-[#843c2d]/50 transition-colors"
-                placeholder="admin@odubo.com"
+                placeholder="admin@odubo.studio"
               />
             </div>
 
@@ -121,20 +91,30 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 rounded-xl glass-surface border border-[#502d26]/30 text-[#ede8df] font-medium hover:bg-[#843c2d]/10 hover:border-[#843c2d]/30 transition-all duration-300 disabled:opacity-50"
+              className="w-full py-3.5 rounded-xl bg-[#ede8df] text-[#302927] font-medium hover:bg-[#ede8df]/90 transition-all duration-300 disabled:opacity-50"
             >
-              {loading ? 'Signing in...' : 'Admin Sign In'}
+              {loading ? 'Signing in...' : 'Sign In'}
             </button>
           </form>
 
-          {/* Footer */}
-          <div className="mt-6 text-center">
+          {/* Customer redirect */}
+          <div className="mt-8 pt-6 border-t border-[#502d26]/20 text-center">
             <p className="text-sm text-[#726d6c]">
-              Don't have an account?{' '}
-              <a href="/signup" className="text-[#b2a491] hover:text-[#ede8df] transition-colors">
-                Create one
+              Looking for your orders?{' '}
+              <a
+                href="https://account.odubo.studio"
+                className="text-[#b2a491] hover:text-[#ede8df] transition-colors"
+              >
+                Customer Account
               </a>
             </p>
+          </div>
+
+          {/* Back to home */}
+          <div className="mt-4 text-center">
+            <Link href="/" className="text-xs text-[#502d26] hover:text-[#726d6c] transition-colors">
+              ← Back to site
+            </Link>
           </div>
         </div>
       </div>
