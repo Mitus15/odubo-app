@@ -788,15 +788,15 @@ h6,
   padding: 0.625rem;
   border-radius: 9999px;
 
-  /* Multi-layer glass effect */
+  /* Multi-layer glass effect - optimized blur for production */
   background: linear-gradient(
     135deg,
     rgba(255, 255, 255, 0.12) 0%,
     rgba(255, 255, 255, 0.06) 50%,
     rgba(255, 255, 255, 0.08) 100%
   );
-  backdrop-filter: blur(20px) saturate(1.4);
-  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  backdrop-filter: blur(12px) saturate(1.2);
+  -webkit-backdrop-filter: blur(12px) saturate(1.2);
 
   /* Holographic edge glow */
   border: 1px solid rgba(255, 255, 255, 0.18);
@@ -810,9 +810,12 @@ h6,
   min-height: 44px;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
-  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  /* Explicit transitions instead of 'all' for performance */
+  transition: background 200ms ease, box-shadow 200ms ease;
   cursor: pointer;
-  will-change: transform, box-shadow;
+  will-change: transform;
+  /* CSS containment for performance */
+  contain: layout style paint;
 }
 
 .holo-button:hover {

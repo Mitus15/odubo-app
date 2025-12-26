@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
 import { useUnifiedMedia } from '@/contexts/UnifiedMediaContext';
 import { useOmniShop } from '@/contexts/OmniShopContext';
@@ -50,6 +50,11 @@ export default function ExpandableLogoMenu({
   const [linkTreeOpen, setLinkTreeOpen] = useState(false);
   const [position, setPosition] = useState<SnapPosition>('middle-right'); // DEFAULT
   const [isDragging, setIsDragging] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(false); // For backdrop-blur optimization
+
+  // Store access state
+  const [canAccessStore, setCanAccessStore] = useState(false);
+  const [checkingStore, setCheckingStore] = useState(true);
 
   const menuRef = useRef<HTMLDivElement>(null);
   const dragStartTime = useRef<number>(0);
@@ -75,6 +80,26 @@ export default function ExpandableLogoMenu({
     } catch {
       // Ignore localStorage errors
     }
+  }, []);
+
+  // Check store access on mount
+  useEffect(() => {
+    async function checkStoreAccess() {
+      try {
+        const res = await fetch('/api/store/status');
+        if (res.ok) {
+          const data = await res.json();
+          setCanAccessStore(data.accessGranted);
+        }
+      } catch (error) {
+        console.error('Failed to check store status:', error);
+        setCanAccessStore(false);
+      } finally {
+        setCheckingStore(false);
+      }
+    }
+
+    checkStoreAccess();
   }, []);
 
   // Save position to localStorage
@@ -194,6 +219,7 @@ export default function ExpandableLogoMenu({
 
   const handleDragStart = useCallback(() => {
     setIsDragging(true);
+    setIsAnimating(true); // Disable expensive backdrop-blur during drag
     dragStartTime.current = Date.now();
     if (isExpanded) setIsExpanded(false);
   }, [isExpanded]);
@@ -213,17 +239,20 @@ export default function ExpandableLogoMenu({
       velocity.y
     );
 
-    // Animate back to origin first (optimized spring for production)
-    animate(x, 0, { type: 'spring', stiffness: 400, damping: 40, mass: 0.8 });
-    animate(y, 0, { type: 'spring', stiffness: 400, damping: 40, mass: 0.8 });
+    // Animate back to origin (optimized: higher stiffness = fewer frames needed)
+    animate(x, 0, { type: 'spring', stiffness: 500, damping: 50, mass: 0.5 });
+    animate(y, 0, { type: 'spring', stiffness: 500, damping: 50, mass: 0.5 });
 
     // If valid movement, change position after a tiny delay for visual feedback
     if (nextPos && nextPos !== position) {
       savePosition(nextPos);
     }
 
-    // Reset state
-    setTimeout(() => setIsDragging(false), 50);
+    // Reset state after animation settles
+    setTimeout(() => {
+      setIsDragging(false);
+      setIsAnimating(false); // Re-enable backdrop-blur
+    }, 300);
   }, [position, getNextPosition, savePosition, x, y]);
 
   // ============================================================================
@@ -299,75 +328,75 @@ export default function ExpandableLogoMenu({
   }, [collapse]);
 
   // ============================================================================
-  // Animation Variants
+  // Animation Variants (memoized for performance)
   // ============================================================================
 
-  const menuVariants = {
+  const menuVariants = useMemo(() => ({
     collapsed: {
-      transition: { 
-        staggerChildren: 0.03, 
+      transition: {
+        staggerChildren: 0.03,
         staggerDirection: -1,
         when: 'afterChildren',
       },
     },
     expanded: {
-      transition: { 
-        staggerChildren: 0.03, 
-        staggerDirection: 1, 
+      transition: {
+        staggerChildren: 0.03,
+        staggerDirection: 1,
         delayChildren: 0.08,
       },
     },
-  };
+  }), []);
 
-  const itemVariants = {
+  // Optimized: Use tween instead of spring for menu items (faster calculations)
+  const itemVariants = useMemo(() => ({
     collapsed: {
       opacity: 0,
       scale: 0.95,
       y: -6,
-      transition: { 
-        type: 'spring', 
-        stiffness: 280, 
-        damping: 35,
-        mass: 0.8,
+      transition: {
+        type: 'tween',
+        duration: 0.15,
+        ease: [0.32, 0.72, 0, 1],
       },
     },
     expanded: {
       opacity: 1,
       scale: 1,
       y: 0,
-      transition: { 
-        type: 'spring', 
-        stiffness: 280, 
-        damping: 35,
-        mass: 0.8,
+      transition: {
+        type: 'tween',
+        duration: 0.2,
+        ease: [0.32, 0.72, 0, 1],
       },
     },
-  };
+  }), []);
 
-  const logoVariants = {
-    collapsed: { 
-      rotate: 0, 
+  // Optimized: faster spring with lower mass
+  const logoVariants = useMemo(() => ({
+    collapsed: {
+      rotate: 0,
       scale: 1,
       transition: {
         type: 'spring',
-        stiffness: 260,
-        damping: 32,
-        mass: 0.9,
+        stiffness: 400,
+        damping: 40,
+        mass: 0.5,
       },
     },
-    expanded: { 
-      rotate: 45, 
+    expanded: {
+      rotate: 45,
       scale: 1.03,
       transition: {
         type: 'spring',
-        stiffness: 260,
-        damping: 32,
-        mass: 0.9,
+        stiffness: 400,
+        damping: 40,
+        mass: 0.5,
       },
     },
-  };
+  }), []);
 
-  const connectingLineVariants = {
+  const connectingLineVariants = useMemo(() => ({
     collapsed: {
       opacity: 0,
       scaleY: 0,
@@ -385,11 +414,11 @@ export default function ExpandableLogoMenu({
         ease: [0.34, 1.56, 0.64, 1],
       },
     },
-  };
+  }), []);
 
-  // Determine menu direction based on position
-  const menuDirection = position === 'bottom-right' ? 'up' : 'down';
-  const isOnLeft = position === 'middle-left';
+  // Memoize derived values
+  const menuDirection = useMemo(() => position === 'bottom-right' ? 'up' : 'down', [position]);
+  const positionStyle = useMemo(() => getPositionStyle(position), [position, getPositionStyle]);
 
   // ============================================================================
   // Render
@@ -400,10 +429,12 @@ export default function ExpandableLogoMenu({
       ref={menuRef}
       className="fixed z-50"
       style={{
-        ...getPositionStyle(position),
+        ...positionStyle,
         touchAction: 'none',
         x,
         y,
+        willChange: 'transform',
+        transform: 'translateZ(0)',
       }}
       drag
       dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
@@ -423,50 +454,43 @@ export default function ExpandableLogoMenu({
         {/* Main logo button */}
         <motion.button
           onClick={handleTap}
-          className="group relative overflow-hidden
+          className={`group relative overflow-hidden
                      w-14 h-14 flex items-center justify-center rounded-full
-                     bg-black/15 backdrop-blur-xl border border-white/20
+                     border border-white/20
                      shadow-[0_12px_32px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.15),inset_0_-1px_0_rgba(0,0,0,0.4)]
-                     hover:shadow-[0_16px_40px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.2),inset_0_-2px_0_rgba(0,0,0,0.5)]
-                     active:shadow-[0_6px_20px_rgba(0,0,0,0.8),inset_0_1px_0_rgba(255,255,255,0.1),inset_0_2px_6px_rgba(0,0,0,0.6)]
-                     transition-all duration-300 ease-out
-                     transform-gpu hover:scale-105 active:scale-95
-                     hover:bg-black/20"
+                     ${isAnimating ? 'bg-black/40' : 'bg-black/15 backdrop-blur-xl'}`}
           initial="collapsed"
           animate={isExpanded ? 'expanded' : 'collapsed'}
           variants={logoVariants}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
           aria-label={isExpanded ? 'Close menu' : 'Open menu'}
           aria-expanded={isExpanded}
           style={{
             width: BUTTON_SIZE,
             height: BUTTON_SIZE,
             cursor: isDragging ? 'grabbing' : 'grab',
-            filter: 'drop-shadow(0 6px 12px rgba(0,0,0,0.4))',
+            willChange: 'transform',
+            backfaceVisibility: 'hidden',
           }}
         >
           <img
             src="/odubo_logo_emboss.png"
             alt=""
-            className="w-7 h-7 object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)] 
-                     transform transition-transform duration-300 group-hover:scale-110"
+            className="w-7 h-7 object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)]"
             draggable={false}
           />
 
-          {/* Glow effect when expanded */}
-          <AnimatePresence>
-            {isExpanded && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.8 }}
-                className="absolute inset-0 rounded-full bg-gradient-to-br from-white/20 to-transparent pointer-events-none"
-              />
-            )}
-          </AnimatePresence>
+          {/* Glow effect when expanded - no AnimatePresence overhead */}
+          <motion.div
+            className="absolute inset-0 rounded-full bg-gradient-to-br from-white/20 to-transparent pointer-events-none"
+            animate={{ opacity: isExpanded ? 1 : 0, scale: isExpanded ? 1 : 0.8 }}
+            transition={{ duration: 0.15 }}
+          />
         </motion.button>
 
         {/* Expanded menu items */}
-        <AnimatePresence mode="wait">
+        <AnimatePresence mode="sync">
           {isExpanded && (
             <>
               {/* Connecting line/gradient indicator */}
@@ -496,26 +520,28 @@ export default function ExpandableLogoMenu({
                   flexDirection: menuDirection === 'up' ? 'column-reverse' : 'column',
                 }}
               >
-              {/* Shop button with BAAD logo */}
-              <motion.button
-                variants={itemVariants}
-                onClick={handleShop}
-                className="holo-button holo-button-accent relative"
-                aria-label="Shop"
-                style={{ touchAction: 'manipulation' }}
-              >
-                <img
-                  src="/brand-logos/baad.png"
-                  alt=""
-                  className="w-6 h-6 object-contain"
-                  draggable={false}
-                />
-                {cartCount > 0 && (
-                  <span className="absolute -top-1 -right-1 w-4 h-4 flex items-center justify-center bg-[#b2a491] text-[#1a1817] text-[9px] font-semibold rounded-full shadow-sm">
-                    {cartCount > 9 ? '9+' : cartCount}
-                  </span>
-                )}
-              </motion.button>
+              {/* Shop button with BAAD logo - conditionally rendered */}
+              {!checkingStore && canAccessStore && (
+                <motion.button
+                  variants={itemVariants}
+                  onClick={handleShop}
+                  className="holo-button holo-button-accent relative"
+                  aria-label="Shop"
+                  style={{ touchAction: 'manipulation', willChange: 'transform, opacity', transform: 'translateZ(0)' }}
+                >
+                  <img
+                    src="/brand-logos/baad.png"
+                    alt=""
+                    className="w-6 h-6 object-contain"
+                    draggable={false}
+                  />
+                  {cartCount > 0 && (
+                    <span className="absolute -top-1 -right-1 w-4 h-4 flex items-center justify-center bg-[#b2a491] text-[#1a1817] text-[9px] font-semibold rounded-full shadow-sm">
+                      {cartCount > 9 ? '9+' : cartCount}
+                    </span>
+                  )}
+                </motion.button>
+              )}
 
               {/* Moments Camera button */}
               <motion.button
@@ -523,7 +549,7 @@ export default function ExpandableLogoMenu({
                 onClick={handleMoments}
                 className="holo-button"
                 aria-label="Moments"
-                style={{ touchAction: 'manipulation' }}
+                style={{ touchAction: 'manipulation', willChange: 'transform, opacity', transform: 'translateZ(0)' }}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
@@ -537,7 +563,7 @@ export default function ExpandableLogoMenu({
                 onClick={handleConnect}
                 className="holo-button"
                 aria-label="Connect"
-                style={{ touchAction: 'manipulation' }}
+                style={{ touchAction: 'manipulation', willChange: 'transform, opacity', transform: 'translateZ(0)' }}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
@@ -550,7 +576,7 @@ export default function ExpandableLogoMenu({
                 onClick={handleAccount}
                 className="holo-button"
                 aria-label="Account"
-                style={{ touchAction: 'manipulation' }}
+                style={{ touchAction: 'manipulation', willChange: 'transform, opacity', transform: 'translateZ(0)' }}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
