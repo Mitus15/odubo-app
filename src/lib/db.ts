@@ -511,3 +511,160 @@ export async function appendJobEvent(jobId: string, step: string, message?: stri
   const sql = `INSERT INTO job_status_events (jobId, step, message, created_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)`;
   await executeQuery(sql, [jobId, step, message ?? null]);
 }
+
+// =============================================================================
+// GLOBAL SETTINGS
+// =============================================================================
+
+export interface GlobalSetting {
+  key: string;
+  value: string;
+  value_type: 'string' | 'number' | 'boolean' | 'json';
+  description?: string;
+  updated_at?: string;
+  updated_by?: string;
+}
+
+/**
+ * Get a global setting by key
+ * Returns null if not found
+ */
+export async function getGlobalSetting(key: string): Promise<GlobalSetting | null> {
+  try {
+    const databaseUrl = process.env.DATABASE_URL;
+    const apiToken = process.env.CLOUDFLARE_D1_API_TOKEN || process.env.CLOUDFLARE_API_TOKEN;
+
+    if (!databaseUrl || !apiToken) {
+      throw new Error('Database configuration missing');
+    }
+
+    const sql = 'SELECT * FROM global_settings WHERE key = ? LIMIT 1';
+    const params = [key];
+
+    const response = await fetch(`${databaseUrl}/query`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiToken}`
+      },
+      body: JSON.stringify({ sql, params }),
+    });
+
+    const data = await response.json() as {
+      result?: { results?: any[] }[];
+      success?: boolean;
+    };
+
+    if (!response.ok || !data.result?.[0]?.results?.length) {
+      return null;
+    }
+
+    return data.result[0].results[0] as GlobalSetting;
+  } catch (error) {
+    console.error('Get global setting error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get a typed boolean setting value
+ * Returns default value if not found or invalid
+ */
+export async function getBooleanSetting(key: string, defaultValue: boolean): Promise<boolean> {
+  try {
+    const setting = await getGlobalSetting(key);
+    if (!setting) return defaultValue;
+
+    // SQLite stores booleans as 0/1
+    if (setting.value_type === 'boolean') {
+      return setting.value === '1' || setting.value === 'true';
+    }
+
+    return defaultValue;
+  } catch (error) {
+    console.error(`Get boolean setting '${key}' error:`, error);
+    return defaultValue;
+  }
+}
+
+/**
+ * Update or insert a global setting
+ */
+export async function setGlobalSetting(
+  key: string,
+  value: string | number | boolean,
+  valueType: 'string' | 'number' | 'boolean' | 'json',
+  updatedBy?: string,
+  description?: string
+): Promise<{ success: boolean }> {
+  try {
+    const databaseUrl = process.env.DATABASE_URL;
+    const apiToken = process.env.CLOUDFLARE_D1_API_TOKEN || process.env.CLOUDFLARE_API_TOKEN;
+
+    if (!databaseUrl || !apiToken) {
+      throw new Error('Database configuration missing');
+    }
+
+    // Convert boolean to SQLite integer
+    let stringValue: string;
+    if (valueType === 'boolean') {
+      stringValue = value ? '1' : '0';
+    } else if (valueType === 'json') {
+      stringValue = typeof value === 'string' ? value : JSON.stringify(value);
+    } else {
+      stringValue = String(value);
+    }
+
+    const sql = `
+      INSERT INTO global_settings (key, value, value_type, description, updated_by, updated_at)
+      VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+      ON CONFLICT(key) DO UPDATE SET
+        value = excluded.value,
+        value_type = excluded.value_type,
+        description = COALESCE(excluded.description, global_settings.description),
+        updated_by = excluded.updated_by,
+        updated_at = CURRENT_TIMESTAMP
+    `;
+    const params = [key, stringValue, valueType, description || null, updatedBy || null];
+
+    const response = await fetch(`${databaseUrl}/query`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiToken}`
+      },
+      body: JSON.stringify({ sql, params }),
+    });
+
+    const data = await response.json() as { success?: boolean };
+
+    if (!response.ok || data.success === false) {
+      throw new Error('Failed to update global setting');
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Set global setting error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get all global settings as a map
+ */
+export async function getAllGlobalSettings(): Promise<Map<string, GlobalSetting>> {
+  try {
+    const sql = 'SELECT * FROM global_settings';
+    const results = await queryDatabase(sql, []);
+
+    const map = new Map<string, GlobalSetting>();
+    results.forEach((row: any) => {
+      map.set(row.key, row as GlobalSetting);
+    });
+
+    return map;
+  } catch (error) {
+    console.error('Get all global settings error:', error);
+    throw error;
+  }
+}

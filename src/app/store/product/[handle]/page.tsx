@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import ProductPageClient from './ProductPageClient';
 import { getShopifyProduct } from '@/lib/shopify';
+import { requireStoreAccess } from '@/lib/storeAccess';
 
 // This function now runs on the server
 async function fetchProduct(handle: string) {
@@ -32,9 +33,12 @@ async function fetchProduct(handle: string) {
 
 // The page itself becomes an async Server Component
 export default async function ProductDetailPage({ params }: { params: { handle: string } }) {
+  // Check store access - redirects non-admins when unpublished
+  await requireStoreAccess();
+
   // Await params for Next.js 15+
   const { handle } = await params;
-  
+
   if (!handle) {
     notFound();
   }

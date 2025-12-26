@@ -18,10 +18,11 @@ interface ProductCard {
 
 interface StorePageClientProps {
   isStoreOpen: boolean;
+  isAdmin: boolean;
   initialProducts: ProductCard[];
 }
 
-export default function StorePageClient({ isStoreOpen, initialProducts }: StorePageClientProps) {
+export default function StorePageClient({ isStoreOpen, isAdmin, initialProducts }: StorePageClientProps) {
   const [timeLeft, setTimeLeft] = useState({
     weeks: 0,
     days: 0,
@@ -220,6 +221,14 @@ export default function StorePageClient({ isStoreOpen, initialProducts }: StoreP
         <ScrollContainer>
           <div className="max-w-4xl mx-auto px-6 py-20 text-center">
             <div className="glass-surface rounded-3xl border border-[#502d26]/30 p-10 backdrop-blur-md bg-[#1c1a19]/80">
+              {/* Admin viewing badge */}
+              {isAdmin && (
+                <div className="mb-6 inline-block px-4 py-2 bg-[#843c2d]/20 border border-[#843c2d]/40 rounded-full">
+                  <span className="text-xs uppercase tracking-widest text-[#ede8df]">
+                    👑 Admin Preview - Store Unpublished
+                  </span>
+                </div>
+              )}
               <h1 className="text-3xl sm:text-4xl font-bold text-[#ede8df] mb-8 tracking-tight">Store Opening Soon</h1>
               
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-8">
@@ -237,26 +246,28 @@ export default function StorePageClient({ isStoreOpen, initialProducts }: StoreP
                 </Link>
               </div>
 
-              {/* Designer Access */}
-              <form onSubmit={handleUnlock} className="max-w-xs mx-auto mt-12 pt-8 border-t border-[#502d26]/20">
-                <p className="text-[10px] text-[#b2a491] mb-3 uppercase tracking-[0.2em]">Designer Access</p>
-                <div className="flex gap-2">
-                  <input 
-                    type="password" 
-                    value={passwordInput}
-                    onChange={(e) => setPasswordInput(e.target.value)}
-                    placeholder="Enter password"
-                    className="flex-1 bg-[#171616] border border-[#502d26]/30 rounded-lg px-3 py-2 text-sm text-[#ede8df] focus:outline-none focus:border-[#843c2d] transition-colors placeholder:text-[#502d26]"
-                  />
-                  <button 
-                    type="submit"
-                    className="px-4 py-2 bg-[#843c2d]/20 text-[#ede8df] rounded-lg hover:bg-[#843c2d]/40 text-sm font-medium transition-colors"
-                  >
-                    Enter
-                  </button>
-                </div>
-                {unlockError && <p className="text-red-400 text-xs mt-2">{unlockError}</p>}
-              </form>
+              {/* Designer Access - hidden for admins */}
+              {!isAdmin && (
+                <form onSubmit={handleUnlock} className="max-w-xs mx-auto mt-12 pt-8 border-t border-[#502d26]/20">
+                  <p className="text-[10px] text-[#b2a491] mb-3 uppercase tracking-[0.2em]">Designer Access</p>
+                  <div className="flex gap-2">
+                    <input
+                      type="password"
+                      value={passwordInput}
+                      onChange={(e) => setPasswordInput(e.target.value)}
+                      placeholder="Enter password"
+                      className="flex-1 bg-[#171616] border border-[#502d26]/30 rounded-lg px-3 py-2 text-sm text-[#ede8df] focus:outline-none focus:border-[#843c2d] transition-colors placeholder:text-[#502d26]"
+                    />
+                    <button
+                      type="submit"
+                      className="px-4 py-2 bg-[#843c2d]/20 text-[#ede8df] rounded-lg hover:bg-[#843c2d]/40 text-sm font-medium transition-colors"
+                    >
+                      Enter
+                    </button>
+                  </div>
+                  {unlockError && <p className="text-red-400 text-xs mt-2">{unlockError}</p>}
+                </form>
+              )}
             </div>
           </div>
         </ScrollContainer>
@@ -266,6 +277,15 @@ export default function StorePageClient({ isStoreOpen, initialProducts }: StoreP
 
   return (
     <ScreenLayout>
+      {/* Admin indicator when viewing unpublished store */}
+      {isAdmin && !isStoreOpen && (
+        <div className="fixed top-20 right-4 z-50 px-3 py-1.5 bg-[#843c2d]/90 border border-[#843c2d] rounded-full shadow-lg">
+          <span className="text-[10px] uppercase tracking-widest text-[#ede8df]">
+            Admin Preview
+          </span>
+        </div>
+      )}
+
       {/* BAAD by Odubo background: soft gradients and glow lights */}
       <div className="fixed inset-0 -z-10 bg-gradient-to-br from-[#0b0b0b] via-[#111111] to-[#0b0b0b]" />
       <div className="pointer-events-none fixed inset-0 -z-10">

@@ -40,7 +40,7 @@ Storage:        Cloudflare R2
 Video:          Cloudflare Stream + HLS.js
 Commerce:       Shopify Storefront API (headless)
 Auth:           Custom (bcrypt + JWT)
-Deployment:     Cloudflare Pages
+Deployment:     Vercel
 ```
 
 ### Directory Structure

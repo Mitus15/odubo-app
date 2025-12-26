@@ -38,7 +38,9 @@ export default function CartModal() {
       });
 
       const { checkoutUrl } = await response.json();
-      
+
+      console.log('🛒 Checkout URL received:', checkoutUrl);
+
       if (checkoutUrl) {
         window.location.href = checkoutUrl;
       } else {

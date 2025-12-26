@@ -11,6 +11,7 @@ interface StoreSettings {
   shippingEnabled: boolean;
   taxesEnabled: boolean;
   inventoryTracking: boolean;
+  storePublished: boolean;
 }
 
 export default function StoreSettingsTab() {
@@ -23,6 +24,7 @@ export default function StoreSettingsTab() {
     shippingEnabled: true,
     taxesEnabled: true,
     inventoryTracking: true,
+    storePublished: false,
   });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -150,6 +152,46 @@ export default function StoreSettingsTab() {
               <option value="kg">Kilograms (kg)</option>
             </select>
           </div>
+        </div>
+      </div>
+
+      {/* Store Visibility */}
+      <div className="bg-[#302927] rounded-xl p-6 space-y-4">
+        <h3 className="text-lg font-semibold text-[#ede8df]">Store Visibility</h3>
+
+        <div className="space-y-3">
+          <label className="flex items-center gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={settings.storePublished}
+              onChange={(e) => setSettings({ ...settings, storePublished: e.target.checked })}
+              className="w-5 h-5 rounded border-[#502d26] bg-[#403633] text-[#843c2d] focus:ring-[#843c2d]"
+            />
+            <div>
+              <div className="text-[#ede8df] font-medium">Publish Store</div>
+              <div className="text-sm text-[#b2a491]">
+                Make the store accessible to the public. When disabled, only admins can access.
+              </div>
+            </div>
+          </label>
+
+          {/* Warning message when unpublished */}
+          {!settings.storePublished && (
+            <div className="mt-2 p-3 bg-[#843c2d]/10 border border-[#843c2d]/30 rounded-lg">
+              <p className="text-xs text-[#ede8df]">
+                ⚠️ Store is currently UNPUBLISHED. Only administrators can access store pages and see the shop button.
+              </p>
+            </div>
+          )}
+
+          {/* Success message when published */}
+          {settings.storePublished && (
+            <div className="mt-2 p-3 bg-green-900/10 border border-green-700/30 rounded-lg">
+              <p className="text-xs text-green-200">
+                ✓ Store is PUBLISHED and accessible to all visitors.
+              </p>
+            </div>
+          )}
         </div>
       </div>
 

@@ -3,9 +3,7 @@ import ScrollContainer from '@/components/ui/ScrollContainer';
 import Link from 'next/link';
 import StorePageClient from './StorePageClient';
 import { getShopifyProducts } from '@/lib/shopify';
-
-// Temporary storefront gate – keeps all logic intact but shows a placeholder
-const STORE_OPEN = true;
+import { requireStoreAccess } from '@/lib/storeAccess';
 
 interface ProductCard {
   id: string;
@@ -46,12 +44,11 @@ async function loadProducts(): Promise<ProductCard[]> {
 }
 
 export default async function StorePage() {
-  if (!STORE_OPEN) {
-    return <StorePageClient isStoreOpen={false} initialProducts={[]} />;
-  }
+  // Check store access - redirects non-admins when unpublished
+  const { published, isAdmin } = await requireStoreAccess();
 
   // Fetch initial products on the server
   const initialProducts = await loadProducts();
 
-  return <StorePageClient isStoreOpen={true} initialProducts={initialProducts} />;
+  return <StorePageClient isStoreOpen={published} isAdmin={isAdmin} initialProducts={initialProducts} />;
 }

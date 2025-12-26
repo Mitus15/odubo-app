@@ -145,7 +145,8 @@ export async function POST(request: NextRequest) {
 
     const checkoutUrl = data.cartCreate.cart.checkoutUrl;
 
-    console.log('Shopify returned checkout URL:', checkoutUrl);
+    console.log('✅ Shopify returned checkout URL:', checkoutUrl);
+    console.log('🔍 Domain check:', checkoutUrl.includes('checkout.odubo.studio') ? 'Custom domain ✓' : 'Default Shopify domain');
 
     // Use the URL exactly as Shopify provides it
     // This should be a valid checkout URL regardless of custom domain settings
