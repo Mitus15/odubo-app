@@ -423,6 +423,13 @@ export default function MomentsCameraModal({ galleryId }: MomentsCameraModalProp
     refreshDevicesAndPersist(currentDeviceId || undefined);
   }, [cameraStarted, currentDeviceId]);
 
+  // Auto-start camera when gallery info is loaded
+  useEffect(() => {
+    if (galleryInfo && !cameraStarted && !mediaBlob && !uploadSuccess) {
+      startCamera();
+    }
+  }, [galleryInfo]);
+
   return (
     <motion.div
       initial={{ opacity: 0, x: '100%' }}
