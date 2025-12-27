@@ -60,7 +60,7 @@ export default function ExpandableLogoMenu({
   const y = useMotionValue(0);
 
   const { openHub } = useUnifiedMedia();
-  const { openMaison, cartCount, storeAccessible, checkingStoreAccess } = useOmniShop();
+  const { openMaison, closeAll: closeAllModals, cartCount, storeAccessible, checkingStoreAccess } = useOmniShop();
 
   // ============================================================================
   // Position Management
@@ -286,9 +286,11 @@ export default function ExpandableLogoMenu({
     collapse();
     // Use requestAnimationFrame to prevent stuttering on production
     requestAnimationFrame(() => {
+      // Close any existing modals first, then open OmniStore
+      closeAllModals();
       openMaison();
     });
-  }, [collapse, openMaison]);
+  }, [collapse, closeAllModals, openMaison]);
 
   const handleAccount = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();

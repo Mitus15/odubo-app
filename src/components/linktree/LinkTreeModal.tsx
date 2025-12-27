@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import type { LinkTreeItem } from '@/types/linktree';
+import { useOmniShop } from '@/contexts/OmniShopContext';
 
 interface LinkTreeModalProps {
   isOpen: boolean;
@@ -13,6 +14,8 @@ export default function LinkTreeModal({ isOpen, onClose }: LinkTreeModalProps) {
   const [links, setLinks] = useState<LinkTreeItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
+
+  const { storeAccessible, checkingStoreAccess, openMaison, closeAll: closeAllShopModals } = useOmniShop();
 
   // Wait for client-side mount for portal
   useEffect(() => {
@@ -30,10 +33,28 @@ export default function LinkTreeModal({ isOpen, onClose }: LinkTreeModalProps) {
     }
   }, [isOpen]);
 
+  // Filter out shopify/store links when store is not accessible
+  const visibleLinks = useMemo(() => {
+    if (checkingStoreAccess) return links;
+    if (!storeAccessible) {
+      return links.filter(link => link.platform !== 'shopify');
+    }
+    return links;
+  }, [links, storeAccessible, checkingStoreAccess]);
+
   if (!isOpen || !mounted) return null;
 
   const handleLinkClick = (link: LinkTreeItem) => {
     fetch(`/api/linktree/${link.id}/click`, { method: 'POST' }).catch(() => {});
+
+    // Special handling for shopify/store link - close this modal and open OmniStore
+    if (link.platform === 'shopify') {
+      onClose();
+      closeAllShopModals();
+      openMaison();
+      return;
+    }
+
     window.open(link.url, '_blank', 'noopener,noreferrer');
   };
 
@@ -66,11 +87,11 @@ export default function LinkTreeModal({ isOpen, onClose }: LinkTreeModalProps) {
           <div className="flex justify-center py-12">
             <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
           </div>
-        ) : links.length === 0 ? (
+        ) : visibleLinks.length === 0 ? (
           <p className="text-center text-white/50 py-12">No links available</p>
         ) : (
           <div className="space-y-3 max-w-md mx-auto">
-            {links.map((link) => (
+            {visibleLinks.map((link) => (
               <button
                 key={link.id}
                 onClick={() => handleLinkClick(link)}
