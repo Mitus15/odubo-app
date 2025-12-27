@@ -2,6 +2,14 @@ import { Suspense } from 'react';
 import { queryDatabase } from '@/lib/db';
 import MediaHubClient from './MediaHubClient';
 import type { Album } from '@/types/music';
+import { generateSeoMetadata } from '@/lib/seo';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = generateSeoMetadata({
+  title: 'Media',
+  description: 'Watch exclusive videos, listen to albums, and explore the full Odubo media library.',
+  path: '/media',
+});
 
 export const revalidate = 300; // 5 minutes
 

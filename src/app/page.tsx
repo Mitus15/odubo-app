@@ -1,5 +1,14 @@
 import HomePageClient from '@/app/HomePageClient';
 import { fetchVerseOfTheDay } from '@/lib/gemini';
+import { generateSeoMetadata } from '@/lib/seo';
+import type { Metadata } from 'next';
+
+// SEO Metadata
+export const metadata: Metadata = generateSeoMetadata({
+  title: 'Clips',
+  description: 'Watch exclusive clips, discover new music, and shop the latest drops from Odubo Studio.',
+  path: '/',
+});
 
 // Use dynamic rendering with ISR to ensure fresh data
 export const dynamic = 'force-dynamic';

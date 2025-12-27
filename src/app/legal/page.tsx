@@ -1,5 +1,14 @@
 import LegalClient from "./LegalClient";
 import { Suspense } from "react";
+import { generateSeoMetadata } from '@/lib/seo';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = generateSeoMetadata({
+  title: 'Legal',
+  description: 'Privacy Policy, Terms of Service, and Shipping & Returns policies for Odubo Studio.',
+  path: '/legal',
+  noIndex: true,
+});
 
 // Convert HTML content to React components for security
 const LegalContent = {

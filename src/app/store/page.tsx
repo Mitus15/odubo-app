@@ -4,6 +4,14 @@ import Link from 'next/link';
 import StorePageClient from './StorePageClient';
 import { getShopifyProducts } from '@/lib/shopify';
 import { requireStoreAccess } from '@/lib/storeAccess';
+import { generateSeoMetadata } from '@/lib/seo';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = generateSeoMetadata({
+  title: 'Store',
+  description: 'Shop exclusive fashion, merchandise, and limited edition drops from Odubo Studio.',
+  path: '/store',
+});
 
 interface ProductCard {
   id: string;

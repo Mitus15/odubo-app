@@ -389,6 +389,99 @@
   -webkit-backdrop-filter: blur(12px) saturate(0.8);
 }
 
+/* ============================================================================
+   Mobile Modal Performance Optimizations
+   GPU-accelerated animations for smooth 60fps modal transitions
+   ============================================================================ */
+
+/* Modal container - promote to GPU layer for transform animations */
+.modal-container {
+  will-change: transform, opacity;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  /* CSS containment for layout isolation */
+  contain: layout style paint;
+}
+
+/* Modal overlay/backdrop - optimized fade transitions */
+.modal-overlay {
+  will-change: opacity;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+}
+
+/* Swipe-dismissible modals - optimized for gesture animations */
+.modal-swipeable {
+  will-change: transform;
+  transform: translate3d(0, 0, 0);
+  -webkit-transform: translate3d(0, 0, 0);
+  touch-action: pan-y;
+}
+
+/* Bottom sheet modals - common pattern needing optimization */
+.modal-bottom-sheet {
+  will-change: transform;
+  transform: translate3d(0, 0, 0);
+  -webkit-transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* Fullscreen modals - prevent paint thrashing */
+.modal-fullscreen {
+  will-change: opacity, transform;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  contain: strict;
+}
+
+/* GPU layer promotion utility - use sparingly on animated elements */
+.gpu-accelerated {
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* Optimized spring animations - common Framer Motion pattern */
+.animate-spring {
+  will-change: transform;
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
+}
+
+/* Clear will-change after animation completes - prevents memory bloat */
+.animation-complete {
+  will-change: auto;
+}
+
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  .modal-container,
+  .modal-overlay,
+  .modal-swipeable,
+  .modal-bottom-sheet,
+  .modal-fullscreen,
+  .animate-spring {
+    will-change: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+
+/* Low-end device optimizations */
+.reduced-effects .modal-container,
+.reduced-effects .modal-overlay,
+.reduced-effects .modal-swipeable,
+.reduced-effects .modal-bottom-sheet,
+.reduced-effects .modal-fullscreen {
+  will-change: auto !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
 .liquid-float {
   animation: liquid-float 6s ease-in-out infinite;
 }
