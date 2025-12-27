@@ -133,8 +133,8 @@ export default function MomentsCameraModal({ galleryId }: MomentsCameraModalProp
     } catch {}
   }, [videoEl]);
 
-  // Start camera - simplified like the working moments page
-  async function startCamera() {
+  // Start camera - accepts optional device/mode override for switching
+  async function startCamera(opts?: { deviceId?: string; mode?: 'environment' | 'user' }) {
     try {
       if (typeof window !== 'undefined' && !window.isSecureContext) {
         setError('Camera requires HTTPS (or localhost).');
@@ -147,12 +147,16 @@ export default function MomentsCameraModal({ galleryId }: MomentsCameraModalProp
         streamRef.current = null;
       }
 
+      // Use provided deviceId or mode, else fall back to current facingMode
+      const useMode = opts?.mode || facingMode;
       const constraints: MediaStreamConstraints = {
-        video: {
-          facingMode: { ideal: facingMode },
-          width: { ideal: facingMode === 'environment' ? 1920 : 1280 },
-          height: { ideal: facingMode === 'environment' ? 1080 : 720 },
-        },
+        video: opts?.deviceId
+          ? { deviceId: { exact: opts.deviceId } }
+          : {
+              facingMode: { ideal: useMode },
+              width: { ideal: useMode === 'environment' ? 1920 : 1280 },
+              height: { ideal: useMode === 'environment' ? 1080 : 720 },
+            },
         audio: false,
       };
 
@@ -420,12 +424,13 @@ export default function MomentsCameraModal({ galleryId }: MomentsCameraModalProp
     refreshDevicesAndPersist(currentDeviceId || undefined);
   }, [cameraStarted, currentDeviceId]);
 
-  // Auto-start camera when gallery info is loaded
+  // Auto-start camera when BOTH gallery info AND video element are ready
   useEffect(() => {
-    if (galleryInfo && !cameraStarted && !mediaBlob && !uploadSuccess) {
+    if (galleryInfo && videoEl && !cameraStarted && !mediaBlob && !uploadSuccess) {
       startCamera();
     }
-  }, [galleryInfo]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [galleryInfo, videoEl, cameraStarted, mediaBlob, uploadSuccess]);
 
   return (
     <motion.div
