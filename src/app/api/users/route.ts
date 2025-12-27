@@ -580,6 +580,10 @@ export async function POST(req: NextRequest) {
   // Signup
   if (action === 'signup') {
     try {
+      const ip = req.headers.get('x-forwarded-for') || 'unknown';
+      const rl = await rateLimit({ key: `signup:${ip}`, limit: 5, windowMs: 60_000 });
+      if (!rl.allowed) return NextResponse.json({ error: 'Too many signup attempts. Please try again later.' }, { status: 429 });
+
       console.log('Signup attempt with data:', rest);
       console.log('Validation schema:', userSchema);
       console.log('Attempting to parse with schema...');

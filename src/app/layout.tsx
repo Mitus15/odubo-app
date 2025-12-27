@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+// Validate environment on startup
+import "@/lib/validateEnv";
 import MusicPlayerLayout from "./components/MusicPlayerLayout";
 // AppHeader removed - navigation via expandable logo menu on clips
 import { AudioProvider } from "@/contexts/AudioContext";

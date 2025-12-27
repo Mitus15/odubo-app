@@ -15,8 +15,18 @@ export type Role = 'admin' | 'editor' | 'viewer';
 
 export function getJwtSecret(): string {
   const secret = process.env.JWT_SECRET;
-  if (!secret && process.env.NODE_ENV === 'production') {
-    throw new Error('JWT_SECRET is not set');
+  if (!secret) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error(
+        'CRITICAL: JWT_SECRET environment variable is not set. ' +
+        'This is required for secure authentication in production.'
+      );
+    }
+    // Only log once per process to avoid spam
+    if (typeof globalThis !== 'undefined' && !(globalThis as any).__jwtSecretWarned) {
+      console.warn('[AUTH] Using insecure development JWT secret. Set JWT_SECRET for production.');
+      (globalThis as any).__jwtSecretWarned = true;
+    }
   }
   return secret || 'dev-insecure-secret';
 }

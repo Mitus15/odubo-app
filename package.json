@@ -54,6 +54,7 @@
     "@capacitor/ios": "^7.4.4",
     "@cloudflare/kv-asset-handler": "^0.4.0",
     "@google/generative-ai": "^0.24.1",
+    "@sentry/nextjs": "^10.32.1",
     "@tailwindcss/line-clamp": "^0.4.4",
     "@tailwindcss/postcss": "^4.1.11",
     "@types/better-sqlite3": "^7.6.13",
