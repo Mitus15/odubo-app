@@ -538,27 +538,8 @@ export default function MomentsCameraModal({ galleryId }: MomentsCameraModalProp
                 </div>
               )}
 
-              {/* Camera not started */}
-              {!cameraStarted && !uploadSuccess && !mediaBlob && (
-                <div className="p-8 text-center">
-                  <button
-                    onClick={() => startCamera()}
-                    className="px-8 py-4 rounded-xl bg-gradient-to-r from-[#843c2d] to-[#6d3224] text-white font-semibold hover:opacity-90 transition-all text-lg flex items-center justify-center gap-3 mx-auto"
-                  >
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    Start Camera
-                  </button>
-                  <p className="mt-3 text-white/40 text-xs">
-                    Default: {facingMode === 'environment' ? 'Back' : 'Front'} camera
-                  </p>
-                </div>
-              )}
-
-              {/* Camera viewfinder */}
-              {cameraStarted && !mediaBlob && !uploadSuccess && (
+              {/* Camera viewfinder - always rendered so ref is available, hidden when not active */}
+              {!mediaBlob && !uploadSuccess && (
                 <div className="space-y-4">
                   <div className="relative rounded-xl overflow-hidden bg-black border border-white/10">
                     <video
@@ -570,35 +551,45 @@ export default function MomentsCameraModal({ galleryId }: MomentsCameraModalProp
                       style={{ transform: isFrontActive() ? 'scaleX(-1)' : 'none' }}
                     />
 
-                    {/* Camera controls */}
-                    <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
-                      <div className="flex items-center justify-center gap-4">
-                        {/* Switch camera */}
-                        <button
-                          onClick={switchCamera}
-                          className="p-3 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 hover:bg-white/20 transition-colors"
-                          aria-label="Switch camera"
-                        >
-                          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                          </svg>
-                        </button>
-
-                        {/* Shutter button */}
-                        <button
-                          onClick={takePhoto}
-                          className="relative p-2"
-                          aria-label="Take photo"
-                        >
-                          <div className="w-16 h-16 rounded-full border-4 border-white bg-white/20 flex items-center justify-center active:scale-90 transition-transform">
-                            <div className="w-12 h-12 rounded-full bg-white" />
-                          </div>
-                        </button>
-
-                        {/* Placeholder for balance */}
-                        <div className="w-11 h-11" />
+                    {/* Loading overlay while camera starts */}
+                    {!cameraStarted && (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80">
+                        <div className="w-10 h-10 border-2 border-white/20 border-t-white/80 rounded-full animate-spin mb-4" />
+                        <p className="text-white/60 text-sm">Starting camera...</p>
                       </div>
-                    </div>
+                    )}
+
+                    {/* Camera controls - only show when camera is active */}
+                    {cameraStarted && (
+                      <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
+                        <div className="flex items-center justify-center gap-4">
+                          {/* Switch camera */}
+                          <button
+                            onClick={switchCamera}
+                            className="p-3 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 hover:bg-white/20 transition-colors"
+                            aria-label="Switch camera"
+                          >
+                            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                          </button>
+
+                          {/* Shutter button */}
+                          <button
+                            onClick={takePhoto}
+                            className="relative p-2"
+                            aria-label="Take photo"
+                          >
+                            <div className="w-16 h-16 rounded-full border-4 border-white bg-white/20 flex items-center justify-center active:scale-90 transition-transform">
+                              <div className="w-12 h-12 rounded-full bg-white" />
+                            </div>
+                          </button>
+
+                          {/* Placeholder for balance */}
+                          <div className="w-11 h-11" />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
