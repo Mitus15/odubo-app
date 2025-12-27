@@ -53,7 +53,7 @@ export default function ExpandableLogoMenu({
   const [isAnimating, setIsAnimating] = useState(false); // For backdrop-blur optimization
 
   const menuRef = useRef<HTMLDivElement>(null);
-  const dragStartTime = useRef<number>(0);
+  const dragStartPos = useRef<{ x: number; y: number } | null>(null);
 
   // Motion values for smooth position transitions
   const x = useMotionValue(0);
@@ -193,10 +193,13 @@ export default function ExpandableLogoMenu({
   // Drag Handlers
   // ============================================================================
 
-  const handleDragStart = useCallback(() => {
+  const handleDragStart = useCallback((
+    event: MouseEvent | TouchEvent | PointerEvent,
+    info: { point: { x: number; y: number } }
+  ) => {
     setIsDragging(true);
     setIsAnimating(true); // Disable expensive backdrop-blur during drag
-    dragStartTime.current = Date.now();
+    dragStartPos.current = { x: info.point.x, y: info.point.y };
     if (isExpanded) setIsExpanded(false);
   }, [isExpanded]);
 
@@ -206,7 +209,11 @@ export default function ExpandableLogoMenu({
   ) => {
     const { offset, velocity } = info;
 
-    // Determine next position
+    // Animate back to origin (optimized: higher stiffness = fewer frames needed)
+    animate(x, 0, { type: 'spring', stiffness: 500, damping: 50, mass: 0.5 });
+    animate(y, 0, { type: 'spring', stiffness: 500, damping: 50, mass: 0.5 });
+
+    // Determine next position based on gesture
     const nextPos = getNextPosition(
       position,
       offset.x,
@@ -215,11 +222,7 @@ export default function ExpandableLogoMenu({
       velocity.y
     );
 
-    // Animate back to origin (optimized: higher stiffness = fewer frames needed)
-    animate(x, 0, { type: 'spring', stiffness: 500, damping: 50, mass: 0.5 });
-    animate(y, 0, { type: 'spring', stiffness: 500, damping: 50, mass: 0.5 });
-
-    // If valid movement, change position after a tiny delay for visual feedback
+    // If valid movement, change position
     if (nextPos && nextPos !== position) {
       savePosition(nextPos);
     }
@@ -228,6 +231,7 @@ export default function ExpandableLogoMenu({
     setTimeout(() => {
       setIsDragging(false);
       setIsAnimating(false); // Re-enable backdrop-blur
+      dragStartPos.current = null;
     }, 300);
   }, [position, getNextPosition, savePosition, x, y]);
 
@@ -235,16 +239,12 @@ export default function ExpandableLogoMenu({
   // Menu Toggle
   // ============================================================================
 
-  const expand = useCallback(() => setIsExpanded(true), []);
   const collapse = useCallback(() => setIsExpanded(false), []);
 
   const handleTap = useCallback((e: React.MouseEvent | React.PointerEvent) => {
     e.stopPropagation();
-
-    // If we just finished dragging, don't toggle
-    const timeSinceDragStart = Date.now() - dragStartTime.current;
-    if (isDragging || timeSinceDragStart < 100) return;
-
+    // Don't toggle if actively dragging
+    if (isDragging) return;
     setIsExpanded(prev => !prev);
   }, [isDragging]);
 
