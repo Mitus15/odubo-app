@@ -15,10 +15,10 @@ export default function MomentsCameraModal({ galleryId }: MomentsCameraModalProp
   const [galleryInfo, setGalleryInfo] = useState<{ id: number; title: string; code?: string; starts_at?: string; ends_at?: string } | null>(null);
   const [isLoadingGallery, setIsLoadingGallery] = useState(false);
 
-  // Camera state
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [stream, setStream] = useState<MediaStream | null>(null);
+  // Camera state - use useState for refs so we get re-render when element attaches
+  const [videoEl, setVideoEl] = useState<HTMLVideoElement | null>(null);
+  const [canvasEl, setCanvasEl] = useState<HTMLCanvasElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const [cameraStarted, setCameraStarted] = useState(false);
   const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
   const [currentDeviceId, setCurrentDeviceId] = useState<string | null>(null);
@@ -123,75 +123,72 @@ export default function MomentsCameraModal({ galleryId }: MomentsCameraModalProp
   // Stop camera stream
   const stopStream = useCallback(() => {
     try {
-      if (stream) {
-        stream.getTracks().forEach((t) => t.stop());
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
       }
-      if (videoRef.current) {
-        videoRef.current.srcObject = null;
+      if (videoEl) {
+        videoEl.srcObject = null;
       }
     } catch {}
-  }, [stream]);
+  }, [videoEl]);
 
-  // Start camera
-  async function startCamera(opts?: { mode?: 'environment' | 'user'; deviceId?: string }) {
+  // Start camera - simplified like the working moments page
+  async function startCamera() {
     try {
       if (typeof window !== 'undefined' && !window.isSecureContext) {
         setError('Camera requires HTTPS (or localhost).');
         return;
       }
 
-      stopStream();
-
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        let desiredDeviceId = opts?.deviceId || null;
-        const desiredMode = opts?.mode || facingMode;
-
-        try {
-          if (!desiredDeviceId) {
-            const savedFront = preferredFrontId || localStorage.getItem('cameraFrontId');
-            const savedBack = preferredBackId || localStorage.getItem('cameraBackId');
-            if (desiredMode === 'environment' && savedBack) desiredDeviceId = savedBack;
-            if (desiredMode === 'user' && savedFront) desiredDeviceId = savedFront;
-          }
-        } catch {}
-
-        const constraints: MediaStreamConstraints = {
-          video: desiredDeviceId
-            ? { deviceId: { exact: desiredDeviceId } }
-            : { facingMode: { ideal: desiredMode } },
-          audio: false,
-        };
-
-        const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
-
-        if (videoRef.current) {
-          videoRef.current.srcObject = mediaStream;
-          videoRef.current.muted = true;
-          await waitForVideoReady(videoRef.current);
-          await videoRef.current.play();
-
-          setStream(mediaStream);
-          setCameraStarted(true);
-
-          try {
-            const settings = mediaStream.getVideoTracks?.()[0]?.getSettings?.();
-            if (settings?.deviceId) setCurrentDeviceId(settings.deviceId);
-          } catch {}
-
-          if (opts?.mode) setFacingMode(opts.mode);
-          setError('');
-
-          try {
-            const settings = mediaStream.getVideoTracks?.()[0]?.getSettings?.();
-            await refreshDevicesAndPersist(settings?.deviceId || undefined);
-          } catch {}
-        }
+      // Stop existing stream
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(t => t.stop());
+        streamRef.current = null;
       }
+
+      const constraints: MediaStreamConstraints = {
+        video: {
+          facingMode: { ideal: facingMode },
+          width: { ideal: facingMode === 'environment' ? 1920 : 1280 },
+          height: { ideal: facingMode === 'environment' ? 1080 : 720 },
+        },
+        audio: false,
+      };
+
+      const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+      streamRef.current = mediaStream;
+
+      // Attach to video element if available
+      if (videoEl) {
+        videoEl.srcObject = mediaStream;
+        videoEl.playsInline = true;
+        videoEl.muted = true;
+        videoEl.autoplay = true;
+        await videoEl.play().catch(() => {});
+      }
+
+      setCameraStarted(true);
+      setError('');
+
+      try {
+        const settings = mediaStream.getVideoTracks?.()[0]?.getSettings?.();
+        if (settings?.deviceId) setCurrentDeviceId(settings.deviceId);
+        await refreshDevicesAndPersist(settings?.deviceId || undefined);
+      } catch {}
     } catch (err: unknown) {
       console.error('Camera error:', err);
       setError(`Camera error: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
+
+  // Effect to attach stream when video element becomes available
+  useEffect(() => {
+    if (videoEl && streamRef.current) {
+      videoEl.srcObject = streamRef.current;
+      videoEl.play().catch(() => {});
+    }
+  }, [videoEl]);
 
   // Switch camera
   async function switchCamera() {
@@ -232,11 +229,11 @@ export default function MomentsCameraModal({ galleryId }: MomentsCameraModalProp
 
   // Take photo
   function takePhoto() {
-    if (!videoRef.current || !canvasRef.current) return;
+    if (!videoEl || !canvasEl) return;
     if (!cameraStarted) { setError('Camera not started'); return; }
 
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
+    const video = videoEl;
+    const canvas = canvasEl;
 
     const vw = video.videoWidth;
     const vh = video.videoHeight;
@@ -543,7 +540,7 @@ export default function MomentsCameraModal({ galleryId }: MomentsCameraModalProp
                 <div className="space-y-4">
                   <div className="relative rounded-xl overflow-hidden bg-black border border-white/10">
                     <video
-                      ref={videoRef}
+                      ref={setVideoEl}
                       autoPlay
                       playsInline
                       muted
@@ -633,7 +630,7 @@ export default function MomentsCameraModal({ galleryId }: MomentsCameraModalProp
       </div>
 
       {/* Hidden canvas */}
-      <canvas ref={canvasRef} style={{ display: 'none' }} />
+      <canvas ref={setCanvasEl} style={{ display: 'none' }} />
     </motion.div>
   );
 }
