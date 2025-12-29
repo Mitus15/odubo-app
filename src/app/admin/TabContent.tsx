@@ -26,10 +26,8 @@ const AdminVideosPage = dynamic(() => import('./videos/page'));
 const AdminUsersPage = dynamic(() => import('./users/page'));
 const AdminLinktreePage = dynamic(() => import('./linktree/page'));
 const AdminLivePage = dynamic(() => import('./live/page'));
-const AdminSocialPage = dynamic(() => import('./social/page'));
 const AdminStoragePage = dynamic(() => import('./storage/page'));
 const AdminDatabasePage = dynamic(() => import('./db/page'));
-const FeaturedManagePage = dynamic(() => import('@/app/featured/manage/page'));
 
 // Loading fallback component
 function LoadingFallback({ title }: { title: string }) {
@@ -44,14 +42,14 @@ function LoadingFallback({ title }: { title: string }) {
 }
 
 // All admin tab types
-type AdminTab = 
-  | 'overview' 
+type AdminTab =
+  | 'overview'
   // CMS
-  | 'music-library' | 'video-library' | 'moments' | 'featured' | 'linktree' | 'live'
-  // Commerce  
+  | 'music-library' | 'video-library' | 'moments' | 'linktree' | 'live'
+  // Commerce
   | 'store-settings' | 'products' | 'orders' | 'customers' | 'discounts'
   // Marketing
-  | 'social' | 'campaigns' | 'email-marketing'
+  | 'campaigns' | 'email-marketing'
   // Analytics
   | 'analytics' | 'analytics-overview' | 'analytics-sales' | 'analytics-finance' 
   | 'analytics-music' | 'analytics-video' | 'analytics-moments' | 'analytics-gallery' 
@@ -88,12 +86,6 @@ export default function TabContent({ activeTab }: { activeTab: AdminTab }) {
       return (
         <Suspense fallback={<LoadingFallback title="Moments" />}>
           <MomentsTab />
-        </Suspense>
-      );
-    case 'featured':
-      return (
-        <Suspense fallback={<LoadingFallback title="Featured" />}>
-          <FeaturedManagePage />
         </Suspense>
       );
     case 'linktree':
@@ -142,12 +134,6 @@ export default function TabContent({ activeTab }: { activeTab: AdminTab }) {
       );
 
     // === MARKETING ===
-    case 'social':
-      return (
-        <Suspense fallback={<LoadingFallback title="Social Ops" />}>
-          <AdminSocialPage />
-        </Suspense>
-      );
     case 'campaigns':
     case 'marketing':
       return (

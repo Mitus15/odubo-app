@@ -20,8 +20,8 @@ export default function DesktopSidebar() {
   const pathname = usePathname();
   const { openMaison, cartCount, storeAccessible, checkingStoreAccess } = useOmniShop();
 
-  // Hide on admin pages (they use AdminSidebar instead)
-  if (pathname.startsWith('/admin') || pathname.startsWith('/featured/manage')) {
+  // Hide on admin/backend pages
+  if (pathname.startsWith('/admin') || pathname.startsWith('/command-center') || pathname.startsWith('/featured/manage')) {
     return null;
   }
 

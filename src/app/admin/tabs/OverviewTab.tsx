@@ -163,18 +163,13 @@ export default function OverviewTab() {
         <h3 className="text-base sm:text-lg font-bold text-[#ede8df] mb-3 sm:mb-4">Quick Actions</h3>
         <div className="flex flex-wrap gap-3">
           <a
-            href="/featured/manage"
+            href="/social-ops"
             className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#ede8df] text-[#171616] font-semibold hover:bg-white/90 transition"
           >
-            <span>⭐</span>
-            <span>Manage Featured</span>
-          </a>
-          <a
-            href="/featured/manage/new"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#302927] border border-[#502d26]/40 text-[#ede8df] hover:bg-[#502d26]/40 transition"
-          >
-            <span>➕</span>
-            <span>New Featured Project</span>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.933-2.185 2.25 2.25 0 00-3.933 2.185z" />
+            </svg>
+            <span>Social Ops</span>
           </a>
         </div>
       </div>

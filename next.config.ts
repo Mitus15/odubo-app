@@ -1,5 +1,11 @@
 import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
+import { setupDevPlatform } from '@cloudflare/next-on-pages/next-dev';
+
+// Set up Cloudflare platform for local development
+if (process.env.NODE_ENV === 'development') {
+  setupDevPlatform();
+}
 
 const nextConfig: NextConfig = {
   reactStrictMode: false,

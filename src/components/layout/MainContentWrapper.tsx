@@ -15,8 +15,8 @@ export default function MainContentWrapper({
 }) {
   const pathname = usePathname();
   
-  // Admin pages have their own sidebar - don't add margin
-  const isAdminPage = pathname?.startsWith('/admin') || pathname?.startsWith('/featured/manage');
+  // Admin/backend pages don't use the sidebar - don't add margin
+  const isAdminPage = pathname?.startsWith('/admin') || pathname?.startsWith('/command-center') || pathname?.startsWith('/featured/manage');
   
   return (
     <div className={`h-full w-full flex flex-col overflow-hidden ${isAdminPage ? '' : 'lg:ml-20 xl:ml-64'}`}>

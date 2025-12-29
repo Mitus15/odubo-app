@@ -156,6 +156,11 @@ const Icons = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
     </svg>
   ),
+  commandCenter: (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" />
+    </svg>
+  ),
 };
 
 // Type for nav items with optional children (foldered structure)
@@ -164,11 +169,13 @@ interface NavItem {
   label: string;
   icon?: ReactNode;
   children?: NavItem[];
+  href?: string; // External link (navigates to another page)
 }
 
 // CMS-style foldered navigation structure - Full Enterprise Admin Suite
 const navItems: NavItem[] = [
   { id: 'overview', label: 'Dashboard', icon: Icons.home },
+  { id: 'command-center', label: 'Command Center', icon: Icons.commandCenter, href: '/command-center' },
   { 
     id: 'cms', 
     label: 'CMS',
@@ -194,12 +201,11 @@ const navItems: NavItem[] = [
       { id: 'store-settings', label: 'Store Settings', icon: Icons.system },
     ]
   },
-  { 
-    id: 'marketing', 
+  {
+    id: 'marketing',
     label: 'Marketing',
     icon: Icons.marketing,
     children: [
-      { id: 'social', label: 'Social Ops', icon: Icons.social },
       { id: 'campaigns', label: 'Campaigns', icon: Icons.marketing },
     ]
   },
@@ -286,6 +292,27 @@ export default function AdminPage() {
     const isExpanded = expandedItems.includes(item.id);
     const isActive = activeTab === item.id;
 
+    // If item has an href, render as a Link
+    if (item.href) {
+      return (
+        <div key={item.id}>
+          <Link
+            href={item.href}
+            className={`
+              w-full flex items-center justify-between px-4 py-2.5 mx-2 rounded-xl text-sm font-medium transition-colors
+              text-[#726d6c] hover:text-[#b2a491] hover:bg-[#302927]/30
+            `}
+            style={{ paddingLeft: `${depth * 16 + 16}px` }}
+          >
+            <div className="flex items-center gap-3">
+              {item.icon && <span className="flex-shrink-0 opacity-80">{item.icon}</span>}
+              <span>{item.label}</span>
+            </div>
+          </Link>
+        </div>
+      );
+    }
+
     return (
       <div key={item.id}>
         <button
@@ -318,7 +345,7 @@ export default function AdminPage() {
         </button>
         {hasChildren && isExpanded && (
           <div className="mt-1 space-y-0.5">
-            {item.children!.map((child) => 
+            {item.children!.map((child) =>
               renderNavItem(child, depth + 1, item.children!.map(c => c.id))
             )}
           </div>
