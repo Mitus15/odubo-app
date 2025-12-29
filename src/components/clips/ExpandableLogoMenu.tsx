@@ -504,7 +504,7 @@ export default function ExpandableLogoMenu({
                 <motion.button
                   variants={itemVariants}
                   onClick={handleShop}
-                  className="holo-button holo-button-accent relative"
+                  className="holo-button holo-button-accent relative overflow-visible"
                   aria-label="Shop"
                   style={{ touchAction: 'manipulation', willChange: 'transform, opacity', transform: 'translateZ(0)' }}
                 >
@@ -515,7 +515,7 @@ export default function ExpandableLogoMenu({
                     draggable={false}
                   />
                   {cartCount > 0 && (
-                    <span className="absolute -top-1 -right-1 w-4 h-4 flex items-center justify-center bg-[#b2a491] text-[#1a1817] text-[9px] font-semibold rounded-full shadow-sm">
+                    <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center bg-[#ede8df] text-[#1a1817] text-[10px] font-bold rounded-full shadow-lg border border-[#1a1817]/20 z-20">
                       {cartCount > 9 ? '9+' : cartCount}
                     </span>
                   )}
