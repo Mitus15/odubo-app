@@ -325,3 +325,245 @@ export const DSPS: { id: DSP; name: string; icon: string }[] = [
   { id: 'tiktok', name: 'TikTok', icon: '📱' },
   { id: 'instagram', name: 'Instagram/Facebook', icon: '📷' },
 ];
+
+// ============================================================================
+// VIDEO DISTRIBUTION TYPES
+// ============================================================================
+
+export type VideoType =
+  | 'music_video'
+  | 'lyric_video'
+  | 'visualizer'
+  | 'live_performance'
+  | 'behind_the_scenes'
+  | 'short_form';
+
+export type VideoReleaseStatus =
+  | 'draft'
+  | 'ready'
+  | 'scheduled'
+  | 'uploading'
+  | 'processing'
+  | 'live'
+  | 'unlisted'
+  | 'private'
+  | 'removed';
+
+export type VideoPlatform =
+  | 'youtube'
+  | 'vevo'
+  | 'facebook'
+  | 'instagram_reels'
+  | 'tiktok'
+  | 'twitter'
+  | 'vimeo';
+
+export type VideoPlatformStatus =
+  | 'pending'
+  | 'scheduled'
+  | 'uploading'
+  | 'processing'
+  | 'live'
+  | 'unlisted'
+  | 'private'
+  | 'failed'
+  | 'removed';
+
+export type VideoAssetType =
+  | 'master'
+  | 'clean'
+  | 'explicit'
+  | 'extended'
+  | 'radio_edit'
+  | 'vertical'
+  | 'square'
+  | 'teaser';
+
+export type ContentIdPolicy = 'monetize' | 'track' | 'block';
+
+export interface VideoRelease {
+  id: string;
+
+  // Core metadata
+  title: string;
+  artistName: string;
+  videoType: VideoType;
+  description?: string;
+  descriptionTemplate?: string;
+
+  // Associated music
+  linkedTrackId?: string;
+  linkedReleaseId?: string;
+  isrc?: string;
+
+  // Primary asset
+  primaryAssetId?: string;
+
+  // Thumbnails
+  thumbnailUrl?: string;
+  thumbnailR2Key?: string;
+  customThumbnails?: string[];
+
+  // Premiere settings
+  premiereEnabled: boolean;
+  premiereDate?: string;
+  premiereCountdownTheme?: string;
+
+  // Content ID / Rights
+  contentIdEnabled: boolean;
+  contentIdPolicy: ContentIdPolicy;
+
+  // Status
+  status: VideoReleaseStatus;
+
+  // Metadata
+  genre?: string;
+  tags?: string[];
+  language: string;
+  madeForKids: boolean;
+  ageRestricted: boolean;
+
+  // Credits
+  director?: string;
+  producer?: string;
+  cinematographer?: string;
+  editor?: string;
+  creditsJson?: Record<string, string>;
+
+  // Internal linking
+  internalVideoId?: string;
+
+  // Timestamps
+  createdAt: string;
+  updatedAt: string;
+  scheduledAt?: string;
+  publishedAt?: string;
+
+  // Related data (when loaded)
+  assets?: VideoAsset[];
+  platforms?: VideoPlatformTarget[];
+}
+
+export interface VideoAsset {
+  id: string;
+  releaseId: string;
+
+  // Asset info
+  label: string;
+  versionType: VideoAssetType;
+
+  // File info
+  fileUrl?: string;
+  r2Key?: string;
+  cloudflareUid?: string;
+
+  // Technical specs
+  durationSeconds?: number;
+  width?: number;
+  height?: number;
+  aspectRatio?: string;
+  framerate?: number;
+  codec?: string;
+  bitrateKbps?: number;
+  fileSizeBytes?: number;
+
+  // Audio
+  audioCodec?: string;
+  audioBitrateKbps?: number;
+  audioChannels?: number;
+
+  // Status
+  status: 'pending' | 'processing' | 'ready' | 'error';
+  processingError?: string;
+
+  // Primary flag
+  isPrimary: boolean;
+
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface VideoPlatformTarget {
+  id: string;
+  releaseId: string;
+
+  // Platform
+  platform: VideoPlatform;
+  enabled: boolean;
+
+  // Platform-specific settings
+  assetId?: string;
+  titleOverride?: string;
+  descriptionOverride?: string;
+  tagsOverride?: string[];
+
+  // YouTube specific
+  youtubeCategory?: string;
+  youtubePlaylistId?: string;
+  youtubeEndScreen?: Record<string, unknown>;
+  youtubeCards?: Record<string, unknown>;
+
+  // External IDs (after publish)
+  externalId?: string;
+  externalUrl?: string;
+
+  // Status
+  status: VideoPlatformStatus;
+  statusMessage?: string;
+
+  // Metrics (cached)
+  views: number;
+  likes: number;
+  comments: number;
+  metricsUpdatedAt?: string;
+
+  // Timing
+  scheduledAt?: string;
+  publishedAt?: string;
+
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ============================================================================
+// VIDEO CONSTANTS
+// ============================================================================
+
+export const VIDEO_TYPES: { id: VideoType; name: string; description: string }[] = [
+  { id: 'music_video', name: 'Music Video', description: 'Official music video' },
+  { id: 'lyric_video', name: 'Lyric Video', description: 'Lyrics on screen' },
+  { id: 'visualizer', name: 'Visualizer', description: 'Audio visualizer' },
+  { id: 'live_performance', name: 'Live Performance', description: 'Live recording' },
+  { id: 'behind_the_scenes', name: 'Behind the Scenes', description: 'BTS content' },
+  { id: 'short_form', name: 'Short Form', description: 'Vertical/short clips' },
+];
+
+export const VIDEO_PLATFORMS: { id: VideoPlatform; name: string; icon: string }[] = [
+  { id: 'youtube', name: 'YouTube', icon: '▶️' },
+  { id: 'vevo', name: 'Vevo', icon: '🎬' },
+  { id: 'facebook', name: 'Facebook', icon: '👤' },
+  { id: 'instagram_reels', name: 'Instagram Reels', icon: '📷' },
+  { id: 'tiktok', name: 'TikTok', icon: '📱' },
+  { id: 'twitter', name: 'X/Twitter', icon: '🐦' },
+  { id: 'vimeo', name: 'Vimeo', icon: '🎥' },
+];
+
+export const VIDEO_ASSET_TYPES: { id: VideoAssetType; name: string }[] = [
+  { id: 'master', name: 'Master' },
+  { id: 'clean', name: 'Clean Version' },
+  { id: 'explicit', name: 'Explicit Version' },
+  { id: 'extended', name: 'Extended Cut' },
+  { id: 'radio_edit', name: 'Radio Edit' },
+  { id: 'vertical', name: 'Vertical (9:16)' },
+  { id: 'square', name: 'Square (1:1)' },
+  { id: 'teaser', name: 'Teaser' },
+];
+
+export const YOUTUBE_CATEGORIES = [
+  { id: '10', name: 'Music' },
+  { id: '24', name: 'Entertainment' },
+  { id: '22', name: 'People & Blogs' },
+  { id: '1', name: 'Film & Animation' },
+  { id: '17', name: 'Sports' },
+  { id: '20', name: 'Gaming' },
+];
