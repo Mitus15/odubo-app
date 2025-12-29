@@ -13,7 +13,22 @@ import {
   YOUTUBE_CATEGORIES,
 } from '@/lib/distributors/types';
 
-type ViewMode = 'list' | 'create' | 'edit';
+type ViewMode = 'list' | 'create' | 'edit' | 'import';
+
+// Hub video type for import
+interface HubVideo {
+  id: number;
+  uid: string;
+  title: string;
+  artistName: string;
+  description: string;
+  thumbnailUrl: string;
+  duration: string;
+  category: string;
+  type: string;
+  status: string;
+  createdAt: string;
+}
 
 // Status badge colors
 const STATUS_COLORS: Record<VideoReleaseStatus, { bg: string; text: string }> = {
@@ -58,7 +73,7 @@ export function VideoDistributionPanel() {
 
       const res = await fetch(`/api/command-center/video-releases?${params}`);
       if (res.ok) {
-        const data = await res.json();
+        const data = (await res.json()) as { releases?: VideoRelease[] };
         setReleases(data.releases || []);
       }
     } catch (e) {
@@ -77,13 +92,17 @@ export function VideoDistributionPanel() {
     setViewMode('create');
   };
 
+  const handleImportFromHub = () => {
+    setViewMode('import');
+  };
+
   const handleEditRelease = async (release: VideoRelease) => {
     // Fetch full release with assets and platforms
     try {
       const res = await fetch(`/api/command-center/video-releases/${release.id}`);
       if (res.ok) {
-        const data = await res.json();
-        setSelectedRelease(data.release);
+        const data = (await res.json()) as { release?: VideoRelease };
+        setSelectedRelease(data.release || null);
         setViewMode('edit');
       }
     } catch (e) {
@@ -169,15 +188,26 @@ export function VideoDistributionPanel() {
               {releases.length} video{releases.length !== 1 ? 's' : ''}
             </span>
           </div>
-          <button
-            onClick={handleCreateNew}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#843c2d] text-white text-sm font-medium hover:bg-[#9a4a3a] transition-colors"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-            </svg>
-            New Video
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleImportFromHub}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl border border-[#502d26]/40 text-sm font-medium hover:bg-[#302927] transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+              </svg>
+              Import from Hub
+            </button>
+            <button
+              onClick={handleCreateNew}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#843c2d] text-white text-sm font-medium hover:bg-[#9a4a3a] transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+              </svg>
+              New Video
+            </button>
+          </div>
         </div>
 
         {/* Content */}
@@ -214,6 +244,52 @@ export function VideoDistributionPanel() {
           )}
         </div>
       </div>
+    );
+  }
+
+  // Import View
+  if (viewMode === 'import') {
+    return (
+      <HubVideoImporter
+        onImport={async (hubVideo, videoType) => {
+          // Create a new video release from hub video
+          try {
+            const res = await fetch('/api/command-center/video-releases', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                title: hubVideo.title,
+                artistName: hubVideo.artistName || 'Artist',
+                videoType,
+                description: hubVideo.description,
+                internalVideoId: String(hubVideo.id),
+              }),
+            });
+
+            if (res.ok) {
+              const data = (await res.json()) as { id: string };
+
+              // Create a video asset with the Cloudflare Stream UID
+              await fetch(`/api/command-center/video-releases/${data.id}/assets`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  label: 'Master',
+                  versionType: 'master',
+                  cloudflareUid: hubVideo.uid,
+                  isPrimary: true,
+                }),
+              });
+
+              await loadReleases();
+              setViewMode('list');
+            }
+          } catch (e) {
+            console.error('Failed to import video:', e);
+          }
+        }}
+        onBack={handleBack}
+      />
     );
   }
 
@@ -805,6 +881,205 @@ function VideoReleaseEditor({
                 </div>
               </div>
             )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// =============================================================================
+// Hub Video Importer
+// =============================================================================
+
+function HubVideoImporter({
+  onImport,
+  onBack,
+}: {
+  onImport: (video: HubVideo, videoType: VideoType) => void;
+  onBack: () => void;
+}) {
+  const [hubVideos, setHubVideos] = useState<HubVideo[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [selectedVideo, setSelectedVideo] = useState<HubVideo | null>(null);
+  const [selectedType, setSelectedType] = useState<VideoType>('music_video');
+  const [importing, setImporting] = useState(false);
+
+  // Load hub videos
+  useEffect(() => {
+    const loadHubVideos = async () => {
+      setLoading(true);
+      try {
+        const params = new URLSearchParams({
+          excludeImported: 'true',
+        });
+        if (search) params.set('search', search);
+
+        const res = await fetch(`/api/command-center/hub-videos?${params}`);
+        if (res.ok) {
+          const data = (await res.json()) as { videos?: HubVideo[] };
+          setHubVideos(data.videos || []);
+        }
+      } catch (e) {
+        console.error('Failed to load hub videos:', e);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const debounce = setTimeout(loadHubVideos, 300);
+    return () => clearTimeout(debounce);
+  }, [search]);
+
+  const handleImport = async () => {
+    if (!selectedVideo) return;
+    setImporting(true);
+    try {
+      await onImport(selectedVideo, selectedType);
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  return (
+    <div className="h-full flex flex-col">
+      {/* Header */}
+      <div className="flex-shrink-0 border-b border-[#502d26]/30 px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onBack}
+            className="p-2 -ml-2 rounded-lg hover:bg-[#302927] transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          <h2 className="font-semibold">Import from Cloudflare Stream</h2>
+        </div>
+        {selectedVideo && (
+          <button
+            onClick={handleImport}
+            disabled={importing}
+            className="px-4 py-2 rounded-xl bg-[#843c2d] text-white text-sm font-medium hover:bg-[#9a4a3a] disabled:opacity-50 transition-colors"
+          >
+            {importing ? 'Importing...' : 'Import Selected'}
+          </button>
+        )}
+      </div>
+
+      {/* Search */}
+      <div className="flex-shrink-0 border-b border-[#502d26]/30 px-4 py-3">
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search videos..."
+          className="w-full px-3 py-2 rounded-lg bg-[#0d0c0a] border border-[#502d26]/40 text-sm focus:outline-none focus:border-[#843c2d]"
+        />
+      </div>
+
+      {/* Video Type Selection (shows when video selected) */}
+      {selectedVideo && (
+        <div className="flex-shrink-0 border-b border-[#502d26]/30 px-4 py-3">
+          <label className="block text-xs text-[#726d6c] mb-2">Video Type</label>
+          <select
+            value={selectedType}
+            onChange={(e) => setSelectedType(e.target.value as VideoType)}
+            className="w-full px-3 py-2 rounded-lg bg-[#0d0c0a] border border-[#502d26]/40 text-sm focus:outline-none focus:border-[#843c2d]"
+          >
+            {VIDEO_TYPES.map((type) => (
+              <option key={type.id} value={type.id}>
+                {type.name} - {type.description}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto p-4">
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="w-6 h-6 border-2 border-[#843c2d] border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : hubVideos.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="text-5xl mb-4">📹</div>
+            <h3 className="font-semibold mb-2">No videos available</h3>
+            <p className="text-sm text-[#726d6c]">
+              {search
+                ? 'No videos match your search'
+                : 'All your Cloudflare Stream videos have been imported'}
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+            {hubVideos.map((video) => (
+              <button
+                key={video.id}
+                onClick={() =>
+                  setSelectedVideo(selectedVideo?.id === video.id ? null : video)
+                }
+                className={`group relative rounded-xl overflow-hidden border-2 transition-all ${
+                  selectedVideo?.id === video.id
+                    ? 'border-[#843c2d] ring-2 ring-[#843c2d]/30'
+                    : 'border-transparent hover:border-[#502d26]/40'
+                }`}
+              >
+                {/* Thumbnail */}
+                <div className="aspect-video bg-[#0d0c0a] relative">
+                  {video.thumbnailUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={video.thumbnailUrl}
+                      alt={video.title}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-3xl text-[#502d26]">
+                      🎬
+                    </div>
+                  )}
+
+                  {/* Selected overlay */}
+                  {selectedVideo?.id === video.id && (
+                    <div className="absolute inset-0 bg-[#843c2d]/20 flex items-center justify-center">
+                      <div className="w-8 h-8 rounded-full bg-[#843c2d] flex items-center justify-center">
+                        <svg
+                          className="w-5 h-5 text-white"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Duration badge */}
+                  {video.duration && (
+                    <div className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-black/70 text-[10px]">
+                      {video.duration}
+                    </div>
+                  )}
+                </div>
+
+                {/* Info */}
+                <div className="p-2 bg-[#171616]">
+                  <h4 className="font-medium text-xs truncate">{video.title}</h4>
+                  {video.artistName && (
+                    <p className="text-[10px] text-[#726d6c] truncate">
+                      {video.artistName}
+                    </p>
+                  )}
+                </div>
+              </button>
+            ))}
           </div>
         )}
       </div>
