@@ -292,8 +292,9 @@ export default function ClipsFeed({ navHeight, initialClipId, onActiveClipChange
   return (
     <div
       ref={rootRef}
-      className="w-full h-full overflow-y-auto overflow-x-hidden"
+      className="w-full overflow-y-auto overflow-x-hidden"
       style={{
+        height: 'var(--app-height, 100dvh)',
         scrollSnapType: 'y mandatory',
         WebkitOverflowScrolling: 'touch',
         overscrollBehavior: 'none',

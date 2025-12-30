@@ -117,10 +117,8 @@ export default function HomePageClient({ verseOfTheDay, initialClipId }: HomePag
 
   return (
     <div
-      className="fixed inset-0 bg-black text-[#ede8df]"
+      className="fixed top-0 left-0 right-0 bottom-0 bg-black text-[#ede8df]"
       style={{
-        height: '100%',
-        width: '100%',
         overflow: 'hidden',
         WebkitOverflowScrolling: 'touch',
       }}
@@ -130,7 +128,7 @@ export default function HomePageClient({ verseOfTheDay, initialClipId }: HomePag
 
       {/* Clips layer - edge to edge, offset for sidebar on desktop */}
       <div
-        className="absolute inset-0 lg:left-20 xl:left-64 bg-black"
+        className="absolute top-0 left-0 right-0 bottom-0 lg:left-20 xl:left-64 bg-black"
         style={{
           overscrollBehavior: 'none',
         }}

@@ -422,7 +422,7 @@ export default function ClipCard({
       {/* Bottom-left: Title & Artist info box */}
       <div
         className="absolute left-4 z-20 pointer-events-auto"
-        style={{ bottom: 'max(env(safe-area-inset-bottom, 16px), 16px)' }}
+        style={{ bottom: 'calc(max(env(safe-area-inset-bottom, 16px), 16px) + 24px)' }}
         onClick={(e) => e.stopPropagation()} // Prevent clip pause when tapping info area
       >
         {/* Vinyl Mini Player - shows when music is playing */}
