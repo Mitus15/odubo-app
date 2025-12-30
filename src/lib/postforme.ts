@@ -21,12 +21,21 @@ export type SocialPlatform =
 
 export interface SocialAccount {
   id: string;
-  platform: SocialPlatform;
+  platform: SocialPlatform | string; // API may return 'tiktok_business' etc.
   username: string;
-  display_name: string;
-  profile_image_url?: string;
-  is_connected: boolean;
-  connected_at: string;
+  profile_photo_url?: string;
+  user_id?: string;
+  status: 'connected' | 'disconnected' | 'expired';
+}
+
+// Wrapped API response format
+interface PaginatedResponse<T> {
+  data: T[];
+  meta: {
+    total: number;
+    offset: number;
+    limit: number;
+  };
 }
 
 export interface SocialPost {
@@ -60,6 +69,46 @@ export interface PostAnalytics {
   updated_at: string;
 }
 
+// Feed item from /social-account-feeds endpoint
+export interface FeedItem {
+  platform_account_id: string;
+  platform_post_id: string;
+  social_account_id: string;
+  platform: string;
+  platform_url: string;
+  posted_at: string;
+  caption?: string;
+  media: Array<{
+    url: string;
+    thumbnail_url?: string;
+  }>;
+  metrics?: {
+    // Instagram format
+    views?: number;
+    impressions?: number;
+    reach?: number;
+    likes?: number;
+    comments?: number;
+    shares?: number;
+    saved?: number;
+    follows?: number;
+    total_interactions?: number;
+    ig_reels_avg_watch_time?: number;
+    ig_reels_video_view_total_time?: number;
+    profile_visits?: number;
+    profile_activity?: number;
+    // TikTok format (alternative field names)
+    view_count?: number;
+    like_count?: number;
+    comment_count?: number;
+    share_count?: number;
+    // YouTube format
+    viewCount?: number;
+    likeCount?: number;
+    commentCount?: number;
+  };
+}
+
 export interface CreatePostInput {
   caption?: string;
   social_accounts: string[]; // Account IDs
@@ -79,7 +128,7 @@ interface ApiResponse<T> {
 // Client
 // =============================================================================
 
-const BASE_URL = 'https://api.postfor.me';
+const BASE_URL = 'https://api.postforme.dev/v1';
 
 /**
  * Get the API key from environment
@@ -144,7 +193,20 @@ async function apiRequest<T>(
  * Get all connected social accounts
  */
 export async function getAccounts(): Promise<ApiResponse<SocialAccount[]>> {
-  return apiRequest<SocialAccount[]>('/social-accounts');
+  const response = await apiRequest<PaginatedResponse<SocialAccount>>('/social-accounts');
+
+  if (!response.success || !response.data) {
+    return {
+      success: false,
+      error: response.error || 'Failed to fetch accounts',
+    };
+  }
+
+  // Unwrap the data array from the paginated response
+  return {
+    success: true,
+    data: response.data.data,
+  };
 }
 
 /**
@@ -271,21 +333,35 @@ export async function getAccountAnalytics(
 // =============================================================================
 
 /**
- * Get feed posts from a connected account
+ * Get feed posts from a connected account with metrics
  */
 export async function getAccountFeed(
   accountId: string,
   params?: {
     limit?: number;
-    cursor?: string;
+    expand?: boolean;
   }
-): Promise<ApiResponse<SocialPost[]>> {
+): Promise<ApiResponse<FeedItem[]>> {
   const searchParams = new URLSearchParams();
   if (params?.limit) searchParams.set('limit', params.limit.toString());
-  if (params?.cursor) searchParams.set('cursor', params.cursor);
+  if (params?.expand !== false) searchParams.set('expand', 'metrics');
 
   const query = searchParams.toString();
-  return apiRequest<SocialPost[]>(`/social-accounts/${accountId}/feed${query ? `?${query}` : ''}`);
+  const response = await apiRequest<PaginatedResponse<FeedItem>>(
+    `/social-account-feeds/${accountId}${query ? `?${query}` : ''}`
+  );
+
+  if (!response.success || !response.data) {
+    return {
+      success: false,
+      error: response.error || 'Failed to fetch feed',
+    };
+  }
+
+  return {
+    success: true,
+    data: response.data.data,
+  };
 }
 
 // =============================================================================
@@ -300,6 +376,7 @@ export function mapPlatform(platform: string): SocialPlatform {
     instagram: 'instagram',
     ig: 'instagram',
     tiktok: 'tiktok',
+    tiktok_business: 'tiktok',
     tt: 'tiktok',
     youtube: 'youtube',
     yt: 'youtube',

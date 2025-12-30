@@ -186,15 +186,31 @@ async function syncAccounts(db: D1Database): Promise<SyncResult> {
 
   for (const account of accountsResponse.data) {
     try {
+      // Fetch account analytics to get follower count
+      let followerCount = 0;
+      let followerChange = 0;
+      try {
+        const analyticsResponse = await postforme.getAccountAnalytics(account.id);
+        if (analyticsResponse.success && analyticsResponse.data) {
+          followerCount = analyticsResponse.data.followers || 0;
+          followerChange = analyticsResponse.data.follower_change || 0;
+        }
+      } catch (analyticsErr) {
+        // Follower data is optional, continue without it
+        console.log(`[Sync] Could not fetch analytics for ${account.id}:`, analyticsErr);
+      }
+
       await db
         .prepare(
           `INSERT INTO social_accounts (
-             id, postforme_account_id, platform, account_handle, account_name, profile_image_url
-           ) VALUES (?, ?, ?, ?, ?, ?)
+             id, postforme_account_id, platform, account_handle, account_name, profile_image_url, follower_count, follower_change
+           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
            ON CONFLICT (platform, postforme_account_id) DO UPDATE SET
              account_handle = excluded.account_handle,
              account_name = excluded.account_name,
              profile_image_url = excluded.profile_image_url,
+             follower_count = excluded.follower_count,
+             follower_change = excluded.follower_change,
              last_synced_at = datetime('now')`
         )
         .bind(
@@ -202,8 +218,10 @@ async function syncAccounts(db: D1Database): Promise<SyncResult> {
           account.id,
           postforme.mapPlatform(account.platform),
           account.username,
-          account.display_name,
-          account.profile_image_url || null
+          account.username, // Use username as account_name (API doesn't provide display_name)
+          account.profile_photo_url || null,
+          followerCount,
+          followerChange
         )
         .run();
 
@@ -217,78 +235,100 @@ async function syncAccounts(db: D1Database): Promise<SyncResult> {
 }
 
 /**
- * Sync posts from Post for Me to social_content table
+ * Sync posts from Post for Me account feeds to social_content table
  */
 async function syncPosts(db: D1Database): Promise<SyncResult> {
   const result: SyncResult = { synced: 0, errors: [] };
 
-  const postsResponse = await postforme.getPosts({ status: 'published', limit: 100 });
-  if (!postsResponse.success || !postsResponse.data) {
-    result.errors.push(postsResponse.error || 'Failed to fetch posts');
+  // Get all connected accounts
+  const accountsResult = await db
+    .prepare(`SELECT postforme_account_id, platform FROM social_accounts WHERE is_active = 1`)
+    .all();
+
+  if (!accountsResult.results?.length) {
+    result.errors.push('No connected accounts to sync');
     return result;
   }
 
-  for (const post of postsResponse.data) {
+  // Fetch feed from each account
+  for (const account of accountsResult.results as Array<{ postforme_account_id: string; platform: string }>) {
     try {
-      // Check if we already have this post mapped
-      const existingMap = await db
-        .prepare(`SELECT social_content_id FROM postforme_content_map WHERE postforme_post_id = ?`)
-        .bind(post.id)
-        .first();
+      const feedResponse = await postforme.getAccountFeed(account.postforme_account_id, { limit: 50 });
 
-      if (existingMap) {
-        // Update existing content
-        await db
-          .prepare(
-            `UPDATE social_content SET
-               caption = ?,
-               status = ?,
-               published_at = ?,
-               updated_at = datetime('now')
-             WHERE id = ?`
-          )
-          .bind(
-            post.caption || null,
-            post.status,
-            post.published_at || null,
-            existingMap.social_content_id
-          )
-          .run();
-      } else {
-        // Create new social_content entry
-        const contentId = crypto.randomUUID().split('-')[0];
-
-        await db
-          .prepare(
-            `INSERT INTO social_content (
-               id, platform, content_type, external_id, external_url, caption, status, published_at
-             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-          )
-          .bind(
-            contentId,
-            postforme.mapPlatform(post.platform),
-            postforme.mapContentType(post.type),
-            post.external_id || post.id,
-            post.external_url || null,
-            post.caption || null,
-            post.status === 'published' ? 'published' : 'draft',
-            post.published_at || null
-          )
-          .run();
-
-        // Create mapping
-        await db
-          .prepare(
-            `INSERT INTO postforme_content_map (id, postforme_post_id, social_content_id)
-             VALUES (?, ?, ?)`
-          )
-          .bind(crypto.randomUUID().split('-')[0], post.id, contentId)
-          .run();
+      if (!feedResponse.success || !feedResponse.data) {
+        result.errors.push(`Feed ${account.postforme_account_id}: ${feedResponse.error}`);
+        continue;
       }
 
-      result.synced++;
+      for (const item of feedResponse.data) {
+        try {
+          // Check if we already have this post mapped
+          const existingMap = await db
+            .prepare(`SELECT social_content_id FROM postforme_content_map WHERE postforme_post_id = ?`)
+            .bind(item.platform_post_id)
+            .first();
+
+          const mediaUrl = item.media?.[0]?.url || null;
+          const thumbnailUrl = item.media?.[0]?.thumbnail_url || null;
+          const isVideo = mediaUrl?.includes('.mp4') || mediaUrl?.includes('/v/');
+
+          if (existingMap) {
+            // Update existing content
+            await db
+              .prepare(
+                `UPDATE social_content SET
+                   caption = ?,
+                   external_url = ?,
+                   thumbnail_url = ?,
+                   updated_at = datetime('now')
+                 WHERE id = ?`
+              )
+              .bind(
+                item.caption || null,
+                item.platform_url || null,
+                thumbnailUrl,
+                existingMap.social_content_id
+              )
+              .run();
+          } else {
+            // Create new social_content entry
+            const contentId = crypto.randomUUID().split('-')[0];
+
+            await db
+              .prepare(
+                `INSERT INTO social_content (
+                   id, platform, content_type, external_id, external_url, caption, status, published_at, thumbnail_url
+                 ) VALUES (?, ?, ?, ?, ?, ?, 'published', ?, ?)`
+              )
+              .bind(
+                contentId,
+                postforme.mapPlatform(item.platform),
+                isVideo ? 'clip' : 'post',
+                item.platform_post_id,
+                item.platform_url || null,
+                item.caption || null,
+                item.posted_at || null,
+                thumbnailUrl
+              )
+              .run();
+
+            // Create mapping
+            await db
+              .prepare(
+                `INSERT INTO postforme_content_map (id, postforme_post_id, social_content_id)
+                 VALUES (?, ?, ?)`
+              )
+              .bind(crypto.randomUUID().split('-')[0], item.platform_post_id, contentId)
+              .run();
+          }
+
+          result.synced++;
+        } catch (err) {
+          result.errors.push(`Post ${item.platform_post_id}: ${err}`);
+        }
+      }
     } catch (err) {
-      result.errors.push(`Post ${post.id}: ${err}`);
+      result.errors.push(`Account ${account.postforme_account_id}: ${err}`);
     }
   }
 
@@ -296,83 +336,105 @@ async function syncPosts(db: D1Database): Promise<SyncResult> {
 }
 
 /**
- * Sync analytics/metrics for all synced posts
+ * Sync analytics/metrics for all synced posts using account feeds
  */
 async function syncAnalytics(db: D1Database): Promise<SyncResult> {
   const result: SyncResult = { synced: 0, errors: [] };
 
-  // Get all mapped posts
-  const mappedPosts = await db
-    .prepare(
-      `SELECT postforme_post_id, social_content_id FROM postforme_content_map`
-    )
+  // Get all connected accounts
+  const accountsResult = await db
+    .prepare(`SELECT postforme_account_id FROM social_accounts WHERE is_active = 1`)
     .all();
 
-  if (!mappedPosts.results?.length) {
-    return result;
-  }
-
-  const postIds = mappedPosts.results.map((m: any) => m.postforme_post_id);
-  const postMap = new Map(
-    mappedPosts.results.map((m: any) => [m.postforme_post_id, m.social_content_id])
-  );
-
-  // Fetch analytics in bulk
-  const analyticsResponse = await postforme.getBulkAnalytics(postIds);
-  if (!analyticsResponse.success || !analyticsResponse.data) {
-    result.errors.push(analyticsResponse.error || 'Failed to fetch analytics');
+  if (!accountsResult.results?.length) {
     return result;
   }
 
   const today = new Date().toISOString().split('T')[0];
 
-  for (const analytics of analyticsResponse.data) {
+  // Fetch feed with metrics from each account
+  for (const account of accountsResult.results as Array<{ postforme_account_id: string }>) {
     try {
-      const contentId = postMap.get(analytics.post_id);
-      if (!contentId) continue;
+      const feedResponse = await postforme.getAccountFeed(account.postforme_account_id, { limit: 50 });
 
-      // Upsert metrics for today
-      await db
-        .prepare(
-          `INSERT INTO social_metrics (
-             id, content_id, date, views, impressions, reach, likes, comments, shares, saves,
-             link_clicks, engagement_rate, watch_time_seconds, avg_watch_percent
-           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-           ON CONFLICT (content_id, date) DO UPDATE SET
-             views = excluded.views,
-             impressions = excluded.impressions,
-             reach = excluded.reach,
-             likes = excluded.likes,
-             comments = excluded.comments,
-             shares = excluded.shares,
-             saves = excluded.saves,
-             link_clicks = excluded.link_clicks,
-             engagement_rate = excluded.engagement_rate,
-             watch_time_seconds = excluded.watch_time_seconds,
-             avg_watch_percent = excluded.avg_watch_percent,
-             synced_at = datetime('now')`
-        )
-        .bind(
-          crypto.randomUUID().split('-')[0],
-          contentId,
-          today,
-          analytics.views || 0,
-          analytics.impressions || 0,
-          analytics.reach || 0,
-          analytics.likes || 0,
-          analytics.comments || 0,
-          analytics.shares || 0,
-          analytics.saves || 0,
-          analytics.clicks || 0,
-          analytics.engagement_rate || 0,
-          analytics.watch_time_seconds || null,
-          analytics.avg_watch_percent || null
-        )
-        .run();
+      if (!feedResponse.success || !feedResponse.data) {
+        result.errors.push(`Analytics feed ${account.postforme_account_id}: ${feedResponse.error}`);
+        continue;
+      }
 
-      result.synced++;
+      for (const item of feedResponse.data) {
+        if (!item.metrics) continue;
+
+        try {
+          // Find the mapped content ID
+          const mapping = await db
+            .prepare(`SELECT social_content_id FROM postforme_content_map WHERE postforme_post_id = ?`)
+            .bind(item.platform_post_id)
+            .first();
+
+          if (!mapping) continue;
+
+          const contentId = (mapping as { social_content_id: string }).social_content_id;
+          const m = item.metrics;
+
+          // Normalize metrics across different platform formats
+          const views = m.views || m.view_count || m.viewCount || 0;
+          const likes = m.likes || m.like_count || m.likeCount || 0;
+          const comments = m.comments || m.comment_count || m.commentCount || 0;
+          const shares = m.shares || m.share_count || 0;
+          const saves = m.saved || 0;
+          const reach = m.reach || views; // Use views as reach fallback
+
+          // Calculate engagement rate
+          const totalEngagement = likes + comments + shares + saves;
+          const engagementRate = reach ? (totalEngagement / reach) * 100 : 0;
+
+          // Upsert metrics for today
+          await db
+            .prepare(
+              `INSERT INTO social_metrics (
+                 id, content_id, date, views, impressions, reach, likes, comments, shares, saves,
+                 link_clicks, engagement_rate, watch_time_seconds, avg_watch_percent
+               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+               ON CONFLICT (content_id, date) DO UPDATE SET
+                 views = excluded.views,
+                 impressions = excluded.impressions,
+                 reach = excluded.reach,
+                 likes = excluded.likes,
+                 comments = excluded.comments,
+                 shares = excluded.shares,
+                 saves = excluded.saves,
+                 link_clicks = excluded.link_clicks,
+                 engagement_rate = excluded.engagement_rate,
+                 watch_time_seconds = excluded.watch_time_seconds,
+                 avg_watch_percent = excluded.avg_watch_percent,
+                 synced_at = datetime('now')`
+            )
+            .bind(
+              crypto.randomUUID().split('-')[0],
+              contentId,
+              today,
+              views,
+              m.impressions || 0,
+              reach,
+              likes,
+              comments,
+              shares,
+              saves,
+              0, // link_clicks not available in feed
+              engagementRate,
+              m.ig_reels_video_view_total_time ? Math.round(m.ig_reels_video_view_total_time / 1000) : null,
+              m.ig_reels_avg_watch_time ? Math.round((m.ig_reels_avg_watch_time / 1000) * 100) / 100 : null
+            )
+            .run();
+
+          result.synced++;
+        } catch (err) {
+          result.errors.push(`Analytics for ${item.platform_post_id}: ${err}`);
+        }
+      }
     } catch (err) {
-      result.errors.push(`Analytics for ${analytics.post_id}: ${err}`);
+      result.errors.push(`Analytics account ${account.postforme_account_id}: ${err}`);
     }
   }
 

@@ -99,6 +99,7 @@ export async function GET(request: NextRequest) {
           sc.platform,
           sc.content_type,
           sc.title,
+          sc.caption,
           sc.external_url,
           sc.published_at,
           COALESCE(SUM(sm.views), 0) as views,

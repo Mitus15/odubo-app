@@ -125,6 +125,7 @@ interface ComprehensiveAnalytics {
       platform: string;
       content_type: string;
       title: string;
+      caption?: string;
       external_url: string;
       views: number;
       likes: number;
@@ -386,7 +387,7 @@ export function AnalyticsDashboardPanel() {
           <div className="flex items-center justify-center py-12">
             <div className="w-6 h-6 border-2 border-[#843c2d] border-t-transparent rounded-full animate-spin" />
           </div>
-        ) : !data ? (
+        ) : !data && !comprehensiveData ? (
           <div className="text-center py-12">
             <div className="text-5xl mb-4">📊</div>
             <h3 className="font-semibold mb-2">No analytics data</h3>
@@ -397,66 +398,86 @@ export function AnalyticsDashboardPanel() {
             {/* Overview Tab */}
             {activeTab === 'overview' && (
               <div className="space-y-6">
-                {/* Key Metrics */}
+                {/* Key Metrics - Use comprehensive social data as primary source */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                   <MetricCard
-                    icon="▶️"
-                    label="Total Streams"
-                    value={formatNumber(data.overview.totalStreams)}
-                    subtitle="DSP plays"
-                  />
-                  <MetricCard
                     icon="👁️"
-                    label="Clip Views"
-                    value={formatNumber(data.clips.totalViews)}
-                    subtitle={`${data.clips.completionRate}% completion`}
+                    label="Total Views"
+                    value={formatNumber(comprehensiveData?.social?.overview?.totalViews || data?.clips?.totalViews || 0)}
+                    subtitle="Across all platforms"
                   />
                   <MetricCard
-                    icon="💰"
-                    label="Streaming Revenue"
-                    value={formatCurrency(data.overview.streamingRevenue)}
-                    subtitle="From DSPs"
+                    icon="❤️"
+                    label="Total Likes"
+                    value={formatNumber(comprehensiveData?.social?.overview?.totalLikes || data?.clips?.totalLikes || 0)}
+                    subtitle="Total engagement"
                   />
                   <MetricCard
-                    icon="🛒"
-                    label="Shop Revenue"
-                    value={formatCurrency(data.funnel.purchaseRevenue)}
-                    subtitle={`${data.funnel.purchases} orders`}
+                    icon="📊"
+                    label="Engagement Rate"
+                    value={comprehensiveData?.social?.overview?.overallEngagementRate || '0%'}
+                    subtitle="Avg across content"
+                  />
+                  <MetricCard
+                    icon="💬"
+                    label="Interactions"
+                    value={formatNumber(
+                      (comprehensiveData?.social?.overview?.totalComments || 0) +
+                      (comprehensiveData?.social?.overview?.totalShares || 0) +
+                      (comprehensiveData?.social?.overview?.totalSaves || 0)
+                    )}
+                    subtitle="Comments, shares, saves"
                   />
                 </div>
 
                 {/* Quick Stats Row */}
                 <div className="grid grid-cols-3 lg:grid-cols-6 gap-3">
-                  <MiniStat label="Listeners" value={formatNumber(data.overview.totalListeners)} />
-                  <MiniStat label="Saves" value={formatNumber(data.overview.totalSaves)} />
-                  <MiniStat label="Shares" value={formatNumber(data.clips.totalShares)} />
-                  <MiniStat label="Likes" value={formatNumber(data.clips.totalLikes)} />
-                  <MiniStat label="Shop Clicks" value={formatNumber(data.clips.totalShopClicks)} />
-                  <MiniStat label="Sessions" value={formatNumber(data.funnel.uniqueSessions)} />
+                  <MiniStat label="Reach" value={formatNumber(comprehensiveData?.social?.overview?.totalReach || 0)} />
+                  <MiniStat label="Comments" value={formatNumber(comprehensiveData?.social?.overview?.totalComments || 0)} />
+                  <MiniStat label="Shares" value={formatNumber(comprehensiveData?.social?.overview?.totalShares || 0)} />
+                  <MiniStat label="Saves" value={formatNumber(comprehensiveData?.social?.overview?.totalSaves || 0)} />
+                  <MiniStat label="Follows" value={formatNumber(comprehensiveData?.social?.overview?.totalFollows || 0)} />
+                  <MiniStat label="Link Clicks" value={formatNumber(comprehensiveData?.social?.overview?.totalLinkClicks || 0)} />
                 </div>
-
-                {/* Streaming Trend Chart */}
-                {data.streamingTrend.length > 0 && (
-                  <div className="p-4 rounded-xl bg-[#0d0c0a] border border-[#502d26]/20">
-                    <h4 className="text-sm font-medium mb-4">Streaming Trend</h4>
-                    <SimpleBarChart
-                      data={data.streamingTrend.map((d) => ({
-                        label: new Date(d.date).toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                        }),
-                        value: d.streams,
-                      }))}
-                    />
-                  </div>
-                )}
 
                 {/* Platform Breakdown + Top Content */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  {/* Platform Breakdown */}
+                  {/* Social Platform Breakdown */}
                   <div className="p-4 rounded-xl bg-[#0d0c0a] border border-[#502d26]/20">
-                    <h4 className="text-sm font-medium mb-4">Platform Breakdown</h4>
-                    {data.platformBreakdown.length > 0 ? (
+                    <h4 className="text-sm font-medium mb-4">Performance by Platform</h4>
+                    {comprehensiveData?.social?.platforms && comprehensiveData.social.platforms.length > 0 ? (
+                      <div className="space-y-3">
+                        {comprehensiveData.social.platforms.map((platform) => (
+                          <div key={platform.platform} className="flex items-center gap-3">
+                            <div
+                              className="w-3 h-3 rounded-full"
+                              style={{
+                                backgroundColor: SOCIAL_COLORS[platform.platform] || '#726d6c',
+                              }}
+                            />
+                            <div className="flex-1">
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="text-sm font-medium">
+                                  {SOCIAL_NAMES[platform.platform] || platform.platform}
+                                </span>
+                                <span className="text-xs text-[#726d6c]">
+                                  {formatNumber(platform.views)} views
+                                </span>
+                              </div>
+                              <div className="h-1.5 bg-[#171616] rounded-full overflow-hidden">
+                                <div
+                                  className="h-full rounded-full transition-all"
+                                  style={{
+                                    width: `${Math.min((platform.views / (comprehensiveData.social.platforms[0]?.views || 1)) * 100, 100)}%`,
+                                    backgroundColor: SOCIAL_COLORS[platform.platform] || '#726d6c',
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : data?.platformBreakdown && data.platformBreakdown.length > 0 ? (
                       <div className="space-y-3">
                         {data.platformBreakdown.map((p) => (
                           <PlatformRow key={p.platform} platform={p} formatNumber={formatNumber} />
@@ -469,17 +490,45 @@ export function AnalyticsDashboardPanel() {
                     )}
                   </div>
 
-                  {/* Recent Activity */}
+                  {/* Top Content */}
                   <div className="p-4 rounded-xl bg-[#0d0c0a] border border-[#502d26]/20">
-                    <h4 className="text-sm font-medium mb-4">Recent Activity</h4>
-                    {data.recentActivity.length > 0 ? (
+                    <h4 className="text-sm font-medium mb-4">Top Content</h4>
+                    {comprehensiveData?.social?.topContent && comprehensiveData.social.topContent.length > 0 ? (
+                      <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                        {comprehensiveData.social.topContent.slice(0, 5).map((content, i) => (
+                          <div
+                            key={content.id}
+                            className="flex items-center gap-2 p-2 rounded-lg hover:bg-[#171616] transition-colors"
+                          >
+                            <span className="text-xs text-[#726d6c] w-4">{i + 1}</span>
+                            <div
+                              className="w-6 h-6 rounded-full flex items-center justify-center text-sm"
+                              style={{
+                                backgroundColor: SOCIAL_COLORS[content.platform] || '#726d6c',
+                              }}
+                            >
+                              {SOCIAL_ICONS[content.platform] || '📱'}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-xs truncate">
+                                {content.title || content.caption?.slice(0, 40) || 'Untitled'}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2 text-[10px] text-[#726d6c]">
+                              <span>👁️ {formatNumber(content.views)}</span>
+                              <span className="text-[#843c2d]">{content.engagementRate.toFixed(1)}%</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : data?.recentActivity && data.recentActivity.length > 0 ? (
                       <div className="space-y-2 max-h-[300px] overflow-y-auto">
                         {data.recentActivity.map((event, i) => (
                           <ActivityItem key={i} event={event} formatCurrency={formatCurrency} />
                         ))}
                       </div>
                     ) : (
-                      <p className="text-sm text-[#726d6c] text-center py-4">No recent activity</p>
+                      <p className="text-sm text-[#726d6c] text-center py-4">No content data yet</p>
                     )}
                   </div>
                 </div>
@@ -664,7 +713,7 @@ export function AnalyticsDashboardPanel() {
                               </div>
                               <div className="flex-1 min-w-0">
                                 <p className="font-medium text-sm truncate">
-                                  {content.title || 'Untitled'}
+                                  {content.title || content.caption || 'Untitled'}
                                 </p>
                                 <p className="text-xs text-[#726d6c]">
                                   {SOCIAL_NAMES[content.platform]} ·{' '}
@@ -699,78 +748,90 @@ export function AnalyticsDashboardPanel() {
             {/* Streaming Tab */}
             {activeTab === 'streaming' && (
               <div className="space-y-6">
-                {/* Streaming Metrics */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                  <MetricCard
-                    icon="▶️"
-                    label="Total Streams"
-                    value={formatNumber(data.overview.totalStreams)}
-                  />
-                  <MetricCard
-                    icon="👥"
-                    label="Unique Listeners"
-                    value={formatNumber(data.overview.totalListeners)}
-                  />
-                  <MetricCard
-                    icon="💾"
-                    label="Saves"
-                    value={formatNumber(data.overview.totalSaves)}
-                  />
-                  <MetricCard
-                    icon="💰"
-                    label="Revenue"
-                    value={formatCurrency(data.overview.streamingRevenue)}
-                  />
-                </div>
+                {data ? (
+                  <>
+                    {/* Streaming Metrics */}
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                      <MetricCard
+                        icon="▶️"
+                        label="Total Streams"
+                        value={formatNumber(data.overview.totalStreams)}
+                      />
+                      <MetricCard
+                        icon="👥"
+                        label="Unique Listeners"
+                        value={formatNumber(data.overview.totalListeners)}
+                      />
+                      <MetricCard
+                        icon="💾"
+                        label="Saves"
+                        value={formatNumber(data.overview.totalSaves)}
+                      />
+                      <MetricCard
+                        icon="💰"
+                        label="Revenue"
+                        value={formatCurrency(data.overview.streamingRevenue)}
+                      />
+                    </div>
 
-                {/* Top Tracks */}
-                <div className="p-4 rounded-xl bg-[#0d0c0a] border border-[#502d26]/20">
-                  <h4 className="text-sm font-medium mb-4">Top Tracks</h4>
-                  {data.topTracks.length > 0 ? (
-                    <div className="space-y-3">
-                      {data.topTracks.map((track, i) => (
-                        <div
-                          key={track.id || i}
-                          className="flex items-center gap-3 p-2 rounded-lg hover:bg-[#171616] transition-colors"
-                        >
-                          <span className="text-xs text-[#726d6c] w-4">{i + 1}</span>
-                          <div className="w-10 h-10 rounded-lg bg-[#171616] flex items-center justify-center text-lg">
-                            🎵
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-sm truncate">{track.title || 'Unknown'}</p>
-                            <p className="text-xs text-[#726d6c] truncate">{track.artistName}</p>
-                          </div>
-                          <div className="flex items-center gap-4 text-xs text-[#726d6c]">
-                            <span>▶️ {formatNumber(track.streams)}</span>
-                            <span>👥 {formatNumber(track.listeners)}</span>
-                            <span className="text-green-400">
-                              {formatCurrency(track.revenue)}
-                            </span>
-                          </div>
+                    {/* Top Tracks */}
+                    <div className="p-4 rounded-xl bg-[#0d0c0a] border border-[#502d26]/20">
+                      <h4 className="text-sm font-medium mb-4">Top Tracks</h4>
+                      {data.topTracks.length > 0 ? (
+                        <div className="space-y-3">
+                          {data.topTracks.map((track, i) => (
+                            <div
+                              key={track.id || i}
+                              className="flex items-center gap-3 p-2 rounded-lg hover:bg-[#171616] transition-colors"
+                            >
+                              <span className="text-xs text-[#726d6c] w-4">{i + 1}</span>
+                              <div className="w-10 h-10 rounded-lg bg-[#171616] flex items-center justify-center text-lg">
+                                🎵
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium text-sm truncate">{track.title || 'Unknown'}</p>
+                                <p className="text-xs text-[#726d6c] truncate">{track.artistName}</p>
+                              </div>
+                              <div className="flex items-center gap-4 text-xs text-[#726d6c]">
+                                <span>▶️ {formatNumber(track.streams)}</span>
+                                <span>👥 {formatNumber(track.listeners)}</span>
+                                <span className="text-green-400">
+                                  {formatCurrency(track.revenue)}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                      ))}
+                      ) : (
+                        <p className="text-sm text-[#726d6c] text-center py-8">
+                          No streaming data yet. Connect your DSP accounts to see analytics.
+                        </p>
+                      )}
                     </div>
-                  ) : (
-                    <p className="text-sm text-[#726d6c] text-center py-8">
-                      No streaming data yet. Connect your DSP accounts to see analytics.
-                    </p>
-                  )}
-                </div>
 
-                {/* Platform Breakdown */}
-                <div className="p-4 rounded-xl bg-[#0d0c0a] border border-[#502d26]/20">
-                  <h4 className="text-sm font-medium mb-4">Streams by Platform</h4>
-                  {data.platformBreakdown.length > 0 ? (
-                    <div className="space-y-3">
-                      {data.platformBreakdown.map((p) => (
-                        <PlatformRow key={p.platform} platform={p} formatNumber={formatNumber} />
-                      ))}
+                    {/* Platform Breakdown */}
+                    <div className="p-4 rounded-xl bg-[#0d0c0a] border border-[#502d26]/20">
+                      <h4 className="text-sm font-medium mb-4">Streams by Platform</h4>
+                      {data.platformBreakdown.length > 0 ? (
+                        <div className="space-y-3">
+                          {data.platformBreakdown.map((p) => (
+                            <PlatformRow key={p.platform} platform={p} formatNumber={formatNumber} />
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-[#726d6c] text-center py-4">No platform data yet</p>
+                      )}
                     </div>
-                  ) : (
-                    <p className="text-sm text-[#726d6c] text-center py-4">No platform data yet</p>
-                  )}
-                </div>
+                  </>
+                ) : (
+                  <div className="text-center py-12">
+                    <div className="text-5xl mb-4">🎵</div>
+                    <h3 className="font-semibold mb-2">No streaming data</h3>
+                    <p className="text-sm text-[#726d6c]">
+                      Connect your DSP accounts to see streaming analytics
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 
@@ -1095,70 +1156,82 @@ export function AnalyticsDashboardPanel() {
             {/* Funnel Tab */}
             {activeTab === 'funnel' && (
               <div className="space-y-6">
-                {/* Conversion Metrics */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                  <MetricCard
-                    icon="👁️"
-                    label="Clip Views"
-                    value={formatNumber(data.funnel.clipViews)}
-                    subtitle="Top of funnel"
-                  />
-                  <MetricCard
-                    icon="🛍️"
-                    label="Shop Clicks"
-                    value={formatNumber(data.funnel.shopClicks)}
-                    subtitle={`${data.funnel.conversionRates.viewToShop.toFixed(1)}% of views`}
-                  />
-                  <MetricCard
-                    icon="🛒"
-                    label="Add to Cart"
-                    value={formatNumber(data.funnel.addToCarts)}
-                    subtitle={`${data.funnel.conversionRates.shopToCart.toFixed(1)}% of clicks`}
-                  />
-                  <MetricCard
-                    icon="✅"
-                    label="Purchases"
-                    value={formatNumber(data.funnel.purchases)}
-                    subtitle={formatCurrency(data.funnel.purchaseRevenue)}
-                  />
-                </div>
+                {data?.funnel ? (
+                  <>
+                    {/* Conversion Metrics */}
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                      <MetricCard
+                        icon="👁️"
+                        label="Clip Views"
+                        value={formatNumber(data.funnel.clipViews)}
+                        subtitle="Top of funnel"
+                      />
+                      <MetricCard
+                        icon="🛍️"
+                        label="Shop Clicks"
+                        value={formatNumber(data.funnel.shopClicks)}
+                        subtitle={`${data.funnel.conversionRates.viewToShop.toFixed(1)}% of views`}
+                      />
+                      <MetricCard
+                        icon="🛒"
+                        label="Add to Cart"
+                        value={formatNumber(data.funnel.addToCarts)}
+                        subtitle={`${data.funnel.conversionRates.shopToCart.toFixed(1)}% of clicks`}
+                      />
+                      <MetricCard
+                        icon="✅"
+                        label="Purchases"
+                        value={formatNumber(data.funnel.purchases)}
+                        subtitle={formatCurrency(data.funnel.purchaseRevenue)}
+                      />
+                    </div>
 
-                {/* Conversion Funnel Visualization */}
-                <div className="p-4 rounded-xl bg-[#0d0c0a] border border-[#502d26]/20">
-                  <h4 className="text-sm font-medium mb-4">Conversion Funnel</h4>
-                  <ConversionFunnel
-                    stages={[
-                      { label: 'Clip Views', value: data.funnel.clipViews, color: '#726d6c' },
-                      { label: 'Shop Clicks', value: data.funnel.shopClicks, color: '#843c2d' },
-                      { label: 'Product Views', value: data.funnel.productViews, color: '#9a4a3a' },
-                      { label: 'Add to Cart', value: data.funnel.addToCarts, color: '#b85c4c' },
-                      { label: 'Checkout', value: data.funnel.checkouts, color: '#d66e5e' },
-                      { label: 'Purchase', value: data.funnel.purchases, color: '#1DB954' },
-                    ]}
-                    formatNumber={formatNumber}
-                  />
-                </div>
+                    {/* Conversion Funnel Visualization */}
+                    <div className="p-4 rounded-xl bg-[#0d0c0a] border border-[#502d26]/20">
+                      <h4 className="text-sm font-medium mb-4">Conversion Funnel</h4>
+                      <ConversionFunnel
+                        stages={[
+                          { label: 'Clip Views', value: data.funnel.clipViews, color: '#726d6c' },
+                          { label: 'Shop Clicks', value: data.funnel.shopClicks, color: '#843c2d' },
+                          { label: 'Product Views', value: data.funnel.productViews, color: '#9a4a3a' },
+                          { label: 'Add to Cart', value: data.funnel.addToCarts, color: '#b85c4c' },
+                          { label: 'Checkout', value: data.funnel.checkouts, color: '#d66e5e' },
+                          { label: 'Purchase', value: data.funnel.purchases, color: '#1DB954' },
+                        ]}
+                        formatNumber={formatNumber}
+                      />
+                    </div>
 
-                {/* Conversion Rates */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                  <RateCard
-                    label="View → Shop"
-                    rate={data.funnel.conversionRates.viewToShop}
-                  />
-                  <RateCard
-                    label="Shop → Cart"
-                    rate={data.funnel.conversionRates.shopToCart}
-                  />
-                  <RateCard
-                    label="Cart → Purchase"
-                    rate={data.funnel.conversionRates.cartToPurchase}
-                  />
-                  <RateCard
-                    label="Overall"
-                    rate={data.funnel.conversionRates.overallConversion}
-                    highlight
-                  />
-                </div>
+                    {/* Conversion Rates */}
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                      <RateCard
+                        label="View → Shop"
+                        rate={data.funnel.conversionRates.viewToShop}
+                      />
+                      <RateCard
+                        label="Shop → Cart"
+                        rate={data.funnel.conversionRates.shopToCart}
+                      />
+                      <RateCard
+                        label="Cart → Purchase"
+                        rate={data.funnel.conversionRates.cartToPurchase}
+                      />
+                      <RateCard
+                        label="Overall"
+                        rate={data.funnel.conversionRates.overallConversion}
+                        highlight
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-center py-12">
+                    <div className="text-5xl mb-4">🛒</div>
+                    <h3 className="font-semibold mb-2">No funnel data</h3>
+                    <p className="text-sm text-[#726d6c]">
+                      Funnel tracking will show how visitors convert to customers
+                    </p>
+                  </div>
+                )}
               </div>
             )}
           </>
