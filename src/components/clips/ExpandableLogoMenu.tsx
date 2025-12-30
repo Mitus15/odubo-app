@@ -501,25 +501,29 @@ export default function ExpandableLogoMenu({
               >
               {/* Shop button with BAAD logo - conditionally rendered */}
               {!checkingStoreAccess && storeAccessible && (
-                <motion.button
+                <motion.div
                   variants={itemVariants}
-                  onClick={handleShop}
-                  className="holo-button holo-button-accent relative overflow-visible"
-                  aria-label="Shop"
-                  style={{ touchAction: 'manipulation', willChange: 'transform, opacity', transform: 'translateZ(0)' }}
+                  className="relative"
                 >
-                  <img
-                    src="/brand-logos/baad.png"
-                    alt=""
-                    className="w-6 h-6 object-contain"
-                    draggable={false}
-                  />
+                  <button
+                    onClick={handleShop}
+                    className="holo-button holo-button-accent"
+                    aria-label="Shop"
+                    style={{ touchAction: 'manipulation' }}
+                  >
+                    <img
+                      src="/brand-logos/baad.png"
+                      alt=""
+                      className="w-6 h-6 object-contain"
+                      draggable={false}
+                    />
+                  </button>
                   {cartCount > 0 && (
-                    <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center bg-[#ede8df] text-[#1a1817] text-[10px] font-bold rounded-full shadow-lg border border-[#1a1817]/20 z-20">
+                    <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center bg-[#ede8df] text-[#1a1817] text-[10px] font-bold rounded-full shadow-lg border border-[#1a1817]/20 z-20 pointer-events-none">
                       {cartCount > 9 ? '9+' : cartCount}
                     </span>
                   )}
-                </motion.button>
+                </motion.div>
               )}
 
               {/* Moments Camera button */}

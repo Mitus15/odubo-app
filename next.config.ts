@@ -86,6 +86,13 @@ const nextConfig: NextConfig = {
           { key: 'Content-Type', value: 'application/manifest+json' },
         ],
       },
+      {
+        source: '/admin.webmanifest',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=86400' },
+          { key: 'Content-Type', value: 'application/manifest+json' },
+        ],
+      },
       // Cache images and fonts for 1 year
       {
         source: '/:path*.(ico|png|jpg|jpeg|gif|webp|svg|woff|woff2|ttf|eot)',

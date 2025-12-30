@@ -273,6 +273,22 @@ export function getRenderWindowRadius(): number {
   return 1;
 }
 
+/**
+ * Check if the app is running as an installed PWA in standalone mode.
+ * This means no browser UI is visible (no address bar, etc.)
+ */
+export function isPWAStandalone(): boolean {
+  if (typeof window === 'undefined') return false;
+
+  // iOS standalone check (Safari adds this property)
+  if ('standalone' in window.navigator) {
+    return (window.navigator as any).standalone === true;
+  }
+
+  // Android/Desktop PWA check via CSS media query
+  return window.matchMedia('(display-mode: standalone)').matches;
+}
+
 // Clear cache on orientation change (dimensions may have changed)
 if (typeof window !== 'undefined') {
   window.addEventListener('orientationchange', () => {

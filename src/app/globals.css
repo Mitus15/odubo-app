@@ -1255,3 +1255,63 @@ h6,
   background-size: 200% 100%;
   animation: holo-shimmer 2s ease-in-out infinite;
 }
+
+/* ============================================================================
+   Clip Card Transitions
+   Animations for auto-swipe between clips
+   ============================================================================ */
+
+/* Slide-up transition for auto-swipe */
+.clip-card-transitioning {
+  animation: clip-slide-up 200ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes clip-slide-up {
+  0% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-15%);
+  }
+}
+
+/* ============================================================================
+   PWA Standalone Mode Optimizations
+   Styles specific to installed PWA experience (no browser UI)
+   ============================================================================ */
+
+@media all and (display-mode: standalone) {
+  :root {
+    /* PWA-specific safe area variables */
+    --pwa-top-inset: env(safe-area-inset-top, 0px);
+    --pwa-bottom-inset: env(safe-area-inset-bottom, 0px);
+    --pwa-left-inset: env(safe-area-inset-left, 0px);
+    --pwa-right-inset: env(safe-area-inset-right, 0px);
+  }
+
+  /* Full viewport in standalone mode */
+  .clips-container,
+  .clips-feed {
+    height: 100dvh;
+    height: 100vh; /* Fallback for older browsers */
+  }
+
+  /* Optimized safe areas for PWA */
+  .safe-area-header {
+    padding-top: var(--pwa-top-inset);
+  }
+
+  .safe-area-bottom {
+    padding-bottom: var(--pwa-bottom-inset);
+  }
+
+  /* PWA body optimization */
+  body {
+    /* Prevent overscroll bounce in PWA */
+    overscroll-behavior: none;
+    /* Ensure full viewport usage */
+    min-height: 100dvh;
+  }
+}

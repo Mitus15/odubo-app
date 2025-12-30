@@ -20,6 +20,8 @@ import MainContentWrapper from "@/components/layout/MainContentWrapper";
 import GDPRConsent from "../components/GDPRConsent";
 import ServiceWorkerRegistration from "../components/ServiceWorkerRegistration";
 import OfflineIndicator from "../components/OfflineIndicator";
+import { PWAProvider } from "../components/PWAProvider";
+import PWAInstallBanner from "../components/PWAInstallBanner";
 // import AccessibilityEnhancer from "./components/AccessibilityEnhancer";
 
 const geistSans = Geist({
@@ -69,35 +71,38 @@ export default function RootLayout({
         }}
       >
         {/* <AuthProvider> */}
-          <AudioProvider>
-            <MusicPlayerProvider>
-              {/* Media priority bridge - connects AudioContext and MusicPlayerContext */}
-              <MediaPriorityBridge />
-              <OmniShopProvider>
-                <UnifiedMediaProvider>
-                  {/* <ClientCapabilities /> */}
-                  <ServiceWorkerRegistration />
-                  <OfflineIndicator />
-                  {/* Desktop sidebar - persistent navigation on lg+ */}
-                  <DesktopSidebar />
+          <PWAProvider>
+            <AudioProvider>
+              <MusicPlayerProvider>
+                {/* Media priority bridge - connects AudioContext and MusicPlayerContext */}
+                <MediaPriorityBridge />
+                <OmniShopProvider>
+                  <UnifiedMediaProvider>
+                    {/* <ClientCapabilities /> */}
+                    <ServiceWorkerRegistration />
+                    <OfflineIndicator />
+                    <PWAInstallBanner />
+                    {/* Desktop sidebar - persistent navigation on lg+ */}
+                    <DesktopSidebar />
 
-                  {/* Main content wrapper - conditionally applies sidebar margin */}
-                  <MainContentWrapper>
-                    {/* Main content - full height, accounts for mini-bar dynamically */}
-                    <main className="flex-1 min-h-0 safe-area-top safe-area-bottom minibar-aware overflow-y-auto">
-                      {children}
-                    </main>
-                    {/* Music player - renders modal via VinylMiniPlayer */}
-                    <MusicPlayerLayout />
-                    <GDPRConsent />
-                  </MainContentWrapper>
-                  {/* Modal orchestrators - rendered at root level */}
-                  <OmniShopOrchestrator />
-                  <OmniMediaOrchestrator />
-                </UnifiedMediaProvider>
-              </OmniShopProvider>
-            </MusicPlayerProvider>
-          </AudioProvider>
+                    {/* Main content wrapper - conditionally applies sidebar margin */}
+                    <MainContentWrapper>
+                      {/* Main content - full height, accounts for mini-bar dynamically */}
+                      <main className="flex-1 min-h-0 safe-area-top safe-area-bottom minibar-aware overflow-y-auto">
+                        {children}
+                      </main>
+                      {/* Music player - renders modal via VinylMiniPlayer */}
+                      <MusicPlayerLayout />
+                      <GDPRConsent />
+                    </MainContentWrapper>
+                    {/* Modal orchestrators - rendered at root level */}
+                    <OmniShopOrchestrator />
+                    <OmniMediaOrchestrator />
+                  </UnifiedMediaProvider>
+                </OmniShopProvider>
+              </MusicPlayerProvider>
+            </AudioProvider>
+          </PWAProvider>
         {/* </AuthProvider> */}
       </body>
     </html>

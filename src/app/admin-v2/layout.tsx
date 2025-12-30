@@ -4,9 +4,15 @@ import { HubShell } from '@/components/hub/layout';
 import './hub-tokens.css';
 
 export const metadata: Metadata = {
-  title: 'The Hub | Odubo',
+  title: 'Odubo Command Center',
   description: 'Enterprise Business Operating System',
   robots: 'noindex, nofollow', // Admin should not be indexed
+  manifest: '/admin.webmanifest',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'Odubo Admin',
+  },
 };
 
 export const viewport: Viewport = {

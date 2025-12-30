@@ -29,7 +29,7 @@ export default function ClipCard({
   lastAutoScrollIndex,
   onAutoScroll,
 }: ClipCardProps) {
-  const { isMuted, armAudio, syncFromVideo, toggleMute } = useAudio();
+  const { isMuted, armAudio, syncFromVideo, toggleMute, hasUserPreference } = useAudio();
   const { storeAccessible } = useOmniShop();
 
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -42,8 +42,10 @@ export default function ClipCard({
   const [showPauseIcon, setShowPauseIcon] = useState(false);
   const [isBuffering, setIsBuffering] = useState(false);
   const [isUserPaused, setIsUserPaused] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
   // Play video with autoplay policy handling
+  // Preserves user's unmute preference - only falls back to muted if no explicit preference
   const attemptPlay = useCallback(async (v: HTMLVideoElement, isUserTap = false): Promise<boolean> => {
     if (!mountedRef.current || !v) return false;
     if (!v.paused && !v.ended) return true;
@@ -55,27 +57,34 @@ export default function ClipCard({
         userPausedRef.current = false;
         setShowPlayButton(false);
         setIsUserPaused(false);
-        if (muted && !isMuted) syncFromVideo(true);
         return true;
       } catch {
         return false;
       }
     };
 
+    // Try with user's preferred mute state first
     if (await tryPlay(isMuted)) return true;
-    if (!isMuted && await tryPlay(true)) return true;
 
+    // If unmuted failed and user hasn't explicitly set preference, try muted
+    // This preserves the user's choice - if they chose unmuted, we don't auto-mute
+    if (!isMuted && !hasUserPreference && await tryPlay(true)) {
+      syncFromVideo(true); // Only sync if no user preference
+      return true;
+    }
+
+    // Retries for non-user-initiated plays (always respect user's mute preference)
     if (!isUserTap) {
       for (let i = 0; i < 2; i++) {
         await new Promise(r => setTimeout(r, 200 * (i + 1)));
         if (!mountedRef.current) return false;
-        if (await tryPlay(true)) return true;
+        if (await tryPlay(isMuted)) return true;
       }
     }
 
     setShowPlayButton(true);
     return false;
-  }, [isMuted, syncFromVideo]);
+  }, [isMuted, hasUserPreference, syncFromVideo]);
 
   // Tap to play/pause
   const handleTap = useCallback((e: React.MouseEvent | React.TouchEvent) => {
@@ -116,7 +125,7 @@ export default function ClipCard({
     if (videoRef.current) attemptPlay(videoRef.current, true);
   }, [armAudio, attemptPlay]);
 
-  // Video ended
+  // Video ended - with slide-up transition animation
   const handleEnded = useCallback(() => {
     onEnded();
     if (currentIndex === lastAutoScrollIndex) {
@@ -127,7 +136,17 @@ export default function ClipCard({
     onAutoScroll(currentIndex);
     const section = videoRef.current?.closest('section');
     const next = section?.nextElementSibling as HTMLElement;
-    if (next) next.scrollIntoView({ behavior: getScrollBehavior(), block: 'start' });
+    if (next) {
+      // Start slide-up animation
+      setIsTransitioning(true);
+
+      // After animation plays, scroll to next clip
+      setTimeout(() => {
+        next.scrollIntoView({ behavior: 'auto', block: 'start' });
+        // Reset transition state after scroll
+        setTimeout(() => setIsTransitioning(false), 50);
+      }, 200); // Match CSS animation duration
+    }
   }, [currentIndex, lastAutoScrollIndex, onAutoScroll, onEnded, attemptPlay]);
 
   // Mount tracking
@@ -148,7 +167,11 @@ export default function ClipCard({
     }
   }, [clip.hlsUrl, active, shouldPreload]);
 
-  // Playback control
+  // Store attemptPlay in ref to avoid effect re-runs when mute state changes
+  const attemptPlayRef = useRef(attemptPlay);
+  attemptPlayRef.current = attemptPlay;
+
+  // Playback control - waits for HLS to be ready before attempting play
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
@@ -159,24 +182,47 @@ export default function ClipCard({
       setShowPlayButton(false);
       v.muted = isMuted;
 
-      const timer = setTimeout(() => {
-        // Respect user pause even during initial play attempt
-        if (mountedRef.current && active && !userPausedRef.current) attemptPlay(v);
-      }, 100);
+      // Wait for video to be ready (HLS attached) before attempting play
+      const attemptWhenReady = async () => {
+        const maxWait = 2000; // 2 second max wait
+        const checkInterval = 50;
+        let waited = 0;
 
+        // Poll until video is ready or timeout
+        while (waited < maxWait) {
+          if (!mountedRef.current) return;
+
+          // Video is ready when it has metadata loaded (readyState >= 1)
+          // or when HLS has attached and provided duration
+          if (v.readyState >= 1 || (v.duration > 0 && !isNaN(v.duration))) {
+            break;
+          }
+          await new Promise(r => setTimeout(r, checkInterval));
+          waited += checkInterval;
+        }
+
+        // Attempt play if still mounted, active, and not user-paused
+        if (mountedRef.current && !userPausedRef.current) {
+          attemptPlayRef.current(v);
+        }
+      };
+
+      attemptWhenReady();
+
+      // Watchdog interval as backup - rescues stalled playback
       const watchdog = setInterval(() => {
         if (!mountedRef.current) return;
         // Only auto-resume if not user-paused and not in background
         if (v.paused && !v.ended && !userPausedRef.current && !document.hidden) {
-          attemptPlay(v, false);
+          attemptPlayRef.current(v, false);
         }
       }, 1000);
 
-      return () => { clearTimeout(timer); clearInterval(watchdog); };
+      return () => { clearInterval(watchdog); };
     } else {
       v.pause();
     }
-  }, [active, isMuted, attemptPlay]);
+  }, [active, isMuted]); // Removed attemptPlay from deps - use ref instead
 
   // Cleanup HLS
   useEffect(() => {
@@ -250,7 +296,9 @@ export default function ClipCard({
 
   return (
     <div
-      className="relative w-full h-full overflow-hidden bg-black select-none"
+      className={`relative w-full h-full overflow-hidden bg-black select-none ${
+        isTransitioning ? 'clip-card-transitioning' : ''
+      }`}
       onClick={handleTap}
       style={{ touchAction: 'pan-y', WebkitUserSelect: 'none', userSelect: 'none' }}
     >

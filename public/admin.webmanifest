@@ -1,0 +1,49 @@
+{
+  "name": "Odubo Command Center",
+  "short_name": "Odubo Admin",
+  "description": "Odubo Studio Administration & Management",
+  "start_url": "/admin-v2",
+  "scope": "/admin-v2",
+  "display": "standalone",
+  "background_color": "#0d0c0a",
+  "theme_color": "#171616",
+  "orientation": "any",
+  "lang": "en",
+  "categories": ["business", "productivity"],
+  "icons": [
+    {
+      "src": "/favicon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon-180x180.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "url": "/admin-v2",
+      "description": "View admin dashboard"
+    },
+    {
+      "name": "Content",
+      "url": "/admin-v2/content/clips",
+      "description": "Manage content"
+    },
+    {
+      "name": "Analytics",
+      "url": "/admin-v2/analytics",
+      "description": "View analytics"
+    }
+  ]
+}
