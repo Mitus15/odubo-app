@@ -535,8 +535,10 @@
 html,
 body,
 #__next {
-  height: 100%;
-  min-height: 100%;
+  height: 100dvh; /* Dynamic viewport height for PWA */
+  height: 100vh; /* Fallback */
+  min-height: 100dvh;
+  min-height: 100vh;
   margin: 0;
   padding: 0;
   overflow: hidden; /* Prevent page-level scroll */
@@ -1291,27 +1293,36 @@ h6,
     --pwa-right-inset: env(safe-area-inset-right, 0px);
   }
 
-  /* Full viewport in standalone mode */
-  .clips-container,
-  .clips-feed {
-    height: 100dvh;
-    height: 100vh; /* Fallback for older browsers */
+  /* PWA body/html optimization - use full viewport */
+  html, body, #__next {
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    max-height: 100dvh !important;
+    overflow: hidden !important;
+    overscroll-behavior: none !important;
   }
 
-  /* Optimized safe areas for PWA */
-  .safe-area-header {
+  /* Fixed containers in PWA should fill viewport exactly */
+  .fixed.inset-0 {
+    top: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    height: 100dvh !important;
+  }
+
+  /* Remove safe area padding on clips pages in PWA - clips go edge to edge */
+  main.safe-area-top.safe-area-bottom {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+  }
+
+  /* Optimized safe areas for PWA - only where explicitly needed */
+  .pwa-safe-area-top {
     padding-top: var(--pwa-top-inset);
   }
 
-  .safe-area-bottom {
+  .pwa-safe-area-bottom {
     padding-bottom: var(--pwa-bottom-inset);
-  }
-
-  /* PWA body optimization */
-  body {
-    /* Prevent overscroll bounce in PWA */
-    overscroll-behavior: none;
-    /* Ensure full viewport usage */
-    min-height: 100dvh;
   }
 }

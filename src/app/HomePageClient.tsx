@@ -116,7 +116,7 @@ export default function HomePageClient({ verseOfTheDay, initialClipId }: HomePag
   const isShowingVerse = phase === 'intro' || phase === 'expanded';
 
   return (
-    <div className="relative bg-black text-[#ede8df]" style={{ minHeight: '100dvh' }}>
+    <div className="relative bg-black text-[#ede8df]" style={{ height: '100dvh', maxHeight: '100dvh', overflow: 'hidden' }}>
       {/* Animated film grain overlay */}
       <FilmGrain opacity={0.03} />
 
