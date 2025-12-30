@@ -1317,9 +1317,15 @@ h6,
   }
 
   /* Remove safe area padding on clips pages in PWA - clips go edge to edge */
-  main.safe-area-top.safe-area-bottom {
+  main.safe-area-top.safe-area-bottom,
+  main.minibar-aware {
     padding-top: 0 !important;
     padding-bottom: 0 !important;
+  }
+
+  /* Override minibar-aware to remove safe area padding in PWA standalone */
+  .minibar-aware {
+    padding-bottom: var(--minibar-height, 0px) !important;
   }
 
   /* Optimized safe areas for PWA - only where explicitly needed */
