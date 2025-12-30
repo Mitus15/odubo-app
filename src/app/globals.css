@@ -1291,24 +1291,29 @@ h6,
     --pwa-bottom-inset: env(safe-area-inset-bottom, 0px);
     --pwa-left-inset: env(safe-area-inset-left, 0px);
     --pwa-right-inset: env(safe-area-inset-right, 0px);
+    /* Fallback app height - JS will override with actual value */
+    --app-height: 100vh;
   }
 
-  /* PWA body/html optimization - use full viewport */
-  html, body, #__next {
-    height: 100dvh !important;
-    min-height: 100dvh !important;
-    max-height: 100dvh !important;
+  /* PWA body/html optimization - fill entire screen using JS-calculated height */
+  html {
+    height: var(--app-height, 100vh) !important;
+    height: -webkit-fill-available !important;
+    overflow: hidden !important;
+  }
+
+  body {
+    height: var(--app-height, 100vh) !important;
+    min-height: var(--app-height, 100vh) !important;
+    max-height: var(--app-height, 100vh) !important;
+    margin: 0 !important;
+    padding: 0 !important;
     overflow: hidden !important;
     overscroll-behavior: none !important;
-  }
-
-  /* Fixed containers in PWA should fill viewport exactly */
-  .fixed.inset-0 {
+    position: fixed !important;
+    width: 100% !important;
     top: 0 !important;
-    right: 0 !important;
-    bottom: 0 !important;
     left: 0 !important;
-    height: 100dvh !important;
   }
 
   /* Remove safe area padding on clips pages in PWA - clips go edge to edge */

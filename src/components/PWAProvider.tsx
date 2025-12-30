@@ -34,10 +34,20 @@ export function PWAProvider({ children }: PWAProviderProps) {
     // Check standalone mode on mount
     setIsStandalone(isPWAStandalone());
 
+    // Set actual viewport height as CSS variable (fixes iOS PWA viewport bugs)
+    const setViewportHeight = () => {
+      const vh = window.innerHeight;
+      document.documentElement.style.setProperty('--app-height', `${vh}px`);
+    };
+    setViewportHeight();
+    window.addEventListener('resize', setViewportHeight);
+    window.addEventListener('orientationchange', setViewportHeight);
+
     // Listen for display mode changes
     const mediaQuery = window.matchMedia('(display-mode: standalone)');
     const handleChange = (e: MediaQueryListEvent) => {
       setIsStandalone(e.matches);
+      setViewportHeight(); // Recalculate on display mode change
     };
     mediaQuery.addEventListener('change', handleChange);
 
@@ -65,6 +75,8 @@ export function PWAProvider({ children }: PWAProviderProps) {
       mediaQuery.removeEventListener('change', handleChange);
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('appinstalled', handleAppInstalled);
+      window.removeEventListener('resize', setViewportHeight);
+      window.removeEventListener('orientationchange', setViewportHeight);
     };
   }, []);
 
