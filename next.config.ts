@@ -1,5 +1,4 @@
 import type { NextConfig } from "next";
-import { withSentryConfig } from "@sentry/nextjs";
 import { setupDevPlatform } from '@cloudflare/next-on-pages/next-dev';
 
 // Set up Cloudflare platform for local development
@@ -126,22 +125,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-// Sentry configuration options
-const sentryWebpackPluginOptions = {
-  // Suppress source map upload logs
-  silent: true,
-  // Organization and project from Sentry
-  org: process.env.SENTRY_ORG,
-  project: process.env.SENTRY_PROJECT,
-  // Auth token for source map upload
-  authToken: process.env.SENTRY_AUTH_TOKEN,
-  // Only upload source maps in production
-  dryRun: process.env.NODE_ENV !== "production",
-  // Disable automatic instrumentation to reduce bundle size
-  disableLogger: true,
-};
-
-// Export with Sentry wrapper (only if DSN is configured)
-export default process.env.NEXT_PUBLIC_SENTRY_DSN
-  ? withSentryConfig(nextConfig, sentryWebpackPluginOptions)
-  : nextConfig;
+export default nextConfig;
