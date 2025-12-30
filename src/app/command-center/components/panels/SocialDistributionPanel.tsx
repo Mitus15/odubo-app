@@ -1,11 +1,11 @@
 'use client';
 
-import SocialOpsContent from '@/components/social-ops/SocialOpsContent';
+import { SocialPostingPanel } from '../social/SocialPostingPanel';
 
 export function SocialDistributionPanel() {
   return (
     <div className="h-full">
-      <SocialOpsContent showHeader={false} />
+      <SocialPostingPanel />
     </div>
   );
 }

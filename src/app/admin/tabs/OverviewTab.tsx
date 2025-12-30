@@ -59,9 +59,9 @@ const fetchQuickStats = async (): Promise<QuickStat[]> => {
       throw new Error(`Failed to fetch stats: ${res.status}`);
     }
     
-    const data = await res.json();
+    const data = await res.json() as { success: boolean; error?: string; stats: AdminStats };
     if (!data.success) throw new Error(data.error);
-    
+
     const stats: AdminStats = data.stats;
     
     return [

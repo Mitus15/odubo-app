@@ -55,42 +55,39 @@ export function CommandCenterShell({ user }: CommandCenterShellProps) {
     <div className="min-h-screen bg-[#0d0c0a] text-[#ede8df] flex flex-col">
       {/* Top Bar */}
       <header className="flex-shrink-0 border-b border-[#502d26]/30">
-        <div className="flex items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-4">
+        {/* Title Row - simplified for mobile */}
+        <div className="flex items-center justify-between px-3 py-2 sm:px-4 sm:py-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <Link
               href="/admin"
-              className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm text-[#726d6c] hover:text-[#ede8df] hover:bg-[#302927] transition-colors"
+              className="p-2 -ml-1 rounded-lg text-[#726d6c] hover:text-[#ede8df] hover:bg-[#302927] transition-colors"
+              aria-label="Back to Admin"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
               </svg>
-              Admin
             </Link>
 
-            <div className="h-5 w-px bg-[#502d26]/40" />
-
-            <div className="flex items-center gap-2">
-              <span className="text-lg">🎛️</span>
-              <h1 className="font-semibold">Command Center</h1>
-            </div>
+            <h1 className="font-semibold text-sm sm:text-base">Command Center</h1>
           </div>
 
-          <span className="text-xs text-[#726d6c]">{user.email}</span>
+          {/* Email - hidden on mobile */}
+          <span className="hidden sm:block text-xs text-[#726d6c] truncate max-w-[200px]">{user.email}</span>
         </div>
 
-        {/* Section Tabs */}
-        <div className="flex items-center gap-1 px-4 pb-3 overflow-x-auto">
+        {/* Section Tabs - horizontally scrollable */}
+        <div className="flex items-center gap-1 px-3 pb-2 sm:px-4 sm:pb-3 overflow-x-auto scrollbar-hide">
           {SECTIONS.map((section) => (
             <button
               key={section.id}
               onClick={() => setActiveSection(section.id)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
                 activeSection === section.id
                   ? 'bg-[#843c2d] text-white'
                   : 'text-[#726d6c] hover:text-[#ede8df] hover:bg-[#302927]'
               }`}
             >
-              <span>{section.icon}</span>
+              <span className="text-sm sm:text-base">{section.icon}</span>
               <span>{section.label}</span>
             </button>
           ))}

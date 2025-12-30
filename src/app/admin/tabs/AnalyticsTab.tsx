@@ -73,8 +73,8 @@ const fetchMetrics = async (): Promise<{ metrics: Metric[]; funnel: FunnelData |
 
     if (!todayRes.ok) throw new Error('Failed to fetch analytics');
 
-    const today: FunnelData = await todayRes.json();
-    const yesterday: FunnelData = yesterdayRes.ok ? await yesterdayRes.json() : null;
+    const today = await todayRes.json() as FunnelData;
+    const yesterday: FunnelData | null = yesterdayRes.ok ? await yesterdayRes.json() as FunnelData : null;
 
     // Extract counts from event data
     const getCount = (data: FunnelData | null, eventType: string): number => {
@@ -145,7 +145,7 @@ const fetchTopContent = async (): Promise<TopContent[]> => {
     const res = await fetch('/api/clips?withEngagement=true&limit=5');
     if (!res.ok) throw new Error('Failed to fetch clips');
 
-    const data = await res.json();
+    const data = await res.json() as { clips?: ClipWithEngagement[] };
     const clips: ClipWithEngagement[] = data.clips || [];
 
     return clips.map(clip => ({

@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState, ReactNode } from "react";
+import { useEffect, useState, ReactNode, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import UserProvider, { useUser } from "./UserProvider";
 import TabContent from "./TabContent";
+import { usePermissions } from "@/lib/usePermissions";
 
 /**
  * Admin Dashboard - CMS-style foldered navigation with in-place content switching
@@ -175,9 +176,8 @@ interface NavItem {
 // CMS-style foldered navigation structure - Full Enterprise Admin Suite
 const navItems: NavItem[] = [
   { id: 'overview', label: 'Dashboard', icon: Icons.home },
-  { id: 'command-center', label: 'Command Center', icon: Icons.commandCenter, href: '/command-center' },
-  { 
-    id: 'cms', 
+  {
+    id: 'cms',
     label: 'CMS',
     icon: Icons.cms,
     children: [
@@ -187,6 +187,16 @@ const navItems: NavItem[] = [
       { id: 'featured', label: 'Featured', icon: Icons.featured },
       { id: 'linktree', label: 'Link Tree', icon: Icons.linktree },
       { id: 'live', label: 'Live Streams', icon: Icons.live },
+    ]
+  },
+  {
+    id: 'social',
+    label: 'Social',
+    icon: Icons.social,
+    children: [
+      { id: 'social-posts', label: 'Social', icon: Icons.social },
+      { id: 'social-accounts', label: 'Accounts', icon: Icons.users },
+      { id: 'social-analytics', label: 'Analytics', icon: Icons.analytics },
     ]
   },
   {
@@ -241,6 +251,30 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<string>('overview');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
+  const { canAccess, hasAccessibleChildren, loading: permissionsLoading } = usePermissions();
+
+  // Filter nav items based on user permissions
+  const filteredNavItems = useMemo(() => {
+    const filterItems = (items: NavItem[]): NavItem[] => {
+      return items.reduce<NavItem[]>((acc, item) => {
+        // If item has children, filter children first
+        if (item.children && item.children.length > 0) {
+          const filteredChildren = filterItems(item.children);
+          // Only include parent if it has accessible children
+          if (filteredChildren.length > 0 || hasAccessibleChildren(item.id)) {
+            acc.push({ ...item, children: filteredChildren });
+          }
+        } else {
+          // Leaf node - check if user can access
+          if (canAccess(item.id)) {
+            acc.push(item);
+          }
+        }
+        return acc;
+      }, []);
+    };
+    return filterItems(navItems);
+  }, [canAccess, hasAccessibleChildren]);
 
   useEffect(() => {
     const getCookieToken = () => {
@@ -386,8 +420,8 @@ export default function AdminPage() {
 
           {/* Navigation */}
           <nav className="flex-1 py-4 overflow-y-auto space-y-1">
-            {navItems.map((item) => 
-              renderNavItem(item, 0, navItems.map(i => i.id))
+            {filteredNavItems.map((item) =>
+              renderNavItem(item, 0, filteredNavItems.map(i => i.id))
             )}
           </nav>
 
@@ -446,7 +480,7 @@ export default function AdminPage() {
         {/* Main Content */}
         <main className="flex-1 flex flex-col h-full overflow-hidden md:static pt-14 md:pt-0">
           <div className="flex-1 overflow-y-auto">
-            <TabContent activeTab={activeTab as any} />
+            <TabContent activeTab={activeTab as any} canAccess={canAccess} />
           </div>
         </main>
       </div>

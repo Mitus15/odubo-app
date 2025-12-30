@@ -1,197 +1,228 @@
-import { NextRequest, NextResponse } from "next/server";
-import { executeQuery, queryDatabase } from "@/lib/db";
-import { userHasAnyRole } from "@/lib/auth";
+import { NextRequest, NextResponse } from 'next/server';
+import { getRequestContext } from '@cloudflare/next-on-pages';
 
-const ALLOWED_ROLES = ["admin", "editor"] as const;
+export const runtime = 'edge';
 
-const PLATFORM_KEYS = ["TikTok", "Instagram", "Facebook", "YouTube"] as const;
-type PlatformKey = (typeof PLATFORM_KEYS)[number];
-
-interface ComposerPayload {
-  TikTok?: string;
-  Instagram?: string;
-  Facebook?: string;
-  YouTube?: string;
-}
-
-interface CreateSocialPostBody {
-  sourceContentId?: string | number | null;
-  contentType?: string | null;
-  goal?: string | null;
-  composer?: ComposerPayload;
-  status?: string | null;
-  scheduledAt?: string | null;
-}
-
-export async function GET(req: NextRequest) {
+/**
+ * GET /api/social/posts
+ * List all scheduled/published posts
+ * Supports filtering by entity_id and status
+ */
+export async function GET(request: NextRequest) {
   try {
-    const hasRole = await userHasAnyRole(req, ["admin", "editor"]);
-    if (!hasRole) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    const { env } = getRequestContext();
+    const db = env.DB;
+
+    const { searchParams } = new URL(request.url);
+    const entityId = searchParams.get('entity_id');
+    const status = searchParams.get('status');
+    const limit = Math.min(parseInt(searchParams.get('limit') || '50', 10), 100);
+    const offset = parseInt(searchParams.get('offset') || '0', 10);
+
+    let query = `
+      SELECT
+        id, status, created_by, approved_by,
+        entity_id, account_ids,
+        media_type, media_url, media_key, thumbnail_url,
+        source_type, source_id,
+        caption, caption_by_platform, hashtags, mentions, first_comment,
+        scheduled_at, published_at, timezone,
+        platforms, platform_status, platform_post_ids, platform_errors,
+        title, requires_approval, is_important, notes, tags,
+        error_message, retry_count, last_retry_at,
+        created_at, updated_at
+      FROM social_posts
+      WHERE 1=1
+    `;
+
+    const bindings: (string | number)[] = [];
+
+    if (entityId) {
+      query += ` AND entity_id = ?`;
+      bindings.push(entityId);
     }
 
-    const posts = await queryDatabase(
-      `SELECT 
-        sp.id,
-        sp.uid,
-        sp.content_type,
-        sp.content_id,
-        sp.goal,
-        sp.created_at,
-        sp.updated_at,
-        GROUP_CONCAT(spt.platform || ':' || spt.status) as platform_statuses,
-        MIN(CASE WHEN spt.status = 'scheduled' THEN spt.scheduled_at END) as scheduled_at
-       FROM social_posts sp
-       LEFT JOIN social_post_targets spt ON spt.social_post_id = sp.id
-       GROUP BY sp.id
-       ORDER BY sp.created_at DESC
-       LIMIT 100`,
-      []
-    );
+    if (status) {
+      query += ` AND status = ?`;
+      bindings.push(status);
+    }
 
-    const formatted = posts.map((post: any) => {
-      const platformStatuses = post.platform_statuses
-        ? post.platform_statuses.split(',').map((ps: string) => {
-            const [platform, status] = ps.split(':');
-            return { platform, status };
-          })
-        : [];
-      
-      const overallStatus = platformStatuses.length > 0 
-        ? platformStatuses[0].status 
-        : 'draft';
+    query += ` ORDER BY
+      CASE WHEN scheduled_at IS NOT NULL THEN scheduled_at ELSE created_at END DESC
+      LIMIT ? OFFSET ?`;
+    bindings.push(limit, offset);
 
-      return {
-        id: post.id,
-        uid: post.uid,
-        contentType: post.content_type,
-        contentId: post.content_id,
-        goal: post.goal,
-        status: overallStatus,
-        platforms: platformStatuses.map((ps: any) => ps.platform),
-        createdAt: post.created_at,
-        updatedAt: post.updated_at,
-        scheduledAt: post.scheduled_at || null,
-      };
+    const result = await db.prepare(query).bind(...bindings).all();
+
+    // Parse JSON fields
+    const posts = (result.results || []).map((row: Record<string, unknown>) => ({
+      ...row,
+      account_ids: parseJSON(row.account_ids as string, []),
+      platforms: parseJSON(row.platforms as string, []),
+      platform_status: parseJSON(row.platform_status as string, {}),
+      platform_post_ids: parseJSON(row.platform_post_ids as string, {}),
+      platform_errors: parseJSON(row.platform_errors as string, {}),
+      hashtags: parseJSON(row.hashtags as string, []),
+      mentions: parseJSON(row.mentions as string, []),
+      tags: parseJSON(row.tags as string, []),
+      caption_by_platform: parseJSON(row.caption_by_platform as string, {}),
+    }));
+
+    // Get total count
+    let countQuery = `SELECT COUNT(*) as count FROM social_posts WHERE 1=1`;
+    const countBindings: string[] = [];
+    if (entityId) {
+      countQuery += ` AND entity_id = ?`;
+      countBindings.push(entityId);
+    }
+    if (status) {
+      countQuery += ` AND status = ?`;
+      countBindings.push(status);
+    }
+    const countResult = await db
+      .prepare(countQuery)
+      .bind(...countBindings)
+      .first();
+
+    return NextResponse.json({
+      posts,
+      total: (countResult as { count: number } | null)?.count || 0,
+      limit,
+      offset,
     });
-
-    return NextResponse.json({ posts: formatted });
   } catch (error) {
-    console.error("Error fetching social posts:", error);
+    console.error('[Social Posts] GET error:', error);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: 'Failed to fetch posts', details: error instanceof Error ? error.message : 'Unknown' },
       { status: 500 }
     );
   }
 }
 
-export async function POST(req: NextRequest) {
+/**
+ * POST /api/social/posts
+ * Create a new post (draft or scheduled)
+ * Now supports entity_id and account_ids for multi-entity posting
+ */
+export async function POST(request: NextRequest) {
   try {
-    const hasRole = await userHasAnyRole(req, ["admin", "editor"]);
-    if (!hasRole) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    const { env } = getRequestContext();
+    const db = env.DB;
 
-    const body = (await req.json()) as CreateSocialPostBody;
+    const body = await request.json();
+    const {
+      status = 'draft',
+      created_by = 'system',
+      entity_id,
+      account_ids,
+      media_type,
+      media_url,
+      media_key,
+      thumbnail_url,
+      source_type,
+      source_id,
+      caption,
+      caption_by_platform,
+      hashtags,
+      mentions,
+      first_comment,
+      scheduled_at,
+      timezone,
+      platforms,
+      title,
+      requires_approval,
+      is_important,
+      notes,
+      tags,
+    } = body as Record<string, unknown>;
 
-    const composer = body.composer || {};
-    const platforms: { platform: PlatformKey; caption: string }[] = [];
-    for (const key of PLATFORM_KEYS) {
-      const value = (composer as any)[key];
-      if (typeof value === "string" && value.trim().length > 0) {
-        platforms.push({ platform: key, caption: value.trim() });
-      }
-    }
-
-    if (platforms.length === 0) {
+    // Validate required fields
+    if (!media_type || !media_url) {
       return NextResponse.json(
-        { error: "At least one platform caption is required" },
+        { error: 'Missing required fields: media_type, media_url' },
         { status: 400 }
       );
     }
 
-    const goal = body.goal ?? null;
-    const contentType = body.contentType ?? "clip";
-    const status = body.status ?? "draft";
-    const scheduledAt = body.scheduledAt ?? null;
-
-    const authHeader = req.headers.get("authorization");
-    let createdByUserId: number | null = null;
-    if (authHeader && authHeader.startsWith("UserId ")) {
-      const idStr = authHeader.slice("UserId ".length).trim();
-      const parsed = Number.parseInt(idStr, 10);
-      if (!Number.isNaN(parsed)) {
-        createdByUserId = parsed;
-      }
-    }
-
-    const uid = crypto.randomUUID();
-
-    // Insert social_post without wrapping in SQL transaction (D1 HTTP API limitation)
-    await executeQuery(
-      `INSERT INTO social_posts (uid, content_type, content_id, goal, created_by_user_id)
-       VALUES (?, ?, ?, ?, ?);`,
-      [
-        uid,
-        contentType,
-        body.sourceContentId ?? null,
-        goal,
-        createdByUserId,
-      ]
-    );
-
-    // Retrieve inserted id using the unique uid
-    const idRows = await queryDatabase(
-      `SELECT id FROM social_posts WHERE uid = ? LIMIT 1`,
-      [uid]
-    );
-    const socialPostId = idRows && idRows[0] && idRows[0].id;
-
-    if (!socialPostId) {
+    // Must have either account_ids (new) or platforms (legacy)
+    if (!account_ids && !platforms) {
       return NextResponse.json(
-        { error: "Failed to create social post" },
-        { status: 500 }
+        { error: 'Missing required fields: account_ids or platforms' },
+        { status: 400 }
       );
     }
 
-    const targetSqlParts: string[] = [];
-    const targetParams: any[] = [];
+    const id = crypto.randomUUID().split('-')[0];
 
-    for (const { platform, caption } of platforms) {
-      targetSqlParts.push(
-        `INSERT INTO social_post_targets (social_post_id, platform, status, scheduled_at, caption)
-         VALUES (?, ?, ?, ?, ?);`
-      );
-      targetParams.push(socialPostId, platform.toLowerCase(), status, scheduledAt, caption);
-    }
-
-    if (targetSqlParts.length > 0) {
-      // Execute inserts one-by-one to avoid multi-statement issues
-      for (let i = 0, p = 0; i < targetSqlParts.length; i++) {
-        const sql = targetSqlParts[i];
-        const params = targetParams.slice(p, p + 5);
-        p += 5;
-        await executeQuery(sql, params);
-      }
-    }
-
-    return NextResponse.json(
-      {
-        id: socialPostId,
-        uid,
-        contentType,
-        goal,
+    await db
+      .prepare(
+        `INSERT INTO social_posts (
+          id, status, created_by, entity_id, account_ids,
+          media_type, media_url, media_key, thumbnail_url,
+          source_type, source_id,
+          caption, caption_by_platform, hashtags, mentions, first_comment,
+          scheduled_at, timezone,
+          platforms, title, requires_approval, is_important, notes, tags
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      )
+      .bind(
+        id,
         status,
-        scheduledAt,
-        platforms: platforms.map((p) => p.platform),
-      },
-      { status: 201 }
-    );
+        created_by,
+        entity_id || null,
+        JSON.stringify(account_ids || []),
+        media_type,
+        media_url,
+        media_key || null,
+        thumbnail_url || null,
+        source_type || null,
+        source_id || null,
+        caption || null,
+        JSON.stringify(caption_by_platform || {}),
+        JSON.stringify(hashtags || []),
+        JSON.stringify(mentions || []),
+        first_comment || null,
+        scheduled_at || null,
+        timezone || 'America/Los_Angeles',
+        JSON.stringify(platforms || []),
+        title || null,
+        requires_approval ? 1 : 0,
+        is_important ? 1 : 0,
+        notes || null,
+        JSON.stringify(tags || [])
+      )
+      .run();
+
+    // Log activity
+    await db
+      .prepare(
+        `INSERT INTO social_activity_log (id, user_id, action, target_type, target_id, details)
+         VALUES (?, ?, 'created', 'post', ?, ?)`
+      )
+      .bind(
+        crypto.randomUUID().split('-')[0],
+        created_by,
+        id,
+        JSON.stringify({ status, entity_id, account_ids, platforms })
+      )
+      .run();
+
+    return NextResponse.json({ success: true, id }, { status: 201 });
   } catch (error) {
-    console.error("Error creating social post:", error);
+    console.error('[Social Posts] POST error:', error);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: 'Failed to create post', details: error instanceof Error ? error.message : 'Unknown' },
       { status: 500 }
     );
+  }
+}
+
+// Helper to safely parse JSON
+function parseJSON<T>(str: string | null | undefined, fallback: T): T {
+  if (!str) return fallback;
+  try {
+    return JSON.parse(str);
+  } catch {
+    return fallback;
   }
 }
