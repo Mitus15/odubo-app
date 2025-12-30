@@ -7,6 +7,7 @@ import { VideoDistributionPanel } from './panels/VideoDistributionPanel';
 import { AnalyticsDashboardPanel } from './panels/AnalyticsDashboardPanel';
 import { DiscographyPanel } from './panels/DiscographyPanel';
 import { SocialDistributionPanel } from './panels/SocialDistributionPanel';
+import { SocialAccountsPanel } from './panels/SocialAccountsPanel';
 
 type User = {
   id: string;
@@ -15,7 +16,7 @@ type User = {
   is_admin: boolean;
 };
 
-type Section = 'music' | 'video' | 'analytics' | 'discography' | 'social';
+type Section = 'music' | 'video' | 'analytics' | 'discography' | 'social' | 'accounts';
 
 const SECTIONS: { id: Section; label: string; icon: string }[] = [
   { id: 'music', label: 'Music', icon: '🎵' },
@@ -23,6 +24,7 @@ const SECTIONS: { id: Section; label: string; icon: string }[] = [
   { id: 'analytics', label: 'Analytics', icon: '📊' },
   { id: 'discography', label: 'Discography', icon: '💿' },
   { id: 'social', label: 'Social', icon: '📱' },
+  { id: 'accounts', label: 'Accounts', icon: '🔗' },
 ];
 
 interface CommandCenterShellProps {
@@ -44,6 +46,8 @@ export function CommandCenterShell({ user }: CommandCenterShellProps) {
         return <DiscographyPanel />;
       case 'social':
         return <SocialDistributionPanel />;
+      case 'accounts':
+        return <SocialAccountsPanel />;
     }
   };
 
