@@ -29,11 +29,12 @@ export default function ClipCard({
   lastAutoScrollIndex,
   onAutoScroll,
 }: ClipCardProps) {
-  const { isMuted, armAudio, syncFromVideo, hasUserPreference } = useAudio();
+  const { isMuted, armAudio } = useAudio();
   const { storeAccessible } = useOmniShop();
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<HlsHandle | null>(null);
+  const hlsReadyRef = useRef(false); // Track when HLS is fully attached and ready
   const mountedRef = useRef(true);
   const userPausedRef = useRef(false);
 
@@ -66,10 +67,11 @@ export default function ClipCard({
     // Try with user's preferred mute state first
     if (await tryPlay(isMuted)) return true;
 
-    // If unmuted failed and user hasn't explicitly set preference, try muted
-    // This preserves the user's choice - if they chose unmuted, we don't auto-mute
-    if (!isMuted && !hasUserPreference && await tryPlay(true)) {
-      syncFromVideo(true); // Only sync if no user preference
+    // If unmuted failed, try muted - but DO NOT change global state
+    // Previously this called syncFromVideo(true) which corrupted mute state for all future clips
+    // Now we let individual clips play muted without affecting global AudioContext
+    if (!isMuted && await tryPlay(true)) {
+      // Clip plays muted, but global state stays as user intended
       return true;
     }
 
@@ -84,7 +86,7 @@ export default function ClipCard({
 
     setShowPlayButton(true);
     return false;
-  }, [isMuted, hasUserPreference, syncFromVideo]);
+  }, [isMuted]);
 
   // Tap to play/pause
   const handleTap = useCallback((e: React.MouseEvent | React.TouchEvent) => {
@@ -148,15 +150,22 @@ export default function ClipCard({
     return () => { mountedRef.current = false; };
   }, []);
 
-  // HLS attachment
+  // HLS attachment - signals hlsReadyRef when complete
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
 
+    // Reset ready state when starting attachment
     if ((active || shouldPreload) && !hlsRef.current) {
+      hlsReadyRef.current = false;
       attachHls(v, clip.hlsUrl, shouldPreload && !active).then(h => {
+        if (!mountedRef.current) return;
         hlsRef.current = h;
+        hlsReadyRef.current = true; // Signal ready after attachment
       });
+    } else if (hlsRef.current) {
+      // HLS already attached, mark ready immediately
+      hlsReadyRef.current = true;
     }
   }, [clip.hlsUrl, active, shouldPreload]);
 
@@ -175,27 +184,32 @@ export default function ClipCard({
       setShowPlayButton(false);
       v.muted = isMuted;
 
-      // Wait for video to be ready (HLS attached) before attempting play
+      // Wait for BOTH HLS attachment AND video readiness before attempting play
       const attemptWhenReady = async () => {
-        const maxWait = 2000; // 2 second max wait
+        const maxWait = 3000; // 3 second max wait (increased for slow networks)
         const checkInterval = 50;
         let waited = 0;
 
-        // Poll until video is ready or timeout
+        // Poll until BOTH HLS is ready AND video has metadata
         while (waited < maxWait) {
           if (!mountedRef.current) return;
 
-          // Video is ready when it has metadata loaded (readyState >= 1)
-          // or when HLS has attached and provided duration
-          if (v.readyState >= 1 || (v.duration > 0 && !isNaN(v.duration))) {
+          // Check BOTH conditions: HLS attached AND video ready
+          const hlsReady = hlsReadyRef.current;
+          const videoReady = v.readyState >= 1 || (v.duration > 0 && !isNaN(v.duration));
+
+          if (hlsReady && videoReady) {
             break;
           }
           await new Promise(r => setTimeout(r, checkInterval));
           waited += checkInterval;
         }
 
-        // Attempt play if still mounted, active, and not user-paused
-        if (mountedRef.current && !userPausedRef.current) {
+        // Double-check still mounted and HLS ready before playing
+        if (!mountedRef.current || !hlsReadyRef.current) return;
+
+        // Only attempt play if not user-paused
+        if (!userPausedRef.current) {
           attemptPlayRef.current(v);
         }
       };
@@ -217,19 +231,24 @@ export default function ClipCard({
     }
   }, [active, isMuted]); // Removed attemptPlay from deps - use ref instead
 
-  // Cleanup HLS
+  // Cleanup HLS - increased delay to prevent race conditions during rapid scrolling
   useEffect(() => {
     if (active || shouldPreload) return;
     const v = videoRef.current;
     if (!v) return;
 
     const { isMobile } = getDeviceInfo();
+    // Increased cleanup delay: 2000ms mobile, 3000ms desktop
+    // This prevents destroying HLS while new clip is still initializing
+    const cleanupDelay = isMobile ? 2000 : 3000;
+
     const timer = setTimeout(() => {
+      hlsReadyRef.current = false; // Reset ready state before cleanup
       if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
       v.removeAttribute('src');
       v.load();
       setFirstFrame(false);
-    }, isMobile ? 500 : 1000);
+    }, cleanupDelay);
 
     return () => clearTimeout(timer);
   }, [active, shouldPreload]);
