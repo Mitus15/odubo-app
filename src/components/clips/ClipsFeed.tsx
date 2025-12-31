@@ -38,7 +38,6 @@ export default function ClipsFeed({ navHeight, initialClipId, onActiveClipChange
   const seenIdsRef = useRef<Set<number>>(new Set());
   const prevBaseClipsRef = useRef<ClipItem[]>([]);
   const initializedRef = useRef(false);
-  const switchTimerRef = useRef<number | null>(null); // Debounce timer for active clip switching
 
   // Fetch clips from API
   const fetchPage = useCallback(async (p: number): Promise<boolean> => {
@@ -221,7 +220,7 @@ export default function ClipsFeed({ navHeight, initialClipId, onActiveClipChange
 
   // Intersection observer for active clip detection
   // Uses 0.5 threshold (50% visibility) for faster transitions
-  // 80ms debounce prevents race conditions during rapid scrolling
+  // Immediate switch - debounce removed as it may interfere with Safari gesture tracking
   useEffect(() => {
     const root = rootRef.current;
     if (!root) return;
@@ -239,21 +238,13 @@ export default function ClipsFeed({ navHeight, initialClipId, onActiveClipChange
         const index = parseInt(el.dataset.clipIndex || '', 10);
 
         if (Number.isFinite(id) && id !== activeId) {
-          // Clear any pending switch to prevent stale updates
-          if (switchTimerRef.current !== null) {
-            window.clearTimeout(switchTimerRef.current);
+          setActiveId(id);
+          if (Number.isFinite(index)) setActiveIndex(index);
+
+          // Load more if near end
+          if (displayClips.length && index >= displayClips.length - 2) {
+            handleLoadMore();
           }
-
-          // 80ms debounce - gives HLS time to initialize while preventing rapid switches
-          switchTimerRef.current = window.setTimeout(() => {
-            setActiveId(id);
-            if (Number.isFinite(index)) setActiveIndex(index);
-
-            // Load more if near end
-            if (displayClips.length && index >= displayClips.length - 2) {
-              handleLoadMore();
-            }
-          }, 80) as unknown as number;
         }
       },
       {
@@ -266,13 +257,7 @@ export default function ClipsFeed({ navHeight, initialClipId, onActiveClipChange
     const items = root.querySelectorAll('[data-clip-key]');
     items.forEach(el => observer.observe(el));
 
-    return () => {
-      observer.disconnect();
-      // Clean up any pending switch timer
-      if (switchTimerRef.current !== null) {
-        window.clearTimeout(switchTimerRef.current);
-      }
-    };
+    return () => observer.disconnect();
   }, [displayClips, handleLoadMore, activeId]);
 
   // Notify parent of active clip change

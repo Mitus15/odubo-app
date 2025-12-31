@@ -184,32 +184,28 @@ export default function ClipCard({
       setShowPlayButton(false);
       v.muted = isMuted;
 
-      // Wait for BOTH HLS attachment AND video readiness before attempting play
+      // Wait for video readiness before attempting play
       const attemptWhenReady = async () => {
-        const maxWait = 3000; // 3 second max wait (increased for slow networks)
+        const maxWait = 2000; // 2 second max wait
         const checkInterval = 50;
         let waited = 0;
 
-        // Poll until BOTH HLS is ready AND video has metadata
+        // Poll until video has metadata or HLS signals ready
         while (waited < maxWait) {
           if (!mountedRef.current) return;
 
-          // Check BOTH conditions: HLS attached AND video ready
-          const hlsReady = hlsReadyRef.current;
-          const videoReady = v.readyState >= 1 || (v.duration > 0 && !isNaN(v.duration));
+          // Ready when: HLS attached OR video has metadata OR duration available
+          const videoReady = hlsReadyRef.current || v.readyState >= 1 || (v.duration > 0 && !isNaN(v.duration));
 
-          if (hlsReady && videoReady) {
+          if (videoReady) {
             break;
           }
           await new Promise(r => setTimeout(r, checkInterval));
           waited += checkInterval;
         }
 
-        // Double-check still mounted and HLS ready before playing
-        if (!mountedRef.current || !hlsReadyRef.current) return;
-
-        // Only attempt play if not user-paused
-        if (!userPausedRef.current) {
+        // Always try to play if still mounted - let attemptPlay handle failures
+        if (mountedRef.current && !userPausedRef.current) {
           attemptPlayRef.current(v);
         }
       };
