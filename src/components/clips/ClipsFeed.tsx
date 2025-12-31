@@ -220,7 +220,7 @@ export default function ClipsFeed({ navHeight, initialClipId, onActiveClipChange
 
   // Intersection observer for active clip detection
   // Uses 0.5 threshold (50% visibility) for faster transitions
-  // Immediate switch - debounce removed as it may interfere with Safari gesture tracking
+  // No debounce - immediate switch to prevent pause gap between clips
   useEffect(() => {
     const root = rootRef.current;
     if (!root) return;
@@ -238,6 +238,7 @@ export default function ClipsFeed({ navHeight, initialClipId, onActiveClipChange
         const index = parseInt(el.dataset.clipIndex || '', 10);
 
         if (Number.isFinite(id) && id !== activeId) {
+          // Immediate switch - no debounce for seamless transitions
           setActiveId(id);
           if (Number.isFinite(index)) setActiveIndex(index);
 
@@ -249,7 +250,7 @@ export default function ClipsFeed({ navHeight, initialClipId, onActiveClipChange
       },
       {
         root,
-        threshold: [0.5], // 50% visibility threshold
+        threshold: [0.5], // Lower threshold: 50% visibility for faster activation
         rootMargin: '0px'
       }
     );
