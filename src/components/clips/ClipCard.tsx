@@ -34,7 +34,6 @@ export default function ClipCard({
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<HlsHandle | null>(null);
-  const hlsReadyRef = useRef(false); // Track when HLS is fully attached and ready
   const mountedRef = useRef(true);
   const userPausedRef = useRef(false);
 
@@ -150,22 +149,16 @@ export default function ClipCard({
     return () => { mountedRef.current = false; };
   }, []);
 
-  // HLS attachment - signals hlsReadyRef when complete
+  // HLS attachment
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
 
-    // Reset ready state when starting attachment
     if ((active || shouldPreload) && !hlsRef.current) {
-      hlsReadyRef.current = false;
       attachHls(v, clip.hlsUrl, shouldPreload && !active).then(h => {
         if (!mountedRef.current) return;
         hlsRef.current = h;
-        hlsReadyRef.current = true; // Signal ready after attachment
       });
-    } else if (hlsRef.current) {
-      // HLS already attached, mark ready immediately
-      hlsReadyRef.current = true;
     }
   }, [clip.hlsUrl, active, shouldPreload]);
 
@@ -184,27 +177,23 @@ export default function ClipCard({
       setShowPlayButton(false);
       v.muted = isMuted;
 
-      // Wait for video readiness before attempting play
+      // Wait for video to be ready before attempting play
       const attemptWhenReady = async () => {
-        const maxWait = 2000; // 2 second max wait
+        const maxWait = 2000;
         const checkInterval = 50;
         let waited = 0;
 
-        // Poll until video has metadata or HLS signals ready
+        // Poll until video has metadata loaded
         while (waited < maxWait) {
           if (!mountedRef.current) return;
-
-          // Ready when: HLS attached OR video has metadata OR duration available
-          const videoReady = hlsReadyRef.current || v.readyState >= 1 || (v.duration > 0 && !isNaN(v.duration));
-
-          if (videoReady) {
+          if (v.readyState >= 1 || (v.duration > 0 && !isNaN(v.duration))) {
             break;
           }
           await new Promise(r => setTimeout(r, checkInterval));
           waited += checkInterval;
         }
 
-        // Always try to play if still mounted - let attemptPlay handle failures
+        // Attempt play if still mounted and not user-paused
         if (mountedRef.current && !userPausedRef.current) {
           attemptPlayRef.current(v);
         }
@@ -235,11 +224,9 @@ export default function ClipCard({
 
     const { isMobile } = getDeviceInfo();
     // Increased cleanup delay: 2000ms mobile, 3000ms desktop
-    // This prevents destroying HLS while new clip is still initializing
     const cleanupDelay = isMobile ? 2000 : 3000;
 
     const timer = setTimeout(() => {
-      hlsReadyRef.current = false; // Reset ready state before cleanup
       if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
       v.removeAttribute('src');
       v.load();
