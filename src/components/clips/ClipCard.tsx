@@ -29,7 +29,7 @@ export default function ClipCard({
   lastAutoScrollIndex,
   onAutoScroll,
 }: ClipCardProps) {
-  const { isMuted, armAudio, syncFromVideo, toggleMute, hasUserPreference } = useAudio();
+  const { isMuted, armAudio, syncFromVideo, hasUserPreference } = useAudio();
   const { storeAccessible } = useOmniShop();
 
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -107,13 +107,6 @@ export default function ClipCard({
       setTimeout(() => setShowPauseIcon(false), 150); // Match exit animation duration
     }
   }, [active, armAudio, attemptPlay]);
-
-  // Mute toggle - context is single source of truth, useEffect syncs to video
-  const handleMute = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    armAudio();
-    toggleMute();
-  }, [armAudio, toggleMute]);
 
   // Play button click
   const handlePlayButton = useCallback((e: React.MouseEvent) => {
@@ -392,32 +385,6 @@ export default function ClipCard({
       </AnimatePresence>
 
 
-      {/* Top-right: Mute button - offset down on desktop to avoid Word button overlap */}
-      {active && (
-        <div
-          className="absolute right-4 z-20 top-4 md:top-20"
-          onClick={(e) => e.stopPropagation()} // Prevent clip pause when tapping button area
-        >
-          {/* Mute button */}
-          <button
-            onClick={handleMute}
-            className="w-11 h-11 flex items-center justify-center rounded-full bg-black/30 backdrop-blur-sm active:scale-95 transition-transform"
-            aria-label={isMuted ? 'Unmute' : 'Mute'}
-            style={{ touchAction: 'manipulation' }}
-          >
-            {isMuted ? (
-              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
-              </svg>
-            ) : (
-              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-              </svg>
-            )}
-          </button>
-        </div>
-      )}
 
       {/* Bottom-left: Title & Artist info box */}
       <div
