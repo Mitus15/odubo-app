@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import ClipsFeed from '@/components/clips/ClipsFeed';
 import ExpandableLogoMenu from '@/components/clips/ExpandableLogoMenu';
 import FilmGrain from '@/components/ui/FilmGrain';
-import { useAudio } from '@/contexts/AudioContext';
 import type { ClipItem } from '@/types/clips';
 
 interface VerseOfTheDay {
@@ -24,8 +23,6 @@ export default function HomePageClient({ verseOfTheDay, initialClipId }: HomePag
   const HEADER_HEIGHT = 0;
   const INTRO_DURATION = 4000; // Show verse for 4 seconds before collapsing
 
-  const { isMuted, toggleMute, armAudio } = useAudio();
-
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
   const [navHeight, setNavHeight] = useState<number>(HEADER_HEIGHT);
 
@@ -35,12 +32,6 @@ export default function HomePageClient({ verseOfTheDay, initialClipId }: HomePag
 
   // Active clip for global menu
   const [activeClip, setActiveClip] = useState<ClipItem | null>(null);
-
-  // Handle mute toggle
-  const handleMuteToggle = useCallback(() => {
-    armAudio();
-    toggleMute();
-  }, [armAudio, toggleMute]);
 
   // Clock update
   useEffect(() => {
@@ -125,19 +116,13 @@ export default function HomePageClient({ verseOfTheDay, initialClipId }: HomePag
   const isShowingVerse = phase === 'intro' || phase === 'expanded';
 
   return (
-    <div
-      className="fixed top-0 left-0 right-0 bottom-0 bg-black text-[#ede8df]"
-      style={{
-        overflow: 'hidden',
-        WebkitOverflowScrolling: 'touch',
-      }}
-    >
+    <div className="relative bg-black text-[#ede8df]" style={{ minHeight: '100dvh' }}>
       {/* Animated film grain overlay */}
       <FilmGrain opacity={0.03} />
 
       {/* Clips layer - edge to edge, offset for sidebar on desktop */}
       <div
-        className="absolute top-0 left-0 right-0 bottom-0 lg:left-20 xl:left-64 bg-black"
+        className="fixed inset-0 lg:left-20 xl:left-64 bg-black"
         style={{
           overscrollBehavior: 'none',
         }}
@@ -146,7 +131,7 @@ export default function HomePageClient({ verseOfTheDay, initialClipId }: HomePag
         <ClipsFeed navHeight={0} initialClipId={initialClipId} onActiveClipChange={setActiveClip} />
       </div>
 
-      {/* Word Button - Single transforming button (left on mobile, right on desktop) */}
+      {/* Word Button - Single transforming button */}
       <AnimatePresence mode="wait">
         {phase !== 'intro' && (
           <motion.button
@@ -178,31 +163,6 @@ export default function HomePageClient({ verseOfTheDay, initialClipId }: HomePag
           </motion.button>
         )}
       </AnimatePresence>
-
-      {/* Mute Button - Persistent, right side on mobile */}
-      <button
-        onClick={handleMuteToggle}
-        className="fixed z-40 right-4 flex items-center justify-center rounded-full bg-black/40 backdrop-blur-xl border border-white/10 text-white shadow-lg active:scale-90 transition-transform"
-        style={{
-          top: 'max(env(safe-area-inset-top, 12px), 12px)',
-          touchAction: 'manipulation',
-          WebkitTapHighlightColor: 'transparent',
-          width: 44,
-          height: 44,
-        }}
-        aria-label={isMuted ? 'Unmute' : 'Mute'}
-      >
-        {isMuted ? (
-          <svg className="w-5 h-5 text-white/80" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-            <path strokeLinecap="round" strokeLinejoin="round" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
-          </svg>
-        ) : (
-          <svg className="w-5 h-5 text-white/80" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-          </svg>
-        )}
-      </button>
 
       {/* Full Verse Overlay (intro & expanded states) */}
       <AnimatePresence>

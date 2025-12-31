@@ -535,10 +535,8 @@
 html,
 body,
 #__next {
-  height: 100dvh; /* Dynamic viewport height for PWA */
-  height: 100vh; /* Fallback */
-  min-height: 100dvh;
-  min-height: 100vh;
+  height: 100%;
+  min-height: 100%;
   margin: 0;
   padding: 0;
   overflow: hidden; /* Prevent page-level scroll */
@@ -1259,37 +1257,6 @@ h6,
 }
 
 /* ============================================================================
-   Clip Section Sizing
-   Full viewport height for scroll snap clips
-   ============================================================================ */
-
-.clip-section {
-  height: 100vh; /* Fallback */
-  height: 100dvh; /* Dynamic viewport height */
-  height: -webkit-fill-available; /* iOS Safari */
-  min-height: 100vh;
-  min-height: 100dvh;
-  min-height: -webkit-fill-available;
-}
-
-/* In PWA standalone, ensure full screen */
-@media all and (display-mode: standalone) {
-  .clip-section {
-    height: 100vh !important;
-    height: 100dvh !important;
-    min-height: 100vh !important;
-    min-height: 100dvh !important;
-  }
-}
-
-html[data-pwa="true"] .clip-section {
-  height: 100vh !important;
-  height: 100dvh !important;
-  min-height: 100vh !important;
-  min-height: 100dvh !important;
-}
-
-/* ============================================================================
    Clip Card Transitions
    Animations for auto-swipe between clips
    ============================================================================ */
@@ -1315,57 +1282,36 @@ html[data-pwa="true"] .clip-section {
    Styles specific to installed PWA experience (no browser UI)
    ============================================================================ */
 
-/* PWA standalone mode - also triggered by data-pwa attribute */
 @media all and (display-mode: standalone) {
   :root {
+    /* PWA-specific safe area variables */
     --pwa-top-inset: env(safe-area-inset-top, 0px);
     --pwa-bottom-inset: env(safe-area-inset-bottom, 0px);
+    --pwa-left-inset: env(safe-area-inset-left, 0px);
+    --pwa-right-inset: env(safe-area-inset-right, 0px);
   }
 
-  html {
-    height: 100% !important;
-    height: -webkit-fill-available !important;
+  /* Full viewport in standalone mode */
+  .clips-container,
+  .clips-feed {
+    height: 100dvh;
+    height: 100vh; /* Fallback for older browsers */
   }
 
+  /* Optimized safe areas for PWA */
+  .safe-area-header {
+    padding-top: var(--pwa-top-inset);
+  }
+
+  .safe-area-bottom {
+    padding-bottom: var(--pwa-bottom-inset);
+  }
+
+  /* PWA body optimization */
   body {
-    height: 100% !important;
-    min-height: 100% !important;
-    min-height: -webkit-fill-available !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    overflow: hidden !important;
+    /* Prevent overscroll bounce in PWA */
+    overscroll-behavior: none;
+    /* Ensure full viewport usage */
+    min-height: 100dvh;
   }
-
-  main {
-    padding: 0 !important;
-    margin: 0 !important;
-  }
-
-  .minibar-aware, .safe-area-top, .safe-area-bottom {
-    padding: 0 !important;
-  }
-}
-
-/* Data attribute fallback for PWA detection */
-html[data-pwa="true"] {
-  height: 100% !important;
-  height: -webkit-fill-available !important;
-}
-
-html[data-pwa="true"] body {
-  height: 100% !important;
-  min-height: -webkit-fill-available !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  overflow: hidden !important;
-}
-
-html[data-pwa="true"] main {
-  padding: 0 !important;
-}
-
-html[data-pwa="true"] .minibar-aware,
-html[data-pwa="true"] .safe-area-top,
-html[data-pwa="true"] .safe-area-bottom {
-  padding: 0 !important;
 }
