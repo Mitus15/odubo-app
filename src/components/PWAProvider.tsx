@@ -36,8 +36,15 @@ export function PWAProvider({ children }: PWAProviderProps) {
 
     // Set actual viewport height as CSS variable (fixes iOS PWA viewport bugs)
     const setViewportHeight = () => {
+      // On iOS PWA, we need the full screen height including safe areas
+      // innerHeight excludes safe areas, so we need to detect and compensate
       const vh = window.innerHeight;
       document.documentElement.style.setProperty('--app-height', `${vh}px`);
+
+      // Also set a flag for PWA mode
+      if (isPWAStandalone()) {
+        document.documentElement.setAttribute('data-pwa', 'true');
+      }
     };
     setViewportHeight();
     window.addEventListener('resize', setViewportHeight);

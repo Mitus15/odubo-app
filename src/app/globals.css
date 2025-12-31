@@ -1259,6 +1259,37 @@ h6,
 }
 
 /* ============================================================================
+   Clip Section Sizing
+   Full viewport height for scroll snap clips
+   ============================================================================ */
+
+.clip-section {
+  height: 100vh; /* Fallback */
+  height: 100dvh; /* Dynamic viewport height */
+  height: -webkit-fill-available; /* iOS Safari */
+  min-height: 100vh;
+  min-height: 100dvh;
+  min-height: -webkit-fill-available;
+}
+
+/* In PWA standalone, ensure full screen */
+@media all and (display-mode: standalone) {
+  .clip-section {
+    height: 100vh !important;
+    height: 100dvh !important;
+    min-height: 100vh !important;
+    min-height: 100dvh !important;
+  }
+}
+
+html[data-pwa="true"] .clip-section {
+  height: 100vh !important;
+  height: 100dvh !important;
+  min-height: 100vh !important;
+  min-height: 100dvh !important;
+}
+
+/* ============================================================================
    Clip Card Transitions
    Animations for auto-swipe between clips
    ============================================================================ */
@@ -1284,37 +1315,57 @@ h6,
    Styles specific to installed PWA experience (no browser UI)
    ============================================================================ */
 
+/* PWA standalone mode - also triggered by data-pwa attribute */
 @media all and (display-mode: standalone) {
   :root {
-    /* PWA-specific safe area variables */
     --pwa-top-inset: env(safe-area-inset-top, 0px);
     --pwa-bottom-inset: env(safe-area-inset-bottom, 0px);
-    --pwa-left-inset: env(safe-area-inset-left, 0px);
-    --pwa-right-inset: env(safe-area-inset-right, 0px);
   }
 
-  /* PWA body/html optimization - fill entire screen */
-  html, body {
+  html {
     height: 100% !important;
-    width: 100% !important;
+    height: -webkit-fill-available !important;
+  }
+
+  body {
+    height: 100% !important;
+    min-height: 100% !important;
+    min-height: -webkit-fill-available !important;
     margin: 0 !important;
     padding: 0 !important;
     overflow: hidden !important;
-    overscroll-behavior: none !important;
   }
 
-  /* Remove ALL padding on main in PWA - clips go edge to edge */
   main {
     padding: 0 !important;
     margin: 0 !important;
   }
 
-  /* Override minibar-aware to remove safe area padding in PWA standalone */
-  .minibar-aware {
-    padding-bottom: var(--minibar-height, 0px) !important;
-  }
-
-  .safe-area-top, .safe-area-bottom {
+  .minibar-aware, .safe-area-top, .safe-area-bottom {
     padding: 0 !important;
   }
+}
+
+/* Data attribute fallback for PWA detection */
+html[data-pwa="true"] {
+  height: 100% !important;
+  height: -webkit-fill-available !important;
+}
+
+html[data-pwa="true"] body {
+  height: 100% !important;
+  min-height: -webkit-fill-available !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+html[data-pwa="true"] main {
+  padding: 0 !important;
+}
+
+html[data-pwa="true"] .minibar-aware,
+html[data-pwa="true"] .safe-area-top,
+html[data-pwa="true"] .safe-area-bottom {
+  padding: 0 !important;
 }

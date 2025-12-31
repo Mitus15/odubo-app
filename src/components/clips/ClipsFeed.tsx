@@ -292,9 +292,8 @@ export default function ClipsFeed({ navHeight, initialClipId, onActiveClipChange
   return (
     <div
       ref={rootRef}
-      className="w-full overflow-y-auto overflow-x-hidden"
+      className="w-full h-full overflow-y-auto overflow-x-hidden"
       style={{
-        height: 'var(--app-height, 100dvh)',
         scrollSnapType: 'y mandatory',
         WebkitOverflowScrolling: 'touch',
         overscrollBehavior: 'none',
@@ -325,10 +324,8 @@ export default function ClipsFeed({ navHeight, initialClipId, onActiveClipChange
             data-clip-key={clip.uniqueKey}
             data-clip-id={clip.id}
             data-clip-index={index}
-            className="w-full flex items-center justify-center flex-shrink-0"
+            className="w-full flex items-center justify-center flex-shrink-0 clip-section"
             style={{
-              height: 'var(--app-height, 100dvh)', /* Use JS-calculated height, fallback to dvh */
-              minHeight: 'var(--app-height, 100dvh)',
               scrollSnapAlign: 'start',
               scrollSnapStop: 'always',
               touchAction: 'pan-y'
