@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import type { ClipItem } from '@/types/clips';
 import { attachHls, type HlsHandle } from '@/lib/hlsPlayer';
 import { prefetchFirstSegment } from '@/lib/hlsPrefetch';
-import { getDeviceInfo, getScrollBehavior } from '@/lib/deviceInfo';
+import { getDeviceInfo } from '@/lib/deviceInfo';
 import { useAudio } from '@/contexts/AudioContext';
 import { useOmniShop } from '@/contexts/OmniShopContext';
 import VinylMiniPlayer from '../player/VinylMiniPlayer';
@@ -36,6 +36,9 @@ export default function ClipCard({
   const hlsRef = useRef<HlsHandle | null>(null);
   const mountedRef = useRef(true);
   const userPausedRef = useRef(false);
+  const playPromiseRef = useRef<Promise<void> | null>(null);
+  const isMutedRef = useRef(isMuted);
+  const hasUserPreferenceRef = useRef(hasUserPreference);
 
   const [firstFrame, setFirstFrame] = useState(false);
   const [showPlayButton, setShowPlayButton] = useState(false);
@@ -44,47 +47,85 @@ export default function ClipCard({
   const [isUserPaused, setIsUserPaused] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
 
-  // Play video with autoplay policy handling
-  // Preserves user's unmute preference - only falls back to muted if no explicit preference
+  // Keep refs in sync with state (avoids stale closures in callbacks)
+  isMutedRef.current = isMuted;
+  hasUserPreferenceRef.current = hasUserPreference;
+
+  // Core play function - handles all browser autoplay policies
+  // Uses refs to avoid dependency on changing state
   const attemptPlay = useCallback(async (v: HTMLVideoElement, isUserTap = false): Promise<boolean> => {
     if (!mountedRef.current || !v) return false;
+
+    // Already playing? Success.
+    if (!v.paused && !v.ended) return true;
+
+    // Wait for any pending play() to resolve first to avoid "interrupted" error
+    if (playPromiseRef.current) {
+      try {
+        await playPromiseRef.current;
+      } catch {
+        // Previous play failed, that's fine
+      }
+      playPromiseRef.current = null;
+    }
+
+    // Check again after await - state may have changed
+    if (!mountedRef.current) return false;
     if (!v.paused && !v.ended) return true;
 
     const tryPlay = async (muted: boolean): Promise<boolean> => {
       try {
         v.muted = muted;
-        await v.play();
+        const promise = v.play();
+        playPromiseRef.current = promise;
+        await promise;
+        playPromiseRef.current = null;
+
+        if (!mountedRef.current) return false;
+
         userPausedRef.current = false;
         setShowPlayButton(false);
         setIsUserPaused(false);
         return true;
-      } catch {
+      } catch (err: any) {
+        playPromiseRef.current = null;
+
+        // "Interrupted" error means another play/pause happened - not a failure
+        if (err?.name === 'AbortError' || err?.message?.includes('interrupted')) {
+          // Check if video is now playing (interruption succeeded)
+          return !v.paused && !v.ended;
+        }
         return false;
       }
     };
 
-    // Try with user's preferred mute state first
-    if (await tryPlay(isMuted)) return true;
+    // Try with user's current mute preference
+    const currentMuted = isMutedRef.current;
+    if (await tryPlay(currentMuted)) return true;
 
-    // If unmuted failed and user hasn't explicitly set preference, try muted
-    // This preserves the user's choice - if they chose unmuted, we don't auto-mute
-    if (!isMuted && !hasUserPreference && await tryPlay(true)) {
-      syncFromVideo(true); // Only sync if no user preference
-      return true;
-    }
-
-    // Retries for non-user-initiated plays (always respect user's mute preference)
-    if (!isUserTap) {
-      for (let i = 0; i < 2; i++) {
-        await new Promise(r => setTimeout(r, 200 * (i + 1)));
-        if (!mountedRef.current) return false;
-        if (await tryPlay(isMuted)) return true;
+    // If unmuted failed and no explicit user preference, try muted (browser policy)
+    if (!currentMuted && !hasUserPreferenceRef.current) {
+      if (await tryPlay(true)) {
+        syncFromVideo(true);
+        return true;
       }
     }
 
-    setShowPlayButton(true);
+    // For non-user-initiated plays, retry a couple times
+    if (!isUserTap && mountedRef.current) {
+      for (let i = 0; i < 2; i++) {
+        await new Promise(r => setTimeout(r, 150 * (i + 1)));
+        if (!mountedRef.current || userPausedRef.current) return false;
+        if (await tryPlay(isMutedRef.current)) return true;
+      }
+    }
+
+    // All attempts failed - show play button
+    if (mountedRef.current) {
+      setShowPlayButton(true);
+    }
     return false;
-  }, [isMuted, hasUserPreference, syncFromVideo]);
+  }, [syncFromVideo]); // Only syncFromVideo - everything else via refs
 
   // Tap to play/pause
   const handleTap = useCallback((e: React.MouseEvent | React.TouchEvent) => {
@@ -104,7 +145,7 @@ export default function ClipCard({
       setIsUserPaused(true);
       v.pause();
       setShowPauseIcon(true);
-      setTimeout(() => setShowPauseIcon(false), 150); // Match exit animation duration
+      setTimeout(() => setShowPauseIcon(false), 150);
     }
   }, [active, armAudio, attemptPlay]);
 
@@ -118,106 +159,152 @@ export default function ClipCard({
     if (videoRef.current) attemptPlay(videoRef.current, true);
   }, [armAudio, attemptPlay]);
 
-  // Video ended - with slide-up transition animation
+  // Video ended handler
   const handleEnded = useCallback(() => {
     onEnded();
     if (currentIndex === lastAutoScrollIndex) {
       const v = videoRef.current;
-      if (v) { v.currentTime = 0; attemptPlay(v); }
+      if (v) {
+        v.currentTime = 0;
+        attemptPlay(v);
+      }
       return;
     }
     onAutoScroll(currentIndex);
     const section = videoRef.current?.closest('section');
     const next = section?.nextElementSibling as HTMLElement;
     if (next) {
-      // Start slide-up animation
       setIsTransitioning(true);
-
-      // After animation plays, scroll to next clip
       setTimeout(() => {
         next.scrollIntoView({ behavior: 'auto', block: 'start' });
-        // Reset transition state after scroll
         setTimeout(() => setIsTransitioning(false), 50);
-      }, 200); // Match CSS animation duration
+      }, 200);
     }
   }, [currentIndex, lastAutoScrollIndex, onAutoScroll, onEnded, attemptPlay]);
 
-  // Mount tracking
+  // Mount tracking and cleanup
   useEffect(() => {
     mountedRef.current = true;
-    return () => { mountedRef.current = false; };
+    return () => {
+      mountedRef.current = false;
+      playPromiseRef.current = null;
+      if (hlsRef.current) {
+        hlsRef.current.destroy();
+        hlsRef.current = null;
+      }
+    };
   }, []);
 
   // HLS attachment
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
+    if (!active && !shouldPreload) return;
 
-    if ((active || shouldPreload) && !hlsRef.current) {
-      attachHls(v, clip.hlsUrl, shouldPreload && !active).then(h => {
+    let cancelled = false;
+
+    const attach = async () => {
+      if (hlsRef.current) {
+        hlsRef.current.destroy();
+        hlsRef.current = null;
+      }
+
+      const h = await attachHls(v, clip.hlsUrl, shouldPreload && !active);
+      if (!cancelled && h) {
         hlsRef.current = h;
-      });
-    }
+      }
+    };
+
+    attach();
+
+    return () => {
+      cancelled = true;
+    };
   }, [clip.hlsUrl, active, shouldPreload]);
 
-  // Store attemptPlay in ref to avoid effect re-runs when mute state changes
+  // Store attemptPlay in ref for use in effects
   const attemptPlayRef = useRef(attemptPlay);
   attemptPlayRef.current = attemptPlay;
 
-  // Playback control - waits for HLS to be ready before attempting play
+  // Main playback control effect
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
 
-    if (active) {
-      userPausedRef.current = false;
-      setIsUserPaused(false);
-      setShowPlayButton(false);
-      v.muted = isMuted;
-
-      // Wait for video to be ready (HLS attached) before attempting play
-      const attemptWhenReady = async () => {
-        const maxWait = 2000; // 2 second max wait
-        const checkInterval = 50;
-        let waited = 0;
-
-        // Poll until video is ready or timeout
-        while (waited < maxWait) {
-          if (!mountedRef.current) return;
-
-          // Video is ready when it has metadata loaded (readyState >= 1)
-          // or when HLS has attached and provided duration
-          if (v.readyState >= 1 || (v.duration > 0 && !isNaN(v.duration))) {
-            break;
-          }
-          await new Promise(r => setTimeout(r, checkInterval));
-          waited += checkInterval;
-        }
-
-        // Attempt play if still mounted, active, and not user-paused
-        if (mountedRef.current && !userPausedRef.current) {
-          attemptPlayRef.current(v);
-        }
-      };
-
-      attemptWhenReady();
-
-      // Watchdog interval as backup - rescues stalled playback
-      const watchdog = setInterval(() => {
-        if (!mountedRef.current) return;
-        // Only auto-resume if not user-paused and not in background
-        if (v.paused && !v.ended && !userPausedRef.current && !document.hidden) {
-          attemptPlayRef.current(v, false);
-        }
-      }, 1000);
-
-      return () => { clearInterval(watchdog); };
-    } else {
+    if (!active) {
       v.pause();
+      return;
     }
-  }, [active, isMuted]); // Removed attemptPlay from deps - use ref instead
 
-  // Cleanup HLS
+    // Reset state when becoming active
+    userPausedRef.current = false;
+    setIsUserPaused(false);
+    setShowPlayButton(false);
+
+    let cancelled = false;
+
+    // Wait for video to be ready, then play
+    const attemptWhenReady = async () => {
+      const maxWait = 3000;
+      const interval = 50;
+      let waited = 0;
+
+      while (waited < maxWait && !cancelled) {
+        if (!mountedRef.current) return;
+
+        const hasSource = v.src || v.currentSrc;
+        const isReady = v.readyState >= 1;
+
+        if (hasSource && isReady) break;
+
+        await new Promise(r => setTimeout(r, interval));
+        waited += interval;
+      }
+
+      if (!cancelled && mountedRef.current && !userPausedRef.current) {
+        attemptPlayRef.current(v);
+      }
+    };
+
+    attemptWhenReady();
+
+    // Watchdog: rescue stalled playback every second
+    const watchdog = setInterval(() => {
+      if (!mountedRef.current || cancelled || userPausedRef.current) return;
+      if (document.hidden) return; // Don't fight visibility API
+
+      const hasSource = v.src || v.currentSrc;
+      if (hasSource && v.paused && !v.ended) {
+        attemptPlayRef.current(v);
+      }
+    }, 1000);
+
+    // Visibility change: resume when tab becomes visible
+    const handleVisibility = () => {
+      if (document.hidden) return;
+      if (!mountedRef.current || cancelled || userPausedRef.current) return;
+
+      const hasSource = v.src || v.currentSrc;
+      if (hasSource && v.paused && !v.ended) {
+        // Small delay to let browser settle
+        setTimeout(() => {
+          if (mountedRef.current && !userPausedRef.current) {
+            attemptPlayRef.current(v);
+          }
+        }, 100);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      cancelled = true;
+      clearInterval(watchdog);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [active]);
+
+  // Cleanup HLS when not needed
   useEffect(() => {
     if (active || shouldPreload) return;
     const v = videoRef.current;
@@ -225,7 +312,10 @@ export default function ClipCard({
 
     const { isMobile } = getDeviceInfo();
     const timer = setTimeout(() => {
-      if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
+      if (hlsRef.current) {
+        hlsRef.current.destroy();
+        hlsRef.current = null;
+      }
       v.removeAttribute('src');
       v.load();
       setFirstFrame(false);
@@ -234,9 +324,12 @@ export default function ClipCard({
     return () => clearTimeout(timer);
   }, [active, shouldPreload]);
 
-  // Sync mute state
+  // Sync mute state to video element (via ref, not React prop)
   useEffect(() => {
-    if (videoRef.current && active) videoRef.current.muted = isMuted;
+    const v = videoRef.current;
+    if (v && active) {
+      v.muted = isMuted;
+    }
   }, [isMuted, active]);
 
   // Buffering detection
@@ -259,12 +352,12 @@ export default function ClipCard({
     };
   }, []);
 
-  // Prefetch
+  // Prefetch next clip
   useEffect(() => {
     if (shouldPreload) prefetchFirstSegment(clip.hlsUrl);
   }, [shouldPreload, clip.hlsUrl]);
 
-  // First frame detection
+  // First frame detection for poster fade
   useEffect(() => {
     const v = videoRef.current;
     if (!v || !active) return;
@@ -282,7 +375,7 @@ export default function ClipCard({
     return () => v.removeEventListener('playing', onPlaying);
   }, [active]);
 
-  // Reset on clip change
+  // Reset first frame on clip change
   useEffect(() => { setFirstFrame(false); }, [clip.id]);
 
   const showPlayOverlay = showPlayButton || (isUserPaused && active && !showPauseIcon);
@@ -307,7 +400,7 @@ export default function ClipCard({
         />
       )}
 
-      {/* Video */}
+      {/* Video - NO muted prop, controlled via ref only */}
       <video
         ref={videoRef}
         className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-200 ${
@@ -315,12 +408,12 @@ export default function ClipCard({
         }`}
         onEnded={handleEnded}
         playsInline
-        muted={isMuted}
+        preload="auto"
         poster={clip.poster ?? undefined}
         style={{ touchAction: 'pan-y' }}
       />
 
-      {/* Gradient overlay for text readability */}
+      {/* Gradient overlay */}
       <div
         className="absolute inset-x-0 bottom-0 h-48 pointer-events-none"
         style={{
@@ -328,7 +421,7 @@ export default function ClipCard({
         }}
       />
 
-      {/* Play button overlay - shown when autoplay fails or user paused */}
+      {/* Play button overlay */}
       <AnimatePresence>
         {showPlayOverlay && (
           <motion.div
@@ -351,7 +444,7 @@ export default function ClipCard({
         )}
       </AnimatePresence>
 
-      {/* Buffering spinner - hidden when play button is visible */}
+      {/* Buffering spinner */}
       <AnimatePresence>
         {active && isBuffering && !showPlayOverlay && (
           <motion.div
@@ -384,20 +477,15 @@ export default function ClipCard({
         )}
       </AnimatePresence>
 
-
-
-      {/* Bottom-left: Title & Artist info box */}
+      {/* Bottom-left: Title & info */}
       <div
         className="absolute left-4 z-20 pointer-events-auto"
         style={{ bottom: 'calc(max(env(safe-area-inset-bottom, 16px), 16px) + 24px)' }}
-        onClick={(e) => e.stopPropagation()} // Prevent clip pause when tapping info area
+        onClick={(e) => e.stopPropagation()}
       >
-        {/* Vinyl Mini Player - shows when music is playing */}
         <VinylMiniPlayer className="mb-3" />
 
-        {/* Info container - no background, text shadows for legibility */}
         <div className="max-w-[240px]">
-          {/* Shoppable indicator - amber when store closed, green with label when open */}
           {clip.productHandle && (
             <div className="flex items-center gap-1.5 mb-1">
               {storeAccessible ? (

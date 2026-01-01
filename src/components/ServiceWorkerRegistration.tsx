@@ -66,15 +66,21 @@ export default function ServiceWorkerRegistration() {
       }
     };
 
-    // Register clips service worker (for HLS caching)
+    // DISABLED: Clips service worker was causing autoplay issues in production
+    // The SW was intercepting HLS requests and returning cached/stale responses
+    // that confused HLS.js state management. Native browser caching is sufficient.
     const registerClipsSW = async () => {
+      // Unregister any existing clips-sw to clean up
       try {
-        const registration = await navigator.serviceWorker.register('/clips-sw.js', {
-          scope: '/clips'
-        });
-        console.log('[SW] Clips service worker registered:', registration.scope);
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        for (const reg of registrations) {
+          if (reg.scope.includes('/clips')) {
+            await reg.unregister();
+            console.log('[SW] Unregistered clips service worker');
+          }
+        }
       } catch (err) {
-        console.warn('[SW] Clips service worker registration failed:', err);
+        // Ignore errors
       }
     };
 
@@ -106,12 +112,11 @@ export default function ServiceWorkerRegistration() {
       });
     };
 
-    // Register both service workers
-    Promise.all([
-      registerMainSW(),
-      registerClipsSW()
-    ]).then(() => {
-      // Prefetch after registration
+    // Register main SW and cleanup clips SW
+    // IMPORTANT: Unregister clips-sw FIRST before registering main SW
+    registerClipsSW().then(() => {
+      return registerMainSW();
+    }).then(() => {
       prefetchCriticalRoutes();
     });
 

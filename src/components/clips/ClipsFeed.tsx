@@ -305,7 +305,7 @@ export default function ClipsFeed({ navHeight, initialClipId, onActiveClipChange
     >
       {/* Loading state */}
       {loading && displayClips.length === 0 && (
-        <div className="flex items-center justify-center h-full">
+        <div className="flex items-center justify-center" style={{ height: '100dvh' }}>
           <div className="flex flex-col items-center gap-3 text-white/60">
             <div className="w-12 h-12 border-4 border-white/20 border-t-white/60 rounded-full animate-spin" />
             <p className="text-sm">Loading clips...</p>
@@ -324,8 +324,9 @@ export default function ClipsFeed({ navHeight, initialClipId, onActiveClipChange
             data-clip-key={clip.uniqueKey}
             data-clip-id={clip.id}
             data-clip-index={index}
-            className="w-full flex items-center justify-center flex-shrink-0 clip-section"
+            className="w-full flex items-center justify-center flex-shrink-0"
             style={{
+              height: '100dvh',
               scrollSnapAlign: 'start',
               scrollSnapStop: 'always',
               touchAction: 'pan-y'
