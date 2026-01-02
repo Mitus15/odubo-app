@@ -32,9 +32,7 @@ export default function PosterCard({ clip, active }: PosterCardProps) {
         touchAction: 'pan-y',
         WebkitUserSelect: 'none',
         userSelect: 'none',
-        transition: active
-          ? 'background-color 250ms ease-out 100ms'
-          : 'background-color 150ms ease-in'
+        transition: 'background-color 200ms ease-out'
       }}
     >
       {/* Poster image - fades out when active to reveal video */}
@@ -46,11 +44,7 @@ export default function PosterCard({ clip, active }: PosterCardProps) {
           className={`absolute inset-0 w-full h-full object-cover pointer-events-none ${
             active ? 'opacity-0' : 'opacity-100'
           }`}
-          style={{
-            transition: active
-              ? 'opacity 250ms ease-out 100ms' // Delay fade-out for smooth scroll settle
-              : 'opacity 150ms ease-in'        // Quick fade-in when scrolling away
-          }}
+          style={{ transition: 'opacity 200ms ease-out' }}
           loading="lazy"
         />
       )}
@@ -62,9 +56,7 @@ export default function PosterCard({ clip, active }: PosterCardProps) {
         }`}
         style={{
           background: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.4) 40%, transparent 100%)',
-          transition: active
-            ? 'opacity 250ms ease-out 100ms'
-            : 'opacity 150ms ease-in'
+          transition: 'opacity 200ms ease-out'
         }}
       />
 

@@ -254,7 +254,7 @@ export default function ClipsFeed({
         const index = parseInt(el.dataset.clipIndex || '', 10);
 
         if (Number.isFinite(id) && id !== activeId) {
-          // Debounce to let scroll snap settle
+          // Debounce to let scroll snap fully complete
           if (debounceTimer) clearTimeout(debounceTimer);
           debounceTimer = setTimeout(() => {
             setActiveId(id);
@@ -264,7 +264,7 @@ export default function ClipsFeed({
             if (displayClips.length && index >= displayClips.length - 2) {
               handleLoadMore();
             }
-          }, 80);
+          }, 200);
         }
       },
       {
