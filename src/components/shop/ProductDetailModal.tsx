@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useOmniShop, type ProductDetail } from '@/contexts/OmniShopContext';
+import { extractColorsFromImage, type ExtractedColors } from '@/lib/colorExtraction';
 
 interface ProductDetailModalProps {
   productHandle: string;
@@ -24,6 +25,7 @@ export default function ProductDetailModal({ productHandle }: ProductDetailModal
   const [error, setError] = useState<string | null>(null);
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
   const [addFeedback, setAddFeedback] = useState<string | null>(null);
+  const [colors, setColors] = useState<ExtractedColors | null>(null);
 
   // Check if we came from Maison (show back button) or directly (show close)
   const hasBackStack = modalStack.length > 1;
@@ -159,25 +161,87 @@ export default function ProductDetailModal({ productHandle }: ProductDetailModal
   // Image for display - variant image or first product image
   const displayImage = selectedVariant?.image || product?.images[0] || null;
 
+  // Extract colors from product image for dynamic background
+  useEffect(() => {
+    if (!displayImage) {
+      setColors(null);
+      return;
+    }
+
+    extractColorsFromImage(displayImage).then(setColors);
+  }, [displayImage]);
+
+  // Dynamic styles based on extracted colors
+  const dynamicStyles = useMemo(() => {
+    if (!colors) {
+      // Default neutral style while loading
+      return {
+        background: 'linear-gradient(135deg, #f5f3f0 0%, #e8e4df 50%, #ddd8d2 100%)',
+        textPrimary: '#1a1817',
+        textSecondary: '#4a4540',
+        buttonBg: '#1a1817',
+        buttonText: '#f5f3f0',
+        headerBg: 'rgba(255, 255, 255, 0.8)',
+        borderColor: 'rgba(0, 0, 0, 0.08)',
+      };
+    }
+
+    if (colors.isLight) {
+      // Light product → dark UI
+      return {
+        background: colors.background,
+        textPrimary: '#ede8df',
+        textSecondary: '#b2a491',
+        buttonBg: '#ede8df',
+        buttonText: '#1a1817',
+        headerBg: 'rgba(30, 28, 26, 0.85)',
+        borderColor: 'rgba(255, 255, 255, 0.1)',
+      };
+    } else {
+      // Dark product → light UI
+      return {
+        background: colors.background,
+        textPrimary: '#1a1817',
+        textSecondary: '#5a5550',
+        buttonBg: '#1a1817',
+        buttonText: '#f5f3f0',
+        headerBg: 'rgba(255, 255, 255, 0.9)',
+        borderColor: 'rgba(0, 0, 0, 0.08)',
+      };
+    }
+  }, [colors]);
+
   return (
     <motion.div
       initial={{ opacity: 0, x: '100%' }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: '100%' }}
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-      className="fixed inset-0 z-[120] flex flex-col bg-gradient-to-br from-[#302927]/95 via-[#1a1817] to-[#302927]/95"
-      style={{ touchAction: 'pan-y' }}
+      className="fixed inset-0 z-[120] flex flex-col"
+      style={{
+        touchAction: 'pan-y',
+        background: dynamicStyles.background,
+        transition: 'background 500ms ease-out',
+      }}
     >
-      {/* Header - glass surface */}
+      {/* Header - adapts to product colors */}
       <header
-        className="relative flex items-center justify-between px-4 py-3 glass-surface-light border-b border-white/5"
-        style={{ paddingTop: 'max(12px, env(safe-area-inset-top, 0px))' }}
+        className="relative flex items-center justify-between px-4 py-3 backdrop-blur-xl"
+        style={{
+          paddingTop: 'max(12px, env(safe-area-inset-top, 0px))',
+          backgroundColor: dynamicStyles.headerBg,
+          borderBottom: `1px solid ${dynamicStyles.borderColor}`,
+          transition: 'background-color 500ms ease-out, border-color 500ms ease-out',
+        }}
       >
         <button
           onClick={hasBackStack ? goBack : closeAll}
-          className="w-10 h-10 flex items-center justify-center text-[#ede8df]/60 hover:text-[#ede8df] transition-colors rounded-full hover:bg-white/5"
+          className="w-10 h-10 flex items-center justify-center transition-colors rounded-full"
           aria-label={hasBackStack ? 'Back' : 'Close'}
-          style={{ touchAction: 'manipulation' }}
+          style={{
+            touchAction: 'manipulation',
+            color: dynamicStyles.textSecondary,
+          }}
         >
           {hasBackStack ? (
             <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
@@ -190,12 +254,15 @@ export default function ProductDetailModal({ productHandle }: ProductDetailModal
           )}
         </button>
 
-        {/* Centered logo */}
+        {/* Centered logo - inverts based on background */}
         <img
           src="/brand-logos/baad.png"
           alt="B.A.A.D Brand Logo"
-          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-6 w-auto"
-          style={{ marginTop: 'calc(env(safe-area-inset-top, 0px) / 2)' }}
+          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-6 w-auto transition-all duration-500"
+          style={{
+            marginTop: 'calc(env(safe-area-inset-top, 0px) / 2)',
+            filter: colors?.isLight ? 'invert(0)' : 'invert(1)',
+          }}
           draggable={false}
         />
 
@@ -214,17 +281,29 @@ export default function ProductDetailModal({ productHandle }: ProductDetailModal
         {/* Loading state */}
         {loading && (
           <div className="flex items-center justify-center min-h-[50vh]">
-            <div className="w-8 h-8 border-2 border-[#843c2d]/30 border-t-[#843c2d] rounded-full animate-spin" />
+            <div
+              className="w-8 h-8 rounded-full animate-spin"
+              style={{
+                borderWidth: 2,
+                borderColor: `${dynamicStyles.textSecondary}30`,
+                borderTopColor: dynamicStyles.textSecondary,
+              }}
+            />
           </div>
         )}
 
         {/* Error state */}
         {error && !loading && (
           <div className="flex flex-col items-center justify-center min-h-[50vh] px-6 text-center">
-            <p className="text-[#b2a491] text-sm mb-4">{error}</p>
+            <p className="text-sm mb-4" style={{ color: dynamicStyles.textSecondary }}>{error}</p>
             <button
               onClick={hasBackStack ? goBack : closeAll}
-              className="px-5 py-2.5 rounded-xl glass-surface border border-[#502d26]/30 text-[#ede8df] hover:bg-[#843c2d]/10 transition-colors text-sm"
+              className="px-5 py-2.5 rounded-xl transition-colors text-sm"
+              style={{
+                backgroundColor: `${dynamicStyles.textPrimary}10`,
+                border: `1px solid ${dynamicStyles.borderColor}`,
+                color: dynamicStyles.textPrimary,
+              }}
             >
               {hasBackStack ? 'Go Back' : 'Close'}
             </button>
@@ -234,21 +313,24 @@ export default function ProductDetailModal({ productHandle }: ProductDetailModal
         {/* Product content */}
         {product && !loading && !error && (
           <div className="flex flex-col md:flex-row md:gap-6 md:p-6">
-            {/* Product Image - responsive sizing */}
-            <div className="w-full md:w-1/2 md:max-w-md aspect-[4/5] md:aspect-square md:rounded-xl bg-gradient-to-b from-[#1a1817] to-[#252220] flex items-center justify-center relative overflow-hidden md:sticky md:top-0">
+            {/* Product Image - clean, no background - product floats on dynamic gradient */}
+            <div className="w-full md:w-1/2 md:max-w-md aspect-[4/5] md:aspect-square md:rounded-xl flex items-center justify-center relative overflow-hidden md:sticky md:top-0">
               {displayImage ? (
                 <motion.img
                   key={displayImage}
                   initial={{ opacity: 0, scale: 0.98 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.3, ease: 'easeOut' }}
+                  transition={{ duration: 0.4, ease: 'easeOut' }}
                   src={displayImage}
                   alt={product.title}
-                  className="w-full h-full object-contain"
+                  className="w-full h-full object-contain drop-shadow-2xl"
                   draggable={false}
                 />
               ) : (
-                <span className="text-[#b2a491]/30 text-[10px] uppercase tracking-[0.2em]">
+                <span
+                  className="text-[10px] uppercase tracking-[0.2em]"
+                  style={{ color: dynamicStyles.textSecondary }}
+                >
                   No Image
                 </span>
               )}
@@ -258,9 +340,17 @@ export default function ProductDetailModal({ productHandle }: ProductDetailModal
             <div className="px-5 py-6 space-y-6 md:flex-1 md:px-0">
               {/* Title and price */}
               <div className="space-y-2">
-                <h2 className="text-[#ede8df] text-lg font-medium tracking-wide">{product.title}</h2>
+                <h2
+                  className="text-lg font-medium tracking-wide transition-colors duration-500"
+                  style={{ color: dynamicStyles.textPrimary }}
+                >
+                  {product.title}
+                </h2>
                 {selectedVariant && (
-                  <p className="text-[#b2a491] text-base tracking-wide">
+                  <p
+                    className="text-base tracking-wide transition-colors duration-500"
+                    style={{ color: dynamicStyles.textSecondary }}
+                  >
                     ${selectedVariant.price.toFixed(2)} USD
                   </p>
                 )}
@@ -268,17 +358,20 @@ export default function ProductDetailModal({ productHandle }: ProductDetailModal
 
               {/* Availability */}
               {selectedVariant?.available === false && (
-                <p className="text-[#843c2d]/60 text-xs uppercase tracking-[0.15em]">
+                <p className="text-red-500/70 text-xs uppercase tracking-[0.15em]">
                   Currently unavailable
                 </p>
               )}
 
-              {/* Options - glass pill buttons */}
+              {/* Options - dynamic buttons */}
               {product.options?.length > 0 && (
                 <div className="space-y-5">
                   {product.options.map((opt) => (
                     <div key={opt.name}>
-                      <label className="text-[10px] uppercase tracking-[0.2em] text-[#b2a491]/60 mb-3 block">
+                      <label
+                        className="text-[10px] uppercase tracking-[0.2em] mb-3 block transition-colors duration-500"
+                        style={{ color: `${dynamicStyles.textSecondary}99` }}
+                      >
                         {opt.name}
                       </label>
                       <div className="flex flex-wrap gap-2">
@@ -296,14 +389,23 @@ export default function ProductDetailModal({ productHandle }: ProductDetailModal
                             <button
                               key={val}
                               onClick={() => updateOption(opt.name, val)}
-                              className={`min-w-[44px] px-4 py-2.5 rounded-xl text-xs uppercase tracking-[0.1em] transition-all border ${
-                                active
-                                  ? 'bg-[#ede8df] text-[#302927] border-[#ede8df]'
+                              className="min-w-[44px] px-4 py-2.5 rounded-xl text-xs uppercase tracking-[0.1em] transition-all active:scale-95"
+                              style={{
+                                touchAction: 'manipulation',
+                                backgroundColor: active
+                                  ? dynamicStyles.buttonBg
                                   : isAvailable
-                                    ? 'glass-surface border-[#502d26]/30 text-[#ede8df]/80 hover:bg-[#843c2d]/10 active:scale-95'
-                                    : 'bg-[#302927]/50 text-[#b2a491]/30 border-[#502d26]/20 line-through cursor-not-allowed'
-                              }`}
-                              style={{ touchAction: 'manipulation' }}
+                                    ? `${dynamicStyles.textPrimary}10`
+                                    : `${dynamicStyles.textSecondary}20`,
+                                color: active
+                                  ? dynamicStyles.buttonText
+                                  : isAvailable
+                                    ? dynamicStyles.textPrimary
+                                    : `${dynamicStyles.textSecondary}50`,
+                                border: `1px solid ${active ? dynamicStyles.buttonBg : dynamicStyles.borderColor}`,
+                                textDecoration: !isAvailable ? 'line-through' : 'none',
+                                cursor: !isAvailable ? 'not-allowed' : 'pointer',
+                              }}
                               disabled={!isAvailable}
                             >
                               {val}
@@ -316,17 +418,22 @@ export default function ProductDetailModal({ productHandle }: ProductDetailModal
                 </div>
               )}
 
-              {/* Add to Bag Button - moved from bottom */}
+              {/* Add to Bag Button - dynamic styling */}
               <div className="pt-6 mt-6">
                 <button
                   onClick={handleAddToCart}
                   disabled={!selectedVariant || selectedVariant.available === false}
-                  className={`w-full py-4 rounded-xl text-xs uppercase tracking-[0.2em] font-medium transition-all ${
-                    selectedVariant?.available !== false
-                      ? 'bg-[#ede8df] text-[#302927] active:scale-[0.98] hover:bg-[#ede8df]/90'
-                      : 'bg-[#302927]/50 text-[#b2a491]/30 cursor-not-allowed'
-                  }`}
-                  style={{ touchAction: 'manipulation' }}
+                  className="w-full py-4 rounded-xl text-xs uppercase tracking-[0.2em] font-medium transition-all active:scale-[0.98]"
+                  style={{
+                    touchAction: 'manipulation',
+                    backgroundColor: selectedVariant?.available !== false
+                      ? dynamicStyles.buttonBg
+                      : `${dynamicStyles.textSecondary}30`,
+                    color: selectedVariant?.available !== false
+                      ? dynamicStyles.buttonText
+                      : `${dynamicStyles.textSecondary}50`,
+                    cursor: selectedVariant?.available === false ? 'not-allowed' : 'pointer',
+                  }}
                 >
                   {addFeedback || (selectedVariant?.available === false ? 'Sold Out' : 'Add to Bag')}
                 </button>
@@ -336,18 +443,23 @@ export default function ProductDetailModal({ productHandle }: ProductDetailModal
         )}
       </div>
 
-      {/* Fixed bottom Legal Links - moved from middle */}
+      {/* Fixed bottom Legal Links - adapts to product colors */}
       {product && !loading && !error && (
         <div
-          className="px-5 py-4 glass-surface-light border-t border-white/5"
-          style={{ paddingBottom: 'max(16px, env(safe-area-inset-bottom, 0px))' }}
+          className="px-5 py-4 backdrop-blur-xl transition-all duration-500"
+          style={{
+            paddingBottom: 'max(16px, env(safe-area-inset-bottom, 0px))',
+            backgroundColor: dynamicStyles.headerBg,
+            borderTop: `1px solid ${dynamicStyles.borderColor}`,
+          }}
         >
           <div className="flex flex-wrap justify-center gap-x-4 gap-y-2">
             <a
               href="https://odubostudio.myshopify.com/policies/shipping-policy"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[10px] text-[#b2a491]/50 hover:text-[#b2a491] transition-colors uppercase tracking-wider"
+              className="text-[10px] uppercase tracking-wider transition-opacity hover:opacity-100"
+              style={{ color: dynamicStyles.textSecondary, opacity: 0.5 }}
             >
               Shipping & Returns
             </a>
@@ -355,7 +467,8 @@ export default function ProductDetailModal({ productHandle }: ProductDetailModal
               href="https://odubostudio.myshopify.com/policies/privacy-policy"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[10px] text-[#b2a491]/50 hover:text-[#b2a491] transition-colors uppercase tracking-wider"
+              className="text-[10px] uppercase tracking-wider transition-opacity hover:opacity-100"
+              style={{ color: dynamicStyles.textSecondary, opacity: 0.5 }}
             >
               Privacy
             </a>
@@ -363,7 +476,8 @@ export default function ProductDetailModal({ productHandle }: ProductDetailModal
               href="https://odubostudio.myshopify.com/policies/terms-of-service"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[10px] text-[#b2a491]/50 hover:text-[#b2a491] transition-colors uppercase tracking-wider"
+              className="text-[10px] uppercase tracking-wider transition-opacity hover:opacity-100"
+              style={{ color: dynamicStyles.textSecondary, opacity: 0.5 }}
             >
               Terms
             </a>
