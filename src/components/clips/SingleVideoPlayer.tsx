@@ -9,6 +9,9 @@ interface SingleVideoPlayerProps {
   clips: ClipItem[];
   activeIndex: number;
   onEnded?: () => void;
+  onVideoReady?: (ready: boolean) => void;
+  scrollDirection?: 'forward' | 'backward' | null;
+  onAdvanceToNext?: () => void;
 }
 
 /**
@@ -29,11 +32,15 @@ export default function SingleVideoPlayer({
   clips,
   activeIndex,
   onEnded,
+  onVideoReady,
+  scrollDirection = null,
+  onAdvanceToNext,
 }: SingleVideoPlayerProps) {
   const { isMuted, armAudio, syncFromVideo, hasUserPreference } = useAudio();
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const preloadRef = useRef<HTMLVideoElement | null>(null);
+  const preloadRef2 = useRef<HTMLVideoElement | null>(null);
   const mountedRef = useRef(true);
   const userPausedRef = useRef(false);
   const playPromiseRef = useRef<Promise<void> | null>(null);
@@ -47,6 +54,7 @@ export default function SingleVideoPlayer({
 
   const activeClip = clips[activeIndex];
   const nextClip = clips[activeIndex + 1];
+  const nextNextClip = clips[activeIndex + 2];
 
   // Get the video URL (prefer MP4 for simplicity, fallback to HLS)
   const getVideoUrl = useCallback((clip: ClipItem | undefined): string | null => {
@@ -162,10 +170,27 @@ export default function SingleVideoPlayer({
     if (videoRef.current) attemptPlay(videoRef.current, true);
   }, [armAudio, attemptPlay]);
 
-  // Video ended handler
+  // Video ended handler - auto-advance forward, loop backward
   const handleEnded = useCallback(() => {
     onEnded?.();
-  }, [onEnded]);
+
+    // If scrolling backward (revisiting), loop the video
+    if (scrollDirection === 'backward') {
+      const v = videoRef.current;
+      if (v) {
+        v.currentTime = 0;
+        attemptPlay(v);
+      }
+      return;
+    }
+
+    // Scrolling forward or neutral - auto-advance after a calm 200ms pause
+    setTimeout(() => {
+      if (mountedRef.current && onAdvanceToNext) {
+        onAdvanceToNext();
+      }
+    }, 200);
+  }, [onEnded, scrollDirection, onAdvanceToNext, attemptPlay]);
 
   // Mount tracking
   useEffect(() => {
@@ -188,14 +213,18 @@ export default function SingleVideoPlayer({
     if (lastActiveIndexRef.current !== activeIndex) {
       lastActiveIndexRef.current = activeIndex;
 
+      // Signal video not ready yet
+      onVideoReady?.(false);
+
       // Reset state for new clip
       setFirstFrame(false);
       setShowPlayButton(false);
       setIsUserPaused(false);
       userPausedRef.current = false;
 
-      // Swap video source
+      // Swap video source and reset to beginning
       v.src = videoUrl;
+      v.currentTime = 0;
       v.load();
 
       // Start playback when ready
@@ -210,39 +239,45 @@ export default function SingleVideoPlayer({
         v.removeEventListener('canplay', handleCanPlay);
       };
     }
-  }, [activeIndex, activeClip, getVideoUrl, attemptPlay]);
+  }, [activeIndex, activeClip, getVideoUrl, attemptPlay, onVideoReady]);
 
-  // Preload next clip
+  // Preload next 2 clips for instant transitions
   useEffect(() => {
-    if (!nextClip) return;
+    const preloadVideo = (ref: React.MutableRefObject<HTMLVideoElement | null>, url: string | null) => {
+      if (!url) return;
 
-    const nextUrl = getVideoUrl(nextClip);
-    if (!nextUrl) return;
+      if (!ref.current) {
+        ref.current = document.createElement('video');
+        ref.current.preload = 'auto';
+        ref.current.muted = true;
+        ref.current.playsInline = true;
+        ref.current.style.cssText = 'position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;';
+        document.body.appendChild(ref.current);
+      }
 
-    // Create a hidden preload element
-    if (!preloadRef.current) {
-      preloadRef.current = document.createElement('video');
-      preloadRef.current.preload = 'auto';
-      preloadRef.current.muted = true;
-      preloadRef.current.style.display = 'none';
-      document.body.appendChild(preloadRef.current);
-    }
-
-    // Set src to preload
-    if (preloadRef.current.src !== nextUrl) {
-      preloadRef.current.src = nextUrl;
-      preloadRef.current.load();
-    }
-
-    return () => {
-      // Cleanup preload element on unmount
-      if (preloadRef.current) {
-        preloadRef.current.src = '';
-        preloadRef.current.remove();
-        preloadRef.current = null;
+      if (ref.current.src !== url) {
+        ref.current.src = url;
+        ref.current.load();
       }
     };
-  }, [nextClip, getVideoUrl]);
+
+    // Preload next clip
+    preloadVideo(preloadRef, getVideoUrl(nextClip));
+
+    // Preload the one after that
+    preloadVideo(preloadRef2, getVideoUrl(nextNextClip));
+
+    return () => {
+      // Cleanup preload elements on unmount
+      [preloadRef, preloadRef2].forEach(ref => {
+        if (ref.current) {
+          ref.current.src = '';
+          ref.current.remove();
+          ref.current = null;
+        }
+      });
+    };
+  }, [nextClip, nextNextClip, getVideoUrl]);
 
   // Sync mute state
   useEffect(() => {
@@ -277,7 +312,12 @@ export default function SingleVideoPlayer({
     const v = videoRef.current;
     if (!v) return;
 
-    const mark = () => setFirstFrame(true);
+    const mark = () => {
+      setFirstFrame(true);
+      // Signal that video is ready to show
+      onVideoReady?.(true);
+    };
+
     const onPlaying = () => {
       if ('requestVideoFrameCallback' in v) {
         (v as any).requestVideoFrameCallback(mark);
@@ -288,7 +328,7 @@ export default function SingleVideoPlayer({
 
     v.addEventListener('playing', onPlaying, { once: true });
     return () => v.removeEventListener('playing', onPlaying);
-  }, [activeIndex]);
+  }, [activeIndex, onVideoReady]);
 
   // Visibility change: resume when tab becomes visible
   useEffect(() => {
@@ -341,23 +381,27 @@ export default function SingleVideoPlayer({
           src={activeClip.poster}
           alt=""
           draggable={false}
-          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 pointer-events-none ${
+          className={`absolute inset-0 w-full h-full object-cover pointer-events-none ${
             firstFrame ? 'opacity-0' : 'opacity-100'
           }`}
+          style={{ transition: 'opacity 400ms cubic-bezier(0.25, 0.46, 0.45, 0.94)' }}
         />
       )}
 
       {/* Video - FIXED position, never scrolls */}
       <video
         ref={videoRef}
-        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-200 ${
-          firstFrame ? 'opacity-100' : 'opacity-0'
+        className={`absolute inset-0 w-full h-full object-cover ${
+          firstFrame ? 'opacity-100 scale-100' : 'opacity-0 scale-[0.98]'
         }`}
         onEnded={handleEnded}
         playsInline
         preload="auto"
         poster={activeClip.poster ?? undefined}
-        style={{ touchAction: 'pan-y' }}
+        style={{
+          touchAction: 'pan-y',
+          transition: 'opacity 400ms cubic-bezier(0.25, 0.46, 0.45, 0.94), transform 400ms cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+        }}
       />
 
       {/* Play button overlay */}

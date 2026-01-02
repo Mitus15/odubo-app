@@ -7,6 +7,7 @@ import type { ClipItem } from '@/types/clips';
 interface PosterCardProps {
   clip: ClipItem;
   active: boolean;
+  videoReady?: boolean; // Only fade when video is actually ready
 }
 
 /**
@@ -20,49 +21,54 @@ interface PosterCardProps {
  * - Safari can't pause what isn't in the scroll container
  * - Less memory usage (no video elements per clip)
  */
-export default function PosterCard({ clip, active }: PosterCardProps) {
+export default function PosterCard({ clip, active, videoReady = false }: PosterCardProps) {
   const { storeAccessible } = useOmniShop();
+
+  // Only become transparent when video is actually ready to show
+  const shouldReveal = active && videoReady;
 
   return (
     <div
       className={`relative w-full h-full overflow-hidden select-none ${
-        active ? 'bg-transparent' : 'bg-black'
+        shouldReveal ? 'bg-transparent' : 'bg-black'
       }`}
       style={{
         touchAction: 'pan-y',
         WebkitUserSelect: 'none',
         userSelect: 'none',
-        transition: 'background-color 200ms ease-out'
+        transition: 'background-color 400ms cubic-bezier(0.25, 0.46, 0.45, 0.94)'
       }}
     >
-      {/* Poster image - fades out when active to reveal video */}
+      {/* Poster image - only fades when video is ready */}
       {clip.poster && (
         <img
           src={clip.poster}
           alt=""
           draggable={false}
           className={`absolute inset-0 w-full h-full object-cover pointer-events-none ${
-            active ? 'opacity-0' : 'opacity-100'
+            shouldReveal ? 'opacity-0' : 'opacity-100'
           }`}
-          style={{ transition: 'opacity 200ms ease-out' }}
+          style={{ transition: 'opacity 400ms cubic-bezier(0.25, 0.46, 0.45, 0.94)' }}
           loading="lazy"
         />
       )}
 
-      {/* Gradient overlay - hide when active to reveal video */}
+      {/* Gradient overlay - fades with poster */}
       <div
         className={`absolute inset-x-0 bottom-0 h-48 pointer-events-none ${
-          active ? 'opacity-0' : 'opacity-100'
+          shouldReveal ? 'opacity-0' : 'opacity-100'
         }`}
         style={{
           background: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.4) 40%, transparent 100%)',
-          transition: 'opacity 200ms ease-out'
+          transition: 'opacity 400ms cubic-bezier(0.25, 0.46, 0.45, 0.94)'
         }}
       />
 
-      {/* Bottom-left: Title & info */}
+      {/* Bottom-left: Title & info - only visible when this clip is active */}
       <div
-        className="absolute left-4 z-20 pointer-events-auto"
+        className={`absolute left-4 z-20 pointer-events-auto transition-opacity duration-200 ${
+          active ? 'opacity-100' : 'opacity-0'
+        }`}
         style={{ bottom: 'calc(max(env(safe-area-inset-bottom, 16px), 16px) + 24px)' }}
         onClick={(e) => e.stopPropagation()}
       >

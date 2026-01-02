@@ -38,6 +38,8 @@ export default function HomePageClient({ verseOfTheDay, initialClipId }: HomePag
   // Clips data for SingleVideoPlayer
   const [clips, setClips] = useState<ClipItem[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [videoReady, setVideoReady] = useState(false);
+  const [scrollDirection, setScrollDirection] = useState<'forward' | 'backward' | null>(null);
 
   // Audio state
   const { isMuted, toggleMute } = useAudio();
@@ -46,6 +48,15 @@ export default function HomePageClient({ verseOfTheDay, initialClipId }: HomePag
   const handleClipsReady = useCallback((newClips: ClipItem[], newActiveIndex: number) => {
     setClips(newClips);
     setActiveIndex(newActiveIndex);
+  }, []);
+
+  // Handle auto-advance to next clip (called when video ends while scrolling forward)
+  const handleAdvanceToNext = useCallback(() => {
+    // Use the exposed function from ClipsFeed
+    const scrollFn = (window as any).__clipsFeedScrollToNext;
+    if (scrollFn) {
+      scrollFn();
+    }
   }, []);
 
   // Clock update
@@ -140,6 +151,9 @@ export default function HomePageClient({ verseOfTheDay, initialClipId }: HomePag
         <SingleVideoPlayer
           clips={clips}
           activeIndex={activeIndex}
+          onVideoReady={setVideoReady}
+          scrollDirection={scrollDirection}
+          onAdvanceToNext={handleAdvanceToNext}
         />
       )}
 
@@ -156,6 +170,8 @@ export default function HomePageClient({ verseOfTheDay, initialClipId }: HomePag
           initialClipId={initialClipId}
           onActiveClipChange={setActiveClip}
           onClipsReady={handleClipsReady}
+          onScrollDirectionChange={setScrollDirection}
+          videoReady={videoReady}
         />
       </div>
 

@@ -14,6 +14,8 @@ interface ClipsFeedProps {
   initialClipId?: number | null;
   onActiveClipChange?: (clip: ClipItem | null) => void;
   onClipsReady?: (clips: ClipItem[], activeIndex: number) => void;
+  onScrollDirectionChange?: (direction: 'forward' | 'backward' | null) => void;
+  videoReady?: boolean;
 }
 
 /**
@@ -33,6 +35,8 @@ export default function ClipsFeed({
   initialClipId,
   onActiveClipChange,
   onClipsReady,
+  onScrollDirectionChange,
+  videoReady = false,
 }: ClipsFeedProps) {
   const { armAudio } = useAudio();
 
@@ -43,10 +47,12 @@ export default function ClipsFeed({
   const [activeId, setActiveId] = useState<number | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [hasMore, setHasMore] = useState(true);
+  const [scrollDirection, setScrollDirection] = useState<'forward' | 'backward' | null>(null);
 
   const rootRef = useRef<HTMLDivElement>(null);
   const inflightRef = useRef(0);
   const abortRef = useRef<AbortController | null>(null);
+  const prevScrollTopRef = useRef(0);
   const seedRef = useRef(Math.random().toString(36).substring(2, 9));
   const keyCounterRef = useRef(0);
   const deckRef = useRef<ClipItem[]>([]);
@@ -231,55 +237,93 @@ export default function ClipsFeed({
     prevBaseClipsRef.current = baseClips;
   }, [baseClips]);
 
-  // Intersection observer for active clip detection
+  // Scroll-end detection for smooth transitions
+  // Only switch video when scroll has completely stopped
   useEffect(() => {
     const root = rootRef.current;
-    if (!root) return;
+    if (!root || !displayClips.length) return;
 
-    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    let scrollTimeout: ReturnType<typeof setTimeout> | null = null;
+    let lastScrollTop = root.scrollTop;
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries.filter(e => e.isIntersecting);
-        if (!visible.length) return;
+    const findCenteredClip = (): { id: number; index: number; distance: number } | null => {
+      const viewportHeight = root.clientHeight;
+      const scrollTop = root.scrollTop;
+      const viewportCenter = scrollTop + viewportHeight / 2;
 
-        visible.sort((a, b) => b.intersectionRatio - a.intersectionRatio);
-        const top = visible[0];
+      let closestClip: { id: number; index: number; distance: number } | null = null;
 
-        // Only trigger when clip is mostly visible (85%+)
-        if (top.intersectionRatio < 0.85) return;
+      const items = root.querySelectorAll('[data-clip-key]');
+      items.forEach((el) => {
+        const htmlEl = el as HTMLElement;
+        const elTop = htmlEl.offsetTop;
+        const elCenter = elTop + htmlEl.clientHeight / 2;
+        const distance = Math.abs(elCenter - viewportCenter);
 
-        const el = top.target as HTMLElement;
-        const id = parseInt(el.dataset.clipId || '', 10);
-        const index = parseInt(el.dataset.clipIndex || '', 10);
+        const id = parseInt(htmlEl.dataset.clipId || '', 10);
+        const index = parseInt(htmlEl.dataset.clipIndex || '', 10);
 
-        if (Number.isFinite(id) && id !== activeId) {
-          // Debounce to let scroll snap fully complete
-          if (debounceTimer) clearTimeout(debounceTimer);
-          debounceTimer = setTimeout(() => {
-            setActiveId(id);
-            if (Number.isFinite(index)) setActiveIndex(index);
-
-            // Load more if near end
-            if (displayClips.length && index >= displayClips.length - 2) {
-              handleLoadMore();
-            }
-          }, 200);
+        if (Number.isFinite(id) && (!closestClip || distance < closestClip.distance)) {
+          closestClip = { id, index, distance };
         }
-      },
-      {
-        root,
-        threshold: [0.5, 0.85, 1.0],
-        rootMargin: '0px'
-      }
-    );
+      });
 
-    const items = root.querySelectorAll('[data-clip-key]');
-    items.forEach(el => observer.observe(el));
+      return closestClip;
+    };
+
+    const handleScrollEnd = () => {
+      const centered = findCenteredClip();
+      if (centered && centered.id !== activeId) {
+        setActiveId(centered.id);
+        setActiveIndex(centered.index);
+
+        // Load more if near end
+        if (centered.index >= displayClips.length - 2) {
+          handleLoadMore();
+        }
+      }
+    };
+
+    const handleScroll = () => {
+      // Track scroll direction
+      const currentScrollTop = root.scrollTop;
+      const newDirection = currentScrollTop > prevScrollTopRef.current ? 'forward' : 'backward';
+      if (Math.abs(currentScrollTop - prevScrollTopRef.current) > 5) {
+        setScrollDirection(newDirection);
+      }
+      prevScrollTopRef.current = currentScrollTop;
+
+      // Clear any pending timeout
+      if (scrollTimeout) clearTimeout(scrollTimeout);
+
+      // Set new timeout - fires when scroll stops
+      scrollTimeout = setTimeout(() => {
+        // Double-check scroll has truly stopped
+        if (root.scrollTop === lastScrollTop) {
+          handleScrollEnd();
+        }
+        lastScrollTop = root.scrollTop;
+      }, 100); // Wait 100ms after scroll stops
+
+      lastScrollTop = root.scrollTop;
+    };
+
+    // Also use scrollend event if browser supports it
+    const handleScrollEndEvent = () => {
+      if (scrollTimeout) clearTimeout(scrollTimeout);
+      handleScrollEnd();
+    };
+
+    root.addEventListener('scroll', handleScroll, { passive: true });
+    root.addEventListener('scrollend', handleScrollEndEvent, { passive: true });
+
+    // Initial detection
+    handleScrollEnd();
 
     return () => {
-      if (debounceTimer) clearTimeout(debounceTimer);
-      observer.disconnect();
+      if (scrollTimeout) clearTimeout(scrollTimeout);
+      root.removeEventListener('scroll', handleScroll);
+      root.removeEventListener('scrollend', handleScrollEndEvent);
     };
   }, [displayClips, handleLoadMore, activeId]);
 
@@ -295,6 +339,38 @@ export default function ClipsFeed({
     if (!onClipsReady || !displayClips.length) return;
     onClipsReady(displayClips, activeIndex);
   }, [displayClips, activeIndex, onClipsReady]);
+
+  // Notify parent of scroll direction changes
+  useEffect(() => {
+    onScrollDirectionChange?.(scrollDirection);
+  }, [scrollDirection, onScrollDirectionChange]);
+
+  // Scroll to next clip (called by parent when video ends)
+  const scrollToNextClip = useCallback(() => {
+    const root = rootRef.current;
+    if (!root) return;
+
+    const nextIndex = activeIndex + 1;
+    if (nextIndex >= displayClips.length) {
+      // At the end, load more if possible
+      handleLoadMore();
+      return;
+    }
+
+    const nextSection = root.querySelector(`[data-clip-index="${nextIndex}"]`);
+    if (nextSection) {
+      nextSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [activeIndex, displayClips.length, handleLoadMore]);
+
+  // Expose scrollToNextClip via a ref callback pattern
+  useEffect(() => {
+    // Attach to window for parent access (cleaner than prop drilling)
+    (window as any).__clipsFeedScrollToNext = scrollToNextClip;
+    return () => {
+      delete (window as any).__clipsFeedScrollToNext;
+    };
+  }, [scrollToNextClip]);
 
   return (
     <div
@@ -335,7 +411,11 @@ export default function ClipsFeed({
             touchAction: 'pan-y'
           }}
         >
-          <PosterCard clip={clip} active={activeId === clip.id} />
+          <PosterCard
+            clip={clip}
+            active={activeId === clip.id}
+            videoReady={activeId === clip.id && videoReady}
+          />
         </section>
       ))}
 
