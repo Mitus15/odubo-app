@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ClipsFeed from '@/components/clips/ClipsFeed';
+import SingleVideoPlayer from '@/components/clips/SingleVideoPlayer';
 import ExpandableLogoMenu from '@/components/clips/ExpandableLogoMenu';
 import FilmGrain from '@/components/ui/FilmGrain';
 import { useAudio } from '@/contexts/AudioContext';
@@ -34,8 +35,18 @@ export default function HomePageClient({ verseOfTheDay, initialClipId }: HomePag
   // Active clip for global menu
   const [activeClip, setActiveClip] = useState<ClipItem | null>(null);
 
+  // Clips data for SingleVideoPlayer
+  const [clips, setClips] = useState<ClipItem[]>([]);
+  const [activeIndex, setActiveIndex] = useState(0);
+
   // Audio state
   const { isMuted, toggleMute } = useAudio();
+
+  // Handle clips data from ClipsFeed
+  const handleClipsReady = useCallback((newClips: ClipItem[], newActiveIndex: number) => {
+    setClips(newClips);
+    setActiveIndex(newActiveIndex);
+  }, []);
 
   // Clock update
   useEffect(() => {
@@ -124,15 +135,28 @@ export default function HomePageClient({ verseOfTheDay, initialClipId }: HomePag
       {/* Animated film grain overlay */}
       <FilmGrain opacity={0.03} />
 
-      {/* Clips layer - edge to edge, offset for sidebar on desktop */}
+      {/* SingleVideoPlayer - FIXED position, never scrolls, plays the active video */}
+      {clips.length > 0 && (
+        <SingleVideoPlayer
+          clips={clips}
+          activeIndex={activeIndex}
+        />
+      )}
+
+      {/* Clips scroll layer - shows posters, handles scroll detection */}
       <div
-        className="fixed inset-0 lg:left-20 xl:left-64 bg-black"
+        className="fixed inset-0 lg:left-20 xl:left-64 bg-transparent z-20"
         style={{
           overscrollBehavior: 'none',
         }}
         onClick={handleBackdropClick}
       >
-        <ClipsFeed navHeight={0} initialClipId={initialClipId} onActiveClipChange={setActiveClip} />
+        <ClipsFeed
+          navHeight={0}
+          initialClipId={initialClipId}
+          onActiveClipChange={setActiveClip}
+          onClipsReady={handleClipsReady}
+        />
       </div>
 
       {/* Mute Button - Top right, always visible */}

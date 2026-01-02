@@ -12,8 +12,8 @@ export async function GET(req: NextRequest) {
     const offset = Math.max(Number(searchParams.get('offset')) || 0, 0);
     const withEngagement = searchParams.get('withEngagement') === 'true';
 
-    // Base query fields
-    const baseFields = `v.id, v.title, v.artist_name, v.description, v.url, v.uid, v.duration, v.duration_seconds, v.poster_url, v.thumbnail, v.created_at, v.shopify_product_handle, v.related_projects`;
+    // Base query fields (including mp4_url for native playback)
+    const baseFields = `v.id, v.title, v.artist_name, v.description, v.url, v.uid, v.mp4_url, v.duration, v.duration_seconds, v.poster_url, v.thumbnail, v.created_at, v.shopify_product_handle, v.related_projects`;
 
     // Engagement fields and scoring
     const engagementFields = withEngagement

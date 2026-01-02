@@ -4,10 +4,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ClipItem, ClipApiRow } from '@/types/clips';
 import { mapClipRows } from '@/lib/clipsMapper';
 import { shuffleArray } from '@/lib/utils';
-import { addPrefetchHints, removePrefetchHints, prefetchFirstSegment, prefetchManifest } from '@/lib/hlsPrefetch';
-import { getRenderWindowRadius, getPrefetchWindow } from '@/lib/deviceInfo';
-import ClipCard from '@/components/clips/ClipCard';
 import { useAudio } from '@/contexts/AudioContext';
+import PosterCard from '@/components/clips/PosterCard';
 
 const PAGE_SIZE = 8;
 
@@ -15,9 +13,27 @@ interface ClipsFeedProps {
   navHeight: number;
   initialClipId?: number | null;
   onActiveClipChange?: (clip: ClipItem | null) => void;
+  onClipsReady?: (clips: ClipItem[], activeIndex: number) => void;
 }
 
-export default function ClipsFeed({ navHeight, initialClipId, onActiveClipChange }: ClipsFeedProps) {
+/**
+ * ClipsFeed - Scroll container with poster-only cards
+ *
+ * This component handles:
+ * - Fetching clips from the API
+ * - Managing the fair shuffle deck
+ * - Detecting which clip is active via IntersectionObserver
+ * - Passing clips and activeIndex to parent for SingleVideoPlayer
+ *
+ * Video playback is handled by SingleVideoPlayer (fixed position).
+ * This component only renders poster images for scrolling.
+ */
+export default function ClipsFeed({
+  navHeight,
+  initialClipId,
+  onActiveClipChange,
+  onClipsReady,
+}: ClipsFeedProps) {
   const { armAudio } = useAudio();
 
   const [baseClips, setBaseClips] = useState<ClipItem[]>([]);
@@ -26,7 +42,6 @@ export default function ClipsFeed({ navHeight, initialClipId, onActiveClipChange
   const [error, setError] = useState('');
   const [activeId, setActiveId] = useState<number | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
-  const [lastAutoScrollIndex, setLastAutoScrollIndex] = useState(-1);
   const [hasMore, setHasMore] = useState(true);
 
   const rootRef = useRef<HTMLDivElement>(null);
@@ -60,7 +75,7 @@ export default function ClipsFeed({ navHeight, initialClipId, onActiveClipChange
         cache: 'no-store'
       });
 
-      const data = await res.json().catch(() => ({}));
+      const data = await res.json().catch(() => ({})) as { error?: string; clips?: ClipApiRow[] };
       if (!res.ok) throw new Error(data?.error || 'Failed to load clips');
 
       const rows: ClipApiRow[] = Array.isArray(data?.clips) ? data.clips : [];
@@ -71,7 +86,6 @@ export default function ClipsFeed({ navHeight, initialClipId, onActiveClipChange
       return mapped.length > 0;
     } catch (e: any) {
       if (e?.name !== 'AbortError') {
-        // Parse error type for user-friendly messages
         const msg = e?.message || String(e);
         if (!navigator.onLine || msg.includes('network') || msg.includes('fetch')) {
           setError('Connection lost. Check your internet and try again.');
@@ -95,7 +109,6 @@ export default function ClipsFeed({ navHeight, initialClipId, onActiveClipChange
     fetchPage(0);
     return () => {
       abortRef.current?.abort();
-      removePrefetchHints();
     };
   }, [fetchPage]);
 
@@ -219,8 +232,6 @@ export default function ClipsFeed({ navHeight, initialClipId, onActiveClipChange
   }, [baseClips]);
 
   // Intersection observer for active clip detection
-  // Uses 0.5 threshold (50% visibility) for faster transitions
-  // No debounce - immediate switch to prevent pause gap between clips
   useEffect(() => {
     const root = rootRef.current;
     if (!root) return;
@@ -238,7 +249,6 @@ export default function ClipsFeed({ navHeight, initialClipId, onActiveClipChange
         const index = parseInt(el.dataset.clipIndex || '', 10);
 
         if (Number.isFinite(id) && id !== activeId) {
-          // Immediate switch - no debounce for seamless transitions
           setActiveId(id);
           if (Number.isFinite(index)) setActiveIndex(index);
 
@@ -250,7 +260,7 @@ export default function ClipsFeed({ navHeight, initialClipId, onActiveClipChange
       },
       {
         root,
-        threshold: [0.5], // Lower threshold: 50% visibility for faster activation
+        threshold: [0.5],
         rootMargin: '0px'
       }
     );
@@ -268,26 +278,11 @@ export default function ClipsFeed({ navHeight, initialClipId, onActiveClipChange
     onActiveClipChange(activeClip || null);
   }, [activeId, displayClips, onActiveClipChange]);
 
-  // Prefetch next clips
+  // Notify parent when clips are ready
   useEffect(() => {
-    if (!displayClips.length || activeIndex < 0) return;
-
-    const { manifestCount, shouldPrefetchSegments } = getPrefetchWindow();
-    const nextClips = displayClips.slice(activeIndex + 1, activeIndex + 1 + manifestCount);
-    const urls = nextClips.map(c => c.hlsUrl).filter(Boolean);
-
-    if (urls.length) {
-      addPrefetchHints(urls);
-      urls.forEach(u => prefetchManifest(u));
-    }
-
-    const next = displayClips[activeIndex + 1];
-    if (shouldPrefetchSegments && next?.hlsUrl) {
-      prefetchFirstSegment(next.hlsUrl);
-    }
-  }, [activeIndex, displayClips]);
-
-  const windowRadius = getRenderWindowRadius();
+    if (!onClipsReady || !displayClips.length) return;
+    onClipsReady(displayClips, activeIndex);
+  }, [displayClips, activeIndex, onClipsReady]);
 
   return (
     <div
@@ -313,51 +308,24 @@ export default function ClipsFeed({ navHeight, initialClipId, onActiveClipChange
         </div>
       )}
 
-      {/* Clips */}
-      {displayClips.map((clip, index) => {
-        const isNearActive = Math.abs(activeIndex - index) <= windowRadius;
-        const shouldPreload = index === activeIndex + 1;
-
-        return (
-          <section
-            key={clip.uniqueKey}
-            data-clip-key={clip.uniqueKey}
-            data-clip-id={clip.id}
-            data-clip-index={index}
-            className="w-full flex items-center justify-center flex-shrink-0"
-            style={{
-              height: '100dvh',
-              scrollSnapAlign: 'start',
-              scrollSnapStop: 'always',
-              touchAction: 'pan-y'
-            }}
-          >
-            {isNearActive ? (
-              <ClipCard
-                clip={clip}
-                active={activeId === clip.id}
-                shouldPreload={shouldPreload}
-                onEnded={handleLoadMore}
-                currentIndex={index}
-                lastAutoScrollIndex={lastAutoScrollIndex}
-                onAutoScroll={setLastAutoScrollIndex}
-              />
-            ) : (
-              <div className="w-full h-full bg-black flex items-center justify-center">
-                {clip.poster && (
-                  <img
-                    src={clip.poster}
-                    alt=""
-                    className="w-full h-full object-cover opacity-40"
-                    loading="lazy"
-                    draggable={false}
-                  />
-                )}
-              </div>
-            )}
-          </section>
-        );
-      })}
+      {/* Clips - using PosterCard (poster only, no video) */}
+      {displayClips.map((clip, index) => (
+        <section
+          key={clip.uniqueKey}
+          data-clip-key={clip.uniqueKey}
+          data-clip-id={clip.id}
+          data-clip-index={index}
+          className="w-full flex items-center justify-center flex-shrink-0"
+          style={{
+            height: '100dvh',
+            scrollSnapAlign: 'start',
+            scrollSnapStop: 'always',
+            touchAction: 'pan-y'
+          }}
+        >
+          <PosterCard clip={clip} active={activeId === clip.id} />
+        </section>
+      ))}
 
       {/* Error state with retry */}
       {error && (

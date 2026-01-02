@@ -2,6 +2,7 @@ export type ClipApiRow = {
   id: number;
   uid?: string; // Cloudflare Stream UID
   hls_url?: string | null;
+  mp4_url?: string | null; // Cloudflare Stream MP4 download URL
   preview_url?: string | null;
   poster_url?: string | null;
   title?: string | null;
@@ -21,6 +22,7 @@ export type ClipApiRow = {
 export type ClipItem = {
   id: number;
   hlsUrl: string;
+  mp4Url?: string | null; // Cloudflare Stream MP4 download URL
   poster: string | null;
   title: string;
   artist: string;
@@ -28,6 +30,7 @@ export type ClipItem = {
   createdAt: string | null;
   productHandle?: string | null;
   parentId?: number | null;
+  uid?: string; // Cloudflare Stream UID for URL generation
   // Engagement data (optional)
   engagementScore?: number;
   viewCount?: number;
