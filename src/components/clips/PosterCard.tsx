@@ -25,7 +25,9 @@ export default function PosterCard({ clip, active }: PosterCardProps) {
 
   return (
     <div
-      className="relative w-full h-full overflow-hidden bg-black select-none"
+      className={`relative w-full h-full overflow-hidden select-none transition-colors duration-300 ${
+        active ? 'bg-transparent' : 'bg-black'
+      }`}
       style={{ touchAction: 'pan-y', WebkitUserSelect: 'none', userSelect: 'none' }}
     >
       {/* Poster image - always visible in scroll layer */}
@@ -41,9 +43,11 @@ export default function PosterCard({ clip, active }: PosterCardProps) {
         />
       )}
 
-      {/* Gradient overlay */}
+      {/* Gradient overlay - hide when active to reveal video */}
       <div
-        className="absolute inset-x-0 bottom-0 h-48 pointer-events-none"
+        className={`absolute inset-x-0 bottom-0 h-48 pointer-events-none transition-opacity duration-300 ${
+          active ? 'opacity-0' : 'opacity-100'
+        }`}
         style={{
           background: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.4) 40%, transparent 100%)'
         }}
