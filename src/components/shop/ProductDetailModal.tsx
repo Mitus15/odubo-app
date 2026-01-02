@@ -220,6 +220,8 @@ export default function ProductDetailModal({ productHandle }: ProductDetailModal
       className="fixed inset-0 z-[120] flex flex-col"
       style={{
         touchAction: 'pan-y',
+        height: '100dvh',
+        overflow: 'hidden',
         background: dynamicStyles.background,
         transition: 'background 500ms ease-out',
       }}
@@ -271,10 +273,12 @@ export default function ProductDetailModal({ productHandle }: ProductDetailModal
 
       {/* Content */}
       <div
-        className="flex-1 overflow-y-auto overscroll-contain"
+        className="flex-1 overscroll-contain"
         style={{
-          paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)',
+          overflowY: 'auto',
           WebkitOverflowScrolling: 'touch',
+          minHeight: 0,
+          paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)',
           touchAction: 'pan-y',
         }}
       >
