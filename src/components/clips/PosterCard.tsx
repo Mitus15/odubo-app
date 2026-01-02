@@ -25,31 +25,46 @@ export default function PosterCard({ clip, active }: PosterCardProps) {
 
   return (
     <div
-      className={`relative w-full h-full overflow-hidden select-none transition-colors duration-300 ${
+      className={`relative w-full h-full overflow-hidden select-none ${
         active ? 'bg-transparent' : 'bg-black'
       }`}
-      style={{ touchAction: 'pan-y', WebkitUserSelect: 'none', userSelect: 'none' }}
+      style={{
+        touchAction: 'pan-y',
+        WebkitUserSelect: 'none',
+        userSelect: 'none',
+        transition: active
+          ? 'background-color 250ms ease-out 100ms'
+          : 'background-color 150ms ease-in'
+      }}
     >
-      {/* Poster image - always visible in scroll layer */}
+      {/* Poster image - fades out when active to reveal video */}
       {clip.poster && (
         <img
           src={clip.poster}
           alt=""
           draggable={false}
-          className={`absolute inset-0 w-full h-full object-cover pointer-events-none transition-opacity duration-300 ${
+          className={`absolute inset-0 w-full h-full object-cover pointer-events-none ${
             active ? 'opacity-0' : 'opacity-100'
           }`}
+          style={{
+            transition: active
+              ? 'opacity 250ms ease-out 100ms' // Delay fade-out for smooth scroll settle
+              : 'opacity 150ms ease-in'        // Quick fade-in when scrolling away
+          }}
           loading="lazy"
         />
       )}
 
       {/* Gradient overlay - hide when active to reveal video */}
       <div
-        className={`absolute inset-x-0 bottom-0 h-48 pointer-events-none transition-opacity duration-300 ${
+        className={`absolute inset-x-0 bottom-0 h-48 pointer-events-none ${
           active ? 'opacity-0' : 'opacity-100'
         }`}
         style={{
-          background: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.4) 40%, transparent 100%)'
+          background: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.4) 40%, transparent 100%)',
+          transition: active
+            ? 'opacity 250ms ease-out 100ms'
+            : 'opacity 150ms ease-in'
         }}
       />
 

@@ -236,6 +236,8 @@ export default function ClipsFeed({
     const root = rootRef.current;
     if (!root) return;
 
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
     const observer = new IntersectionObserver(
       (entries) => {
         const visible = entries.filter(e => e.isIntersecting);
@@ -244,23 +246,30 @@ export default function ClipsFeed({
         visible.sort((a, b) => b.intersectionRatio - a.intersectionRatio);
         const top = visible[0];
 
+        // Only trigger when clip is mostly visible (85%+)
+        if (top.intersectionRatio < 0.85) return;
+
         const el = top.target as HTMLElement;
         const id = parseInt(el.dataset.clipId || '', 10);
         const index = parseInt(el.dataset.clipIndex || '', 10);
 
         if (Number.isFinite(id) && id !== activeId) {
-          setActiveId(id);
-          if (Number.isFinite(index)) setActiveIndex(index);
+          // Debounce to let scroll snap settle
+          if (debounceTimer) clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(() => {
+            setActiveId(id);
+            if (Number.isFinite(index)) setActiveIndex(index);
 
-          // Load more if near end
-          if (displayClips.length && index >= displayClips.length - 2) {
-            handleLoadMore();
-          }
+            // Load more if near end
+            if (displayClips.length && index >= displayClips.length - 2) {
+              handleLoadMore();
+            }
+          }, 80);
         }
       },
       {
         root,
-        threshold: [0.5],
+        threshold: [0.5, 0.85, 1.0],
         rootMargin: '0px'
       }
     );
@@ -268,7 +277,10 @@ export default function ClipsFeed({
     const items = root.querySelectorAll('[data-clip-key]');
     items.forEach(el => observer.observe(el));
 
-    return () => observer.disconnect();
+    return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      observer.disconnect();
+    };
   }, [displayClips, handleLoadMore, activeId]);
 
   // Notify parent of active clip change
