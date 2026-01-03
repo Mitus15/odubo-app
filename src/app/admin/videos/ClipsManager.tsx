@@ -204,11 +204,11 @@ export default function ClipsManager({ videoId, videoTitle, videoArtist }: Clips
         ) : clips.length === 0 ? (
           <div className="text-[#888]">No clips found.</div>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-3">
             {clips.map((clip, index) => (
               <div
                 key={clip.id}
-                className="flex items-center justify-between bg-[#000]/20 p-2 rounded"
+                className="flex flex-col sm:flex-row sm:items-center sm:justify-between bg-[#000]/20 p-3 rounded-lg gap-3"
                 draggable
                 onDragStart={() => { dragClipIndex.current = index; }}
                 onDragOver={(e) => { e.preventDefault(); }}
@@ -218,39 +218,39 @@ export default function ClipsManager({ videoId, videoTitle, videoArtist }: Clips
                   reorderClips(from as number, index);
                 }}
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 flex-1 min-w-0">
                   {clip.thumbnail && (
-                    <div className="w-16 h-9 relative bg-black">
-                      <Image src={clip.thumbnail} alt={clip.title} fill className="object-cover" />
+                    <div className="w-16 h-9 relative bg-black rounded shrink-0">
+                      <Image src={clip.thumbnail} alt={clip.title} fill className="object-cover rounded" />
                     </div>
                   )}
-                  <div>
-                    <div className="text-[#ede8df] text-sm">{clip.title}</div>
-                    <div className="text-[#888] text-xs">{clip.artist_name ? `${clip.artist_name} • ` : ''}{clip.uid}</div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[#ede8df] text-sm truncate">{clip.title}</div>
+                    <div className="text-[#888] text-xs truncate">{clip.artist_name ? `${clip.artist_name} • ` : ''}{clip.uid}</div>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="flex flex-col">
-                    <button 
+                <div className="flex items-center gap-2 sm:gap-3 justify-end">
+                  <div className="flex sm:flex-col gap-1">
+                    <button
                       onClick={() => moveClip(index, 'up')}
                       disabled={index === 0}
-                      className="text-[#888] hover:text-[#ede8df] disabled:opacity-30 text-[10px] leading-none p-1"
+                      className="text-[#888] hover:text-[#ede8df] disabled:opacity-30 text-base w-9 h-9 flex items-center justify-center bg-[#302927]/50 rounded-lg"
                       title="Move Up"
                     >
                       ▲
                     </button>
-                    <button 
+                    <button
                       onClick={() => moveClip(index, 'down')}
                       disabled={index === clips.length - 1}
-                      className="text-[#888] hover:text-[#ede8df] disabled:opacity-30 text-[10px] leading-none p-1"
+                      className="text-[#888] hover:text-[#ede8df] disabled:opacity-30 text-base w-9 h-9 flex items-center justify-center bg-[#302927]/50 rounded-lg"
                       title="Move Down"
                     >
                       ▼
                     </button>
                   </div>
-                  <button 
+                  <button
                     onClick={() => handleDelete(clip.id)}
-                    className="text-red-400 hover:text-red-300 text-xs px-2 py-1"
+                    className="text-red-400 hover:text-red-300 text-xs px-4 py-2.5 min-h-[44px] bg-red-600/10 rounded-lg"
                   >
                     Delete
                   </button>
@@ -277,7 +277,7 @@ export default function ClipsManager({ videoId, videoTitle, videoArtist }: Clips
             {selectedFiles.map((file, index) => (
               <div
                 key={index}
-                className="flex items-center justify-between bg-[#000]/20 p-2 rounded"
+                className="flex items-center justify-between bg-[#000]/20 p-3 rounded-lg gap-2"
                 draggable
                 onDragStart={() => { dragFileIndex.current = index; }}
                 onDragOver={(e) => { e.preventDefault(); }}
@@ -288,9 +288,9 @@ export default function ClipsManager({ videoId, videoTitle, videoArtist }: Clips
                 }}
               >
                 <span className="text-[#ede8df] text-sm truncate flex-1">{file.name}</span>
-                <div className="flex items-center gap-2">
-                  <button onClick={() => moveFile(index, 'up')} disabled={index === 0} className="text-[#888] hover:text-[#ede8df] disabled:opacity-30">↑</button>
-                  <button onClick={() => moveFile(index, 'down')} disabled={index === selectedFiles.length - 1} className="text-[#888] hover:text-[#ede8df] disabled:opacity-30">↓</button>
+                <div className="flex items-center gap-1">
+                  <button onClick={() => moveFile(index, 'up')} disabled={index === 0} className="text-[#888] hover:text-[#ede8df] disabled:opacity-30 w-9 h-9 flex items-center justify-center bg-[#302927]/50 rounded-lg text-base">↑</button>
+                  <button onClick={() => moveFile(index, 'down')} disabled={index === selectedFiles.length - 1} className="text-[#888] hover:text-[#ede8df] disabled:opacity-30 w-9 h-9 flex items-center justify-center bg-[#302927]/50 rounded-lg text-base">↓</button>
                 </div>
               </div>
             ))}
@@ -304,7 +304,7 @@ export default function ClipsManager({ videoId, videoTitle, videoArtist }: Clips
         <button
           onClick={handleUpload}
           disabled={uploading || selectedFiles.length === 0}
-          className="bg-[#b2a491] text-[#1a1614] px-4 py-2 rounded font-medium disabled:opacity-50 hover:bg-[#c5b8a5] transition-colors"
+          className="w-full sm:w-auto bg-[#b2a491] text-[#1a1614] px-6 py-3 min-h-[48px] rounded-lg font-medium disabled:opacity-50 hover:bg-[#c5b8a5] transition-colors text-sm"
         >
           {uploading ? 'Uploading...' : 'Upload Clips'}
         </button>

@@ -1117,15 +1117,15 @@ const DetailModal = ({ video, onClose, onUpdate }: { video: Video; onClose: () =
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.2 }}
-        className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+        className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm p-0 sm:p-4"
         onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
       >
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.95 }}
+        <motion.div
+          initial={{ opacity: 0, y: 20, scale: 0.98 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 20, scale: 0.98 }}
           transition={{ duration: 0.2 }}
-          className="w-full max-w-4xl bg-[#171616] border border-[#b2a491]/20 rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]"
+          className="w-full sm:max-w-4xl bg-[#171616] border-t sm:border border-[#b2a491]/20 sm:rounded-2xl overflow-hidden shadow-2xl flex flex-col h-[95vh] sm:h-auto sm:max-h-[90vh]"
         >
           {/* Header / Player */}
           <div className={`bg-black relative group transition-all duration-300 ease-in-out ${isPlayerMinimized ? 'h-14 shrink-0' : 'aspect-video shrink-0'}`}>
@@ -1139,14 +1139,14 @@ const DetailModal = ({ video, onClose, onUpdate }: { video: Video; onClose: () =
               />
             </div>
             
-            <div className="absolute top-3 right-4 flex items-center gap-2 z-20">
-              <button 
-                onClick={() => setIsPlayerMinimized(!isPlayerMinimized)} 
-                className="px-3 py-1.5 bg-black/50 backdrop-blur-md rounded-lg text-xs text-[#ede8df] hover:bg-black/80 border border-white/10 transition-colors"
+            <div className="absolute top-2 sm:top-3 right-2 sm:right-4 flex items-center gap-2 z-20">
+              <button
+                onClick={() => setIsPlayerMinimized(!isPlayerMinimized)}
+                className="min-h-[44px] px-3 sm:px-4 py-2 bg-black/50 backdrop-blur-md rounded-lg text-xs sm:text-sm text-[#ede8df] hover:bg-black/80 border border-white/10 transition-colors"
               >
-                {isPlayerMinimized ? 'Expand Player' : 'Minimize'}
+                {isPlayerMinimized ? 'Expand' : 'Minimize'}
               </button>
-              <button onClick={onClose} className="w-8 h-8 bg-black/50 backdrop-blur-md rounded-full text-white flex items-center justify-center hover:bg-black/80 border border-white/10">✕</button>
+              <button onClick={onClose} className="w-11 h-11 sm:w-10 sm:h-10 bg-black/50 backdrop-blur-md rounded-full text-white flex items-center justify-center hover:bg-black/80 border border-white/10 text-lg">✕</button>
             </div>
             
             {isPlayerMinimized && (
@@ -1157,74 +1157,85 @@ const DetailModal = ({ video, onClose, onUpdate }: { video: Video; onClose: () =
           </div>
 
           {/* Interactive Timeline */}
-          <div className="px-6 pt-3 pb-4 bg-[#121111] border-b border-[#b2a491]/10">
-            <div className="flex items-center justify-between mb-2">
-              <div className="text-[11px] font-mono text-[#b2a491]">
+          <div className="px-3 sm:px-6 pt-3 pb-4 bg-[#121111] border-b border-[#b2a491]/10">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
+              <div className="text-xs sm:text-sm font-mono text-[#b2a491]">
                 {formatDuration(currentTime)} / {formatDuration(durationSeconds)}
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-1.5 sm:gap-2">
                 <button
                   onClick={addMarkerAtCurrent}
                   disabled={durationSeconds <= 0}
-                  className="text-[11px] px-2 py-1 rounded bg-[#ede8df] text-[#171616] disabled:opacity-40 hover:bg-[#d9d3c9]"
-                >Add Marker @ Now</button>
-                  <button
-                    onClick={undo}
-                    disabled={!undoStack.length}
-                    className="text-[11px] px-2 py-1 rounded bg-[#302927] text-[#ede8df] disabled:opacity-30 hover:bg-[#403834]"
-                  >Undo</button>
-                  <button
-                    onClick={redo}
-                    disabled={!redoStack.length}
-                    className="text-[11px] px-2 py-1 rounded bg-[#302927] text-[#ede8df] disabled:opacity-30 hover:bg-[#403834]"
-                  >Redo</button>
-                  <button
-                    onClick={resetAllMarkers}
-                    className="text-[11px] px-2 py-1 rounded bg-red-600/20 text-red-300 hover:bg-red-600/30"
-                  >Reset Markers</button>
+                  className="min-h-[36px] sm:min-h-[32px] text-xs px-3 py-1.5 rounded bg-[#ede8df] text-[#171616] disabled:opacity-40 hover:bg-[#d9d3c9]"
+                >+ Marker</button>
+                <button
+                  onClick={undo}
+                  disabled={!undoStack.length}
+                  className="min-h-[36px] sm:min-h-[32px] text-xs px-3 py-1.5 rounded bg-[#302927] text-[#ede8df] disabled:opacity-30 hover:bg-[#403834]"
+                >Undo</button>
+                <button
+                  onClick={redo}
+                  disabled={!redoStack.length}
+                  className="min-h-[36px] sm:min-h-[32px] text-xs px-3 py-1.5 rounded bg-[#302927] text-[#ede8df] disabled:opacity-30 hover:bg-[#403834]"
+                >Redo</button>
+                <button
+                  onClick={resetAllMarkers}
+                  className="min-h-[36px] sm:min-h-[32px] text-xs px-3 py-1.5 rounded bg-red-600/20 text-red-300 hover:bg-red-600/30"
+                >Reset</button>
               </div>
             </div>
             <div
               ref={timelineRef}
               onClick={handleTimelineClick}
-              className="relative h-8 rounded bg-[#302927]/40 cursor-pointer select-none group"
+              onTouchEnd={(e) => {
+                const touch = e.changedTouches[0];
+                const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
+                const x = touch.clientX - rect.left;
+                const pct = Math.max(0, Math.min(1, x / rect.width));
+                const time = pct * durationSeconds;
+                if (durationSeconds > 0) {
+                  addMarker(time);
+                }
+              }}
+              className="relative h-12 sm:h-10 rounded bg-[#302927]/40 cursor-pointer select-none group touch-none"
             >
               {/* Progress Playhead */}
               {durationSeconds > 0 && (
                 <div
-                  className="absolute top-0 bottom-0 w-[2px] bg-[#ede8df]"
+                  className="absolute top-0 bottom-0 w-[3px] sm:w-[2px] bg-[#ede8df] rounded-full"
                   style={{ left: `${(currentTime / durationSeconds) * 100}%` }}
                 />
               )}
-              {/* Markers */}
+              {/* Markers - larger touch targets */}
               {durationSeconds > 0 && markers.map(m => {
                 const pos = (m.timestamp / durationSeconds) * 100;
                 return (
                   <div
                     key={m.id}
-                    className={`absolute top-0 bottom-0 w-[8px] -ml-[4px] rounded cursor-ew-resize ${selectedMarkerId === m.id ? 'bg-yellow-400' : 'bg-indigo-400 hover:bg-indigo-300'}`}
+                    className={`absolute top-0 bottom-0 w-[20px] sm:w-[12px] -ml-[10px] sm:-ml-[6px] rounded cursor-ew-resize ${selectedMarkerId === m.id ? 'bg-yellow-400' : 'bg-indigo-400 hover:bg-indigo-300'}`}
                     style={{ left: `${pos}%` }}
                     data-marker="1"
                     data-id={m.id}
                     onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); setSelectedMarkerId(m.id); setDraggingMarkerId(m.id); }}
+                    onTouchStart={(e) => { e.stopPropagation(); setSelectedMarkerId(m.id); }}
                     onClick={(e) => { e.stopPropagation(); setSelectedMarkerId(m.id); }}
                     title={`${formatDuration(m.timestamp)}${m.label ? ' • ' + m.label : ''}`}
                   />
                 );
               })}
-              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-60 text-[10px] text-[#b2a491] transition-opacity">Click to add marker</div>
+              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-60 text-xs text-[#b2a491] transition-opacity pointer-events-none">Tap to add marker</div>
             </div>
           </div>
 
           {/* Tabs */}
-          <div className="flex border-b border-[#b2a491]/10">
-            <button onClick={() => setActiveTab('details')} className={`flex-1 py-4 text-sm font-medium ${activeTab === 'details' ? 'text-[#ede8df] border-b-2 border-[#ede8df]' : 'text-[#b2a491]'}`}>Details</button>
-            <button onClick={() => setActiveTab('thumbnails')} className={`flex-1 py-4 text-sm font-medium ${activeTab === 'thumbnails' ? 'text-[#ede8df] border-b-2 border-[#ede8df]' : 'text-[#b2a491]'}`}>Thumbnails</button>
-            <button onClick={() => setActiveTab('clips')} className={`flex-1 py-4 text-sm font-medium ${activeTab === 'clips' ? 'text-[#ede8df] border-b-2 border-[#ede8df]' : 'text-[#b2a491]'}`}>Clips ({clips.length})</button>
+          <div className="flex overflow-x-auto border-b border-[#b2a491]/10 scrollbar-hide">
+            <button onClick={() => setActiveTab('details')} className={`flex-1 min-w-[100px] min-h-[48px] py-3 text-sm font-medium whitespace-nowrap ${activeTab === 'details' ? 'text-[#ede8df] border-b-2 border-[#ede8df]' : 'text-[#b2a491]'}`}>Details</button>
+            <button onClick={() => setActiveTab('thumbnails')} className={`flex-1 min-w-[100px] min-h-[48px] py-3 text-sm font-medium whitespace-nowrap ${activeTab === 'thumbnails' ? 'text-[#ede8df] border-b-2 border-[#ede8df]' : 'text-[#b2a491]'}`}>Thumbnails</button>
+            <button onClick={() => setActiveTab('clips')} className={`flex-1 min-w-[100px] min-h-[48px] py-3 text-sm font-medium whitespace-nowrap ${activeTab === 'clips' ? 'text-[#ede8df] border-b-2 border-[#ede8df]' : 'text-[#b2a491]'}`}>Clips ({clips.length})</button>
           </div>
 
           {/* Content */}
-          <div className="flex-1 overflow-y-auto p-6">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6">
             {activeTab === 'details' ? (
               <div className="space-y-4">
                 <div className="flex justify-end">
@@ -1301,7 +1312,7 @@ const DetailModal = ({ video, onClose, onUpdate }: { video: Video; onClose: () =
                 
                 <div className="bg-[#302927]/20 rounded-lg p-4 border border-[#b2a491]/10 space-y-3">
                   <h3 className="text-xs font-medium text-[#b2a491] uppercase tracking-wider">Visibility</h3>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs text-[#b2a491] mb-1">Type</label>
                       <select
@@ -1431,30 +1442,32 @@ export default function AdminVideosPage() {
       <ScrollContainer>
         <div className="max-w-7xl mx-auto p-6 sm:p-10">
           {/* Header */}
-          <div className="flex items-center justify-between mb-10">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-10">
             <div>
-              <h1 className="text-3xl font-bold text-[#ede8df] tracking-tight">Video Library</h1>
-              <p className="text-[#b2a491] mt-1">Manage, analyze, and publish your content.</p>
+              <h1 className="text-2xl sm:text-3xl font-bold text-[#ede8df] tracking-tight">Video Library</h1>
+              <p className="text-sm sm:text-base text-[#b2a491] mt-1">Manage, analyze, and publish your content.</p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               {normalizeStatus && (
-                <span className="text-sm text-[#b2a491] animate-pulse">{normalizeStatus}</span>
+                <span className="text-xs sm:text-sm text-[#b2a491] animate-pulse w-full sm:w-auto">{normalizeStatus}</span>
               )}
-              <button 
+              <button
                 onClick={handleNormalizePending}
                 disabled={isNormalizing}
-                className="flex items-center gap-2 px-4 py-3 bg-[#302927] text-[#ede8df] rounded-full font-medium hover:bg-[#3d3533] transition-transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center justify-center gap-2 min-h-[44px] px-3 sm:px-4 py-2.5 bg-[#302927] text-[#ede8df] rounded-full font-medium hover:bg-[#3d3533] transition-transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                 title="Normalize audio on all pending videos to -16 LUFS"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" /></svg>
-                {isNormalizing ? 'Normalizing...' : 'Normalize Audio'}
+                <span className="hidden xs:inline">{isNormalizing ? 'Normalizing...' : 'Normalize Audio'}</span>
+                <span className="xs:hidden">{isNormalizing ? '...' : 'Audio'}</span>
               </button>
-              <button 
+              <button
                 onClick={() => setIsUploading(true)}
-                className="flex items-center gap-2 px-6 py-3 bg-[#ede8df] text-[#171616] rounded-full font-medium hover:bg-[#d9d3c9] transition-transform hover:scale-105 shadow-lg shadow-[#ede8df]/10"
+                className="flex items-center justify-center gap-2 min-h-[44px] px-4 sm:px-6 py-2.5 bg-[#ede8df] text-[#171616] rounded-full font-medium hover:bg-[#d9d3c9] transition-transform hover:scale-105 shadow-lg shadow-[#ede8df]/10 text-sm"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-                Add Video
+                <span className="hidden xs:inline">Add Video</span>
+                <span className="xs:hidden">Add</span>
               </button>
             </div>
           </div>
