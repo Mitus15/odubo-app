@@ -132,9 +132,17 @@ export default function ClipsFeed({
     };
   }, [fetchPage]);
 
-  // Load more clips - fetch next page
+  // Load more clips - fetch next page or loop with new shuffle
   const handleLoadMore = useCallback(() => {
-    if (!hasMore || inflightRef.current > 0) return;
+    if (inflightRef.current > 0) return;
+
+    if (!hasMore) {
+      // All clips seen - reshuffle with new seed for infinite loop
+      sessionSeedRef.current = Math.random().toString(36).substring(2, 12);
+      pageRef.current = -1; // Will become 0 on next fetch
+      setHasMore(true);
+    }
+
     fetchPage(pageRef.current + 1);
   }, [hasMore, fetchPage]);
 

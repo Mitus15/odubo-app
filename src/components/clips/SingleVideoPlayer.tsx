@@ -52,6 +52,7 @@ export default function SingleVideoPlayer({
 
   const activeClip = clips[activeIndex];
   const nextClip = clips[activeIndex + 1];
+  const nextNextClip = clips[activeIndex + 2];
 
   // Get the video URL (prefer MP4 for simplicity, fallback to HLS)
   const getVideoUrl = useCallback((clip: ClipItem | undefined): string | null => {
@@ -181,12 +182,10 @@ export default function SingleVideoPlayer({
       return;
     }
 
-    // Scrolling forward or neutral - auto-advance after brief pause
-    setTimeout(() => {
-      if (mountedRef.current && onAdvanceToNext) {
-        onAdvanceToNext();
-      }
-    }, 80);
+    // Scrolling forward or neutral - auto-advance immediately
+    if (mountedRef.current && onAdvanceToNext) {
+      onAdvanceToNext();
+    }
   }, [onEnded, scrollDirection, onAdvanceToNext, attemptPlay]);
 
   // Mount tracking
@@ -224,43 +223,45 @@ export default function SingleVideoPlayer({
       v.currentTime = 0;
       v.load();
 
-      // Start playback as soon as first frame is available (faster than canplay)
-      const handleLoadedData = () => {
+      // Start playback as soon as metadata is available (fastest possible)
+      const handleLoadedMetadata = () => {
         if (!mountedRef.current || userPausedRef.current) return;
         attemptPlay(v);
       };
 
-      v.addEventListener('loadeddata', handleLoadedData, { once: true });
+      v.addEventListener('loadedmetadata', handleLoadedMetadata, { once: true });
 
       return () => {
-        v.removeEventListener('loadeddata', handleLoadedData);
+        v.removeEventListener('loadedmetadata', handleLoadedMetadata);
       };
     }
   }, [activeIndex, activeClip, getVideoUrl, attemptPlay, onVideoReady]);
 
-  // Preload next clip using link preload (lighter than hidden video elements)
+  // Preload next 2 clips using link preload (lighter than hidden video elements)
   useEffect(() => {
-    const nextUrl = getVideoUrl(nextClip);
-    if (!nextUrl) return;
+    const urls = [getVideoUrl(nextClip), getVideoUrl(nextNextClip)].filter(Boolean) as string[];
+    const links: HTMLLinkElement[] = [];
 
-    // Check if link already exists
-    const existingLink = document.querySelector(`link[href="${nextUrl}"]`);
-    if (existingLink) return;
+    for (const url of urls) {
+      // Check if link already exists
+      if (document.querySelector(`link[href="${url}"]`)) continue;
 
-    // Create preload link
-    const link = document.createElement('link');
-    link.rel = 'preload';
-    link.as = 'video';
-    link.href = nextUrl;
-    document.head.appendChild(link);
+      // Create preload link
+      const link = document.createElement('link');
+      link.rel = 'preload';
+      link.as = 'video';
+      link.href = url;
+      document.head.appendChild(link);
+      links.push(link);
+    }
 
     return () => {
-      // Remove preload link after a delay (browser may have cached it)
+      // Remove preload links after a delay (browser may have cached them)
       setTimeout(() => {
-        link.remove();
+        links.forEach(link => link.remove());
       }, 5000);
     };
-  }, [nextClip, getVideoUrl]);
+  }, [nextClip, nextNextClip, getVideoUrl]);
 
   // Sync mute state
   useEffect(() => {
@@ -367,7 +368,7 @@ export default function SingleVideoPlayer({
           className={`absolute inset-0 w-full h-full object-cover pointer-events-none ${
             firstFrame ? 'opacity-0' : 'opacity-100'
           }`}
-          style={{ transition: 'opacity 280ms cubic-bezier(0.25, 0.46, 0.45, 0.94)' }}
+          style={{ transition: 'opacity 150ms ease-out' }}
         />
       )}
 
@@ -383,7 +384,7 @@ export default function SingleVideoPlayer({
         poster={activeClip.poster ?? undefined}
         style={{
           touchAction: 'pan-y',
-          transition: 'opacity 280ms cubic-bezier(0.25, 0.46, 0.45, 0.94), transform 280ms cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+          transition: 'opacity 150ms ease-out, transform 150ms ease-out'
         }}
       />
 
