@@ -11,6 +11,8 @@ export async function GET(req: NextRequest) {
     const limit = Math.min(Math.max(Number(searchParams.get('limit')) || 10, 1), 50);
     const offset = Math.max(Number(searchParams.get('offset')) || 0, 0);
     const withEngagement = searchParams.get('withEngagement') === 'true';
+    // Seed for consistent shuffle within a session (optional, for pagination)
+    const seed = searchParams.get('seed') || '';
 
     // Base query fields (including mp4_url for native playback)
     const baseFields = `v.id, v.title, v.artist_name, v.description, v.url, v.uid, v.mp4_url, v.duration, v.duration_seconds, v.poster_url, v.thumbnail, v.created_at, v.shopify_product_handle, v.related_projects`;
@@ -32,10 +34,18 @@ export async function GET(req: NextRequest) {
       ? 'LEFT JOIN clip_engagement e ON v.id = e.clip_id'
       : '';
 
-    // Order by engagement score if available, otherwise by date
-    const orderBy = withEngagement
-      ? 'ORDER BY engagement_score DESC, v.created_at DESC, v.id DESC'
-      : 'ORDER BY v.created_at DESC, v.id DESC';
+    // For engagement mode, order by score. Otherwise randomize for variety.
+    // Use seeded random for consistent pagination within session
+    let orderBy: string;
+    if (withEngagement) {
+      orderBy = 'ORDER BY engagement_score DESC, v.created_at DESC, v.id DESC';
+    } else if (seed) {
+      // Seeded random: hash(id + seed) for consistent order across pages
+      orderBy = `ORDER BY (v.id * 2654435761 + ${hashSeed(seed)}) % 2147483647`;
+    } else {
+      // True random shuffle on first load
+      orderBy = 'ORDER BY RANDOM()';
+    }
 
     // Include public clips, treating legacy/null status values as published/live
     const rows = await queryDatabase(
@@ -62,4 +72,14 @@ export async function GET(req: NextRequest) {
     const error = err as { message?: string };
     return NextResponse.json({ error: error?.message || 'Internal error' }, { status: 500 });
   }
+}
+
+// Simple hash for seed string to number
+function hashSeed(seed: string): number {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    hash = ((hash << 5) - hash) + seed.charCodeAt(i);
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  return Math.abs(hash);
 }

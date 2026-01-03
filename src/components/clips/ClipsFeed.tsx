@@ -3,11 +3,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ClipItem, ClipApiRow } from '@/types/clips';
 import { mapClipRows } from '@/lib/clipsMapper';
-import { shuffleArray } from '@/lib/utils';
 import { useAudio } from '@/contexts/AudioContext';
 import PosterCard from '@/components/clips/PosterCard';
 
-const PAGE_SIZE = 8;
+const PAGE_SIZE = 12; // Larger pages for better infinite scroll
 
 interface ClipsFeedProps {
   navHeight: number;
@@ -40,7 +39,6 @@ export default function ClipsFeed({
 }: ClipsFeedProps) {
   const { armAudio } = useAudio();
 
-  const [baseClips, setBaseClips] = useState<ClipItem[]>([]);
   const [displayClips, setDisplayClips] = useState<Array<ClipItem & { uniqueKey: string }>>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -53,18 +51,17 @@ export default function ClipsFeed({
   const inflightRef = useRef(0);
   const abortRef = useRef<AbortController | null>(null);
   const prevScrollTopRef = useRef(0);
-  const seedRef = useRef(Math.random().toString(36).substring(2, 9));
+  // Session seed for consistent random order across pagination
+  const sessionSeedRef = useRef(Math.random().toString(36).substring(2, 12));
   const keyCounterRef = useRef(0);
-  const deckRef = useRef<ClipItem[]>([]);
-  const seenIdsRef = useRef<Set<number>>(new Set());
-  const prevBaseClipsRef = useRef<ClipItem[]>([]);
+  const pageRef = useRef(0);
   const initializedRef = useRef(false);
 
-  // Fetch clips from API
+  // Fetch clips from API with session seed for consistent random order
   const fetchPage = useCallback(async (p: number): Promise<boolean> => {
     if (inflightRef.current > 0) return false;
     inflightRef.current++;
-    setLoading(true);
+    if (p === 0) setLoading(true);
     setError('');
     abortRef.current?.abort();
     const ctrl = new AbortController();
@@ -74,6 +71,8 @@ export default function ClipsFeed({
       const url = new URL('/api/clips', window.location.origin);
       url.searchParams.set('limit', String(PAGE_SIZE));
       url.searchParams.set('offset', String(p * PAGE_SIZE));
+      // Use session seed for consistent random order across pages
+      url.searchParams.set('seed', sessionSeedRef.current);
 
       const res = await fetch(url.toString(), {
         headers: { 'Accept': 'application/json' },
@@ -81,14 +80,29 @@ export default function ClipsFeed({
         cache: 'no-store'
       });
 
-      const data = await res.json().catch(() => ({})) as { error?: string; clips?: ClipApiRow[] };
+      const data = await res.json().catch(() => ({})) as { error?: string; clips?: ClipApiRow[]; hasMore?: boolean };
       if (!res.ok) throw new Error(data?.error || 'Failed to load clips');
 
       const rows: ClipApiRow[] = Array.isArray(data?.clips) ? data.clips : [];
       const mapped = mapClipRows(rows);
 
-      setBaseClips(prev => p === 0 ? mapped : dedupeById([...prev, ...mapped]));
-      setHasMore(mapped.length > 0);
+      // Add unique keys for React
+      const withKeys = mapped.map(clip => ({
+        ...clip,
+        uniqueKey: `${keyCounterRef.current++}-${clip.id}-${sessionSeedRef.current}`
+      }));
+
+      setDisplayClips(prev => p === 0 ? withKeys : [...prev, ...withKeys]);
+      setHasMore(data.hasMore ?? mapped.length === PAGE_SIZE);
+      pageRef.current = p;
+
+      // Set initial active clip on first page
+      if (p === 0 && withKeys[0]) {
+        setActiveId(withKeys[0].id);
+        setActiveIndex(0);
+        initializedRef.current = true;
+      }
+
       return mapped.length > 0;
     } catch (e: any) {
       if (e?.name !== 'AbortError') {
@@ -118,124 +132,11 @@ export default function ClipsFeed({
     };
   }, [fetchPage]);
 
-  // Load all pages
-  useEffect(() => {
-    if (baseClips.length === 0 || !hasMore) return;
-    let cancelled = false;
-
-    (async () => {
-      let page = 1;
-      while (!cancelled && hasMore) {
-        const got = await fetchPage(page);
-        if (!got) break;
-        page++;
-      }
-    })();
-
-    return () => { cancelled = true; };
-  }, [baseClips.length, hasMore, fetchPage]);
-
-  // Build fair shuffle deck
-  const buildFairDeck = useCallback((clips: ClipItem[], exclude: Set<number>) => {
-    const buckets = new Map<string, ClipItem[]>();
-    for (const c of clips) {
-      if (exclude.has(c.id)) continue;
-      const key = c.parentId != null ? `p:${c.parentId}` : `u:${c.id}`;
-      if (!buckets.has(key)) buckets.set(key, []);
-      buckets.get(key)!.push(c);
-    }
-
-    for (const [k, arr] of buckets.entries()) {
-      buckets.set(k, shuffleArray(arr));
-    }
-
-    const deck: ClipItem[] = [];
-    while (buckets.size > 0) {
-      const keys = shuffleArray([...buckets.keys()]);
-      for (const key of keys) {
-        const bucket = buckets.get(key);
-        if (!bucket?.length) { buckets.delete(key); continue; }
-        deck.push(bucket.shift()!);
-        if (!bucket.length) buckets.delete(key);
-      }
-    }
-    return deck;
-  }, []);
-
-  // Append from deck
-  const appendFromDeck = useCallback((count: number) => {
-    if (!deckRef.current.length) {
-      deckRef.current = buildFairDeck(baseClips, seenIdsRef.current);
-      if (!deckRef.current.length) {
-        seenIdsRef.current.clear();
-        deckRef.current = buildFairDeck(baseClips, seenIdsRef.current);
-      }
-    }
-
-    const out: Array<ClipItem & { uniqueKey: string }> = [];
-    for (let i = 0; i < count && deckRef.current.length; i++) {
-      const clip = deckRef.current.shift()!;
-      seenIdsRef.current.add(clip.id);
-      out.push({ ...clip, uniqueKey: `${keyCounterRef.current++}-${clip.id}-${seedRef.current}` });
-    }
-
-    if (out.length) setDisplayClips(prev => [...prev, ...out]);
-  }, [baseClips, buildFairDeck]);
-
-  // Initialize display - show immediately after first page (don't wait for all pages)
-  useEffect(() => {
-    if (initializedRef.current || baseClips.length === 0) return;
-
-    let orderedClips: ClipItem[];
-
-    if (initialClipId) {
-      const target = baseClips.find(c => c.id === initialClipId);
-      if (target) {
-        const remaining = baseClips.filter(c => c.id !== initialClipId);
-        orderedClips = [target, ...buildFairDeck(remaining, new Set([initialClipId]))];
-      } else {
-        orderedClips = buildFairDeck(baseClips, seenIdsRef.current);
-      }
-    } else {
-      orderedClips = buildFairDeck(baseClips, seenIdsRef.current);
-    }
-
-    const batch = orderedClips.slice(0, PAGE_SIZE);
-    deckRef.current = orderedClips.slice(PAGE_SIZE);
-    batch.forEach(c => seenIdsRef.current.add(c.id));
-
-    const display = batch.map(clip => ({
-      ...clip,
-      uniqueKey: `${keyCounterRef.current++}-${clip.id}-${seedRef.current}`
-    }));
-
-    setDisplayClips(display);
-    if (display[0]) setActiveId(display[0].id);
-    initializedRef.current = true;
-  }, [baseClips, buildFairDeck, initialClipId]);
-
-  // Load more when near end
+  // Load more clips - fetch next page
   const handleLoadMore = useCallback(() => {
-    if (!baseClips.length) return;
-    appendFromDeck(PAGE_SIZE);
-  }, [appendFromDeck, baseClips.length]);
-
-  // Rebuild deck when clips change
-  useEffect(() => {
-    if (!baseClips.length) return;
-    const prev = prevBaseClipsRef.current;
-    const prevIds = new Set(prev.map(c => c.id));
-    const newClips = baseClips.filter(c => !prevIds.has(c.id));
-
-    if (newClips.length && initializedRef.current) {
-      const shuffled = shuffleArray(newClips);
-      for (const clip of shuffled) {
-        const pos = Math.floor(Math.random() * (deckRef.current.length + 1));
-        deckRef.current.splice(pos, 0, clip);
-      }
-    }
-    prevBaseClipsRef.current = baseClips;
-  }, [baseClips]);
+    if (!hasMore || inflightRef.current > 0) return;
+    fetchPage(pageRef.current + 1);
+  }, [hasMore, fetchPage]);
 
   // Scroll-end detection for smooth transitions
   // Only switch video when scroll has completely stopped
@@ -451,13 +352,4 @@ export default function ClipsFeed({
       )}
     </div>
   );
-}
-
-function dedupeById(arr: ClipItem[]): ClipItem[] {
-  const seen = new Set<number>();
-  return arr.filter(c => {
-    if (seen.has(c.id)) return false;
-    seen.add(c.id);
-    return true;
-  });
 }
