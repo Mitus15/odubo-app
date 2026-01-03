@@ -184,12 +184,12 @@ export default function SingleVideoPlayer({
       return;
     }
 
-    // Scrolling forward or neutral - auto-advance after a calm 200ms pause
+    // Scrolling forward or neutral - auto-advance after brief pause
     setTimeout(() => {
       if (mountedRef.current && onAdvanceToNext) {
         onAdvanceToNext();
       }
-    }, 200);
+    }, 80);
   }, [onEnded, scrollDirection, onAdvanceToNext, attemptPlay]);
 
   // Mount tracking
@@ -227,16 +227,16 @@ export default function SingleVideoPlayer({
       v.currentTime = 0;
       v.load();
 
-      // Start playback when ready
-      const handleCanPlay = () => {
+      // Start playback as soon as first frame is available (faster than canplay)
+      const handleLoadedData = () => {
         if (!mountedRef.current || userPausedRef.current) return;
         attemptPlay(v);
       };
 
-      v.addEventListener('canplay', handleCanPlay, { once: true });
+      v.addEventListener('loadeddata', handleLoadedData, { once: true });
 
       return () => {
-        v.removeEventListener('canplay', handleCanPlay);
+        v.removeEventListener('loadeddata', handleLoadedData);
       };
     }
   }, [activeIndex, activeClip, getVideoUrl, attemptPlay, onVideoReady]);
@@ -384,7 +384,7 @@ export default function SingleVideoPlayer({
           className={`absolute inset-0 w-full h-full object-cover pointer-events-none ${
             firstFrame ? 'opacity-0' : 'opacity-100'
           }`}
-          style={{ transition: 'opacity 400ms cubic-bezier(0.25, 0.46, 0.45, 0.94)' }}
+          style={{ transition: 'opacity 280ms cubic-bezier(0.25, 0.46, 0.45, 0.94)' }}
         />
       )}
 
@@ -400,7 +400,7 @@ export default function SingleVideoPlayer({
         poster={activeClip.poster ?? undefined}
         style={{
           touchAction: 'pan-y',
-          transition: 'opacity 400ms cubic-bezier(0.25, 0.46, 0.45, 0.94), transform 400ms cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+          transition: 'opacity 280ms cubic-bezier(0.25, 0.46, 0.45, 0.94), transform 280ms cubic-bezier(0.25, 0.46, 0.45, 0.94)'
         }}
       />
 

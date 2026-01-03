@@ -36,7 +36,7 @@ export default function PosterCard({ clip, active, videoReady = false }: PosterC
         touchAction: 'pan-y',
         WebkitUserSelect: 'none',
         userSelect: 'none',
-        transition: 'background-color 400ms cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+        transition: 'background-color 280ms cubic-bezier(0.25, 0.46, 0.45, 0.94)'
       }}
     >
       {/* Poster image - only fades when video is ready */}
@@ -48,8 +48,8 @@ export default function PosterCard({ clip, active, videoReady = false }: PosterC
           className={`absolute inset-0 w-full h-full object-cover pointer-events-none ${
             shouldReveal ? 'opacity-0' : 'opacity-100'
           }`}
-          style={{ transition: 'opacity 400ms cubic-bezier(0.25, 0.46, 0.45, 0.94)' }}
-          loading="lazy"
+          style={{ transition: 'opacity 280ms cubic-bezier(0.25, 0.46, 0.45, 0.94)' }}
+          loading="eager"
         />
       )}
 
@@ -60,7 +60,7 @@ export default function PosterCard({ clip, active, videoReady = false }: PosterC
         }`}
         style={{
           background: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.4) 40%, transparent 100%)',
-          transition: 'opacity 400ms cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+          transition: 'opacity 280ms cubic-bezier(0.25, 0.46, 0.45, 0.94)'
         }}
       />
 
