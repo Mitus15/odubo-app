@@ -237,20 +237,32 @@ export default function SingleVideoPlayer({
     if (v) v.muted = isMuted;
   }, [isMuted]);
 
-  // Buffering detection
+  // Buffering detection - only show spinner after 500ms delay to prevent flash
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
 
-    const onWaiting = () => setIsBuffering(true);
-    const onPlaying = () => setIsBuffering(false);
-    const onCanPlay = () => setIsBuffering(false);
+    let bufferTimeout: ReturnType<typeof setTimeout> | null = null;
+
+    const onWaiting = () => {
+      // Only show spinner if buffering for more than 500ms
+      bufferTimeout = setTimeout(() => setIsBuffering(true), 500);
+    };
+    const onPlaying = () => {
+      if (bufferTimeout) clearTimeout(bufferTimeout);
+      setIsBuffering(false);
+    };
+    const onCanPlay = () => {
+      if (bufferTimeout) clearTimeout(bufferTimeout);
+      setIsBuffering(false);
+    };
 
     v.addEventListener('waiting', onWaiting);
     v.addEventListener('playing', onPlaying);
     v.addEventListener('canplaythrough', onCanPlay);
 
     return () => {
+      if (bufferTimeout) clearTimeout(bufferTimeout);
       v.removeEventListener('waiting', onWaiting);
       v.removeEventListener('playing', onPlaying);
       v.removeEventListener('canplaythrough', onCanPlay);
@@ -337,10 +349,10 @@ export default function SingleVideoPlayer({
         />
       )}
 
-      {/* Main video - single stable element */}
+      {/* Main video - single stable element, pointer-events-none so clicks go to parent */}
       <video
         ref={videoRef}
-        className={`absolute inset-0 w-full h-full object-cover ${
+        className={`absolute inset-0 w-full h-full object-cover pointer-events-none ${
           firstFrame ? 'opacity-100 scale-100' : 'opacity-0 scale-[0.98]'
         }`}
         onEnded={handleEnded}
