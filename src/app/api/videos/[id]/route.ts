@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { getUserFromRequest, isAdminUser } from '@/lib/auth';
 import { deleteFile } from '@/worker/upload';
 import { writeAuditLog } from '@/lib/audit';
+import { normalizeVideoType } from '@/types/videoTypes';
 
 export const runtime = 'nodejs';
 
@@ -154,7 +155,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       })(),
       category: body.category,
       is_public: toIntBoolean(body.is_public),
-      type: body.type,
+      // Normalize type to ensure consistency
+      type: body.type !== undefined ? normalizeVideoType(body.type) : undefined,
       mood: body.mood,
       credits: safeJsonStringify(body.credits),
       related_projects: safeJsonStringify(body.related_projects),

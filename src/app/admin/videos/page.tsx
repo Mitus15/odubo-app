@@ -8,6 +8,7 @@ import { createPortal } from "react-dom";
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import ClipsManager from './ClipsManager';
+import { PARENT_VIDEO_TYPES, VIDEO_TYPE_LABELS, type VideoType } from '@/types/videoTypes';
 
 // --- Types ---
 type Video = {
@@ -1308,8 +1309,11 @@ const DetailModal = ({ video, onClose, onUpdate }: { video: Video; onClose: () =
                         onChange={e => setFormData(f => ({ ...f, type: e.target.value, category: e.target.value }))}
                         className="w-full bg-[#302927]/50 border border-[#b2a491]/20 rounded-lg px-3 py-2 text-[#ede8df] focus:outline-none focus:border-[#ede8df]"
                       >
-                        <option value="music-video">Music Video</option>
-                        <option value="film">Film</option>
+                        {PARENT_VIDEO_TYPES.map(type => (
+                          <option key={type} value={type}>
+                            {VIDEO_TYPE_LABELS[type]}
+                          </option>
+                        ))}
                       </select>
                     </div>
                     <div className="col-span-2">
@@ -1410,7 +1414,7 @@ export default function AdminVideosPage() {
     setLoading(true);
     try {
       // Use exclude_type=clip to get only parent videos (not clips) directly from the API
-      const res = await fetch(`/api/videos?limit=100&exclude_type=clip&t=${Date.now()}`, { cache: 'no-store' });
+      const res = await fetch(`/api/videos?limit=200&exclude_type=clip&t=${Date.now()}`, { cache: 'no-store' });
       const data: any = await res.json();
       setVideos(data.videos || []);
     } catch (e) {

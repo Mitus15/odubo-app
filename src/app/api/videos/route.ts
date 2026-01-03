@@ -6,6 +6,7 @@ import { deleteFile } from '@/worker/upload';
 import { z } from 'zod';
 import { writeAuditLog } from '@/lib/audit';
 import CloudflareStreamAPI from '@/lib/cloudflareStream';
+import { normalizeVideoType, VALID_VIDEO_TYPES, VIDEO_TYPES } from '@/types/videoTypes';
 
 export async function GET(req: NextRequest) {
   try {
@@ -233,7 +234,8 @@ export async function POST(req: NextRequest) {
   const duration_seconds = body.duration_seconds === '' ? null : (body.duration_seconds as any);
     const category = body.category || '';
     const is_public = body.is_public === true || body.is_public === 1 || body.is_public === '1' || body.is_public === 'true' ? 1 : 0;
-    const type = body.type || '';
+    // Normalize type to ensure consistency across all videos
+    const type = normalizeVideoType(body.type);
     const mood = body.mood || '';
     const credits = typeof body.credits === 'string' ? body.credits : JSON.stringify(body.credits || []);
     const related_projects = typeof body.related_projects === 'string' ? body.related_projects : JSON.stringify(body.related_projects || []);
