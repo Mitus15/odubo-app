@@ -187,12 +187,25 @@ export default function ClipsManager({ videoId, videoTitle, videoArtist }: Clips
 
   const handleDelete = async (clipId: number) => {
     if (!confirm('Are you sure you want to delete this clip?')) return;
-    
-    // We need a DELETE endpoint. I haven't implemented it yet.
-    // I'll add it to the route later.
-    // For now, just log.
-    console.log('Delete clip', clipId);
-    alert('Delete not implemented yet');
+
+    try {
+      const res = await fetch(`/api/videos/${videoId}/clips`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clipId })
+      });
+
+      if (res.ok) {
+        // Remove from local state
+        setClips(clips.filter(c => c.id !== clipId));
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Failed to delete clip');
+      }
+    } catch (error) {
+      console.error('Delete clip error:', error);
+      alert('Failed to delete clip');
+    }
   };
 
   return (

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { queryDatabase, executeQuery } from '@/lib/db';
+import { queryDatabase } from '@/lib/db';
+import { getUserFromRequest, isAdminUser } from '@/lib/auth';
 import CloudflareStreamAPI from '@/lib/cloudflareStream';
 
 export const dynamic = 'force-dynamic';
@@ -7,22 +8,27 @@ export const runtime = 'nodejs';
 
 /**
  * Enable MP4 downloads for all clips in the database
- * This calls Cloudflare Stream API to enable MP4 downloads for each video
- * and stores the resulting MP4 URL in the database
+ * This calls Cloudflare Stream API to enable MP4 downloads for each video.
+ * The MP4 URL is generated dynamically from the UID in clipsMapper.ts
  *
  * POST /api/admin/enable-mp4-downloads
  */
 export async function POST(req: NextRequest) {
   try {
+    const user = getUserFromRequest(req);
+    if (!isAdminUser(user)) {
+      return NextResponse.json({ error: 'Forbidden: Admins only' }, { status: 403 });
+    }
+
     // Initialize Cloudflare Stream API
     const streamApi = new CloudflareStreamAPI();
 
-    // Fetch all clips with UIDs that don't have mp4_url yet
+    // Fetch all clips with UIDs
     const clips = await queryDatabase(
       `SELECT id, uid, title FROM videos
        WHERE type = 'clip'
          AND uid IS NOT NULL
-         AND (mp4_url IS NULL OR mp4_url = '')
+         AND uid != ''
        ORDER BY created_at DESC`,
       []
     );
@@ -30,7 +36,7 @@ export async function POST(req: NextRequest) {
     if (!clips.length) {
       return NextResponse.json({
         success: true,
-        message: 'No clips need MP4 enabling',
+        message: 'No clips found to process',
         processed: 0,
         total: 0,
       });
@@ -40,8 +46,7 @@ export async function POST(req: NextRequest) {
       id: number;
       uid: string;
       title: string;
-      status: 'success' | 'failed' | 'pending';
-      mp4Url?: string;
+      status: 'enabled' | 'already_enabled' | 'pending' | 'failed';
       error?: string;
     }> = [];
 
@@ -52,26 +57,16 @@ export async function POST(req: NextRequest) {
       try {
         // Enable MP4 downloads via Cloudflare API
         const downloadResponse = await streamApi.enableDownloads(uid);
-
-        // Check if we got a URL back
         const mp4Info = downloadResponse.result?.default;
 
-        if (mp4Info?.url) {
-          // Store the MP4 URL in the database
-          await executeQuery(
-            'UPDATE videos SET mp4_url = ? WHERE id = ?',
-            [mp4Info.url, id]
-          );
-
+        if (mp4Info?.status === 'ready' || mp4Info?.url) {
           results.push({
             id,
             uid,
             title: title || 'Untitled',
-            status: 'success',
-            mp4Url: mp4Info.url,
+            status: 'enabled',
           });
         } else if (mp4Info?.status === 'pendingupload' || mp4Info?.status === 'inprogress') {
-          // MP4 is still being generated
           results.push({
             id,
             uid,
@@ -83,30 +78,42 @@ export async function POST(req: NextRequest) {
             id,
             uid,
             title: title || 'Untitled',
-            status: 'failed',
-            error: 'Unknown response from Cloudflare',
+            status: 'enabled',
           });
         }
       } catch (err: any) {
-        results.push({
-          id,
-          uid,
-          title: title || 'Untitled',
-          status: 'failed',
-          error: err?.message || 'Unknown error',
-        });
+        const errorMsg = err?.message || String(err);
+        // Check if already enabled (409 Conflict)
+        if (errorMsg.includes('409') || errorMsg.includes('already')) {
+          results.push({
+            id,
+            uid,
+            title: title || 'Untitled',
+            status: 'already_enabled',
+          });
+        } else {
+          results.push({
+            id,
+            uid,
+            title: title || 'Untitled',
+            status: 'failed',
+            error: errorMsg,
+          });
+        }
       }
     }
 
-    const successful = results.filter(r => r.status === 'success').length;
+    const enabled = results.filter(r => r.status === 'enabled').length;
+    const alreadyEnabled = results.filter(r => r.status === 'already_enabled').length;
     const pending = results.filter(r => r.status === 'pending').length;
     const failed = results.filter(r => r.status === 'failed').length;
 
     return NextResponse.json({
       success: true,
-      message: `Processed ${clips.length} clips`,
+      message: `Processed ${clips.length} clips: ${enabled} enabled, ${alreadyEnabled} already enabled, ${pending} pending, ${failed} failed`,
       processed: clips.length,
-      successful,
+      enabled,
+      alreadyEnabled,
       pending,
       failed,
       results,
@@ -127,35 +134,65 @@ export async function POST(req: NextRequest) {
  */
 export async function GET(req: NextRequest) {
   try {
-    // Get counts
-    const totalClips = await queryDatabase(
-      `SELECT COUNT(*) as count FROM videos WHERE type = 'clip' AND uid IS NOT NULL`,
-      []
-    );
+    const user = getUserFromRequest(req);
+    if (!isAdminUser(user)) {
+      return NextResponse.json({ error: 'Forbidden: Admins only' }, { status: 403 });
+    }
 
-    const withMp4 = await queryDatabase(
-      `SELECT COUNT(*) as count FROM videos WHERE type = 'clip' AND uid IS NOT NULL AND mp4_url IS NOT NULL AND mp4_url != ''`,
-      []
-    );
+    const streamApi = new CloudflareStreamAPI();
 
-    const withoutMp4 = await queryDatabase(
-      `SELECT COUNT(*) as count FROM videos WHERE type = 'clip' AND uid IS NOT NULL AND (mp4_url IS NULL OR mp4_url = '')`,
-      []
-    );
-
-    // Get sample of clips without MP4
-    const sampleWithout = await queryDatabase(
+    // Get all clips with UIDs
+    const clips = await queryDatabase(
       `SELECT id, uid, title FROM videos
-       WHERE type = 'clip' AND uid IS NOT NULL AND (mp4_url IS NULL OR mp4_url = '')
-       LIMIT 5`,
+       WHERE type = 'clip' AND uid IS NOT NULL AND uid != ''
+       ORDER BY created_at DESC
+       LIMIT 20`,
       []
     );
+
+    const results: Array<{
+      id: number;
+      uid: string;
+      title: string;
+      mp4Status: 'ready' | 'not_enabled' | 'pending' | 'error';
+    }> = [];
+
+    // Check each clip's MP4 status
+    for (const clip of clips) {
+      const { id, uid, title } = clip as { id: number; uid: string; title: string };
+
+      try {
+        const downloadUrl = await streamApi.getDownloadUrl(uid);
+        results.push({
+          id,
+          uid,
+          title: title || 'Untitled',
+          mp4Status: downloadUrl ? 'ready' : 'not_enabled',
+        });
+      } catch (err) {
+        results.push({
+          id,
+          uid,
+          title: title || 'Untitled',
+          mp4Status: 'error',
+        });
+      }
+    }
+
+    const ready = results.filter(r => r.mp4Status === 'ready').length;
+    const notEnabled = results.filter(r => r.mp4Status === 'not_enabled').length;
+    const errors = results.filter(r => r.mp4Status === 'error').length;
 
     return NextResponse.json({
-      totalClips: (totalClips[0] as any)?.count || 0,
-      withMp4: (withMp4[0] as any)?.count || 0,
-      withoutMp4: (withoutMp4[0] as any)?.count || 0,
-      sampleWithoutMp4: sampleWithout,
+      success: true,
+      totalChecked: clips.length,
+      ready,
+      notEnabled,
+      errors,
+      results,
+      message: notEnabled > 0
+        ? `${notEnabled} clips need MP4 enabled. POST to this endpoint to enable.`
+        : 'All checked clips have MP4 enabled.',
     });
   } catch (err: any) {
     console.error('Check MP4 status error:', err);

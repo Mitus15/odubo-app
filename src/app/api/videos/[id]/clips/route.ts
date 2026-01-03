@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { queryDatabase, executeQuery } from '@/lib/db';
 import { getUserFromRequest, isAdminUser } from '@/lib/auth';
+import CloudflareStreamAPI from '@/lib/cloudflareStream';
 
 export const runtime = 'nodejs';
 
@@ -87,6 +88,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       [parentStatus, parentPublication, uid]
     );
 
+    // Enable MP4 downloads for the clip (non-blocking)
+    try {
+      const stream = new CloudflareStreamAPI();
+      await stream.enableDownloads(uid);
+    } catch (mp4Error) {
+      // Non-fatal: MP4 might already be enabled or video still processing
+      console.warn('Could not enable MP4 downloads for clip:', uid, mp4Error);
+    }
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error creating clip:', error);
@@ -122,5 +132,48 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   } catch (error) {
     console.error('Error reordering clips:', error);
     return NextResponse.json({ error: 'Failed to reorder clips' }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const user = getUserFromRequest(req);
+    if (!isAdminUser(user)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const body = await req.json();
+    const { clipId } = body;
+
+    if (!clipId) {
+      return NextResponse.json({ error: 'clipId is required' }, { status: 400 });
+    }
+
+    // Get the clip UID for Cloudflare Stream deletion
+    const clips = await queryDatabase(
+      'SELECT uid FROM videos WHERE id = ? AND type = ?',
+      [clipId, 'clip']
+    );
+
+    const clip = clips[0] as { uid?: string } | undefined;
+
+    // Delete from Cloudflare Stream if UID exists
+    if (clip?.uid) {
+      try {
+        const stream = new CloudflareStreamAPI();
+        await stream.deleteVideo(clip.uid);
+      } catch (streamError) {
+        // Non-fatal: video might not exist in Stream
+        console.warn('Could not delete from Cloudflare Stream:', clip.uid, streamError);
+      }
+    }
+
+    // Delete from database
+    await executeQuery('DELETE FROM videos WHERE id = ? AND type = ?', [clipId, 'clip']);
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting clip:', error);
+    return NextResponse.json({ error: 'Failed to delete clip' }, { status: 500 });
   }
 }
