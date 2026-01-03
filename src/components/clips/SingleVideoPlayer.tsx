@@ -39,8 +39,6 @@ export default function SingleVideoPlayer({
   const { isMuted, armAudio, syncFromVideo, hasUserPreference } = useAudio();
 
   const videoRef = useRef<HTMLVideoElement>(null);
-  const preloadRef = useRef<HTMLVideoElement | null>(null);
-  const preloadRef2 = useRef<HTMLVideoElement | null>(null);
   const mountedRef = useRef(true);
   const userPausedRef = useRef(false);
   const playPromiseRef = useRef<Promise<void> | null>(null);
@@ -54,7 +52,6 @@ export default function SingleVideoPlayer({
 
   const activeClip = clips[activeIndex];
   const nextClip = clips[activeIndex + 1];
-  const nextNextClip = clips[activeIndex + 2];
 
   // Get the video URL (prefer MP4 for simplicity, fallback to HLS)
   const getVideoUrl = useCallback((clip: ClipItem | undefined): string | null => {
@@ -241,43 +238,29 @@ export default function SingleVideoPlayer({
     }
   }, [activeIndex, activeClip, getVideoUrl, attemptPlay, onVideoReady]);
 
-  // Preload next 2 clips for instant transitions
+  // Preload next clip using link preload (lighter than hidden video elements)
   useEffect(() => {
-    const preloadVideo = (ref: React.MutableRefObject<HTMLVideoElement | null>, url: string | null) => {
-      if (!url) return;
+    const nextUrl = getVideoUrl(nextClip);
+    if (!nextUrl) return;
 
-      if (!ref.current) {
-        ref.current = document.createElement('video');
-        ref.current.preload = 'auto';
-        ref.current.muted = true;
-        ref.current.playsInline = true;
-        ref.current.style.cssText = 'position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;';
-        document.body.appendChild(ref.current);
-      }
+    // Check if link already exists
+    const existingLink = document.querySelector(`link[href="${nextUrl}"]`);
+    if (existingLink) return;
 
-      if (ref.current.src !== url) {
-        ref.current.src = url;
-        ref.current.load();
-      }
-    };
-
-    // Preload next clip
-    preloadVideo(preloadRef, getVideoUrl(nextClip));
-
-    // Preload the one after that
-    preloadVideo(preloadRef2, getVideoUrl(nextNextClip));
+    // Create preload link
+    const link = document.createElement('link');
+    link.rel = 'preload';
+    link.as = 'video';
+    link.href = nextUrl;
+    document.head.appendChild(link);
 
     return () => {
-      // Cleanup preload elements on unmount
-      [preloadRef, preloadRef2].forEach(ref => {
-        if (ref.current) {
-          ref.current.src = '';
-          ref.current.remove();
-          ref.current = null;
-        }
-      });
+      // Remove preload link after a delay (browser may have cached it)
+      setTimeout(() => {
+        link.remove();
+      }, 5000);
     };
-  }, [nextClip, nextNextClip, getVideoUrl]);
+  }, [nextClip, getVideoUrl]);
 
   // Sync mute state
   useEffect(() => {

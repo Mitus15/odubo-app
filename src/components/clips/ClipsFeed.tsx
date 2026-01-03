@@ -182,9 +182,9 @@ export default function ClipsFeed({
     if (out.length) setDisplayClips(prev => [...prev, ...out]);
   }, [baseClips, buildFairDeck]);
 
-  // Initialize display
+  // Initialize display - show immediately after first page (don't wait for all pages)
   useEffect(() => {
-    if (initializedRef.current || baseClips.length === 0 || hasMore) return;
+    if (initializedRef.current || baseClips.length === 0) return;
 
     let orderedClips: ClipItem[];
 
@@ -212,7 +212,7 @@ export default function ClipsFeed({
     setDisplayClips(display);
     if (display[0]) setActiveId(display[0].id);
     initializedRef.current = true;
-  }, [baseClips, hasMore, buildFairDeck, initialClipId]);
+  }, [baseClips, buildFairDeck, initialClipId]);
 
   // Load more when near end
   const handleLoadMore = useCallback(() => {
@@ -396,28 +396,43 @@ export default function ClipsFeed({
         </div>
       )}
 
-      {/* Clips - using PosterCard (poster only, no video) */}
-      {displayClips.map((clip, index) => (
-        <section
-          key={clip.uniqueKey}
-          data-clip-key={clip.uniqueKey}
-          data-clip-id={clip.id}
-          data-clip-index={index}
-          className="w-full flex items-center justify-center flex-shrink-0"
-          style={{
-            height: '100dvh',
-            scrollSnapAlign: 'start',
-            scrollSnapStop: 'always',
-            touchAction: 'pan-y'
-          }}
-        >
-          <PosterCard
-            clip={clip}
-            active={activeId === clip.id}
-            videoReady={activeId === clip.id && videoReady}
-          />
-        </section>
-      ))}
+      {/* Clips - virtualized: only render activeIndex ± 2 */}
+      {displayClips.map((clip, index) => {
+        // Virtualization: skip clips far from active index
+        const distance = Math.abs(index - activeIndex);
+        if (distance > 2) {
+          // Render placeholder to maintain scroll position
+          return (
+            <div
+              key={clip.uniqueKey}
+              data-clip-index={index}
+              style={{ height: '100dvh', scrollSnapAlign: 'start' }}
+            />
+          );
+        }
+
+        return (
+          <section
+            key={clip.uniqueKey}
+            data-clip-key={clip.uniqueKey}
+            data-clip-id={clip.id}
+            data-clip-index={index}
+            className="w-full flex items-center justify-center flex-shrink-0"
+            style={{
+              height: '100dvh',
+              scrollSnapAlign: 'start',
+              scrollSnapStop: 'always',
+              touchAction: 'pan-y'
+            }}
+          >
+            <PosterCard
+              clip={clip}
+              active={activeId === clip.id}
+              videoReady={activeId === clip.id && videoReady}
+            />
+          </section>
+        );
+      })}
 
       {/* Error state with retry */}
       {error && (
