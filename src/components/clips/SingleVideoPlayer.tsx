@@ -15,12 +15,13 @@ interface SingleVideoPlayerProps {
 }
 
 /**
- * SingleVideoPlayer - Fixed position video player with dual-video preloading
+ * SingleVideoPlayer - Fixed position video player with hidden preload
  *
- * Uses TWO video elements for instant transitions:
- * - Primary: Currently playing
- * - Secondary: Preloading next clip in background
- * When advancing, we swap roles for instant playback.
+ * Architecture (based on TikTok's approach):
+ * - Single stable video ref (no swapping, no stale closures)
+ * - Hidden preload element that actually buffers next clip
+ * - Immediate play() call (browser queues and starts ASAP)
+ * - Poster shows until first frame renders
  */
 export default function SingleVideoPlayer({
   clips,
@@ -32,16 +33,14 @@ export default function SingleVideoPlayer({
 }: SingleVideoPlayerProps) {
   const { isMuted, armAudio, syncFromVideo, hasUserPreference } = useAudio();
 
-  // Dual video refs for instant swap
-  const videoARef = useRef<HTMLVideoElement>(null);
-  const videoBRef = useRef<HTMLVideoElement>(null);
-  const [activeVideo, setActiveVideo] = useState<'A' | 'B'>('A');
+  // Single stable refs - no computed refs, no stale closures
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const preloadRef = useRef<HTMLVideoElement>(null);
 
   const mountedRef = useRef(true);
   const userPausedRef = useRef(false);
   const playPromiseRef = useRef<Promise<void> | null>(null);
   const lastActiveIndexRef = useRef(-1);
-  const preloadedIndexRef = useRef<number>(-1);
 
   const [showPlayButton, setShowPlayButton] = useState(false);
   const [isBuffering, setIsBuffering] = useState(false);
@@ -52,16 +51,10 @@ export default function SingleVideoPlayer({
   const activeClip = clips[activeIndex];
   const nextClip = clips[activeIndex + 1];
 
-  // Get the active video element
-  const videoRef = activeVideo === 'A' ? videoARef : videoBRef;
-  const preloadRef = activeVideo === 'A' ? videoBRef : videoARef;
-
   // Get the video URL (prefer MP4 for simplicity, fallback to HLS)
   const getVideoUrl = useCallback((clip: ClipItem | undefined): string | null => {
     if (!clip) return null;
-    // Prefer MP4 for native browser support and simpler playback
     if (clip.mp4Url) return clip.mp4Url;
-    // Fallback to HLS
     return clip.hlsUrl || null;
   }, []);
 
@@ -103,7 +96,6 @@ export default function SingleVideoPlayer({
       } catch (err: any) {
         playPromiseRef.current = null;
 
-        // "Interrupted" error means another play/pause happened
         if (err?.name === 'AbortError' || err?.message?.includes('interrupted')) {
           return !v.paused && !v.ended;
         }
@@ -174,7 +166,6 @@ export default function SingleVideoPlayer({
   const handleEnded = useCallback(() => {
     onEnded?.();
 
-    // If scrolling backward (revisiting), loop the video
     if (scrollDirection === 'backward') {
       const v = videoRef.current;
       if (v) {
@@ -184,7 +175,7 @@ export default function SingleVideoPlayer({
       return;
     }
 
-    // Scrolling forward or neutral - auto-advance immediately
+    // Auto-advance immediately
     if (mountedRef.current && onAdvanceToNext) {
       onAdvanceToNext();
     }
@@ -199,16 +190,16 @@ export default function SingleVideoPlayer({
     };
   }, []);
 
-  // Handle clip change - use preloaded video if available, otherwise load fresh
+  // Handle clip change - load and play immediately
   useEffect(() => {
-    if (!activeClip) return;
+    const v = videoRef.current;
+    if (!v || !activeClip) return;
 
     const videoUrl = getVideoUrl(activeClip);
     if (!videoUrl) return;
 
     // Check if this is a new clip
     if (lastActiveIndexRef.current !== activeIndex) {
-      const prevIndex = lastActiveIndexRef.current;
       lastActiveIndexRef.current = activeIndex;
 
       // Signal video not ready yet
@@ -220,57 +211,33 @@ export default function SingleVideoPlayer({
       setIsUserPaused(false);
       userPausedRef.current = false;
 
-      // Pause the currently playing video first
-      const currentV = videoRef.current;
-      if (currentV && !currentV.paused) {
-        currentV.pause();
-      }
-
-      // Check if next clip is already preloaded in the secondary video
-      const preloadV = preloadRef.current;
-      const urlPart = videoUrl.split('/').pop() || '';
-      const isPreloaded = preloadedIndexRef.current === activeIndex && preloadV?.src && preloadV.src.includes(urlPart);
-
-      if (isPreloaded && preloadV) {
-        // INSTANT SWAP: Use preloaded video
-        preloadV.currentTime = 0;
-        preloadV.muted = isMuted;
-        setActiveVideo(prev => prev === 'A' ? 'B' : 'A');
-        attemptPlay(preloadV);
-      } else {
-        // Load fresh into current video (reuse same element)
-        if (currentV) {
-          currentV.src = videoUrl;
-          currentV.currentTime = 0;
-          attemptPlay(currentV);
-        }
-      }
+      // Set source and play immediately - don't wait for any events
+      v.src = videoUrl;
+      v.currentTime = 0;
+      attemptPlay(v);
     }
-  }, [activeIndex, activeClip, getVideoUrl, attemptPlay, onVideoReady, isMuted]);
+  }, [activeIndex, activeClip, getVideoUrl, attemptPlay, onVideoReady]);
 
-  // Preload next clip into secondary video element
+  // Preload next clip into hidden video element
   useEffect(() => {
-    const preloadV = preloadRef.current;
+    const p = preloadRef.current;
     const nextUrl = getVideoUrl(nextClip);
-    const nextIndex = activeIndex + 1;
+    if (!p || !nextUrl) return;
 
-    if (!preloadV || !nextUrl || preloadedIndexRef.current === nextIndex) return;
+    // Only update if URL changed
+    if (p.src !== nextUrl) {
+      p.src = nextUrl;
+      p.load(); // Actually buffer the video
+    }
+  }, [nextClip, getVideoUrl]);
 
-    // Preload the next clip
-    preloadV.src = nextUrl;
-    preloadV.muted = true;
-    preloadV.preload = 'auto';
-    preloadV.load();
-    preloadedIndexRef.current = nextIndex;
-  }, [activeIndex, nextClip, getVideoUrl]);
-
-  // Sync mute state to active video
+  // Sync mute state
   useEffect(() => {
     const v = videoRef.current;
     if (v) v.muted = isMuted;
-  }, [isMuted, activeVideo]);
+  }, [isMuted]);
 
-  // Buffering detection - re-bind when active video changes
+  // Buffering detection
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
@@ -288,9 +255,9 @@ export default function SingleVideoPlayer({
       v.removeEventListener('playing', onPlaying);
       v.removeEventListener('canplaythrough', onCanPlay);
     };
-  }, [activeVideo]);
+  }, []);
 
-  // First frame detection for poster fade - re-bind on video swap
+  // First frame detection for poster fade
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
@@ -310,7 +277,7 @@ export default function SingleVideoPlayer({
 
     v.addEventListener('playing', onPlaying, { once: true });
     return () => v.removeEventListener('playing', onPlaying);
-  }, [activeIndex, activeVideo, onVideoReady]);
+  }, [activeIndex, onVideoReady]);
 
   // Visibility change: resume when tab becomes visible
   useEffect(() => {
@@ -330,7 +297,7 @@ export default function SingleVideoPlayer({
 
     document.addEventListener('visibilitychange', handleVisibility);
     return () => document.removeEventListener('visibilitychange', handleVisibility);
-  }, [attemptPlay, activeVideo]);
+  }, [attemptPlay]);
 
   // Watchdog: rescue stalled playback
   useEffect(() => {
@@ -345,7 +312,7 @@ export default function SingleVideoPlayer({
     }, 1000);
 
     return () => clearInterval(watchdog);
-  }, [attemptPlay, activeVideo]);
+  }, [attemptPlay]);
 
   const showPlayOverlay = showPlayButton || (isUserPaused && !showPauseIcon);
 
@@ -370,40 +337,28 @@ export default function SingleVideoPlayer({
         />
       )}
 
-      {/* Video A */}
+      {/* Main video - single stable element */}
       <video
-        ref={videoARef}
+        ref={videoRef}
         className={`absolute inset-0 w-full h-full object-cover ${
-          activeVideo === 'A'
-            ? (firstFrame ? 'opacity-100 scale-100' : 'opacity-0 scale-[0.98]')
-            : 'opacity-0 pointer-events-none'
+          firstFrame ? 'opacity-100 scale-100' : 'opacity-0 scale-[0.98]'
         }`}
-        onEnded={activeVideo === 'A' ? handleEnded : undefined}
+        onEnded={handleEnded}
         playsInline
         preload="auto"
         style={{
           touchAction: 'pan-y',
-          transition: 'opacity 150ms ease-out, transform 150ms ease-out',
-          zIndex: activeVideo === 'A' ? 1 : 0
+          transition: 'opacity 150ms ease-out, transform 150ms ease-out'
         }}
       />
 
-      {/* Video B (preload / swap target) */}
+      {/* Hidden preload video - buffers next clip */}
       <video
-        ref={videoBRef}
-        className={`absolute inset-0 w-full h-full object-cover ${
-          activeVideo === 'B'
-            ? (firstFrame ? 'opacity-100 scale-100' : 'opacity-0 scale-[0.98]')
-            : 'opacity-0 pointer-events-none'
-        }`}
-        onEnded={activeVideo === 'B' ? handleEnded : undefined}
-        playsInline
+        ref={preloadRef}
         preload="auto"
-        style={{
-          touchAction: 'pan-y',
-          transition: 'opacity 150ms ease-out, transform 150ms ease-out',
-          zIndex: activeVideo === 'B' ? 1 : 0
-        }}
+        muted
+        playsInline
+        style={{ display: 'none' }}
       />
 
       {/* Play button overlay */}
