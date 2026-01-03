@@ -14,21 +14,30 @@ export async function GET(req: NextRequest) {
     const offset = Math.max(0, Number(url.searchParams.get('offset') || '0'));
     const publicationStatus = url.searchParams.get('publication_status');
     const uid = url.searchParams.get('uid');
+    const excludeType = url.searchParams.get('exclude_type'); // e.g., 'clip' to exclude clips
     const hasFilter = publicationStatus === 'live' || publicationStatus === 'archived';
 
     // Try with full schema first, fallback to basic schema if columns don't exist
     let videos;
     try {
-      let where = '';
+      const whereClauses: string[] = [];
       const paramsFull: any[] = [];
-      
+
       if (uid) {
-        where = 'WHERE uid = ?';
+        whereClauses.push('uid = ?');
         paramsFull.push(uid);
       } else if (hasFilter) {
-        where = 'WHERE COALESCE(publication_status,\'archived\') = ?';
+        whereClauses.push("COALESCE(publication_status,'archived') = ?");
         paramsFull.push(publicationStatus);
       }
+
+      // Exclude specific type (e.g., clips)
+      if (excludeType) {
+        whereClauses.push("COALESCE(type, '') != ?");
+        paramsFull.push(excludeType);
+      }
+
+      const where = whereClauses.length > 0 ? 'WHERE ' + whereClauses.join(' AND ') : '';
 
       paramsFull.push(limit);
       paramsFull.push(offset);

@@ -1409,11 +1409,10 @@ export default function AdminVideosPage() {
   const loadVideos = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/videos?limit=100&t=${Date.now()}`, { cache: 'no-store' });
+      // Use exclude_type=clip to get only parent videos (not clips) directly from the API
+      const res = await fetch(`/api/videos?limit=100&exclude_type=clip&t=${Date.now()}`, { cache: 'no-store' });
       const data: any = await res.json();
-      // Filter out clips from the main view
-      const mainVideos = (data.videos || []).filter((v: Video) => v.type !== 'clip');
-      setVideos(mainVideos);
+      setVideos(data.videos || []);
     } catch (e) {
       console.error(e);
     } finally {
