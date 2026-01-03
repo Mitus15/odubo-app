@@ -22,6 +22,245 @@ interface StorePageClientProps {
   initialProducts: ProductCard[];
 }
 
+// Full-screen scrollable product viewer (like clips feed)
+function ProductFeedModal({
+  products,
+  initialIndex,
+  productDetails,
+  onClose,
+  onIndexChange,
+  selectedOptions,
+  openOption,
+  setOpenOption,
+  updateOption,
+  selectedVariant,
+  detailLoading,
+  detailError,
+  addToCart,
+  addFeedback,
+  setCtaReady,
+}: {
+  products: ProductCard[];
+  initialIndex: number;
+  productDetails: Record<string, any>;
+  onClose: () => void;
+  onIndexChange: (idx: number) => void;
+  selectedOptions: Record<string, string>;
+  openOption: string | null;
+  setOpenOption: (opt: string | null) => void;
+  updateOption: (name: string, value: string) => void;
+  selectedVariant: any;
+  detailLoading: boolean;
+  detailError: string | null;
+  addToCart: () => void;
+  addFeedback: string | null;
+  setCtaReady: (ready: boolean) => void;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [activeIndex, setActiveIndex] = useState(initialIndex);
+  const hasScrolledRef = useRef(false);
+
+  // Scroll to initial product on mount
+  useEffect(() => {
+    if (!hasScrolledRef.current && containerRef.current) {
+      const target = containerRef.current.querySelector(`[data-product-index="${initialIndex}"]`);
+      if (target) {
+        target.scrollIntoView({ behavior: 'instant', block: 'start' });
+        hasScrolledRef.current = true;
+      }
+    }
+  }, [initialIndex]);
+
+  // Detect which product is centered after scroll ends
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    let scrollTimeout: ReturnType<typeof setTimeout> | null = null;
+
+    const handleScroll = () => {
+      if (scrollTimeout) clearTimeout(scrollTimeout);
+      scrollTimeout = setTimeout(() => {
+        const containerRect = container.getBoundingClientRect();
+        const centerY = containerRect.top + containerRect.height / 2;
+
+        let closestIdx = activeIndex;
+        let closestDist = Infinity;
+
+        container.querySelectorAll('[data-product-index]').forEach((el) => {
+          const rect = el.getBoundingClientRect();
+          const elCenter = rect.top + rect.height / 2;
+          const dist = Math.abs(elCenter - centerY);
+          if (dist < closestDist) {
+            closestDist = dist;
+            closestIdx = parseInt((el as HTMLElement).dataset.productIndex || '0', 10);
+          }
+        });
+
+        if (closestIdx !== activeIndex) {
+          setActiveIndex(closestIdx);
+          onIndexChange(closestIdx);
+        }
+      }, 50);
+    };
+
+    container.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      if (scrollTimeout) clearTimeout(scrollTimeout);
+      container.removeEventListener('scroll', handleScroll);
+    };
+  }, [activeIndex, onIndexChange]);
+
+  const currentProduct = products[activeIndex];
+  const currentDetail = currentProduct ? productDetails[currentProduct.handle] : null;
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black">
+      {/* Close button */}
+      <button
+        aria-label="Close"
+        onClick={onClose}
+        className="fixed top-4 right-4 z-[60] text-white bg-black/50 hover:bg-black/70 rounded-full p-3 backdrop-blur-sm border border-white/20"
+        style={{ top: 'calc(env(safe-area-inset-top, 16px) + 16px)' }}
+      >
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+
+      {/* Product counter */}
+      <div
+        className="fixed top-4 left-4 z-[60] text-white/60 text-xs font-medium"
+        style={{ top: 'calc(env(safe-area-inset-top, 16px) + 20px)' }}
+      >
+        {activeIndex + 1} / {products.length}
+      </div>
+
+      {/* Scrollable product feed */}
+      <div
+        ref={containerRef}
+        className="h-full w-full overflow-y-auto overflow-x-hidden"
+        style={{
+          scrollSnapType: 'y mandatory',
+          WebkitOverflowScrolling: 'touch',
+          overscrollBehavior: 'contain',
+        }}
+      >
+        {products.map((product, idx) => {
+          const detail = productDetails[product.handle];
+          const isActive = idx === activeIndex;
+          const variant = isActive ? selectedVariant : detail?.variants?.[0];
+
+          return (
+            <section
+              key={product.id}
+              data-product-index={idx}
+              className="w-full flex flex-col"
+              style={{
+                height: '100dvh',
+                scrollSnapAlign: 'start',
+                scrollSnapStop: 'always',
+              }}
+            >
+              {/* Product Image - Top half */}
+              <div className="flex-1 flex items-center justify-center bg-[#0a0a0a] p-4">
+                {product.image ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={variant?.image || product.image}
+                    alt={product.title}
+                    className="max-w-full max-h-full object-contain"
+                  />
+                ) : (
+                  <div className="text-[#502d26] text-xs uppercase tracking-widest">No Image</div>
+                )}
+              </div>
+
+              {/* Product Info - Bottom section */}
+              <div className="bg-[#0f0b0b] border-t border-white/10 p-4 pb-8 space-y-3" style={{ paddingBottom: 'calc(2rem + env(safe-area-inset-bottom, 0px))' }}>
+                <div>
+                  <h2 className="text-lg font-semibold text-[#f7f3ec]">{product.title}</h2>
+                  {variant && (
+                    <p className="text-base font-medium text-[#b2a491]">
+                      ${typeof variant.price === 'number' ? variant.price.toFixed(2) : variant.price}
+                    </p>
+                  )}
+                  {!product.available && (
+                    <p className="text-xs text-red-300 mt-1">Sold Out</p>
+                  )}
+                </div>
+
+                {/* Options - only show for active product */}
+                {isActive && detail?.options?.map((opt: any) => {
+                  const open = openOption === opt.name;
+                  return (
+                    <div key={opt.name} className="border border-white/10 rounded-xl bg-white/5 overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOpenOption(open ? null : opt.name);
+                          setCtaReady(true);
+                        }}
+                        className="w-full flex items-center justify-between px-3 py-2 text-left text-sm font-semibold text-[#f7f3ec]"
+                      >
+                        <span>{opt.name}: {selectedOptions[opt.name] || '—'}</span>
+                        <span className="text-[#d7cfc3] text-xs">{open ? '−' : '+'}</span>
+                      </button>
+                      {open && (
+                        <div className="px-3 pb-2 flex flex-wrap gap-1.5">
+                          {opt.values?.map((val: string) => {
+                            const active = selectedOptions[opt.name] === val;
+                            return (
+                              <button
+                                key={val}
+                                type="button"
+                                onClick={() => updateOption(opt.name, val)}
+                                className={`px-2.5 py-1 rounded-lg text-xs transition-all border ${active ? 'bg-gradient-to-r from-[#843c2d] via-[#a44e3a] to-[#52241d] text-[#f8f2ea] border-[#c58a70]/60' : 'text-[#e1d6c8] border-white/15 bg-white/5'}`}
+                              >
+                                {val}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+
+                {isActive && detailLoading && (
+                  <p className="text-xs text-[#c7b8a8]">Loading…</p>
+                )}
+
+                {/* CTA buttons */}
+                {isActive && openOption === null && (
+                  <div className="flex gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={addToCart}
+                      disabled={!selectedVariant || selectedVariant.available === false || !product.available}
+                      className={`flex-1 py-3 rounded-xl text-sm font-semibold transition-all ${product.available && selectedVariant?.available !== false ? 'bg-gradient-to-r from-[#843c2d] via-[#a44e3a] to-[#52241d] text-[#f8f2ea]' : 'bg-white/5 text-[#666] cursor-not-allowed'}`}
+                    >
+                      {addFeedback || (!product.available ? 'Sold Out' : 'Add to Bag')}
+                    </button>
+
+                    <Link
+                      href="/store/cart"
+                      className="px-4 py-3 rounded-xl border border-white/20 text-[#f8f2ea] bg-white/5 text-sm font-medium"
+                      onClick={onClose}
+                    >
+                      Bag
+                    </Link>
+                  </div>
+                )}
+              </div>
+            </section>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function StorePageClient({ isStoreOpen, isAdmin, initialProducts }: StorePageClientProps) {
   const [timeLeft, setTimeLeft] = useState({
     weeks: 0,
@@ -436,128 +675,30 @@ export default function StorePageClient({ isStoreOpen, isAdmin, initialProducts 
         </div>
       </footer>
 
-      {/* Modal viewer - z-50 above footer (z-30) and header (z-40) */}
-      {selectedIndex !== null && filteredProducts[selectedIndex] && (
-        <div 
-          key={`modal-${selectedIndex}`} 
-          className="fixed inset-0 z-50 flex items-start sm:items-center justify-center" 
-          role="dialog" 
-          aria-modal="true" 
-          aria-label={selectedProduct?.title || 'Product detail'}
-          style={{ 
-            paddingTop: 'calc(80px + env(safe-area-inset-top, 0px))',
-            paddingBottom: 'max(1rem, env(safe-area-inset-bottom, 16px))',
-            paddingLeft: 'max(1rem, env(safe-area-inset-left, 16px))',
-            paddingRight: 'max(1rem, env(safe-area-inset-right, 16px))'
+      {/* Full-screen product viewer - scrollable like clips feed */}
+      {selectedIndex !== null && (
+        <ProductFeedModal
+          products={filteredProducts}
+          initialIndex={selectedIndex}
+          productDetails={productDetails}
+          onClose={() => setSelectedIndex(null)}
+          onIndexChange={(idx) => {
+            setSelectedIndex(idx);
+            if (filteredProducts[idx]) {
+              ensureDetail(filteredProducts[idx].handle);
+            }
           }}
-        >
-          <div className="absolute inset-0 bg-black/90" aria-hidden onClick={() => setSelectedIndex(null)} />
-          <div className="absolute inset-0 backdrop-blur-xl" aria-hidden />
-
-          <div className="relative w-full max-w-6xl max-h-full flex flex-col">
-            {/* Close button - positioned at top right of modal card */}
-            <button
-              aria-label="Close"
-              onClick={() => setSelectedIndex(null)}
-              className="absolute -top-2 -right-2 z-30 text-[#0b0b0b] bg-[#f8f2ea] hover:bg-white rounded-full p-2.5 border border-white/60 shadow-2xl"
-            >
-              ✕
-            </button>
-            
-            <div className="relative w-full max-h-[calc(100dvh-140px)] sm:max-h-[80vh] overflow-y-auto rounded-2xl sm:rounded-3xl glass-surface border border-white/10 bg-[#0f0b0b]/95 shadow-[0_30px_120px_rgba(0,0,0,0.45)]">
-
-              <div className="grid md:grid-cols-[1fr_1fr] gap-0">
-                <div className="w-full bg-[#0f0b0b] flex items-center justify-center p-3 sm:p-5">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={(selectedVariant?.image || selectedProduct?.image || selectedDetail?.images?.[0]) ?? ''}
-                    alt={selectedProduct?.title || ''}
-                    className="w-full max-h-[35vh] sm:max-h-[45vh] object-contain"
-                  />
-                </div>
-
-                <div className="w-full p-4 sm:p-6 text-[#ede8df] space-y-3 pb-6">
-                  <div className="space-y-0.5">
-                    <h2 className="text-sm sm:text-base font-semibold leading-tight text-[#f7f3ec] line-clamp-2">{selectedProduct?.title}</h2>
-                    {selectedVariant && (
-                      <p className="text-sm font-medium text-[#f7f3ec]">{selectedVariant.price !== null ? `$${selectedVariant.price.toFixed(2)}` : 'Price on request'}</p>
-                    )}
-                    {selectedVariant?.available === false && (
-                      <p className="text-xs text-red-200/80">Currently unavailable</p>
-                    )}
-                  </div>
-
-                  <div className="space-y-2 pb-2">
-                    {selectedDetail?.options?.map((opt: any) => {
-                      const open = openOption === opt.name;
-                      return (
-                        <div key={opt.name} className="glass-surface border border-white/10 rounded-xl bg-white/5 overflow-hidden">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setOpenOption(open ? null : opt.name);
-                              setCtaReady(true);
-                            }}
-                            className="w-full flex items-center justify-between px-3 py-2 text-left text-sm font-semibold text-[#f7f3ec]"
-                          >
-                            <span>{opt.name}</span>
-                            <span className="text-[#d7cfc3] text-xs">{open ? '−' : '+'}</span>
-                          </button>
-                          {open && (
-                            <div className="px-3 pb-2 flex flex-wrap gap-1.5">
-                              {opt.values?.map((val: string) => {
-                                const active = selectedOptions[opt.name] === val;
-                                return (
-                                  <button
-                                    key={val}
-                                    type="button"
-                                    onClick={() => updateOption(opt.name, val)}
-                                    className={`px-2.5 py-1 rounded-lg text-xs transition-all border ${active ? 'bg-gradient-to-r from-[#843c2d] via-[#a44e3a] to-[#52241d] text-[#f8f2ea] border-[#c58a70]/60 shadow-[0_10px_28px_rgba(0,0,0,0.35)]' : 'text-[#e1d6c8] border-white/15 bg-white/5 hover:bg-white/10'}`}
-                                  >
-                                    {val}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {detailLoading && (
-                    <p className="text-xs text-[#c7b8a8]">Loading variants…</p>
-                  )}
-                  {detailError && (
-                    <p className="text-xs text-red-300">{detailError}</p>
-                  )}
-
-                  {/* CTA buttons only visible when all variant sections are minimized */}
-                  {openOption === null && (
-                    <div className="flex flex-wrap justify-center gap-2 text-center pt-2">
-                      <button
-                        type="button"
-                        onClick={addToCart}
-                        disabled={!selectedVariant || selectedVariant.available === false}
-                        className={`px-4 py-2.5 rounded-lg text-sm font-semibold transition-all border ${selectedVariant?.available !== false ? 'bg-gradient-to-r from-[#843c2d] via-[#a44e3a] to-[#52241d] text-[#f8f2ea] border-[#c58a70]/50 shadow-[0_12px_30px_rgba(0,0,0,0.35)] hover:scale-[1.02]' : 'bg-white/5 text-[#c7b8a8] border-white/10 cursor-not-allowed'}`}
-                      >
-                        {addFeedback || (selectedVariant?.available === false ? 'Unavailable' : 'Add to Bag')}
-                      </button>
-
-                      <Link
-                        href="/store/cart"
-                        className="px-4 py-2.5 rounded-lg border border-white/20 text-[#f8f2ea] bg-white/5 hover:bg-white/10 transition-colors text-sm"
-                        onClick={() => setSelectedIndex(null)}
-                      >
-                        Go to Bag
-                      </Link>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+          selectedOptions={selectedOptions}
+          openOption={openOption}
+          setOpenOption={setOpenOption}
+          updateOption={updateOption}
+          selectedVariant={selectedVariant}
+          detailLoading={detailLoading}
+          detailError={detailError}
+          addToCart={addToCart}
+          addFeedback={addFeedback}
+          setCtaReady={setCtaReady}
+        />
       )}
     </ScreenLayout>
   );
