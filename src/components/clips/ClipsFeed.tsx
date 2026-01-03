@@ -212,7 +212,7 @@ export default function ClipsFeed({
           handleScrollEnd();
         }
         lastScrollTop = root.scrollTop;
-      }, 60); // Wait 60ms after scroll stops
+      }, 30); // Wait 30ms after scroll stops (reduced for faster response)
 
       lastScrollTop = root.scrollTop;
     };
