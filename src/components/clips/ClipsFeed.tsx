@@ -172,8 +172,8 @@ export default function ClipsFeed({
     fetchPage(pageRef.current + 1);
   }, [hasMore, fetchPage]);
 
-  // Scroll-end detection for smooth transitions
-  // Only switch video when scroll has completely stopped
+  // Active clip detection using IntersectionObserver (primary) with scroll fallbacks
+  // IntersectionObserver is more reliable than manual scroll position calculations
   useEffect(() => {
     const root = rootRef.current;
     if (!root || !displayClips.length) return;
@@ -181,46 +181,66 @@ export default function ClipsFeed({
     let scrollTimeout: ReturnType<typeof setTimeout> | null = null;
     let lastScrollTop = root.scrollTop;
 
-    const findCenteredClip = (): { id: number; index: number; distance: number } | null => {
-      const viewportHeight = root.clientHeight;
-      const scrollTop = root.scrollTop;
-      const viewportCenter = scrollTop + viewportHeight / 2;
+    // Track the most visible clip via IntersectionObserver
+    const visibilityMap = new Map<number, number>(); // clipIndex -> intersectionRatio
 
-      let closestClip: { id: number; index: number; distance: number } | null = null;
+    const updateActiveFromVisibility = () => {
+      if (visibilityMap.size === 0) return;
 
-      const items = root.querySelectorAll('[data-clip-key]');
-      items.forEach((el) => {
-        const htmlEl = el as HTMLElement;
-        const elTop = htmlEl.offsetTop;
-        const elCenter = elTop + htmlEl.clientHeight / 2;
-        const distance = Math.abs(elCenter - viewportCenter);
+      // Find the clip with highest visibility
+      let bestIndex = -1;
+      let bestRatio = 0;
 
-        const id = parseInt(htmlEl.dataset.clipId || '', 10);
-        const index = parseInt(htmlEl.dataset.clipIndex || '', 10);
-
-        if (Number.isFinite(id) && (!closestClip || distance < closestClip.distance)) {
-          closestClip = { id, index, distance };
+      visibilityMap.forEach((ratio, index) => {
+        if (ratio > bestRatio) {
+          bestRatio = ratio;
+          bestIndex = index;
         }
       });
 
-      return closestClip;
-    };
+      // Only update if we found a clip with >50% visibility
+      if (bestIndex >= 0 && bestRatio >= 0.5) {
+        const clip = displayClips[bestIndex];
+        if (clip && clip.id !== activeId) {
+          setActiveId(clip.id);
+          setActiveIndex(bestIndex);
 
-    const handleScrollEnd = () => {
-      const centered = findCenteredClip();
-      if (centered && centered.id !== activeId) {
-        setActiveId(centered.id);
-        setActiveIndex(centered.index);
-
-        // Load more if near end
-        if (centered.index >= displayClips.length - 2) {
-          handleLoadMore();
+          // Load more if near end
+          if (bestIndex >= displayClips.length - 2) {
+            handleLoadMore();
+          }
         }
       }
     };
 
+    // IntersectionObserver: primary detection method
+    // CRITICAL: root must be the scroll container, NOT viewport
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          const index = parseInt(entry.target.getAttribute('data-clip-index') || '-1', 10);
+          if (index >= 0) {
+            if (entry.isIntersecting) {
+              visibilityMap.set(index, entry.intersectionRatio);
+            } else {
+              visibilityMap.delete(index);
+            }
+          }
+        });
+        updateActiveFromVisibility();
+      },
+      {
+        root: root, // CRITICAL: scroll container, NOT viewport
+        threshold: [0.5, 0.7, 0.9], // Multiple thresholds for granular detection
+      }
+    );
+
+    // Observe all clip sections
+    const sections = root.querySelectorAll('[data-clip-index]');
+    sections.forEach((section) => observer.observe(section));
+
+    // Scroll direction tracking (still needed for video behavior)
     const handleScroll = () => {
-      // Track scroll direction
       const currentScrollTop = root.scrollTop;
       const newDirection = currentScrollTop > prevScrollTopRef.current ? 'forward' : 'backward';
       if (Math.abs(currentScrollTop - prevScrollTopRef.current) > 5) {
@@ -228,34 +248,32 @@ export default function ClipsFeed({
       }
       prevScrollTopRef.current = currentScrollTop;
 
-      // Clear any pending timeout
+      // Fallback timeout in case IntersectionObserver misses edge cases
       if (scrollTimeout) clearTimeout(scrollTimeout);
-
-      // Set new timeout - fires when scroll stops
       scrollTimeout = setTimeout(() => {
-        // Double-check scroll has truly stopped
         if (root.scrollTop === lastScrollTop) {
-          handleScrollEnd();
+          updateActiveFromVisibility();
         }
         lastScrollTop = root.scrollTop;
-      }, 30); // Wait 30ms after scroll stops (reduced for faster response)
+      }, 100); // Increased from 30ms - IO handles most cases now
 
       lastScrollTop = root.scrollTop;
     };
 
-    // Also use scrollend event if browser supports it
+    // scrollend event as enhancement (when browser supports it)
     const handleScrollEndEvent = () => {
       if (scrollTimeout) clearTimeout(scrollTimeout);
-      handleScrollEnd();
+      updateActiveFromVisibility();
     };
 
     root.addEventListener('scroll', handleScroll, { passive: true });
     root.addEventListener('scrollend', handleScrollEndEvent, { passive: true });
 
     // Initial detection
-    handleScrollEnd();
+    updateActiveFromVisibility();
 
     return () => {
+      observer.disconnect();
       if (scrollTimeout) clearTimeout(scrollTimeout);
       root.removeEventListener('scroll', handleScroll);
       root.removeEventListener('scrollend', handleScrollEndEvent);
