@@ -230,6 +230,14 @@ export default function SingleVideoPlayer({
       p.src = nextUrl;
       p.load(); // Actually buffer the video
     }
+
+    // Cleanup: release resources on unmount
+    return () => {
+      if (p) {
+        p.src = '';
+        p.load(); // Flush any buffered data
+      }
+    };
   }, [nextClip, getVideoUrl]);
 
   // Sync mute state
@@ -312,19 +320,51 @@ export default function SingleVideoPlayer({
     return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, [attemptPlay]);
 
-  // Watchdog: rescue stalled playback
+  // Watchdog: rescue stalled playback with exponential backoff
   useEffect(() => {
-    const watchdog = setInterval(() => {
-      if (!mountedRef.current || userPausedRef.current) return;
-      if (document.hidden) return;
+    const BACKOFF_INTERVALS = [500, 1000, 2000, 4000, 8000];
+    let backoffIndex = 0;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
-      const v = videoRef.current;
-      if (v && v.src && v.paused && !v.ended) {
-        attemptPlay(v);
-      }
-    }, 1000);
+    const scheduleWatchdog = () => {
+      if (!mountedRef.current) return;
 
-    return () => clearInterval(watchdog);
+      const delay = BACKOFF_INTERVALS[Math.min(backoffIndex, BACKOFF_INTERVALS.length - 1)];
+      timeoutId = setTimeout(async () => {
+        // Skip if conditions not met
+        if (!mountedRef.current || userPausedRef.current) {
+          scheduleWatchdog();
+          return;
+        }
+        if (document.hidden || !navigator.onLine) {
+          scheduleWatchdog();
+          return;
+        }
+
+        const v = videoRef.current;
+        if (v && v.src && v.paused && !v.ended) {
+          const success = await attemptPlay(v);
+          if (success) {
+            // Reset backoff on success
+            backoffIndex = 0;
+          } else {
+            // Increase backoff on failure
+            backoffIndex = Math.min(backoffIndex + 1, BACKOFF_INTERVALS.length - 1);
+          }
+        } else {
+          // Video is playing or ended, reset backoff
+          backoffIndex = 0;
+        }
+
+        scheduleWatchdog();
+      }, delay);
+    };
+
+    scheduleWatchdog();
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+    };
   }, [attemptPlay]);
 
   const showPlayOverlay = showPlayButton || (isUserPaused && !showPauseIcon);
