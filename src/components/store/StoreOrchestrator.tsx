@@ -2,6 +2,7 @@
 
 import { useState, useCallback, createContext, useContext, type ReactNode } from 'react';
 import { AnimatePresence } from 'framer-motion';
+import Link from 'next/link';
 import { useStore } from '@/contexts/StoreContext';
 import ProductBrowse from './ProductBrowse';
 import ProductDetailFeed from './ProductDetailFeed';
@@ -69,11 +70,11 @@ export default function StoreOrchestrator() {
             >
               <div className="flex flex-col items-center justify-center gap-1.5 text-[11px]">
                 <div className="flex items-center gap-3 text-white/50">
-                  <a href="/privacy" className="hover:text-white/80 transition-colors">Privacy</a>
+                  <Link href="/legal" className="hover:text-white/80 transition-colors">Privacy</Link>
                   <span className="text-white/20">•</span>
-                  <a href="/terms" className="hover:text-white/80 transition-colors">Terms</a>
+                  <Link href="/legal?tab=terms" className="hover:text-white/80 transition-colors">Terms</Link>
                   <span className="text-white/20">•</span>
-                  <a href="/shipping-returns" className="hover:text-white/80 transition-colors">Shipping & Returns</a>
+                  <Link href="/legal?tab=shipping" className="hover:text-white/80 transition-colors">Shipping & Returns</Link>
                 </div>
                 <div className="text-white/30">
                   © {new Date().getFullYear()} ODUBO
