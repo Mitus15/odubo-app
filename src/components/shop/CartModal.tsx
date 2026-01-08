@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
+import Link from 'next/link';
 import { useOmniShop } from '@/contexts/OmniShopContext';
 
 export default function CartModal() {
@@ -234,30 +235,24 @@ export default function CartModal() {
 
           {/* Legal links */}
           <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 pt-2 border-t border-[#502d26]/10">
-            <a
-              href="https://odubostudio.myshopify.com/policies/privacy-policy"
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              href="/legal"
               className="text-[9px] text-[#b2a491]/40 hover:text-[#b2a491]/70 transition-colors uppercase tracking-wider"
             >
               Privacy
-            </a>
-            <a
-              href="https://odubostudio.myshopify.com/policies/terms-of-service"
-              target="_blank"
-              rel="noopener noreferrer"
+            </Link>
+            <Link
+              href="/legal?tab=terms"
               className="text-[9px] text-[#b2a491]/40 hover:text-[#b2a491]/70 transition-colors uppercase tracking-wider"
             >
               Terms
-            </a>
-            <a
-              href="https://odubostudio.myshopify.com/policies/shipping-policy"
-              target="_blank"
-              rel="noopener noreferrer"
+            </Link>
+            <Link
+              href="/legal?tab=shipping"
               className="text-[9px] text-[#b2a491]/40 hover:text-[#b2a491]/70 transition-colors uppercase tracking-wider"
             >
               Shipping & Returns
-            </a>
+            </Link>
           </div>
         </div>
       )}

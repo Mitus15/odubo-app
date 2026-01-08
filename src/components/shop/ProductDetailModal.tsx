@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
+import Link from 'next/link';
 import { useOmniShop, type ProductDetail } from '@/contexts/OmniShopContext';
 import { extractColorsFromImage, type ExtractedColors } from '@/lib/colorExtraction';
 
@@ -458,33 +459,27 @@ export default function ProductDetailModal({ productHandle }: ProductDetailModal
           }}
         >
           <div className="flex flex-wrap justify-center gap-x-4 gap-y-2">
-            <a
-              href="https://odubostudio.myshopify.com/policies/shipping-policy"
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              href="/legal?tab=shipping"
               className="text-[10px] uppercase tracking-wider transition-opacity hover:opacity-100"
               style={{ color: dynamicStyles.textSecondary, opacity: 0.5 }}
             >
               Shipping & Returns
-            </a>
-            <a
-              href="https://odubostudio.myshopify.com/policies/privacy-policy"
-              target="_blank"
-              rel="noopener noreferrer"
+            </Link>
+            <Link
+              href="/legal"
               className="text-[10px] uppercase tracking-wider transition-opacity hover:opacity-100"
               style={{ color: dynamicStyles.textSecondary, opacity: 0.5 }}
             >
               Privacy
-            </a>
-            <a
-              href="https://odubostudio.myshopify.com/policies/terms-of-service"
-              target="_blank"
-              rel="noopener noreferrer"
+            </Link>
+            <Link
+              href="/legal?tab=terms"
               className="text-[10px] uppercase tracking-wider transition-opacity hover:opacity-100"
               style={{ color: dynamicStyles.textSecondary, opacity: 0.5 }}
             >
               Terms
-            </a>
+            </Link>
           </div>
         </div>
       )}

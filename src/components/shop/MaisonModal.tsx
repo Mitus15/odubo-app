@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import Link from 'next/link';
 import { useOmniShop, type ProductCard } from '@/contexts/OmniShopContext';
 import ProductFeed from './ProductFeed';
 
@@ -348,35 +349,29 @@ export default function MaisonModal() {
       </div>
 
       {/* Persistent Footer - fixed at bottom */}
-      <footer 
+      <footer
         className="glass-surface-light border-t border-white/5 px-4 py-3"
         style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom, 0px))' }}
       >
         <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 mb-2">
-          <a
-            href="https://odubostudio.myshopify.com/policies/privacy-policy"
-            target="_blank"
-            rel="noopener noreferrer"
+          <Link
+            href="/legal"
             className="text-[10px] text-[#ede8df]/50 hover:text-[#ede8df]/80 transition-colors uppercase tracking-wider"
           >
             Privacy
-          </a>
-          <a
-            href="https://odubostudio.myshopify.com/policies/terms-of-service"
-            target="_blank"
-            rel="noopener noreferrer"
+          </Link>
+          <Link
+            href="/legal?tab=terms"
             className="text-[10px] text-[#ede8df]/50 hover:text-[#ede8df]/80 transition-colors uppercase tracking-wider"
           >
             Terms
-          </a>
-          <a
-            href="https://odubostudio.myshopify.com/policies/shipping-policy"
-            target="_blank"
-            rel="noopener noreferrer"
+          </Link>
+          <Link
+            href="/legal?tab=shipping"
             className="text-[10px] text-[#ede8df]/50 hover:text-[#ede8df]/80 transition-colors uppercase tracking-wider"
           >
             Shipping & Returns
-          </a>
+          </Link>
         </div>
         <p className="text-center text-[9px] text-[#ede8df]/30 tracking-wider">
           &copy; {new Date().getFullYear()} Odubo Studio. All rights reserved.
