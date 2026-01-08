@@ -392,11 +392,7 @@ export default function ProductDetailFeed() {
             ) : addedFeedback ? (
               <>✓ Added to Bag</>
             ) : (
-              <>
-                <span>{variantInCart ? 'Add Another' : 'Add to Bag'}</span>
-                <span className="opacity-70">•</span>
-                <span>${selectedVariant?.price.toFixed(2)}</span>
-              </>
+              <span>{variantInCart ? 'Add Another' : 'Add to Bag'}</span>
             )}
           </motion.button>
         </div>
