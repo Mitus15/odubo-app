@@ -8,6 +8,8 @@ import MusicPlayerLayout from "./components/MusicPlayerLayout";
 import { AudioProvider } from "@/contexts/AudioContext";
 import { MusicPlayerProvider } from "@/contexts/MusicPlayerContext";
 import { OmniShopProvider } from "@/contexts/OmniShopContext";
+import { StoreProvider } from "@/contexts/StoreContext";
+import StoreOrchestrator from "@/components/store/StoreOrchestrator";
 import OmniShopOrchestrator from "@/components/shop/OmniShopOrchestrator";
 import { UnifiedMediaProvider } from "@/contexts/UnifiedMediaContext";
 import OmniMediaOrchestrator from "@/components/media/OmniMediaOrchestrator";
@@ -77,28 +79,31 @@ export default function RootLayout({
                 {/* Media priority bridge - connects AudioContext and MusicPlayerContext */}
                 <MediaPriorityBridge />
                 <OmniShopProvider>
-                  <UnifiedMediaProvider>
-                    {/* <ClientCapabilities /> */}
-                    <ServiceWorkerRegistration />
-                    <OfflineIndicator />
-                    <PWAInstallBanner />
-                    {/* Desktop sidebar - persistent navigation on lg+ */}
-                    <DesktopSidebar />
+                  <StoreProvider>
+                    <UnifiedMediaProvider>
+                      {/* <ClientCapabilities /> */}
+                      <ServiceWorkerRegistration />
+                      <OfflineIndicator />
+                      <PWAInstallBanner />
+                      {/* Desktop sidebar - persistent navigation on lg+ */}
+                      <DesktopSidebar />
 
-                    {/* Main content wrapper - conditionally applies sidebar margin */}
-                    <MainContentWrapper>
-                      {/* Main content - full height, accounts for mini-bar dynamically */}
-                      <main className="flex-1 min-h-0 safe-area-top safe-area-bottom minibar-aware overflow-y-auto">
-                        {children}
-                      </main>
-                      {/* Music player - renders modal via VinylMiniPlayer */}
-                      <MusicPlayerLayout />
-                      <GDPRConsent />
-                    </MainContentWrapper>
-                    {/* Modal orchestrators - rendered at root level */}
-                    <OmniShopOrchestrator />
-                    <OmniMediaOrchestrator />
-                  </UnifiedMediaProvider>
+                      {/* Main content wrapper - conditionally applies sidebar margin */}
+                      <MainContentWrapper>
+                        {/* Main content - full height, accounts for mini-bar dynamically */}
+                        <main className="flex-1 min-h-0 safe-area-top safe-area-bottom minibar-aware overflow-y-auto">
+                          {children}
+                        </main>
+                        {/* Music player - renders modal via VinylMiniPlayer */}
+                        <MusicPlayerLayout />
+                        <GDPRConsent />
+                      </MainContentWrapper>
+                      {/* Modal orchestrators - rendered at root level */}
+                      <StoreOrchestrator />
+                      <OmniShopOrchestrator />
+                      <OmniMediaOrchestrator />
+                    </UnifiedMediaProvider>
+                  </StoreProvider>
                 </OmniShopProvider>
               </MusicPlayerProvider>
             </AudioProvider>
