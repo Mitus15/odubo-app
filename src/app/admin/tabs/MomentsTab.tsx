@@ -232,6 +232,28 @@ export default function MomentsTab() {
                 alert('Unable to update event');
               }
             }}
+            onDelete={async () => {
+              if (!confirm(`Delete "${event.title}"? This will remove the event and all its photos/videos permanently.`)) return;
+              try {
+                const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+                const res = await fetch(`/api/moments/galleries/${event.id}`, {
+                  method: 'DELETE',
+                  headers: token ? { Authorization: `Bearer ${token}` } : {},
+                  credentials: 'include'
+                });
+                
+                if (!res.ok) {
+                  const data = await res.json().catch(() => ({}));
+                  throw new Error(data.error || 'Delete failed');
+                }
+                
+                // Remove from state
+                setEvents(prev => prev.filter(e => e.id !== event.id));
+              } catch (e: any) {
+                console.error('Delete event error:', e);
+                alert(`Failed to delete: ${e.message}`);
+              }
+            }}
           />
         ))}
       </div>
@@ -250,12 +272,14 @@ function EventCard({
   event, 
   onToggleFeatured, 
   onCopyCode, 
-  onUpdate 
+  onUpdate,
+  onDelete 
 }: { 
   event: MomentsEvent; 
   onToggleFeatured: () => void;
   onCopyCode: () => void;
   onUpdate: (event: MomentsEvent) => void;
+  onDelete: () => void;
 }) {
   const isActive = event.starts_at && event.ends_at 
     ? new Date() >= new Date(event.starts_at) && new Date() <= new Date(event.ends_at)
@@ -350,6 +374,12 @@ function EventCard({
             event={event} 
             onUpdate={onUpdate}
           />
+          <button
+            onClick={onDelete}
+            className="col-span-2 px-3 py-2 rounded bg-red-800/80 text-white hover:bg-red-800 text-sm"
+          >
+            Delete Event
+          </button>
         </div>
       </div>
     </article>

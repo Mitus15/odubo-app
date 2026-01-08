@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import ScreenLayout from '@/components/ui/ScreenLayout';
 import ScrollContainer from '@/components/ui/ScrollContainer';
 import VinylMiniPlayer from '@/components/player/VinylMiniPlayer';
@@ -22,188 +22,144 @@ interface StorePageClientProps {
   initialProducts: ProductCard[];
 }
 
-// Full-screen scrollable product viewer (like clips feed)
-function ProductFeedModal({
-  products,
-  initialIndex,
-  productDetails,
-  onClose,
-  onIndexChange,
-  selectedOptions,
-  openOption,
-  setOpenOption,
-  updateOption,
-  selectedVariant,
-  detailLoading,
-  detailError,
-  addToCart,
-  addFeedback,
-  setCtaReady,
-}: {
+interface ProductFeedModalProps {
   products: ProductCard[];
-  initialIndex: number;
-  productDetails: Record<string, any>;
+  selectedHandle: string | null;
   onClose: () => void;
-  onIndexChange: (idx: number) => void;
-  selectedOptions: Record<string, string>;
-  openOption: string | null;
-  setOpenOption: (opt: string | null) => void;
-  updateOption: (name: string, value: string) => void;
-  selectedVariant: any;
+  productDetails: Record<string, any>;
+  ensureDetail: (handle: string) => void;
   detailLoading: boolean;
   detailError: string | null;
+  selectedOptions: Record<string, string>;
+  updateOption: (name: string, value: string) => void;
+  openOption: string | null;
+  setOpenOption: (opt: string | null) => void;
   addToCart: () => void;
   addFeedback: string | null;
-  setCtaReady: (ready: boolean) => void;
-}) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [activeIndex, setActiveIndex] = useState(initialIndex);
-  const hasScrolledRef = useRef(false);
+}
 
-  // Scroll to initial product on mount
+/**
+ * ProductModal - Simple single product view
+ * Shows the selected product directly. No scroll complexity.
+ */
+function ProductFeedModal({
+  products,
+  selectedHandle,
+  onClose,
+  productDetails,
+  ensureDetail,
+  detailLoading,
+  detailError,
+  selectedOptions,
+  updateOption,
+  openOption,
+  setOpenOption,
+  addToCart,
+  addFeedback,
+}: ProductFeedModalProps) {
+  // Get the product by handle (stable identifier)
+  const product = selectedHandle ? products.find(p => p.handle === selectedHandle) : null;
+  const detail = product ? productDetails[product.handle] : null;
+
+  // Selected variant
+  const selectedVariant = useMemo(() => {
+    if (!detail?.variants?.length) return null;
+    return detail.variants.find((v: any) => {
+      return Object.entries(selectedOptions).every(([k, val]) => v.selectedOptions?.[k] === val);
+    }) || detail.variants[0];
+  }, [detail, selectedOptions]);
+
+  // Load product details when modal opens
   useEffect(() => {
-    if (!hasScrolledRef.current && containerRef.current) {
-      const target = containerRef.current.querySelector(`[data-product-index="${initialIndex}"]`);
-      if (target) {
-        target.scrollIntoView({ behavior: 'instant', block: 'start' });
-        hasScrolledRef.current = true;
-      }
+    if (product && !productDetails[product.handle]) {
+      ensureDetail(product.handle);
     }
-  }, [initialIndex]);
+  }, [product, productDetails, ensureDetail]);
 
-  // Detect which product is centered after scroll ends
+  // Escape to close
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    let scrollTimeout: ReturnType<typeof setTimeout> | null = null;
-
-    const handleScroll = () => {
-      if (scrollTimeout) clearTimeout(scrollTimeout);
-      scrollTimeout = setTimeout(() => {
-        const containerRect = container.getBoundingClientRect();
-        const centerY = containerRect.top + containerRect.height / 2;
-
-        let closestIdx = activeIndex;
-        let closestDist = Infinity;
-
-        container.querySelectorAll('[data-product-index]').forEach((el) => {
-          const rect = el.getBoundingClientRect();
-          const elCenter = rect.top + rect.height / 2;
-          const dist = Math.abs(elCenter - centerY);
-          if (dist < closestDist) {
-            closestDist = dist;
-            closestIdx = parseInt((el as HTMLElement).dataset.productIndex || '0', 10);
-          }
-        });
-
-        if (closestIdx !== activeIndex) {
-          setActiveIndex(closestIdx);
-          onIndexChange(closestIdx);
-        }
-      }, 50);
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
     };
+    window.addEventListener('keydown', handleKeyDown);
+    window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
 
-    container.addEventListener('scroll', handleScroll, { passive: true });
-    return () => {
-      if (scrollTimeout) clearTimeout(scrollTimeout);
-      container.removeEventListener('scroll', handleScroll);
-    };
-  }, [activeIndex, onIndexChange]);
-
-  const currentProduct = products[activeIndex];
-  const currentDetail = currentProduct ? productDetails[currentProduct.handle] : null;
+  if (selectedHandle === null || !product) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black">
+    <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label={product.title}>
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/90 backdrop-blur-xl" onClick={onClose} />
+
       {/* Close button */}
       <button
         aria-label="Close"
         onClick={onClose}
-        className="fixed top-4 right-4 z-[60] text-white bg-black/50 hover:bg-black/70 rounded-full p-3 backdrop-blur-sm border border-white/20"
-        style={{ top: 'calc(env(safe-area-inset-top, 16px) + 16px)' }}
+        className="absolute right-4 z-50 text-[#0b0b0b] bg-[#f8f2ea] hover:bg-white rounded-full p-2.5 border border-white/60 shadow-2xl"
+        style={{ top: 'calc(1rem + env(safe-area-inset-top, 0px))' }}
       >
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-        </svg>
+        ✕
       </button>
 
       {/* Product counter */}
       <div
-        className="fixed top-4 left-4 z-[60] text-white/60 text-xs font-medium"
-        style={{ top: 'calc(env(safe-area-inset-top, 16px) + 20px)' }}
+        className="absolute left-4 z-50 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-sm text-white/80 text-xs font-medium"
+        style={{ top: 'calc(1rem + env(safe-area-inset-top, 0px))' }}
       >
-        {activeIndex + 1} / {products.length}
+        {product ? products.findIndex(p => p.handle === product.handle) + 1 : 0} / {products.length}
       </div>
 
-      {/* Scrollable product feed */}
+      {/* Product content - centered, no scroll */}
       <div
-        ref={containerRef}
-        className="h-full w-full overflow-y-auto overflow-x-hidden"
+        className="absolute inset-0 flex items-center justify-center overflow-y-auto"
         style={{
-          scrollSnapType: 'y mandatory',
-          WebkitOverflowScrolling: 'touch',
-          overscrollBehavior: 'contain',
+          paddingTop: 'calc(60px + env(safe-area-inset-top, 0px))',
+          paddingBottom: 'calc(40px + env(safe-area-inset-bottom, 0px))',
+          paddingLeft: 'max(1rem, env(safe-area-inset-left, 16px))',
+          paddingRight: 'max(1rem, env(safe-area-inset-right, 16px))',
         }}
       >
-        {products.map((product, idx) => {
-          const detail = productDetails[product.handle];
-          const isActive = idx === activeIndex;
-          const variant = isActive ? selectedVariant : detail?.variants?.[0];
-
-          return (
-            <section
-              key={product.id}
-              data-product-index={idx}
-              className="w-full flex flex-col"
-              style={{
-                height: '100dvh',
-                scrollSnapAlign: 'start',
-                scrollSnapStop: 'always',
-              }}
-            >
-              {/* Product Image - Top half */}
-              <div className="flex-1 flex items-center justify-center bg-[#0a0a0a] p-4">
-                {product.image ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={variant?.image || product.image}
-                    alt={product.title}
-                    className="max-w-full max-h-full object-contain"
-                  />
-                ) : (
-                  <div className="text-[#502d26] text-xs uppercase tracking-widest">No Image</div>
-                )}
+        <div className="w-full max-w-6xl">
+          <div className="rounded-2xl sm:rounded-3xl glass-surface border border-white/10 bg-[#0f0b0b]/95 shadow-[0_30px_120px_rgba(0,0,0,0.45)] overflow-hidden">
+            <div className="grid md:grid-cols-[1fr_1fr] gap-0">
+              {/* Product Image */}
+              <div className="w-full bg-[#0f0b0b] flex items-center justify-center p-3 sm:p-5">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={(selectedVariant?.image || product.image || detail?.images?.[0]) ?? ''}
+                  alt={product.title || ''}
+                  className="w-full max-h-[35vh] sm:max-h-[45vh] object-contain"
+                />
               </div>
 
-              {/* Product Info - Bottom section */}
-              <div className="bg-[#0f0b0b] border-t border-white/10 p-4 pb-8 space-y-3" style={{ paddingBottom: 'calc(2rem + env(safe-area-inset-bottom, 0px))' }}>
-                <div>
-                  <h2 className="text-lg font-semibold text-[#f7f3ec]">{product.title}</h2>
-                  {variant && (
-                    <p className="text-base font-medium text-[#b2a491]">
-                      ${typeof variant.price === 'number' ? variant.price.toFixed(2) : variant.price}
+              {/* Product Info */}
+              <div className="w-full p-4 sm:p-6 text-[#ede8df] space-y-3 pb-6">
+                <div className="space-y-0.5">
+                  <h2 className="text-sm sm:text-base font-semibold leading-tight text-[#f7f3ec] line-clamp-2">
+                    {product.title}
+                  </h2>
+                  {selectedVariant && (
+                    <p className="text-sm font-medium text-[#f7f3ec]">
+                      {selectedVariant.price !== null ? `$${selectedVariant.price.toFixed(2)}` : 'Price on request'}
                     </p>
                   )}
-                  {!product.available && (
-                    <p className="text-xs text-red-300 mt-1">Sold Out</p>
+                  {selectedVariant?.available === false && (
+                    <p className="text-xs text-red-200/80">Currently unavailable</p>
                   )}
                 </div>
 
-                {/* Options - only show for active product */}
-                {isActive && detail?.options?.map((opt: any) => {
+                {/* Options */}
+                {detail?.options?.map((opt: any) => {
                   const open = openOption === opt.name;
                   return (
-                    <div key={opt.name} className="border border-white/10 rounded-xl bg-white/5 overflow-hidden">
+                    <div key={opt.name} className="glass-surface border border-white/10 rounded-xl bg-white/5 overflow-hidden">
                       <button
                         type="button"
-                        onClick={() => {
-                          setOpenOption(open ? null : opt.name);
-                          setCtaReady(true);
-                        }}
+                        onClick={() => setOpenOption(open ? null : opt.name)}
                         className="w-full flex items-center justify-between px-3 py-2 text-left text-sm font-semibold text-[#f7f3ec]"
                       >
-                        <span>{opt.name}: {selectedOptions[opt.name] || '—'}</span>
+                        <span>{opt.name}</span>
                         <span className="text-[#d7cfc3] text-xs">{open ? '−' : '+'}</span>
                       </button>
                       {open && (
@@ -215,7 +171,7 @@ function ProductFeedModal({
                                 key={val}
                                 type="button"
                                 onClick={() => updateOption(opt.name, val)}
-                                className={`px-2.5 py-1 rounded-lg text-xs transition-all border ${active ? 'bg-gradient-to-r from-[#843c2d] via-[#a44e3a] to-[#52241d] text-[#f8f2ea] border-[#c58a70]/60' : 'text-[#e1d6c8] border-white/15 bg-white/5'}`}
+                                className={`px-2.5 py-1 rounded-lg text-xs transition-all border ${active ? 'bg-gradient-to-r from-[#843c2d] via-[#a44e3a] to-[#52241d] text-[#f8f2ea] border-[#c58a70]/60 shadow-[0_10px_28px_rgba(0,0,0,0.35)]' : 'text-[#e1d6c8] border-white/15 bg-white/5 hover:bg-white/10'}`}
                               >
                                 {val}
                               </button>
@@ -227,35 +183,35 @@ function ProductFeedModal({
                   );
                 })}
 
-                {isActive && detailLoading && (
-                  <p className="text-xs text-[#c7b8a8]">Loading…</p>
-                )}
+                {/* Loading/Error states */}
+                {detailLoading && <p className="text-xs text-[#c7b8a8]">Loading variants…</p>}
+                {detailError && <p className="text-xs text-red-300">{detailError}</p>}
 
                 {/* CTA buttons */}
-                {isActive && openOption === null && (
-                  <div className="flex gap-2 pt-2">
+                {openOption === null && (
+                  <div className="flex flex-wrap justify-center gap-2 text-center pt-2">
                     <button
                       type="button"
                       onClick={addToCart}
-                      disabled={!selectedVariant || selectedVariant.available === false || !product.available}
-                      className={`flex-1 py-3 rounded-xl text-sm font-semibold transition-all ${product.available && selectedVariant?.available !== false ? 'bg-gradient-to-r from-[#843c2d] via-[#a44e3a] to-[#52241d] text-[#f8f2ea]' : 'bg-white/5 text-[#666] cursor-not-allowed'}`}
+                      disabled={!selectedVariant || selectedVariant.available === false}
+                      className={`px-4 py-2.5 rounded-lg text-sm font-semibold transition-all border ${selectedVariant?.available !== false ? 'bg-gradient-to-r from-[#843c2d] via-[#a44e3a] to-[#52241d] text-[#f8f2ea] border-[#c58a70]/50 shadow-[0_12px_30px_rgba(0,0,0,0.35)] hover:scale-[1.02]' : 'bg-white/5 text-[#c7b8a8] border-white/10 cursor-not-allowed'}`}
                     >
-                      {addFeedback || (!product.available ? 'Sold Out' : 'Add to Bag')}
+                      {addFeedback || (selectedVariant?.available === false ? 'Unavailable' : 'Add to Bag')}
                     </button>
 
                     <Link
                       href="/store/cart"
-                      className="px-4 py-3 rounded-xl border border-white/20 text-[#f8f2ea] bg-white/5 text-sm font-medium"
+                      className="px-4 py-2.5 rounded-lg border border-white/20 text-[#f8f2ea] bg-white/5 hover:bg-white/10 transition-colors text-sm"
                       onClick={onClose}
                     >
-                      Bag
+                      Go to Bag
                     </Link>
                   </div>
                 )}
               </div>
-            </section>
-          );
-        })}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -276,16 +232,13 @@ export default function StorePageClient({ isStoreOpen, isAdmin, initialProducts 
   const [products, setProducts] = useState<ProductCard[]>(initialProducts);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [selectedHandle, setSelectedHandle] = useState<string | null>(null);
   const [productDetails, setProductDetails] = useState<Record<string, any>>({});
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
   const [openOption, setOpenOption] = useState<string | null>(null);
-  const [optionsHandle, setOptionsHandle] = useState<string | null>(null);
   const [addFeedback, setAddFeedback] = useState<string | null>(null);
-  const [ctaReady, setCtaReady] = useState(false);
-  const prevSelectedIndex = useRef<number | null>(null);
 
   const handleUnlock = (e: React.FormEvent) => {
     e.preventDefault();
@@ -325,7 +278,7 @@ export default function StorePageClient({ isStoreOpen, isAdmin, initialProducts 
 
   const filteredProducts = useMemo(() => products.filter(Boolean), [products]);
 
-  const selectedProduct = selectedIndex !== null ? filteredProducts[selectedIndex] : null;
+  const selectedProduct = selectedHandle ? filteredProducts.find(p => p.handle === selectedHandle) : null;
   const selectedDetail = selectedProduct ? productDetails[selectedProduct.handle] : null;
 
   const selectedVariant = useMemo(() => {
@@ -400,14 +353,12 @@ export default function StorePageClient({ isStoreOpen, isAdmin, initialProducts 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedProduct?.handle]);
 
-  // Reset ALL modal state when selectedIndex changes (open, close, or switch)
+  // Reset ALL modal state when selectedHandle changes (open, close, or switch)
   useEffect(() => {
-    // Always reset on any change to selectedIndex
     setOpenOption(null);
-    setCtaReady(false);
     setAddFeedback(null);
     setSelectedOptions({});
-  }, [selectedIndex]);
+  }, [selectedHandle]);
 
   // Initialize default options when product details load (after reset above)
   useEffect(() => {
@@ -584,7 +535,7 @@ export default function StorePageClient({ isStoreOpen, isAdmin, initialProducts 
                   <button
                     key={p.id}
                     type="button"
-                    onClick={() => setSelectedIndex(idx)}
+                    onClick={() => setSelectedHandle(p.handle)}
                     className="group relative aspect-square rounded-lg overflow-hidden bg-[#0d0b0a] focus:outline-none focus:ring-2 focus:ring-[#843c2d]/50"
                   >
                     {/* Product Image */}
@@ -675,31 +626,22 @@ export default function StorePageClient({ isStoreOpen, isAdmin, initialProducts 
         </div>
       </footer>
 
-      {/* Full-screen product viewer - scrollable like clips feed */}
-      {selectedIndex !== null && (
-        <ProductFeedModal
-          products={filteredProducts}
-          initialIndex={selectedIndex}
-          productDetails={productDetails}
-          onClose={() => setSelectedIndex(null)}
-          onIndexChange={(idx) => {
-            setSelectedIndex(idx);
-            if (filteredProducts[idx]) {
-              ensureDetail(filteredProducts[idx].handle);
-            }
-          }}
-          selectedOptions={selectedOptions}
-          openOption={openOption}
-          setOpenOption={setOpenOption}
-          updateOption={updateOption}
-          selectedVariant={selectedVariant}
-          detailLoading={detailLoading}
-          detailError={detailError}
-          addToCart={addToCart}
-          addFeedback={addFeedback}
-          setCtaReady={setCtaReady}
-        />
-      )}
+      {/* Product Modal */}
+      <ProductFeedModal
+        products={filteredProducts}
+        selectedHandle={selectedHandle}
+        onClose={() => setSelectedHandle(null)}
+        productDetails={productDetails}
+        ensureDetail={ensureDetail}
+        detailLoading={detailLoading}
+        detailError={detailError}
+        selectedOptions={selectedOptions}
+        updateOption={updateOption}
+        openOption={openOption}
+        setOpenOption={setOpenOption}
+        addToCart={addToCart}
+        addFeedback={addFeedback}
+      />
     </ScreenLayout>
   );
 }
