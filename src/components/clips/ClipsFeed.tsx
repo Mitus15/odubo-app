@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type MutableRefObject } from 'react';
 import type { ClipItem, ClipApiRow } from '@/types/clips';
 import { mapClipRows } from '@/lib/clipsMapper';
 import { useAudio } from '@/contexts/AudioContext';
@@ -11,10 +11,13 @@ const PAGE_SIZE = 12; // Larger pages for better infinite scroll
 interface ClipsFeedProps {
   navHeight: number;
   initialClipId?: number | null;
+  initialClips?: ClipItem[];  // Server-rendered clips to avoid client waterfall
   onActiveClipChange?: (clip: ClipItem | null) => void;
   onClipsReady?: (clips: ClipItem[], activeIndex: number) => void;
   onScrollDirectionChange?: (direction: 'forward' | 'backward' | null) => void;
   videoReady?: boolean;
+  /** Ref to expose scrollToNextClip function to parent - replaces window global */
+  scrollToNextRef?: MutableRefObject<(() => void) | null>;
 }
 
 /**
@@ -32,10 +35,12 @@ interface ClipsFeedProps {
 export default function ClipsFeed({
   navHeight,
   initialClipId,
+  initialClips,
   onActiveClipChange,
   onClipsReady,
   onScrollDirectionChange,
   videoReady = false,
+  scrollToNextRef,
 }: ClipsFeedProps) {
   const { armAudio } = useAudio();
 
@@ -124,13 +129,34 @@ export default function ClipsFeed({
     }
   }, []);
 
-  // Initial fetch
+  // Initial setup: use SSR clips if available, otherwise fetch
   useEffect(() => {
-    fetchPage(0);
+    if (initialClips && initialClips.length > 0 && !initializedRef.current) {
+      // Use server-rendered clips - skip API call
+      const withKeys = initialClips.map(clip => ({
+        ...clip,
+        uniqueKey: `${keyCounterRef.current++}-${clip.id}-ssr`
+      }));
+
+      setDisplayClips(withKeys);
+      setHasMore(true); // Assume more clips are available for pagination
+      setLoading(false);
+      pageRef.current = 0;
+
+      if (withKeys[0]) {
+        setActiveId(withKeys[0].id);
+        setActiveIndex(0);
+      }
+      initializedRef.current = true;
+    } else if (!initializedRef.current) {
+      // No SSR clips, fetch from API
+      fetchPage(0);
+    }
+
     return () => {
       abortRef.current?.abort();
     };
-  }, [fetchPage]);
+  }, [fetchPage, initialClips]);
 
   // Load more clips - fetch next page or loop with new shuffle
   const handleLoadMore = useCallback(() => {
@@ -272,14 +298,17 @@ export default function ClipsFeed({
     }
   }, [activeIndex, displayClips.length, handleLoadMore]);
 
-  // Expose scrollToNextClip via a ref callback pattern
+  // Expose scrollToNextClip to parent via ref (type-safe, no global pollution)
   useEffect(() => {
-    // Attach to window for parent access (cleaner than prop drilling)
-    (window as any).__clipsFeedScrollToNext = scrollToNextClip;
+    if (scrollToNextRef) {
+      scrollToNextRef.current = scrollToNextClip;
+    }
     return () => {
-      delete (window as any).__clipsFeedScrollToNext;
+      if (scrollToNextRef) {
+        scrollToNextRef.current = null;
+      }
     };
-  }, [scrollToNextClip]);
+  }, [scrollToNextClip, scrollToNextRef]);
 
   return (
     <div

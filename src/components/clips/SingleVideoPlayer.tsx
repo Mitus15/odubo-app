@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from 'react';
+import Image from 'next/image';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { ClipItem } from '@/types/clips';
 import { useAudio } from '@/contexts/AudioContext';
@@ -338,11 +339,14 @@ export default function SingleVideoPlayer({
     >
       {/* Poster - shows until first frame renders */}
       {activeClip.poster && (
-        <img
+        <Image
           src={activeClip.poster}
           alt=""
+          fill
+          sizes="100vw"
+          priority
           draggable={false}
-          className={`absolute inset-0 w-full h-full object-cover pointer-events-none ${
+          className={`object-cover pointer-events-none ${
             firstFrame ? 'opacity-0' : 'opacity-100'
           }`}
           style={{ transition: 'opacity 150ms ease-out' }}

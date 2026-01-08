@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ClipsFeed from '@/components/clips/ClipsFeed';
 import SingleVideoPlayer from '@/components/clips/SingleVideoPlayer';
+import ClipsErrorBoundary from '@/components/clips/ClipsErrorBoundary';
 import ExpandableLogoMenu from '@/components/clips/ExpandableLogoMenu';
 import FilmGrain from '@/components/ui/FilmGrain';
 import { useAudio } from '@/contexts/AudioContext';
@@ -18,9 +19,10 @@ interface VerseOfTheDay {
 interface HomePageClientProps {
   verseOfTheDay: VerseOfTheDay;
   initialClipId?: number | null;
+  initialClips?: ClipItem[];
 }
 
-export default function HomePageClient({ verseOfTheDay, initialClipId }: HomePageClientProps) {
+export default function HomePageClient({ verseOfTheDay, initialClipId, initialClips }: HomePageClientProps) {
   // No header - clips go edge to edge
   const HEADER_HEIGHT = 0;
   const INTRO_DURATION = 4000; // Show verse for 4 seconds before collapsing
@@ -44,6 +46,9 @@ export default function HomePageClient({ verseOfTheDay, initialClipId }: HomePag
   // Audio state
   const { isMuted, toggleMute } = useAudio();
 
+  // Ref to hold ClipsFeed's scrollToNext function (type-safe, no window global)
+  const scrollToNextRef = useRef<(() => void) | null>(null);
+
   // Handle clips data from ClipsFeed
   const handleClipsReady = useCallback((newClips: ClipItem[], newActiveIndex: number) => {
     setClips(newClips);
@@ -52,11 +57,7 @@ export default function HomePageClient({ verseOfTheDay, initialClipId }: HomePag
 
   // Handle auto-advance to next clip (called when video ends while scrolling forward)
   const handleAdvanceToNext = useCallback(() => {
-    // Use the exposed function from ClipsFeed
-    const scrollFn = (window as any).__clipsFeedScrollToNext;
-    if (scrollFn) {
-      scrollFn();
-    }
+    scrollToNextRef.current?.();
   }, []);
 
   // Clock update
@@ -146,34 +147,39 @@ export default function HomePageClient({ verseOfTheDay, initialClipId }: HomePag
       {/* Animated film grain overlay */}
       <FilmGrain opacity={0.03} />
 
-      {/* SingleVideoPlayer - FIXED position, never scrolls, plays the active video */}
-      {clips.length > 0 && (
-        <SingleVideoPlayer
-          clips={clips}
-          activeIndex={activeIndex}
-          onVideoReady={setVideoReady}
-          scrollDirection={scrollDirection}
-          onAdvanceToNext={handleAdvanceToNext}
-        />
-      )}
+      {/* Clips viewport wrapped in error boundary for graceful degradation */}
+      <ClipsErrorBoundary>
+        {/* SingleVideoPlayer - FIXED position, never scrolls, plays the active video */}
+        {clips.length > 0 && (
+          <SingleVideoPlayer
+            clips={clips}
+            activeIndex={activeIndex}
+            onVideoReady={setVideoReady}
+            scrollDirection={scrollDirection}
+            onAdvanceToNext={handleAdvanceToNext}
+          />
+        )}
 
-      {/* Clips scroll layer - shows posters, handles scroll detection */}
-      <div
-        className="fixed inset-0 lg:left-20 xl:left-64 bg-transparent z-20"
-        style={{
-          overscrollBehavior: 'none',
-        }}
-        onClick={handleBackdropClick}
-      >
-        <ClipsFeed
-          navHeight={0}
-          initialClipId={initialClipId}
-          onActiveClipChange={setActiveClip}
-          onClipsReady={handleClipsReady}
-          onScrollDirectionChange={setScrollDirection}
-          videoReady={videoReady}
-        />
-      </div>
+        {/* Clips scroll layer - shows posters, handles scroll detection */}
+        <div
+          className="fixed inset-0 lg:left-20 xl:left-64 bg-transparent z-20"
+          style={{
+            overscrollBehavior: 'none',
+          }}
+          onClick={handleBackdropClick}
+        >
+          <ClipsFeed
+            navHeight={0}
+            initialClipId={initialClipId}
+            initialClips={initialClips}
+            onActiveClipChange={setActiveClip}
+            onClipsReady={handleClipsReady}
+            onScrollDirectionChange={setScrollDirection}
+            videoReady={videoReady}
+            scrollToNextRef={scrollToNextRef}
+          />
+        </div>
+      </ClipsErrorBoundary>
 
       {/* Mute Button - Top right, always visible */}
       <button

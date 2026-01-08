@@ -1,5 +1,7 @@
 "use client";
 
+import { memo } from 'react';
+import Image from 'next/image';
 import { useOmniShop } from '@/contexts/OmniShopContext';
 import VinylMiniPlayer from '../player/VinylMiniPlayer';
 import type { ClipItem } from '@/types/clips';
@@ -20,8 +22,11 @@ interface PosterCardProps {
  * - Smooth scrolling without video elements
  * - Safari can't pause what isn't in the scroll container
  * - Less memory usage (no video elements per clip)
+ *
+ * Wrapped with React.memo to prevent re-renders during scroll
+ * when props haven't meaningfully changed.
  */
-export default function PosterCard({ clip, active, videoReady = false }: PosterCardProps) {
+function PosterCard({ clip, active, videoReady = false }: PosterCardProps) {
   const { storeAccessible } = useOmniShop();
 
   // Only become transparent when video is actually ready to show
@@ -41,15 +46,17 @@ export default function PosterCard({ clip, active, videoReady = false }: PosterC
     >
       {/* Poster image - only fades when video is ready */}
       {clip.poster && (
-        <img
+        <Image
           src={clip.poster}
           alt=""
+          fill
+          sizes="100vw"
+          priority={active}
           draggable={false}
-          className={`absolute inset-0 w-full h-full object-cover pointer-events-none ${
+          className={`object-cover pointer-events-none ${
             shouldReveal ? 'opacity-0' : 'opacity-100'
           }`}
           style={{ transition: 'opacity 280ms cubic-bezier(0.25, 0.46, 0.45, 0.94)' }}
-          loading="eager"
         />
       )}
 
@@ -95,3 +102,14 @@ export default function PosterCard({ clip, active, videoReady = false }: PosterC
     </div>
   );
 }
+
+// Custom comparison function: only re-render when meaningful props change
+function arePropsEqual(prevProps: PosterCardProps, nextProps: PosterCardProps): boolean {
+  return (
+    prevProps.clip.id === nextProps.clip.id &&
+    prevProps.active === nextProps.active &&
+    prevProps.videoReady === nextProps.videoReady
+  );
+}
+
+export default memo(PosterCard, arePropsEqual);
