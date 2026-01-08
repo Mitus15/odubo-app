@@ -30,10 +30,7 @@ export default function LegalClient({
       case "privacy":
         return (
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-[#ede8df] mb-2">Privacy Policy</h1>
-            <p className="text-xs text-[#b2a491]/60 mb-8 uppercase tracking-widest">
-              Last Updated: July 26, 2025
-            </p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-[#ede8df] mb-6">Privacy Policy</h1>
             <div className="legal-content text-[#c7b8a8] leading-relaxed space-y-4">
               {privacyContent}
             </div>
@@ -42,10 +39,7 @@ export default function LegalClient({
       case "terms":
         return (
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-[#ede8df] mb-2">Terms of Service</h1>
-            <p className="text-xs text-[#b2a491]/60 mb-8 uppercase tracking-widest">
-              Last Updated: July 26, 2025
-            </p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-[#ede8df] mb-6">Terms of Service</h1>
             <div className="legal-content text-[#c7b8a8] leading-relaxed space-y-4">
               {termsContent}
             </div>
@@ -54,10 +48,7 @@ export default function LegalClient({
       case "shipping":
         return (
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-[#ede8df] mb-2">Shipping & Returns</h1>
-            <p className="text-xs text-[#b2a491]/60 mb-8 uppercase tracking-widest">
-              Last Updated: July 26, 2025
-            </p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-[#ede8df] mb-6">Shipping & Returns</h1>
             <div className="legal-content text-[#c7b8a8] leading-relaxed space-y-4">
               {shippingContent}
             </div>
