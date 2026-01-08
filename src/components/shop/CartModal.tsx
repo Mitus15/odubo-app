@@ -146,11 +146,13 @@ export default function CartModal() {
                 <div className="flex-1 flex flex-col justify-between min-w-0">
                   <div>
                     <h3 className="text-[#ede8df] text-sm font-medium truncate">
-                      {item.title.split('—')[0]}
+                      {item.title}
                     </h3>
-                    <p className="text-[#b2a491]/60 text-xs truncate mt-0.5">
-                      {item.title.split('—')[1] || 'Default'}
-                    </p>
+                    {item.variantTitle && item.variantTitle !== 'Default Title' && (
+                      <p className="text-[#b2a491]/60 text-xs truncate mt-0.5">
+                        {item.variantTitle}
+                      </p>
+                    )}
                   </div>
 
                   <div className="flex items-end justify-between mt-2">

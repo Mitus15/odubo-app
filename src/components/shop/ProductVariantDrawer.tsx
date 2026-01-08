@@ -141,7 +141,8 @@ export default function ProductVariantDrawer({ productHandle, isOpen, onClose }:
 
     addToCart({
       variantId: selectedVariant.id,
-      title: `${product.title} — ${selectedVariant.title}`,
+      title: product.title,
+      variantTitle: selectedVariant.title,
       price: selectedVariant.price,
       image: selectedVariant.image || product.images[0],
     });

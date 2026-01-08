@@ -72,7 +72,8 @@ function ProductCardComponent({ product, isActive, index }: ProductCardProps) {
       // Add the first available variant to cart
       addToCart({
         variantId: firstVariant.id,
-        title: `${product.title} — ${firstVariant.title}`,
+        title: product.title,
+        variantTitle: firstVariant.title,
         price: parseFloat(firstVariant.price.amount),
         image: firstVariant.image?.url || product.image || undefined,
       });
