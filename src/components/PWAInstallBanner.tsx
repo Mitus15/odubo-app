@@ -59,7 +59,7 @@ export default function PWAInstallBanner() {
           <div className="mx-4 mt-2 p-3 rounded-xl glass-surface border border-white/10 flex items-center justify-between gap-3 pointer-events-auto shadow-lg">
             <div className="flex items-center gap-3 min-w-0">
               <img
-                src="/odubo_logo_emboss.png"
+                src="/odubo_logo_emboss.webp"
                 alt=""
                 className="w-8 h-8 object-contain flex-shrink-0"
                 draggable={false}

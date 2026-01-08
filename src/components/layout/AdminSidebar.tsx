@@ -141,7 +141,7 @@ export default function AdminSidebar() {
         <Link href="/admin" className="flex items-center gap-3 group">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/odubo_logo_emboss.png"
+            src="/odubo_logo_emboss.webp"
             alt="Odubo Admin"
             className="w-10 h-10 xl:w-12 xl:h-12 object-contain opacity-80 group-hover:opacity-100 transition-opacity"
             draggable={false}

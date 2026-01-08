@@ -216,7 +216,7 @@ function GalleryGrid({ galleries, loading }: { galleries: Gallery[]; loading: bo
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-[#252221] via-[#1a1918] to-[#252221]">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src="/odubo_logo_emboss.png"
+                    src="/odubo_logo_emboss.webp"
                     alt=""
                     className="w-16 h-16 object-contain opacity-20"
                     draggable={false}

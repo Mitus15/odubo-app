@@ -79,7 +79,7 @@ export default function FeaturedHeroClient({ config }: { config: FeaturedConfig 
           loop
           playsInline
           crossOrigin={useCors ? 'anonymous' : undefined}
-          poster="/odubo_logo_emboss.png"
+          poster="/odubo_logo_emboss.webp"
           style={{ filter: 'blur(6px) saturate(1.05)', transform: 'scale(1.03)' }}
           onError={() => {
             // If CORS is not available, drop crossOrigin and reload once

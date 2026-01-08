@@ -220,25 +220,32 @@ export default function SingleVideoPlayer({
   }, [activeIndex, activeClip, getVideoUrl, attemptPlay, onVideoReady]);
 
   // Preload next clip into hidden video element
+  // DEFERRED: Only start after first frame renders (after LCP)
   useEffect(() => {
+    // Wait until first frame is rendered to avoid blocking LCP
+    if (!firstFrame) return;
+
     const p = preloadRef.current;
     const nextUrl = getVideoUrl(nextClip);
     if (!p || !nextUrl) return;
 
-    // Only update if URL changed
-    if (p.src !== nextUrl) {
-      p.src = nextUrl;
-      p.load(); // Actually buffer the video
-    }
+    // Small delay to ensure LCP is captured before starting preload
+    const timeoutId = setTimeout(() => {
+      if (p.src !== nextUrl) {
+        p.src = nextUrl;
+        p.load(); // Actually buffer the video
+      }
+    }, 100);
 
     // Cleanup: release resources on unmount
     return () => {
+      clearTimeout(timeoutId);
       if (p) {
         p.src = '';
         p.load(); // Flush any buffered data
       }
     };
-  }, [nextClip, getVideoUrl]);
+  }, [nextClip, getVideoUrl, firstFrame]);
 
   // Sync mute state
   useEffect(() => {

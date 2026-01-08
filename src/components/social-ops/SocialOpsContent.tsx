@@ -1427,7 +1427,7 @@ export default function SocialOpsContent({ showHeader = true }: SocialOpsContent
       <div className="min-h-screen bg-[#0d0c0a] text-[#ede8df] flex flex-col items-center justify-center p-6">
         <div className="w-full max-w-sm">
           <div className="flex items-center justify-center gap-3 mb-8">
-            <img src="/odubo_logo_emboss.png" alt="Odubo" className="w-10 h-10" />
+            <img src="/odubo_logo_emboss.webp" alt="Odubo" className="w-10 h-10" />
             <span className="text-xl font-semibold">Social Ops</span>
           </div>
           {loginError && (

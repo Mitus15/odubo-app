@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
 import { useUnifiedMedia } from '@/contexts/UnifiedMediaContext';
 import { useOmniShop } from '@/contexts/OmniShopContext';
+import { useStore } from '@/contexts/StoreContext';
 import LinkTreeModal from '@/components/linktree/LinkTreeModal';
 
 /**
@@ -60,7 +61,15 @@ export default function ExpandableLogoMenu({
   const y = useMotionValue(0);
 
   const { openHub } = useUnifiedMedia();
-  const { openMaison, closeAll: closeAllModals, cartCount, storeAccessible, checkingStoreAccess } = useOmniShop();
+  const { openMaison, closeAll: closeAllModals, cartCount: legacyCartCount, storeAccessible: legacyStoreAccessible, checkingStoreAccess: legacyCheckingAccess } = useOmniShop();
+  
+  // New store system
+  const { openStore, isStoreAccessible, isCheckingAccess, cartItemCount } = useStore();
+  
+  // Use new store values with fallback to legacy
+  const storeAccessible = isStoreAccessible || legacyStoreAccessible;
+  const checkingStoreAccess = isCheckingAccess && legacyCheckingAccess;
+  const cartCount = cartItemCount || legacyCartCount;
 
   // ============================================================================
   // Position Management
@@ -286,11 +295,11 @@ export default function ExpandableLogoMenu({
     collapse();
     // Use requestAnimationFrame to prevent stuttering on production
     requestAnimationFrame(() => {
-      // Close any existing modals first, then open OmniStore
+      // Close any legacy modals first, then open new Store
       closeAllModals();
-      openMaison();
+      openStore();
     });
-  }, [collapse, closeAllModals, openMaison]);
+  }, [collapse, closeAllModals, openStore]);
 
   const handleAccount = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
@@ -454,7 +463,7 @@ export default function ExpandableLogoMenu({
           }}
         >
           <img
-            src="/odubo_logo_emboss.png"
+            src="/odubo_logo_emboss.webp"
             alt=""
             className="w-7 h-7 object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)]"
             draggable={false}

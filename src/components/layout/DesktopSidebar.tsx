@@ -82,7 +82,7 @@ export default function DesktopSidebar() {
         <Link href="/">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/odubo_logo_emboss.png"
+            src="/odubo_logo_emboss.webp"
             alt="Odubo"
             className="w-10 h-10 xl:w-12 xl:h-12 object-contain opacity-80 hover:opacity-100 transition-opacity"
             draggable={false}

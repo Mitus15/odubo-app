@@ -406,7 +406,7 @@ export default function AdminPage() {
             <Link href="/admin" className="flex items-center gap-3 group">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src="/odubo_logo_emboss.png"
+                src="/odubo_logo_emboss.webp"
                 alt="Odubo"
                 className="w-9 h-9 object-contain opacity-80 group-hover:opacity-100 transition-opacity"
                 draggable={false}
@@ -454,7 +454,7 @@ export default function AdminPage() {
               <div className="p-4 border-b border-[#502d26]/20 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="/odubo_logo_emboss.png" alt="Odubo" className="w-8 h-8 object-contain" draggable={false} />
+                  <img src="/odubo_logo_emboss.webp" alt="Odubo" className="w-8 h-8 object-contain" draggable={false} />
                   <span className="font-bold text-[#ede8df]">Odubo Admin</span>
                 </div>
                 <button
