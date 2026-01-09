@@ -67,6 +67,17 @@ export default function HomePageClient({ verseOfTheDay, initialClipId, initialCl
     return () => clearInterval(interval);
   }, []);
 
+  // HLS.js warm-up: Pre-import during intro phase (before first video)
+  // Saves ~100ms on first video play for browsers that need HLS.js
+  useEffect(() => {
+    const video = document.createElement('video');
+    const needsHlsJs = !video.canPlayType('application/vnd.apple.mpegurl');
+    if (needsHlsJs) {
+      // Dynamic import triggers module load + parse while user reads verse
+      import('hls.js').catch(() => {});
+    }
+  }, []);
+
   // Auto-collapse after intro
   useEffect(() => {
     if (phase === 'intro') {

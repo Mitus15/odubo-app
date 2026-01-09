@@ -220,32 +220,40 @@ export default function SingleVideoPlayer({
   }, [activeIndex, activeClip, getVideoUrl, attemptPlay, onVideoReady]);
 
   // Preload next clip into hidden video element
-  // DEFERRED: Only start after first frame renders (after LCP)
+  // Start immediately when clip activates - use requestIdleCallback to avoid blocking main thread
   useEffect(() => {
-    // Wait until first frame is rendered to avoid blocking LCP
-    if (!firstFrame) return;
-
     const p = preloadRef.current;
     const nextUrl = getVideoUrl(nextClip);
     if (!p || !nextUrl) return;
 
-    // Small delay to ensure LCP is captured before starting preload
-    const timeoutId = setTimeout(() => {
+    let idleId: number | undefined;
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+    const startPreload = () => {
       if (p.src !== nextUrl) {
         p.src = nextUrl;
         p.load(); // Actually buffer the video
       }
-    }, 100);
+    };
 
-    // Cleanup: release resources on unmount
+    // Use requestIdleCallback to preload without blocking - falls back to setTimeout
+    if ('requestIdleCallback' in window) {
+      idleId = requestIdleCallback(startPreload, { timeout: 50 });
+    } else {
+      // Fallback: start after microtask to not block current render
+      timeoutId = setTimeout(startPreload, 0);
+    }
+
+    // Cleanup: release resources on unmount or clip change
     return () => {
-      clearTimeout(timeoutId);
+      if (idleId !== undefined) cancelIdleCallback(idleId);
+      if (timeoutId !== undefined) clearTimeout(timeoutId);
       if (p) {
         p.src = '';
         p.load(); // Flush any buffered data
       }
     };
-  }, [nextClip, getVideoUrl, firstFrame]);
+  }, [nextClip, getVideoUrl, activeIndex]);
 
   // Sync mute state
   useEffect(() => {

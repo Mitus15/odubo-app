@@ -5,6 +5,8 @@ import type { ClipItem, ClipApiRow } from '@/types/clips';
 import { mapClipRows } from '@/lib/clipsMapper';
 import { useAudio } from '@/contexts/AudioContext';
 import PosterCard from '@/components/clips/PosterCard';
+import { prefetchManifest, prefetchFirstSegment } from '@/lib/hlsPrefetch';
+import { getNetworkInfo, getPrefetchWindow } from '@/lib/deviceInfo';
 
 const PAGE_SIZE = 12; // Larger pages for better infinite scroll
 
@@ -297,6 +299,36 @@ export default function ClipsFeed({
   useEffect(() => {
     onScrollDirectionChange?.(scrollDirection);
   }, [scrollDirection, onScrollDirectionChange]);
+
+  // Prefetch HLS manifests for upcoming clips (network-aware)
+  // This dramatically reduces time-to-first-frame when scrolling
+  useEffect(() => {
+    if (displayClips.length === 0) return;
+
+    const { shouldPrefetchSegments, manifestCount } = getPrefetchWindow();
+    const { saveData } = getNetworkInfo();
+
+    // Don't prefetch if user has data saver enabled
+    if (saveData) return;
+
+    // Prefetch manifests for clips ahead of active (skip +1, it's handled by SingleVideoPlayer)
+    const prefetchClips = displayClips.slice(activeIndex + 2, activeIndex + 2 + manifestCount);
+
+    prefetchClips.forEach((clip, i) => {
+      const hlsUrl = clip.hlsUrl;
+      if (!hlsUrl) return;
+
+      // Stagger prefetch to avoid bandwidth spike
+      setTimeout(() => {
+        if (shouldPrefetchSegments && i === 0) {
+          // Only prefetch segment for the very next clip on good networks
+          prefetchFirstSegment(hlsUrl);
+        } else {
+          prefetchManifest(hlsUrl);
+        }
+      }, i * 200); // 200ms stagger between prefetches
+    });
+  }, [displayClips, activeIndex]);
 
   // Scroll to next clip (called by parent when video ends)
   const scrollToNextClip = useCallback(() => {

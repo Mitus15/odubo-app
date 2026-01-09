@@ -63,6 +63,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        {/* Preconnect to video CDN - saves 100-300ms per video load */}
+        <link rel="preconnect" href="https://videodelivery.net" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://videodelivery.net" />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} overflow-hidden bg-gradient-to-br from-[#302927] via-[#171616] to-[#302927] text-[#ede8df] font-serif`}
         suppressHydrationWarning={true}

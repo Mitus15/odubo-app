@@ -61,13 +61,24 @@ export async function GET(req: NextRequest) {
       [limit, offset]
     );
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       clips: rows,
       feedSource: 'clips',
       nextOffset: offset + (rows?.length || 0),
       hasMore: rows?.length === limit,
       includesEngagement: withEngagement,
     });
+
+    // CDN caching: 60s fresh, 5min stale-while-revalidate for faster repeat visits
+    // Only cache seeded requests (pagination) - random shuffles should stay fresh
+    if (seed) {
+      response.headers.set('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
+    } else {
+      // For random shuffles, allow brief client cache only
+      response.headers.set('Cache-Control', 'private, max-age=10');
+    }
+
+    return response;
   } catch (err: unknown) {
     const error = err as { message?: string };
     return NextResponse.json({ error: error?.message || 'Internal error' }, { status: 500 });

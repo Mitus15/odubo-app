@@ -63,18 +63,33 @@ export async function attachHls(video: HTMLVideoElement, src: string, preloadOnl
   const autoCap = isSlowNetwork || downlink < 3 ? 2 : -1;
   
   // TikTok's Secret: Get cached quality preference for warm start
+  // Enhanced with connection-aware initial quality
   const getCachedQuality = (): number => {
+    // For preload, always use lowest quality
+    if (preloadOnly) return 0;
+
+    // Try cached preference first (from previous videos in session)
     try {
       const cached = localStorage.getItem('clips:preferred-quality');
       if (cached) {
         const { level, timestamp } = JSON.parse(cached);
-        // Use cached if < 1 hour old and not preload
-        if (!preloadOnly && Date.now() - timestamp < 3600000) {
-          return level;
+        // Use cached if < 30 min old (reduced from 1 hour for fresher estimates)
+        if (Date.now() - timestamp < 1800000) {
+          return Math.min(level, 2); // Cap at level 2 to avoid stalls
         }
       }
     } catch {}
-    return 0; // Always start at lowest for instant playback
+
+    // Network-aware initial quality for cold start
+    const { effectiveType, downlink } = getNetworkInfo();
+
+    // On great connections (wifi/5G), start at level 1 for better quality faster
+    if (effectiveType === '4g' && downlink >= 5) {
+      return 1; // Medium quality - good balance of speed and quality
+    }
+
+    // Default: lowest quality for instant start on slower networks
+    return 0;
   };
   
   const hls = new Hls({

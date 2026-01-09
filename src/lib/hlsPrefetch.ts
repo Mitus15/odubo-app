@@ -61,7 +61,13 @@ export async function prefetchFirstSegment(hlsUrl: string): Promise<void> {
     const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
     const isIOS = /iP(ad|hone|od)/.test(ua) || ((navigator as any)?.platform === 'MacIntel' && (navigator as any)?.maxTouchPoints > 1);
     const isMobile = isIOS || (typeof window !== 'undefined' && window.innerWidth < 768);
-    const isWeak = saveData || effectiveType !== '4g' || downlink < 3 || isMobile;
+    // Only skip on truly weak networks, not just mobile
+    // Mobile on 4G/wifi can handle segment prefetch fine
+    const isWeak = saveData ||
+      effectiveType === 'slow-2g' ||
+      effectiveType === '2g' ||
+      (effectiveType === '3g' && downlink < 2) ||
+      downlink < 1.5;
     if (isWeak) {
       // On weak networks, skip segment prefetch to avoid stalling active playback
       return;
