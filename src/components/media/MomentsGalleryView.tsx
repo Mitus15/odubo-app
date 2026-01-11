@@ -1,9 +1,119 @@
 'use client';
 
-import { useEffect, useCallback, useRef, useState } from 'react';
+import { useEffect, useCallback, useRef, useState, memo } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUnifiedMedia, type Photo } from '@/contexts/UnifiedMediaContext';
+
+/**
+ * Optimized photo tile with blur-up loading
+ */
+const PhotoTile = memo(function PhotoTile({
+  photo,
+  index,
+  onOpen,
+}: {
+  photo: Photo;
+  index: number;
+  onOpen: () => void;
+}) {
+  const [loaded, setLoaded] = useState(false);
+  const imgRef = useRef<HTMLImageElement>(null);
+
+  // Check if already cached/loaded on mount
+  useEffect(() => {
+    if (imgRef.current?.complete && imgRef.current?.naturalWidth > 0) {
+      setLoaded(true);
+    }
+  }, []);
+
+  const isAboveFold = index < 9; // First 3 rows
+
+  return (
+    <button
+      onClick={onOpen}
+      className="relative aspect-square bg-[#1a1714] overflow-hidden group"
+      style={{ touchAction: 'manipulation' }}
+    >
+      {/* Blur placeholder */}
+      {!loaded && (
+        <div className="absolute inset-0 bg-gradient-to-br from-[#2a2520] to-[#1a1714] animate-pulse" />
+      )}
+
+      <img
+        ref={imgRef}
+        src={photo.thumbnail_url || photo.r2_url}
+        alt=""
+        className={`absolute inset-0 w-full h-full object-cover transition-all duration-300 group-hover:scale-105 ${
+          loaded ? 'opacity-100' : 'opacity-0'
+        }`}
+        loading={isAboveFold ? 'eager' : 'lazy'}
+        decoding="async"
+        fetchPriority={index < 6 ? 'high' : 'auto'}
+        onLoad={() => setLoaded(true)}
+        draggable={false}
+      />
+
+      {/* Video indicator */}
+      {photo.media_type === 'video' && loaded && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="p-2 rounded-full bg-black/50 backdrop-blur-sm">
+            <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M8 5v14l11-7z" />
+            </svg>
+          </div>
+        </div>
+      )}
+
+      {/* Username badge */}
+      {photo.user_name && loaded && (
+        <div className="absolute bottom-1 left-1 px-1.5 py-0.5 bg-black/60 backdrop-blur-sm rounded text-[9px] text-white/80 truncate max-w-[80%]">
+          @{photo.user_name}
+        </div>
+      )}
+    </button>
+  );
+});
+
+/**
+ * Lightbox image with smooth loading
+ */
+const LightboxImage = memo(function LightboxImage({ src }: { src: string }) {
+  const [loaded, setLoaded] = useState(false);
+  const imgRef = useRef<HTMLImageElement>(null);
+
+  // Reset loaded state when src changes
+  useEffect(() => {
+    setLoaded(false);
+    // Check if already cached
+    if (imgRef.current?.complete && imgRef.current?.naturalWidth > 0) {
+      setLoaded(true);
+    }
+  }, [src]);
+
+  return (
+    <div className="relative max-w-full max-h-full flex items-center justify-center">
+      {/* Loading spinner */}
+      {!loaded && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="w-8 h-8 border-2 border-white/20 border-t-white/80 rounded-full animate-spin" />
+        </div>
+      )}
+      <img
+        ref={imgRef}
+        src={src}
+        alt=""
+        className={`max-w-full max-h-full object-contain transition-opacity duration-200 ${
+          loaded ? 'opacity-100' : 'opacity-0'
+        }`}
+        decoding="async"
+        fetchPriority="high"
+        onLoad={() => setLoaded(true)}
+        draggable={false}
+      />
+    </div>
+  );
+});
 
 interface MomentsGalleryViewProps {
   galleryId: number;
@@ -74,6 +184,23 @@ export default function MomentsGalleryView({ galleryId }: MomentsGalleryViewProp
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [lightboxIndex, prev, next, closeLightbox]);
+
+  // Preload adjacent lightbox images
+  useEffect(() => {
+    if (lightboxIndex === null || photos.length <= 1) return;
+
+    const preloadUrls: string[] = [];
+    const prevIdx = (lightboxIndex - 1 + photos.length) % photos.length;
+    const nextIdx = (lightboxIndex + 1) % photos.length;
+
+    if (photos[prevIdx]?.r2_url) preloadUrls.push(photos[prevIdx].r2_url);
+    if (photos[nextIdx]?.r2_url) preloadUrls.push(photos[nextIdx].r2_url);
+
+    preloadUrls.forEach((url) => {
+      const img = new Image();
+      img.src = url;
+    });
+  }, [lightboxIndex, photos]);
 
   // Download photo
   const handleDownload = (photo: Photo) => {
@@ -162,36 +289,12 @@ export default function MomentsGalleryView({ galleryId }: MomentsGalleryViewProp
         {!isLoadingPhotos && photos.length > 0 && (
           <div className="p-1 grid grid-cols-3 gap-1">
             {photos.map((photo, index) => (
-              <button
+              <PhotoTile
                 key={photo.id}
-                onClick={() => openLightbox(index)}
-                className="relative aspect-square bg-black overflow-hidden group"
-                style={{ touchAction: 'manipulation' }}
-              >
-                <img
-                  src={photo.thumbnail_url || photo.r2_url}
-                  alt=""
-                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
-                  loading={index < 12 ? 'eager' : 'lazy'}
-                  draggable={false}
-                />
-                {/* Video indicator */}
-                {photo.media_type === 'video' && (
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="p-2 rounded-full bg-black/50 backdrop-blur-sm">
-                      <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M8 5v14l11-7z" />
-                      </svg>
-                    </div>
-                  </div>
-                )}
-                {/* Username badge */}
-                {photo.user_name && (
-                  <div className="absolute bottom-1 left-1 px-1.5 py-0.5 bg-black/60 backdrop-blur-sm rounded text-[9px] text-white/80 truncate max-w-[80%]">
-                    @{photo.user_name}
-                  </div>
-                )}
-              </button>
+                photo={photo}
+                index={index}
+                onOpen={() => openLightbox(index)}
+              />
             ))}
           </div>
         )}
@@ -243,7 +346,7 @@ export default function MomentsGalleryView({ galleryId }: MomentsGalleryViewProp
             </header>
 
             {/* Main content */}
-            <div className="flex-1 flex items-center justify-center">
+            <div className="flex-1 flex items-center justify-center p-4">
               {currentPhoto.media_type === 'video' ? (
                 <video
                   src={currentPhoto.r2_url}
@@ -253,12 +356,7 @@ export default function MomentsGalleryView({ galleryId }: MomentsGalleryViewProp
                   className="max-w-full max-h-full object-contain"
                 />
               ) : (
-                <img
-                  src={currentPhoto.r2_url}
-                  alt=""
-                  className="max-w-full max-h-full object-contain"
-                  draggable={false}
-                />
+                <LightboxImage src={currentPhoto.r2_url} />
               )}
             </div>
 

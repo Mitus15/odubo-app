@@ -20,12 +20,8 @@ export default function DesktopSidebar() {
   const pathname = usePathname();
   const { openMaison, cartCount, storeAccessible, checkingStoreAccess } = useOmniShop();
 
-  // Hide on admin/backend pages
-  if (pathname.startsWith('/admin') || pathname.startsWith('/command-center') || pathname.startsWith('/featured/manage')) {
-    return null;
-  }
-
   // Nav items - memoized to filter based on store access
+  // IMPORTANT: All hooks must be called before any conditional returns
   const navItems = useMemo(() => {
     const items = [
       {
@@ -74,6 +70,11 @@ export default function DesktopSidebar() {
     ];
     return items;
   }, [checkingStoreAccess, storeAccessible, openMaison, cartCount]);
+
+  // Hide on admin/backend pages (must be after all hooks)
+  if (pathname?.startsWith('/admin') || pathname?.startsWith('/command-center') || pathname?.startsWith('/featured/manage')) {
+    return null;
+  }
 
   return (
     <aside className="hidden lg:flex fixed left-0 top-0 bottom-0 w-20 xl:w-64 flex-col bg-[#0d0c0a] border-r border-[#502d26]/20 z-40">
