@@ -10,7 +10,6 @@ import {
   useRef,
   type ReactNode,
 } from 'react';
-import { useSearchParams, usePathname, useRouter } from 'next/navigation';
 import { useCart, type UseCartReturn } from '@/hooks/useCart';
 import { fetchProducts, fetchProduct, createCheckout } from '@/lib/store/api';
 import type {
@@ -77,11 +76,6 @@ const StoreContext = createContext<StoreContextValue | null>(null);
 // ============================================
 
 export function StoreProvider({ children }: { children: ReactNode }) {
-  // Router for URL updates
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-
   // Cart hook
   const cartHook = useCart();
 
@@ -92,10 +86,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   // View state
   const [view, setView] = useState<StoreView>('closed');
   const [selectedProductIndex, setSelectedProductIndex] = useState<number | null>(null);
-
-  // Track if we've restored from URL (to avoid loops)
-  const hasRestoredFromUrl = useRef(false);
-  const pendingProductHandle = useRef<string | null>(null);
 
   // Products
   const [products, setProducts] = useState<ProductSummary[]>([]);
@@ -261,70 +251,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setSelectedProductIndex(index);
     }
   }, [products.length]);
-
-  // ============================================
-  // URL Persistence
-  // ============================================
-
-  // Check for product param on mount/load
-  useEffect(() => {
-    if (hasRestoredFromUrl.current) return;
-
-    const productHandle = searchParams.get('product');
-    if (productHandle && pathname === '/store') {
-      pendingProductHandle.current = productHandle;
-    }
-  }, [searchParams, pathname]);
-
-  // Restore product from URL once products are loaded
-  useEffect(() => {
-    if (hasRestoredFromUrl.current || !pendingProductHandle.current) return;
-    if (products.length === 0) return;
-
-    const handle = pendingProductHandle.current;
-    const index = products.findIndex(p => p.handle === handle);
-
-    if (index !== -1) {
-      hasRestoredFromUrl.current = true;
-      pendingProductHandle.current = null;
-      setSelectedProductIndex(index);
-      setView('detail');
-    } else {
-      // Product not found in current list, try to load it directly
-      hasRestoredFromUrl.current = true;
-      pendingProductHandle.current = null;
-      // Load the product directly and show it
-      loadProductDetail(handle).then(() => {
-        setView('detail');
-      });
-    }
-  }, [products, loadProductDetail]);
-
-  // Sync URL when product selection changes
-  useEffect(() => {
-    // Only sync if we're on the store page
-    if (pathname !== '/store') return;
-
-    const currentProductParam = searchParams.get('product');
-    const selectedHandle = selectedProductIndex !== null && products[selectedProductIndex]
-      ? products[selectedProductIndex].handle
-      : null;
-
-    // Update URL if product changed
-    if (selectedHandle && view === 'detail') {
-      if (currentProductParam !== selectedHandle) {
-        const params = new URLSearchParams(searchParams.toString());
-        params.set('product', selectedHandle);
-        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-      }
-    } else if (currentProductParam && view !== 'detail') {
-      // Remove product param if no longer viewing detail
-      const params = new URLSearchParams(searchParams.toString());
-      params.delete('product');
-      const newUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
-      router.replace(newUrl, { scroll: false });
-    }
-  }, [selectedProductIndex, products, view, pathname, searchParams, router]);
 
   // ============================================
   // Checkout
