@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useUnifiedMedia, type Gallery } from '@/contexts/UnifiedMediaContext';
 
 export default function MomentsTabView() {
@@ -12,6 +12,15 @@ export default function MomentsTabView() {
   } = useUnifiedMedia();
 
   const { galleries, isLoadingGalleries } = moments;
+
+  // Check if on mobile (camera only available on mobile)
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Fetch galleries on mount if not already loaded
   useEffect(() => {
@@ -44,34 +53,39 @@ export default function MomentsTabView() {
           </svg>
         </div>
         <p className="text-white/50 text-sm text-center mb-4">No moments galleries yet</p>
-        <button
-          onClick={() => openMomentsCamera()}
-          className="px-5 py-2.5 rounded-xl bg-white/10 border border-white/10 text-white hover:bg-white/15 transition-colors text-sm"
-        >
-          Capture Moments
-        </button>
+        {/* Capture button - mobile only */}
+        {isMobile && (
+          <button
+            onClick={() => openMomentsCamera()}
+            className="px-5 py-2.5 rounded-xl bg-white/10 border border-white/10 text-white hover:bg-white/15 transition-colors text-sm"
+          >
+            Capture Moments
+          </button>
+        )}
       </div>
     );
   }
 
   // Galleries grid
   return (
-    <div className="p-3">
-      {/* Capture button */}
-      <button
-        onClick={() => openMomentsCamera()}
-        className="w-full mb-4 p-4 rounded-xl bg-gradient-to-r from-[#843c2d] to-[#6d3224] text-white flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.98] transition-all"
-        style={{ touchAction: 'manipulation' }}
-      >
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
-          <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
-        </svg>
-        <span className="font-medium">Capture Moments</span>
-      </button>
+    <div className="p-3 md:p-6">
+      {/* Capture button - mobile only */}
+      {isMobile && (
+        <button
+          onClick={() => openMomentsCamera()}
+          className="w-full mb-4 p-4 rounded-xl bg-gradient-to-r from-[#843c2d] to-[#6d3224] text-white flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.98] transition-all"
+          style={{ touchAction: 'manipulation' }}
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
+          </svg>
+          <span className="font-medium">Capture Moments</span>
+        </button>
+      )}
 
-      {/* Galleries grid */}
-      <div className="grid grid-cols-2 gap-3">
+      {/* Galleries grid - responsive columns */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
         {galleries.map((gallery, index) => (
           <GalleryCard
             key={gallery.id}

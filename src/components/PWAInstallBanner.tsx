@@ -9,6 +9,7 @@ const STORAGE_KEY = 'odubo:pwa-banner-dismissed';
 /**
  * Subtle install banner for PWA promotion.
  * Shows only when:
+ * - On mobile device (not desktop)
  * - App is not already installed (not standalone)
  * - App is installable (beforeinstallprompt fired)
  * - User hasn't dismissed the banner
@@ -16,6 +17,17 @@ const STORAGE_KEY = 'odubo:pwa-banner-dismissed';
 export default function PWAInstallBanner() {
   const { isStandalone, isInstallable, promptInstall } = usePWA();
   const [dismissed, setDismissed] = useState(true); // Start dismissed to prevent flash
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    // Check if mobile device (not desktop)
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   useEffect(() => {
     // Check if user previously dismissed
@@ -43,8 +55,8 @@ export default function PWAInstallBanner() {
     }
   };
 
-  // Don't show if: already installed, not installable, or dismissed
-  const shouldShow = !isStandalone && isInstallable && !dismissed;
+  // Don't show if: on desktop, already installed, not installable, or dismissed
+  const shouldShow = isMobile && !isStandalone && isInstallable && !dismissed;
 
   return (
     <AnimatePresence>

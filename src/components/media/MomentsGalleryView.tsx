@@ -1,9 +1,21 @@
 'use client';
 
-import { useEffect, useCallback, useRef, useState, memo } from 'react';
+import { useEffect, useCallback, useRef, useState, memo, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUnifiedMedia, type Photo } from '@/contexts/UnifiedMediaContext';
+
+// Hook to detect mobile vs desktop
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+  return isMobile;
+}
 
 /**
  * Optimized photo tile with blur-up loading
@@ -131,6 +143,7 @@ export default function MomentsGalleryView({ galleryId }: MomentsGalleryViewProp
 
   const { photos, lightboxIndex, isLoadingPhotos } = moments;
   const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
+  const isMobile = useIsMobile();
 
   // Touch handling for lightbox swipe
   const touchStartX = useRef(0);
@@ -240,17 +253,22 @@ export default function MomentsGalleryView({ galleryId }: MomentsGalleryViewProp
 
         <h2 className="text-white text-sm font-medium">Gallery</h2>
 
-        <button
-          onClick={() => openMomentsCamera(galleryId)}
-          className="w-10 h-10 flex items-center justify-center text-white/70 hover:text-white transition-colors rounded-full hover:bg-white/10"
-          aria-label="Add photo"
-          style={{ touchAction: 'manipulation' }}
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
-            <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
-          </svg>
-        </button>
+        {/* Camera button - mobile only */}
+        {isMobile ? (
+          <button
+            onClick={() => openMomentsCamera(galleryId)}
+            className="w-10 h-10 flex items-center justify-center text-white/70 hover:text-white transition-colors rounded-full hover:bg-white/10"
+            aria-label="Add photo"
+            style={{ touchAction: 'manipulation' }}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
+            </svg>
+          </button>
+        ) : (
+          <div className="w-10" /> {/* Spacer for layout balance */}
+        )}
       </header>
 
       {/* Content */}
@@ -260,8 +278,8 @@ export default function MomentsGalleryView({ galleryId }: MomentsGalleryViewProp
       >
         {/* Loading */}
         {isLoadingPhotos && (
-          <div className="p-3 grid grid-cols-3 gap-1">
-            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => (
+          <div className="p-1 md:p-4 grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-1 md:gap-2">
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((i) => (
               <div key={i} className="aspect-square bg-white/5 rounded animate-pulse" />
             ))}
           </div>
@@ -276,18 +294,21 @@ export default function MomentsGalleryView({ galleryId }: MomentsGalleryViewProp
               </svg>
             </div>
             <p className="text-white/50 text-sm text-center mb-4">No photos in this gallery yet</p>
-            <button
-              onClick={() => openMomentsCamera(galleryId)}
-              className="px-5 py-2.5 rounded-xl bg-[#843c2d] text-white hover:bg-[#9a4535] transition-colors text-sm"
-            >
-              Be the first to capture
-            </button>
+            {/* Capture button - mobile only */}
+            {isMobile && (
+              <button
+                onClick={() => openMomentsCamera(galleryId)}
+                className="px-5 py-2.5 rounded-xl bg-[#843c2d] text-white hover:bg-[#9a4535] transition-colors text-sm"
+              >
+                Be the first to capture
+              </button>
+            )}
           </div>
         )}
 
-        {/* Photo grid */}
+        {/* Photo grid - responsive columns for desktop */}
         {!isLoadingPhotos && photos.length > 0 && (
-          <div className="p-1 grid grid-cols-3 gap-1">
+          <div className="p-1 md:p-4 grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-1 md:gap-2">
             {photos.map((photo, index) => (
               <PhotoTile
                 key={photo.id}
