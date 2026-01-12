@@ -267,7 +267,7 @@ export default function MomentsGalleryView({ galleryId }: MomentsGalleryViewProp
             </svg>
           </button>
         ) : (
-          <div className="w-10" /> {/* Spacer for layout balance */}
+          <div className="w-10" />
         )}
       </header>
 
