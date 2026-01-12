@@ -24,6 +24,11 @@ import ServiceWorkerRegistration from "../components/ServiceWorkerRegistration";
 import OfflineIndicator from "../components/OfflineIndicator";
 import { PWAProvider } from "../components/PWAProvider";
 import PWAInstallBanner from "../components/PWAInstallBanner";
+import { EmailCaptureProvider } from "@/contexts/EmailCaptureContext";
+import EmailCaptureModal from "@/components/marketing/EmailCaptureModal";
+import GoogleAnalytics from "@/components/analytics/GoogleAnalytics";
+import { QuickShopProvider } from "@/contexts/QuickShopContext";
+import QuickShopModal from "@/components/shop/QuickShopModal";
 // import AccessibilityEnhancer from "./components/AccessibilityEnhancer";
 
 const geistSans = Geist({
@@ -77,6 +82,8 @@ export default function RootLayout({
           WebkitOverflowScrolling: 'touch'
         }}
       >
+        {/* Google Analytics 4 - respects GDPR consent */}
+        <GoogleAnalytics />
         {/* <AuthProvider> */}
           <PWAProvider>
             <AudioProvider>
@@ -85,6 +92,7 @@ export default function RootLayout({
                 <MediaPriorityBridge />
                 <OmniShopProvider>
                   <StoreProvider>
+                    <QuickShopProvider>
                     <UnifiedMediaProvider>
                       {/* <ClientCapabilities /> */}
                       <ServiceWorkerRegistration />
@@ -107,7 +115,14 @@ export default function RootLayout({
                       <StoreOrchestrator />
                       <OmniShopOrchestrator />
                       <OmniMediaOrchestrator />
+                      {/* Email capture for conversions */}
+                      <EmailCaptureProvider>
+                        <EmailCaptureModal />
+                      </EmailCaptureProvider>
+                      {/* Quick shop modal for clip-to-purchase */}
+                      <QuickShopModal />
                     </UnifiedMediaProvider>
+                    </QuickShopProvider>
                   </StoreProvider>
                 </OmniShopProvider>
               </MusicPlayerProvider>

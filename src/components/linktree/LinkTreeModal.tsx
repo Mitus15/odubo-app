@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
+import Image from 'next/image';
 import type { LinkTreeItem } from '@/types/linktree';
 import { useOmniShop } from '@/contexts/OmniShopContext';
 
@@ -33,11 +34,11 @@ export default function LinkTreeModal({ isOpen, onClose }: LinkTreeModalProps) {
     }
   }, [isOpen]);
 
-  // Filter out shopify/store links when store is not accessible
+  // Filter out shopify/baad store links when store is not accessible
   const visibleLinks = useMemo(() => {
     if (checkingStoreAccess) return links;
     if (!storeAccessible) {
-      return links.filter(link => link.platform !== 'shopify');
+      return links.filter(link => link.platform !== 'shopify' && link.platform !== 'baad');
     }
     return links;
   }, [links, storeAccessible, checkingStoreAccess]);
@@ -47,8 +48,8 @@ export default function LinkTreeModal({ isOpen, onClose }: LinkTreeModalProps) {
   const handleLinkClick = (link: LinkTreeItem) => {
     fetch(`/api/linktree/${link.id}/click`, { method: 'POST' }).catch(() => {});
 
-    // Special handling for shopify/store link - close this modal and open OmniStore
-    if (link.platform === 'shopify') {
+    // Special handling for shopify/baad store link - close this modal and open OmniStore
+    if (link.platform === 'shopify' || link.platform === 'baad') {
       onClose();
       closeAllShopModals();
       openMaison();
@@ -151,10 +152,15 @@ function PlatformIcon({ platform }: { platform: string | null }) {
         </svg>
       );
     case 'shopify':
+    case 'baad':
       return (
-        <svg viewBox="0 0 24 24" className={iconClass} fill="white">
-          <path d="M15.337 23.979l7.216-1.561s-2.604-17.613-2.625-17.756a.37.37 0 00-.327-.313c-.142-.013-.282-.026-.436-.026-.96 0-1.747.283-2.325.807l-.387-.104V3.5a.5.5 0 00-.5-.5h-2.5V1.5a.5.5 0 00-.5-.5H10.5a.5.5 0 00-.5.5V3h-2v1.5h2v1.025l-.462.125C8.762 4.62 7.5 4.5 7.5 4.5L6 21.5l9.337 2.479z"/>
-        </svg>
+        <Image
+          src="/brand-logos/baad-white.png"
+          alt="BAAD"
+          width={24}
+          height={24}
+          className={iconClass}
+        />
       );
     default:
       return (

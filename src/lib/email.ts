@@ -168,13 +168,15 @@ function orderConfirmationHTML(data: OrderConfirmationData): string {
 export interface WelcomeEmailData {
   name: string;
   email: string;
+  discountCode?: string;
 }
 
 function welcomeEmailHTML(data: WelcomeEmailData): string {
   const site = getSiteUrl();
+  const discountCode = data.discountCode || 'WELCOME5';
 
   const content = `
-    <h1 style="margin:0 0 8px;font-size:24px;color:${BRAND.primary}">Welcome to Odubo</h1>
+    <h1 style="margin:0 0 8px;font-size:24px;color:${BRAND.primary}">Welcome to the Inner Circle</h1>
     <p style="margin:0 0 20px;font-size:16px;color:${BRAND.text}">
       Hey ${data.name || 'there'}, thanks for joining the community.
     </p>
@@ -183,9 +185,15 @@ function welcomeEmailHTML(data: WelcomeEmailData): string {
       You now have access to exclusive drops, behind-the-scenes content, and first looks at new releases.
     </p>
 
+    <div style="margin:24px 0;padding:20px;background:#f9f7f4;border-radius:12px;text-align:center;">
+      <p style="margin:0 0 8px;font-size:14px;color:#6d6459;">Your exclusive welcome gift</p>
+      <p style="margin:0;font-size:28px;font-weight:700;color:${BRAND.primary};font-family:${BRAND.sans};letter-spacing:2px;">${discountCode}</p>
+      <p style="margin:8px 0 0;font-size:14px;color:#6d6459;">5% off your first order</p>
+    </div>
+
     <div style="margin:24px 0;text-align:center;">
-      <a href="${site}" style="display:inline-block;padding:14px 28px;background:${BRAND.primary};color:#fff;border-radius:999px;text-decoration:none;font-weight:600;font-family:${BRAND.sans};">
-        Explore Odubo
+      <a href="${site}/store" style="display:inline-block;padding:14px 28px;background:${BRAND.primary};color:#fff;border-radius:999px;text-decoration:none;font-weight:600;font-family:${BRAND.sans};">
+        Shop Now
       </a>
     </div>
 
@@ -194,7 +202,147 @@ function welcomeEmailHTML(data: WelcomeEmailData): string {
     </p>
   `;
 
-  return emailWrapper(content, `Welcome to Odubo - You're in!`);
+  return emailWrapper(content, `Welcome to Odubo - Here's 5% off your first order!`);
+}
+
+// Day 3 Email - Best clips + most loved products
+export interface Day3EmailData {
+  name: string;
+  email: string;
+}
+
+function day3EmailHTML(data: Day3EmailData): string {
+  const site = getSiteUrl();
+
+  const content = `
+    <h1 style="margin:0 0 8px;font-size:24px;color:${BRAND.primary}">What You've Been Missing</h1>
+    <p style="margin:0 0 20px;font-size:16px;color:${BRAND.text}">
+      Hey ${data.name || 'there'}, here's what the community's been loving this week.
+    </p>
+
+    <div style="margin:24px 0;padding:20px;background:#f9f7f4;border-radius:12px;">
+      <p style="margin:0 0 12px;font-size:14px;font-weight:600;color:${BRAND.primary};">🎬 Trending Clips</p>
+      <p style="margin:0;font-size:14px;color:${BRAND.text};">
+        Check out the latest drops on the feed. New clips added daily.
+      </p>
+    </div>
+
+    <div style="margin:24px 0;text-align:center;">
+      <a href="${site}" style="display:inline-block;padding:14px 28px;background:${BRAND.primary};color:#fff;border-radius:999px;text-decoration:none;font-weight:600;font-family:${BRAND.sans};">
+        Watch Now
+      </a>
+    </div>
+
+    <div style="margin:24px 0;padding:20px;background:#f9f7f4;border-radius:12px;">
+      <p style="margin:0 0 12px;font-size:14px;font-weight:600;color:${BRAND.primary};">🛍️ Fan Favorites</p>
+      <p style="margin:0;font-size:14px;color:${BRAND.text};">
+        See what everyone's wearing. Limited pieces, once they're gone, they're gone.
+      </p>
+    </div>
+
+    <div style="margin:24px 0;text-align:center;">
+      <a href="${site}/store" style="display:inline-block;padding:14px 28px;background:transparent;color:${BRAND.primary};border:2px solid ${BRAND.primary};border-radius:999px;text-decoration:none;font-weight:600;font-family:${BRAND.sans};">
+        Browse the Collection
+      </a>
+    </div>
+
+    <p style="margin:24px 0 0;font-size:13px;color:#6d6459;text-align:center;">
+      Remember, your welcome code WELCOME5 is still active.
+    </p>
+  `;
+
+  return emailWrapper(content, `See what's trending at Odubo`);
+}
+
+// Day 7 Email - Limited time urgency
+export interface Day7EmailData {
+  name: string;
+  email: string;
+  discountCode?: string;
+}
+
+function day7EmailHTML(data: Day7EmailData): string {
+  const site = getSiteUrl();
+  const discountCode = data.discountCode || 'WELCOME5';
+
+  const content = `
+    <h1 style="margin:0 0 8px;font-size:24px;color:${BRAND.primary}">Your 5% Off Expires Soon</h1>
+    <p style="margin:0 0 20px;font-size:16px;color:${BRAND.text}">
+      Hey ${data.name || 'there'}, just a heads up — your welcome discount is about to expire.
+    </p>
+
+    <div style="margin:24px 0;padding:20px;background:#f9f7f4;border-radius:12px;text-align:center;border:2px dashed ${BRAND.accent};">
+      <p style="margin:0 0 8px;font-size:14px;color:#6d6459;">Use code before it's gone</p>
+      <p style="margin:0;font-size:28px;font-weight:700;color:${BRAND.primary};font-family:${BRAND.sans};letter-spacing:2px;">${discountCode}</p>
+      <p style="margin:8px 0 0;font-size:14px;color:#d97706;font-weight:600;">Expires in 3 days</p>
+    </div>
+
+    <div style="margin:24px 0;text-align:center;">
+      <a href="${site}/store" style="display:inline-block;padding:14px 28px;background:${BRAND.primary};color:#fff;border-radius:999px;text-decoration:none;font-weight:600;font-family:${BRAND.sans};">
+        Claim Your 5% Off
+      </a>
+    </div>
+
+    <p style="margin:24px 0 0;font-size:14px;color:#6d6459;text-align:center;">
+      Don't miss out — this is the only reminder.
+    </p>
+  `;
+
+  return emailWrapper(content, `Your 5% off expires soon - don't miss out!`);
+}
+
+export async function sendDay3Email(data: Day3EmailData): Promise<SendResult> {
+  const resend = getResend();
+  if (!resend) {
+    return { success: false, error: 'Email service not configured' };
+  }
+
+  const { fromEmail } = getEmailEnv();
+
+  try {
+    const result = await resend.emails.send({
+      from: fromEmail,
+      to: data.email,
+      subject: 'What you\'ve been missing at Odubo',
+      html: day3EmailHTML(data),
+    });
+
+    if (result.error) {
+      return { success: false, error: result.error.message };
+    }
+
+    return { success: true, id: result.data?.id || 'sent' };
+  } catch (err: any) {
+    console.error('[EMAIL] Failed to send Day 3 email:', err);
+    return { success: false, error: err.message || 'Unknown error' };
+  }
+}
+
+export async function sendDay7Email(data: Day7EmailData): Promise<SendResult> {
+  const resend = getResend();
+  if (!resend) {
+    return { success: false, error: 'Email service not configured' };
+  }
+
+  const { fromEmail } = getEmailEnv();
+
+  try {
+    const result = await resend.emails.send({
+      from: fromEmail,
+      to: data.email,
+      subject: 'Your 5% off expires soon',
+      html: day7EmailHTML(data),
+    });
+
+    if (result.error) {
+      return { success: false, error: result.error.message };
+    }
+
+    return { success: true, id: result.data?.id || 'sent' };
+  } catch (err: any) {
+    console.error('[EMAIL] Failed to send Day 7 email:', err);
+    return { success: false, error: err.message || 'Unknown error' };
+  }
 }
 
 // ============================================================================

@@ -12,7 +12,15 @@ import ffmpegPath from 'ffmpeg-static';
 export const runtime = 'nodejs';
 export const maxDuration = 300; // 5 minutes for processing
 
-// Configuration
+// Configuration for dynamics-sensitive normalization
+// Philosophy: Reduce the loud, gently touch the quiet
+const LOUD_CEILING = -14;      // LUFS - clips louder than this get reduced
+const QUIET_FLOOR = -20;       // LUFS - clips quieter than this get gentle boost
+const MAX_BOOST_DB = 3;        // Never boost more than this
+const HIGH_LRA_THRESHOLD = 10; // LU - clips with high dynamic range get gentler treatment
+const LIMITER_CEILING = -1;    // dB - safety limiter to prevent clipping
+
+// Legacy config (still used for analysis)
 const TARGET_LUFS = -16;
 const TARGET_TP = -1.5;
 const TARGET_LRA = 11;
@@ -23,6 +31,33 @@ interface LoudnessData {
   input_tp: number;
   input_lra: number;
   input_thresh: number;
+}
+
+/**
+ * Calculate asymmetric gain for dynamics-sensitive normalization
+ * - Loud clips: bring down to ceiling (priority: prevent ear damage)
+ * - Quiet clips: gentle boost, capped at MAX_BOOST_DB
+ * - High dynamic range: even gentler treatment
+ * - Middle range: leave alone
+ */
+function calculateAsymmetricGain(measuredLufs: number, measuredLra: number): number {
+  // High dynamic range? Be extra gentle
+  const isHighDynamicRange = measuredLra > HIGH_LRA_THRESHOLD;
+  const effectiveMaxBoost = isHighDynamicRange ? 1.5 : MAX_BOOST_DB;
+
+  if (measuredLufs > LOUD_CEILING) {
+    // TOO LOUD - bring down to ceiling (always do this)
+    return LOUD_CEILING - measuredLufs; // Negative gain (reduction)
+  }
+
+  if (measuredLufs < QUIET_FLOOR) {
+    // Quiet - gentle boost, capped
+    const idealBoost = QUIET_FLOOR - measuredLufs;
+    return Math.min(idealBoost, effectiveMaxBoost);
+  }
+
+  // In the sweet spot (-14 to -20 LUFS) - leave it alone
+  return 0;
 }
 
 async function analyzeLoudness(inputPath: string): Promise<LoudnessData> {
@@ -64,43 +99,59 @@ async function analyzeLoudness(inputPath: string): Promise<LoudnessData> {
   });
 }
 
-async function normalizeVideo(inputPath: string, loudnessData: LoudnessData): Promise<string> {
+/**
+ * Apply fixed gain to video using volume filter (preserves dynamics)
+ * Unlike loudnorm which dynamically adjusts, this applies a fixed dB change
+ */
+async function applyGain(inputPath: string, gainDb: number): Promise<string> {
   if (!ffmpegPath || !existsSync(ffmpegPath)) {
     throw new Error('ffmpeg-static binary not found');
   }
-  
+
   const outPath = path.join(os.tmpdir(), `odubo_normalized_${Date.now()}.mp4`);
-  
-  const loudnormFilter = `loudnorm=I=${TARGET_LUFS}:TP=${TARGET_TP}:LRA=${TARGET_LRA}:` +
-    `measured_I=${loudnessData.input_i}:` +
-    `measured_TP=${loudnessData.input_tp}:` +
-    `measured_LRA=${loudnessData.input_lra}:` +
-    `measured_thresh=${loudnessData.input_thresh}:` +
-    `linear=true`;
-  
+
+  // Use volume filter for fixed gain + limiter for safety
+  // This preserves the original dynamics while shifting the overall level
+  const audioFilter = `volume=${gainDb}dB,alimiter=limit=${LIMITER_CEILING}dB:attack=5:release=50`;
+
   await new Promise<void>((resolve, reject) => {
     const args = [
       '-i', inputPath,
       '-c:v', 'copy',
-      '-af', loudnormFilter,
+      '-af', audioFilter,
       '-c:a', 'aac',
       '-b:a', '192k',
       '-ar', '48000',
       '-movflags', '+faststart',
       '-y', outPath
     ];
-    
+
     let stderr = '';
     const p = spawn(ffmpegPath as string, args, { stdio: ['pipe', 'pipe', 'pipe'] });
     p.stderr?.on('data', (data) => { stderr += data.toString(); });
     p.on('error', reject);
     p.on('exit', (code) => {
-      if (code !== 0) return reject(new Error(`ffmpeg normalize failed`));
+      if (code !== 0) return reject(new Error(`ffmpeg gain adjustment failed`));
       resolve();
     });
   });
-  
+
   return outPath;
+}
+
+/**
+ * Main normalization function using dynamics-sensitive algorithm
+ * Returns the output path, or null if no processing needed (gain ~0)
+ */
+async function normalizeVideo(inputPath: string, loudnessData: LoudnessData): Promise<string | null> {
+  const gainDb = calculateAsymmetricGain(loudnessData.input_i, loudnessData.input_lra);
+
+  // If gain is negligible, no processing needed
+  if (Math.abs(gainDb) < 0.5) {
+    return null;
+  }
+
+  return applyGain(inputPath, gainDb);
 }
 
 /**
@@ -190,71 +241,116 @@ export async function POST(
     // Analyze loudness
     const loudnessData = await analyzeLoudness(srcPath);
     
-    // Check if normalization is actually needed
-    const delta = Math.abs(loudnessData.input_i - TARGET_LUFS);
-    if (!force && delta < 1.0) {
-      // Mark as normalized since it's already within tolerance
-      await executeQuery('UPDATE videos SET audio_normalized = 1 WHERE id = ?', [videoId]);
-      
+    // Calculate what gain would be applied
+    const gainDb = calculateAsymmetricGain(loudnessData.input_i, loudnessData.input_lra);
+    const now = new Date().toISOString();
+
+    // Store analysis results regardless of whether we process
+    await executeQuery(
+      `UPDATE videos SET
+         audio_loudness_lufs = ?,
+         audio_loudness_range_lu = ?,
+         audio_analyzed_at = ?
+       WHERE id = ?`,
+      [loudnessData.input_i, loudnessData.input_lra, now, videoId]
+    );
+
+    // Check if normalization is actually needed (gain is negligible)
+    if (!force && Math.abs(gainDb) < 0.5) {
+      // Mark as normalized since it doesn't need adjustment
+      await executeQuery(
+        `UPDATE videos SET
+           audio_normalized = 1,
+           audio_gain_applied_db = 0
+         WHERE id = ?`,
+        [videoId]
+      );
+
       return NextResponse.json({
         success: true,
-        message: 'Already within tolerance',
-        loudness: {
-          current: loudnessData.input_i,
-          target: TARGET_LUFS,
-          delta: delta
+        message: 'No adjustment needed - loudness is within acceptable range',
+        analysis: {
+          loudness: loudnessData.input_i,
+          dynamicRange: loudnessData.input_lra,
+          gainCalculated: gainDb,
+          decision: loudnessData.input_i > LOUD_CEILING
+            ? 'Already below loud ceiling'
+            : loudnessData.input_i < QUIET_FLOOR
+            ? 'Too gentle to boost significantly'
+            : 'In the sweet spot (-14 to -20 LUFS)'
         },
         skipped: true
       });
     }
-    
+
     // Normalize the audio
     outPath = await normalizeVideo(srcPath, loudnessData);
-    
+
+    // If normalizeVideo returns null, no processing was done
+    if (!outPath) {
+      await executeQuery(
+        `UPDATE videos SET audio_normalized = 1, audio_gain_applied_db = 0 WHERE id = ?`,
+        [videoId]
+      );
+      return NextResponse.json({
+        success: true,
+        message: 'No processing needed',
+        skipped: true
+      });
+    }
+
     // Upload to Cloudflare Stream
     const fileBuffer = await fs.readFile(outPath);
     const uploadResult = await stream.uploadVideoStream(fileBuffer, {
       name: `${video.title || `Video ${videoId}`} (normalized)`,
       meta: {
         originalVideoId: videoId,
-        normalizedAt: new Date().toISOString(),
-        targetLufs: TARGET_LUFS,
+        normalizedAt: now,
         originalLufs: loudnessData.input_i,
+        gainApplied: gainDb,
       }
     });
-    
+
     const newUid = uploadResult.result.uid;
-    
+
     // Wait for processing (up to 5 minutes)
     const isReady = await stream.waitForVideoReady(newUid, {
       maxWaitTime: 300000,
       pollInterval: 5000,
     });
-    
+
     if (!isReady) {
       return NextResponse.json({ error: 'Stream processing timeout' }, { status: 504 });
     }
-    
-    // Update database with new URL
+
+    // Update database with new URL and analysis results
     const newUrl = `https://${CUSTOMER_SUBDOMAIN}.cloudflarestream.com/${newUid}/manifest/video.m3u8`;
-    
+
     await executeQuery(
-      `UPDATE videos SET 
-         url = ?, 
-         uid = ?, 
+      `UPDATE videos SET
+         url = ?,
+         uid = ?,
          audio_normalized = 1,
+         audio_gain_applied_db = ?,
          updated_at = datetime("now")
        WHERE id = ?`,
-      [newUrl, newUid, videoId]
+      [newUrl, newUid, gainDb, videoId]
     );
-    
+
+    // Determine what action was taken
+    const action = gainDb < 0
+      ? `Reduced by ${Math.abs(gainDb).toFixed(1)}dB (was too loud)`
+      : `Boosted by ${gainDb.toFixed(1)}dB (was quiet)`;
+
     return NextResponse.json({
       success: true,
       message: 'Audio normalized successfully',
-      loudness: {
-        before: loudnessData.input_i,
-        after: TARGET_LUFS,
-        delta: loudnessData.input_i - TARGET_LUFS
+      action,
+      analysis: {
+        originalLoudness: loudnessData.input_i,
+        dynamicRange: loudnessData.input_lra,
+        gainApplied: gainDb,
+        resultingLoudness: loudnessData.input_i + gainDb,
       },
       video: {
         id: videoId,
@@ -298,21 +394,40 @@ export async function GET(
   }
   
   const rows = await queryDatabase(
-    'SELECT id, title, uid, audio_normalized FROM videos WHERE id = ? LIMIT 1',
+    `SELECT id, title, uid, audio_normalized,
+            audio_loudness_lufs, audio_loudness_range_lu,
+            audio_gain_applied_db, audio_analyzed_at
+     FROM videos WHERE id = ? LIMIT 1`,
     [videoId]
   );
-  
+
   if (!rows.length) {
     return NextResponse.json({ error: 'Video not found' }, { status: 404 });
   }
-  
+
   const video = rows[0];
-  
+
+  // Calculate what gain would be applied (for preview)
+  const predictedGain = video.audio_loudness_lufs
+    ? calculateAsymmetricGain(video.audio_loudness_lufs, video.audio_loudness_range_lu || 7)
+    : null;
+
   return NextResponse.json({
     id: video.id,
     title: video.title,
     uid: video.uid,
     audio_normalized: video.audio_normalized === 1,
-    target_lufs: TARGET_LUFS
+    analysis: video.audio_loudness_lufs ? {
+      loudness: video.audio_loudness_lufs,
+      dynamicRange: video.audio_loudness_range_lu,
+      gainApplied: video.audio_gain_applied_db,
+      analyzedAt: video.audio_analyzed_at,
+      predictedGain,
+    } : null,
+    config: {
+      loudCeiling: LOUD_CEILING,
+      quietFloor: QUIET_FLOOR,
+      maxBoost: MAX_BOOST_DB,
+    }
   });
 }

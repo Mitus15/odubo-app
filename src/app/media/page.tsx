@@ -1,8 +1,9 @@
-import { Suspense } from 'react';
+import HomePageClient from '@/app/HomePageClient';
+import { fetchVerseOfTheDay } from '@/lib/gemini';
 import { queryDatabase } from '@/lib/db';
-import MediaHubClient from './MediaHubClient';
-import type { Album } from '@/types/music';
+import { mapClipRows } from '@/lib/clipsMapper';
 import { generateSeoMetadata } from '@/lib/seo';
+import type { ClipApiRow, ClipItem } from '@/types/clips';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = generateSeoMetadata({
@@ -11,66 +12,62 @@ export const metadata: Metadata = generateSeoMetadata({
   path: '/media',
 });
 
-export const revalidate = 300; // 5 minutes
+export const dynamic = 'force-dynamic';
 
-interface Video {
-  id: number;
-  title: string;
-  description: string;
-  url: string;
-  poster_url?: string;
-  thumbnail?: string;
-  duration?: string;
-  category?: string;
-  type?: string;
-  mood?: string;
-  credits?: string;
-  created_at: string;
-}
-
-async function getVideos(): Promise<Video[]> {
+// Server-side verse fetching
+async function getVerse() {
   try {
-    const videos = await queryDatabase(`
-      SELECT * FROM videos
-      WHERE is_public = 1
-        AND status = 'published'
-        AND publication_status = 'live'
-        AND type != 'clip'
-      ORDER BY created_at DESC
-    `);
-    return videos || [];
+    const timestamp = Date.now().toString();
+    const requestId = Math.random().toString(36).substring(7);
+    const result = await fetchVerseOfTheDay(timestamp, requestId);
+    return {
+      text: result.text,
+      reference: result.reference,
+      error: result.note || result.error || null
+    };
   } catch (error) {
-    console.error('Error fetching videos:', error);
-    // Return empty array to show empty state instead of breaking
-    return [];
+    console.error('getVerse error:', error);
+    return {
+      text: "Trust in the Lord with all your heart and lean not on your own understanding.",
+      reference: "Proverbs 3:5",
+      error: "Unable to fetch today's verse."
+    };
   }
 }
 
-async function getAlbums(): Promise<Album[]> {
+// Server-side initial clips fetch
+async function getInitialClips(): Promise<ClipItem[]> {
   try {
-    const albums = await queryDatabase('SELECT * FROM albums ORDER BY created_at DESC');
-    return albums || [];
+    const baseFields = `v.id, v.title, v.artist_name, v.description, v.url, v.uid, v.mp4_url, v.duration, v.duration_seconds, v.poster_url, v.thumbnail, v.created_at, v.shopify_product_handle, v.related_projects`;
+    const rows = await queryDatabase(
+      `SELECT ${baseFields}
+       FROM videos v
+       WHERE v.type = 'clip'
+         AND (v.is_public = 1 OR v.is_public IS NULL)
+         AND COALESCE(v.status, 'published') != 'archived'
+         AND COALESCE(v.publication_status, 'live') = 'live'
+       ORDER BY RANDOM()
+       LIMIT 12`,
+      []
+    ) as ClipApiRow[];
+    return mapClipRows(rows);
   } catch (error) {
-    console.error('Error fetching albums:', error);
+    console.error('getInitialClips error:', error);
     return [];
   }
 }
 
 export default async function MediaPage() {
-  const [videos, albums] = await Promise.all([getVideos(), getAlbums()]);
+  const [verseOfTheDay, initialClips] = await Promise.all([
+    getVerse(),
+    getInitialClips()
+  ]);
 
   return (
-    <div className="flex flex-col h-full min-h-0 bg-gradient-to-br from-[#302927] via-[#171616] to-[#302927]">
-      {/* Ambient light effects */}
-      <div className="fixed inset-0 -z-10 pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#843c2d]/8 rounded-full blur-[100px]" />
-        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-[#b2a491]/6 rounded-full blur-[80px]" />
-        <div className="absolute top-1/2 left-0 w-64 h-64 bg-[#502d26]/10 rounded-full blur-[60px]" />
-      </div>
-
-      <div className="relative z-10 flex-1 min-h-0 overflow-hidden p-4">
-        <MediaHubClient videos={videos} albums={albums} />
-      </div>
-    </div>
+    <HomePageClient
+      verseOfTheDay={verseOfTheDay}
+      initialClips={initialClips}
+      defaultModal="media"
+    />
   );
 }

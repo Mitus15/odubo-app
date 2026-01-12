@@ -1,14 +1,21 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import ClipsFeed from '@/components/clips/ClipsFeed';
 import SingleVideoPlayer from '@/components/clips/SingleVideoPlayer';
 import ClipsErrorBoundary from '@/components/clips/ClipsErrorBoundary';
 import ExpandableLogoMenu from '@/components/clips/ExpandableLogoMenu';
 import FilmGrain from '@/components/ui/FilmGrain';
+import LinkTreeModal from '@/components/linktree/LinkTreeModal';
 import { useAudio } from '@/contexts/AudioContext';
+import { useStore } from '@/contexts/StoreContext';
+import { useUnifiedMedia } from '@/contexts/UnifiedMediaContext';
 import type { ClipItem } from '@/types/clips';
+
+// Modal types that can be opened via URL
+export type DefaultModal = 'store' | 'moments' | 'media' | 'links' | null;
 
 interface VerseOfTheDay {
   text: string;
@@ -20,19 +27,21 @@ interface HomePageClientProps {
   verseOfTheDay: VerseOfTheDay;
   initialClipId?: number | null;
   initialClips?: ClipItem[];
+  defaultModal?: DefaultModal;
 }
 
-export default function HomePageClient({ verseOfTheDay, initialClipId, initialClips }: HomePageClientProps) {
+export default function HomePageClient({ verseOfTheDay, initialClipId, initialClips, defaultModal }: HomePageClientProps) {
   // No header - clips go edge to edge
   const HEADER_HEIGHT = 0;
   const INTRO_DURATION = 4000; // Show verse for 4 seconds before collapsing
 
+  const router = useRouter();
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
   const [navHeight, setNavHeight] = useState<number>(HEADER_HEIGHT);
 
-  // Verse overlay states
-  const [phase, setPhase] = useState<'intro' | 'collapsed' | 'expanded'>('intro');
-  const [hasInteracted, setHasInteracted] = useState(false);
+  // Verse overlay states - skip intro if opening a modal
+  const [phase, setPhase] = useState<'intro' | 'collapsed' | 'expanded'>(defaultModal ? 'collapsed' : 'intro');
+  const [hasInteracted, setHasInteracted] = useState(!!defaultModal);
 
   // Active clip for global menu
   const [activeClip, setActiveClip] = useState<ClipItem | null>(null);
@@ -43,8 +52,56 @@ export default function HomePageClient({ verseOfTheDay, initialClipId, initialCl
   const [videoReady, setVideoReady] = useState(false);
   const [scrollDirection, setScrollDirection] = useState<'forward' | 'backward' | null>(null);
 
+  // LinkTree modal state (for /links route)
+  const [linkTreeOpen, setLinkTreeOpen] = useState(false);
+
   // Audio state
   const { isMuted, toggleMute } = useAudio();
+
+  // Modal contexts
+  const { openStore, view: storeView, closeStore } = useStore();
+  const { openHub, modalStack, closeAll: closeMedia } = useUnifiedMedia();
+
+  // Auto-open modal based on defaultModal prop
+  useEffect(() => {
+    if (!defaultModal) return;
+
+    // Small delay to ensure contexts are ready
+    const timer = setTimeout(() => {
+      switch (defaultModal) {
+        case 'store':
+          openStore();
+          break;
+        case 'moments':
+          openHub('moments');
+          break;
+        case 'media':
+          openHub('videos');
+          break;
+        case 'links':
+          setLinkTreeOpen(true);
+          break;
+      }
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, [defaultModal, openStore, openHub]);
+
+  // Navigate back to / when modal closes (only if opened via URL)
+  useEffect(() => {
+    if (!defaultModal) return;
+
+    // Check if all modals are closed
+    const storeIsClosed = storeView === 'closed';
+    const mediaIsClosed = modalStack.length === 0;
+    const linksIsClosed = !linkTreeOpen;
+
+    // If we opened via URL and modal is now closed, navigate home
+    if (storeIsClosed && mediaIsClosed && linksIsClosed) {
+      // Use shallow routing to update URL without reload
+      router.replace('/', { scroll: false });
+    }
+  }, [defaultModal, storeView, modalStack.length, linkTreeOpen, router]);
 
   // Ref to hold ClipsFeed's scrollToNext function (type-safe, no window global)
   const scrollToNextRef = useRef<(() => void) | null>(null);
@@ -65,17 +122,6 @@ export default function HomePageClient({ verseOfTheDay, initialClipId, initialCl
     setCurrentTime(new Date());
     const interval = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(interval);
-  }, []);
-
-  // HLS.js warm-up: Pre-import during intro phase (before first video)
-  // Saves ~100ms on first video play for browsers that need HLS.js
-  useEffect(() => {
-    const video = document.createElement('video');
-    const needsHlsJs = !video.canPlayType('application/vnd.apple.mpegurl');
-    if (needsHlsJs) {
-      // Dynamic import triggers module load + parse while user reads verse
-      import('hls.js').catch(() => {});
-    }
   }, []);
 
   // Auto-collapse after intro
@@ -320,6 +366,9 @@ export default function HomePageClient({ verseOfTheDay, initialClipId, initialCl
           clipArtist={activeClip?.artist}
         />
       </div>
+
+      {/* LinkTree Modal - for /links route */}
+      <LinkTreeModal isOpen={linkTreeOpen} onClose={() => setLinkTreeOpen(false)} />
     </div>
   );
 }

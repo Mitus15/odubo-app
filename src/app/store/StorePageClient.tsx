@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import ScreenLayout from '@/components/ui/ScreenLayout';
 import ScrollContainer from '@/components/ui/ScrollContainer';
 import VinylMiniPlayer from '@/components/player/VinylMiniPlayer';
@@ -14,6 +14,38 @@ interface ProductCard {
   price: number | null;
   available: boolean;
   createdAt: string;
+  category: string;
+}
+
+// Shopify productType → Display category (case-insensitive matching)
+const CATEGORY_GROUPS: Record<string, string> = {
+  // Pants group
+  'jeans': 'Pants',
+  'trousers': 'Pants',
+  'pants': 'Pants',
+  // Hoodies group
+  'hoodies': 'Hoodies',
+  'hoodie': 'Hoodies',
+  'sweatshirt': 'Hoodies',
+  'sweatshirts': 'Hoodies',
+  // T-Shirts (standalone)
+  't-shirts': 'T-Shirts',
+  't-shirt': 'T-Shirts',
+  'tee': 'T-Shirts',
+  'tees': 'T-Shirts',
+  // Vests (standalone)
+  'vests': 'Vests',
+  'vest': 'Vests',
+};
+
+// Display order for filter pills
+const CATEGORY_ORDER = ['All', 'T-Shirts', 'Pants', 'Hoodies', 'Vests'];
+
+// Helper to normalize and map category
+function getDisplayCategory(productType: string): string {
+  if (!productType) return '';
+  const normalized = productType.toLowerCase().trim();
+  return CATEGORY_GROUPS[normalized] || productType;
 }
 
 interface StorePageClientProps {
@@ -239,6 +271,111 @@ export default function StorePageClient({ isStoreOpen, isAdmin, initialProducts 
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
   const [openOption, setOpenOption] = useState<string | null>(null);
   const [addFeedback, setAddFeedback] = useState<string | null>(null);
+  const [activeCategory, setActiveCategory] = useState<string>('All');
+
+  // Cart state for sticky button
+  const [cartCount, setCartCount] = useState(0);
+  const [quickAddFeedback, setQuickAddFeedback] = useState<string | null>(null);
+  const [hasScrolled, setHasScrolled] = useState(false);
+
+  // Track cart count from localStorage
+  useEffect(() => {
+    const updateCartCount = () => {
+      try {
+        const raw = localStorage.getItem('cart') || '[]';
+        const cart = JSON.parse(raw);
+        const count = Array.isArray(cart) ? cart.reduce((sum: number, item: any) => sum + (item.qty || 1), 0) : 0;
+        setCartCount(count);
+      } catch {
+        setCartCount(0);
+      }
+    };
+    updateCartCount();
+    window.addEventListener('storage', updateCartCount);
+    // Custom event for same-tab updates
+    window.addEventListener('cartUpdated', updateCartCount);
+    return () => {
+      window.removeEventListener('storage', updateCartCount);
+      window.removeEventListener('cartUpdated', updateCartCount);
+    };
+  }, []);
+
+  // Quick add to cart (adds default variant)
+  const quickAddToCart = useCallback(async (e: React.MouseEvent, product: ProductCard) => {
+    e.stopPropagation();
+    if (!product.available) return;
+
+    try {
+      // Fetch product details if not cached
+      let detail = productDetails[product.handle];
+      if (!detail) {
+        const STORE_URL = process.env.NEXT_PUBLIC_SHOPIFY_STORE_URL || 'https://odubostudio.myshopify.com';
+        const PUBLIC_TOKEN = process.env.NEXT_PUBLIC_SHOPIFY_API_KEY;
+        if (!PUBLIC_TOKEN) throw new Error('Missing token');
+
+        const query = `#graphql
+          query Product($handle: String!) {
+            product(handle: $handle) {
+              variants(first: 1) { edges { node {
+                id title availableForSale
+                price { amount }
+                image { url }
+              }}}
+            }
+          }`;
+
+        const res = await fetch(`${STORE_URL}/api/2024-07/graphql.json`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Shopify-Storefront-Access-Token': PUBLIC_TOKEN,
+          },
+          body: JSON.stringify({ query, variables: { handle: product.handle } }),
+        });
+
+        const data = await res.json();
+        const v = data?.data?.product?.variants?.edges?.[0]?.node;
+        if (!v) throw new Error('No variant');
+
+        detail = {
+          variants: [{
+            id: v.id,
+            title: v.title,
+            price: parseFloat(v.price.amount),
+            available: v.availableForSale,
+            image: v.image?.url || null,
+          }]
+        };
+      }
+
+      const variant = detail.variants[0];
+      if (!variant) throw new Error('No variant');
+
+      const raw = localStorage.getItem('cart') || '[]';
+      const cart: any[] = JSON.parse(raw);
+      const existing = cart.find(c => c.variantId === variant.id);
+
+      const base = {
+        variantId: variant.id,
+        qty: 1,
+        title: variant.title === 'Default Title' ? product.title : `${product.title} — ${variant.title}`,
+        price: variant.price,
+        image: variant.image || product.image,
+      };
+
+      const nextCart = existing
+        ? cart.map(c => c.variantId === variant.id ? { ...c, qty: c.qty + 1 } : c)
+        : [...cart, base];
+
+      localStorage.setItem('cart', JSON.stringify(nextCart));
+      window.dispatchEvent(new Event('cartUpdated'));
+
+      setQuickAddFeedback(product.handle);
+      setTimeout(() => setQuickAddFeedback(null), 1200);
+    } catch (err) {
+      console.error('Quick add failed:', err);
+    }
+  }, [productDetails]);
 
   const handleUnlock = (e: React.FormEvent) => {
     e.preventDefault();
@@ -276,7 +413,30 @@ export default function StorePageClient({ isStoreOpen, isAdmin, initialProducts 
     return () => clearInterval(interval);
   }, []);
 
-  const filteredProducts = useMemo(() => products.filter(Boolean), [products]);
+  // Derive available categories from products (only show categories that have products)
+  const availableCategories = useMemo(() => {
+    const seen = new Set<string>();
+    products.forEach(p => {
+      if (p?.category) {
+        const displayCat = getDisplayCategory(p.category);
+        if (displayCat) seen.add(displayCat);
+      }
+    });
+    // Return ordered categories, with unmapped ones at the end
+    const ordered = CATEGORY_ORDER.filter(c => c === 'All' || seen.has(c));
+    const unmapped = [...seen].filter(c => !CATEGORY_ORDER.includes(c)).sort();
+    return [...ordered, ...unmapped];
+  }, [products]);
+
+  // Filter products by selected category
+  const filteredProducts = useMemo(() => {
+    return products.filter(p => {
+      if (!p) return false;
+      if (activeCategory === 'All') return true;
+      const productGroup = getDisplayCategory(p.category);
+      return productGroup === activeCategory;
+    });
+  }, [products, activeCategory]);
 
   const selectedProduct = selectedHandle ? filteredProducts.find(p => p.handle === selectedHandle) : null;
   const selectedDetail = selectedProduct ? productDetails[selectedProduct.handle] : null;
@@ -397,6 +557,7 @@ export default function StorePageClient({ isStoreOpen, isAdmin, initialProducts 
         ? cart.map(c => c.variantId === selectedVariant.id ? { ...c, qty: c.qty + 1 } : c)
         : [...cart, base];
       localStorage.setItem('cart', JSON.stringify(nextCart));
+      window.dispatchEvent(new Event('cartUpdated'));
       setAddFeedback('✓ Added to bag');
       setTimeout(() => setAddFeedback(null), 1800);
     } catch (e) {
@@ -502,9 +663,32 @@ export default function StorePageClient({ isStoreOpen, isAdmin, initialProducts 
       </header>
 
       <ScrollContainer>
+        {/* Category Filter Pills */}
+        {availableCategories.length > 1 && (
+          <div className="sticky top-0 z-20 bg-[#0b0b0b]/95 backdrop-blur-sm border-b border-white/5">
+            <div className="overflow-x-auto scrollbar-hide px-3 py-2.5">
+              <div className="flex gap-2">
+                {availableCategories.map(cat => (
+                  <button
+                    key={cat}
+                    onClick={() => setActiveCategory(cat)}
+                    className={`px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all border ${
+                      activeCategory === cat
+                        ? 'bg-[#843c2d] text-[#f8f2ea] border-[#843c2d]'
+                        : 'bg-white/5 text-[#b2a491] border-white/10 hover:bg-white/10 hover:text-[#ede8df]'
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Content area with consistent spacing */}
-        <div 
-          className="pt-16 pb-40"
+        <div
+          className="pt-4 pb-40"
           style={{ paddingBottom: 'calc(160px + env(safe-area-inset-bottom, 0px))' }}
         >
           {/* Loading state */}
@@ -532,38 +716,70 @@ export default function StorePageClient({ isStoreOpen, isAdmin, initialProducts 
                 style={{ gap: '12px' }}
               >
                 {filteredProducts.map((p, idx) => (
-                  <button
+                  <div
                     key={p.id}
-                    type="button"
-                    onClick={() => setSelectedHandle(p.handle)}
-                    className="group relative aspect-square rounded-lg overflow-hidden bg-[#0d0b0a] focus:outline-none focus:ring-2 focus:ring-[#843c2d]/50"
+                    className="group relative aspect-square rounded-lg overflow-hidden bg-[#0d0b0a]"
                   >
-                    {/* Product Image */}
-                    {p.image ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img 
-                        src={p.image} 
-                        alt={p.title} 
-                        className="absolute inset-0 w-full h-full object-contain transition-transform duration-500 ease-out group-hover:scale-[1.03]" 
-                      />
-                    ) : (
-                      <div className="absolute inset-0 flex items-center justify-center bg-[#1a1614]">
-                        <span className="text-[#502d26] text-[10px] uppercase tracking-widest">No Image</span>
-                      </div>
-                    )}
+                    {/* Main clickable area for product details */}
+                    <button
+                      type="button"
+                      onClick={() => setSelectedHandle(p.handle)}
+                      className="absolute inset-0 w-full h-full focus:outline-none focus:ring-2 focus:ring-[#843c2d]/50"
+                      aria-label={`View ${p.title}`}
+                    >
+                      {/* Product Image */}
+                      {p.image ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={p.image}
+                          alt={p.title}
+                          className="absolute inset-0 w-full h-full object-contain transition-transform duration-500 ease-out group-hover:scale-[1.03]"
+                        />
+                      ) : (
+                        <div className="absolute inset-0 flex items-center justify-center bg-[#1a1614]">
+                          <span className="text-[#502d26] text-[10px] uppercase tracking-widest">No Image</span>
+                        </div>
+                      )}
+                    </button>
 
                     {/* Sold Out Overlay */}
                     {!p.available && (
-                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center pointer-events-none">
                         <span className="px-3 py-1.5 bg-[#0d0b0a]/90 rounded-full text-[#ede8df] text-[10px] uppercase tracking-widest border border-[#502d26]/50">
                           Sold Out
                         </span>
                       </div>
                     )}
 
+                    {/* Quick Add Button - bottom right */}
+                    {p.available && (
+                      <button
+                        type="button"
+                        onClick={(e) => quickAddToCart(e, p)}
+                        className={`absolute bottom-2 right-2 z-10 w-10 h-10 rounded-full
+                          flex items-center justify-center transition-all duration-200
+                          ${quickAddFeedback === p.handle
+                            ? 'bg-green-500 scale-110'
+                            : 'bg-[#843c2d] hover:bg-[#a44e3a] active:scale-95'
+                          }
+                          text-white shadow-lg`}
+                        aria-label={quickAddFeedback === p.handle ? 'Added to bag' : 'Quick add to bag'}
+                      >
+                        {quickAddFeedback === p.handle ? (
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                          </svg>
+                        ) : (
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                          </svg>
+                        )}
+                      </button>
+                    )}
+
                     {/* Subtle hover glow */}
-                    <div className="absolute inset-0 rounded-lg ring-1 ring-inset ring-white/5 group-hover:ring-[#843c2d]/30 transition-all duration-300" />
-                  </button>
+                    <div className="absolute inset-0 rounded-lg ring-1 ring-inset ring-white/5 group-hover:ring-[#843c2d]/30 transition-all duration-300 pointer-events-none" />
+                  </div>
                 ))}
               </div>
             </div>
@@ -572,7 +788,17 @@ export default function StorePageClient({ isStoreOpen, isAdmin, initialProducts 
           {/* Empty state */}
           {!loading && !error && filteredProducts.length === 0 && (
             <div className="flex flex-col items-center justify-center min-h-[50vh] text-[#502d26]">
-              <p className="text-xs uppercase tracking-widest">No products available</p>
+              <p className="text-xs uppercase tracking-widest">
+                {activeCategory === 'All' ? 'No products available' : `No ${activeCategory.toLowerCase()} available`}
+              </p>
+              {activeCategory !== 'All' && (
+                <button
+                  onClick={() => setActiveCategory('All')}
+                  className="mt-4 px-4 py-2 text-xs uppercase tracking-widest text-[#b2a491] hover:text-[#ede8df] transition-colors"
+                >
+                  View all products
+                </button>
+              )}
             </div>
           )}
 
@@ -595,6 +821,26 @@ export default function StorePageClient({ isStoreOpen, isAdmin, initialProducts 
       >
         <VinylMiniPlayer />
       </div>
+
+      {/* Sticky Cart Button - shows when cart has items */}
+      {cartCount > 0 && (
+        <Link
+          href="/store/cart"
+          className="fixed z-40 flex items-center gap-2 px-4 py-3 rounded-full
+            bg-[#843c2d] hover:bg-[#a44e3a] text-white font-semibold text-sm
+            shadow-[0_8px_30px_rgba(132,60,45,0.4)] transition-all duration-200
+            active:scale-95"
+          style={{
+            right: '1rem',
+            bottom: 'calc(140px + env(safe-area-inset-bottom, 0px))'
+          }}
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+          </svg>
+          <span>Bag ({cartCount})</span>
+        </Link>
+      )}
 
       {/* Footer - OUTSIDE ScrollContainer, truly fixed at bottom with safe area */}
       <footer

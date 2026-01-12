@@ -5,7 +5,6 @@ import Image from 'next/image';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { ClipItem } from '@/types/clips';
 import { useAudio } from '@/contexts/AudioContext';
-import { attachHls, type HlsHandle } from '@/lib/hlsPlayer';
 
 interface SingleVideoPlayerProps {
   clips: ClipItem[];
@@ -38,8 +37,6 @@ export default function SingleVideoPlayer({
   // Single stable refs - no computed refs, no stale closures
   const videoRef = useRef<HTMLVideoElement>(null);
   const preloadRef = useRef<HTMLVideoElement>(null);
-  const hlsHandleRef = useRef<HlsHandle | null>(null);
-  const preloadHlsHandleRef = useRef<HlsHandle | null>(null);
 
   const mountedRef = useRef(true);
   const userPausedRef = useRef(false);
@@ -55,14 +52,11 @@ export default function SingleVideoPlayer({
   const activeClip = clips[activeIndex];
   const nextClip = clips[activeIndex + 1];
 
-  // Get the video URL (prefer HLS for streaming, fallback to MP4)
-  // HLS enables adaptive bitrate and faster first-frame via segment streaming
+  // Get the video URL (prefer MP4 for simplicity, fallback to HLS)
   const getVideoUrl = useCallback((clip: ClipItem | undefined): string | null => {
     if (!clip) return null;
-    // Prefer HLS for adaptive streaming (faster first frame, quality adaptation)
-    if (clip.hlsUrl) return clip.hlsUrl;
-    // Fallback to MP4 if no HLS available
-    return clip.mp4Url || null;
+    if (clip.mp4Url) return clip.mp4Url;
+    return clip.hlsUrl || null;
   }, []);
 
   // Core play function - handles browser autoplay policies
@@ -188,25 +182,16 @@ export default function SingleVideoPlayer({
     }
   }, [onEnded, scrollDirection, onAdvanceToNext, attemptPlay]);
 
-  // Mount tracking and HLS cleanup
+  // Mount tracking
   useEffect(() => {
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
       playPromiseRef.current = null;
-      // Clean up HLS instances on unmount
-      if (hlsHandleRef.current) {
-        hlsHandleRef.current.destroy();
-        hlsHandleRef.current = null;
-      }
-      if (preloadHlsHandleRef.current) {
-        preloadHlsHandleRef.current.destroy();
-        preloadHlsHandleRef.current = null;
-      }
     };
   }, []);
 
-  // Handle clip change - load with HLS.js for adaptive streaming
+  // Handle clip change - load and play immediately
   useEffect(() => {
     const v = videoRef.current;
     if (!v || !activeClip) return;
@@ -227,81 +212,40 @@ export default function SingleVideoPlayer({
       setIsUserPaused(false);
       userPausedRef.current = false;
 
-      // Clean up previous HLS instance
-      if (hlsHandleRef.current) {
-        hlsHandleRef.current.destroy();
-        hlsHandleRef.current = null;
-      }
-
-      // Use HLS.js for adaptive streaming (handles both HLS and fallback)
-      // This is async but we don't need to wait - attachHls sets up the source
-      attachHls(v, videoUrl, false).then((handle) => {
-        if (mountedRef.current) {
-          hlsHandleRef.current = handle;
-          v.currentTime = 0;
-          attemptPlay(v);
-        }
-      }).catch(() => {
-        // Fallback: set src directly if attachHls fails
-        if (mountedRef.current) {
-          v.src = videoUrl;
-          v.currentTime = 0;
-          attemptPlay(v);
-        }
-      });
+      // Set source and play immediately - don't wait for any events
+      v.src = videoUrl;
+      v.currentTime = 0;
+      attemptPlay(v);
     }
   }, [activeIndex, activeClip, getVideoUrl, attemptPlay, onVideoReady]);
 
-  // Preload next clip into hidden video element using HLS.js
-  // Start immediately when clip activates - use requestIdleCallback to avoid blocking main thread
+  // Preload next clip into hidden video element
+  // DEFERRED: Only start after first frame renders (after LCP)
   useEffect(() => {
+    // Wait until first frame is rendered to avoid blocking LCP
+    if (!firstFrame) return;
+
     const p = preloadRef.current;
     const nextUrl = getVideoUrl(nextClip);
     if (!p || !nextUrl) return;
 
-    let idleId: number | undefined;
-    let timeoutId: ReturnType<typeof setTimeout> | undefined;
-
-    const startPreload = async () => {
-      // Clean up previous preload HLS instance
-      if (preloadHlsHandleRef.current) {
-        preloadHlsHandleRef.current.destroy();
-        preloadHlsHandleRef.current = null;
+    // Small delay to ensure LCP is captured before starting preload
+    const timeoutId = setTimeout(() => {
+      if (p.src !== nextUrl) {
+        p.src = nextUrl;
+        p.load(); // Actually buffer the video
       }
+    }, 100);
 
-      // Use HLS.js for preload with preloadOnly=true (minimal buffer, lowest quality)
-      try {
-        const handle = await attachHls(p, nextUrl, true);
-        if (mountedRef.current) {
-          preloadHlsHandleRef.current = handle;
-        }
-      } catch {
-        // Fallback: set src directly
-        if (mountedRef.current) {
-          p.src = nextUrl;
-          p.load();
-        }
-      }
-    };
-
-    // Use requestIdleCallback to preload without blocking - falls back to setTimeout
-    if ('requestIdleCallback' in window) {
-      idleId = requestIdleCallback(() => { startPreload(); }, { timeout: 50 });
-    } else {
-      // Fallback: start after microtask to not block current render
-      timeoutId = setTimeout(startPreload, 0);
-    }
-
-    // Cleanup: release resources on unmount or clip change
+    // Cleanup: release resources on unmount
     return () => {
-      if (idleId !== undefined) cancelIdleCallback(idleId);
-      if (timeoutId !== undefined) clearTimeout(timeoutId);
-      if (preloadHlsHandleRef.current) {
-        preloadHlsHandleRef.current.destroy();
-        preloadHlsHandleRef.current = null;
+      clearTimeout(timeoutId);
+      if (p) {
+        p.src = '';
+        p.load(); // Flush any buffered data
       }
     };
-  }, [nextClip, getVideoUrl, activeIndex]);
+  }, [nextClip, getVideoUrl, firstFrame]);
 
   // Sync mute state
   useEffect(() => {

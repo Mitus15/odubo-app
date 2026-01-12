@@ -1,10 +1,9 @@
-import ScreenLayout from '@/components/ui/ScreenLayout';
-import ScrollContainer from '@/components/ui/ScrollContainer';
-import Link from 'next/link';
-import StorePageClient from './StorePageClient';
-import { getShopifyProducts } from '@/lib/shopify';
-import { requireStoreAccess } from '@/lib/storeAccess';
+import HomePageClient from '@/app/HomePageClient';
+import { fetchVerseOfTheDay } from '@/lib/gemini';
+import { queryDatabase } from '@/lib/db';
+import { mapClipRows } from '@/lib/clipsMapper';
 import { generateSeoMetadata } from '@/lib/seo';
+import type { ClipApiRow, ClipItem } from '@/types/clips';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = generateSeoMetadata({
@@ -13,50 +12,62 @@ export const metadata: Metadata = generateSeoMetadata({
   path: '/store',
 });
 
-interface ProductCard {
-  id: string;
-  title: string;
-  handle: string;
-  image: string | null;
-  price: number | null;
-  available: boolean;
-  createdAt: string;
+export const dynamic = 'force-dynamic';
+
+// Server-side verse fetching
+async function getVerse() {
+  try {
+    const timestamp = Date.now().toString();
+    const requestId = Math.random().toString(36).substring(7);
+    const result = await fetchVerseOfTheDay(timestamp, requestId);
+    return {
+      text: result.text,
+      reference: result.reference,
+      error: result.note || result.error || null
+    };
+  } catch (error) {
+    console.error('getVerse error:', error);
+    return {
+      text: "Trust in the Lord with all your heart and lean not on your own understanding.",
+      reference: "Proverbs 3:5",
+      error: "Unable to fetch today's verse."
+    };
+  }
 }
 
-// Server-side product fetching function
-async function loadProducts(): Promise<ProductCard[]> {
+// Server-side initial clips fetch
+async function getInitialClips(): Promise<ClipItem[]> {
   try {
-    // Fetch directly from Shopify library, bypassing internal API call
-    const data = await getShopifyProducts();
-
-    if (!data.success || !data.products) {
-      console.error('Failed to load products:', data.error);
-      return [];
-    }
-
-    // Map the API response to ProductCard format
-    return data.products.map((p: any) => ({
-      id: p.id,
-      title: p.title,
-      handle: p.handle,
-      image: p.images && p.images.length > 0 ? p.images[0] : null,
-      price: p.price || 0,
-      available: p.status === 'active',
-      createdAt: p.createdAt || new Date().toISOString()
-    }));
-
-  } catch (e) {
-    console.error('Failed to load products:', e);
+    const baseFields = `v.id, v.title, v.artist_name, v.description, v.url, v.uid, v.mp4_url, v.duration, v.duration_seconds, v.poster_url, v.thumbnail, v.created_at, v.shopify_product_handle, v.related_projects`;
+    const rows = await queryDatabase(
+      `SELECT ${baseFields}
+       FROM videos v
+       WHERE v.type = 'clip'
+         AND (v.is_public = 1 OR v.is_public IS NULL)
+         AND COALESCE(v.status, 'published') != 'archived'
+         AND COALESCE(v.publication_status, 'live') = 'live'
+       ORDER BY RANDOM()
+       LIMIT 12`,
+      []
+    ) as ClipApiRow[];
+    return mapClipRows(rows);
+  } catch (error) {
+    console.error('getInitialClips error:', error);
     return [];
   }
 }
 
 export default async function StorePage() {
-  // Check store access - redirects non-admins when unpublished
-  const { published, isAdmin } = await requireStoreAccess();
+  const [verseOfTheDay, initialClips] = await Promise.all([
+    getVerse(),
+    getInitialClips()
+  ]);
 
-  // Fetch initial products on the server
-  const initialProducts = await loadProducts();
-
-  return <StorePageClient isStoreOpen={published} isAdmin={isAdmin} initialProducts={initialProducts} />;
+  return (
+    <HomePageClient
+      verseOfTheDay={verseOfTheDay}
+      initialClips={initialClips}
+      defaultModal="store"
+    />
+  );
 }

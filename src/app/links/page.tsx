@@ -7,9 +7,9 @@ import type { ClipApiRow, ClipItem } from '@/types/clips';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = generateSeoMetadata({
-  title: 'Moments',
-  description: 'Capture and share moments from live events. Browse photo galleries and contribute to the community.',
-  path: '/moments',
+  title: 'Links',
+  description: 'Connect with Odubo across all platforms. Find social media, streaming services, and more.',
+  path: '/links',
 });
 
 export const dynamic = 'force-dynamic';
@@ -57,7 +57,7 @@ async function getInitialClips(): Promise<ClipItem[]> {
   }
 }
 
-export default async function MomentsPage() {
+export default async function LinksPage() {
   const [verseOfTheDay, initialClips] = await Promise.all([
     getVerse(),
     getInitialClips()
@@ -67,7 +67,7 @@ export default async function MomentsPage() {
     <HomePageClient
       verseOfTheDay={verseOfTheDay}
       initialClips={initialClips}
-      defaultModal="moments"
+      defaultModal="links"
     />
   );
 }

@@ -34,6 +34,11 @@ const AdminLivePage = dynamic(() => import('./live/page'));
 const AdminStoragePage = dynamic(() => import('./storage/page'));
 const AdminDatabasePage = dynamic(() => import('./db/page'));
 
+// Intelligence components
+const IntelDashboard = dynamic(() => import('@/components/intelligence/IntelDashboard'));
+const CommerceOverview = dynamic(() => import('@/components/intelligence/commerce/CommerceOverview'));
+const PlatformConnections = dynamic(() => import('@/components/intelligence/connections/PlatformConnections'));
+
 // Loading fallback component
 function LoadingFallback({ title }: { title: string }) {
   return (
@@ -69,7 +74,7 @@ function AccessDenied() {
 type AdminTab =
   | 'overview'
   // CMS
-  | 'music-library' | 'video-library' | 'moments' | 'linktree' | 'live'
+  | 'music-library' | 'video-library' | 'moments' | 'linktree' | 'live' | 'featured'
   // Social
   | 'social-posts' | 'social-accounts' | 'social-analytics'
   // Commerce
@@ -80,6 +85,11 @@ type AdminTab =
   | 'analytics' | 'analytics-overview' | 'analytics-sales' | 'analytics-finance'
   | 'analytics-music' | 'analytics-video' | 'analytics-moments' | 'analytics-gallery'
   | 'analytics-users' | 'analytics-customers' | 'analytics-reports'
+  // Intelligence
+  | 'intel-overview' | 'intel-streaming' | 'intel-social' | 'intel-commerce'
+  | 'intel-fans' | 'intel-insights' | 'intel-connections'
+  // Distribution
+  | 'dist-releases' | 'dist-videos' | 'dist-status' | 'dist-import'
   // System
   | 'users' | 'database' | 'storage' | 'api-keys' | 'settings'
   // Legacy
@@ -222,6 +232,44 @@ export default function TabContent({ activeTab, canAccess }: TabContentProps) {
           <AnalyticsTab view={activeTab === 'analytics' ? 'analytics-overview' : activeTab} />
         </Suspense>
       );
+
+    // === INTELLIGENCE ===
+    case 'intel-overview':
+      return (
+        <Suspense fallback={<LoadingFallback title="Intelligence Dashboard" />}>
+          <IntelDashboard />
+        </Suspense>
+      );
+    case 'intel-streaming':
+      return <PlaceholderTab title="Streaming Analytics" description="View streams, listeners, and revenue across Spotify, Apple Music, and other platforms. Import data from your distributor to get started." />;
+    case 'intel-social':
+      return <PlaceholderTab title="Social Analytics" description="Track engagement and growth across Instagram, TikTok, and YouTube. Connect your accounts to sync data automatically." />;
+    case 'intel-commerce':
+      return (
+        <Suspense fallback={<LoadingFallback title="Commerce Analytics" />}>
+          <CommerceOverview />
+        </Suspense>
+      );
+    case 'intel-fans':
+      return <PlaceholderTab title="Fan Intelligence" description="Unified fan profiles across all platforms. Segment your audience and understand their journey from discovery to purchase." />;
+    case 'intel-insights':
+      return <PlaceholderTab title="Correlation Insights" description="AI-powered cross-domain analysis. Discover patterns like which social posts drive streams or how clips convert to sales." />;
+    case 'intel-connections':
+      return (
+        <Suspense fallback={<LoadingFallback title="Platform Connections" />}>
+          <PlatformConnections />
+        </Suspense>
+      );
+
+    // === DISTRIBUTION ===
+    case 'dist-releases':
+      return <PlaceholderTab title="Music Releases" description="Manage music distribution to streaming platforms. Create releases, add tracks, and submit to your distributor." />;
+    case 'dist-videos':
+      return <PlaceholderTab title="Video Releases" description="Distribute music videos and visual content to YouTube, Vevo, and social platforms." />;
+    case 'dist-status':
+      return <PlaceholderTab title="Distribution Status" description="Track the status of your releases across all platforms. See which DSPs are live and any issues." />;
+    case 'dist-import':
+      return <PlaceholderTab title="Import Data" description="Upload CSV exports from your distributor to import streaming analytics. Supports UnitedMasters, DistroKid, TuneCore, and more." />;
 
     // === SYSTEM ===
     case 'users':

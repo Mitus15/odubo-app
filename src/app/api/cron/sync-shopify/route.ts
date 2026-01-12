@@ -1,0 +1,342 @@
+import { NextRequest, NextResponse } from 'next/server';
+// @ts-ignore
+import { getRequestContext } from '@cloudflare/next-on-pages';
+import {
+  fetchOrders,
+  toCents,
+  extractOrderNumber,
+  hashCustomerId,
+  parseUtmParams,
+  isAdminApiConfigured,
+  type ShopifyAdminOrder,
+} from '@/lib/shopify-admin';
+
+export const runtime = 'edge';
+
+/**
+ * Shopify Order Sync Cron Job
+ *
+ * POST /api/cron/sync-shopify
+ *
+ * Fetches orders from Shopify Admin API and stores them in D1.
+ * Supports incremental sync (only new/updated orders).
+ *
+ * Can be called:
+ * - Via cron scheduler (Vercel Cron or Cloudflare)
+ * - Manually from admin UI
+ * - Via webhook trigger for real-time updates
+ *
+ * Query params:
+ * - full=true: Force full sync instead of incremental
+ * - limit=N: Limit number of orders to sync (for testing)
+ */
+export async function POST(request: NextRequest) {
+  const startTime = Date.now();
+  let syncLogId: number | null = null;
+
+  try {
+    // Check if Admin API is configured
+    if (!isAdminApiConfigured()) {
+      return NextResponse.json(
+        { error: 'Shopify Admin API not configured. Set SHOPIFY_ADMIN_ACCESS_TOKEN.' },
+        { status: 500 }
+      );
+    }
+
+    const { env } = getRequestContext();
+    const db = env.DB;
+
+    const { searchParams } = new URL(request.url);
+    const fullSync = searchParams.get('full') === 'true';
+    const limitParam = searchParams.get('limit');
+    const maxOrders = limitParam ? parseInt(limitParam, 10) : 500;
+
+    // Create sync log entry
+    const logResult = await db
+      .prepare(
+        `INSERT INTO sync_logs (job_type, platform, status, started_at)
+         VALUES ('commerce_orders', 'shopify', 'running', datetime('now'))
+         RETURNING id`
+      )
+      .first<{ id: number }>();
+
+    syncLogId = logResult?.id || null;
+
+    // Get last sync time for incremental updates
+    let sinceDate: string | undefined;
+    if (!fullSync) {
+      const syncStatus = await db
+        .prepare(`SELECT last_updated_at FROM commerce_sync_status WHERE sync_type = 'orders'`)
+        .first<{ last_updated_at: string | null }>();
+
+      sinceDate = syncStatus?.last_updated_at || undefined;
+    }
+
+    // Fetch orders from Shopify
+    let cursor: string | undefined;
+    let totalFetched = 0;
+    let totalInserted = 0;
+    let latestUpdatedAt: string | null = null;
+
+    while (totalFetched < maxOrders) {
+      const { orders, pageInfo } = await fetchOrders({
+        since: sinceDate,
+        cursor,
+        limit: Math.min(50, maxOrders - totalFetched),
+      });
+
+      if (orders.length === 0) break;
+
+      // Process orders
+      for (const order of orders) {
+        try {
+          const inserted = await upsertOrder(db, order);
+          if (inserted) totalInserted++;
+
+          // Track latest update time
+          if (!latestUpdatedAt || order.updatedAt > latestUpdatedAt) {
+            latestUpdatedAt = order.updatedAt;
+          }
+        } catch (err) {
+          console.error(`[Sync] Error processing order ${order.id}:`, err);
+        }
+      }
+
+      totalFetched += orders.length;
+
+      // Check for more pages
+      if (!pageInfo.hasNextPage) break;
+      cursor = pageInfo.endCursor || undefined;
+    }
+
+    // Update sync status
+    if (latestUpdatedAt) {
+      await db
+        .prepare(
+          `INSERT INTO commerce_sync_status (sync_type, last_updated_at, total_synced, last_sync_count, status, completed_at)
+           VALUES ('orders', ?, ?, ?, 'idle', datetime('now'))
+           ON CONFLICT(sync_type) DO UPDATE SET
+             last_updated_at = excluded.last_updated_at,
+             total_synced = commerce_sync_status.total_synced + excluded.last_sync_count,
+             last_sync_count = excluded.last_sync_count,
+             status = 'idle',
+             completed_at = datetime('now')`
+        )
+        .bind(latestUpdatedAt, totalInserted, totalInserted)
+        .run();
+    }
+
+    // Update sync log
+    const duration = Date.now() - startTime;
+    if (syncLogId) {
+      await db
+        .prepare(
+          `UPDATE sync_logs SET
+             status = 'completed',
+             records_fetched = ?,
+             records_inserted = ?,
+             completed_at = datetime('now')
+           WHERE id = ?`
+        )
+        .bind(totalFetched, totalInserted, syncLogId)
+        .run();
+    }
+
+    // Recompute daily metrics
+    await recomputeDailyMetrics(db);
+
+    return NextResponse.json({
+      success: true,
+      fetched: totalFetched,
+      inserted: totalInserted,
+      duration: `${duration}ms`,
+      incremental: !fullSync,
+      lastUpdatedAt: latestUpdatedAt,
+    });
+  } catch (error) {
+    console.error('[Sync Shopify] Error:', error);
+
+    // Update sync log on error
+    if (syncLogId) {
+      try {
+        const { env } = getRequestContext();
+        await env.DB.prepare(
+          `UPDATE sync_logs SET
+             status = 'failed',
+             error_message = ?,
+             completed_at = datetime('now')
+           WHERE id = ?`
+        )
+          .bind(error instanceof Error ? error.message : 'Unknown error', syncLogId)
+          .run();
+      } catch {
+        // Ignore logging errors
+      }
+    }
+
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Sync failed' },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * Upsert a single order into D1
+ */
+async function upsertOrder(db: any, order: ShopifyAdminOrder): Promise<boolean> {
+  const orderId = `order_${order.id.split('/').pop()}`;
+  const shopifyId = order.id;
+  const orderNumber = extractOrderNumber(order.name);
+
+  // Parse UTM from landing site
+  const utm = parseUtmParams(order.landingSite);
+
+  // Hash customer ID for privacy
+  const customerHash = order.customer ? hashCustomerId(order.customer.id) : null;
+
+  // Upsert order
+  await db
+    .prepare(
+      `INSERT INTO commerce_orders (
+         id, shopify_id, shopify_order_number,
+         total_price_cents, subtotal_price_cents, total_tax_cents, total_discounts_cents, currency,
+         financial_status, fulfillment_status,
+         customer_id, customer_hash,
+         source_name, referring_site, landing_site,
+         utm_source, utm_medium, utm_campaign,
+         shopify_created_at, shopify_updated_at, processed_at, closed_at, cancelled_at,
+         synced_at, updated_at
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+       ON CONFLICT(shopify_id) DO UPDATE SET
+         total_price_cents = excluded.total_price_cents,
+         subtotal_price_cents = excluded.subtotal_price_cents,
+         total_tax_cents = excluded.total_tax_cents,
+         total_discounts_cents = excluded.total_discounts_cents,
+         financial_status = excluded.financial_status,
+         fulfillment_status = excluded.fulfillment_status,
+         shopify_updated_at = excluded.shopify_updated_at,
+         closed_at = excluded.closed_at,
+         cancelled_at = excluded.cancelled_at,
+         synced_at = datetime('now'),
+         updated_at = datetime('now')`
+    )
+    .bind(
+      orderId,
+      shopifyId,
+      orderNumber,
+      toCents(order.totalPriceSet.shopMoney.amount),
+      toCents(order.subtotalPriceSet.shopMoney.amount),
+      toCents(order.totalTaxSet.shopMoney.amount),
+      toCents(order.totalDiscountsSet.shopMoney.amount),
+      order.totalPriceSet.shopMoney.currencyCode,
+      order.displayFinancialStatus,
+      order.displayFulfillmentStatus,
+      order.customer?.id || null,
+      customerHash,
+      order.sourceName,
+      order.referringSite,
+      order.landingSite,
+      utm.utm_source || null,
+      utm.utm_medium || null,
+      utm.utm_campaign || null,
+      order.createdAt,
+      order.updatedAt,
+      order.processedAt,
+      order.closedAt,
+      order.cancelledAt
+    )
+    .run();
+
+  // Delete existing line items and re-insert
+  await db.prepare(`DELETE FROM commerce_order_items WHERE order_id = ?`).bind(orderId).run();
+
+  // Insert line items
+  for (const edge of order.lineItems.edges) {
+    const item = edge.node;
+    await db
+      .prepare(
+        `INSERT INTO commerce_order_items (
+           order_id, shopify_line_item_id,
+           product_id, product_title, variant_id, variant_title, sku,
+           quantity, price_cents, total_discount_cents
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      )
+      .bind(
+        orderId,
+        item.id,
+        item.product?.id || null,
+        item.title,
+        item.variant?.id || null,
+        item.variantTitle,
+        item.sku,
+        item.quantity,
+        toCents(item.originalTotalSet.shopMoney.amount),
+        toCents(item.totalDiscountSet.shopMoney.amount)
+      )
+      .run();
+  }
+
+  // Update/create customer record
+  if (order.customer && customerHash) {
+    await db
+      .prepare(
+        `INSERT INTO commerce_customers (id, shopify_customer_id, customer_hash, total_orders, first_order_at, last_order_at)
+         VALUES (?, ?, ?, 1, ?, ?)
+         ON CONFLICT(shopify_customer_id) DO UPDATE SET
+           total_orders = commerce_customers.total_orders + 1,
+           last_order_at = MAX(commerce_customers.last_order_at, excluded.last_order_at),
+           updated_at = datetime('now')`
+      )
+      .bind(customerHash, order.customer.id, customerHash, order.createdAt, order.createdAt)
+      .run();
+  }
+
+  return true;
+}
+
+/**
+ * Recompute daily metrics after sync
+ */
+async function recomputeDailyMetrics(db: any) {
+  // Get metrics for the last 90 days
+  const result = await db
+    .prepare(
+      `SELECT
+         date(shopify_created_at) as date,
+         COUNT(*) as total_orders,
+         SUM(total_price_cents) as total_revenue_cents,
+         AVG(total_price_cents) as avg_order_value_cents
+       FROM commerce_orders
+       WHERE shopify_created_at >= date('now', '-90 days')
+         AND financial_status NOT IN ('voided', 'refunded')
+       GROUP BY date(shopify_created_at)`
+    )
+    .all();
+
+  // Upsert each day's metrics
+  for (const row of result.results || []) {
+    await db
+      .prepare(
+        `INSERT INTO commerce_daily_metrics (date, total_orders, total_revenue_cents, avg_order_value_cents, computed_at)
+         VALUES (?, ?, ?, ?, datetime('now'))
+         ON CONFLICT(date) DO UPDATE SET
+           total_orders = excluded.total_orders,
+           total_revenue_cents = excluded.total_revenue_cents,
+           avg_order_value_cents = excluded.avg_order_value_cents,
+           computed_at = datetime('now')`
+      )
+      .bind(
+        row.date,
+        row.total_orders,
+        row.total_revenue_cents || 0,
+        Math.round(row.avg_order_value_cents || 0)
+      )
+      .run();
+  }
+}
+
+// Also support GET for manual triggers from browser
+export async function GET(request: NextRequest) {
+  return POST(request);
+}
