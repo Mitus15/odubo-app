@@ -1,6 +1,7 @@
 'use client';
 
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, useRef, type ReactNode } from 'react';
+import { useSearchParams, usePathname, useRouter } from 'next/navigation';
 
 // ============================================================================
 // Types
@@ -142,11 +143,21 @@ interface UnifiedMediaContextValue {
 const UnifiedMediaContext = createContext<UnifiedMediaContextValue | null>(null);
 
 export function UnifiedMediaProvider({ children }: { children: ReactNode }) {
+  // Router for URL updates
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
   // Modal stack state
   const [modalStack, setModalStack] = useState<ModalState[]>([]);
 
   // Tab state - default to moments (archived videos/music from user-facing UI)
   const [activeTab, setActiveTabState] = useState<MediaTab>('moments');
+
+  // Track if we've restored from URL (to avoid loops)
+  const hasRestoredFromUrl = useRef(false);
+  const pendingGalleryId = useRef<number | null>(null);
+  const pendingPhotoId = useRef<number | null>(null);
 
   // Video data
   const [videos, setVideos] = useState<VideoCard[]>([]);
@@ -281,6 +292,104 @@ export function UnifiedMediaProvider({ children }: { children: ReactNode }) {
       setIsLoadingPhotos(false);
     }
   }, []);
+
+  // ============================================================================
+  // URL Persistence
+  // ============================================================================
+
+  // Check for gallery/photo params on mount
+  useEffect(() => {
+    if (hasRestoredFromUrl.current) return;
+
+    const galleryParam = searchParams.get('gallery');
+    const photoParam = searchParams.get('photo');
+
+    if (galleryParam && pathname === '/moments') {
+      pendingGalleryId.current = parseInt(galleryParam, 10);
+      if (photoParam) {
+        pendingPhotoId.current = parseInt(photoParam, 10);
+      }
+    }
+  }, [searchParams, pathname]);
+
+  // Restore gallery from URL once galleries are loaded
+  useEffect(() => {
+    if (hasRestoredFromUrl.current || pendingGalleryId.current === null) return;
+    if (galleries.length === 0) return;
+
+    const galleryId = pendingGalleryId.current;
+    const gallery = galleries.find(g => g.id === galleryId);
+
+    if (gallery) {
+      hasRestoredFromUrl.current = true;
+      pendingGalleryId.current = null;
+
+      // Open the gallery
+      setSelectedGalleryId(galleryId);
+      setModalStack([{ type: 'hub' }, { type: 'moments-gallery', galleryId }]);
+
+      // Load photos for this gallery
+      refreshPhotos(galleryId);
+    } else {
+      // Gallery not found, clear pending
+      hasRestoredFromUrl.current = true;
+      pendingGalleryId.current = null;
+      pendingPhotoId.current = null;
+    }
+  }, [galleries, refreshPhotos]);
+
+  // Restore photo/lightbox from URL once photos are loaded
+  useEffect(() => {
+    if (pendingPhotoId.current === null) return;
+    if (photos.length === 0) return;
+
+    const photoId = pendingPhotoId.current;
+    const photoIndex = photos.findIndex(p => p.id === photoId);
+
+    if (photoIndex !== -1) {
+      pendingPhotoId.current = null;
+      setLightboxIndex(photoIndex);
+    } else {
+      // Photo not found, clear pending
+      pendingPhotoId.current = null;
+    }
+  }, [photos]);
+
+  // Sync URL when gallery/photo selection changes
+  useEffect(() => {
+    // Only sync if we're on the moments page
+    if (pathname !== '/moments') return;
+
+    const currentGalleryParam = searchParams.get('gallery');
+    const currentPhotoParam = searchParams.get('photo');
+
+    // Check if we're viewing a gallery
+    const isViewingGallery = modalStack.some(m => m.type === 'moments-gallery');
+    const currentGalleryId = selectedGalleryId;
+    const currentPhotoId = lightboxIndex !== null && photos[lightboxIndex]
+      ? photos[lightboxIndex].id
+      : null;
+
+    // Build new params
+    const params = new URLSearchParams();
+
+    if (isViewingGallery && currentGalleryId !== null) {
+      params.set('gallery', currentGalleryId.toString());
+
+      if (currentPhotoId !== null) {
+        params.set('photo', currentPhotoId.toString());
+      }
+    }
+
+    // Check if URL needs updating
+    const newGalleryParam = params.get('gallery');
+    const newPhotoParam = params.get('photo');
+
+    if (currentGalleryParam !== newGalleryParam || currentPhotoParam !== newPhotoParam) {
+      const newUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
+      router.replace(newUrl, { scroll: false });
+    }
+  }, [modalStack, selectedGalleryId, lightboxIndex, photos, pathname, searchParams, router]);
 
   // ============================================================================
   // Moments State Object
