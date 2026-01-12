@@ -68,6 +68,25 @@ database/
 └── migrations/            # SQL migration files
 ```
 
+### Deployment
+
+**Auto-Deploy Pipeline:**
+- **GitHub → Vercel**: Pushing to `main` branch automatically deploys to production
+- **Production URL**: https://odubo.studio
+- **Preview Deployments**: PRs get preview URLs automatically
+
+**To Deploy:**
+```bash
+git add .
+git commit -m "feat: description"
+git push origin main
+# Vercel auto-deploys within ~2 minutes
+```
+
+**Database Migrations:**
+- Run manually via Wrangler CLI: `npx wrangler d1 execute odubo --remote --file=database/migrations/xxx.sql`
+- Or use the admin panel migration runner
+
 ### Key Architectural Patterns
 
 **1. Single Source of Truth**
