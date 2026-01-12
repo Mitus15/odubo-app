@@ -215,14 +215,34 @@ export default function MomentsGalleryView({ galleryId }: MomentsGalleryViewProp
     });
   }, [lightboxIndex, photos]);
 
-  // Download photo
-  const handleDownload = (photo: Photo) => {
-    const a = document.createElement('a');
-    a.href = photo.r2_url;
-    a.download = photo.original_filename || `moment-${photo.id}.jpg`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+  // Download photo - fetch as blob to bypass cross-origin download restrictions
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const handleDownload = async (photo: Photo) => {
+    if (isDownloading) return;
+
+    setIsDownloading(true);
+    try {
+      const response = await fetch(photo.r2_url);
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = photo.original_filename || `moment-${photo.id}.jpg`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+
+      // Clean up blob URL
+      URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+      console.error('Download failed:', error);
+      // Fallback: open in new tab
+      window.open(photo.r2_url, '_blank');
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   const currentPhoto = lightboxIndex !== null ? photos[lightboxIndex] : null;
@@ -355,12 +375,20 @@ export default function MomentsGalleryView({ galleryId }: MomentsGalleryViewProp
               {currentPhoto.media_type !== 'video' && (
                 <button
                   onClick={() => handleDownload(currentPhoto)}
-                  className="w-10 h-10 flex items-center justify-center text-white/80 hover:text-white transition-colors rounded-full hover:bg-white/10"
-                  aria-label="Download"
+                  disabled={isDownloading}
+                  className="w-10 h-10 flex items-center justify-center text-white/80 hover:text-white transition-colors rounded-full hover:bg-white/10 disabled:opacity-50"
+                  aria-label={isDownloading ? 'Downloading...' : 'Download'}
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                  </svg>
+                  {isDownloading ? (
+                    <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                    </svg>
+                  )}
                 </button>
               )}
               {currentPhoto.media_type === 'video' && <div className="w-10" />}
