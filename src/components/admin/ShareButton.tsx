@@ -3,8 +3,10 @@
 import React, { useState } from 'react';
 
 interface ShareButtonProps {
-  /** URL to the media file (video or image) */
-  mediaUrl: string;
+  /** URL to the media file (video or image) - used for images/moments */
+  mediaUrl?: string;
+  /** Video ID for clips - will fetch download URL from API */
+  videoId?: number;
   /** Title for the share */
   title: string;
   /** Media type for determining file extension and MIME type */
@@ -27,6 +29,7 @@ interface ShareButtonProps {
  */
 export function ShareButton({
   mediaUrl,
+  videoId,
   title,
   mediaType,
   filename,
@@ -35,6 +38,37 @@ export function ShareButton({
   onShareComplete,
 }: ShareButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
+
+  // Get video download URL from API (enables MP4 on Cloudflare Stream)
+  const getVideoDownloadUrl = async (id: number): Promise<string | null> => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const res = await fetch(`/api/videos/${id}/download`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        credentials: 'include',
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to get download URL');
+      }
+
+      const data = await res.json();
+
+      if (data.status === 'ready' && data.url) {
+        return data.url;
+      }
+
+      if (data.status === 'pending') {
+        // Wait and retry
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      } else {
+        throw new Error(data.error || 'Unknown error');
+      }
+    }
+
+    return null;
+  };
 
   const handleShare = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -57,9 +91,23 @@ export function ShareButton({
         const mimeType = mediaType === 'video' ? 'video/mp4' : 'image/jpeg';
         const safeFilename = filename || title.replace(/[^a-zA-Z0-9]/g, '_');
 
-        // Fetch via proxy to bypass CORS
-        const proxyUrl = `/api/admin/media-proxy?url=${encodeURIComponent(mediaUrl)}`;
-        const response = await fetch(proxyUrl);
+        let fetchUrl: string;
+
+        if (videoId && mediaType === 'video') {
+          // For videos: get download URL from API (enables MP4 on Cloudflare)
+          const downloadUrl = await getVideoDownloadUrl(videoId);
+          if (!downloadUrl) {
+            throw new Error('Video is still processing. Try again in a moment.');
+          }
+          fetchUrl = downloadUrl;
+        } else if (mediaUrl) {
+          // For images: use proxy to bypass CORS
+          fetchUrl = `/api/admin/media-proxy?url=${encodeURIComponent(mediaUrl)}`;
+        } else {
+          throw new Error('No media URL provided');
+        }
+
+        const response = await fetch(fetchUrl);
         if (!response.ok) {
           throw new Error('Failed to fetch media');
         }
@@ -81,14 +129,14 @@ export function ShareButton({
       await navigator.share({
         title,
         text: title,
-        url: mediaUrl,
+        url: mediaUrl || '',
       });
       onShareComplete?.(true);
     } catch (error: any) {
       // User cancelled is not an error
       if (error?.name !== 'AbortError') {
         console.error('Share failed:', error);
-        alert('Failed to share. Please try again.');
+        alert(error.message || 'Failed to share. Please try again.');
         onShareComplete?.(false);
       }
     } finally {
