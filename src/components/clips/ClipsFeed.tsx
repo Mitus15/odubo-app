@@ -61,6 +61,13 @@ export default function ClipsFeed({
   const keyCounterRef = useRef(0);
   const pageRef = useRef(0);
   const initializedRef = useRef(false);
+  // Store the base clips (original fetched clips) for circular looping
+  const baseClipsRef = useRef<ClipItem[]>([]);
+  // Track if we've exhausted the API (no more pages)
+  const apiExhaustedRef = useRef(false);
+  // Debounce loadMore to prevent rapid calls
+  const loadMoreTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastLoadMoreTimeRef = useRef(0);
 
   // Fetch clips from API with session seed for consistent random order
   const fetchPage = useCallback(async (p: number): Promise<boolean> => {
@@ -98,8 +105,20 @@ export default function ClipsFeed({
       }));
 
       setDisplayClips(prev => p === 0 ? withKeys : [...prev, ...withKeys]);
-      setHasMore(data.hasMore ?? mapped.length === PAGE_SIZE);
+
+      const hasMoreFromApi = data.hasMore ?? mapped.length === PAGE_SIZE;
+      setHasMore(hasMoreFromApi);
       pageRef.current = p;
+
+      // Track when API is exhausted - store base clips for circular looping
+      if (!hasMoreFromApi && !apiExhaustedRef.current) {
+        apiExhaustedRef.current = true;
+        // Store base clips (without unique keys) for looping
+        setDisplayClips(current => {
+          baseClipsRef.current = current.map(({ uniqueKey, ...clip }) => clip as ClipItem);
+          return current;
+        });
+      }
 
       // Set initial active clip on first page
       if (p === 0 && withKeys[0]) {
@@ -139,6 +158,8 @@ export default function ClipsFeed({
       }));
 
       setDisplayClips(withKeys);
+      // Store base clips for circular looping (SSR clips are the complete set)
+      baseClipsRef.current = initialClips;
       setHasMore(true); // Assume more clips are available for pagination
       setLoading(false);
       pageRef.current = 0;
@@ -158,18 +179,54 @@ export default function ClipsFeed({
     };
   }, [fetchPage, initialClips]);
 
-  // Load more clips - fetch next page or loop with new shuffle
-  const handleLoadMore = useCallback(() => {
-    if (inflightRef.current > 0) return;
+  // Maximum number of clip instances to keep in memory (prevents infinite growth)
+  // With virtualization, only ~5 are rendered at once anyway
+  const MAX_DISPLAY_CLIPS = 100;
+  // Minimum time between loadMore calls (ms)
+  const LOAD_MORE_DEBOUNCE = 500;
 
-    if (!hasMore) {
-      // All clips seen - reshuffle with new seed for infinite loop
-      sessionSeedRef.current = Math.random().toString(36).substring(2, 12);
-      pageRef.current = -1; // Will become 0 on next fetch
-      setHasMore(true);
+  // Load more clips - fetch next page or loop circularly
+  const handleLoadMore = useCallback(() => {
+    // Debounce: prevent rapid repeated calls
+    const now = Date.now();
+    if (now - lastLoadMoreTimeRef.current < LOAD_MORE_DEBOUNCE) {
+      return;
     }
 
-    fetchPage(pageRef.current + 1);
+    if (inflightRef.current > 0) return;
+
+    // If API has more pages, fetch them
+    if (hasMore) {
+      lastLoadMoreTimeRef.current = now;
+      fetchPage(pageRef.current + 1);
+      return;
+    }
+
+    // API exhausted - append cloned clips for infinite circular scrolling
+    // This avoids refetching and creates seamless looping
+    if (baseClipsRef.current.length > 0) {
+      lastLoadMoreTimeRef.current = now;
+
+      const clonedClips = baseClipsRef.current.map(clip => ({
+        ...clip,
+        uniqueKey: `${keyCounterRef.current++}-${clip.id}-loop`
+      }));
+
+      setDisplayClips(prev => {
+        const newClips = [...prev, ...clonedClips];
+
+        // Memory management: if array is too large, trim from the start
+        // This works because virtualization only renders clips near activeIndex
+        if (newClips.length > MAX_DISPLAY_CLIPS) {
+          const trimCount = newClips.length - MAX_DISPLAY_CLIPS;
+          // Adjust activeIndex to compensate for trimming
+          setActiveIndex(idx => Math.max(0, idx - trimCount));
+          return newClips.slice(trimCount);
+        }
+
+        return newClips;
+      });
+    }
   }, [hasMore, fetchPage]);
 
   // Active clip detection using IntersectionObserver (primary) with scroll fallbacks
