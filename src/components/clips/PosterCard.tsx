@@ -1,10 +1,7 @@
 "use client";
 
-import { memo, useCallback } from 'react';
+import { memo } from 'react';
 import Image from 'next/image';
-import { useOmniShop } from '@/contexts/OmniShopContext';
-import { useQuickShop } from '@/contexts/QuickShopContext';
-import { clipAnalytics } from '@/lib/clipAnalytics';
 import VinylMiniPlayer from '../player/VinylMiniPlayer';
 import type { ClipItem } from '@/types/clips';
 
@@ -29,21 +26,6 @@ interface PosterCardProps {
  * when props haven't meaningfully changed.
  */
 function PosterCard({ clip, active, videoReady = false }: PosterCardProps) {
-  const { storeAccessible } = useOmniShop();
-  const { openQuickShop } = useQuickShop();
-
-  // Only show shop UI if there's an actual product handle (not empty string)
-  const hasProduct = !!(clip.productHandle && clip.productHandle.trim());
-
-  const handleShopClick = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (hasProduct && clip.productHandle) {
-      // Track the shop click for analytics
-      clipAnalytics.trackShopClick(clip.id, clip.productHandle);
-      openQuickShop(clip.productHandle);
-    }
-  }, [hasProduct, clip.id, clip.productHandle, openQuickShop]);
-
   // Only become transparent when video is actually ready to show
   const shouldReveal = active && videoReady;
 
@@ -95,20 +77,6 @@ function PosterCard({ clip, active, videoReady = false }: PosterCardProps) {
         onClick={(e) => e.stopPropagation()}
       >
         <VinylMiniPlayer className="mb-3" />
-
-        {/* View Item button - above title */}
-        {hasProduct && storeAccessible && (
-          <button
-            onClick={handleShopClick}
-            className="mb-2 px-4 py-2 rounded-full bg-white/95 text-[#1a1817] font-semibold text-sm
-                       shadow-[0_4px_20px_rgba(0,0,0,0.4)] backdrop-blur-sm
-                       active:scale-95 transition-all duration-200"
-            style={{ touchAction: 'manipulation' }}
-            aria-label="View this item"
-          >
-            View Item
-          </button>
-        )}
 
         <div className="max-w-[240px]">
           <h3 className="text-sm font-semibold text-white truncate drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">

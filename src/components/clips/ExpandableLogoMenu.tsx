@@ -40,13 +40,17 @@ interface ExpandableLogoMenuProps {
   clipId?: number;
   clipTitle?: string;
   clipArtist?: string;
+  clipProductHandle?: string;
 }
 
 export default function ExpandableLogoMenu({
   clipId,
   clipTitle,
   clipArtist,
+  clipProductHandle,
 }: ExpandableLogoMenuProps) {
+  // Check if current clip has a shoppable product
+  const hasProduct = !!(clipProductHandle && clipProductHandle.trim());
   const [isExpanded, setIsExpanded] = useState(false);
   const [linkTreeOpen, setLinkTreeOpen] = useState(false);
   const [position, setPosition] = useState<SnapPosition>('middle-right'); // DEFAULT
@@ -446,7 +450,8 @@ export default function ExpandableLogoMenu({
                      w-14 h-14 flex items-center justify-center rounded-full
                      border border-white/20
                      shadow-[0_12px_32px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.15),inset_0_-1px_0_rgba(0,0,0,0.4)]
-                     ${isAnimating ? 'bg-black/40' : 'bg-black/15 backdrop-blur-xl'}`}
+                     ${isAnimating ? 'bg-black/40' : 'bg-black/15 backdrop-blur-xl'}
+                     ${hasProduct && !isExpanded && storeAccessible ? 'animate-subtle-shake' : ''}`}
           initial="collapsed"
           animate={isExpanded ? 'expanded' : 'collapsed'}
           variants={logoVariants}

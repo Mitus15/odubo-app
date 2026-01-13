@@ -364,6 +364,7 @@ export default function HomePageClient({ verseOfTheDay, initialClipId, initialCl
           clipId={activeClip?.id}
           clipTitle={activeClip?.title}
           clipArtist={activeClip?.artist}
+          clipProductHandle={activeClip?.productHandle}
         />
       </div>
 

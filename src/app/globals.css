@@ -457,6 +457,21 @@
   will-change: auto;
 }
 
+/* Subtle shake animation - draws attention to shoppable items */
+@keyframes subtle-shake {
+  0%, 100% { transform: translateX(0) rotate(0); }
+  10% { transform: translateX(-1px) rotate(-0.5deg); }
+  20% { transform: translateX(1px) rotate(0.5deg); }
+  30% { transform: translateX(-1px) rotate(-0.5deg); }
+  40% { transform: translateX(1px) rotate(0.5deg); }
+  50%, 100% { transform: translateX(0) rotate(0); }
+}
+
+.animate-subtle-shake {
+  animation: subtle-shake 3s ease-in-out infinite;
+  animation-delay: 1s;
+}
+
 /* Reduce motion for users who prefer it */
 @media (prefers-reduced-motion: reduce) {
   .modal-container,
@@ -464,10 +479,12 @@
   .modal-swipeable,
   .modal-bottom-sheet,
   .modal-fullscreen,
-  .animate-spring {
+  .animate-spring,
+  .animate-subtle-shake {
     will-change: auto !important;
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
+    animation: none !important;
   }
 }
 
