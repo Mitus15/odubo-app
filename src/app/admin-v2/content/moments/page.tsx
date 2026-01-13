@@ -8,6 +8,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useHubUser } from '@/contexts/HubUserContext';
+import { ShareButton } from '@/components/admin/ShareButton';
 
 // =============================================================================
 // TYPES
@@ -32,6 +33,16 @@ interface GalleryRow {
   config: GalleryConfig;
   photo_count?: number;
   video_count?: number;
+}
+
+interface Photo {
+  id: number;
+  r2_url: string;
+  thumbnail_url?: string;
+  original_filename?: string;
+  user_name?: string;
+  created_at: string;
+  media_type?: string;
 }
 
 // =============================================================================
@@ -87,12 +98,14 @@ function GalleryCard({
   gallery,
   onEdit,
   onToggleFeatured,
-  onCopyCode
+  onCopyCode,
+  onViewPhotos,
 }: {
   gallery: GalleryRow;
   onEdit: () => void;
   onToggleFeatured: () => void;
   onCopyCode: () => void;
+  onViewPhotos: () => void;
 }) {
   const totalMedia = (gallery.photo_count || 0) + (gallery.video_count || 0);
 
@@ -159,6 +172,15 @@ function GalleryCard({
 
         {/* Actions */}
         <div className="grid grid-cols-2 gap-2 pt-2">
+          <button
+            onClick={onViewPhotos}
+            className="hub-btn hub-btn-secondary text-xs py-2 col-span-2 flex items-center justify-center gap-1.5"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3 10.5V6a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 6v4.5M3 10.5h18" />
+            </svg>
+            Photos ({totalMedia})
+          </button>
           <button
             onClick={onCopyCode}
             className="hub-btn hub-btn-secondary text-xs py-2"
@@ -379,6 +401,113 @@ function GalleryModal({
 }
 
 // =============================================================================
+// PHOTOS MODAL
+// =============================================================================
+
+function PhotosModal({
+  gallery,
+  onClose,
+}: {
+  gallery: GalleryRow;
+  onClose: () => void;
+}) {
+  const [photos, setPhotos] = useState<Photo[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPhotos = async () => {
+      try {
+        setIsLoading(true);
+        const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+        const res = await fetch(`/api/moments/list?galleryId=${gallery.id}&limit=200`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.photos)) {
+            setPhotos(data.photos);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch photos:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchPhotos();
+  }, [gallery.id]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full sm:max-w-2xl rounded-t-2xl sm:rounded-2xl border border-[var(--hub-border)] bg-[var(--hub-bg-secondary)] overflow-hidden max-h-[90vh] flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--hub-border)]">
+          <div>
+            <h2 className="text-lg font-semibold text-[var(--hub-text-primary)]">
+              {gallery.title}
+            </h2>
+            <p className="text-xs text-[var(--hub-text-muted)]">
+              {photos.length} photos
+            </p>
+          </div>
+          <button onClick={onClose} className="p-2 -mr-2 text-[var(--hub-text-muted)] hover:text-[var(--hub-text-primary)]">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Photos Grid */}
+        <div className="flex-1 overflow-y-auto p-2">
+          {isLoading ? (
+            <div className="grid grid-cols-3 gap-1">
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => (
+                <div key={i} className="aspect-square bg-[var(--hub-bg-tertiary)] animate-pulse rounded" />
+              ))}
+            </div>
+          ) : photos.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-[var(--hub-text-muted)]">No photos in this gallery</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-3 gap-1">
+              {photos.map((photo) => (
+                <div key={photo.id} className="relative aspect-square group">
+                  <img
+                    src={photo.thumbnail_url || photo.r2_url}
+                    alt=""
+                    className="w-full h-full object-cover rounded"
+                  />
+                  {/* Share button overlay */}
+                  <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <ShareButton
+                      mediaUrl={photo.r2_url}
+                      title={photo.original_filename || `Photo from ${gallery.title}`}
+                      mediaType={photo.media_type === 'video' ? 'video' : 'image'}
+                      filename={photo.original_filename || `${gallery.title}_${photo.id}`}
+                      size="sm"
+                    />
+                  </div>
+                  {/* Video indicator */}
+                  {photo.media_type === 'video' && (
+                    <div className="absolute bottom-1 left-1 w-5 h-5 rounded bg-black/60 flex items-center justify-center">
+                      <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M8 5v14l11-7z" />
+                      </svg>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// =============================================================================
 // MAIN PAGE
 // =============================================================================
 
@@ -389,6 +518,7 @@ export default function MomentsPage() {
   const [filter, setFilter] = useState<'all' | 'live' | 'featured'>('all');
   const [editingGallery, setEditingGallery] = useState<GalleryRow | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [photosGallery, setPhotosGallery] = useState<GalleryRow | null>(null);
 
   const canWrite = canAccess('content', 'write');
   const canDelete = canAccess('content', 'delete');
@@ -599,6 +729,7 @@ export default function MomentsPage() {
               onEdit={() => setEditingGallery(gallery)}
               onToggleFeatured={() => toggleFeatured(gallery)}
               onCopyCode={() => copyCode(gallery.code)}
+              onViewPhotos={() => setPhotosGallery(gallery)}
             />
           ))}
           {filteredGalleries.length === 0 && (
@@ -623,6 +754,14 @@ export default function MomentsPage() {
           initial={editingGallery}
           onClose={() => setEditingGallery(null)}
           onSubmit={updateGallery}
+        />
+      )}
+
+      {/* Photos Modal */}
+      {photosGallery && (
+        <PhotosModal
+          gallery={photosGallery}
+          onClose={() => setPhotosGallery(null)}
         />
       )}
     </div>

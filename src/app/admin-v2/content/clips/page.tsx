@@ -9,6 +9,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useHubUser } from '@/contexts/HubUserContext';
 import { DataTable } from '@/components/hub/data-display';
+import { ShareButton } from '@/components/admin/ShareButton';
 import type { Column, TableAction } from '@/lib/hub/types';
 
 // =============================================================================
@@ -72,6 +73,7 @@ function formatNumber(num: number | undefined): string {
 function ClipCard({ clip, onClick }: { clip: ClipRow; onClick?: () => void }) {
   const thumbnailUrl = clip.thumbnail || clip.poster_url;
   const duration = clip.duration_seconds || clip.duration;
+  const mp4Url = clip.uid ? `https://videodelivery.net/${clip.uid}/downloads/default.mp4` : null;
 
   return (
     <div
@@ -126,14 +128,27 @@ function ClipCard({ clip, onClick }: { clip: ClipRow; onClick?: () => void }) {
           )}
         </div>
 
-        {/* Product linked badge - top right */}
-        {clip.shopify_product_handle && (
-          <div className="absolute top-2 right-2 p-1.5 bg-black/70 rounded">
-            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 0 0-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 0 0-16.536-1.84M7.5 14.25 5.106 5.272M6 20.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Zm12.75 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z" />
-            </svg>
-          </div>
-        )}
+        {/* Top right: Share + Product badge */}
+        <div className="absolute top-2 right-2 flex flex-col gap-1.5 items-end">
+          {/* Share button */}
+          {mp4Url && (
+            <ShareButton
+              mediaUrl={mp4Url}
+              title={clip.title}
+              mediaType="video"
+              filename={clip.title}
+              size="sm"
+            />
+          )}
+          {/* Product linked badge */}
+          {clip.shopify_product_handle && (
+            <div className="p-1.5 bg-black/70 rounded">
+              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 0 0-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 0 0-16.536-1.84M7.5 14.25 5.106 5.272M6 20.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Zm12.75 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z" />
+              </svg>
+            </div>
+          )}
+        </div>
 
         {/* Gradient overlay */}
         <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/80 to-transparent" />
@@ -322,8 +337,48 @@ export default function ClipsPage() {
     },
   ];
 
+  // Share handler for list view
+  const handleShare = async (clip: ClipRow) => {
+    if (!clip.uid) return;
+
+    const mp4Url = `https://videodelivery.net/${clip.uid}/downloads/default.mp4`;
+
+    if (!navigator.share) {
+      alert('Sharing is not supported on this device');
+      return;
+    }
+
+    try {
+      if (navigator.canShare) {
+        const response = await fetch(mp4Url);
+        if (response.ok) {
+          const blob = await response.blob();
+          const safeFilename = clip.title.replace(/[^a-zA-Z0-9]/g, '_');
+          const file = new File([blob], `${safeFilename}.mp4`, { type: 'video/mp4' });
+          const shareData = { files: [file], title: clip.title };
+          if (navigator.canShare(shareData)) {
+            await navigator.share(shareData);
+            return;
+          }
+        }
+      }
+      // Fallback to URL sharing
+      await navigator.share({ title: clip.title, url: mp4Url });
+    } catch (error: any) {
+      if (error?.name !== 'AbortError') {
+        console.error('Share failed:', error);
+        alert('Failed to share. Please try again.');
+      }
+    }
+  };
+
   // Table actions
   const actions: TableAction<ClipRow>[] = [
+    {
+      id: 'share',
+      label: 'Share',
+      onClick: handleShare,
+    },
     {
       id: 'edit',
       label: 'Edit',
