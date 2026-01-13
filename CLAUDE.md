@@ -1,4 +1,38 @@
-# CLAUDE.md — Odubo Platform Intelligence Brief
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+---
+
+## Development Commands
+
+```bash
+# Development
+npm run dev                    # Start dev server with Turbopack (http://localhost:3000)
+npm run build                  # Production build (skips lint)
+npm run lint                   # ESLint check
+
+# Testing
+npm test                       # Run all tests
+npm run test:watch             # Watch mode with typeahead filtering
+npm run test:coverage          # Run with coverage report (70% threshold)
+
+# Database (Cloudflare D1)
+npx wrangler d1 execute odubo --remote --file=database/migrations/xxx.sql  # Run migration
+npx wrangler d1 execute odubo --local --command="SELECT * FROM ..."        # Local query
+
+# Audio/Video Processing
+npm run audio:transcode:track -- <track-id>   # Transcode single track to web format
+npm run audio:hls:album -- <album-id>         # Generate HLS for album
+npm run worker:clips                           # Run clip processing worker
+
+# Deployment (auto-deploys on push to main)
+git push origin main           # Triggers Vercel deploy (~2 min)
+npm run deploy:cf              # Deploy to Cloudflare Pages
+npm run deploy:cf:secrets      # Deploy with secrets update
+```
+
+---
 
 ## Role & Philosophy
 
@@ -43,6 +77,23 @@ Auth:           Custom (bcrypt + JWT)
 Deployment:     Vercel
 ```
 
+### Environment Setup
+
+1. Copy `.env.example` to `.env.local` and fill in required values
+2. Key services needed:
+   - Cloudflare: Account ID, D1 database, R2 bucket, Stream API
+   - Shopify: Storefront API key and store URL
+   - JWT_SECRET for authentication
+3. Run `npm install` then `npm run dev`
+
+### Path Aliases
+
+TypeScript paths are configured for clean imports:
+- `@/components/*` → `src/components/*`
+- `@/lib/*` → `src/lib/*`
+- `@/contexts/*` → `src/contexts/*`
+- `@/types/*` → `src/types/*`
+
 ### Directory Structure
 ```
 src/
@@ -65,7 +116,7 @@ src/
 └── styles/                # Global styles
 
 database/
-└── migrations/            # SQL migration files
+└── migrations/            # SQL migration files (numbered sequentially)
 ```
 
 ### Deployment
@@ -152,6 +203,12 @@ Core functionality works without JS where possible. HLS falls back to native vid
 - **Single active video** — Only one video plays at a time
 - **Preload strategy** — Next clip's first segment prefetched
 - **Memory management** — Destroy HLS instances when not visible
+
+### Testing Patterns
+- Tests live in `src/__tests__/` using Jest + React Testing Library
+- Run single test: `npm test -- --testPathPattern="filename"`
+- Run specific test name: `npm test -- -t "test name pattern"`
+- Coverage threshold: 70% for branches, functions, lines, statements
 
 ---
 

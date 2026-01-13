@@ -1,6 +1,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
+import ShareClipButton from '@/components/admin/ShareClipButton';
 
 interface Clip {
   id: number;
@@ -261,6 +262,10 @@ export default function ClipsManager({ videoId, videoTitle, videoArtist }: Clips
                       ▼
                     </button>
                   </div>
+                  <ShareClipButton
+                    clipId={clip.id}
+                    clipTitle={clip.title}
+                  />
                   <button
                     onClick={() => handleDelete(clip.id)}
                     className="text-red-400 hover:text-red-300 text-xs px-4 py-2.5 min-h-[44px] bg-red-600/10 rounded-lg"
