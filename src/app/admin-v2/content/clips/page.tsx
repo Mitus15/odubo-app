@@ -350,7 +350,9 @@ export default function ClipsPage() {
 
     try {
       if (navigator.canShare) {
-        const response = await fetch(mp4Url);
+        // Fetch via proxy to bypass CORS
+        const proxyUrl = `/api/admin/media-proxy?url=${encodeURIComponent(mp4Url)}`;
+        const response = await fetch(proxyUrl);
         if (response.ok) {
           const blob = await response.blob();
           const safeFilename = clip.title.replace(/[^a-zA-Z0-9]/g, '_');

@@ -57,8 +57,9 @@ export function ShareButton({
         const mimeType = mediaType === 'video' ? 'video/mp4' : 'image/jpeg';
         const safeFilename = filename || title.replace(/[^a-zA-Z0-9]/g, '_');
 
-        // Fetch the file
-        const response = await fetch(mediaUrl);
+        // Fetch via proxy to bypass CORS
+        const proxyUrl = `/api/admin/media-proxy?url=${encodeURIComponent(mediaUrl)}`;
+        const response = await fetch(proxyUrl);
         if (!response.ok) {
           throw new Error('Failed to fetch media');
         }
