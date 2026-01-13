@@ -9,7 +9,8 @@ import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useHubUser } from '@/contexts/HubUserContext';
 import { DataTable } from '@/components/hub/data-display';
-import { ShareButton } from '@/components/admin/ShareButton';
+import ShareClipButton from '@/components/admin/ShareClipButton';
+import ShareClipModal from '@/components/admin/ShareClipModal';
 import type { Column, TableAction } from '@/lib/hub/types';
 
 // =============================================================================
@@ -130,13 +131,9 @@ function ClipCard({ clip, onClick }: { clip: ClipRow; onClick?: () => void }) {
         {/* Top right: Share + Product badge */}
         <div className="absolute top-2 right-2 flex flex-col gap-1.5 items-end">
           {/* Share button */}
-          <ShareButton
-            videoId={clip.id}
-            title={clip.title}
-            mediaType="video"
-            filename={clip.title}
-            size="sm"
-          />
+          <div onClick={(e) => e.stopPropagation()}>
+            <ShareClipButton clipId={clip.id} clipTitle={clip.title} />
+          </div>
           {/* Product linked badge */}
           {clip.shopify_product_handle && (
             <div className="p-1.5 bg-black/70 rounded">
@@ -334,75 +331,15 @@ export default function ClipsPage() {
     },
   ];
 
-  // Share handler for list view
-  const [sharingClipId, setSharingClipId] = useState<number | null>(null);
-
-  const handleShare = async (clip: ClipRow) => {
-    if (!navigator.share) {
-      alert('Sharing is not supported on this device');
-      return;
-    }
-
-    setSharingClipId(clip.id);
-
-    try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-
-      // Get download URL from API (enables MP4 on Cloudflare Stream)
-      let downloadUrl: string | null = null;
-      for (let attempt = 0; attempt < 5; attempt++) {
-        const res = await fetch(`/api/videos/${clip.id}/download`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-          credentials: 'include',
-        });
-
-        if (!res.ok) throw new Error('Failed to get download URL');
-        const data = await res.json();
-
-        if (data.status === 'ready' && data.url) {
-          downloadUrl = data.url;
-          break;
-        }
-        if (data.status === 'pending') {
-          await new Promise(resolve => setTimeout(resolve, 2000));
-        }
-      }
-
-      if (!downloadUrl) {
-        throw new Error('Video is still processing. Try again in a moment.');
-      }
-
-      if (navigator.canShare) {
-        const response = await fetch(downloadUrl);
-        if (response.ok) {
-          const blob = await response.blob();
-          const safeFilename = clip.title.replace(/[^a-zA-Z0-9]/g, '_');
-          const file = new File([blob], `${safeFilename}.mp4`, { type: 'video/mp4' });
-          const shareData = { files: [file], title: clip.title };
-          if (navigator.canShare(shareData)) {
-            await navigator.share(shareData);
-            return;
-          }
-        }
-      }
-      // Fallback to URL sharing
-      await navigator.share({ title: clip.title, url: downloadUrl });
-    } catch (error: any) {
-      if (error?.name !== 'AbortError') {
-        console.error('Share failed:', error);
-        alert(error.message || 'Failed to share. Please try again.');
-      }
-    } finally {
-      setSharingClipId(null);
-    }
-  };
+  // Share modal state for list view
+  const [shareModalClip, setShareModalClip] = useState<ClipRow | null>(null);
 
   // Table actions
   const actions: TableAction<ClipRow>[] = [
     {
       id: 'share',
       label: 'Share',
-      onClick: handleShare,
+      onClick: (row) => setShareModalClip(row),
     },
     {
       id: 'edit',
@@ -559,6 +496,16 @@ export default function ClipsPage() {
           actions={actions}
           emptyMessage="No clips found"
           onRowClick={(row) => window.location.href = `/admin/videos?edit=${row.id}`}
+        />
+      )}
+
+      {/* Share Modal for list view */}
+      {shareModalClip && (
+        <ShareClipModal
+          isOpen={true}
+          onClose={() => setShareModalClip(null)}
+          clipId={shareModalClip.id}
+          clipTitle={shareModalClip.title}
         />
       )}
     </div>
