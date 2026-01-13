@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import type { LinkTreeItem } from '@/types/linktree';
 import { useOmniShop } from '@/contexts/OmniShopContext';
+import { useStore } from '@/contexts/StoreContext';
 
 interface LinkTreeModalProps {
   isOpen: boolean;
@@ -16,7 +17,12 @@ export default function LinkTreeModal({ isOpen, onClose }: LinkTreeModalProps) {
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
 
-  const { storeAccessible, checkingStoreAccess, openMaison, closeAll: closeAllShopModals } = useOmniShop();
+  const { storeAccessible: legacyStoreAccessible, checkingStoreAccess: legacyCheckingAccess, closeAll: closeAllShopModals } = useOmniShop();
+  const { openStore, isStoreAccessible, isCheckingAccess } = useStore();
+
+  // Use new store values with fallback to legacy
+  const storeAccessible = isStoreAccessible || legacyStoreAccessible;
+  const checkingStoreAccess = isCheckingAccess && legacyCheckingAccess;
 
   // Wait for client-side mount for portal
   useEffect(() => {
@@ -48,11 +54,11 @@ export default function LinkTreeModal({ isOpen, onClose }: LinkTreeModalProps) {
   const handleLinkClick = (link: LinkTreeItem) => {
     fetch(`/api/linktree/${link.id}/click`, { method: 'POST' }).catch(() => {});
 
-    // Special handling for shopify/baad store link - close this modal and open OmniStore
+    // Special handling for shopify/baad store link - close this modal and open new Store
     if (link.platform === 'shopify' || link.platform === 'baad') {
       onClose();
       closeAllShopModals();
-      openMaison();
+      openStore();
       return;
     }
 
