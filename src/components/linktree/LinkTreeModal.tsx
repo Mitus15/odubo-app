@@ -61,20 +61,34 @@ export default function LinkTreeModal({ isOpen, onClose }: LinkTreeModalProps) {
 
   const modalContent = (
     <div
-      className="fixed inset-0 z-[200] bg-black flex flex-col"
+      className="fixed inset-0 z-[200] flex flex-col"
       style={{
+        background: 'linear-gradient(145deg, #1a1714 0%, #0d0c0a 50%, #1a1714 100%)',
         paddingTop: 'env(safe-area-inset-top)',
         paddingBottom: 'env(safe-area-inset-bottom)',
         paddingLeft: 'env(safe-area-inset-left)',
         paddingRight: 'env(safe-area-inset-right)',
       }}
     >
+      {/* Subtle noise texture overlay */}
+      <div className="absolute inset-0 opacity-[0.015] pointer-events-none" style={{
+        backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
+      }} />
+
       {/* Header */}
-      <div className="flex items-center justify-between px-4 h-14 border-b border-white/10">
-        <h1 className="text-white text-lg font-semibold">Connect</h1>
+      <div className="relative flex items-center justify-between px-4 h-16">
+        <div className="flex items-center gap-3">
+          <img
+            src="/odubo_logo_emboss.webp"
+            alt="Odubo"
+            className="w-8 h-8 object-contain opacity-60"
+            draggable={false}
+          />
+          <h1 className="text-[#ede8df] text-lg font-medium tracking-wide">Connect</h1>
+        </div>
         <button
           onClick={onClose}
-          className="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 text-white active:bg-white/20"
+          className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 backdrop-blur-sm border border-white/10 text-[#ede8df]/70 hover:text-[#ede8df] hover:bg-white/10 transition-all active:scale-95"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -86,29 +100,64 @@ export default function LinkTreeModal({ isOpen, onClose }: LinkTreeModalProps) {
       <div className="flex-1 overflow-y-auto px-4 py-6">
         {loading ? (
           <div className="flex justify-center py-12">
-            <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+            <div className="w-10 h-10 border-2 border-[#843c2d]/30 border-t-[#843c2d] rounded-full animate-spin" />
           </div>
         ) : visibleLinks.length === 0 ? (
-          <p className="text-center text-white/50 py-12">No links available</p>
+          <p className="text-center text-[#ede8df]/40 py-12">No links available</p>
         ) : (
-          <div className="space-y-3 max-w-md mx-auto">
-            {visibleLinks.map((link) => (
+          <div className="grid gap-3 max-w-lg mx-auto">
+            {visibleLinks.map((link, index) => (
               <button
                 key={link.id}
                 onClick={() => handleLinkClick(link)}
-                className="w-full flex items-center gap-4 p-4 rounded-2xl bg-white/10 text-white text-left active:bg-white/20 transition-colors"
+                className="group w-full flex items-center gap-4 p-4 rounded-2xl text-left transition-all duration-300 active:scale-[0.98]"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%)',
+                  backdropFilter: 'blur(12px)',
+                  WebkitBackdropFilter: 'blur(12px)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  boxShadow: '0 4px 24px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)',
+                  animationDelay: `${index * 50}ms`,
+                }}
               >
-                <div className="w-12 h-12 flex items-center justify-center rounded-full bg-white/10 flex-shrink-0">
+                {/* Icon container with glass effect */}
+                <div
+                  className="w-12 h-12 flex items-center justify-center rounded-xl flex-shrink-0 transition-transform duration-300 group-hover:scale-110"
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.03) 100%)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.1)',
+                  }}
+                >
                   <PlatformIcon platform={link.platform} />
                 </div>
-                <span className="flex-1 font-medium text-base">{link.title}</span>
-                <svg className="w-5 h-5 text-white/40 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 19.5l15-15m0 0H8.25m11.25 0v11.25" />
-                </svg>
+
+                {/* Title */}
+                <span className="flex-1 font-medium text-[#ede8df] text-base group-hover:text-white transition-colors">
+                  {link.title}
+                </span>
+
+                {/* Arrow with hover animation */}
+                <div className="w-8 h-8 flex items-center justify-center rounded-full bg-white/5 group-hover:bg-[#843c2d]/30 transition-all duration-300">
+                  <svg
+                    className="w-4 h-4 text-[#ede8df]/40 group-hover:text-[#ede8df] transition-all duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 19.5l15-15m0 0H8.25m11.25 0v11.25" />
+                  </svg>
+                </div>
               </button>
             ))}
           </div>
         )}
+
+        {/* Footer */}
+        <div className="mt-8 text-center">
+          <p className="text-[10px] text-[#726d6c]/60 uppercase tracking-[0.2em]">Odubo Studio</p>
+        </div>
       </div>
     </div>
   );
