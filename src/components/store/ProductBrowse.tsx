@@ -151,19 +151,16 @@ function ProductGridItem({ product, index, onSelect }: ProductGridItemProps) {
         )}
       </div>
 
-      {/* Product info - always visible */}
-      <div className="p-2">
-        <h3 className="text-white/90 text-xs font-medium line-clamp-1 mb-1">{product.title}</h3>
-        <div className="flex items-center gap-1.5">
-          <span className={`text-sm font-semibold ${isOnSale ? 'text-red-400' : 'text-white'}`}>
-            ${product.price.toFixed(2)}
+      {/* Price only - no product name in grid */}
+      <div className="absolute bottom-2 left-2 flex items-center gap-1.5">
+        <span className={`text-sm font-semibold px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-sm ${isOnSale ? 'text-red-400' : 'text-white'}`}>
+          ${Math.round(product.price)}
+        </span>
+        {isOnSale && (
+          <span className="text-white/50 text-xs line-through px-1.5 py-0.5 rounded-full bg-black/40">
+            ${Math.round(product.compareAtPrice!)}
           </span>
-          {isOnSale && (
-            <span className="text-white/40 text-xs line-through">
-              ${product.compareAtPrice!.toFixed(2)}
-            </span>
-          )}
-        </div>
+        )}
       </div>
     </motion.button>
   );
@@ -276,11 +273,10 @@ export default function ProductBrowse() {
         {isLoadingProducts && products.length === 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 p-2">
             {[...Array(8)].map((_, i) => (
-              <div key={i} className="rounded-lg bg-[#1a1817] overflow-hidden">
+              <div key={i} className="rounded-lg bg-[#1a1817] overflow-hidden relative">
                 <div className="aspect-square bg-white/5 animate-pulse" />
-                <div className="p-2 space-y-2">
-                  <div className="h-3 w-3/4 bg-white/5 rounded animate-pulse" />
-                  <div className="h-4 w-1/3 bg-white/5 rounded animate-pulse" />
+                <div className="absolute bottom-2 left-2">
+                  <div className="h-5 w-12 bg-white/10 rounded-full animate-pulse" />
                 </div>
               </div>
             ))}
