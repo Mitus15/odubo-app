@@ -15,6 +15,7 @@ export async function GET(request: NextRequest) {
   const allowedDomains = [
     'videodelivery.net',
     'cloudflarestream.com',
+    'customer-', // Cloudflare Stream customer subdomains
     'r2.cloudflarestorage.com',
     'media.odubo.studio', // R2 public bucket
     'pub-', // R2 public bucket URLs (generic)

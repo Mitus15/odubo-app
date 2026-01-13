@@ -106,8 +106,9 @@ export default function ShareClipModal({ isOpen, onClose, clipId, clipTitle }: S
 
       setMessage('Downloading video...');
 
-      // 2. Fetch the video as a blob
-      const videoRes = await fetch(downloadUrl);
+      // 2. Fetch the video via proxy to bypass CORS
+      const proxyUrl = `/api/admin/media-proxy?url=${encodeURIComponent(downloadUrl)}`;
+      const videoRes = await fetch(proxyUrl);
       if (!videoRes.ok) {
         throw new Error('Failed to download video');
       }
@@ -158,7 +159,8 @@ export default function ShareClipModal({ isOpen, onClose, clipId, clipTitle }: S
       }
 
       setMessage('Downloading...');
-      const videoRes = await fetch(downloadUrl);
+      const proxyUrl = `/api/admin/media-proxy?url=${encodeURIComponent(downloadUrl)}`;
+      const videoRes = await fetch(proxyUrl);
       const blob = await videoRes.blob();
 
       const safeTitle = clipTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase();
