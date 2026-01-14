@@ -23,7 +23,7 @@ import GDPRConsent from "../components/GDPRConsent";
 import ServiceWorkerRegistration from "../components/ServiceWorkerRegistration";
 import OfflineIndicator from "../components/OfflineIndicator";
 import { PWAProvider } from "../components/PWAProvider";
-import PWAInstallBanner from "../components/PWAInstallBanner";
+// PWAInstallBanner removed - unnecessary friction
 import { EmailCaptureProvider } from "@/contexts/EmailCaptureContext";
 import EmailCaptureModal from "@/components/marketing/EmailCaptureModal";
 import GoogleAnalytics from "@/components/analytics/GoogleAnalytics";
@@ -97,7 +97,6 @@ export default function RootLayout({
                       {/* <ClientCapabilities /> */}
                       <ServiceWorkerRegistration />
                       <OfflineIndicator />
-                      <PWAInstallBanner />
                       {/* Desktop sidebar - persistent navigation on lg+ */}
                       <DesktopSidebar />
 
