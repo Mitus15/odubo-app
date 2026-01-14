@@ -42,6 +42,23 @@ interface SocialContent {
   updated_at: string;
 }
 
+interface Clip {
+  id: number;
+  title: string;
+  artist_name: string | null;
+  description: string | null;
+  uid: string;
+  url: string | null;
+  mp4_url: string | null;
+  duration: number | null;
+  duration_seconds: number | null;
+  poster_url: string | null;
+  thumbnail: string | null;
+  shopify_product_handle: string | null;
+  created_at: string;
+  already_imported: number;
+}
+
 type ViewMode = 'library' | 'calendar' | 'analytics';
 type StatusFilter = 'all' | 'draft' | 'review' | 'approved' | 'scheduled' | 'posted' | 'archived';
 
@@ -130,6 +147,21 @@ const Icons = {
   back: (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+    </svg>
+  ),
+  film: (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 01-1.125-1.125M3.375 19.5h1.5C5.496 19.5 6 18.996 6 18.375m-2.625 0V5.625m0 12.75v-1.5c0-.621.504-1.125 1.125-1.125m18.375 2.625V5.625m0 12.75c0 .621-.504 1.125-1.125 1.125m1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125m0 3.75h-1.5A1.125 1.125 0 0118 18.375M20.625 4.5H3.375m17.25 0c.621 0 1.125.504 1.125 1.125M20.625 4.5h-1.5C18.504 4.5 18 5.004 18 5.625m3.75 0v1.5c0 .621-.504 1.125-1.125 1.125M3.375 4.5c-.621 0-1.125.504-1.125 1.125M3.375 4.5h1.5C5.496 4.5 6 5.004 6 5.625m-2.625 0v1.5c0 .621.504 1.125 1.125 1.125m0 0h1.5m-1.5 0c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125m1.5-3.75C5.496 8.25 6 7.746 6 7.125v-1.5M4.875 8.25C5.496 8.25 6 8.754 6 9.375v1.5m0-5.25v5.25m0-5.25C6 5.004 6.504 4.5 7.125 4.5h9.75c.621 0 1.125.504 1.125 1.125m1.125 2.625h1.5m-1.5 0A1.125 1.125 0 0118 7.125v-1.5m1.125 2.625c-.621 0-1.125.504-1.125 1.125v1.5m2.625-2.625c.621 0 1.125.504 1.125 1.125v1.5c0 .621-.504 1.125-1.125 1.125M18 5.625v5.25M7.125 12h9.75m-9.75 0A1.125 1.125 0 016 10.875M7.125 12C6.504 12 6 12.504 6 13.125m0-2.25C6 11.496 5.496 12 4.875 12M18 10.875c0 .621-.504 1.125-1.125 1.125M18 10.875c0 .621.504 1.125 1.125 1.125m-2.25 0c.621 0 1.125.504 1.125 1.125m-12 5.25v-5.25m0 5.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125m-12 0v-1.5c0-.621-.504-1.125-1.125-1.125M18 18.375v-5.25m0 5.25v-1.5c0-.621.504-1.125 1.125-1.125M18 13.125v1.5c0 .621.504 1.125 1.125 1.125M18 13.125c0-.621.504-1.125 1.125-1.125M6 13.125v1.5c0 .621-.504 1.125-1.125 1.125M6 13.125C6 12.504 5.496 12 4.875 12m-1.5 0h1.5m-1.5 0c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125M19.125 12h1.5m0 0c.621 0 1.125.504 1.125 1.125v1.5c0 .621-.504 1.125-1.125 1.125m-17.25 0h1.5m14.25 0h1.5" />
+    </svg>
+  ),
+  search: (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+    </svg>
+  ),
+  check: (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
     </svg>
   ),
 };
@@ -637,6 +669,7 @@ function UploadModal({
   onClose: () => void;
   onSuccess: () => void;
 }) {
+  const [activeTab, setActiveTab] = useState<'upload' | 'clips'>('upload');
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -646,6 +679,82 @@ function UploadModal({
   const [isCreatingNewFolder, setIsCreatingNewFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Clips import state
+  const [clips, setClips] = useState<Clip[]>([]);
+  const [clipsLoading, setClipsLoading] = useState(false);
+  const [clipsSearch, setClipsSearch] = useState('');
+  const [selectedClip, setSelectedClip] = useState<Clip | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
+
+  // Load clips when switching to clips tab
+  useEffect(() => {
+    if (activeTab === 'clips') {
+      loadClips();
+    }
+  }, [activeTab]);
+
+  const loadClips = async (search?: string) => {
+    setClipsLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const params = new URLSearchParams();
+      if (search) params.set('search', search);
+      params.set('limit', '20');
+
+      const res = await fetch(`/api/admin/social/clips?${params}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        credentials: 'include',
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setClips(data.clips || []);
+      }
+    } catch (e) {
+      console.error('Failed to load clips:', e);
+    } finally {
+      setClipsLoading(false);
+    }
+  };
+
+  const handleClipsSearch = () => {
+    loadClips(clipsSearch);
+  };
+
+  const handleImportClip = async () => {
+    if (!selectedClip) return;
+
+    setIsImporting(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch('/api/admin/social/clips', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          video_id: selectedClip.id,
+          folder_id: folderId,
+          title: title.trim() || selectedClip.title,
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Failed to import clip');
+      }
+
+      onSuccess();
+    } catch (error) {
+      console.error('Import error:', error);
+      alert(error instanceof Error ? error.message : 'Import failed');
+    } finally {
+      setIsImporting(false);
+    }
+  };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -765,164 +874,364 @@ function UploadModal({
     }
   };
 
+  const isWorking = isUploading || isImporting;
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
-      onClick={(e) => e.target === e.currentTarget && !isUploading && onClose()}
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/70 backdrop-blur-sm"
+      onClick={(e) => e.target === e.currentTarget && !isWorking && onClose()}
     >
       <motion.div
-        initial={{ scale: 0.95, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.95, opacity: 0 }}
-        className="w-full max-w-lg bg-[#1a1614] rounded-2xl border border-[#b2a491]/20 overflow-hidden"
+        initial={{ y: '100%', opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: '100%', opacity: 0 }}
+        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+        className="w-full sm:max-w-2xl bg-[#1a1614] sm:rounded-2xl rounded-t-2xl border border-[#b2a491]/20 overflow-hidden max-h-[95vh] sm:max-h-[85vh] flex flex-col"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#b2a491]/10">
-          <h2 className="text-lg font-semibold">Upload Content</h2>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#b2a491]/10 shrink-0">
+          <h2 className="text-lg font-semibold">Add Content</h2>
           <button
             onClick={onClose}
-            disabled={isUploading}
+            disabled={isWorking}
             className="p-2 hover:bg-[#0d0b0a] rounded-lg transition-colors disabled:opacity-50"
           >
             {Icons.close}
           </button>
         </div>
 
-        <div className="p-6 space-y-4">
-          {/* Drop zone */}
-          <div
-            onDragOver={(e) => {
-              e.preventDefault();
-              setIsDragging(true);
-            }}
-            onDragLeave={() => setIsDragging(false)}
-            onDrop={handleDrop}
-            onClick={() => fileInputRef.current?.click()}
-            className={`relative border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${
-              isDragging
-                ? 'border-[#b2a491] bg-[#b2a491]/10'
-                : 'border-[#b2a491]/30 hover:border-[#b2a491]/50'
+        {/* Tabs */}
+        <div className="flex border-b border-[#b2a491]/10 shrink-0">
+          <button
+            onClick={() => setActiveTab('upload')}
+            className={`flex-1 px-4 py-3 text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
+              activeTab === 'upload'
+                ? 'text-[#ede8df] border-b-2 border-[#b2a491]'
+                : 'text-[#888] hover:text-[#ede8df]'
             }`}
           >
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="video/*"
-              onChange={handleFileSelect}
-              className="hidden"
-            />
-            {selectedFile ? (
-              <div>
-                <div className="w-12 h-12 mx-auto mb-3 text-[#b2a491]">{Icons.play}</div>
-                <p className="font-medium">{selectedFile.name}</p>
-                <p className="text-sm text-[#888] mt-1">
-                  {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-                </p>
-              </div>
-            ) : (
-              <div>
-                <div className="w-12 h-12 mx-auto mb-3 text-[#888]">{Icons.upload}</div>
-                <p className="font-medium">Drop video here or click to browse</p>
-                <p className="text-sm text-[#888] mt-1">Supports MP4, MOV, WebM</p>
-              </div>
-            )}
-          </div>
+            {Icons.upload}
+            <span>Upload New</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('clips')}
+            className={`flex-1 px-4 py-3 text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
+              activeTab === 'clips'
+                ? 'text-[#ede8df] border-b-2 border-[#b2a491]'
+                : 'text-[#888] hover:text-[#ede8df]'
+            }`}
+          >
+            {Icons.film}
+            <span>From Clips</span>
+          </button>
+        </div>
 
-          {/* Title */}
-          <div>
-            <label className="block text-sm font-medium text-[#888] mb-2">Title</label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Enter title..."
-              className="w-full px-4 py-3 bg-[#0d0b0a] border border-[#b2a491]/20 rounded-xl focus:outline-none focus:border-[#b2a491]/40"
-            />
-          </div>
+        <div className="p-6 space-y-4 overflow-y-auto flex-1">
+          {activeTab === 'upload' ? (
+            <>
+              {/* Drop zone */}
+              <div
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setIsDragging(true);
+                }}
+                onDragLeave={() => setIsDragging(false)}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+                className={`relative border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${
+                  isDragging
+                    ? 'border-[#b2a491] bg-[#b2a491]/10'
+                    : 'border-[#b2a491]/30 hover:border-[#b2a491]/50'
+                }`}
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="video/*"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+                {selectedFile ? (
+                  <div>
+                    <div className="w-12 h-12 mx-auto mb-3 text-[#b2a491]">{Icons.play}</div>
+                    <p className="font-medium">{selectedFile.name}</p>
+                    <p className="text-sm text-[#888] mt-1">
+                      {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                    </p>
+                  </div>
+                ) : (
+                  <div>
+                    <div className="w-12 h-12 mx-auto mb-3 text-[#888]">{Icons.upload}</div>
+                    <p className="font-medium">Drop video here or click to browse</p>
+                    <p className="text-sm text-[#888] mt-1">Supports MP4, MOV, WebM</p>
+                  </div>
+                )}
+              </div>
 
-          {/* Folder */}
-          <div>
-            <label className="block text-sm font-medium text-[#888] mb-2">Folder</label>
-            {isCreatingNewFolder ? (
-              <div className="flex gap-2">
+              {/* Title */}
+              <div>
+                <label className="block text-sm font-medium text-[#888] mb-2">Title</label>
                 <input
                   type="text"
-                  value={newFolderName}
-                  onChange={(e) => setNewFolderName(e.target.value)}
-                  placeholder="New folder name..."
-                  className="flex-1 px-4 py-3 bg-[#0d0b0a] border border-[#b2a491]/20 rounded-xl focus:outline-none focus:border-[#b2a491]/40"
-                  autoFocus
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Enter title..."
+                  className="w-full px-4 py-3 bg-[#0d0b0a] border border-[#b2a491]/20 rounded-xl focus:outline-none focus:border-[#b2a491]/40"
                 />
+              </div>
+
+              {/* Folder */}
+              <div>
+                <label className="block text-sm font-medium text-[#888] mb-2">Folder</label>
+                {isCreatingNewFolder ? (
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={newFolderName}
+                      onChange={(e) => setNewFolderName(e.target.value)}
+                      placeholder="New folder name..."
+                      className="flex-1 px-4 py-3 bg-[#0d0b0a] border border-[#b2a491]/20 rounded-xl focus:outline-none focus:border-[#b2a491]/40"
+                      autoFocus
+                    />
+                    <button
+                      onClick={() => {
+                        setIsCreatingNewFolder(false);
+                        setNewFolderName('');
+                      }}
+                      className="px-3 py-2 text-[#888] hover:text-[#ede8df] transition-colors"
+                      type="button"
+                    >
+                      {Icons.close}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <select
+                      value={folderId || ''}
+                      onChange={(e) => setFolderId(e.target.value ? Number(e.target.value) : null)}
+                      className="flex-1 px-4 py-3 bg-[#0d0b0a] border border-[#b2a491]/20 rounded-xl focus:outline-none focus:border-[#b2a491]/40"
+                    >
+                      <option value="">No folder</option>
+                      {folders.map((folder) => (
+                        <option key={folder.id} value={folder.id}>
+                          {folder.name}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={() => setIsCreatingNewFolder(true)}
+                      className="px-3 py-3 bg-[#0d0b0a] border border-[#b2a491]/20 rounded-xl text-[#888] hover:text-[#ede8df] hover:border-[#b2a491]/40 transition-colors"
+                      type="button"
+                      title="Create new folder"
+                    >
+                      {Icons.plus}
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Upload progress */}
+              {isUploading && (
+                <div>
+                  <div className="h-2 bg-[#0d0b0a] rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-[#b2a491] transition-all duration-300"
+                      style={{ width: `${uploadProgress}%` }}
+                    />
+                  </div>
+                  <p className="text-sm text-[#888] mt-2 text-center">Uploading... {uploadProgress}%</p>
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="flex gap-3 pt-2">
                 <button
-                  onClick={() => {
-                    setIsCreatingNewFolder(false);
-                    setNewFolderName('');
-                  }}
-                  className="px-3 py-2 text-[#888] hover:text-[#ede8df] transition-colors"
-                  type="button"
+                  onClick={onClose}
+                  disabled={isUploading}
+                  className="flex-1 px-4 py-3 bg-[#0d0b0a] hover:bg-[#252220] border border-[#b2a491]/20 rounded-xl transition-colors disabled:opacity-50"
                 >
-                  {Icons.close}
+                  Cancel
+                </button>
+                <button
+                  onClick={handleUpload}
+                  disabled={!selectedFile || !title.trim() || isUploading}
+                  className="flex-1 px-4 py-3 bg-[#b2a491] hover:bg-[#c4b8a7] text-[#0d0b0a] rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isUploading ? 'Uploading...' : 'Upload'}
                 </button>
               </div>
-            ) : (
+            </>
+          ) : (
+            <>
+              {/* Clips Search */}
               <div className="flex gap-2">
-                <select
-                  value={folderId || ''}
-                  onChange={(e) => setFolderId(e.target.value ? Number(e.target.value) : null)}
-                  className="flex-1 px-4 py-3 bg-[#0d0b0a] border border-[#b2a491]/20 rounded-xl focus:outline-none focus:border-[#b2a491]/40"
-                >
-                  <option value="">No folder</option>
-                  {folders.map((folder) => (
-                    <option key={folder.id} value={folder.id}>
-                      {folder.name}
-                    </option>
-                  ))}
-                </select>
+                <div className="relative flex-1">
+                  <input
+                    type="text"
+                    value={clipsSearch}
+                    onChange={(e) => setClipsSearch(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleClipsSearch()}
+                    placeholder="Search clips..."
+                    className="w-full pl-10 pr-4 py-3 bg-[#0d0b0a] border border-[#b2a491]/20 rounded-xl focus:outline-none focus:border-[#b2a491]/40"
+                  />
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[#888]">
+                    {Icons.search}
+                  </div>
+                </div>
                 <button
-                  onClick={() => setIsCreatingNewFolder(true)}
-                  className="px-3 py-3 bg-[#0d0b0a] border border-[#b2a491]/20 rounded-xl text-[#888] hover:text-[#ede8df] hover:border-[#b2a491]/40 transition-colors"
-                  type="button"
-                  title="Create new folder"
+                  onClick={handleClipsSearch}
+                  className="px-4 py-3 bg-[#0d0b0a] hover:bg-[#252220] border border-[#b2a491]/20 rounded-xl transition-colors"
                 >
-                  {Icons.plus}
+                  Search
                 </button>
               </div>
-            )}
-          </div>
 
-          {/* Upload progress */}
-          {isUploading && (
-            <div>
-              <div className="h-2 bg-[#0d0b0a] rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-[#b2a491] transition-all duration-300"
-                  style={{ width: `${uploadProgress}%` }}
-                />
+              {/* Clips Grid */}
+              <div className="min-h-[200px]">
+                {clipsLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="w-8 h-8 border-2 border-[#b2a491]/30 border-t-[#b2a491] rounded-full animate-spin" />
+                  </div>
+                ) : clips.length === 0 ? (
+                  <div className="text-center py-12 text-[#888]">
+                    <div className="w-12 h-12 mx-auto mb-3 opacity-50">{Icons.film}</div>
+                    <p>No clips available</p>
+                    <p className="text-sm mt-1">All clips have already been imported</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {clips.map((clip) => {
+                      const thumbnailUrl = clip.poster_url || clip.thumbnail ||
+                        (clip.uid ? `https://videodelivery.net/${clip.uid}/thumbnails/thumbnail.jpg` : null);
+                      const isSelected = selectedClip?.id === clip.id;
+                      const isImported = clip.already_imported === 1;
+
+                      return (
+                        <button
+                          key={clip.id}
+                          onClick={() => !isImported && setSelectedClip(isSelected ? null : clip)}
+                          disabled={isImported}
+                          className={`relative aspect-[9/16] rounded-xl overflow-hidden border-2 transition-all ${
+                            isSelected
+                              ? 'border-[#b2a491] ring-2 ring-[#b2a491]/30'
+                              : isImported
+                              ? 'border-transparent opacity-50 cursor-not-allowed'
+                              : 'border-transparent hover:border-[#b2a491]/50'
+                          }`}
+                        >
+                          {thumbnailUrl ? (
+                            <img
+                              src={thumbnailUrl}
+                              alt={clip.title}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-[#0d0b0a] flex items-center justify-center">
+                              {Icons.film}
+                            </div>
+                          )}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+                          <div className="absolute bottom-0 left-0 right-0 p-2">
+                            <p className="text-xs font-medium text-white truncate">{clip.title}</p>
+                            {clip.duration_seconds && (
+                              <p className="text-xs text-white/70">{formatDuration(clip.duration_seconds)}</p>
+                            )}
+                          </div>
+                          {isSelected && (
+                            <div className="absolute top-2 right-2 w-6 h-6 bg-[#b2a491] rounded-full flex items-center justify-center">
+                              {Icons.check}
+                            </div>
+                          )}
+                          {isImported && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                              <span className="text-xs bg-[#252220] px-2 py-1 rounded">Already imported</span>
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
-              <p className="text-sm text-[#888] mt-2 text-center">Uploading... {uploadProgress}%</p>
-            </div>
-          )}
 
-          {/* Actions */}
-          <div className="flex gap-3 pt-2">
-            <button
-              onClick={onClose}
-              disabled={isUploading}
-              className="flex-1 px-4 py-3 bg-[#0d0b0a] hover:bg-[#252220] border border-[#b2a491]/20 rounded-xl transition-colors disabled:opacity-50"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleUpload}
-              disabled={!selectedFile || !title.trim() || isUploading}
-              className="flex-1 px-4 py-3 bg-[#b2a491] hover:bg-[#c4b8a7] text-[#0d0b0a] rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isUploading ? 'Uploading...' : 'Upload'}
-            </button>
-          </div>
+              {/* Selected clip details */}
+              {selectedClip && (
+                <div className="p-4 bg-[#0d0b0a] rounded-xl border border-[#b2a491]/20 space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-16 h-24 rounded-lg overflow-hidden shrink-0">
+                      {(selectedClip.poster_url || selectedClip.thumbnail || selectedClip.uid) ? (
+                        <img
+                          src={selectedClip.poster_url || selectedClip.thumbnail || `https://videodelivery.net/${selectedClip.uid}/thumbnails/thumbnail.jpg`}
+                          alt={selectedClip.title}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-[#1a1614] flex items-center justify-center">
+                          {Icons.film}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">{selectedClip.title}</p>
+                      {selectedClip.artist_name && (
+                        <p className="text-sm text-[#888]">{selectedClip.artist_name}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Override title */}
+                  <div>
+                    <label className="block text-sm font-medium text-[#888] mb-2">Title (optional override)</label>
+                    <input
+                      type="text"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      placeholder={selectedClip.title}
+                      className="w-full px-4 py-3 bg-[#1a1614] border border-[#b2a491]/20 rounded-xl focus:outline-none focus:border-[#b2a491]/40"
+                    />
+                  </div>
+
+                  {/* Folder */}
+                  <div>
+                    <label className="block text-sm font-medium text-[#888] mb-2">Folder</label>
+                    <select
+                      value={folderId || ''}
+                      onChange={(e) => setFolderId(e.target.value ? Number(e.target.value) : null)}
+                      className="w-full px-4 py-3 bg-[#1a1614] border border-[#b2a491]/20 rounded-xl focus:outline-none focus:border-[#b2a491]/40"
+                    >
+                      <option value="">No folder</option>
+                      {folders.map((folder) => (
+                        <option key={folder.id} value={folder.id}>
+                          {folder.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={onClose}
+                  disabled={isImporting}
+                  className="flex-1 px-4 py-3 bg-[#0d0b0a] hover:bg-[#252220] border border-[#b2a491]/20 rounded-xl transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleImportClip}
+                  disabled={!selectedClip || isImporting}
+                  className="flex-1 px-4 py-3 bg-[#b2a491] hover:bg-[#c4b8a7] text-[#0d0b0a] rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isImporting ? 'Importing...' : 'Import Clip'}
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </motion.div>
     </motion.div>
