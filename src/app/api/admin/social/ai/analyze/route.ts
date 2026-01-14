@@ -58,6 +58,25 @@ export async function POST(req: NextRequest) {
 
     const item = content[0];
 
+    // Fetch active voice profile
+    const profiles = await queryDatabase(
+      `SELECT * FROM ai_voice_profiles WHERE is_active = 1 LIMIT 1`,
+      []
+    );
+    const voiceProfile = profiles?.[0] || null;
+
+    // Fetch training examples if profile exists
+    let trainingExamples: any[] = [];
+    if (voiceProfile) {
+      trainingExamples = await queryDatabase(
+        `SELECT content, rating, platform FROM ai_training_examples
+         WHERE profile_id = ?
+         ORDER BY rating ASC, created_at DESC
+         LIMIT 10`,
+        [voiceProfile.id]
+      ) || [];
+    }
+
     // Build context for AI
     const contextParts: string[] = [];
     if (item.title) contextParts.push(`Title: ${item.title}`);
@@ -73,11 +92,11 @@ export async function POST(req: NextRequest) {
       prompt = buildCategorizationPrompt(contextParts);
       analysis = await runCategorizationAnalysis(prompt);
     } else if (analyze_type === 'caption') {
-      prompt = buildCaptionPrompt(contextParts, item.title);
+      prompt = buildCaptionPrompt(contextParts, item.title, voiceProfile, trainingExamples);
       analysis = await runCaptionAnalysis(prompt);
     } else {
       // Full analysis
-      prompt = buildFullAnalysisPrompt(contextParts, item.title);
+      prompt = buildFullAnalysisPrompt(contextParts, item.title, voiceProfile, trainingExamples);
       analysis = await runFullAnalysis(prompt);
     }
 
@@ -160,19 +179,17 @@ Respond with ONLY valid JSON:
 {"content_type": "category_name", "suggested_type": "new_name_if_other", "confidence": 0.0-1.0}`;
 }
 
-function buildCaptionPrompt(context: string[], title: string): string {
-  return `You are a social media expert for a musician/artist brand.
+function buildCaptionPrompt(context: string[], title: string, profile: any, examples: any[]): string {
+  const voiceInstructions = buildVoiceInstructions(profile, examples);
+
+  return `You are a social media expert for a musician/artist brand called "Odubo".
+
+${voiceInstructions}
 
 Content: ${title || 'Untitled'}
 ${context.join('\n')}
 
-Generate engaging captions for each platform. Each caption should:
-- Match the platform's style and character limits
-- Instagram: Up to 2200 chars, can use emojis, storytelling
-- TikTok: Short, punchy, trend-aware, use emojis
-- YouTube Shorts: Descriptive, SEO-friendly
-
-Also suggest relevant hashtags for each platform (10 each).
+Generate 3 caption options for each platform following the voice guidelines above.
 
 Respond with ONLY valid JSON:
 {
@@ -189,8 +206,13 @@ Respond with ONLY valid JSON:
 }`;
 }
 
-function buildFullAnalysisPrompt(context: string[], title: string): string {
+function buildFullAnalysisPrompt(context: string[], title: string, profile: any, examples: any[]): string {
+  const voiceInstructions = buildVoiceInstructions(profile, examples);
+  const maxHashtags = profile?.max_hashtags || 7;
+
   return `You are an AI assistant analyzing social media content for a musician/artist brand called "Odubo".
+
+${voiceInstructions}
 
 Content: ${title || 'Untitled'}
 ${context.join('\n')}
@@ -199,18 +221,11 @@ Perform a comprehensive analysis:
 
 1. CONTENT TYPE - Classify as one of: promo, announcement, bts, performance, personal, collab, teaser, fan_content, tutorial. If none fit well, suggest a new category.
 
-2. CAPTIONS - Generate 3 caption options for each platform:
-   - Instagram: Storytelling, emojis allowed, up to 2200 chars
-   - TikTok: Short, trendy, punchy
-   - YouTube Shorts: Descriptive, SEO-optimized
+2. CAPTIONS - Generate 3 caption options for each platform, following the voice guidelines above.
 
-3. HASHTAGS - 10 relevant hashtags per platform (mix of trending and niche)
+3. HASHTAGS - ${maxHashtags} curated hashtags per platform (quality over quantity)
 
-4. PERFORMANCE SCORE - Rate 0-100 based on:
-   - Visual appeal and quality
-   - Hook potential (first 3 seconds)
-   - Trend alignment
-   - Engagement likelihood
+4. PERFORMANCE SCORE - Rate 0-100 based on visual appeal, hook potential, trend alignment, engagement likelihood
 
 5. OPTIMAL POSTING - Suggest best day/time for each platform
 
@@ -238,6 +253,66 @@ Respond with ONLY valid JSON:
   },
   "performance_factors": ["factor1", "factor2", ...]
 }`;
+}
+
+// Build voice instructions from profile and examples
+function buildVoiceInstructions(profile: any, examples: any[]): string {
+  if (!profile) {
+    return `VOICE GUIDELINES:
+Write in an artistic, minimal style. Short, impactful phrases. No excessive emojis. Let the art speak.`;
+  }
+
+  const instructions: string[] = [];
+
+  // Core tone description
+  if (profile.tone_description) {
+    instructions.push(`VOICE & TONE:\n${profile.tone_description}`);
+  }
+
+  // Custom instructions
+  if (profile.custom_instructions) {
+    instructions.push(`ADDITIONAL INSTRUCTIONS:\n${profile.custom_instructions}`);
+  }
+
+  // Banned words
+  let bannedWords: string[] = [];
+  try {
+    if (profile.banned_words) {
+      bannedWords = JSON.parse(profile.banned_words);
+    }
+  } catch {}
+  if (bannedWords.length > 0) {
+    instructions.push(`NEVER USE THESE WORDS/PHRASES: ${bannedWords.join(', ')}`);
+  }
+
+  // Generation limits
+  instructions.push(`LIMITS:
+- Maximum ${profile.max_emojis || 1} emoji(s) per caption
+- Maximum ${profile.max_hashtags || 7} hashtags per platform
+- ${profile.prefer_lowercase ? 'Prefer lowercase aesthetic' : 'Standard capitalization'}`);
+
+  // Platform-specific styles
+  const platformStyles: string[] = [];
+  if (profile.instagram_style) platformStyles.push(`Instagram: ${profile.instagram_style}`);
+  if (profile.tiktok_style) platformStyles.push(`TikTok: ${profile.tiktok_style}`);
+  if (profile.youtube_style) platformStyles.push(`YouTube: ${profile.youtube_style}`);
+  if (platformStyles.length > 0) {
+    instructions.push(`PLATFORM STYLES:\n${platformStyles.join('\n')}`);
+  }
+
+  // Training examples
+  const perfectExamples = examples.filter(e => e.rating === 'perfect');
+  const avoidExamples = examples.filter(e => e.rating === 'avoid');
+
+  if (perfectExamples.length > 0) {
+    instructions.push(`EXAMPLES OF PERFECT CAPTIONS (match this style):\n${perfectExamples.slice(0, 5).map((ex, i) => `${i + 1}. "${ex.content}"`).join('\n')}`);
+  }
+
+  if (avoidExamples.length > 0) {
+    instructions.push(`EXAMPLES TO AVOID (never write like this):\n${avoidExamples.slice(0, 3).map((ex, i) => `${i + 1}. "${ex.content}"`).join('\n')}`);
+  }
+
+  return instructions.join('\n\n');
 }
 
 async function runCategorizationAnalysis(prompt: string): Promise<Partial<AIAnalysisResult>> {

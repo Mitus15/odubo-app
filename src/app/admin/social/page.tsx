@@ -2144,6 +2144,26 @@ function ContentEditorModal({
           setHashtagsYoutube(analysis.hashtags.youtube.join(' '));
         }
       }
+
+      // Auto-save AI suggestions to database
+      const captionsToSave = {
+        caption_instagram: analysis.captions?.instagram?.[0] || '',
+        caption_tiktok: analysis.captions?.tiktok?.[0] || '',
+        caption_youtube: analysis.captions?.youtube?.[0] || '',
+        hashtags_instagram: analysis.hashtags?.instagram?.join(' ') || '',
+        hashtags_tiktok: analysis.hashtags?.tiktok?.join(' ') || '',
+        hashtags_youtube: analysis.hashtags?.youtube?.join(' ') || '',
+      };
+
+      await fetch(`/api/admin/social/${content.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        credentials: 'include',
+        body: JSON.stringify(captionsToSave),
+      });
     } catch (error) {
       console.error('AI analysis error:', error);
       setAiError(error instanceof Error ? error.message : 'AI analysis failed');
