@@ -206,6 +206,7 @@ export default function SocialCMSPage() {
   const [editingContent, setEditingContent] = useState<SocialContent | null>(null);
   const [showNewFolderInput, setShowNewFolderInput] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
+  const [preSelectedScheduleDate, setPreSelectedScheduleDate] = useState<Date | null>(null);
 
   // Fetch folders
   const fetchFolders = useCallback(async () => {
@@ -305,6 +306,12 @@ export default function SocialCMSPage() {
   const handleEditContent = (item: SocialContent) => {
     setEditingContent(item);
     setShowEditorModal(true);
+  };
+
+  // Create content from calendar (with pre-selected date)
+  const handleCreateFromCalendar = (date: Date) => {
+    setPreSelectedScheduleDate(date);
+    setShowUploadModal(true);
   };
 
   return (
@@ -515,7 +522,11 @@ export default function SocialCMSPage() {
           )}
 
           {viewMode === 'calendar' && (
-            <CalendarView content={content} onEditContent={handleEditContent} />
+            <CalendarView
+              content={content}
+              onEditContent={handleEditContent}
+              onCreateContent={handleCreateFromCalendar}
+            />
           )}
 
           {viewMode === 'analytics' && (
@@ -529,9 +540,14 @@ export default function SocialCMSPage() {
         {showUploadModal && (
           <UploadModal
             folders={folders}
-            onClose={() => setShowUploadModal(false)}
+            preSelectedScheduleDate={preSelectedScheduleDate}
+            onClose={() => {
+              setShowUploadModal(false);
+              setPreSelectedScheduleDate(null);
+            }}
             onSuccess={() => {
               setShowUploadModal(false);
+              setPreSelectedScheduleDate(null);
               fetchContent();
               fetchFolders();
             }}
@@ -662,14 +678,24 @@ function ContentCard({
 // Upload Modal Component
 function UploadModal({
   folders,
+  preSelectedScheduleDate,
   onClose,
   onSuccess,
 }: {
   folders: Folder[];
+  preSelectedScheduleDate?: Date | null;
   onClose: () => void;
   onSuccess: () => void;
 }) {
-  const [activeTab, setActiveTab] = useState<'upload' | 'clips'>('upload');
+  type ImportTab = 'upload' | 'clips' | 'assets' | 'moments' | 'media';
+  const [activeTab, setActiveTab] = useState<ImportTab>('upload');
+  const [scheduledFor, setScheduledFor] = useState<string>(
+    preSelectedScheduleDate
+      ? new Date(preSelectedScheduleDate.getTime() + 12 * 60 * 60 * 1000) // Default to noon
+          .toISOString()
+          .slice(0, 16)
+      : ''
+  );
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -687,11 +713,29 @@ function UploadModal({
   const [selectedClip, setSelectedClip] = useState<Clip | null>(null);
   const [isImporting, setIsImporting] = useState(false);
 
-  // Load clips when switching to clips tab
+  // Brand Assets import state
+  const [assets, setAssets] = useState<any[]>([]);
+  const [assetsLoading, setAssetsLoading] = useState(false);
+  const [assetsSearch, setAssetsSearch] = useState('');
+  const [selectedAsset, setSelectedAsset] = useState<any | null>(null);
+
+  // Moments import state
+  const [moments, setMoments] = useState<any[]>([]);
+  const [momentsLoading, setMomentsLoading] = useState(false);
+  const [selectedMoment, setSelectedMoment] = useState<any | null>(null);
+
+  // Media Hub import state
+  const [mediaVideos, setMediaVideos] = useState<any[]>([]);
+  const [mediaLoading, setMediaLoading] = useState(false);
+  const [mediaSearch, setMediaSearch] = useState('');
+  const [selectedMedia, setSelectedMedia] = useState<any | null>(null);
+
+  // Load content when switching tabs
   useEffect(() => {
-    if (activeTab === 'clips') {
-      loadClips();
-    }
+    if (activeTab === 'clips') loadClips();
+    if (activeTab === 'assets') loadAssets();
+    if (activeTab === 'moments') loadMoments();
+    if (activeTab === 'media') loadMediaVideos();
   }, [activeTab]);
 
   const loadClips = async (search?: string) => {
@@ -739,12 +783,193 @@ function UploadModal({
           video_id: selectedClip.id,
           folder_id: folderId,
           title: title.trim() || selectedClip.title,
+          scheduled_for: scheduledFor || null,
         }),
       });
 
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.error || 'Failed to import clip');
+      }
+
+      onSuccess();
+    } catch (error) {
+      console.error('Import error:', error);
+      alert(error instanceof Error ? error.message : 'Import failed');
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  // Brand Assets functions
+  const loadAssets = async (search?: string) => {
+    setAssetsLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const params = new URLSearchParams();
+      if (search) params.set('search', search);
+      params.set('limit', '20');
+
+      const res = await fetch(`/api/admin/social/import/brand-assets?${params}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        credentials: 'include',
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setAssets(data.assets || []);
+      }
+    } catch (e) {
+      console.error('Failed to load assets:', e);
+    } finally {
+      setAssetsLoading(false);
+    }
+  };
+
+  const handleImportAsset = async () => {
+    if (!selectedAsset) return;
+
+    setIsImporting(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch('/api/admin/social/import/brand-assets', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          asset_id: selectedAsset.id,
+          folder_id: folderId,
+          title: title.trim() || selectedAsset.title,
+          scheduled_for: scheduledFor || null,
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Failed to import asset');
+      }
+
+      onSuccess();
+    } catch (error) {
+      console.error('Import error:', error);
+      alert(error instanceof Error ? error.message : 'Import failed');
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  // Moments functions
+  const loadMoments = async () => {
+    setMomentsLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const params = new URLSearchParams();
+      params.set('limit', '20');
+      params.set('moderated', 'true'); // Only show approved photos
+
+      const res = await fetch(`/api/admin/social/import/moments?${params}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        credentials: 'include',
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setMoments(data.photos || []);
+      }
+    } catch (e) {
+      console.error('Failed to load moments:', e);
+    } finally {
+      setMomentsLoading(false);
+    }
+  };
+
+  const handleImportMoment = async () => {
+    if (!selectedMoment) return;
+
+    setIsImporting(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch('/api/admin/social/import/moments', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          photo_id: selectedMoment.id,
+          folder_id: folderId,
+          title: title.trim() || `Moment by ${selectedMoment.user_name || 'Fan'}`,
+          scheduled_for: scheduledFor || null,
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Failed to import moment');
+      }
+
+      onSuccess();
+    } catch (error) {
+      console.error('Import error:', error);
+      alert(error instanceof Error ? error.message : 'Import failed');
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  // Media Hub functions
+  const loadMediaVideos = async (search?: string) => {
+    setMediaLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const params = new URLSearchParams();
+      if (search) params.set('search', search);
+      params.set('limit', '20');
+
+      const res = await fetch(`/api/admin/social/import/media-hub?${params}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        credentials: 'include',
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setMediaVideos(data.videos || []);
+      }
+    } catch (e) {
+      console.error('Failed to load media videos:', e);
+    } finally {
+      setMediaLoading(false);
+    }
+  };
+
+  const handleImportMedia = async () => {
+    if (!selectedMedia) return;
+
+    setIsImporting(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch('/api/admin/social/import/media-hub', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          video_id: selectedMedia.id,
+          folder_id: folderId,
+          title: title.trim() || selectedMedia.title,
+          scheduled_for: scheduledFor || null,
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Failed to import video');
       }
 
       onSuccess();
@@ -857,6 +1082,8 @@ function UploadModal({
           upload_uid: uid,
           title: title.trim(),
           thumbnail_url: `https://videodelivery.net/${uid}/thumbnails/thumbnail.jpg`,
+          scheduled_for: scheduledFor || null,
+          status: scheduledFor ? 'scheduled' : 'draft',
         }),
       });
 
@@ -904,33 +1131,73 @@ function UploadModal({
         </div>
 
         {/* Tabs */}
-        <div className="flex border-b border-[#b2a491]/10 shrink-0">
+        <div className="flex border-b border-[#b2a491]/10 shrink-0 overflow-x-auto">
           <button
             onClick={() => setActiveTab('upload')}
-            className={`flex-1 px-4 py-3 text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
+            className={`px-4 py-3 text-sm font-medium transition-colors flex items-center justify-center gap-2 whitespace-nowrap ${
               activeTab === 'upload'
                 ? 'text-[#ede8df] border-b-2 border-[#b2a491]'
                 : 'text-[#888] hover:text-[#ede8df]'
             }`}
           >
             {Icons.upload}
-            <span>Upload New</span>
+            <span>Upload</span>
           </button>
           <button
             onClick={() => setActiveTab('clips')}
-            className={`flex-1 px-4 py-3 text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
+            className={`px-4 py-3 text-sm font-medium transition-colors flex items-center justify-center gap-2 whitespace-nowrap ${
               activeTab === 'clips'
                 ? 'text-[#ede8df] border-b-2 border-[#b2a491]'
                 : 'text-[#888] hover:text-[#ede8df]'
             }`}
           >
             {Icons.film}
-            <span>From Clips</span>
+            <span>Clips</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('assets')}
+            className={`px-4 py-3 text-sm font-medium transition-colors flex items-center justify-center gap-2 whitespace-nowrap ${
+              activeTab === 'assets'
+                ? 'text-[#ede8df] border-b-2 border-[#b2a491]'
+                : 'text-[#888] hover:text-[#ede8df]'
+            }`}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+            </svg>
+            <span>Assets</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('moments')}
+            className={`px-4 py-3 text-sm font-medium transition-colors flex items-center justify-center gap-2 whitespace-nowrap ${
+              activeTab === 'moments'
+                ? 'text-[#ede8df] border-b-2 border-[#b2a491]'
+                : 'text-[#888] hover:text-[#ede8df]'
+            }`}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
+            </svg>
+            <span>Moments</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('media')}
+            className={`px-4 py-3 text-sm font-medium transition-colors flex items-center justify-center gap-2 whitespace-nowrap ${
+              activeTab === 'media'
+                ? 'text-[#ede8df] border-b-2 border-[#b2a491]'
+                : 'text-[#888] hover:text-[#ede8df]'
+            }`}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 01-1.125-1.125M3.375 19.5h1.5C5.496 19.5 6 18.996 6 18.375m-3.75 0V5.625m0 12.75v-1.5c0-.621.504-1.125 1.125-1.125m18.375 2.625V5.625m0 12.75c0 .621-.504 1.125-1.125 1.125m1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125m0 3.75h-1.5A1.125 1.125 0 0118 18.375M20.625 4.5H3.375m17.25 0c.621 0 1.125.504 1.125 1.125M20.625 4.5h-1.5C18.504 4.5 18 5.004 18 5.625m3.75 0v1.5c0 .621-.504 1.125-1.125 1.125M3.375 4.5c-.621 0-1.125.504-1.125 1.125M3.375 4.5h1.5C5.496 4.5 6 5.004 6 5.625m-3.75 0v1.5c0 .621.504 1.125 1.125 1.125m0 0h1.5m-1.5 0c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125m1.5-3.75C5.496 8.25 6 7.746 6 7.125v-1.5M4.875 8.25C5.496 8.25 6 8.754 6 9.375v1.5m0-5.25v5.25m0-5.25C6 5.004 6.504 4.5 7.125 4.5h9.75c.621 0 1.125.504 1.125 1.125m1.125 2.625h1.5m-1.5 0A1.125 1.125 0 0118 7.125v-1.5m1.125 2.625c-.621 0-1.125.504-1.125 1.125v1.5m2.625-2.625c.621 0 1.125.504 1.125 1.125v1.5c0 .621-.504 1.125-1.125 1.125M18 5.625v5.25M7.125 12h9.75m-9.75 0A1.125 1.125 0 016 10.875M7.125 12C6.504 12 6 12.504 6 13.125m0-2.25C6 11.496 5.496 12 4.875 12M18 10.875c0 .621-.504 1.125-1.125 1.125M18 10.875c0 .621.504 1.125 1.125 1.125m-2.25 0c.621 0 1.125.504 1.125 1.125m-12 5.25v-5.25m0 5.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125m-12 0v-1.5c0-.621-.504-1.125-1.125-1.125M18 18.375v-5.25m0 5.25v-1.5c0-.621.504-1.125 1.125-1.125M18 13.125v1.5c0 .621.504 1.125 1.125 1.125M18 13.125c0-.621.504-1.125 1.125-1.125M6 13.125v1.5c0 .621-.504 1.125-1.125 1.125M6 13.125C6 12.504 5.496 12 4.875 12m-1.5 0h1.5m-1.5 0c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125M19.125 12h1.5m0 0c.621 0 1.125.504 1.125 1.125v1.5c0 .621-.504 1.125-1.125 1.125m-17.25 0h1.5m14.25 0h1.5" />
+            </svg>
+            <span>Media</span>
           </button>
         </div>
 
         <div className="p-6 space-y-4 overflow-y-auto flex-1">
-          {activeTab === 'upload' ? (
+          {activeTab === 'upload' && (
             <>
               {/* Drop zone */}
               <div
@@ -1033,6 +1300,24 @@ function UploadModal({
                 )}
               </div>
 
+              {/* Schedule date (shows when creating from calendar or optionally) */}
+              <div>
+                <label className="block text-sm font-medium text-[#888] mb-2">
+                  Schedule For {preSelectedScheduleDate && <span className="text-[#b2a491]">(from calendar)</span>}
+                </label>
+                <input
+                  type="datetime-local"
+                  value={scheduledFor}
+                  onChange={(e) => setScheduledFor(e.target.value)}
+                  className="w-full px-4 py-3 bg-[#0d0b0a] border border-[#b2a491]/20 rounded-xl focus:outline-none focus:border-[#b2a491]/40"
+                />
+                {scheduledFor && (
+                  <p className="text-xs text-[#888] mt-1">
+                    Content will be scheduled. Clear to save as draft.
+                  </p>
+                )}
+              </div>
+
               {/* Upload progress */}
               {isUploading && (
                 <div>
@@ -1064,7 +1349,9 @@ function UploadModal({
                 </button>
               </div>
             </>
-          ) : (
+          )}
+
+          {activeTab === 'clips' && (
             <>
               {/* Clips Search */}
               <div className="flex gap-2">
@@ -1210,6 +1497,24 @@ function UploadModal({
                       ))}
                     </select>
                   </div>
+
+                  {/* Schedule date */}
+                  <div>
+                    <label className="block text-sm font-medium text-[#888] mb-2">
+                      Schedule For {preSelectedScheduleDate && <span className="text-[#b2a491]">(from calendar)</span>}
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={scheduledFor}
+                      onChange={(e) => setScheduledFor(e.target.value)}
+                      className="w-full px-4 py-3 bg-[#1a1614] border border-[#b2a491]/20 rounded-xl focus:outline-none focus:border-[#b2a491]/40"
+                    />
+                    {scheduledFor && (
+                      <p className="text-xs text-[#888] mt-1">
+                        Content will be scheduled. Clear to save as draft.
+                      </p>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -1228,6 +1533,513 @@ function UploadModal({
                   className="flex-1 px-4 py-3 bg-[#b2a491] hover:bg-[#c4b8a7] text-[#0d0b0a] rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isImporting ? 'Importing...' : 'Import Clip'}
+                </button>
+              </div>
+            </>
+          )}
+
+          {activeTab === 'assets' && (
+            <>
+              {/* Assets Search */}
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <input
+                    type="text"
+                    value={assetsSearch}
+                    onChange={(e) => setAssetsSearch(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && loadAssets(assetsSearch)}
+                    placeholder="Search brand assets..."
+                    className="w-full pl-10 pr-4 py-3 bg-[#0d0b0a] border border-[#b2a491]/20 rounded-xl focus:outline-none focus:border-[#b2a491]/40"
+                  />
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[#888]">
+                    {Icons.search}
+                  </div>
+                </div>
+                <button
+                  onClick={() => loadAssets(assetsSearch)}
+                  className="px-4 py-3 bg-[#0d0b0a] border border-[#b2a491]/20 rounded-xl hover:border-[#b2a491]/40 transition-colors"
+                >
+                  Search
+                </button>
+              </div>
+
+              {/* Assets Grid */}
+              <div className="min-h-[200px]">
+                {assetsLoading ? (
+                  <div className="flex items-center justify-center h-40">
+                    <div className="w-8 h-8 border-2 border-[#b2a491]/30 border-t-[#b2a491] rounded-full animate-spin" />
+                  </div>
+                ) : assets.length === 0 ? (
+                  <div className="text-center py-10 text-[#888]">
+                    <p>No brand assets found</p>
+                    <p className="text-sm mt-1">Upload assets in Brand Assets first</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                    {assets.map((asset) => {
+                      const isSelected = selectedAsset?.id === asset.id;
+                      const isImported = asset.already_imported === 1;
+                      const thumbnailUrl = asset.r2_key_thumb || asset.r2_key_web || asset.r2_key;
+                      return (
+                        <button
+                          key={asset.id}
+                          onClick={() => !isImported && setSelectedAsset(isSelected ? null : asset)}
+                          disabled={isImported}
+                          className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all ${
+                            isSelected ? 'border-[#b2a491] ring-2 ring-[#b2a491]/30' :
+                            isImported ? 'border-transparent opacity-50 cursor-not-allowed' :
+                            'border-transparent hover:border-[#b2a491]/50'
+                          }`}
+                        >
+                          {thumbnailUrl ? (
+                            <img
+                              src={`${process.env.NEXT_PUBLIC_R2_PUBLIC_URL || ''}/${thumbnailUrl}`}
+                              alt={asset.title || ''}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : asset.stream_uid ? (
+                            <img
+                              src={`https://videodelivery.net/${asset.stream_uid}/thumbnails/thumbnail.jpg`}
+                              alt={asset.title || ''}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-[#1a1614] flex items-center justify-center">
+                              <svg className="w-8 h-8 text-[#888]" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+                              </svg>
+                            </div>
+                          )}
+                          {asset.asset_type === 'video' && (
+                            <div className="absolute top-1 right-1 bg-black/60 px-1.5 py-0.5 rounded text-xs">
+                              Video
+                            </div>
+                          )}
+                          {isSelected && (
+                            <div className="absolute top-2 right-2 w-6 h-6 bg-[#b2a491] rounded-full flex items-center justify-center">
+                              {Icons.check}
+                            </div>
+                          )}
+                          {isImported && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                              <span className="text-xs bg-[#252220] px-2 py-1 rounded">Already imported</span>
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Selected asset details */}
+              {selectedAsset && (
+                <div className="p-4 bg-[#0d0b0a] rounded-xl border border-[#b2a491]/20 space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-16 h-16 rounded-lg overflow-hidden shrink-0 bg-[#1a1614]">
+                      {selectedAsset.r2_key_thumb || selectedAsset.r2_key_web ? (
+                        <img
+                          src={`${process.env.NEXT_PUBLIC_R2_PUBLIC_URL || ''}/${selectedAsset.r2_key_thumb || selectedAsset.r2_key_web}`}
+                          alt={selectedAsset.title || ''}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : selectedAsset.stream_uid ? (
+                        <img
+                          src={`https://videodelivery.net/${selectedAsset.stream_uid}/thumbnails/thumbnail.jpg`}
+                          alt={selectedAsset.title || ''}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : null}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">{selectedAsset.title || 'Untitled Asset'}</p>
+                      <p className="text-sm text-[#888]">{selectedAsset.category_name} / {selectedAsset.album_name}</p>
+                    </div>
+                  </div>
+
+                  {/* Override title */}
+                  <div>
+                    <label className="block text-sm font-medium text-[#888] mb-2">Title (optional override)</label>
+                    <input
+                      type="text"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      placeholder={selectedAsset.title || 'Enter title...'}
+                      className="w-full px-4 py-3 bg-[#1a1614] border border-[#b2a491]/20 rounded-xl focus:outline-none focus:border-[#b2a491]/40"
+                    />
+                  </div>
+
+                  {/* Folder */}
+                  <div>
+                    <label className="block text-sm font-medium text-[#888] mb-2">Folder</label>
+                    <select
+                      value={folderId || ''}
+                      onChange={(e) => setFolderId(e.target.value ? Number(e.target.value) : null)}
+                      className="w-full px-4 py-3 bg-[#1a1614] border border-[#b2a491]/20 rounded-xl focus:outline-none focus:border-[#b2a491]/40"
+                    >
+                      <option value="">No folder</option>
+                      {folders.map((folder) => (
+                        <option key={folder.id} value={folder.id}>
+                          {folder.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Schedule date */}
+                  <div>
+                    <label className="block text-sm font-medium text-[#888] mb-2">
+                      Schedule For {preSelectedScheduleDate && <span className="text-[#b2a491]">(from calendar)</span>}
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={scheduledFor}
+                      onChange={(e) => setScheduledFor(e.target.value)}
+                      className="w-full px-4 py-3 bg-[#1a1614] border border-[#b2a491]/20 rounded-xl focus:outline-none focus:border-[#b2a491]/40"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={onClose}
+                  disabled={isImporting}
+                  className="flex-1 px-4 py-3 bg-[#0d0b0a] hover:bg-[#252220] border border-[#b2a491]/20 rounded-xl transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleImportAsset}
+                  disabled={!selectedAsset || isImporting}
+                  className="flex-1 px-4 py-3 bg-[#b2a491] hover:bg-[#c4b8a7] text-[#0d0b0a] rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isImporting ? 'Importing...' : 'Import Asset'}
+                </button>
+              </div>
+            </>
+          )}
+
+          {activeTab === 'moments' && (
+            <>
+              {/* Moments info */}
+              <p className="text-sm text-[#888]">Import approved fan photos from Moments galleries</p>
+
+              {/* Moments Grid */}
+              <div className="min-h-[200px]">
+                {momentsLoading ? (
+                  <div className="flex items-center justify-center h-40">
+                    <div className="w-8 h-8 border-2 border-[#b2a491]/30 border-t-[#b2a491] rounded-full animate-spin" />
+                  </div>
+                ) : moments.length === 0 ? (
+                  <div className="text-center py-10 text-[#888]">
+                    <p>No approved moments found</p>
+                    <p className="text-sm mt-1">Moderate fan photos in Moments first</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                    {moments.map((photo) => {
+                      const isSelected = selectedMoment?.id === photo.id;
+                      const isImported = photo.already_imported === 1;
+                      const thumbnailUrl = photo.thumbnail_key || photo.r2_key;
+                      return (
+                        <button
+                          key={photo.id}
+                          onClick={() => !isImported && setSelectedMoment(isSelected ? null : photo)}
+                          disabled={isImported}
+                          className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all ${
+                            isSelected ? 'border-[#b2a491] ring-2 ring-[#b2a491]/30' :
+                            isImported ? 'border-transparent opacity-50 cursor-not-allowed' :
+                            'border-transparent hover:border-[#b2a491]/50'
+                          }`}
+                        >
+                          {thumbnailUrl ? (
+                            <img
+                              src={`${process.env.NEXT_PUBLIC_R2_PUBLIC_URL || ''}/${thumbnailUrl}`}
+                              alt={photo.user_name || 'Moment'}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-[#1a1614] flex items-center justify-center">
+                              <svg className="w-8 h-8 text-[#888]" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
+                              </svg>
+                            </div>
+                          )}
+                          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-2">
+                            <p className="text-xs text-white truncate">{photo.user_name || 'Anonymous'}</p>
+                          </div>
+                          {isSelected && (
+                            <div className="absolute top-2 right-2 w-6 h-6 bg-[#b2a491] rounded-full flex items-center justify-center">
+                              {Icons.check}
+                            </div>
+                          )}
+                          {isImported && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                              <span className="text-xs bg-[#252220] px-2 py-1 rounded">Already imported</span>
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Selected moment details */}
+              {selectedMoment && (
+                <div className="p-4 bg-[#0d0b0a] rounded-xl border border-[#b2a491]/20 space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-16 h-16 rounded-lg overflow-hidden shrink-0 bg-[#1a1614]">
+                      {(selectedMoment.thumbnail_key || selectedMoment.r2_key) && (
+                        <img
+                          src={`${process.env.NEXT_PUBLIC_R2_PUBLIC_URL || ''}/${selectedMoment.thumbnail_key || selectedMoment.r2_key}`}
+                          alt={selectedMoment.user_name || 'Moment'}
+                          className="w-full h-full object-cover"
+                        />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">{selectedMoment.user_name || 'Anonymous'}</p>
+                      <p className="text-sm text-[#888]">{selectedMoment.gallery_title || 'Gallery'}</p>
+                    </div>
+                  </div>
+
+                  {/* Override title */}
+                  <div>
+                    <label className="block text-sm font-medium text-[#888] mb-2">Title (optional override)</label>
+                    <input
+                      type="text"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      placeholder={`Moment by ${selectedMoment.user_name || 'Fan'}`}
+                      className="w-full px-4 py-3 bg-[#1a1614] border border-[#b2a491]/20 rounded-xl focus:outline-none focus:border-[#b2a491]/40"
+                    />
+                  </div>
+
+                  {/* Folder */}
+                  <div>
+                    <label className="block text-sm font-medium text-[#888] mb-2">Folder</label>
+                    <select
+                      value={folderId || ''}
+                      onChange={(e) => setFolderId(e.target.value ? Number(e.target.value) : null)}
+                      className="w-full px-4 py-3 bg-[#1a1614] border border-[#b2a491]/20 rounded-xl focus:outline-none focus:border-[#b2a491]/40"
+                    >
+                      <option value="">No folder</option>
+                      {folders.map((folder) => (
+                        <option key={folder.id} value={folder.id}>
+                          {folder.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Schedule date */}
+                  <div>
+                    <label className="block text-sm font-medium text-[#888] mb-2">
+                      Schedule For {preSelectedScheduleDate && <span className="text-[#b2a491]">(from calendar)</span>}
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={scheduledFor}
+                      onChange={(e) => setScheduledFor(e.target.value)}
+                      className="w-full px-4 py-3 bg-[#1a1614] border border-[#b2a491]/20 rounded-xl focus:outline-none focus:border-[#b2a491]/40"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={onClose}
+                  disabled={isImporting}
+                  className="flex-1 px-4 py-3 bg-[#0d0b0a] hover:bg-[#252220] border border-[#b2a491]/20 rounded-xl transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleImportMoment}
+                  disabled={!selectedMoment || isImporting}
+                  className="flex-1 px-4 py-3 bg-[#b2a491] hover:bg-[#c4b8a7] text-[#0d0b0a] rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isImporting ? 'Importing...' : 'Import Moment'}
+                </button>
+              </div>
+            </>
+          )}
+
+          {activeTab === 'media' && (
+            <>
+              {/* Media Search */}
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <input
+                    type="text"
+                    value={mediaSearch}
+                    onChange={(e) => setMediaSearch(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && loadMediaVideos(mediaSearch)}
+                    placeholder="Search media hub videos..."
+                    className="w-full pl-10 pr-4 py-3 bg-[#0d0b0a] border border-[#b2a491]/20 rounded-xl focus:outline-none focus:border-[#b2a491]/40"
+                  />
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[#888]">
+                    {Icons.search}
+                  </div>
+                </div>
+                <button
+                  onClick={() => loadMediaVideos(mediaSearch)}
+                  className="px-4 py-3 bg-[#0d0b0a] border border-[#b2a491]/20 rounded-xl hover:border-[#b2a491]/40 transition-colors"
+                >
+                  Search
+                </button>
+              </div>
+
+              {/* Media Grid */}
+              <div className="min-h-[200px]">
+                {mediaLoading ? (
+                  <div className="flex items-center justify-center h-40">
+                    <div className="w-8 h-8 border-2 border-[#b2a491]/30 border-t-[#b2a491] rounded-full animate-spin" />
+                  </div>
+                ) : mediaVideos.length === 0 ? (
+                  <div className="text-center py-10 text-[#888]">
+                    <p>No media hub videos found</p>
+                    <p className="text-sm mt-1">Upload long-form videos to Media Hub first</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {mediaVideos.map((video) => {
+                      const isSelected = selectedMedia?.id === video.id;
+                      const isImported = video.already_imported === 1;
+                      const thumbnailUrl = video.poster_url || video.thumbnail ||
+                        (video.uid ? `https://videodelivery.net/${video.uid}/thumbnails/thumbnail.jpg` : null);
+                      return (
+                        <button
+                          key={video.id}
+                          onClick={() => !isImported && setSelectedMedia(isSelected ? null : video)}
+                          disabled={isImported}
+                          className={`relative aspect-video rounded-lg overflow-hidden border-2 transition-all ${
+                            isSelected ? 'border-[#b2a491] ring-2 ring-[#b2a491]/30' :
+                            isImported ? 'border-transparent opacity-50 cursor-not-allowed' :
+                            'border-transparent hover:border-[#b2a491]/50'
+                          }`}
+                        >
+                          {thumbnailUrl ? (
+                            <img
+                              src={thumbnailUrl}
+                              alt={video.title || ''}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-[#1a1614] flex items-center justify-center">
+                              {Icons.film}
+                            </div>
+                          )}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+                          <div className="absolute bottom-0 left-0 right-0 p-2">
+                            <p className="text-xs font-medium text-white truncate">{video.title}</p>
+                            {video.duration_seconds && (
+                              <p className="text-xs text-white/70">{formatDuration(video.duration_seconds)}</p>
+                            )}
+                          </div>
+                          {isSelected && (
+                            <div className="absolute top-2 right-2 w-6 h-6 bg-[#b2a491] rounded-full flex items-center justify-center">
+                              {Icons.check}
+                            </div>
+                          )}
+                          {isImported && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                              <span className="text-xs bg-[#252220] px-2 py-1 rounded">Already imported</span>
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Selected media details */}
+              {selectedMedia && (
+                <div className="p-4 bg-[#0d0b0a] rounded-xl border border-[#b2a491]/20 space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-20 h-12 rounded-lg overflow-hidden shrink-0 bg-[#1a1614]">
+                      {(selectedMedia.poster_url || selectedMedia.thumbnail || selectedMedia.uid) && (
+                        <img
+                          src={selectedMedia.poster_url || selectedMedia.thumbnail || `https://videodelivery.net/${selectedMedia.uid}/thumbnails/thumbnail.jpg`}
+                          alt={selectedMedia.title || ''}
+                          className="w-full h-full object-cover"
+                        />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">{selectedMedia.title || 'Untitled Video'}</p>
+                      {selectedMedia.artist_name && (
+                        <p className="text-sm text-[#888]">{selectedMedia.artist_name}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Override title */}
+                  <div>
+                    <label className="block text-sm font-medium text-[#888] mb-2">Title (optional override)</label>
+                    <input
+                      type="text"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      placeholder={selectedMedia.title || 'Enter title...'}
+                      className="w-full px-4 py-3 bg-[#1a1614] border border-[#b2a491]/20 rounded-xl focus:outline-none focus:border-[#b2a491]/40"
+                    />
+                  </div>
+
+                  {/* Folder */}
+                  <div>
+                    <label className="block text-sm font-medium text-[#888] mb-2">Folder</label>
+                    <select
+                      value={folderId || ''}
+                      onChange={(e) => setFolderId(e.target.value ? Number(e.target.value) : null)}
+                      className="w-full px-4 py-3 bg-[#1a1614] border border-[#b2a491]/20 rounded-xl focus:outline-none focus:border-[#b2a491]/40"
+                    >
+                      <option value="">No folder</option>
+                      {folders.map((folder) => (
+                        <option key={folder.id} value={folder.id}>
+                          {folder.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Schedule date */}
+                  <div>
+                    <label className="block text-sm font-medium text-[#888] mb-2">
+                      Schedule For {preSelectedScheduleDate && <span className="text-[#b2a491]">(from calendar)</span>}
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={scheduledFor}
+                      onChange={(e) => setScheduledFor(e.target.value)}
+                      className="w-full px-4 py-3 bg-[#1a1614] border border-[#b2a491]/20 rounded-xl focus:outline-none focus:border-[#b2a491]/40"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={onClose}
+                  disabled={isImporting}
+                  className="flex-1 px-4 py-3 bg-[#0d0b0a] hover:bg-[#252220] border border-[#b2a491]/20 rounded-xl transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleImportMedia}
+                  disabled={!selectedMedia || isImporting}
+                  className="flex-1 px-4 py-3 bg-[#b2a491] hover:bg-[#c4b8a7] text-[#0d0b0a] rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isImporting ? 'Importing...' : 'Import Video'}
                 </button>
               </div>
             </>
@@ -1264,8 +2076,70 @@ function ContentEditorModal({
   const [scheduledPlatforms, setScheduledPlatforms] = useState<string[]>(
     content.scheduled_platforms ? JSON.parse(content.scheduled_platforms) : []
   );
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
 
   const thumbnailUrl = content.thumbnail_url || (content.upload_uid ? `https://videodelivery.net/${content.upload_uid}/thumbnails/thumbnail.jpg` : null);
+
+  // AI Analysis handler
+  const handleAiAnalyze = async () => {
+    setIsAnalyzing(true);
+    setAiError(null);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch('/api/admin/social/ai/analyze', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          content_id: content.id,
+          analyze_type: 'full',
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'AI analysis failed');
+      }
+
+      const data = await res.json();
+      const analysis = data.analysis;
+
+      // Update captions if AI returned them
+      if (analysis.captions) {
+        if (analysis.captions.instagram?.[0]) {
+          setCaptionInstagram(analysis.captions.instagram[0]);
+        }
+        if (analysis.captions.tiktok?.[0]) {
+          setCaptionTiktok(analysis.captions.tiktok[0]);
+        }
+        if (analysis.captions.youtube?.[0]) {
+          setCaptionYoutube(analysis.captions.youtube[0]);
+        }
+      }
+
+      // Update hashtags if AI returned them
+      if (analysis.hashtags) {
+        if (analysis.hashtags.instagram?.length) {
+          setHashtagsInstagram(analysis.hashtags.instagram.join(' '));
+        }
+        if (analysis.hashtags.tiktok?.length) {
+          setHashtagsTiktok(analysis.hashtags.tiktok.join(' '));
+        }
+        if (analysis.hashtags.youtube?.length) {
+          setHashtagsYoutube(analysis.hashtags.youtube.join(' '));
+        }
+      }
+    } catch (error) {
+      console.error('AI analysis error:', error);
+      setAiError(error instanceof Error ? error.message : 'AI analysis failed');
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -1406,11 +2280,24 @@ function ContentEditorModal({
           <div className="border-t border-[#b2a491]/10 pt-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-medium">Captions</h3>
-              <button className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-[#b2a491]/20 hover:bg-[#b2a491]/30 text-[#b2a491] rounded-lg transition-colors">
-                {Icons.sparkles}
-                AI Suggest All
+              <button
+                onClick={handleAiAnalyze}
+                disabled={isAnalyzing}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-[#b2a491]/20 hover:bg-[#b2a491]/30 text-[#b2a491] rounded-lg transition-colors disabled:opacity-50 disabled:cursor-wait"
+              >
+                {isAnalyzing ? (
+                  <div className="w-4 h-4 border-2 border-[#b2a491]/30 border-t-[#b2a491] rounded-full animate-spin" />
+                ) : (
+                  Icons.sparkles
+                )}
+                {isAnalyzing ? 'Analyzing...' : 'AI Suggest All'}
               </button>
             </div>
+            {aiError && (
+              <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-sm text-red-400">
+                {aiError}
+              </div>
+            )}
 
             <div className="space-y-4">
               {/* Instagram */}
@@ -1559,24 +2446,303 @@ function ContentEditorModal({
   );
 }
 
-// Calendar View Component (placeholder)
+// Calendar View Component
 function CalendarView({
   content,
   onEditContent,
+  onCreateContent,
 }: {
   content: SocialContent[];
   onEditContent: (item: SocialContent) => void;
+  onCreateContent?: (date: Date) => void;
 }) {
-  const scheduledContent = content.filter((c) => c.scheduled_for);
+  const [viewMode, setViewMode] = useState<'week' | 'month'>('week');
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [calendarData, setCalendarData] = useState<Record<string, SocialContent[]>>({});
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Calculate date range based on view mode
+  const getDateRange = useCallback(() => {
+    const start = new Date(currentDate);
+    const end = new Date(currentDate);
+
+    if (viewMode === 'week') {
+      // Start of week (Sunday)
+      start.setDate(start.getDate() - start.getDay());
+      // End of week (Saturday)
+      end.setDate(start.getDate() + 6);
+    } else {
+      // Start of month
+      start.setDate(1);
+      // End of month
+      end.setMonth(end.getMonth() + 1);
+      end.setDate(0);
+    }
+
+    start.setHours(0, 0, 0, 0);
+    end.setHours(23, 59, 59, 999);
+
+    return { start, end };
+  }, [currentDate, viewMode]);
+
+  // Fetch calendar data
+  useEffect(() => {
+    const fetchCalendarData = async () => {
+      setIsLoading(true);
+      try {
+        const token = localStorage.getItem('token');
+        const { start, end } = getDateRange();
+
+        const res = await fetch(
+          `/api/admin/social/calendar?start=${start.toISOString()}&end=${end.toISOString()}`,
+          {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+            credentials: 'include',
+          }
+        );
+
+        if (res.ok) {
+          const data = await res.json();
+          setCalendarData(data.calendar || {});
+        }
+      } catch (e) {
+        console.error('Failed to fetch calendar:', e);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchCalendarData();
+  }, [getDateRange]);
+
+  // Navigation handlers
+  const goToday = () => setCurrentDate(new Date());
+  const goPrev = () => {
+    const newDate = new Date(currentDate);
+    if (viewMode === 'week') {
+      newDate.setDate(newDate.getDate() - 7);
+    } else {
+      newDate.setMonth(newDate.getMonth() - 1);
+    }
+    setCurrentDate(newDate);
+  };
+  const goNext = () => {
+    const newDate = new Date(currentDate);
+    if (viewMode === 'week') {
+      newDate.setDate(newDate.getDate() + 7);
+    } else {
+      newDate.setMonth(newDate.getMonth() + 1);
+    }
+    setCurrentDate(newDate);
+  };
+
+  // Generate days for the view
+  const getDays = () => {
+    const { start, end } = getDateRange();
+    const days: Date[] = [];
+    const current = new Date(start);
+
+    // For month view, include padding days from previous month
+    if (viewMode === 'month') {
+      const firstDay = new Date(start);
+      const dayOfWeek = firstDay.getDay();
+      if (dayOfWeek > 0) {
+        const padding = new Date(firstDay);
+        padding.setDate(padding.getDate() - dayOfWeek);
+        while (padding < firstDay) {
+          days.push(new Date(padding));
+          padding.setDate(padding.getDate() + 1);
+        }
+      }
+    }
+
+    while (current <= end) {
+      days.push(new Date(current));
+      current.setDate(current.getDate() + 1);
+    }
+
+    // For month view, pad to complete the last week
+    if (viewMode === 'month') {
+      const lastDay = days[days.length - 1];
+      const dayOfWeek = lastDay.getDay();
+      if (dayOfWeek < 6) {
+        const padding = new Date(lastDay);
+        padding.setDate(padding.getDate() + 1);
+        while (padding.getDay() !== 0) {
+          days.push(new Date(padding));
+          padding.setDate(padding.getDate() + 1);
+        }
+      }
+    }
+
+    return days;
+  };
+
+  const days = getDays();
+  const { start } = getDateRange();
+
+  // Format date key for lookup
+  const formatDateKey = (date: Date) => {
+    return date.toISOString().split('T')[0];
+  };
+
+  // Get content for a specific day
+  const getContentForDay = (date: Date) => {
+    const key = formatDateKey(date);
+    return calendarData[key] || [];
+  };
+
+  // Check if date is today
+  const isToday = (date: Date) => {
+    const today = new Date();
+    return date.toDateString() === today.toDateString();
+  };
+
+  // Check if date is in current month (for month view styling)
+  const isCurrentMonth = (date: Date) => {
+    return date.getMonth() === currentDate.getMonth();
+  };
+
+  // Platform color mapping
+  const platformColors: Record<string, string> = {
+    instagram: 'bg-pink-500',
+    tiktok: 'bg-cyan-500',
+    youtube: 'bg-red-500',
+  };
+
+  // Format header based on view
+  const formatHeader = () => {
+    if (viewMode === 'week') {
+      const { start, end } = getDateRange();
+      const startMonth = start.toLocaleString('default', { month: 'short' });
+      const endMonth = end.toLocaleString('default', { month: 'short' });
+      if (startMonth === endMonth) {
+        return `${startMonth} ${start.getDate()} - ${end.getDate()}, ${start.getFullYear()}`;
+      }
+      return `${startMonth} ${start.getDate()} - ${endMonth} ${end.getDate()}, ${start.getFullYear()}`;
+    }
+    return currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+  };
 
   return (
-    <div className="text-center py-20">
-      <div className="w-16 h-16 mx-auto mb-4 text-[#888]">{Icons.calendar}</div>
-      <h3 className="text-lg font-medium mb-2">Calendar View</h3>
-      <p className="text-[#888] mb-4">
-        {scheduledContent.length} items scheduled
-      </p>
-      <p className="text-sm text-[#666]">Full calendar coming in Phase 2</p>
+    <div className="flex flex-col h-full">
+      {/* Calendar Header */}
+      <div className="flex items-center justify-between mb-4 px-2">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={goToday}
+            className="px-3 py-1.5 text-sm bg-[#0d0b0a] border border-[#b2a491]/20 rounded-lg hover:bg-[#1a1614] transition-colors"
+          >
+            Today
+          </button>
+          <button
+            onClick={goPrev}
+            className="p-1.5 hover:bg-[#1a1614] rounded-lg transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+            </svg>
+          </button>
+          <button
+            onClick={goNext}
+            className="p-1.5 hover:bg-[#1a1614] rounded-lg transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+            </svg>
+          </button>
+          <h2 className="text-lg font-medium ml-2">{formatHeader()}</h2>
+        </div>
+        <div className="flex items-center gap-1 bg-[#0d0b0a] border border-[#b2a491]/20 rounded-lg p-0.5">
+          <button
+            onClick={() => setViewMode('week')}
+            className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+              viewMode === 'week' ? 'bg-[#b2a491] text-[#0d0b0a]' : 'hover:bg-[#1a1614]'
+            }`}
+          >
+            Week
+          </button>
+          <button
+            onClick={() => setViewMode('month')}
+            className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+              viewMode === 'month' ? 'bg-[#b2a491] text-[#0d0b0a]' : 'hover:bg-[#1a1614]'
+            }`}
+          >
+            Month
+          </button>
+        </div>
+      </div>
+
+      {/* Day Headers */}
+      <div className={`grid ${viewMode === 'week' ? 'grid-cols-7' : 'grid-cols-7'} gap-px bg-[#b2a491]/10 rounded-t-lg overflow-hidden`}>
+        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+          <div key={day} className="bg-[#0d0b0a] px-2 py-2 text-center text-xs font-medium text-[#888]">
+            {day}
+          </div>
+        ))}
+      </div>
+
+      {/* Calendar Grid */}
+      {isLoading ? (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="w-8 h-8 border-2 border-[#b2a491]/30 border-t-[#b2a491] rounded-full animate-spin" />
+        </div>
+      ) : (
+        <div className={`grid grid-cols-7 gap-px bg-[#b2a491]/10 rounded-b-lg overflow-hidden flex-1 ${
+          viewMode === 'month' ? 'auto-rows-fr' : ''
+        }`}>
+          {days.map((day, index) => {
+            const dayContent = getContentForDay(day);
+            const today = isToday(day);
+            const inMonth = viewMode === 'month' ? isCurrentMonth(day) : true;
+
+            return (
+              <div
+                key={index}
+                onClick={() => onCreateContent?.(day)}
+                className={`bg-[#0d0b0a] p-2 ${viewMode === 'week' ? 'min-h-[120px]' : 'min-h-[80px]'} ${
+                  !inMonth ? 'opacity-40' : ''
+                } hover:bg-[#1a1614]/50 cursor-pointer transition-colors group`}
+              >
+                <div className={`text-sm mb-1 ${today ? 'text-[#b2a491] font-bold' : 'text-[#888]'}`}>
+                  {day.getDate()}
+                </div>
+                <div className="space-y-1">
+                  {dayContent.slice(0, viewMode === 'week' ? 4 : 2).map((item) => {
+                    const platforms: string[] = item.scheduled_platforms || [];
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onEditContent(item);
+                        }}
+                        className="w-full text-left p-1.5 bg-[#1a1614] hover:bg-[#252220] rounded text-xs truncate border border-[#b2a491]/10 transition-colors"
+                      >
+                        <div className="flex items-center gap-1 mb-0.5">
+                          {platforms.slice(0, 3).map((p) => (
+                            <span key={p} className={`w-1.5 h-1.5 rounded-full ${platformColors[p] || 'bg-gray-500'}`} />
+                          ))}
+                        </div>
+                        <span className="truncate block">{item.title || 'Untitled'}</span>
+                      </button>
+                    );
+                  })}
+                  {dayContent.length > (viewMode === 'week' ? 4 : 2) && (
+                    <div className="text-xs text-[#888] text-center">
+                      +{dayContent.length - (viewMode === 'week' ? 4 : 2)} more
+                    </div>
+                  )}
+                </div>
+                {/* Quick add indicator on hover */}
+                <div className="hidden group-hover:flex items-center justify-center mt-1 text-xs text-[#888]">
+                  <span>+ Add</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

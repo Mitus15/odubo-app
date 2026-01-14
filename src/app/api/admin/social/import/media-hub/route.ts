@@ -3,7 +3,7 @@ export const runtime = 'edge';
 import { getUserFromRequest, isAdminUser } from '@/lib/auth';
 import { queryDatabase } from '@/lib/db';
 
-// GET: List available clips for import into Social CMS
+// GET: List available media hub videos for import
 export async function GET(req: NextRequest) {
   const user = getUserFromRequest(req);
   if (!isAdminUser(user)) {
@@ -17,36 +17,35 @@ export async function GET(req: NextRequest) {
     const offset = Math.max(Number(searchParams.get('offset')) || 0, 0);
     const excludeImported = searchParams.get('excludeImported') !== 'false';
 
-    // Build WHERE clauses
+    // Build WHERE clauses - get non-clip videos (longer content)
     const conditions: string[] = [
-      "v.type = 'clip'",
-      "(v.is_public = 1 OR v.is_public IS NULL)",
-      "COALESCE(v.status, 'published') != 'archived'",
+      "(v.type IS NULL OR v.type != 'clip')", // Non-clips
+      "v.uid IS NOT NULL", // Must have video UID
     ];
     const params: any[] = [];
 
-    // Optional search filter
+    // Search filter
     if (search) {
-      conditions.push("(v.title LIKE ? OR v.description LIKE ? OR v.artist_name LIKE ?)");
+      conditions.push('(v.title LIKE ? OR v.description LIKE ? OR v.artist_name LIKE ?)');
       params.push(`%${search}%`, `%${search}%`, `%${search}%`);
     }
 
-    // Exclude clips already imported to Social CMS
+    // Exclude videos already imported to Social CMS
     if (excludeImported) {
-      conditions.push("NOT EXISTS (SELECT 1 FROM social_content sc WHERE sc.video_id = v.id AND sc.source_type = 'clip')");
+      conditions.push("NOT EXISTS (SELECT 1 FROM social_content sc WHERE sc.hub_video_id = v.id AND sc.import_source = 'media_hub')");
     }
 
-    const whereClause = conditions.join(' AND ');
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
     // Get total count
     const countResult = await queryDatabase(
-      `SELECT COUNT(*) as total FROM videos v WHERE ${whereClause}`,
+      `SELECT COUNT(*) as total FROM videos v ${whereClause}`,
       params
     );
     const total = countResult?.[0]?.total || 0;
 
-    // Get clips
-    const clips = await queryDatabase(
+    // Get videos
+    const videos = await queryDatabase(
       `SELECT
         v.id,
         v.title,
@@ -59,34 +58,35 @@ export async function GET(req: NextRequest) {
         v.duration_seconds,
         v.poster_url,
         v.thumbnail,
-        v.shopify_product_handle,
+        v.type,
+        v.status,
         v.created_at,
         CASE WHEN sc.id IS NOT NULL THEN 1 ELSE 0 END as already_imported
       FROM videos v
-      LEFT JOIN social_content sc ON sc.video_id = v.id AND sc.source_type = 'clip'
-      WHERE ${whereClause}
+      LEFT JOIN social_content sc ON sc.hub_video_id = v.id AND sc.import_source = 'media_hub'
+      ${whereClause}
       ORDER BY v.created_at DESC
       LIMIT ? OFFSET ?`,
       [...params, limit, offset]
     );
 
     return NextResponse.json({
-      clips: clips || [],
+      videos: videos || [],
       total,
       limit,
       offset,
-      hasMore: offset + (clips?.length || 0) < total,
+      hasMore: offset + (videos?.length || 0) < total,
     });
   } catch (e: any) {
-    console.error('Error listing clips:', e);
+    console.error('Error listing media hub videos:', e);
     return NextResponse.json(
-      { error: String(e?.message || 'Failed to list clips') },
+      { error: String(e?.message || 'Failed to list media hub videos') },
       { status: 500 }
     );
   }
 }
 
-// POST: Import a clip into Social CMS
+// POST: Import a media hub video into Social CMS
 export async function POST(req: NextRequest) {
   const user = getUserFromRequest(req);
   if (!isAdminUser(user)) {
@@ -101,39 +101,41 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'video_id required' }, { status: 400 });
     }
 
-    // Get the clip details
-    const clips = await queryDatabase(
-      `SELECT id, title, uid, duration_seconds, poster_url, thumbnail
+    // Get the video details
+    const videos = await queryDatabase(
+      `SELECT id, title, uid, duration_seconds, poster_url, thumbnail, type
        FROM videos
-       WHERE id = ? AND type = 'clip'`,
+       WHERE id = ? AND (type IS NULL OR type != 'clip')`,
       [video_id]
     );
 
-    if (!clips || clips.length === 0) {
-      return NextResponse.json({ error: 'Clip not found' }, { status: 404 });
+    if (!videos || videos.length === 0) {
+      return NextResponse.json({ error: 'Video not found' }, { status: 404 });
     }
 
-    const clip = clips[0];
+    const video = videos[0];
 
     // Check if already imported
     const existing = await queryDatabase(
-      `SELECT id FROM social_content WHERE video_id = ? AND source_type = 'clip'`,
+      `SELECT id FROM social_content WHERE hub_video_id = ? AND import_source = 'media_hub'`,
       [video_id]
     );
 
     if (existing && existing.length > 0) {
-      return NextResponse.json({ error: 'Clip already imported' }, { status: 409 });
+      return NextResponse.json({ error: 'Video already imported' }, { status: 409 });
     }
 
-    // Create social content entry
-    const thumbnailUrl = clip.poster_url || clip.thumbnail ||
-      (clip.uid ? `https://videodelivery.net/${clip.uid}/thumbnails/thumbnail.jpg` : null);
+    // Determine thumbnail URL
+    const thumbnailUrl = video.poster_url || video.thumbnail ||
+      (video.uid ? `https://videodelivery.net/${video.uid}/thumbnails/thumbnail.jpg` : null);
 
+    // Create social content entry
     await queryDatabase(
       `INSERT INTO social_content (
         folder_id,
         source_type,
-        video_id,
+        import_source,
+        hub_video_id,
         upload_uid,
         thumbnail_url,
         duration,
@@ -142,14 +144,14 @@ export async function POST(req: NextRequest) {
         scheduled_for,
         created_at,
         updated_at
-      ) VALUES (?, 'clip', ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+      ) VALUES (?, 'upload', 'media_hub', ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
       [
         folder_id || null,
         video_id,
-        clip.uid,
+        video.uid,
         thumbnailUrl,
-        clip.duration_seconds || null,
-        title || clip.title || 'Imported Clip',
+        video.duration_seconds || null,
+        title || video.title || 'Imported Video',
         scheduled_for ? 'scheduled' : 'draft',
         scheduled_for || null,
       ]
@@ -157,7 +159,7 @@ export async function POST(req: NextRequest) {
 
     // Get the created entry
     const created = await queryDatabase(
-      `SELECT * FROM social_content WHERE video_id = ? AND source_type = 'clip' ORDER BY id DESC LIMIT 1`,
+      `SELECT * FROM social_content WHERE hub_video_id = ? AND import_source = 'media_hub' ORDER BY id DESC LIMIT 1`,
       [video_id]
     );
 
@@ -166,9 +168,9 @@ export async function POST(req: NextRequest) {
       content: created?.[0] || null,
     });
   } catch (e: any) {
-    console.error('Error importing clip:', e);
+    console.error('Error importing media hub video:', e);
     return NextResponse.json(
-      { error: String(e?.message || 'Failed to import clip') },
+      { error: String(e?.message || 'Failed to import media hub video') },
       { status: 500 }
     );
   }
