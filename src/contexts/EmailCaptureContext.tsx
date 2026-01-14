@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
+import { usePathname } from 'next/navigation';
 import { ecommerce } from '@/components/analytics/GoogleAnalytics';
 
 interface EmailCaptureContextValue {
@@ -41,6 +42,16 @@ export function EmailCaptureProvider({ children }: { children: ReactNode }) {
   const [discountCode, setDiscountCode] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasShownAuto, setHasShownAuto] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const pathname = usePathname();
+
+  // Check if on admin subdomain or admin path
+  useEffect(() => {
+    const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
+    const isAdminSubdomain = hostname.startsWith('admin.');
+    const isAdminPath = pathname?.startsWith('/admin');
+    setIsAdmin(isAdminSubdomain || !!isAdminPath);
+  }, [pathname]);
 
   // Load state from localStorage on mount
   useEffect(() => {
@@ -58,8 +69,9 @@ export function EmailCaptureProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // Auto-show modal after delay (only once per session, respects cooldown)
+  // Never show on admin routes
   useEffect(() => {
-    if (hasSubscribed || hasShownAuto) return;
+    if (hasSubscribed || hasShownAuto || isAdmin) return;
 
     // Check if user dismissed recently
     try {
@@ -83,7 +95,7 @@ export function EmailCaptureProvider({ children }: { children: ReactNode }) {
     }, MODAL_DELAY_MS);
 
     return () => clearTimeout(timer);
-  }, [hasSubscribed, hasShownAuto]);
+  }, [hasSubscribed, hasShownAuto, isAdmin]);
 
   const openModal = useCallback(() => {
     if (!hasSubscribed) {

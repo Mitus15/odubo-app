@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePWA } from './PWAProvider';
 
@@ -13,11 +14,22 @@ const STORAGE_KEY = 'odubo:pwa-banner-dismissed';
  * - App is not already installed (not standalone)
  * - App is installable (beforeinstallprompt fired)
  * - User hasn't dismissed the banner
+ * - NOT on admin routes or admin subdomain
  */
 export default function PWAInstallBanner() {
   const { isStandalone, isInstallable, promptInstall } = usePWA();
   const [dismissed, setDismissed] = useState(true); // Start dismissed to prevent flash
   const [isMobile, setIsMobile] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const pathname = usePathname();
+
+  useEffect(() => {
+    // Check if on admin subdomain or admin path
+    const hostname = window.location.hostname;
+    const isAdminSubdomain = hostname.startsWith('admin.');
+    const isAdminPath = pathname?.startsWith('/admin');
+    setIsAdmin(isAdminSubdomain || isAdminPath);
+  }, [pathname]);
 
   useEffect(() => {
     // Check if mobile device (not desktop)
@@ -55,8 +67,8 @@ export default function PWAInstallBanner() {
     }
   };
 
-  // Don't show if: on desktop, already installed, not installable, or dismissed
-  const shouldShow = isMobile && !isStandalone && isInstallable && !dismissed;
+  // Don't show if: on admin, on desktop, already installed, not installable, or dismissed
+  const shouldShow = !isAdmin && isMobile && !isStandalone && isInstallable && !dismissed;
 
   return (
     <AnimatePresence>
