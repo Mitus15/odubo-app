@@ -91,10 +91,27 @@ export async function GET(req: NextRequest) {
         if (!groupedByDate[dateKey]) {
           groupedByDate[dateKey] = [];
         }
+        // Safely parse JSON fields
+        let scheduledPlatforms: string[] = [];
+        let platformStatus: Record<string, string> = {};
+        try {
+          if (item.scheduled_platforms) {
+            scheduledPlatforms = JSON.parse(item.scheduled_platforms);
+          }
+        } catch {
+          // Invalid JSON, use empty array
+        }
+        try {
+          if (item.platform_status) {
+            platformStatus = JSON.parse(item.platform_status);
+          }
+        } catch {
+          // Invalid JSON, use empty object
+        }
         groupedByDate[dateKey].push({
           ...item,
-          scheduled_platforms: item.scheduled_platforms ? JSON.parse(item.scheduled_platforms) : [],
-          platform_status: item.platform_status ? JSON.parse(item.platform_status) : {},
+          scheduled_platforms: scheduledPlatforms,
+          platform_status: platformStatus,
         });
       }
     }
