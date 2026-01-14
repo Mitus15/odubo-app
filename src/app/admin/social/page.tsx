@@ -2073,9 +2073,20 @@ function ContentEditorModal({
   const [hashtagsTiktok, setHashtagsTiktok] = useState(content.hashtags_tiktok || '');
   const [hashtagsYoutube, setHashtagsYoutube] = useState(content.hashtags_youtube || '');
   const [scheduledFor, setScheduledFor] = useState(content.scheduled_for || '');
-  const [scheduledPlatforms, setScheduledPlatforms] = useState<string[]>(
-    content.scheduled_platforms ? JSON.parse(content.scheduled_platforms) : []
-  );
+  const [scheduledPlatforms, setScheduledPlatforms] = useState<string[]>(() => {
+    // Handle both array (from calendar API) and string (from main API) formats
+    if (Array.isArray(content.scheduled_platforms)) {
+      return content.scheduled_platforms;
+    }
+    if (content.scheduled_platforms && typeof content.scheduled_platforms === 'string') {
+      try {
+        return JSON.parse(content.scheduled_platforms);
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  });
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
 
