@@ -3,41 +3,13 @@
 import { Suspense } from 'react';
 import dynamic from 'next/dynamic';
 
-// Core tab components
+// Only load tabs that are actually used in-page (not via separate routes)
 const OverviewTab = dynamic(() => import('./tabs/OverviewTab'));
-const AnalyticsTab = dynamic(() => import('./tabs/AnalyticsTab'));
-const MomentsTab = dynamic(() => import('./tabs/MomentsTab'));
 const ProductsTab = dynamic(() => import('./tabs/ProductsTab'));
 const OrdersTab = dynamic(() => import('./tabs/OrdersTab'));
 const CustomersTab = dynamic(() => import('./tabs/CustomersTab'));
-const PlaceholderTab = dynamic(() => import('./tabs/PlaceholderTab'));
-
-// New tab components
-const StoreSettingsTab = dynamic(() => import('./tabs/StoreSettingsTab'));
-const CampaignsTab = dynamic(() => import('./tabs/CampaignsTab'));
-const EmailMarketingTab = dynamic(() => import('./tabs/EmailMarketingTab'));
 const DiscountsTab = dynamic(() => import('./tabs/DiscountsTab'));
 const ApiKeysTab = dynamic(() => import('./tabs/ApiKeysTab'));
-const ContentTab = dynamic(() => import('./tabs/ContentTab'));
-
-// Social management components
-const SocialPostsTab = dynamic(() => import('./tabs/SocialPostsTab'));
-const SocialAccountsTab = dynamic(() => import('./tabs/SocialAccountsTab'));
-const SocialAnalyticsTab = dynamic(() => import('./tabs/SocialAnalyticsTab'));
-
-// Content management components
-const LibraryManager = dynamic(() => import('@/components/LibraryManager'));
-const AdminVideosPage = dynamic(() => import('./videos/page'));
-const AdminUsersPage = dynamic(() => import('./users/page'));
-const AdminLinktreePage = dynamic(() => import('./linktree/page'));
-const AdminLivePage = dynamic(() => import('./live/page'));
-const AdminStoragePage = dynamic(() => import('./storage/page'));
-const AdminDatabasePage = dynamic(() => import('./db/page'));
-
-// Intelligence components
-const IntelDashboard = dynamic(() => import('@/components/intelligence/IntelDashboard'));
-const CommerceOverview = dynamic(() => import('@/components/intelligence/commerce/CommerceOverview'));
-const PlatformConnections = dynamic(() => import('@/components/intelligence/connections/PlatformConnections'));
 
 // Loading fallback component
 function LoadingFallback({ title }: { title: string }) {
@@ -70,30 +42,12 @@ function AccessDenied() {
   );
 }
 
-// All admin tab types
+// Simplified tab types - only tabs used in-page
 type AdminTab =
   | 'overview'
-  // CMS
-  | 'music-library' | 'video-library' | 'moments' | 'linktree' | 'live' | 'featured'
-  // Social
-  | 'social-posts' | 'social-accounts' | 'social-analytics'
-  // Commerce
-  | 'store-settings' | 'products' | 'orders' | 'customers' | 'discounts'
-  // Marketing
-  | 'campaigns' | 'email-marketing'
-  // Analytics
-  | 'analytics' | 'analytics-overview' | 'analytics-sales' | 'analytics-finance'
-  | 'analytics-music' | 'analytics-video' | 'analytics-moments' | 'analytics-gallery'
-  | 'analytics-users' | 'analytics-customers' | 'analytics-reports'
-  // Intelligence
-  | 'intel-overview' | 'intel-streaming' | 'intel-social' | 'intel-commerce'
-  | 'intel-fans' | 'intel-insights' | 'intel-connections'
-  // Distribution
-  | 'dist-releases' | 'dist-videos' | 'dist-status' | 'dist-import'
-  // System
-  | 'users' | 'database' | 'storage' | 'api-keys' | 'settings'
-  // Legacy
-  | 'marketing' | 'content' | 'markets' | 'finance';
+  | 'products' | 'orders' | 'customers' | 'discounts'
+  | 'api-keys'
+  | string; // Allow any string for flexibility
 
 interface TabContentProps {
   activeTab: AdminTab;
@@ -102,7 +56,6 @@ interface TabContentProps {
 
 export default function TabContent({ activeTab, canAccess }: TabContentProps) {
   // Check permission before rendering content
-  // If canAccess is not provided (legacy), allow all access
   if (canAccess && !canAccess(activeTab)) {
     return <AccessDenied />;
   }
@@ -116,65 +69,7 @@ export default function TabContent({ activeTab, canAccess }: TabContentProps) {
         </Suspense>
       );
 
-    // === CMS ===
-    case 'music-library':
-      return (
-        <Suspense fallback={<LoadingFallback title="Music Library" />}>
-          <LibraryManager />
-        </Suspense>
-      );
-    case 'video-library':
-      return (
-        <Suspense fallback={<LoadingFallback title="Video Library" />}>
-          <AdminVideosPage />
-        </Suspense>
-      );
-    case 'moments':
-      return (
-        <Suspense fallback={<LoadingFallback title="Moments" />}>
-          <MomentsTab />
-        </Suspense>
-      );
-    case 'linktree':
-      return (
-        <Suspense fallback={<LoadingFallback title="Link Tree" />}>
-          <AdminLinktreePage />
-        </Suspense>
-      );
-    case 'live':
-      return (
-        <Suspense fallback={<LoadingFallback title="Live Streams" />}>
-          <AdminLivePage />
-        </Suspense>
-      );
-
-    // === SOCIAL ===
-    case 'social-posts':
-      return (
-        <Suspense fallback={<LoadingFallback title="Social Posts" />}>
-          <SocialPostsTab />
-        </Suspense>
-      );
-    case 'social-accounts':
-      return (
-        <Suspense fallback={<LoadingFallback title="Social Accounts" />}>
-          <SocialAccountsTab />
-        </Suspense>
-      );
-    case 'social-analytics':
-      return (
-        <Suspense fallback={<LoadingFallback title="Social Analytics" />}>
-          <SocialAnalyticsTab />
-        </Suspense>
-      );
-
-    // === COMMERCE ===
-    case 'store-settings':
-      return (
-        <Suspense fallback={<LoadingFallback title="Store Settings" />}>
-          <StoreSettingsTab />
-        </Suspense>
-      );
+    // === COMMERCE (in-page tabs) ===
     case 'products':
       return (
         <Suspense fallback={<LoadingFallback title="Products" />}>
@@ -200,96 +95,7 @@ export default function TabContent({ activeTab, canAccess }: TabContentProps) {
         </Suspense>
       );
 
-    // === MARKETING ===
-    case 'campaigns':
-    case 'marketing':
-      return (
-        <Suspense fallback={<LoadingFallback title="Campaigns" />}>
-          <CampaignsTab />
-        </Suspense>
-      );
-    case 'email-marketing':
-      return (
-        <Suspense fallback={<LoadingFallback title="Email Marketing" />}>
-          <EmailMarketingTab />
-        </Suspense>
-      );
-
-    // === ANALYTICS ===
-    case 'analytics':
-    case 'analytics-overview':
-    case 'analytics-sales':
-    case 'analytics-finance':
-    case 'analytics-music':
-    case 'analytics-video':
-    case 'analytics-moments':
-    case 'analytics-gallery':
-    case 'analytics-users':
-    case 'analytics-customers':
-    case 'analytics-reports':
-      return (
-        <Suspense fallback={<LoadingFallback title="Analytics" />}>
-          <AnalyticsTab view={activeTab === 'analytics' ? 'analytics-overview' : activeTab} />
-        </Suspense>
-      );
-
-    // === INTELLIGENCE ===
-    case 'intel-overview':
-      return (
-        <Suspense fallback={<LoadingFallback title="Intelligence Dashboard" />}>
-          <IntelDashboard />
-        </Suspense>
-      );
-    case 'intel-streaming':
-      return <PlaceholderTab title="Streaming Analytics" description="View streams, listeners, and revenue across Spotify, Apple Music, and other platforms. Import data from your distributor to get started." />;
-    case 'intel-social':
-      return <PlaceholderTab title="Social Analytics" description="Track engagement and growth across Instagram, TikTok, and YouTube. Connect your accounts to sync data automatically." />;
-    case 'intel-commerce':
-      return (
-        <Suspense fallback={<LoadingFallback title="Commerce Analytics" />}>
-          <CommerceOverview />
-        </Suspense>
-      );
-    case 'intel-fans':
-      return <PlaceholderTab title="Fan Intelligence" description="Unified fan profiles across all platforms. Segment your audience and understand their journey from discovery to purchase." />;
-    case 'intel-insights':
-      return <PlaceholderTab title="Correlation Insights" description="AI-powered cross-domain analysis. Discover patterns like which social posts drive streams or how clips convert to sales." />;
-    case 'intel-connections':
-      return (
-        <Suspense fallback={<LoadingFallback title="Platform Connections" />}>
-          <PlatformConnections />
-        </Suspense>
-      );
-
-    // === DISTRIBUTION ===
-    case 'dist-releases':
-      return <PlaceholderTab title="Music Releases" description="Manage music distribution to streaming platforms. Create releases, add tracks, and submit to your distributor." />;
-    case 'dist-videos':
-      return <PlaceholderTab title="Video Releases" description="Distribute music videos and visual content to YouTube, Vevo, and social platforms." />;
-    case 'dist-status':
-      return <PlaceholderTab title="Distribution Status" description="Track the status of your releases across all platforms. See which DSPs are live and any issues." />;
-    case 'dist-import':
-      return <PlaceholderTab title="Import Data" description="Upload CSV exports from your distributor to import streaming analytics. Supports UnitedMasters, DistroKid, TuneCore, and more." />;
-
-    // === SYSTEM ===
-    case 'users':
-      return (
-        <Suspense fallback={<LoadingFallback title="Users" />}>
-          <AdminUsersPage />
-        </Suspense>
-      );
-    case 'database':
-      return (
-        <Suspense fallback={<LoadingFallback title="Database" />}>
-          <AdminDatabasePage />
-        </Suspense>
-      );
-    case 'storage':
-      return (
-        <Suspense fallback={<LoadingFallback title="Storage" />}>
-          <AdminStoragePage />
-        </Suspense>
-      );
+    // === SYSTEM (api-keys is the only in-page tab) ===
     case 'api-keys':
       return (
         <Suspense fallback={<LoadingFallback title="API Keys" />}>
@@ -297,19 +103,12 @@ export default function TabContent({ activeTab, canAccess }: TabContentProps) {
         </Suspense>
       );
 
-    // === LEGACY/PLACEHOLDER ===
-    case 'content':
+    // All other content is accessed via dedicated routes
+    default:
       return (
-        <Suspense fallback={<LoadingFallback title="Content Management" />}>
-          <ContentTab />
+        <Suspense fallback={<LoadingFallback title="Dashboard" />}>
+          <OverviewTab />
         </Suspense>
       );
-    case 'markets':
-      return <PlaceholderTab title="Markets" description="Manage international markets, regions, and currencies." />;
-    case 'finance':
-      return <PlaceholderTab title="Finance" description="View revenue, payouts, and financial reports." />;
-
-    default:
-      return <PlaceholderTab title="Not Found" description="This section is not available." />;
   }
 }

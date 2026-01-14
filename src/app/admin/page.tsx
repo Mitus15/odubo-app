@@ -209,20 +209,19 @@ interface NavItem {
   href?: string; // External link (navigates to another page)
 }
 
-// CMS-style foldered navigation structure - Full Enterprise Admin Suite
+// Simplified navigation - only working features
 const navItems: NavItem[] = [
   { id: 'overview', label: 'Dashboard', icon: Icons.home },
   {
-    id: 'cms',
-    label: 'CMS',
+    id: 'content',
+    label: 'Content',
     icon: Icons.cms,
     children: [
-      { id: 'music-library', label: 'Music', icon: Icons.music },
-      { id: 'video-library', label: 'Videos', icon: Icons.videos },
-      { id: 'moments', label: 'Moments', icon: Icons.moments },
-      { id: 'featured', label: 'Featured', icon: Icons.featured },
-      { id: 'linktree', label: 'Link Tree', icon: Icons.linktree },
-      { id: 'live', label: 'Live Streams', icon: Icons.live },
+      { id: 'music', label: 'Music', icon: Icons.music, href: '/admin/albums' },
+      { id: 'videos', label: 'Videos', icon: Icons.videos, href: '/admin/videos' },
+      { id: 'moments', label: 'Moments', icon: Icons.moments, href: '/admin/moments' },
+      { id: 'brand-assets', label: 'Brand Assets', icon: Icons.products, href: '/admin/brand-assets' },
+      { id: 'linktree', label: 'Links', icon: Icons.linktree, href: '/admin/linktree' },
     ]
   },
   {
@@ -230,10 +229,8 @@ const navItems: NavItem[] = [
     label: 'Social',
     icon: Icons.social,
     children: [
-      { id: 'social-posts', label: 'Social CMS', icon: Icons.social, href: '/admin/social' },
+      { id: 'social-cms', label: 'Content CMS', icon: Icons.commandCenter, href: '/admin/social' },
       { id: 'ai-studio', label: 'AI Studio', icon: Icons.ai, href: '/admin/ai-studio' },
-      { id: 'social-accounts', label: 'Accounts', icon: Icons.users },
-      { id: 'social-analytics', label: 'Analytics', icon: Icons.analytics },
     ]
   },
   {
@@ -245,53 +242,6 @@ const navItems: NavItem[] = [
       { id: 'orders', label: 'Orders', icon: Icons.orders },
       { id: 'customers', label: 'Customers', icon: Icons.customers },
       { id: 'discounts', label: 'Discounts', icon: Icons.discounts },
-      { id: 'store-settings', label: 'Store Settings', icon: Icons.system },
-    ]
-  },
-  {
-    id: 'marketing',
-    label: 'Marketing',
-    icon: Icons.marketing,
-    children: [
-      { id: 'campaigns', label: 'Campaigns', icon: Icons.marketing },
-    ]
-  },
-  {
-    id: 'analytics',
-    label: 'Analytics',
-    icon: Icons.analytics,
-    children: [
-      { id: 'analytics-overview', label: 'Overview', icon: Icons.globe },
-      { id: 'analytics-music', label: 'Music', icon: Icons.music },
-      { id: 'analytics-video', label: 'Video', icon: Icons.videos },
-      { id: 'analytics-moments', label: 'Moments', icon: Icons.moments },
-      { id: 'analytics-customers', label: 'Customers', icon: Icons.customers },
-      { id: 'analytics-reports', label: 'Reports', icon: Icons.reports },
-    ]
-  },
-  {
-    id: 'intelligence',
-    label: 'Intelligence',
-    icon: Icons.intelligence,
-    children: [
-      { id: 'intel-overview', label: 'Dashboard', icon: Icons.home },
-      { id: 'intel-streaming', label: 'Streaming', icon: Icons.streaming },
-      { id: 'intel-social', label: 'Social', icon: Icons.social },
-      { id: 'intel-commerce', label: 'Commerce', icon: Icons.commerce },
-      { id: 'intel-fans', label: 'Fans', icon: Icons.fans },
-      { id: 'intel-insights', label: 'Insights', icon: Icons.insights },
-      { id: 'intel-connections', label: 'Connections', icon: Icons.connections },
-    ]
-  },
-  {
-    id: 'distribution',
-    label: 'Distribution',
-    icon: Icons.distribution,
-    children: [
-      { id: 'dist-releases', label: 'Music Releases', icon: Icons.music },
-      { id: 'dist-videos', label: 'Video Releases', icon: Icons.videos },
-      { id: 'dist-status', label: 'Status', icon: Icons.reports },
-      { id: 'dist-import', label: 'Import Data', icon: Icons.database },
     ]
   },
   {
@@ -299,9 +249,9 @@ const navItems: NavItem[] = [
     label: 'System',
     icon: Icons.system,
     children: [
-      { id: 'users', label: 'Users', icon: Icons.users },
-      { id: 'database', label: 'Database', icon: Icons.database },
-      { id: 'storage', label: 'Storage', icon: Icons.storage },
+      { id: 'users', label: 'Users', icon: Icons.users, href: '/admin/users' },
+      { id: 'database', label: 'Database', icon: Icons.database, href: '/admin/db' },
+      { id: 'storage', label: 'Storage', icon: Icons.storage, href: '/admin/storage' },
       { id: 'api-keys', label: 'API Keys', icon: Icons.api },
     ]
   },
