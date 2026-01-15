@@ -185,8 +185,8 @@ export default function ApiKeysTab() {
                   <div className="flex items-center gap-3 mb-2">
                     <h3 className="text-lg font-semibold text-[#ede8df]">{apiKey.name}</h3>
                     <span className={`px-2 py-1 text-xs font-medium rounded-lg ${
-                      apiKey.status === 'active' 
-                        ? 'bg-green-500/10 text-green-500' 
+                      apiKey.status === 'active'
+                        ? 'bg-emerald-500/10 text-emerald-500'
                         : 'bg-red-500/10 text-red-500'
                     }`}>
                       {apiKey.status}

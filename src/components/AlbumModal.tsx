@@ -325,15 +325,15 @@ export default function AlbumModal({ album, tracks, onClose }: AlbumModalProps) 
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-gray-900 rounded-lg p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-[#1a1614] rounded-lg p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-[#502d26]/30">
         <div className="flex justify-between items-start mb-6">
           <div>
-            <h3 className="text-2xl font-bold">{album.title}</h3>
-            <p className="text-gray-400">{album.artist_name}</p>
+            <h3 className="text-2xl font-bold text-[#ede8df]">{album.title}</h3>
+            <p className="text-[#b2a491]">{album.artist_name}</p>
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-white text-xl"
+            className="text-[#b2a491] hover:text-[#ede8df] text-xl"
           >
             ×
           </button>
@@ -364,11 +364,11 @@ export default function AlbumModal({ album, tracks, onClose }: AlbumModalProps) 
           {/* Existing Tracks */}
           <div>
             <div className="flex justify-between items-center mb-4">
-              <h4 className="text-lg font-bold">Current Tracks ({reorderedTracks.length})</h4>
+              <h4 className="text-lg font-bold text-[#ede8df]">Current Tracks ({reorderedTracks.length})</h4>
               {reorderedTracks.length > 1 && (
                 <button
                   onClick={saveTrackOrder}
-                  className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+                  className="px-3 py-1 bg-[#843c2d] text-white text-sm rounded hover:bg-[#9a4535]"
                 >
                   Save Order
                 </button>
@@ -376,9 +376,9 @@ export default function AlbumModal({ album, tracks, onClose }: AlbumModalProps) 
             </div>
             <div className="space-y-2 max-h-64 overflow-y-auto">
               {reorderedTracks.map((track, index) => (
-                <div 
-                  key={track.id} 
-                  className="bg-gray-800 p-3 rounded cursor-move hover:bg-gray-750 transition-colors"
+                <div
+                  key={track.id}
+                  className="bg-[#252220] p-3 rounded cursor-move hover:bg-[#302927] transition-colors border border-[#502d26]/20"
                   draggable
                   onDragStart={(e) => handleDragStart(e, track)}
                   onDragOver={handleDragOver}
@@ -387,13 +387,13 @@ export default function AlbumModal({ album, tracks, onClose }: AlbumModalProps) 
                   <div className="flex justify-between items-center">
                     <div className="flex-1">
                       <div className="flex items-center space-x-2">
-                        <span className="text-gray-400 text-sm">⋮⋮</span>
-                        <p className="font-medium">{track.track_number}. {track.title}</p>
+                        <span className="text-[#726d6c] text-sm">⋮⋮</span>
+                        <p className="font-medium text-[#ede8df]">{track.track_number}. {track.title}</p>
                       </div>
-                      <p className="text-xs text-gray-400">{formatDuration(track.duration)}</p>
+                      <p className="text-xs text-[#b2a491]">{formatDuration(track.duration)}</p>
                       {track.credits && track.credits.length > 0 && (
                         <div className="mt-1">
-                          <p className="text-xs text-gray-500">
+                          <p className="text-xs text-[#726d6c]">
                             Credits: {track.credits.map(c => `${c.name} (${c.role})`).join(', ')}
                           </p>
                         </div>
@@ -401,8 +401,8 @@ export default function AlbumModal({ album, tracks, onClose }: AlbumModalProps) 
                     </div>
                     <div className="flex items-center space-x-2">
                       <span className={`text-xs px-2 py-1 rounded ${
-                        track.audio_status === 'ready' ? 'bg-green-600' :
-                        track.audio_status === 'error' ? 'bg-red-600' : 'bg-yellow-600'
+                        track.audio_status === 'ready' ? 'bg-emerald-600' :
+                        track.audio_status === 'error' ? 'bg-red-600' : 'bg-amber-600'
                       }`}>
                         {track.audio_status}
                       </span>
@@ -414,7 +414,7 @@ export default function AlbumModal({ album, tracks, onClose }: AlbumModalProps) 
                             startEditingTrackCredits(track.id, track.credits || []);
                           }
                         }}
-                        className="px-2 py-1 bg-purple-600 text-white text-xs rounded hover:bg-purple-700"
+                        className="px-2 py-1 bg-[#843c2d] text-white text-xs rounded hover:bg-[#9a4535]"
                       >
                         {editingCredits === track.id ? 'Cancel' : 'Edit Credits'}
                       </button>
@@ -422,20 +422,20 @@ export default function AlbumModal({ album, tracks, onClose }: AlbumModalProps) 
                   </div>
                   
                   {editingCredits === track.id && (
-                    <div className="mt-3 pt-3 border-t border-gray-700">
+                    <div className="mt-3 pt-3 border-t border-[#502d26]/30">
                       <div className="flex justify-between items-center mb-2">
-                        <h6 className="text-sm font-medium">Edit Track Credits</h6>
+                        <h6 className="text-sm font-medium text-[#ede8df]">Edit Track Credits</h6>
                         <div className="flex space-x-2">
                           <button
                             onClick={() => addCreditToExistingTrack(track.id)}
-                            className="px-2 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700"
+                            className="px-2 py-1 bg-emerald-600 text-white text-xs rounded hover:bg-emerald-700"
                           >
                             Add Credit
                           </button>
                           <button
                             onClick={() => saveExistingTrackCredits(track.id)}
                             disabled={savingCredits === track.id}
-                            className="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 disabled:opacity-50"
+                            className="px-2 py-1 bg-[#843c2d] text-white text-xs rounded hover:bg-[#9a4535] disabled:opacity-50"
                           >
                             {savingCredits === track.id ? 'Saving...' : 'Save'}
                           </button>
@@ -447,21 +447,21 @@ export default function AlbumModal({ album, tracks, onClose }: AlbumModalProps) 
                           {editingTrackCredits[track.id].map((credit, creditIndex) => (
                             <div key={creditIndex} className="grid grid-cols-4 gap-2 items-end">
                               <div>
-                                <label className="block text-xs font-medium mb-1">Name</label>
+                                <label className="block text-xs font-medium mb-1 text-[#b2a491]">Name</label>
                                 <input
                                   type="text"
                                   placeholder="Artist name"
                                   value={credit.name}
                                   onChange={(e) => updateExistingTrackCredit(track.id, creditIndex, 'name', e.target.value)}
-                                  className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-xs"
+                                  className="w-full px-2 py-1 bg-[#302927] border border-[#502d26]/30 rounded text-xs text-[#ede8df]"
                                 />
                               </div>
                               <div>
-                                <label className="block text-xs font-medium mb-1">Role</label>
+                                <label className="block text-xs font-medium mb-1 text-[#b2a491]">Role</label>
                                 <select
                                   value={credit.role}
                                   onChange={(e) => updateExistingTrackCredit(track.id, creditIndex, 'role', e.target.value)}
-                                  className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-xs"
+                                  className="w-full px-2 py-1 bg-[#302927] border border-[#502d26]/30 rounded text-xs text-[#ede8df]"
                                 >
                                   <option value="">Select role</option>
                                   <option value="Artist">Artist</option>
@@ -477,7 +477,7 @@ export default function AlbumModal({ album, tracks, onClose }: AlbumModalProps) 
                                 </select>
                               </div>
                               <div>
-                                <label className="flex items-center text-xs">
+                                <label className="flex items-center text-xs text-[#b2a491]">
                                   <input
                                     type="checkbox"
                                     checked={credit.is_featured}
@@ -499,14 +499,14 @@ export default function AlbumModal({ album, tracks, onClose }: AlbumModalProps) 
                           ))}
                         </div>
                       ) : (
-                        <p className="text-xs text-gray-500">No credits added yet</p>
+                        <p className="text-xs text-[#726d6c]">No credits added yet</p>
                       )}
                     </div>
                   )}
                 </div>
               ))}
               {reorderedTracks.length === 0 && (
-                <p className="text-gray-400 text-center py-4">No tracks yet</p>
+                <p className="text-[#b2a491] text-center py-4">No tracks yet</p>
               )}
             </div>
           </div>
@@ -514,32 +514,32 @@ export default function AlbumModal({ album, tracks, onClose }: AlbumModalProps) 
 
         {/* Track Upload Section */}
         <div className="mt-8">
-          <h4 className="text-lg font-bold mb-4">Add New Tracks</h4>
-          
+          <h4 className="text-lg font-bold mb-4 text-[#ede8df]">Add New Tracks</h4>
+
           <div className="mb-4">
-            <label className="block text-sm font-medium mb-2">Select Audio Files</label>
+            <label className="block text-sm font-medium mb-2 text-[#b2a491]">Select Audio Files</label>
             <input
               type="file"
               ref={trackFilesRef}
               multiple
               accept="audio/*"
               onChange={handleTrackFilesChange}
-              className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 bg-[#252220] border border-[#502d26]/30 rounded-md focus:outline-none focus:ring-2 focus:ring-[#843c2d] text-[#ede8df]"
             />
           </div>
 
           {trackUploads.length > 0 && (
             <div className="space-y-4">
-              <h5 className="font-medium">Track Details</h5>
+              <h5 className="font-medium text-[#ede8df]">Track Details</h5>
               {trackUploads.map((track, index) => (
-                <div key={index} className="bg-gray-800 p-4 rounded-lg border border-gray-700">
+                <div key={index} className="bg-[#252220] p-4 rounded-lg border border-[#502d26]/30">
                   <div className="flex justify-between items-center mb-3">
-                    <h6 className="text-sm font-medium text-gray-300">
+                    <h6 className="text-sm font-medium text-[#b2a491]">
                       Track {track.track_number}: {track.title || 'Untitled'}
                     </h6>
                     <div className="flex items-center space-x-2">
                       {track.credits.length > 0 && (
-                        <span className="text-xs bg-purple-600 text-white px-2 py-1 rounded">
+                        <span className="text-xs bg-[#843c2d] text-white px-2 py-1 rounded">
                           {track.credits.length} credit{track.credits.length !== 1 ? 's' : ''}
                         </span>
                       )}
@@ -553,36 +553,36 @@ export default function AlbumModal({ album, tracks, onClose }: AlbumModalProps) 
                   
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
                     <div>
-                      <label className="block text-xs font-medium mb-1">Title</label>
+                      <label className="block text-xs font-medium mb-1 text-[#b2a491]">Title</label>
                       <input
                         type="text"
                         value={track.title}
                         onChange={(e) => updateTrackUpload(index, 'title', e.target.value)}
-                        className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-sm"
+                        className="w-full px-2 py-1 bg-[#302927] border border-[#502d26]/30 rounded text-sm text-[#ede8df]"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium mb-1">Track #</label>
+                      <label className="block text-xs font-medium mb-1 text-[#b2a491]">Track #</label>
                       <input
                         type="number"
                         value={track.track_number}
                         onChange={(e) => updateTrackUpload(index, 'track_number', parseInt(e.target.value))}
-                        className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-sm"
+                        className="w-full px-2 py-1 bg-[#302927] border border-[#502d26]/30 rounded text-sm text-[#ede8df]"
                         min="1"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium mb-1">Duration (seconds)</label>
+                      <label className="block text-xs font-medium mb-1 text-[#b2a491]">Duration (seconds)</label>
                       <input
                         type="number"
                         value={track.duration}
                         onChange={(e) => updateTrackUpload(index, 'duration', parseInt(e.target.value))}
-                        className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-sm"
+                        className="w-full px-2 py-1 bg-[#302927] border border-[#502d26]/30 rounded text-sm text-[#ede8df]"
                         min="1"
                       />
                     </div>
                     <div className="flex items-end space-x-2">
-                      <label className="flex items-center text-xs">
+                      <label className="flex items-center text-xs text-[#b2a491]">
                         <input
                           type="checkbox"
                           checked={track.explicit_content}
@@ -601,14 +601,14 @@ export default function AlbumModal({ album, tracks, onClose }: AlbumModalProps) 
                   </div>
 
                   {/* Credits Section */}
-                  <div className="border-t border-gray-700 pt-3">
+                  <div className="border-t border-[#502d26]/30 pt-3">
                     <div className="flex justify-between items-center mb-2">
-                      <h6 className="text-sm font-medium">Credits</h6>
+                      <h6 className="text-sm font-medium text-[#ede8df]">Credits</h6>
                       <div className="flex space-x-1">
                         {track.credits.length > 0 && trackUploads.length > 1 && (
                           <button
                             onClick={() => copyCreditsToAllTracks(index)}
-                            className="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
+                            className="px-2 py-1 bg-[#843c2d] text-white text-xs rounded hover:bg-[#9a4535]"
                             title="Copy these credits to all other tracks"
                           >
                             Copy to All
@@ -617,7 +617,7 @@ export default function AlbumModal({ album, tracks, onClose }: AlbumModalProps) 
                         {track.credits.length > 0 && (
                           <button
                             onClick={() => clearAllCreditsFromTrack(index)}
-                            className="px-2 py-1 bg-gray-600 text-white text-xs rounded hover:bg-gray-700"
+                            className="px-2 py-1 bg-[#302927] text-[#ede8df] text-xs rounded hover:bg-[#3a3533]"
                             title="Remove all credits from this track"
                           >
                             Clear All
@@ -625,7 +625,7 @@ export default function AlbumModal({ album, tracks, onClose }: AlbumModalProps) 
                         )}
                         <button
                           onClick={() => addCreditToTrackUpload(index)}
-                          className="px-2 py-1 bg-purple-600 text-white text-xs rounded hover:bg-purple-700"
+                          className="px-2 py-1 bg-[#843c2d] text-white text-xs rounded hover:bg-[#9a4535]"
                         >
                           Add Credit
                         </button>
@@ -635,24 +635,24 @@ export default function AlbumModal({ album, tracks, onClose }: AlbumModalProps) 
                     {track.credits.length > 0 ? (
                       <div className="space-y-2">
                         {track.credits.map((credit, creditIndex) => (
-                          <div key={creditIndex} className="bg-gray-750 p-2 rounded border border-gray-600">
+                          <div key={creditIndex} className="bg-[#302927] p-2 rounded border border-[#502d26]/30">
                             <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
                               <div>
-                                <label className="block text-xs font-medium mb-1">Name</label>
+                                <label className="block text-xs font-medium mb-1 text-[#b2a491]">Name</label>
                                 <input
                                   type="text"
                                   placeholder="Artist name"
                                   value={credit.name}
                                   onChange={(e) => updateTrackUploadCredit(index, creditIndex, 'name', e.target.value)}
-                                  className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-xs focus:outline-none focus:ring-1 focus:ring-purple-500"
+                                  className="w-full px-2 py-1 bg-[#252220] border border-[#502d26]/30 rounded text-xs text-[#ede8df] focus:outline-none focus:ring-1 focus:ring-[#843c2d]"
                                 />
                               </div>
                               <div>
-                                <label className="block text-xs font-medium mb-1">Role</label>
+                                <label className="block text-xs font-medium mb-1 text-[#b2a491]">Role</label>
                                 <select
                                   value={credit.role}
                                   onChange={(e) => updateTrackUploadCredit(index, creditIndex, 'role', e.target.value)}
-                                  className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-xs focus:outline-none focus:ring-1 focus:ring-purple-500"
+                                  className="w-full px-2 py-1 bg-[#252220] border border-[#502d26]/30 rounded text-xs text-[#ede8df] focus:outline-none focus:ring-1 focus:ring-[#843c2d]"
                                 >
                                   <option value="">Select role</option>
                                   <option value="Artist">Artist</option>
@@ -668,7 +668,7 @@ export default function AlbumModal({ album, tracks, onClose }: AlbumModalProps) 
                                 </select>
                               </div>
                               <div className="flex items-end">
-                                <label className="flex items-center text-xs">
+                                <label className="flex items-center text-xs text-[#b2a491]">
                                   <input
                                     type="checkbox"
                                     checked={credit.is_featured}
@@ -691,11 +691,11 @@ export default function AlbumModal({ album, tracks, onClose }: AlbumModalProps) 
                         ))}
                       </div>
                     ) : (
-                      <div className="text-center py-4 border-2 border-dashed border-gray-600 rounded">
-                        <p className="text-xs text-gray-500 mb-2">No credits added</p>
+                      <div className="text-center py-4 border-2 border-dashed border-[#502d26]/30 rounded">
+                        <p className="text-xs text-[#726d6c] mb-2">No credits added</p>
                         <button
                           onClick={() => addCreditToTrackUpload(index)}
-                          className="text-xs text-purple-400 hover:text-purple-300"
+                          className="text-xs text-[#e8a592] hover:text-[#ede8df]"
                         >
                           + Add first credit
                         </button>
@@ -709,13 +709,13 @@ export default function AlbumModal({ album, tracks, onClose }: AlbumModalProps) 
                 <button
                   onClick={uploadTracks}
                   disabled={uploading}
-                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50"
+                  className="px-4 py-2 bg-[#843c2d] text-white rounded-md hover:bg-[#9a4535] disabled:opacity-50"
                 >
                   {uploading ? 'Uploading...' : `Upload ${trackUploads.length} Track${trackUploads.length !== 1 ? 's' : ''}`}
                 </button>
                 <button
                   onClick={() => setTrackUploads([])}
-                  className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
+                  className="px-4 py-2 bg-[#302927] text-[#ede8df] rounded-md hover:bg-[#3a3533]"
                 >
                   Clear All
                 </button>

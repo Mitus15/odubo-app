@@ -294,7 +294,7 @@ function EventCard({
       <div className="h-24 bg-gradient-to-br from-[#502d26] to-[#6b4c3b] relative">
         {isActive && (
           <div className="absolute top-2 left-2">
-            <div className="px-2 py-1 bg-green-600 text-white text-xs rounded-full">
+            <div className="px-2 py-1 bg-emerald-600 text-white text-xs rounded-full">
               Live
             </div>
           </div>

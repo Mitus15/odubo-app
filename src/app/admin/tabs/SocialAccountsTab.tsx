@@ -203,7 +203,7 @@ export default function SocialAccountsTab() {
 
                       {/* Status */}
                       <div className="flex items-center gap-2">
-                        <div className={`w-2 h-2 rounded-full ${account.is_active ? 'bg-green-500' : 'bg-gray-500'}`} />
+                        <div className={`w-2 h-2 rounded-full ${account.is_active ? 'bg-emerald-500' : 'bg-[#726d6c]'}`} />
                         <span className="text-xs text-[#726d6c]">
                           {account.is_active ? 'Active' : 'Inactive'}
                         </span>

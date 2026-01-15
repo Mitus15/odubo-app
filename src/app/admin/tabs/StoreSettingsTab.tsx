@@ -186,8 +186,8 @@ export default function StoreSettingsTab() {
 
           {/* Success message when published */}
           {settings.storePublished && (
-            <div className="mt-2 p-3 bg-green-900/10 border border-green-700/30 rounded-lg">
-              <p className="text-xs text-green-200">
+            <div className="mt-2 p-3 bg-emerald-900/10 border border-emerald-700/30 rounded-lg">
+              <p className="text-xs text-emerald-200">
                 ✓ Store is PUBLISHED and accessible to all visitors.
               </p>
             </div>

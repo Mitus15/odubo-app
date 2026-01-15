@@ -480,8 +480,8 @@ export default function AdminPage() {
 
               {/* Mobile Navigation */}
               <nav className="py-4 space-y-1">
-                {navItems.map((item) => 
-                  renderNavItem(item, 0, navItems.map(i => i.id))
+                {filteredNavItems.map((item) =>
+                  renderNavItem(item, 0, filteredNavItems.map(i => i.id))
                 )}
               </nav>
 

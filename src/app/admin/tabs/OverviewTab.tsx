@@ -201,10 +201,10 @@ export default function OverviewTab() {
                 <span className="text-[#b2a491] text-sm">Database</span>
                 <div className="flex items-center space-x-2">
                   <div className={`w-2 h-2 rounded-full ${
-                    systemMetrics.database.status === 'healthy' ? 'bg-green-500' : 'bg-yellow-500'
+                    systemMetrics.database.status === 'healthy' ? 'bg-emerald-500' : 'bg-amber-500'
                   }`}></div>
                   <span className={`text-xs ${
-                    systemMetrics.database.status === 'healthy' ? 'text-green-400' : 'text-yellow-400'
+                    systemMetrics.database.status === 'healthy' ? 'text-emerald-400' : 'text-amber-400'
                   }`}>
                     {systemMetrics.database.status.charAt(0).toUpperCase() + systemMetrics.database.status.slice(1)}
                   </span>
@@ -214,10 +214,10 @@ export default function OverviewTab() {
                 <span className="text-[#b2a491] text-sm">Storage</span>
                 <div className="flex items-center space-x-2">
                   <div className={`w-2 h-2 rounded-full ${
-                    systemMetrics.storage.status === 'online' ? 'bg-green-500' : 'bg-red-500'
+                    systemMetrics.storage.status === 'online' ? 'bg-emerald-500' : 'bg-red-500'
                   }`}></div>
                   <span className={`text-xs ${
-                    systemMetrics.storage.status === 'online' ? 'text-green-400' : 'text-red-400'
+                    systemMetrics.storage.status === 'online' ? 'text-emerald-400' : 'text-red-400'
                   }`}>
                     {systemMetrics.storage.status.charAt(0).toUpperCase() + systemMetrics.storage.status.slice(1)}
                   </span>
@@ -227,10 +227,10 @@ export default function OverviewTab() {
                 <span className="text-[#b2a491] text-sm">CDN</span>
                 <div className="flex items-center space-x-2">
                   <div className={`w-2 h-2 rounded-full ${
-                    systemMetrics.cdn.status === 'active' ? 'bg-green-500' : 'bg-red-500'
+                    systemMetrics.cdn.status === 'active' ? 'bg-emerald-500' : 'bg-red-500'
                   }`}></div>
                   <span className={`text-xs ${
-                    systemMetrics.cdn.status === 'active' ? 'text-green-400' : 'text-red-400'
+                    systemMetrics.cdn.status === 'active' ? 'text-emerald-400' : 'text-red-400'
                   }`}>
                     {systemMetrics.cdn.status.charAt(0).toUpperCase() + systemMetrics.cdn.status.slice(1)}
                   </span>

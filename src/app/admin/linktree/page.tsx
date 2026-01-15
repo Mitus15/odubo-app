@@ -317,11 +317,11 @@ export default function LinkTreeAdminPage() {
                       </div>
                       <div className="flex gap-2 flex-shrink-0">
                         {link.is_active ? (
-                          <span className="px-2 py-0.5 text-[10px] rounded-full bg-green-900/30 text-green-400 border border-green-700/30 whitespace-nowrap">
+                          <span className="px-2 py-0.5 text-[10px] rounded-full bg-emerald-900/30 text-emerald-400 border border-emerald-700/30 whitespace-nowrap">
                             Active
                           </span>
                         ) : (
-                          <span className="px-2 py-0.5 text-[10px] rounded-full bg-gray-900/30 text-gray-400 border border-gray-700/30 whitespace-nowrap">
+                          <span className="px-2 py-0.5 text-[10px] rounded-full bg-[#302927] text-[#726d6c] border border-[#502d26]/30 whitespace-nowrap">
                             Inactive
                           </span>
                         )}
@@ -441,11 +441,11 @@ export default function LinkTreeAdminPage() {
                           <td className="px-4 py-3">
                             <div className="flex gap-2">
                               {link.is_active ? (
-                                <span className="px-2 py-1 text-xs rounded-full bg-green-900/30 text-green-400 border border-green-700/30">
+                                <span className="px-2 py-1 text-xs rounded-full bg-emerald-900/30 text-emerald-400 border border-emerald-700/30">
                                   Active
                                 </span>
                               ) : (
-                                <span className="px-2 py-1 text-xs rounded-full bg-gray-900/30 text-gray-400 border border-gray-700/30">
+                                <span className="px-2 py-1 text-xs rounded-full bg-[#302927] text-[#726d6c] border border-[#502d26]/30">
                                   Inactive
                                 </span>
                               )}
