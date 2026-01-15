@@ -26,6 +26,13 @@ npm run audio:transcode:track -- <track-id>   # Transcode single track to web fo
 npm run audio:hls:album -- <album-id>         # Generate HLS for album
 npm run worker:clips                           # Run clip processing worker
 
+# Moments (Galleries)
+npm run moments:create-gallery                 # Create new gallery
+npm run moments:reminders                      # Dispatch reminder notifications
+
+# Performance
+npm run lighthouse                             # Run Lighthouse performance audit
+
 # Deployment (auto-deploys on push to main)
 git push origin main           # Triggers Vercel deploy (~2 min)
 npm run deploy:cf              # Deploy to Cloudflare Pages
@@ -99,24 +106,31 @@ TypeScript paths are configured for clean imports:
 src/
 ├── app/                    # Next.js App Router pages
 │   ├── api/               # API routes
-│   ├── (auth)/            # Auth-related pages
+│   ├── admin/             # Admin dashboard
+│   ├── admin-v2/          # Admin v2 (newer interface)
 │   ├── store/             # E-commerce pages
+│   ├── moments/           # Gallery/events pages
+│   ├── media/             # Long-form video content
 │   └── ...
 ├── components/
 │   ├── clips/             # ClipCard, ClipsFeed, VirtuosoFeed
 │   ├── store/             # Cart, checkout components
 │   └── ...
-├── contexts/              # React contexts (AudioContext, etc.)
+├── contexts/              # React contexts (AudioContext, CartContext, etc.)
+├── hooks/                 # Custom React hooks
 ├── lib/                   # Utilities and helpers
 │   ├── db.ts             # Database operations
 │   ├── hlsPlayer.ts      # HLS video management
 │   ├── deviceInfo.ts     # Device/network detection
 │   └── ...
 ├── types/                 # TypeScript definitions
-└── styles/                # Global styles
+├── worker/                # Background workers (clip processing)
+├── middleware.ts          # Request middleware (subdomain routing)
+└── config/                # App configuration
 
 database/
-└── migrations/            # SQL migration files (numbered sequentially)
+├── migrations/            # SQL migration files (numbered sequentially)
+└── schema.sql             # Full database schema reference
 ```
 
 ### Deployment
@@ -154,6 +168,12 @@ Cloudflare D1/R2/Stream for data, assets, and video. API routes run on edge. Zer
 
 **5. Progressive Enhancement**
 Core functionality works without JS where possible. HLS falls back to native video. Offline-first where applicable.
+
+**6. Subdomain Routing**
+Middleware (`/src/middleware.ts`) handles subdomain-based routing:
+- `admin.odubo.studio` → Admin dashboard
+- Main domain → Public-facing site
+Subdomain detection works in both production and local development.
 
 ---
 
@@ -283,7 +303,9 @@ Before ending work on a feature:
 
 ---
 
-## Current Implementation Context (Updated: 2025-12-17)
+## Current Implementation Context
+
+> **Note:** This section contains implementation-specific details that may drift over time. Verify against actual code when in doubt. Consider moving detailed session notes to `/docs/sessions/`.
 
 ### Clips Feed System
 
@@ -409,6 +431,12 @@ const [isUserPaused, setIsUserPaused] = useState(false);  // For rendering only
 - Batch operations for performance
 - Migrations run manually or via Wrangler
 
+### Mobile App (Capacitor)
+- iOS and Android builds via Capacitor
+- Web app wrapped as native shell
+- Native features accessible via Capacitor plugins
+- Build artifacts in `/ios/` and `/android/` directories
+
 ---
 
 ## Communication Style
@@ -426,15 +454,7 @@ When asking for clarification:
 
 ---
 
-## Remember
-
-This is not just a web app. It is a **digital sanctuary** — the intersection of art, technology, and the human soul. Every pixel, every millisecond, every interaction is an opportunity to create something transcendent.
-
-Build with excellence. Ship with confidence. Iterate with humility.
-
----
-
-## Owner UI/UX Preferences (Updated: 2025-12-17)
+## Owner UI/UX Preferences
 
 The owner is a musician, not a developer/designer. Think through details and make informed design decisions. Filter raw ideas through professional UX knowledge.
 

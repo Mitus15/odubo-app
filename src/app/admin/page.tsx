@@ -246,6 +246,18 @@ const navItems: NavItem[] = [
   },
   { id: 'analytics', label: 'Analytics', icon: Icons.analytics },
   {
+    id: 'business',
+    label: 'Business',
+    icon: Icons.reports,
+    children: [
+      { id: 'reports', label: 'Reports', icon: Icons.reports },
+      { id: 'finance', label: 'Finance', icon: Icons.analytics },
+      { id: 'expenses', label: 'Expenses', icon: Icons.orders },
+      { id: 'ad-campaigns', label: 'Ad Campaigns', icon: Icons.marketing },
+      { id: 'social-growth', label: 'Social Growth', icon: Icons.streaming },
+    ]
+  },
+  {
     id: 'system',
     label: 'System',
     icon: Icons.system,

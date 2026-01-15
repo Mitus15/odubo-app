@@ -24,6 +24,13 @@ const StorageTab = dynamic(() => import('./tabs/StorageTab'));
 const DatabaseTab = dynamic(() => import('./tabs/DatabaseTab'));
 const UsersTab = dynamic(() => import('./tabs/UsersTab'));
 
+// === BUSINESS / BI TABS ===
+const ReportsTab = dynamic(() => import('./tabs/ReportsTab'));
+const FinanceTab = dynamic(() => import('./tabs/FinanceTab'));
+const ExpensesTab = dynamic(() => import('./tabs/ExpensesTab'));
+const AdCampaignsTab = dynamic(() => import('./tabs/AdCampaignsTab'));
+const SocialGrowthTab = dynamic(() => import('./tabs/SocialGrowthTab'));
+
 // Loading fallback component
 function LoadingFallback({ title }: { title: string }) {
   return (
@@ -67,6 +74,8 @@ type AdminTab =
   | 'products' | 'orders' | 'customers' | 'discounts'
   // Analytics
   | 'analytics'
+  // Business / BI
+  | 'reports' | 'finance' | 'expenses' | 'ad-campaigns' | 'social-growth'
   // System
   | 'users' | 'database' | 'storage' | 'api-keys'
   | string; // Allow any string for flexibility
@@ -168,6 +177,38 @@ export default function TabContent({ activeTab, canAccess }: TabContentProps) {
       return (
         <Suspense fallback={<LoadingFallback title="Analytics" />}>
           <AnalyticsTab />
+        </Suspense>
+      );
+
+    // === BUSINESS / BI ===
+    case 'reports':
+      return (
+        <Suspense fallback={<LoadingFallback title="Reports" />}>
+          <ReportsTab />
+        </Suspense>
+      );
+    case 'finance':
+      return (
+        <Suspense fallback={<LoadingFallback title="Finance" />}>
+          <FinanceTab />
+        </Suspense>
+      );
+    case 'expenses':
+      return (
+        <Suspense fallback={<LoadingFallback title="Expenses" />}>
+          <ExpensesTab />
+        </Suspense>
+      );
+    case 'ad-campaigns':
+      return (
+        <Suspense fallback={<LoadingFallback title="Ad Campaigns" />}>
+          <AdCampaignsTab />
+        </Suspense>
+      );
+    case 'social-growth':
+      return (
+        <Suspense fallback={<LoadingFallback title="Social Growth" />}>
+          <SocialGrowthTab />
         </Suspense>
       );
 
