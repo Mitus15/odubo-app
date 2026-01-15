@@ -1,14 +1,12 @@
-// @ts-ignore
-import { getRequestContext } from '@cloudflare/next-on-pages';
+import { queryDatabase, executeQuery } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 import type { AdCampaignInput, AdPlatform } from '@/types/bi';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 // GET /api/bi/ad-campaigns - List campaigns with metrics
 export async function GET(req: NextRequest) {
   try {
-    const { env } = getRequestContext();
     const url = new URL(req.url);
 
     const platform = url.searchParams.get('platform') as AdPlatform | null;
@@ -28,12 +26,12 @@ export async function GET(req: NextRequest) {
 
     sql += ' ORDER BY created_at DESC';
 
-    const { results: campaigns } = await env.DB.prepare(sql).bind(...params).all();
+    const campaigns = await queryDatabase(sql, params);
 
     // Get aggregated metrics for each campaign
     const campaignsWithMetrics = await Promise.all(
       (campaigns || []).map(async (campaign: Record<string, unknown>) => {
-        const { results: metrics } = await env.DB.prepare(`
+        const metrics = await queryDatabase(`
           SELECT
             COALESCE(SUM(spend_cents), 0) as total_spend_cents,
             COALESCE(SUM(impressions), 0) as total_impressions,
@@ -42,7 +40,7 @@ export async function GET(req: NextRequest) {
             COALESCE(SUM(conversion_value_cents), 0) as total_conversion_value_cents
           FROM bi_ad_metrics
           WHERE campaign_id = ?
-        `).bind(campaign.id).all();
+        `, [campaign.id]);
 
         const m = metrics?.[0] || {};
         const totalSpend = Number(m.total_spend_cents) || 0;
@@ -91,7 +89,6 @@ export async function GET(req: NextRequest) {
 // POST /api/bi/ad-campaigns - Create campaign
 export async function POST(req: NextRequest) {
   try {
-    const { env } = getRequestContext();
     const body = (await req.json()) as AdCampaignInput;
 
     if (!body.platform || !body.name || !body.start_date) {
@@ -103,12 +100,12 @@ export async function POST(req: NextRequest) {
 
     const id = crypto.randomUUID().replace(/-/g, '').slice(0, 16);
 
-    await env.DB.prepare(`
+    await executeQuery(`
       INSERT INTO bi_ad_campaigns (
         id, platform, external_campaign_id, name, objective, status,
         budget_cents, budget_type, start_date, end_date, target_audience, notes
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).bind(
+    `, [
       id,
       body.platform,
       body.external_campaign_id || null,
@@ -121,11 +118,11 @@ export async function POST(req: NextRequest) {
       body.end_date || null,
       body.target_audience ? JSON.stringify(body.target_audience) : null,
       body.notes || null
-    ).run();
+    ]);
 
-    const campaign = await env.DB.prepare('SELECT * FROM bi_ad_campaigns WHERE id = ?').bind(id).first();
+    const campaign = await queryDatabase('SELECT * FROM bi_ad_campaigns WHERE id = ?', [id]);
 
-    return NextResponse.json({ success: true, campaign });
+    return NextResponse.json({ success: true, campaign: campaign[0] });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : 'Unknown error';
     return NextResponse.json({ success: false, error: message }, { status: 500 });

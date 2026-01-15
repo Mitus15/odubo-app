@@ -1,14 +1,12 @@
-// @ts-ignore
-import { getRequestContext } from '@cloudflare/next-on-pages';
+import { queryDatabase, executeQuery } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 import type { SocialSnapshotInput, SocialPlatform } from '@/types/bi';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 // GET /api/bi/social-growth - Get social metrics with growth calculations
 export async function GET(req: NextRequest) {
   try {
-    const { env } = getRequestContext();
     const url = new URL(req.url);
 
     const platform = url.searchParams.get('platform') as SocialPlatform | null;
@@ -36,10 +34,10 @@ export async function GET(req: NextRequest) {
     sql += ' ORDER BY date DESC, platform LIMIT ?';
     params.push(limit);
 
-    const { results: snapshots } = await env.DB.prepare(sql).bind(...params).all();
+    const snapshots = await queryDatabase(sql, params);
 
     // Get latest snapshot per platform for growth calculations
-    const { results: latestByPlatform } = await env.DB.prepare(`
+    const latestByPlatform = await queryDatabase(`
       SELECT s1.*
       FROM bi_social_snapshots s1
       INNER JOIN (
@@ -47,14 +45,14 @@ export async function GET(req: NextRequest) {
         FROM bi_social_snapshots
         GROUP BY platform
       ) s2 ON s1.platform = s2.platform AND s1.date = s2.max_date
-    `).all();
+    `, []);
 
     // Get previous snapshots for growth comparison (7 days ago)
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     const compareDate = sevenDaysAgo.toISOString().split('T')[0];
 
-    const { results: previousByPlatform } = await env.DB.prepare(`
+    const previousByPlatform = await queryDatabase(`
       SELECT s1.*
       FROM bi_social_snapshots s1
       INNER JOIN (
@@ -63,7 +61,7 @@ export async function GET(req: NextRequest) {
         WHERE date <= ?
         GROUP BY platform
       ) s2 ON s1.platform = s2.platform AND s1.date = s2.max_date
-    `).bind(compareDate).all();
+    `, [compareDate]);
 
     // Calculate growth per platform
     type GrowthData = {
@@ -131,7 +129,6 @@ export async function GET(req: NextRequest) {
 // POST /api/bi/social-growth - Add social snapshot
 export async function POST(req: NextRequest) {
   try {
-    const { env } = getRequestContext();
     const body = (await req.json()) as SocialSnapshotInput;
 
     if (!body.platform || !body.date) {
@@ -144,7 +141,7 @@ export async function POST(req: NextRequest) {
     const id = crypto.randomUUID().replace(/-/g, '').slice(0, 16);
 
     // Upsert (replace if exists for same platform+date)
-    await env.DB.prepare(`
+    await executeQuery(`
       INSERT INTO bi_social_snapshots (
         id, platform, date, followers, following,
         posts_count, likes_count, comments_count, shares_count, views_count,
@@ -159,7 +156,7 @@ export async function POST(req: NextRequest) {
         shares_count = excluded.shares_count,
         views_count = excluded.views_count,
         platform_data = excluded.platform_data
-    `).bind(
+    `, [
       id,
       body.platform,
       body.date,
@@ -172,13 +169,14 @@ export async function POST(req: NextRequest) {
       body.views_count || 0,
       body.platform_data ? JSON.stringify(body.platform_data) : null,
       body.entry_type || 'manual'
-    ).run();
+    ]);
 
-    const snapshot = await env.DB.prepare(
-      'SELECT * FROM bi_social_snapshots WHERE platform = ? AND date = ?'
-    ).bind(body.platform, body.date).first();
+    const snapshot = await queryDatabase(
+      'SELECT * FROM bi_social_snapshots WHERE platform = ? AND date = ?',
+      [body.platform, body.date]
+    );
 
-    return NextResponse.json({ success: true, snapshot });
+    return NextResponse.json({ success: true, snapshot: snapshot[0] });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : 'Unknown error';
     return NextResponse.json({ success: false, error: message }, { status: 500 });

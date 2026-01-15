@@ -1,13 +1,11 @@
-// @ts-ignore
-import { getRequestContext } from '@cloudflare/next-on-pages';
+import { queryDatabase } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 // GET /api/bi/expenses/summary - Get aggregated expense data
 export async function GET(req: NextRequest) {
   try {
-    const { env } = getRequestContext();
     const url = new URL(req.url);
 
     const startDate = url.searchParams.get('start');
@@ -26,14 +24,14 @@ export async function GET(req: NextRequest) {
     }
 
     // Total expenses
-    const totalResult = await env.DB.prepare(`
+    const totalResult = await queryDatabase(`
       SELECT COALESCE(SUM(amount_cents), 0) as total_cents
       FROM bi_expenses
       WHERE 1=1 ${dateFilter}
-    `).bind(...dateParams).first();
+    `, dateParams);
 
     // By category
-    const { results: byCategory } = await env.DB.prepare(`
+    const byCategory = await queryDatabase(`
       SELECT
         category,
         COALESCE(SUM(amount_cents), 0) as total_cents,
@@ -42,10 +40,10 @@ export async function GET(req: NextRequest) {
       WHERE 1=1 ${dateFilter}
       GROUP BY category
       ORDER BY total_cents DESC
-    `).bind(...dateParams).all();
+    `, dateParams);
 
     // By vendor
-    const { results: byVendor } = await env.DB.prepare(`
+    const byVendor = await queryDatabase(`
       SELECT
         vendor,
         COALESCE(SUM(amount_cents), 0) as total_cents,
@@ -55,10 +53,10 @@ export async function GET(req: NextRequest) {
       GROUP BY vendor
       ORDER BY total_cents DESC
       LIMIT 10
-    `).bind(...dateParams).all();
+    `, dateParams);
 
     // Monthly recurring total
-    const recurringResult = await env.DB.prepare(`
+    const recurringResult = await queryDatabase(`
       SELECT COALESCE(SUM(
         CASE
           WHEN recurring_interval = 'weekly' THEN amount_cents * 4
@@ -70,23 +68,23 @@ export async function GET(req: NextRequest) {
       ), 0) as monthly_recurring_cents
       FROM bi_expenses
       WHERE is_recurring = 1
-    `).first();
+    `, []);
 
     // Recent expenses
-    const { results: recent } = await env.DB.prepare(`
+    const recent = await queryDatabase(`
       SELECT * FROM bi_expenses
       WHERE 1=1 ${dateFilter}
       ORDER BY expense_date DESC
       LIMIT 5
-    `).bind(...dateParams).all();
+    `, dateParams);
 
     return NextResponse.json({
       success: true,
       summary: {
-        total_cents: totalResult?.total_cents || 0,
+        total_cents: totalResult[0]?.total_cents || 0,
         by_category: byCategory || [],
         by_vendor: byVendor || [],
-        monthly_recurring_cents: recurringResult?.monthly_recurring_cents || 0,
+        monthly_recurring_cents: recurringResult[0]?.monthly_recurring_cents || 0,
         recent: recent || [],
         period: {
           start: startDate,

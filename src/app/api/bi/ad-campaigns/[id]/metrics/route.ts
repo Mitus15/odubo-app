@@ -1,9 +1,8 @@
-// @ts-ignore
-import { getRequestContext } from '@cloudflare/next-on-pages';
+import { queryDatabase, executeQuery } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 import type { AdMetricsInput } from '@/types/bi';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 // GET /api/bi/ad-campaigns/[id]/metrics - Get metrics for a campaign
 export async function GET(
@@ -11,7 +10,6 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { env } = getRequestContext();
     const { id } = await params;
     const url = new URL(req.url);
     const startDate = url.searchParams.get('start');
@@ -31,7 +29,7 @@ export async function GET(
 
     sql += ' ORDER BY date DESC';
 
-    const { results } = await env.DB.prepare(sql).bind(...sqlParams).all();
+    const results = await queryDatabase(sql, sqlParams);
 
     return NextResponse.json({ success: true, metrics: results });
   } catch (e: unknown) {
@@ -46,7 +44,6 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { env } = getRequestContext();
     const { id: campaignId } = await params;
     const body = (await req.json()) as Omit<AdMetricsInput, 'campaign_id'>;
 
@@ -55,8 +52,8 @@ export async function POST(
     }
 
     // Check campaign exists
-    const campaign = await env.DB.prepare('SELECT id FROM bi_ad_campaigns WHERE id = ?').bind(campaignId).first();
-    if (!campaign) {
+    const campaign = await queryDatabase('SELECT id FROM bi_ad_campaigns WHERE id = ?', [campaignId]);
+    if (!campaign.length) {
       return NextResponse.json({ success: false, error: 'Campaign not found' }, { status: 404 });
     }
 
@@ -76,7 +73,7 @@ export async function POST(
     const metricsId = crypto.randomUUID().replace(/-/g, '').slice(0, 16);
 
     // Upsert metrics for this campaign+date
-    await env.DB.prepare(`
+    await executeQuery(`
       INSERT INTO bi_ad_metrics (
         id, campaign_id, date, spend_cents, impressions, reach, clicks, ctr,
         conversions, conversion_value_cents, cpc_cents, cpm_cents, cpa_cents, roas, entry_type
@@ -93,7 +90,7 @@ export async function POST(
         cpm_cents = excluded.cpm_cents,
         cpa_cents = excluded.cpa_cents,
         roas = excluded.roas
-    `).bind(
+    `, [
       metricsId,
       campaignId,
       body.date,
@@ -108,13 +105,14 @@ export async function POST(
       cpm,
       cpa,
       roas
-    ).run();
+    ]);
 
-    const metrics = await env.DB.prepare(
-      'SELECT * FROM bi_ad_metrics WHERE campaign_id = ? AND date = ?'
-    ).bind(campaignId, body.date).first();
+    const metrics = await queryDatabase(
+      'SELECT * FROM bi_ad_metrics WHERE campaign_id = ? AND date = ?',
+      [campaignId, body.date]
+    );
 
-    return NextResponse.json({ success: true, metrics });
+    return NextResponse.json({ success: true, metrics: metrics[0] });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : 'Unknown error';
     return NextResponse.json({ success: false, error: message }, { status: 500 });

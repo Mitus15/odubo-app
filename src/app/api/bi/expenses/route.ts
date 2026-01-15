@@ -1,14 +1,12 @@
-// @ts-ignore
-import { getRequestContext } from '@cloudflare/next-on-pages';
+import { queryDatabase, executeQuery } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 import type { ExpenseInput } from '@/types/bi';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 // GET /api/bi/expenses - List expenses with optional filtering
 export async function GET(req: NextRequest) {
   try {
-    const { env } = getRequestContext();
     const url = new URL(req.url);
 
     // Query params for filtering
@@ -42,7 +40,7 @@ export async function GET(req: NextRequest) {
     sql += ' ORDER BY expense_date DESC LIMIT ? OFFSET ?';
     params.push(limit, offset);
 
-    const { results } = await env.DB.prepare(sql).bind(...params).all();
+    const results = await queryDatabase(sql, params);
 
     // Get total count for pagination
     let countSql = 'SELECT COUNT(*) as total FROM bi_expenses WHERE 1=1';
@@ -64,12 +62,12 @@ export async function GET(req: NextRequest) {
       countParams.push(`%${vendor}%`);
     }
 
-    const countResult = await env.DB.prepare(countSql).bind(...countParams).first();
+    const countResult = await queryDatabase(countSql, countParams);
 
     return NextResponse.json({
       success: true,
       expenses: results,
-      total: countResult?.total || 0,
+      total: countResult[0]?.total || 0,
       limit,
       offset,
     });
@@ -82,7 +80,6 @@ export async function GET(req: NextRequest) {
 // POST /api/bi/expenses - Create new expense
 export async function POST(req: NextRequest) {
   try {
-    const { env } = getRequestContext();
     const body = (await req.json()) as ExpenseInput;
 
     // Validate required fields
@@ -95,13 +92,13 @@ export async function POST(req: NextRequest) {
 
     const id = crypto.randomUUID().replace(/-/g, '').slice(0, 16);
 
-    await env.DB.prepare(`
+    await executeQuery(`
       INSERT INTO bi_expenses (
         id, category, name, description, vendor, amount_cents, currency,
         is_recurring, recurring_interval, expense_date, period_start, period_end,
         campaign_id, receipt_url, notes
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).bind(
+    `, [
       id,
       body.category,
       body.name,
@@ -117,12 +114,12 @@ export async function POST(req: NextRequest) {
       body.campaign_id || null,
       body.receipt_url || null,
       body.notes || null
-    ).run();
+    ]);
 
     // Fetch the created expense
-    const expense = await env.DB.prepare('SELECT * FROM bi_expenses WHERE id = ?').bind(id).first();
+    const expense = await queryDatabase('SELECT * FROM bi_expenses WHERE id = ?', [id]);
 
-    return NextResponse.json({ success: true, expense });
+    return NextResponse.json({ success: true, expense: expense[0] });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : 'Unknown error';
     return NextResponse.json({ success: false, error: message }, { status: 500 });

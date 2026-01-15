@@ -1,8 +1,7 @@
-// @ts-ignore
-import { getRequestContext } from '@cloudflare/next-on-pages';
+import { queryDatabase, executeQuery } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 export interface Discount {
   id: string;
@@ -47,16 +46,13 @@ function computeStatus(discount: Discount): Discount['status'] {
 // GET /api/admin/discounts - List all discounts
 export async function GET(req: NextRequest) {
   try {
-    const { env } = getRequestContext();
     const { searchParams } = new URL(req.url);
     const status = searchParams.get('status');
 
-    let query = `
+    const results = await queryDatabase(`
       SELECT * FROM discounts
       ORDER BY created_at DESC
-    `;
-
-    const { results } = await env.DB.prepare(query).all();
+    `, []);
 
     // Compute actual status based on dates and map to frontend format
     const discounts = (results || []).map((d: Discount) => {
@@ -89,7 +85,6 @@ export async function GET(req: NextRequest) {
 // POST /api/admin/discounts - Create a new discount
 export async function POST(req: NextRequest) {
   try {
-    const { env } = getRequestContext();
     const body = await req.json();
 
     const {
@@ -112,11 +107,12 @@ export async function POST(req: NextRequest) {
     }
 
     // Check for duplicate code
-    const existing = await env.DB.prepare(
-      'SELECT id FROM discounts WHERE code = ?'
-    ).bind(code.toUpperCase()).first();
+    const existing = await queryDatabase(
+      'SELECT id FROM discounts WHERE code = ?',
+      [code.toUpperCase()]
+    );
 
-    if (existing) {
+    if (existing.length) {
       return NextResponse.json(
         { success: false, error: 'A discount with this code already exists' },
         { status: 400 }
@@ -129,12 +125,12 @@ export async function POST(req: NextRequest) {
 
     const id = crypto.randomUUID().replace(/-/g, '').slice(0, 16);
 
-    await env.DB.prepare(`
+    await executeQuery(`
       INSERT INTO discounts (
         id, code, type, value, description, status,
         start_date, end_date, usage_limit, min_purchase_cents, notes
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).bind(
+    `, [
       id,
       code.toUpperCase(),
       type,
@@ -146,14 +142,15 @@ export async function POST(req: NextRequest) {
       usage_limit || null,
       minPurchaseCents,
       notes || null
-    ).run();
+    ]);
 
     // Fetch the created discount
-    const created = await env.DB.prepare(
-      'SELECT * FROM discounts WHERE id = ?'
-    ).bind(id).first();
+    const created = await queryDatabase(
+      'SELECT * FROM discounts WHERE id = ?',
+      [id]
+    );
 
-    return NextResponse.json({ success: true, discount: created });
+    return NextResponse.json({ success: true, discount: created[0] });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : 'Unknown error';
     console.error('Error creating discount:', e);

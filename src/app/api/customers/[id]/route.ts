@@ -1,8 +1,7 @@
-// @ts-ignore
-import { getRequestContext } from '@cloudflare/next-on-pages';
+import { queryDatabase, executeQuery } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 // GET /api/customers/[id] - Get single customer with stats
 export async function GET(
@@ -10,14 +9,14 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { env } = getRequestContext();
     const { id } = await params;
 
-    const customer = await env.DB.prepare(
-      'SELECT * FROM customers WHERE id = ?'
-    ).bind(id).first();
+    const customer = await queryDatabase(
+      'SELECT * FROM customers WHERE id = ?',
+      [id]
+    );
 
-    if (!customer) {
+    if (!customer.length) {
       return NextResponse.json(
         { success: false, error: 'Customer not found' },
         { status: 404 }
@@ -25,7 +24,7 @@ export async function GET(
     }
 
     // Get order stats
-    const stats = await env.DB.prepare(`
+    const stats = await queryDatabase(`
       SELECT
         COUNT(*) as total_orders,
         SUM(CASE WHEN status IN ('paid', 'fulfilled') THEN total_amount ELSE 0 END) as total_spent,
@@ -34,27 +33,27 @@ export async function GET(
         MAX(created_at) as last_order_date
       FROM orders
       WHERE customer_email = ?
-    `).bind(customer.email).first();
+    `, [customer[0].email]);
 
     return NextResponse.json({
       success: true,
       customer: {
-        id: customer.id,
-        email: customer.email,
-        firstName: customer.first_name,
-        lastName: customer.last_name,
-        phone: customer.phone,
-        totalSpent: customer.total_spent || 0,
-        ordersCount: customer.orders_count || 0,
-        createdAt: customer.created_at,
-        updatedAt: customer.updated_at,
+        id: customer[0].id,
+        email: customer[0].email,
+        firstName: customer[0].first_name,
+        lastName: customer[0].last_name,
+        phone: customer[0].phone,
+        totalSpent: customer[0].total_spent || 0,
+        ordersCount: customer[0].orders_count || 0,
+        createdAt: customer[0].created_at,
+        updatedAt: customer[0].updated_at,
       },
       stats: {
-        totalOrders: stats?.total_orders || 0,
-        totalSpent: stats?.total_spent || 0,
-        averageOrderValue: stats?.avg_order_value || 0,
-        firstOrderDate: stats?.first_order_date,
-        lastOrderDate: stats?.last_order_date,
+        totalOrders: stats[0]?.total_orders || 0,
+        totalSpent: stats[0]?.total_spent || 0,
+        averageOrderValue: stats[0]?.avg_order_value || 0,
+        firstOrderDate: stats[0]?.first_order_date,
+        lastOrderDate: stats[0]?.last_order_date,
       },
     });
   } catch (e: unknown) {
@@ -70,15 +69,15 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { env } = getRequestContext();
     const { id } = await params;
     const body = await req.json();
 
-    const existing = await env.DB.prepare(
-      'SELECT id FROM customers WHERE id = ?'
-    ).bind(id).first();
+    const existing = await queryDatabase(
+      'SELECT id FROM customers WHERE id = ?',
+      [id]
+    );
 
-    if (!existing) {
+    if (!existing.length) {
       return NextResponse.json(
         { success: false, error: 'Customer not found' },
         { status: 404 }
@@ -113,15 +112,16 @@ export async function PUT(
     updates.push('updated_at = CURRENT_TIMESTAMP');
     values.push(id);
 
-    await env.DB.prepare(`
+    await executeQuery(`
       UPDATE customers SET ${updates.join(', ')} WHERE id = ?
-    `).bind(...values).run();
+    `, values);
 
-    const updated = await env.DB.prepare(
-      'SELECT * FROM customers WHERE id = ?'
-    ).bind(id).first();
+    const updated = await queryDatabase(
+      'SELECT * FROM customers WHERE id = ?',
+      [id]
+    );
 
-    return NextResponse.json({ success: true, customer: updated });
+    return NextResponse.json({ success: true, customer: updated[0] });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : 'Unknown error';
     console.error('Error updating customer:', e);

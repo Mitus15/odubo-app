@@ -1,12 +1,10 @@
-// @ts-ignore
-import { getRequestContext } from '@cloudflare/next-on-pages';
+import { queryDatabase } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 export async function GET(req: NextRequest) {
   try {
-    const { env } = getRequestContext();
     const { searchParams } = new URL(req.url);
     const sortBy = searchParams.get('sort') || 'created_at';
     const sortOrder = searchParams.get('order') || 'DESC';
@@ -17,14 +15,14 @@ export async function GET(req: NextRequest) {
     const safeSortOrder = sortOrder.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
 
     // Get customers with stats and last order date
-    const { results } = await env.DB.prepare(`
+    const results = await queryDatabase(`
       SELECT
         c.*,
         (SELECT MAX(created_at) FROM orders WHERE customer_email = c.email) as last_order_date,
         (SELECT COUNT(*) FROM orders WHERE customer_email = c.email AND status = 'paid') as paid_orders_count
       FROM customers c
       ORDER BY ${safeSortBy} ${safeSortOrder}
-    `).all();
+    `, []);
 
     // Format response
     const customers = (results || []).map((c: any) => ({

@@ -1,8 +1,7 @@
-// @ts-ignore
-import { getRequestContext } from '@cloudflare/next-on-pages';
+import { queryDatabase } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 interface OrderItem {
   id: string;
@@ -37,15 +36,15 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { env } = getRequestContext();
     const { id } = await params;
 
     // Get customer by ID
-    const customer = await env.DB.prepare(
-      'SELECT * FROM customers WHERE id = ?'
-    ).bind(id).first();
+    const customer = await queryDatabase(
+      'SELECT * FROM customers WHERE id = ?',
+      [id]
+    );
 
-    if (!customer) {
+    if (!customer.length) {
       return NextResponse.json(
         { success: false, error: 'Customer not found' },
         { status: 404 }
@@ -53,11 +52,11 @@ export async function GET(
     }
 
     // Get all orders for this customer
-    const { results: orders } = await env.DB.prepare(`
+    const orders = await queryDatabase(`
       SELECT * FROM orders
       WHERE customer_email = ?
       ORDER BY created_at DESC
-    `).bind(customer.email).all();
+    `, [customer[0].email]) as Order[];
 
     // Get order items for all orders
     const orderIds = (orders || []).map((o: Order) => o.id);
@@ -67,10 +66,10 @@ export async function GET(
     if (orderIds.length > 0) {
       // Get items for each order
       for (const orderId of orderIds) {
-        const { results: items } = await env.DB.prepare(`
+        const items = await queryDatabase(`
           SELECT * FROM order_items WHERE order_id = ?
-        `).bind(orderId).all();
-        orderItemsMap[orderId] = (items || []) as OrderItem[];
+        `, [orderId]) as OrderItem[];
+        orderItemsMap[orderId] = items || [];
       }
     }
 
@@ -118,12 +117,12 @@ export async function GET(
     return NextResponse.json({
       success: true,
       customer: {
-        id: customer.id,
-        email: customer.email,
-        firstName: customer.first_name,
-        lastName: customer.last_name,
-        phone: customer.phone,
-        createdAt: customer.created_at,
+        id: customer[0].id,
+        email: customer[0].email,
+        firstName: customer[0].first_name,
+        lastName: customer[0].last_name,
+        phone: customer[0].phone,
+        createdAt: customer[0].created_at,
       },
       stats,
       orders: formattedOrders,

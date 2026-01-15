@@ -1,9 +1,8 @@
-// @ts-ignore
-import { getRequestContext } from '@cloudflare/next-on-pages';
+import { queryDatabase, executeQuery } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 import type { AdCampaignInput } from '@/types/bi';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 // GET /api/bi/ad-campaigns/[id] - Get campaign with metrics
 export async function GET(
@@ -11,18 +10,17 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { env } = getRequestContext();
     const { id } = await params;
 
-    const campaign = await env.DB.prepare('SELECT * FROM bi_ad_campaigns WHERE id = ?').bind(id).first();
-    if (!campaign) {
+    const campaigns = await queryDatabase('SELECT * FROM bi_ad_campaigns WHERE id = ?', [id]);
+    if (!campaigns.length) {
       return NextResponse.json({ success: false, error: 'Campaign not found' }, { status: 404 });
     }
 
     // Get all metrics for this campaign
-    const { results: metrics } = await env.DB.prepare(`
+    const metrics = await queryDatabase(`
       SELECT * FROM bi_ad_metrics WHERE campaign_id = ? ORDER BY date DESC
-    `).bind(id).all();
+    `, [id]);
 
     // Calculate aggregates
     const totals = (metrics || []).reduce(
@@ -40,7 +38,7 @@ export async function GET(
 
     return NextResponse.json({
       success: true,
-      campaign,
+      campaign: campaigns[0],
       metrics,
       totals: { ...totals, roas },
     });
@@ -56,7 +54,6 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { env } = getRequestContext();
     const { id } = await params;
     const body = (await req.json()) as Partial<AdCampaignInput>;
 
@@ -99,11 +96,11 @@ export async function PUT(
     updates.push("updated_at = datetime('now')");
     values.push(id);
 
-    await env.DB.prepare(`UPDATE bi_ad_campaigns SET ${updates.join(', ')} WHERE id = ?`).bind(...values).run();
+    await executeQuery(`UPDATE bi_ad_campaigns SET ${updates.join(', ')} WHERE id = ?`, values);
 
-    const campaign = await env.DB.prepare('SELECT * FROM bi_ad_campaigns WHERE id = ?').bind(id).first();
+    const campaign = await queryDatabase('SELECT * FROM bi_ad_campaigns WHERE id = ?', [id]);
 
-    return NextResponse.json({ success: true, campaign });
+    return NextResponse.json({ success: true, campaign: campaign[0] });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : 'Unknown error';
     return NextResponse.json({ success: false, error: message }, { status: 500 });
@@ -116,10 +113,9 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { env } = getRequestContext();
     const { id } = await params;
 
-    await env.DB.prepare('DELETE FROM bi_ad_campaigns WHERE id = ?').bind(id).run();
+    await executeQuery('DELETE FROM bi_ad_campaigns WHERE id = ?', [id]);
 
     return NextResponse.json({ success: true, deleted: id });
   } catch (e: unknown) {

@@ -1,8 +1,7 @@
-// @ts-ignore
-import { getRequestContext } from '@cloudflare/next-on-pages';
+import { queryDatabase, executeQuery } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 // GET /api/admin/discounts/[id] - Get single discount
 export async function GET(
@@ -10,14 +9,14 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { env } = getRequestContext();
     const { id } = await params;
 
-    const discount = await env.DB.prepare(
-      'SELECT * FROM discounts WHERE id = ?'
-    ).bind(id).first();
+    const discount = await queryDatabase(
+      'SELECT * FROM discounts WHERE id = ?',
+      [id]
+    );
 
-    if (!discount) {
+    if (!discount.length) {
       return NextResponse.json(
         { success: false, error: 'Discount not found' },
         { status: 404 }
@@ -25,19 +24,19 @@ export async function GET(
     }
 
     // Get redemption stats
-    const redemptionStats = await env.DB.prepare(`
+    const redemptionStats = await queryDatabase(`
       SELECT
         COUNT(*) as total_redemptions,
         SUM(discount_amount_cents) as total_discount_cents,
         AVG(order_total_cents) as avg_order_cents
       FROM discount_redemptions
       WHERE discount_id = ?
-    `).bind(id).first();
+    `, [id]);
 
     return NextResponse.json({
       success: true,
-      discount,
-      stats: redemptionStats,
+      discount: discount[0],
+      stats: redemptionStats[0],
     });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : 'Unknown error';
@@ -52,16 +51,16 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { env } = getRequestContext();
     const { id } = await params;
     const body = await req.json();
 
     // Check if discount exists
-    const existing = await env.DB.prepare(
-      'SELECT id FROM discounts WHERE id = ?'
-    ).bind(id).first();
+    const existing = await queryDatabase(
+      'SELECT id FROM discounts WHERE id = ?',
+      [id]
+    );
 
-    if (!existing) {
+    if (!existing.length) {
       return NextResponse.json(
         { success: false, error: 'Discount not found' },
         { status: 404 }
@@ -83,11 +82,12 @@ export async function PUT(
 
     // Check for duplicate code if code is changing
     if (code) {
-      const duplicateCheck = await env.DB.prepare(
-        'SELECT id FROM discounts WHERE code = ? AND id != ?'
-      ).bind(code.toUpperCase(), id).first();
+      const duplicateCheck = await queryDatabase(
+        'SELECT id FROM discounts WHERE code = ? AND id != ?',
+        [code.toUpperCase(), id]
+      );
 
-      if (duplicateCheck) {
+      if (duplicateCheck.length) {
         return NextResponse.json(
           { success: false, error: 'A discount with this code already exists' },
           { status: 400 }
@@ -151,16 +151,17 @@ export async function PUT(
     updates.push('updated_at = CURRENT_TIMESTAMP');
     values.push(id);
 
-    await env.DB.prepare(`
+    await executeQuery(`
       UPDATE discounts SET ${updates.join(', ')} WHERE id = ?
-    `).bind(...values).run();
+    `, values);
 
     // Fetch updated discount
-    const updated = await env.DB.prepare(
-      'SELECT * FROM discounts WHERE id = ?'
-    ).bind(id).first();
+    const updated = await queryDatabase(
+      'SELECT * FROM discounts WHERE id = ?',
+      [id]
+    );
 
-    return NextResponse.json({ success: true, discount: updated });
+    return NextResponse.json({ success: true, discount: updated[0] });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : 'Unknown error';
     console.error('Error updating discount:', e);
@@ -174,15 +175,15 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { env } = getRequestContext();
     const { id } = await params;
 
     // Check if discount exists
-    const existing = await env.DB.prepare(
-      'SELECT id, code FROM discounts WHERE id = ?'
-    ).bind(id).first();
+    const existing = await queryDatabase(
+      'SELECT id, code FROM discounts WHERE id = ?',
+      [id]
+    );
 
-    if (!existing) {
+    if (!existing.length) {
       return NextResponse.json(
         { success: false, error: 'Discount not found' },
         { status: 404 }
@@ -190,18 +191,20 @@ export async function DELETE(
     }
 
     // Delete redemptions first (foreign key)
-    await env.DB.prepare(
-      'DELETE FROM discount_redemptions WHERE discount_id = ?'
-    ).bind(id).run();
+    await executeQuery(
+      'DELETE FROM discount_redemptions WHERE discount_id = ?',
+      [id]
+    );
 
     // Delete the discount
-    await env.DB.prepare(
-      'DELETE FROM discounts WHERE id = ?'
-    ).bind(id).run();
+    await executeQuery(
+      'DELETE FROM discounts WHERE id = ?',
+      [id]
+    );
 
     return NextResponse.json({
       success: true,
-      message: `Discount ${(existing as { code: string }).code} deleted`,
+      message: `Discount ${(existing[0] as { code: string }).code} deleted`,
     });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : 'Unknown error';

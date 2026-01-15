@@ -1,9 +1,8 @@
-// @ts-ignore
-import { getRequestContext } from '@cloudflare/next-on-pages';
+import { queryDatabase, executeQuery } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 import type { ExpenseInput } from '@/types/bi';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 // GET /api/bi/expenses/[id] - Get single expense
 export async function GET(
@@ -11,16 +10,15 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { env } = getRequestContext();
     const { id } = await params;
 
-    const expense = await env.DB.prepare('SELECT * FROM bi_expenses WHERE id = ?').bind(id).first();
+    const results = await queryDatabase('SELECT * FROM bi_expenses WHERE id = ?', [id]);
 
-    if (!expense) {
+    if (!results.length) {
       return NextResponse.json({ success: false, error: 'Expense not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ success: true, expense });
+    return NextResponse.json({ success: true, expense: results[0] });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : 'Unknown error';
     return NextResponse.json({ success: false, error: message }, { status: 500 });
@@ -33,13 +31,12 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { env } = getRequestContext();
     const { id } = await params;
     const body = (await req.json()) as Partial<ExpenseInput>;
 
     // Check if expense exists
-    const existing = await env.DB.prepare('SELECT * FROM bi_expenses WHERE id = ?').bind(id).first();
-    if (!existing) {
+    const existing = await queryDatabase('SELECT * FROM bi_expenses WHERE id = ?', [id]);
+    if (!existing.length) {
       return NextResponse.json({ success: false, error: 'Expense not found' }, { status: 404 });
     }
 
@@ -112,12 +109,12 @@ export async function PUT(
     values.push(id);
 
     const sql = `UPDATE bi_expenses SET ${updates.join(', ')} WHERE id = ?`;
-    await env.DB.prepare(sql).bind(...values).run();
+    await executeQuery(sql, values);
 
     // Fetch updated expense
-    const expense = await env.DB.prepare('SELECT * FROM bi_expenses WHERE id = ?').bind(id).first();
+    const expense = await queryDatabase('SELECT * FROM bi_expenses WHERE id = ?', [id]);
 
-    return NextResponse.json({ success: true, expense });
+    return NextResponse.json({ success: true, expense: expense[0] });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : 'Unknown error';
     return NextResponse.json({ success: false, error: message }, { status: 500 });
@@ -130,16 +127,15 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { env } = getRequestContext();
     const { id } = await params;
 
     // Check if expense exists
-    const existing = await env.DB.prepare('SELECT * FROM bi_expenses WHERE id = ?').bind(id).first();
-    if (!existing) {
+    const existing = await queryDatabase('SELECT * FROM bi_expenses WHERE id = ?', [id]);
+    if (!existing.length) {
       return NextResponse.json({ success: false, error: 'Expense not found' }, { status: 404 });
     }
 
-    await env.DB.prepare('DELETE FROM bi_expenses WHERE id = ?').bind(id).run();
+    await executeQuery('DELETE FROM bi_expenses WHERE id = ?', [id]);
 
     return NextResponse.json({ success: true, deleted: id });
   } catch (e: unknown) {

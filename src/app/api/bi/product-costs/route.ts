@@ -1,14 +1,12 @@
-// @ts-ignore
-import { getRequestContext } from '@cloudflare/next-on-pages';
+import { queryDatabase, executeQuery } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 import type { ProductCostInput } from '@/types/bi';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 // GET /api/bi/product-costs - List product costs
 export async function GET(req: NextRequest) {
   try {
-    const { env } = getRequestContext();
     const url = new URL(req.url);
     const productHandle = url.searchParams.get('product_handle');
     const current = url.searchParams.get('current') === 'true';
@@ -27,7 +25,7 @@ export async function GET(req: NextRequest) {
 
     sql += ' ORDER BY product_handle, effective_from DESC';
 
-    const { results } = await env.DB.prepare(sql).bind(...params).all();
+    const results = await queryDatabase(sql, params);
 
     return NextResponse.json({ success: true, costs: results });
   } catch (e: unknown) {
@@ -39,7 +37,6 @@ export async function GET(req: NextRequest) {
 // POST /api/bi/product-costs - Add product cost
 export async function POST(req: NextRequest) {
   try {
-    const { env } = getRequestContext();
     const body = (await req.json()) as ProductCostInput;
 
     if (!body.product_handle || body.unit_cost_cents === undefined || !body.effective_from) {
@@ -53,26 +50,22 @@ export async function POST(req: NextRequest) {
 
     // If this is a new current cost, close out the previous one
     if (!body.effective_to) {
-      await env.DB.prepare(`
+      await executeQuery(`
         UPDATE bi_product_costs
         SET effective_to = ?, updated_at = datetime('now')
         WHERE product_handle = ?
           AND (variant_sku IS NULL OR variant_sku = ?)
           AND effective_to IS NULL
-      `).bind(
-        body.effective_from,
-        body.product_handle,
-        body.variant_sku || null
-      ).run();
+      `, [body.effective_from, body.product_handle, body.variant_sku || null]);
     }
 
-    await env.DB.prepare(`
+    await executeQuery(`
       INSERT INTO bi_product_costs (
         id, product_handle, variant_sku, unit_cost_cents,
         shipping_cost_cents, packaging_cost_cents,
         effective_from, effective_to, notes
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).bind(
+    `, [
       id,
       body.product_handle,
       body.variant_sku || null,
@@ -82,11 +75,11 @@ export async function POST(req: NextRequest) {
       body.effective_from,
       body.effective_to || null,
       body.notes || null
-    ).run();
+    ]);
 
-    const cost = await env.DB.prepare('SELECT * FROM bi_product_costs WHERE id = ?').bind(id).first();
+    const cost = await queryDatabase('SELECT * FROM bi_product_costs WHERE id = ?', [id]);
 
-    return NextResponse.json({ success: true, cost });
+    return NextResponse.json({ success: true, cost: cost[0] });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : 'Unknown error';
     return NextResponse.json({ success: false, error: message }, { status: 500 });
@@ -96,7 +89,6 @@ export async function POST(req: NextRequest) {
 // PUT /api/bi/product-costs - Update product cost
 export async function PUT(req: NextRequest) {
   try {
-    const { env } = getRequestContext();
     const body = await req.json() as { id: string } & Partial<ProductCostInput>;
 
     if (!body.id) {
@@ -134,11 +126,11 @@ export async function PUT(req: NextRequest) {
     updates.push("updated_at = datetime('now')");
     values.push(body.id);
 
-    await env.DB.prepare(`UPDATE bi_product_costs SET ${updates.join(', ')} WHERE id = ?`).bind(...values).run();
+    await executeQuery(`UPDATE bi_product_costs SET ${updates.join(', ')} WHERE id = ?`, values);
 
-    const cost = await env.DB.prepare('SELECT * FROM bi_product_costs WHERE id = ?').bind(body.id).first();
+    const cost = await queryDatabase('SELECT * FROM bi_product_costs WHERE id = ?', [body.id]);
 
-    return NextResponse.json({ success: true, cost });
+    return NextResponse.json({ success: true, cost: cost[0] });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : 'Unknown error';
     return NextResponse.json({ success: false, error: message }, { status: 500 });
@@ -148,7 +140,6 @@ export async function PUT(req: NextRequest) {
 // DELETE /api/bi/product-costs - Delete product cost
 export async function DELETE(req: NextRequest) {
   try {
-    const { env } = getRequestContext();
     const url = new URL(req.url);
     const id = url.searchParams.get('id');
 
@@ -156,7 +147,7 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'Missing id' }, { status: 400 });
     }
 
-    await env.DB.prepare('DELETE FROM bi_product_costs WHERE id = ?').bind(id).run();
+    await executeQuery('DELETE FROM bi_product_costs WHERE id = ?', [id]);
 
     return NextResponse.json({ success: true, deleted: id });
   } catch (e: unknown) {

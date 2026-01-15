@@ -1,14 +1,12 @@
-// @ts-ignore
-import { getRequestContext } from '@cloudflare/next-on-pages';
+import { queryDatabase, executeQuery } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 import type { ReportType, ReportData } from '@/types/bi';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 // POST /api/bi/reports/generate - Generate a report
 export async function POST(req: NextRequest) {
   try {
-    const { env } = getRequestContext();
     const body = await req.json();
     const { report_type, period_start, period_end } = body as {
       report_type: ReportType;
@@ -26,19 +24,19 @@ export async function POST(req: NextRequest) {
     const reportId = crypto.randomUUID().replace(/-/g, '').slice(0, 16);
 
     // 1. Get Revenue Data from commerce_orders
-    const { results: revenueData } = await env.DB.prepare(`
+    const revenueData = await queryDatabase(`
       SELECT
         COALESCE(SUM(total_price_cents), 0) as total_revenue_cents,
         COUNT(*) as order_count
       FROM commerce_orders
       WHERE shopify_created_at >= ? AND shopify_created_at <= ?
         AND financial_status = 'paid'
-    `).bind(period_start, period_end + 'T23:59:59').all();
+    `, [period_start, period_end + 'T23:59:59']);
 
     const revenue = revenueData?.[0] || { total_revenue_cents: 0, order_count: 0 };
 
     // Get revenue by product
-    const { results: productRevenue } = await env.DB.prepare(`
+    const productRevenue = await queryDatabase(`
       SELECT
         oi.product_title,
         oi.product_id as product_handle,
@@ -51,14 +49,14 @@ export async function POST(req: NextRequest) {
       GROUP BY oi.product_id
       ORDER BY revenue_cents DESC
       LIMIT 10
-    `).bind(period_start, period_end + 'T23:59:59').all();
+    `, [period_start, period_end + 'T23:59:59']);
 
     // 2. Calculate COGS from product costs
-    const { results: productCosts } = await env.DB.prepare(`
+    const productCosts = await queryDatabase(`
       SELECT product_handle, unit_cost_cents, shipping_cost_cents, packaging_cost_cents
       FROM bi_product_costs
       WHERE effective_to IS NULL OR effective_to >= ?
-    `).bind(period_start).all();
+    `, [period_start]);
 
     const costsMap = new Map<string, number>();
     (productCosts || []).forEach((c: Record<string, unknown>) => {
@@ -80,7 +78,7 @@ export async function POST(req: NextRequest) {
     });
 
     // 3. Get Expenses
-    const { results: expensesData } = await env.DB.prepare(`
+    const expensesData = await queryDatabase(`
       SELECT
         category,
         COALESCE(SUM(amount_cents), 0) as total_cents,
@@ -88,7 +86,7 @@ export async function POST(req: NextRequest) {
       FROM bi_expenses
       WHERE expense_date >= ? AND expense_date <= ?
       GROUP BY category
-    `).bind(period_start, period_end).all();
+    `, [period_start, period_end]);
 
     const totalExpenses = (expensesData || []).reduce(
       (sum: number, e: Record<string, unknown>) => sum + (Number(e.total_cents) || 0),
@@ -96,7 +94,7 @@ export async function POST(req: NextRequest) {
     );
 
     // 4. Get Social Growth
-    const { results: socialLatest } = await env.DB.prepare(`
+    const socialLatest = await queryDatabase(`
       SELECT s1.*
       FROM bi_social_snapshots s1
       INNER JOIN (
@@ -105,9 +103,9 @@ export async function POST(req: NextRequest) {
         WHERE date <= ?
         GROUP BY platform
       ) s2 ON s1.platform = s2.platform AND s1.date = s2.max_date
-    `).bind(period_end).all();
+    `, [period_end]);
 
-    const { results: socialPrevious } = await env.DB.prepare(`
+    const socialPrevious = await queryDatabase(`
       SELECT s1.*
       FROM bi_social_snapshots s1
       INNER JOIN (
@@ -116,7 +114,7 @@ export async function POST(req: NextRequest) {
         WHERE date < ?
         GROUP BY platform
       ) s2 ON s1.platform = s2.platform AND s1.date = s2.max_date
-    `).bind(period_start).all();
+    `, [period_start]);
 
     const socialGrowth = (socialLatest || []).map((latest: Record<string, unknown>) => {
       const previous = (socialPrevious || []).find(
@@ -146,7 +144,7 @@ export async function POST(req: NextRequest) {
     const topPerformer = socialGrowth.sort((a, b) => b.growth_percent - a.growth_percent)[0]?.platform || null;
 
     // 5. Get Ad Campaign Performance
-    const { results: adMetrics } = await env.DB.prepare(`
+    const adMetrics = await queryDatabase(`
       SELECT
         c.platform,
         c.name as campaign_name,
@@ -159,7 +157,7 @@ export async function POST(req: NextRequest) {
       FROM bi_ad_campaigns c
       LEFT JOIN bi_ad_metrics m ON m.campaign_id = c.id AND m.date >= ? AND m.date <= ?
       GROUP BY c.id
-    `).bind(period_start, period_end).all();
+    `, [period_start, period_end]);
 
     const adTotals = (adMetrics || []).reduce(
       (acc: { spend: number; impressions: number; clicks: number; conversions: number; value: number }, m: Record<string, unknown>) => ({
@@ -185,7 +183,7 @@ export async function POST(req: NextRequest) {
     }, {});
 
     // 6. Get Content Performance (clips)
-    const { results: clipStats } = await env.DB.prepare(`
+    const clipStats = await queryDatabase(`
       SELECT
         COUNT(DISTINCT v.id) as clips_published,
         COALESCE(SUM(e.view_count), 0) as total_views,
@@ -193,19 +191,19 @@ export async function POST(req: NextRequest) {
       FROM videos v
       LEFT JOIN clip_engagement e ON e.clip_id = v.id
       WHERE v.created_at >= ? AND v.created_at <= ?
-    `).bind(period_start, period_end).all();
+    `, [period_start, period_end]);
 
     const clipData = clipStats?.[0] || { clips_published: 0, total_views: 0, total_completions: 0 };
 
     // Get top clips
-    const { results: topClips } = await env.DB.prepare(`
+    const topClips = await queryDatabase(`
       SELECT v.id, v.title, e.view_count, e.completion_count
       FROM videos v
       LEFT JOIN clip_engagement e ON e.clip_id = v.id
       WHERE v.created_at >= ? AND v.created_at <= ?
       ORDER BY e.view_count DESC
       LIMIT 5
-    `).bind(period_start, period_end).all();
+    `, [period_start, period_end]);
 
     // 7. Build Report Data
     const revenueAmount = Number(revenue.total_revenue_cents) || 0;
@@ -309,10 +307,10 @@ export async function POST(req: NextRequest) {
     };
 
     // Save report
-    await env.DB.prepare(`
+    await executeQuery(`
       INSERT INTO bi_reports (id, report_type, period_start, period_end, status, report_data)
       VALUES (?, ?, ?, ?, 'ready', ?)
-    `).bind(reportId, report_type, period_start, period_end, JSON.stringify(reportData)).run();
+    `, [reportId, report_type, period_start, period_end, JSON.stringify(reportData)]);
 
     return NextResponse.json({
       success: true,

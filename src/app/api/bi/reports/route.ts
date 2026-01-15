@@ -1,13 +1,11 @@
-// @ts-ignore
-import { getRequestContext } from '@cloudflare/next-on-pages';
+import { queryDatabase } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 // GET /api/bi/reports - List generated reports
 export async function GET(req: NextRequest) {
   try {
-    const { env } = getRequestContext();
     const url = new URL(req.url);
 
     const reportType = url.searchParams.get('type');
@@ -24,7 +22,7 @@ export async function GET(req: NextRequest) {
     sql += ' ORDER BY generated_at DESC LIMIT ?';
     params.push(limit);
 
-    const { results } = await env.DB.prepare(sql).bind(...params).all();
+    const results = await queryDatabase(sql, params);
 
     return NextResponse.json({ success: true, reports: results });
   } catch (e: unknown) {
