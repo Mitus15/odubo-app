@@ -164,6 +164,16 @@ const Icons = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
     </svg>
   ),
+  copy: (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184" />
+    </svg>
+  ),
+  checkCircle: (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  ),
 };
 
 // Status badge colors
@@ -2089,8 +2099,65 @@ function ContentEditorModal({
   });
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  const [copiedPlatform, setCopiedPlatform] = useState<string | null>(null);
+  const [isMarkingPosted, setIsMarkingPosted] = useState(false);
 
   const thumbnailUrl = content.thumbnail_url || (content.upload_uid ? `https://videodelivery.net/${content.upload_uid}/thumbnails/thumbnail.jpg` : null);
+  const downloadUrl = content.upload_uid ? `https://videodelivery.net/${content.upload_uid}/downloads/default.mp4` : null;
+
+  // Copy caption + hashtags to clipboard
+  const handleCopyCaption = async (platform: 'instagram' | 'tiktok' | 'youtube') => {
+    const captions: Record<string, string> = {
+      instagram: captionInstagram,
+      tiktok: captionTiktok,
+      youtube: captionYoutube,
+    };
+    const hashtags: Record<string, string> = {
+      instagram: hashtagsInstagram,
+      tiktok: hashtagsTiktok,
+      youtube: hashtagsYoutube,
+    };
+
+    const text = `${captions[platform] || ''}\n\n${hashtags[platform] || ''}`.trim();
+
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedPlatform(platform);
+      setTimeout(() => setCopiedPlatform(null), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
+
+  // Quick mark as posted
+  const handleMarkPosted = async () => {
+    setIsMarkingPosted(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`/api/admin/social/${content.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          status: 'posted',
+          posted_at: new Date().toISOString(),
+          posted_platforms: scheduledPlatforms.length > 0 ? scheduledPlatforms : ['instagram', 'tiktok', 'youtube'],
+        }),
+      });
+
+      if (res.ok) {
+        setStatus('posted');
+        onSave(); // Refresh the list
+      }
+    } catch (err) {
+      console.error('Failed to mark as posted:', err);
+    } finally {
+      setIsMarkingPosted(false);
+    }
+  };
 
   // AI Analysis handler
   const handleAiAnalyze = async () => {
@@ -2305,6 +2372,78 @@ function ContentEditorModal({
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Quick Actions */}
+          <div className="flex flex-wrap gap-2 p-3 bg-[#0d0b0a] rounded-xl border border-[#b2a491]/10">
+            {/* Download */}
+            {downloadUrl && (
+              <a
+                href={downloadUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 px-3 py-2 bg-[#1a1614] hover:bg-[#252220] border border-[#b2a491]/20 rounded-lg text-sm transition-colors"
+              >
+                {Icons.download}
+                Download
+              </a>
+            )}
+
+            {/* Copy buttons */}
+            <button
+              onClick={() => handleCopyCaption('instagram')}
+              className={`flex items-center gap-2 px-3 py-2 border rounded-lg text-sm transition-colors ${
+                copiedPlatform === 'instagram'
+                  ? 'bg-pink-500/20 border-pink-500/50 text-pink-400'
+                  : 'bg-[#1a1614] hover:bg-[#252220] border-[#b2a491]/20'
+              }`}
+            >
+              {copiedPlatform === 'instagram' ? Icons.check : Icons.copy}
+              <span className="text-pink-400">{Icons.instagram}</span>
+              {copiedPlatform === 'instagram' ? 'Copied!' : 'Copy'}
+            </button>
+
+            <button
+              onClick={() => handleCopyCaption('tiktok')}
+              className={`flex items-center gap-2 px-3 py-2 border rounded-lg text-sm transition-colors ${
+                copiedPlatform === 'tiktok'
+                  ? 'bg-cyan-500/20 border-cyan-500/50 text-cyan-400'
+                  : 'bg-[#1a1614] hover:bg-[#252220] border-[#b2a491]/20'
+              }`}
+            >
+              {copiedPlatform === 'tiktok' ? Icons.check : Icons.copy}
+              <span className="text-white">{Icons.tiktok}</span>
+              {copiedPlatform === 'tiktok' ? 'Copied!' : 'Copy'}
+            </button>
+
+            <button
+              onClick={() => handleCopyCaption('youtube')}
+              className={`flex items-center gap-2 px-3 py-2 border rounded-lg text-sm transition-colors ${
+                copiedPlatform === 'youtube'
+                  ? 'bg-red-500/20 border-red-500/50 text-red-400'
+                  : 'bg-[#1a1614] hover:bg-[#252220] border-[#b2a491]/20'
+              }`}
+            >
+              {copiedPlatform === 'youtube' ? Icons.check : Icons.copy}
+              <span className="text-red-500">{Icons.youtube}</span>
+              {copiedPlatform === 'youtube' ? 'Copied!' : 'Copy'}
+            </button>
+
+            {/* Mark as Posted - show only if not already posted */}
+            {status !== 'posted' && (
+              <button
+                onClick={handleMarkPosted}
+                disabled={isMarkingPosted}
+                className="flex items-center gap-2 px-3 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 ml-auto"
+              >
+                {isMarkingPosted ? (
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  Icons.checkCircle
+                )}
+                {isMarkingPosted ? 'Posting...' : 'Mark as Posted'}
+              </button>
+            )}
           </div>
 
           {/* Captions */}
