@@ -45,9 +45,9 @@ export default function DiscountsTab() {
 
   const getStatusColor = (status: Discount['status']) => {
     switch (status) {
-      case 'active': return 'bg-green-500/10 text-green-500';
+      case 'active': return 'bg-emerald-500/10 text-emerald-500';
       case 'expired': return 'bg-red-500/10 text-red-500';
-      case 'scheduled': return 'bg-blue-500/10 text-blue-500';
+      case 'scheduled': return 'bg-[#b2a491]/10 text-[#ede8df]';
     }
   };
 

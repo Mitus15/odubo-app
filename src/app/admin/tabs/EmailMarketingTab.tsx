@@ -40,9 +40,9 @@ export default function EmailMarketingTab() {
 
   const getStatusColor = (status: EmailCampaign['status']) => {
     switch (status) {
-      case 'sent': return 'bg-green-500/10 text-green-500';
-      case 'scheduled': return 'bg-blue-500/10 text-blue-500';
-      case 'draft': return 'bg-gray-500/10 text-gray-400';
+      case 'sent': return 'bg-emerald-500/10 text-emerald-500';
+      case 'scheduled': return 'bg-[#b2a491]/10 text-[#ede8df]';
+      case 'draft': return 'bg-[#726d6c]/10 text-[#b2a491]';
     }
   };
 
@@ -154,7 +154,7 @@ export default function EmailMarketingTab() {
                             </div>
                             <div>
                               <div className="text-xs text-[#b2a491]">Click Rate</div>
-                              <div className="text-sm font-semibold text-blue-500">{calculateClickRate(campaign)}%</div>
+                              <div className="text-sm font-semibold text-[#843c2d]">{calculateClickRate(campaign)}%</div>
                             </div>
                           </>
                         )}

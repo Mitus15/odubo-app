@@ -1428,7 +1428,7 @@ export default function BrandAssetsPage() {
                     {/* Type badge */}
                     <div className="absolute top-2 left-2">
                       <span className={`p-1 sm:p-1.5 rounded-lg ${
-                        asset.asset_type === 'video' ? 'bg-purple-500/80' : 'bg-blue-500/80'
+                        asset.asset_type === 'video' ? 'bg-[#843c2d]/80' : 'bg-[#302927]/80'
                       }`}>
                         {asset.asset_type === 'video' ? Icons.video : Icons.image}
                       </span>

@@ -3,13 +3,26 @@
 import { Suspense } from 'react';
 import dynamic from 'next/dynamic';
 
-// Only load tabs that are actually used in-page (not via separate routes)
+// === EXISTING TABS ===
 const OverviewTab = dynamic(() => import('./tabs/OverviewTab'));
 const ProductsTab = dynamic(() => import('./tabs/ProductsTab'));
 const OrdersTab = dynamic(() => import('./tabs/OrdersTab'));
 const CustomersTab = dynamic(() => import('./tabs/CustomersTab'));
 const DiscountsTab = dynamic(() => import('./tabs/DiscountsTab'));
 const ApiKeysTab = dynamic(() => import('./tabs/ApiKeysTab'));
+const MomentsTab = dynamic(() => import('./tabs/MomentsTab'));
+const AnalyticsTab = dynamic(() => import('./tabs/AnalyticsTab'));
+
+// === NEW TAB WRAPPERS (from page content) ===
+const SocialCMSTab = dynamic(() => import('./tabs/SocialCMSTab'));
+const VideosTab = dynamic(() => import('./tabs/VideosTab'));
+const MusicTab = dynamic(() => import('./tabs/MusicTab'));
+const BrandAssetsTab = dynamic(() => import('./tabs/BrandAssetsTab'));
+const LinksTab = dynamic(() => import('./tabs/LinksTab'));
+const AIStudioTab = dynamic(() => import('./tabs/AIStudioTab'));
+const StorageTab = dynamic(() => import('./tabs/StorageTab'));
+const DatabaseTab = dynamic(() => import('./tabs/DatabaseTab'));
+const UsersTab = dynamic(() => import('./tabs/UsersTab'));
 
 // Loading fallback component
 function LoadingFallback({ title }: { title: string }) {
@@ -42,11 +55,20 @@ function AccessDenied() {
   );
 }
 
-// Simplified tab types - only tabs used in-page
+// Tab types - all tabs rendered in-page
 type AdminTab =
+  // Dashboard
   | 'overview'
+  // Content
+  | 'music' | 'videos' | 'moments' | 'brand-assets' | 'links'
+  // Social
+  | 'social-cms' | 'ai-studio'
+  // Commerce
   | 'products' | 'orders' | 'customers' | 'discounts'
-  | 'api-keys'
+  // Analytics
+  | 'analytics'
+  // System
+  | 'users' | 'database' | 'storage' | 'api-keys'
   | string; // Allow any string for flexibility
 
 interface TabContentProps {
@@ -69,7 +91,53 @@ export default function TabContent({ activeTab, canAccess }: TabContentProps) {
         </Suspense>
       );
 
-    // === COMMERCE (in-page tabs) ===
+    // === CONTENT ===
+    case 'music':
+      return (
+        <Suspense fallback={<LoadingFallback title="Music" />}>
+          <MusicTab />
+        </Suspense>
+      );
+    case 'videos':
+      return (
+        <Suspense fallback={<LoadingFallback title="Videos" />}>
+          <VideosTab />
+        </Suspense>
+      );
+    case 'moments':
+      return (
+        <Suspense fallback={<LoadingFallback title="Moments" />}>
+          <MomentsTab />
+        </Suspense>
+      );
+    case 'brand-assets':
+      return (
+        <Suspense fallback={<LoadingFallback title="Brand Assets" />}>
+          <BrandAssetsTab />
+        </Suspense>
+      );
+    case 'links':
+      return (
+        <Suspense fallback={<LoadingFallback title="Links" />}>
+          <LinksTab />
+        </Suspense>
+      );
+
+    // === SOCIAL ===
+    case 'social-cms':
+      return (
+        <Suspense fallback={<LoadingFallback title="Social CMS" />}>
+          <SocialCMSTab />
+        </Suspense>
+      );
+    case 'ai-studio':
+      return (
+        <Suspense fallback={<LoadingFallback title="AI Studio" />}>
+          <AIStudioTab />
+        </Suspense>
+      );
+
+    // === COMMERCE ===
     case 'products':
       return (
         <Suspense fallback={<LoadingFallback title="Products" />}>
@@ -95,7 +163,33 @@ export default function TabContent({ activeTab, canAccess }: TabContentProps) {
         </Suspense>
       );
 
-    // === SYSTEM (api-keys is the only in-page tab) ===
+    // === ANALYTICS ===
+    case 'analytics':
+      return (
+        <Suspense fallback={<LoadingFallback title="Analytics" />}>
+          <AnalyticsTab />
+        </Suspense>
+      );
+
+    // === SYSTEM ===
+    case 'users':
+      return (
+        <Suspense fallback={<LoadingFallback title="Users" />}>
+          <UsersTab />
+        </Suspense>
+      );
+    case 'database':
+      return (
+        <Suspense fallback={<LoadingFallback title="Database" />}>
+          <DatabaseTab />
+        </Suspense>
+      );
+    case 'storage':
+      return (
+        <Suspense fallback={<LoadingFallback title="Storage" />}>
+          <StorageTab />
+        </Suspense>
+      );
     case 'api-keys':
       return (
         <Suspense fallback={<LoadingFallback title="API Keys" />}>
@@ -103,7 +197,7 @@ export default function TabContent({ activeTab, canAccess }: TabContentProps) {
         </Suspense>
       );
 
-    // All other content is accessed via dedicated routes
+    // Fallback to dashboard
     default:
       return (
         <Suspense fallback={<LoadingFallback title="Dashboard" />}>

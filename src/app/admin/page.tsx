@@ -209,7 +209,7 @@ interface NavItem {
   href?: string; // External link (navigates to another page)
 }
 
-// Simplified navigation - only working features
+// Navigation - all tabs render in-place (no page navigation)
 const navItems: NavItem[] = [
   { id: 'overview', label: 'Dashboard', icon: Icons.home },
   {
@@ -217,11 +217,11 @@ const navItems: NavItem[] = [
     label: 'Content',
     icon: Icons.cms,
     children: [
-      { id: 'music', label: 'Music', icon: Icons.music, href: '/admin/albums' },
-      { id: 'videos', label: 'Videos', icon: Icons.videos, href: '/admin/videos' },
-      { id: 'moments', label: 'Moments', icon: Icons.moments, href: '/admin/moments' },
-      { id: 'brand-assets', label: 'Brand Assets', icon: Icons.products, href: '/admin/brand-assets' },
-      { id: 'linktree', label: 'Links', icon: Icons.linktree, href: '/admin/linktree' },
+      { id: 'music', label: 'Music', icon: Icons.music },
+      { id: 'videos', label: 'Videos', icon: Icons.videos },
+      { id: 'moments', label: 'Moments', icon: Icons.moments },
+      { id: 'brand-assets', label: 'Brand Assets', icon: Icons.products },
+      { id: 'links', label: 'Links', icon: Icons.linktree },
     ]
   },
   {
@@ -229,8 +229,8 @@ const navItems: NavItem[] = [
     label: 'Social',
     icon: Icons.social,
     children: [
-      { id: 'social-cms', label: 'Content CMS', icon: Icons.commandCenter, href: '/admin/social' },
-      { id: 'ai-studio', label: 'AI Studio', icon: Icons.ai, href: '/admin/ai-studio' },
+      { id: 'social-cms', label: 'Content CMS', icon: Icons.commandCenter },
+      { id: 'ai-studio', label: 'AI Studio', icon: Icons.ai },
     ]
   },
   {
@@ -244,14 +244,15 @@ const navItems: NavItem[] = [
       { id: 'discounts', label: 'Discounts', icon: Icons.discounts },
     ]
   },
+  { id: 'analytics', label: 'Analytics', icon: Icons.analytics },
   {
     id: 'system',
     label: 'System',
     icon: Icons.system,
     children: [
-      { id: 'users', label: 'Users', icon: Icons.users, href: '/admin/users' },
-      { id: 'database', label: 'Database', icon: Icons.database, href: '/admin/db' },
-      { id: 'storage', label: 'Storage', icon: Icons.storage, href: '/admin/storage' },
+      { id: 'users', label: 'Users', icon: Icons.users },
+      { id: 'database', label: 'Database', icon: Icons.database },
+      { id: 'storage', label: 'Storage', icon: Icons.storage },
       { id: 'api-keys', label: 'API Keys', icon: Icons.api },
     ]
   },

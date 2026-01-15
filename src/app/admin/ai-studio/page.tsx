@@ -506,8 +506,8 @@ export default function AIStudioPage() {
                       <p className="text-white">{example.content}</p>
                       <div className="flex items-center gap-2 mt-2">
                         <span className={`text-xs px-2 py-1 rounded ${
-                          example.rating === 'perfect' ? 'bg-green-500/20 text-green-400' :
-                          example.rating === 'good' ? 'bg-blue-500/20 text-blue-400' :
+                          example.rating === 'perfect' ? 'bg-emerald-500/20 text-emerald-400' :
+                          example.rating === 'good' ? 'bg-[#b2a491]/20 text-[#ede8df]' :
                           'bg-red-500/20 text-red-400'
                         }`}>
                           {example.rating}

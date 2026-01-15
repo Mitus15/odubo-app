@@ -176,14 +176,14 @@ const Icons = {
   ),
 };
 
-// Status badge colors
+// Status badge colors - using brand palette
 const statusColors: Record<string, { bg: string; text: string; border: string }> = {
-  draft: { bg: 'bg-gray-500/20', text: 'text-gray-300', border: 'border-gray-500/30' },
-  review: { bg: 'bg-yellow-500/20', text: 'text-yellow-300', border: 'border-yellow-500/30' },
-  approved: { bg: 'bg-blue-500/20', text: 'text-blue-300', border: 'border-blue-500/30' },
-  scheduled: { bg: 'bg-purple-500/20', text: 'text-purple-300', border: 'border-purple-500/30' },
-  posted: { bg: 'bg-green-500/20', text: 'text-green-300', border: 'border-green-500/30' },
-  archived: { bg: 'bg-gray-600/20', text: 'text-gray-400', border: 'border-gray-600/30' },
+  draft: { bg: 'bg-[#726d6c]/20', text: 'text-[#b2a491]', border: 'border-[#726d6c]/30' },
+  review: { bg: 'bg-amber-500/20', text: 'text-amber-300', border: 'border-amber-500/30' },
+  approved: { bg: 'bg-[#843c2d]/20', text: 'text-[#e8a592]', border: 'border-[#843c2d]/30' },
+  scheduled: { bg: 'bg-[#b2a491]/20', text: 'text-[#ede8df]', border: 'border-[#b2a491]/30' },
+  posted: { bg: 'bg-emerald-500/20', text: 'text-emerald-300', border: 'border-emerald-500/30' },
+  archived: { bg: 'bg-[#302927]/40', text: 'text-[#726d6c]', border: 'border-[#726d6c]/30' },
 };
 
 // Format duration
