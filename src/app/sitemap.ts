@@ -1,175 +1,83 @@
 import { MetadataRoute } from 'next';
+import { getShopifyProducts } from '@/lib/shopify';
 
-export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = 'https://odubo.studio';
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://odubo.studio';
   const currentDate = new Date().toISOString();
 
-  // Static pages
-  const staticPages = [
+  // Static pages - core site structure
+  const staticPages: MetadataRoute.Sitemap = [
     {
       url: baseUrl,
       lastModified: currentDate,
-      changeFrequency: 'daily' as const,
+      changeFrequency: 'daily',
       priority: 1.0,
-    },
-    {
-      url: `${baseUrl}/music`,
-      lastModified: currentDate,
-      changeFrequency: 'daily' as const,
-      priority: 0.9,
-    },
-    {
-      url: `${baseUrl}/media`,
-      lastModified: currentDate,
-      changeFrequency: 'daily' as const,
-      priority: 0.9,
     },
     {
       url: `${baseUrl}/store`,
       lastModified: currentDate,
-      changeFrequency: 'weekly' as const,
+      changeFrequency: 'daily',
+      priority: 0.9,
+    },
+    {
+      url: `${baseUrl}/music`,
+      lastModified: currentDate,
+      changeFrequency: 'weekly',
       priority: 0.8,
     },
     {
-      url: `${baseUrl}/search`,
+      url: `${baseUrl}/media`,
       lastModified: currentDate,
-      changeFrequency: 'daily' as const,
+      changeFrequency: 'daily',
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/moments`,
+      lastModified: currentDate,
+      changeFrequency: 'weekly',
       priority: 0.7,
+    },
+    {
+      url: `${baseUrl}/links`,
+      lastModified: currentDate,
+      changeFrequency: 'weekly',
+      priority: 0.6,
+    },
+    {
+      url: `${baseUrl}/contact`,
+      lastModified: currentDate,
+      changeFrequency: 'monthly',
+      priority: 0.5,
     },
     {
       url: `${baseUrl}/legal`,
       lastModified: currentDate,
-      changeFrequency: 'monthly' as const,
-      priority: 0.5,
-    },
-    {
-      url: `${baseUrl}/login`,
-      lastModified: currentDate,
-      changeFrequency: 'monthly' as const,
-      priority: 0.6,
-    },
-    {
-      url: `${baseUrl}/signup`,
-      lastModified: currentDate,
-      changeFrequency: 'monthly' as const,
-      priority: 0.6,
+      changeFrequency: 'monthly',
+      priority: 0.3,
     },
   ];
 
-  // Dynamic content pages (these would be populated from your database)
-  const dynamicPages = [
-    // Example album pages
-    {
-      url: `${baseUrl}/music/albums/featured`,
-      lastModified: currentDate,
-      changeFrequency: 'weekly' as const,
-      priority: 0.8,
-    },
-    {
-      url: `${baseUrl}/music/albums/latest`,
-      lastModified: currentDate,
-      changeFrequency: 'daily' as const,
-      priority: 0.8,
-    },
-    {
-      url: `${baseUrl}/music/albums/popular`,
-      lastModified: currentDate,
-      changeFrequency: 'weekly' as const,
-      priority: 0.8,
-    },
-    
-    // Example video pages
-    {
-      url: `${baseUrl}/media/videos/featured`,
-      lastModified: currentDate,
-      changeFrequency: 'daily' as const,
-      priority: 0.8,
-    },
-    {
-      url: `${baseUrl}/media/videos/latest`,
-      lastModified: currentDate,
-      changeFrequency: 'daily' as const,
-      priority: 0.8,
-    },
-    
-    // Example store pages
-    {
-      url: `${baseUrl}/store/collections/featured`,
-      lastModified: currentDate,
-      changeFrequency: 'weekly' as const,
-      priority: 0.7,
-    },
-    {
-      url: `${baseUrl}/store/collections/latest`,
-      lastModified: currentDate,
-      changeFrequency: 'weekly' as const,
-      priority: 0.7,
-    },
-  ];
-
-  // Category and tag pages
-  const categoryPages = [
-    {
-      url: `${baseUrl}/music/genres/electronic`,
-      lastModified: currentDate,
-      changeFrequency: 'weekly' as const,
-      priority: 0.7,
-    },
-    {
-      url: `${baseUrl}/music/genres/rock`,
-      lastModified: currentDate,
-      changeFrequency: 'weekly' as const,
-      priority: 0.7,
-    },
-    {
-      url: `${baseUrl}/music/genres/jazz`,
-      lastModified: currentDate,
-      changeFrequency: 'weekly' as const,
-      priority: 0.7,
-    },
-    {
-      url: `${baseUrl}/music/genres/classical`,
-      lastModified: currentDate,
-      changeFrequency: 'weekly' as const,
-      priority: 0.7,
-    },
-    {
-      url: `${baseUrl}/music/genres/hip-hop`,
-      lastModified: currentDate,
-      changeFrequency: 'weekly' as const,
-      priority: 0.7,
-    },
-  ];
-
-  // Legal and policy pages
-  const legalPages = [
-    {
-      url: `${baseUrl}/legal/privacy`,
-      lastModified: currentDate,
-      changeFrequency: 'monthly' as const,
-      priority: 0.4,
-    },
-    {
-      url: `${baseUrl}/legal/terms`,
-      lastModified: currentDate,
-      changeFrequency: 'monthly' as const,
-      priority: 0.4,
-    },
-    {
-      url: `${baseUrl}/legal/shipping`,
-      lastModified: currentDate,
-      changeFrequency: 'monthly' as const,
-      priority: 0.4,
-    },
-  ];
+  // Fetch dynamic product pages from Shopify
+  let productPages: MetadataRoute.Sitemap = [];
+  try {
+    const productsResult = await getShopifyProducts();
+    if (productsResult.success && productsResult.products) {
+      productPages = productsResult.products
+        .filter(product => product.status === 'active')
+        .map(product => ({
+          url: `${baseUrl}/store/product/${product.handle}`,
+          lastModified: product.createdAt || currentDate,
+          changeFrequency: 'weekly' as const,
+          priority: 0.8,
+        }));
+    }
+  } catch (error) {
+    console.error('[SITEMAP] Error fetching products:', error);
+  }
 
   // Combine all pages
   return [
     ...staticPages,
-    ...dynamicPages,
-    ...categoryPages,
-    ...legalPages,
+    ...productPages,
   ];
 }
-
-
