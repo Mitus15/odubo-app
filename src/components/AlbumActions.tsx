@@ -62,19 +62,19 @@ export default function AlbumActions({ album, onAlbumUpdate }: AlbumActionsProps
         <button
           onClick={handleView}
           disabled={loading}
-          className="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 disabled:opacity-50"
+          className="px-3 py-1 bg-[#843c2d] text-white text-sm rounded hover:bg-[#9a4535] disabled:opacity-50"
         >
           {loading ? 'Loading...' : 'View & Add Tracks'}
         </button>
         <button
           onClick={() => window.location.href = `/admin/albums/edit/${currentAlbum.id}`}
-          className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+          className="px-3 py-1 bg-[#302927] text-[#ede8df] text-sm rounded hover:bg-[#3a3533] border border-[#502d26]/30"
         >
           Edit Album
         </button>
         <button
           onClick={handleDelete}
-          className="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700"
+          className="px-3 py-1 bg-red-900/30 text-red-400 text-sm rounded hover:bg-red-900/50"
         >
           Delete
         </button>

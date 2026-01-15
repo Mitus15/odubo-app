@@ -37,12 +37,8 @@ export default function MusicTab() {
   }
 
   return (
-    <div className="w-full text-white pt-4 pb-20">
+    <div className="w-full pt-4 pb-20">
       <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-4">Music Management</h1>
-          <p className="text-gray-400">Create albums and upload tracks in one workflow</p>
-        </div>
         <AlbumsClientWrapper albums={albums} />
       </div>
     </div>

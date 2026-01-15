@@ -3,7 +3,7 @@
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useOmniShop } from '@/contexts/OmniShopContext';
-import { useMemo } from 'react';
+import { useMemo, useEffect, useState } from 'react';
 
 /**
  * DesktopSidebar - Persistent navigation for desktop (lg+)
@@ -19,6 +19,15 @@ import { useMemo } from 'react';
 export default function DesktopSidebar() {
   const pathname = usePathname();
   const { openMaison, cartCount, storeAccessible, checkingStoreAccess } = useOmniShop();
+  const [isAdminSubdomain, setIsAdminSubdomain] = useState(false);
+
+  // Check if on admin subdomain
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const hostname = window.location.hostname;
+      setIsAdminSubdomain(hostname.startsWith('admin.'));
+    }
+  }, []);
 
   // Nav items - always show all items, but disable store-dependent ones while checking
   // IMPORTANT: All hooks must be called before any conditional returns
@@ -77,8 +86,8 @@ export default function DesktopSidebar() {
     return items.filter(item => !item.hidden);
   }, [checkingStoreAccess, storeAccessible, openMaison, cartCount]);
 
-  // Hide on admin/backend pages (must be after all hooks)
-  if (pathname?.startsWith('/admin') || pathname?.startsWith('/command-center') || pathname?.startsWith('/featured/manage')) {
+  // Hide on admin/backend pages and admin subdomain (must be after all hooks)
+  if (isAdminSubdomain || pathname?.startsWith('/admin') || pathname?.startsWith('/command-center') || pathname?.startsWith('/featured/manage')) {
     return null;
   }
 
