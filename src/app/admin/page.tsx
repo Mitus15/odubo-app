@@ -242,6 +242,7 @@ const navItems: NavItem[] = [
       { id: 'orders', label: 'Orders', icon: Icons.orders },
       { id: 'customers', label: 'Customers', icon: Icons.customers },
       { id: 'discounts', label: 'Discounts', icon: Icons.discounts },
+      { id: 'store-settings', label: 'Store Settings', icon: Icons.system },
     ]
   },
   { id: 'analytics', label: 'Analytics', icon: Icons.analytics },

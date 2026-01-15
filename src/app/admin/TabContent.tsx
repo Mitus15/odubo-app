@@ -12,6 +12,7 @@ const DiscountsTab = dynamic(() => import('./tabs/DiscountsTab'));
 const ApiKeysTab = dynamic(() => import('./tabs/ApiKeysTab'));
 const MomentsTab = dynamic(() => import('./tabs/MomentsTab'));
 const AnalyticsTab = dynamic(() => import('./tabs/AnalyticsTab'));
+const StoreSettingsTab = dynamic(() => import('./tabs/StoreSettingsTab'));
 
 // === NEW TAB WRAPPERS (from page content) ===
 const SocialCMSTab = dynamic(() => import('./tabs/SocialCMSTab'));
@@ -71,7 +72,7 @@ type AdminTab =
   // Social
   | 'social-cms' | 'ai-studio'
   // Commerce
-  | 'products' | 'orders' | 'customers' | 'discounts'
+  | 'products' | 'orders' | 'customers' | 'discounts' | 'store-settings'
   // Analytics
   | 'analytics'
   // Business / BI
@@ -169,6 +170,12 @@ export default function TabContent({ activeTab, canAccess }: TabContentProps) {
       return (
         <Suspense fallback={<LoadingFallback title="Discounts" />}>
           <DiscountsTab />
+        </Suspense>
+      );
+    case 'store-settings':
+      return (
+        <Suspense fallback={<LoadingFallback title="Store Settings" />}>
+          <StoreSettingsTab />
         </Suspense>
       );
 
