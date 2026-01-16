@@ -448,44 +448,49 @@ export default function ExpandableLogoMenu({
           </span>
         )}
 
-        {/* Main logo button */}
-        <motion.button
-          onClick={handleTap}
-          className={`group relative overflow-hidden
-                     w-14 h-14 flex items-center justify-center rounded-full
+        {/* Main logo button - wrapper has shadow (doesn't rotate), inner content rotates */}
+        <div
+          className={`relative w-14 h-14 flex items-center justify-center rounded-full
                      border border-white/20
                      shadow-[0_12px_32px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.15),inset_0_-1px_0_rgba(0,0,0,0.4)]
-                     ${isAnimating ? 'bg-black/40' : 'bg-black/15 backdrop-blur-xl'}
-                     ${hasProduct && !isExpanded && storeAccessible ? 'animate-subtle-shake' : ''}`}
-          initial="collapsed"
-          animate={isExpanded ? 'expanded' : 'collapsed'}
-          variants={logoVariants}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          aria-label={isExpanded ? 'Close menu' : 'Open menu'}
-          aria-expanded={isExpanded}
+                     ${isAnimating ? 'bg-black/40' : 'bg-black/15 backdrop-blur-xl'}`}
           style={{
             width: BUTTON_SIZE,
             height: BUTTON_SIZE,
-            cursor: isDragging ? 'grabbing' : 'grab',
-            willChange: 'transform',
-            backfaceVisibility: 'hidden',
           }}
         >
-          <img
-            src="/odubo_logo_emboss.webp"
-            alt=""
-            className="w-7 h-7 object-contain"
-            draggable={false}
-          />
+          <motion.button
+            onClick={handleTap}
+            className={`group relative overflow-hidden w-full h-full flex items-center justify-center rounded-full
+                       ${hasProduct && !isExpanded && storeAccessible ? 'animate-subtle-shake' : ''}`}
+            initial="collapsed"
+            animate={isExpanded ? 'expanded' : 'collapsed'}
+            variants={logoVariants}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            aria-label={isExpanded ? 'Close menu' : 'Open menu'}
+            aria-expanded={isExpanded}
+            style={{
+              cursor: isDragging ? 'grabbing' : 'grab',
+              willChange: 'transform',
+              backfaceVisibility: 'hidden',
+            }}
+          >
+            <img
+              src="/odubo_logo_emboss.webp"
+              alt=""
+              className="w-7 h-7 object-contain"
+              draggable={false}
+            />
 
-          {/* Glow effect when expanded - no AnimatePresence overhead */}
-          <motion.div
-            className="absolute inset-0 rounded-full bg-gradient-to-br from-white/20 to-transparent pointer-events-none"
-            animate={{ opacity: isExpanded ? 1 : 0, scale: isExpanded ? 1 : 0.8 }}
-            transition={{ duration: 0.15 }}
-          />
-        </motion.button>
+            {/* Glow effect when expanded - no AnimatePresence overhead */}
+            <motion.div
+              className="absolute inset-0 rounded-full bg-gradient-to-br from-white/20 to-transparent pointer-events-none"
+              animate={{ opacity: isExpanded ? 1 : 0, scale: isExpanded ? 1 : 0.8 }}
+              transition={{ duration: 0.15 }}
+            />
+          </motion.button>
+        </div>
 
         {/* Expanded menu items */}
         <AnimatePresence mode="sync">

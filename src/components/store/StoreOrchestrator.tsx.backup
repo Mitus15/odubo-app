@@ -70,8 +70,8 @@ export default function StoreOrchestrator() {
           {view === 'detail' && <ProductDetailFeed key="detail" />}
         </AnimatePresence>
 
-        {/* Persistent footer - only show in browse view (detail has its own Add to Bag UI) */}
-        {view === 'browse' && (
+        {/* Persistent footer - shows across all store views */}
+        {view !== 'closed' && (
           <footer className="fixed bottom-0 left-0 right-0 z-[115] border-t border-white/5 bg-black/80 backdrop-blur-sm">
             <div 
               className="px-4 py-3"
