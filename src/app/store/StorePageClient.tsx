@@ -864,6 +864,10 @@ export default function StorePageClient({ isStoreOpen, isAdmin, initialProducts 
               <Link href="/legal?tab=shipping" className="hover:text-[#ede8df] transition-colors">
                 Shipping & Returns
               </Link>
+              <span className="text-[#502d26]/30">•</span>
+              <Link href="/contact" className="hover:text-[#ede8df] transition-colors">
+                Contact
+              </Link>
             </div>
             <p className="text-[9px] text-[#502d26]/40">
               © {new Date().getFullYear()} Odubo Studio. All rights reserved.
