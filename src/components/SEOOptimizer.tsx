@@ -111,7 +111,7 @@ export default function SEOOptimizer({
             "contactPoint": {
               "@type": "ContactPoint",
               "contactType": "customer service",
-              "email": "support@odubo.studio"
+              "email": "baad@odubo.studio"
             },
             "address": {
               "@type": "PostalAddress",

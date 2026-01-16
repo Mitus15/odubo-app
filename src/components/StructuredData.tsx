@@ -56,7 +56,7 @@ export default function StructuredData({ type, data }: StructuredDataProps) {
           "contactPoint": {
             "@type": "ContactPoint",
             "contactType": "customer service",
-            "email": "support@odubo.studio"
+            "email": "baad@odubo.studio"
           }
         };
         break;

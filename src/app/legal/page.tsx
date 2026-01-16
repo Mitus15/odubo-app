@@ -74,7 +74,7 @@ const LegalContent = {
       <p>We're happy to exchange items for different sizes or colors when available. Contact us to arrange an exchange.</p>
       
       <h2 className="text-lg font-semibold mt-8 mb-3 text-[#ede8df]">Questions?</h2>
-      <p>Contact our support team at <span className="text-[#ede8df]">support@odubo.studio</span> for any shipping or returns questions.</p>
+      <p>Contact our support team at <span className="text-[#ede8df]">baad@odubo.studio</span> for any shipping or returns questions.</p>
     </>
   )
 };
