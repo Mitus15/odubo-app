@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import ScreenLayout from '@/components/ui/ScreenLayout';
 import ScrollContainer from '@/components/ui/ScrollContainer';
 import VinylMiniPlayer from '@/components/player/VinylMiniPlayer';
+import ContactModal from '@/components/store/ContactModal';
 import Link from 'next/link';
 
 interface ProductCard {
@@ -277,6 +278,9 @@ export default function StorePageClient({ isStoreOpen, isAdmin, initialProducts 
   const [cartCount, setCartCount] = useState(0);
   const [quickAddFeedback, setQuickAddFeedback] = useState<string | null>(null);
   const [hasScrolled, setHasScrolled] = useState(false);
+
+  // Contact modal state
+  const [contactModalOpen, setContactModalOpen] = useState(false);
 
   // Track cart count from localStorage
   useEffect(() => {
@@ -865,9 +869,12 @@ export default function StorePageClient({ isStoreOpen, isAdmin, initialProducts 
                 Shipping & Returns
               </Link>
               <span className="text-[#502d26]/30">•</span>
-              <Link href="/contact" className="hover:text-[#ede8df] transition-colors">
+              <button
+                onClick={() => setContactModalOpen(true)}
+                className="hover:text-[#ede8df] transition-colors"
+              >
                 Contact
-              </Link>
+              </button>
             </div>
             <p className="text-[9px] text-[#502d26]/40">
               © {new Date().getFullYear()} Odubo Studio. All rights reserved.
@@ -891,6 +898,12 @@ export default function StorePageClient({ isStoreOpen, isAdmin, initialProducts 
         setOpenOption={setOpenOption}
         addToCart={addToCart}
         addFeedback={addFeedback}
+      />
+
+      {/* Contact Modal */}
+      <ContactModal
+        isOpen={contactModalOpen}
+        onClose={() => setContactModalOpen(false)}
       />
     </ScreenLayout>
   );

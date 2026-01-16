@@ -68,7 +68,7 @@ export default function ExpandableLogoMenu({
   const { openMaison, closeAll: closeAllModals, cartCount: legacyCartCount, storeAccessible: legacyStoreAccessible, checkingStoreAccess: legacyCheckingAccess } = useOmniShop();
   
   // New store system
-  const { openStore, isStoreAccessible, isCheckingAccess, cartItemCount } = useStore();
+  const { openStore, isStoreAccessible, isCheckingAccess, cartItemCount, view: storeView } = useStore();
   
   // Use new store values with fallback to legacy
   const storeAccessible = isStoreAccessible || legacyStoreAccessible;
@@ -436,8 +436,8 @@ export default function ExpandableLogoMenu({
     >
       <div className="relative flex flex-col items-center gap-2">
         {/* Notification badge - positioned relative to container, not button */}
-        {/* Only show when store is accessible */}
-        {!isExpanded && cartCount > 0 && storeAccessible && (
+        {/* Only show when menu collapsed AND store is closed (not open/opening) */}
+        {!isExpanded && storeView === 'closed' && cartCount > 0 && storeAccessible && (
           <span className="absolute -top-1 -right-1 w-[18px] h-[18px] flex items-center justify-center bg-[#ede8df] text-[#1a1817] text-[10px] font-bold rounded-full shadow-lg border border-[#1a1817]/20 z-10 pointer-events-none">
             {cartCount > 9 ? '9+' : cartCount}
           </span>
