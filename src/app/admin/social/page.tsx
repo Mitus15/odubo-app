@@ -385,9 +385,41 @@ export default function SocialCMSPage() {
         </div>
       </header>
 
+      {/* Mobile Filter Bar */}
+      <div className="md:hidden sticky top-[60px] z-30 bg-[#0d0b0a]/95 backdrop-blur-sm border-b border-[#b2a491]/10 px-4 py-3">
+        <div className="flex items-center gap-3">
+          {/* Folder Dropdown */}
+          <select
+            value={selectedFolder}
+            onChange={(e) => setSelectedFolder(e.target.value)}
+            className="flex-1 px-3 py-2 bg-[#1a1614] border border-[#b2a491]/20 rounded-lg text-sm focus:outline-none focus:border-[#b2a491]/40"
+          >
+            <option value="all">All Content ({totalCount})</option>
+            {folders.map((f) => (
+              <option key={f.id} value={f.slug}>{f.name} ({f.content_count})</option>
+            ))}
+          </select>
+
+          {/* Status Dropdown */}
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+            className="px-3 py-2 bg-[#1a1614] border border-[#b2a491]/20 rounded-lg text-sm focus:outline-none focus:border-[#b2a491]/40"
+          >
+            <option value="all">All</option>
+            <option value="draft">Draft</option>
+            <option value="review">Review</option>
+            <option value="approved">Approved</option>
+            <option value="scheduled">Scheduled</option>
+            <option value="posted">Posted</option>
+            <option value="archived">Archived</option>
+          </select>
+        </div>
+      </div>
+
       <div className="flex flex-col md:flex-row">
-        {/* Sidebar - Folders */}
-        <aside className="w-full md:w-56 lg:w-64 border-b md:border-b-0 md:border-r border-[#b2a491]/10 p-4">
+        {/* Sidebar - Folders (hidden on mobile, filter bar above replaces it) */}
+        <aside className="hidden md:block md:w-56 lg:w-64 md:border-r border-[#b2a491]/10 p-4">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-medium text-[#888] uppercase tracking-wider">Folders</h2>
             <button
@@ -2627,6 +2659,7 @@ function CalendarView({
   onCreateContent?: (date: Date) => void;
 }) {
   const [viewMode, setViewMode] = useState<'week' | 'month'>('week');
+  const [mobileView, setMobileView] = useState<'list' | 'grid'>('list');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [calendarData, setCalendarData] = useState<Record<string, SocialContent[]>>({});
   const [isLoading, setIsLoading] = useState(false);
@@ -2823,7 +2856,28 @@ function CalendarView({
           </button>
           <h2 className="text-lg font-medium ml-2">{formatHeader()}</h2>
         </div>
-        <div className="flex items-center gap-1 bg-[#0d0b0a] border border-[#b2a491]/20 rounded-lg p-0.5">
+        {/* Mobile: List/Grid toggle */}
+        <div className="md:hidden flex items-center gap-1 bg-[#0d0b0a] border border-[#b2a491]/20 rounded-lg p-0.5">
+          <button
+            onClick={() => setMobileView('list')}
+            className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+              mobileView === 'list' ? 'bg-[#b2a491] text-[#0d0b0a]' : 'hover:bg-[#1a1614]'
+            }`}
+          >
+            List
+          </button>
+          <button
+            onClick={() => setMobileView('grid')}
+            className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+              mobileView === 'grid' ? 'bg-[#b2a491] text-[#0d0b0a]' : 'hover:bg-[#1a1614]'
+            }`}
+          >
+            Grid
+          </button>
+        </div>
+
+        {/* Desktop: Week/Month toggle */}
+        <div className="hidden md:flex items-center gap-1 bg-[#0d0b0a] border border-[#b2a491]/20 rounded-lg p-0.5">
           <button
             onClick={() => setViewMode('week')}
             className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
@@ -2843,76 +2897,208 @@ function CalendarView({
         </div>
       </div>
 
-      {/* Day Headers */}
-      <div className={`grid ${viewMode === 'week' ? 'grid-cols-7' : 'grid-cols-7'} gap-px bg-[#b2a491]/10 rounded-t-lg overflow-hidden`}>
-        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-          <div key={day} className="bg-[#0d0b0a] px-2 py-2 text-center text-xs font-medium text-[#888]">
-            {day}
-          </div>
-        ))}
-      </div>
+      {/* Mobile Agenda List View */}
+      {mobileView === 'list' && (
+        <div className="md:hidden space-y-3 flex-1 overflow-y-auto">
+          {isLoading ? (
+            <div className="flex-1 flex items-center justify-center py-12">
+              <div className="w-8 h-8 border-2 border-[#b2a491]/30 border-t-[#b2a491] rounded-full animate-spin" />
+            </div>
+          ) : (
+            days
+              .filter((day) => getContentForDay(day).length > 0 || isToday(day))
+              .map((day, index) => {
+                const dayContent = getContentForDay(day);
+                const today = isToday(day);
 
-      {/* Calendar Grid */}
-      {isLoading ? (
-        <div className="flex-1 flex items-center justify-center">
-          <div className="w-8 h-8 border-2 border-[#b2a491]/30 border-t-[#b2a491] rounded-full animate-spin" />
-        </div>
-      ) : (
-        <div className={`grid grid-cols-7 gap-px bg-[#b2a491]/10 rounded-b-lg overflow-hidden flex-1 ${
-          viewMode === 'month' ? 'auto-rows-fr' : ''
-        }`}>
-          {days.map((day, index) => {
-            const dayContent = getContentForDay(day);
-            const today = isToday(day);
-            const inMonth = viewMode === 'month' ? isCurrentMonth(day) : true;
-
-            return (
-              <div
-                key={index}
-                onClick={() => onCreateContent?.(day)}
-                className={`bg-[#0d0b0a] p-2 ${viewMode === 'week' ? 'min-h-[120px]' : 'min-h-[80px]'} ${
-                  !inMonth ? 'opacity-40' : ''
-                } hover:bg-[#1a1614]/50 cursor-pointer transition-colors group`}
-              >
-                <div className={`text-sm mb-1 ${today ? 'text-[#b2a491] font-bold' : 'text-[#888]'}`}>
-                  {day.getDate()}
-                </div>
-                <div className="space-y-1">
-                  {dayContent.slice(0, viewMode === 'week' ? 4 : 2).map((item) => {
-                    const platforms: string[] = item.scheduled_platforms || [];
-                    return (
-                      <button
-                        key={item.id}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onEditContent(item);
-                        }}
-                        className="w-full text-left p-1.5 bg-[#1a1614] hover:bg-[#252220] rounded text-xs truncate border border-[#b2a491]/10 transition-colors"
-                      >
-                        <div className="flex items-center gap-1 mb-0.5">
-                          {platforms.slice(0, 3).map((p) => (
-                            <span key={p} className={`w-1.5 h-1.5 rounded-full ${platformColors[p] || 'bg-gray-500'}`} />
-                          ))}
+                return (
+                  <div
+                    key={index}
+                    className="bg-[#1a1614] rounded-xl overflow-hidden border border-[#b2a491]/10"
+                  >
+                    {/* Day Header */}
+                    <div
+                      onClick={() => onCreateContent?.(day)}
+                      className={`flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-[#252220] transition-colors ${
+                        today ? 'bg-[#b2a491]/10' : ''
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`text-2xl font-bold ${today ? 'text-[#b2a491]' : 'text-[#ede8df]'}`}>
+                          {day.getDate()}
                         </div>
-                        <span className="truncate block">{item.title || 'Untitled'}</span>
-                      </button>
-                    );
-                  })}
-                  {dayContent.length > (viewMode === 'week' ? 4 : 2) && (
-                    <div className="text-xs text-[#888] text-center">
-                      +{dayContent.length - (viewMode === 'week' ? 4 : 2)} more
+                        <div>
+                          <div className={`text-sm ${today ? 'text-[#b2a491] font-medium' : 'text-[#888]'}`}>
+                            {day.toLocaleDateString('default', { weekday: 'short' })}
+                          </div>
+                          <div className="text-xs text-[#666]">
+                            {day.toLocaleDateString('default', { month: 'short', year: 'numeric' })}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {dayContent.length > 0 && (
+                          <span className="text-sm text-[#888]">{dayContent.length} item{dayContent.length > 1 ? 's' : ''}</span>
+                        )}
+                        <span className="text-[#666]">+</span>
+                      </div>
                     </div>
-                  )}
-                </div>
-                {/* Quick add indicator on hover */}
-                <div className="hidden group-hover:flex items-center justify-center mt-1 text-xs text-[#888]">
-                  <span>+ Add</span>
-                </div>
-              </div>
-            );
-          })}
+
+                    {/* Day Content Items */}
+                    {dayContent.length > 0 && (
+                      <div className="px-3 pb-3 space-y-2">
+                        {dayContent.map((item) => {
+                          const platforms: string[] = item.scheduled_platforms || [];
+                          return (
+                            <button
+                              key={item.id}
+                              onClick={() => onEditContent(item)}
+                              className="w-full flex items-center gap-3 p-3 bg-[#0d0b0a] hover:bg-[#252220] rounded-lg text-left transition-colors"
+                            >
+                              {/* Thumbnail */}
+                              {item.thumbnail_url ? (
+                                <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-[#252220]">
+                                  <img
+                                    src={item.thumbnail_url}
+                                    alt=""
+                                    className="w-full h-full object-cover"
+                                  />
+                                </div>
+                              ) : (
+                                <div className="w-12 h-12 rounded-lg bg-[#252220] flex items-center justify-center flex-shrink-0">
+                                  <svg className="w-5 h-5 text-[#666]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z" />
+                                  </svg>
+                                </div>
+                              )}
+                              {/* Content Info */}
+                              <div className="flex-1 min-w-0">
+                                <div className="font-medium text-sm truncate">{item.title || 'Untitled'}</div>
+                                <div className="flex items-center gap-2 mt-1">
+                                  {/* Platform dots */}
+                                  <div className="flex items-center gap-1">
+                                    {platforms.slice(0, 3).map((p) => (
+                                      <span key={p} className={`w-2 h-2 rounded-full ${platformColors[p] || 'bg-gray-500'}`} />
+                                    ))}
+                                  </div>
+                                  {/* Status badge */}
+                                  <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                    item.status === 'posted' ? 'bg-green-500/20 text-green-400' :
+                                    item.status === 'scheduled' ? 'bg-blue-500/20 text-blue-400' :
+                                    item.status === 'approved' ? 'bg-purple-500/20 text-purple-400' :
+                                    'bg-[#888]/20 text-[#888]'
+                                  }`}>
+                                    {item.status}
+                                  </span>
+                                  {/* Scheduled time */}
+                                  {item.scheduled_datetime && (
+                                    <span className="text-xs text-[#666]">
+                                      {new Date(item.scheduled_datetime).toLocaleTimeString('default', { hour: 'numeric', minute: '2-digit' })}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              {/* Chevron */}
+                              <svg className="w-5 h-5 text-[#666] flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                              </svg>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Empty day (today only) */}
+                    {dayContent.length === 0 && today && (
+                      <div className="px-4 pb-4">
+                        <div className="text-sm text-[#666] italic">No content scheduled</div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+          )}
+          {!isLoading && days.filter((day) => getContentForDay(day).length > 0 || isToday(day)).length === 0 && (
+            <div className="text-center py-12 text-[#888]">
+              <div className="text-sm">No scheduled content this {viewMode === 'week' ? 'week' : 'month'}</div>
+            </div>
+          )}
         </div>
       )}
+
+      {/* Desktop Grid View + Mobile Grid View */}
+      <div className={`${mobileView === 'list' ? 'hidden md:block' : ''} flex-1 flex flex-col`}>
+        {/* Day Headers */}
+        <div className={`grid grid-cols-7 gap-px bg-[#b2a491]/10 rounded-t-lg overflow-hidden`}>
+          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+            <div key={day} className="bg-[#0d0b0a] px-2 py-2 text-center text-xs font-medium text-[#888]">
+              {day}
+            </div>
+          ))}
+        </div>
+
+        {/* Calendar Grid */}
+        {isLoading ? (
+          <div className="flex-1 flex items-center justify-center">
+            <div className="w-8 h-8 border-2 border-[#b2a491]/30 border-t-[#b2a491] rounded-full animate-spin" />
+          </div>
+        ) : (
+          <div className={`grid grid-cols-7 gap-px bg-[#b2a491]/10 rounded-b-lg overflow-hidden flex-1 ${
+            viewMode === 'month' ? 'auto-rows-fr' : ''
+          }`}>
+            {days.map((day, index) => {
+              const dayContent = getContentForDay(day);
+              const today = isToday(day);
+              const inMonth = viewMode === 'month' ? isCurrentMonth(day) : true;
+
+              return (
+                <div
+                  key={index}
+                  onClick={() => onCreateContent?.(day)}
+                  className={`bg-[#0d0b0a] p-2 ${viewMode === 'week' ? 'min-h-[120px]' : 'min-h-[80px]'} ${
+                    !inMonth ? 'opacity-40' : ''
+                  } hover:bg-[#1a1614]/50 cursor-pointer transition-colors group`}
+                >
+                  <div className={`text-sm mb-1 ${today ? 'text-[#b2a491] font-bold' : 'text-[#888]'}`}>
+                    {day.getDate()}
+                  </div>
+                  <div className="space-y-1">
+                    {dayContent.slice(0, viewMode === 'week' ? 4 : 2).map((item) => {
+                      const platforms: string[] = item.scheduled_platforms || [];
+                      return (
+                        <button
+                          key={item.id}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEditContent(item);
+                          }}
+                          className="w-full text-left p-1.5 bg-[#1a1614] hover:bg-[#252220] rounded text-xs truncate border border-[#b2a491]/10 transition-colors"
+                        >
+                          <div className="flex items-center gap-1 mb-0.5">
+                            {platforms.slice(0, 3).map((p) => (
+                              <span key={p} className={`w-1.5 h-1.5 rounded-full ${platformColors[p] || 'bg-gray-500'}`} />
+                            ))}
+                          </div>
+                          <span className="truncate block">{item.title || 'Untitled'}</span>
+                        </button>
+                      );
+                    })}
+                    {dayContent.length > (viewMode === 'week' ? 4 : 2) && (
+                      <div className="text-xs text-[#888] text-center">
+                        +{dayContent.length - (viewMode === 'week' ? 4 : 2)} more
+                      </div>
+                    )}
+                  </div>
+                  {/* Quick add indicator on hover */}
+                  <div className="hidden group-hover:flex items-center justify-center mt-1 text-xs text-[#888]">
+                    <span>+ Add</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
