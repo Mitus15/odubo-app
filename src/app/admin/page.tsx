@@ -167,6 +167,16 @@ const Icons = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" />
     </svg>
   ),
+  logout: (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
+    </svg>
+  ),
+  account: (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M17.982 18.725A7.488 7.488 0 0012 15.75a7.488 7.488 0 00-5.982 2.975m11.963 0a9 9 0 10-11.963 0m11.963 0A8.966 8.966 0 0112 21a8.966 8.966 0 01-5.982-2.275M15 9.75a3 3 0 11-6 0 3 3 0 016 0z" />
+    </svg>
+  ),
   // Intelligence & Analytics icons
   intelligence: (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
@@ -258,6 +268,7 @@ const navItems: NavItem[] = [
       { id: 'social-growth', label: 'Social Growth', icon: Icons.streaming },
     ]
   },
+  { id: 'account', label: 'Account', icon: Icons.account },
   {
     id: 'system',
     label: 'System',
@@ -516,6 +527,19 @@ export default function AdminPage() {
 
 function AdminFooter() {
   const { user } = useUser();
+
+  const handleLogout = () => {
+    // Clear localStorage
+    localStorage.removeItem('token');
+    // Clear sessionStorage cache
+    sessionStorage.removeItem('me.cache');
+    sessionStorage.removeItem('me.cache.ts');
+    // Clear cookie
+    document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    // Redirect to login
+    window.location.href = '/login';
+  };
+
   return (
     <div className="p-4 xl:p-5 border-t border-[#502d26]/10 flex-shrink-0">
       <div className="flex flex-col gap-3">
@@ -528,13 +552,22 @@ function AdminFooter() {
             {user.email}{user.is_admin ? ' • Admin' : ''}
           </p>
         )}
-        <Link
-          href="/"
-          className="flex items-center gap-2 text-[#502d26]/60 hover:text-[#726d6c] transition-colors"
-        >
-          {Icons.back}
-          <span className="text-xs font-medium">Back to Site</span>
-        </Link>
+        <div className="flex items-center gap-4">
+          <Link
+            href="/"
+            className="flex items-center gap-2 text-[#502d26]/60 hover:text-[#726d6c] transition-colors"
+          >
+            {Icons.back}
+            <span className="text-xs font-medium">Back to Site</span>
+          </Link>
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-2 text-[#502d26]/60 hover:text-red-400 transition-colors"
+          >
+            {Icons.logout}
+            <span className="text-xs font-medium">Log Out</span>
+          </button>
+        </div>
       </div>
     </div>
   );

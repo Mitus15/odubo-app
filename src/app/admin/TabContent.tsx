@@ -32,6 +32,9 @@ const ExpensesTab = dynamic(() => import('./tabs/ExpensesTab'));
 const AdCampaignsTab = dynamic(() => import('./tabs/AdCampaignsTab'));
 const SocialGrowthTab = dynamic(() => import('./tabs/SocialGrowthTab'));
 
+// === ACCOUNT TAB ===
+const AccountTab = dynamic(() => import('./tabs/AccountTab'));
+
 // Loading fallback component
 function LoadingFallback({ title }: { title: string }) {
   return (
@@ -77,6 +80,8 @@ type AdminTab =
   | 'analytics'
   // Business / BI
   | 'reports' | 'finance' | 'expenses' | 'ad-campaigns' | 'social-growth'
+  // Account
+  | 'account'
   // System
   | 'users' | 'database' | 'storage' | 'api-keys'
   | string; // Allow any string for flexibility
@@ -216,6 +221,14 @@ export default function TabContent({ activeTab, canAccess }: TabContentProps) {
       return (
         <Suspense fallback={<LoadingFallback title="Social Growth" />}>
           <SocialGrowthTab />
+        </Suspense>
+      );
+
+    // === ACCOUNT ===
+    case 'account':
+      return (
+        <Suspense fallback={<LoadingFallback title="Account" />}>
+          <AccountTab />
         </Suspense>
       );
 
