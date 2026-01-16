@@ -3,8 +3,8 @@ import { Resend } from 'resend';
 
 // Initialize Resend client
 const resendApiKey = process.env.RESEND_API_KEY;
-const fromEmail = process.env.RESEND_FROM_EMAIL || process.env.EMAIL_FROM || 'noreply@odubo.com';
-const supportEmail = process.env.SUPPORT_EMAIL || 'support@odubo.com';
+const fromEmail = process.env.RESEND_FROM_EMAIL || process.env.EMAIL_FROM || 'noreply@odubo.studio';
+const supportEmail = process.env.SUPPORT_EMAIL || 'support@odubo.studio';
 
 interface ContactFormData {
   name: string;

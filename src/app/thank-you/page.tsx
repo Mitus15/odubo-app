@@ -118,8 +118,8 @@ function ThankYouContent() {
           {/* Support */}
           <p className="mt-8 text-sm text-[#ede8df]/50">
             Questions? Contact us at{' '}
-            <a href="mailto:support@odubo.com" className="text-[#b2a491] hover:text-[#ede8df] transition-colors">
-              support@odubo.com
+            <a href="mailto:support@odubo.studio" className="text-[#b2a491] hover:text-[#ede8df] transition-colors">
+              support@odubo.studio
             </a>
           </p>
         </div>
