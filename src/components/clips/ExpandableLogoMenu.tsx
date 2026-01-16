@@ -56,6 +56,7 @@ export default function ExpandableLogoMenu({
   const [position, setPosition] = useState<SnapPosition>('middle-right'); // DEFAULT
   const [isDragging, setIsDragging] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false); // For backdrop-blur optimization
+  const [isOpeningStore, setIsOpeningStore] = useState(false); // Track store opening to prevent badge flash
 
   const menuRef = useRef<HTMLDivElement>(null);
   const dragStartPos = useRef<{ x: number; y: number } | null>(null);
@@ -296,12 +297,16 @@ export default function ExpandableLogoMenu({
 
   const handleShop = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
+    // Set flag BEFORE collapse to prevent badge flash
+    setIsOpeningStore(true);
     collapse();
     // Use requestAnimationFrame to prevent stuttering on production
     requestAnimationFrame(() => {
       // Close any legacy modals first, then open new Store
       closeAllModals();
       openStore();
+      // Reset flag after store is open
+      setTimeout(() => setIsOpeningStore(false), 100);
     });
   }, [collapse, closeAllModals, openStore]);
 
@@ -436,8 +441,8 @@ export default function ExpandableLogoMenu({
     >
       <div className="relative flex flex-col items-center gap-2">
         {/* Notification badge - positioned relative to container, not button */}
-        {/* Only show when menu collapsed AND store is completely closed */}
-        {!isExpanded && storeView === 'closed' && cartCount > 0 && storeAccessible && (
+        {/* Only show when menu collapsed AND store is completely closed AND not opening */}
+        {!isExpanded && !isOpeningStore && storeView === 'closed' && cartCount > 0 && storeAccessible && (
           <span className="absolute -top-1 -right-1 w-[18px] h-[18px] flex items-center justify-center bg-[#ede8df] text-[#1a1817] text-[10px] font-bold rounded-full shadow-lg border border-[#1a1817]/20 z-10 pointer-events-none">
             {cartCount > 9 ? '9+' : cartCount}
           </span>
@@ -470,7 +475,7 @@ export default function ExpandableLogoMenu({
           <img
             src="/odubo_logo_emboss.webp"
             alt=""
-            className="w-7 h-7 object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)]"
+            className="w-7 h-7 object-contain"
             draggable={false}
           />
 

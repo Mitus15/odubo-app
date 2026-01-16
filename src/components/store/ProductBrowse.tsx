@@ -266,7 +266,7 @@ export default function ProductBrowse() {
         className="flex-1 overflow-y-auto overscroll-contain"
         style={{ 
           WebkitOverflowScrolling: 'touch',
-          paddingBottom: 'calc(44px + env(safe-area-inset-bottom, 0px))'
+          paddingBottom: 'calc(100px + env(safe-area-inset-bottom, 0px))'
         }}
       >
         {/* Initial loading state */}

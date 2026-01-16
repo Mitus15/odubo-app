@@ -100,7 +100,7 @@ export default function StoreOrchestrator() {
                     className="py-2 px-1 text-white/50 hover:text-white/80 transition-colors min-h-[44px] flex items-center"
                     style={{ touchAction: 'manipulation' }}
                   >
-                    Shipping
+                    Shipping & Returns
                   </button>
                   <span className="text-white/20">•</span>
                   <button
