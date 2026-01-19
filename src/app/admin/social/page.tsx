@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
+import PublishModal from './PublishModal';
 
 // Types
 interface Folder {
@@ -380,7 +381,7 @@ export default function SocialCMSPage() {
             }`}
           >
             {Icons.chart}
-            <span>Analytics</span>
+            <span>History</span>
           </button>
         </div>
       </header>
@@ -572,7 +573,9 @@ export default function SocialCMSPage() {
           )}
 
           {viewMode === 'analytics' && (
-            <AnalyticsView content={content.filter((c) => c.status === 'posted')} />
+            <PostingHistoryView
+              content={content.filter((c) => c.status === 'posted' || c.status === 'scheduled')}
+            />
           )}
         </main>
       </div>
@@ -2133,6 +2136,7 @@ function ContentEditorModal({
   const [aiError, setAiError] = useState<string | null>(null);
   const [copiedPlatform, setCopiedPlatform] = useState<string | null>(null);
   const [isMarkingPosted, setIsMarkingPosted] = useState(false);
+  const [showPublishModal, setShowPublishModal] = useState(false);
 
   const thumbnailUrl = content.thumbnail_url || (content.upload_uid ? `https://videodelivery.net/${content.upload_uid}/thumbnails/thumbnail.jpg` : null);
   const downloadUrl = content.upload_uid ? `https://videodelivery.net/${content.upload_uid}/downloads/default.mp4` : null;
@@ -2461,20 +2465,27 @@ function ContentEditorModal({
               {copiedPlatform === 'youtube' ? 'Copied!' : 'Copy'}
             </button>
 
-            {/* Mark as Posted - show only if not already posted */}
-            {status !== 'posted' && (
+            {/* Publish Button - show only if not already posted and has video */}
+            {status !== 'posted' && content.upload_uid && (
               <button
-                onClick={handleMarkPosted}
-                disabled={isMarkingPosted}
-                className="flex items-center gap-2 px-3 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 ml-auto"
+                onClick={() => setShowPublishModal(true)}
+                className="flex items-center gap-2 px-4 py-2.5 bg-[#843c2d] hover:bg-[#6b3225] active:bg-[#5a2a1f] text-white rounded-xl text-sm font-medium transition-colors ml-auto min-h-[44px]"
               >
-                {isMarkingPosted ? (
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                ) : (
-                  Icons.checkCircle
-                )}
-                {isMarkingPosted ? 'Posting...' : 'Mark as Posted'}
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+                </svg>
+                Publish
               </button>
+            )}
+
+            {/* Posted Badge */}
+            {status === 'posted' && (
+              <div className="flex items-center gap-2 px-3 py-2 bg-emerald-500/20 text-emerald-400 rounded-xl text-sm font-medium ml-auto">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Posted
+              </div>
             )}
           </div>
 
@@ -2644,6 +2655,31 @@ function ContentEditorModal({
           </div>
         </div>
       </motion.div>
+
+      {/* Publish Modal */}
+      {showPublishModal && (
+        <PublishModal
+          content={{
+            id: content.id,
+            upload_uid: content.upload_uid,
+            thumbnail_url: content.thumbnail_url,
+            title,
+            caption_instagram: captionInstagram,
+            caption_tiktok: captionTiktok,
+            caption_youtube: captionYoutube,
+            hashtags_instagram: hashtagsInstagram,
+            hashtags_tiktok: hashtagsTiktok,
+            hashtags_youtube: hashtagsYoutube,
+            status,
+          }}
+          onClose={() => setShowPublishModal(false)}
+          onPublished={() => {
+            setStatus('posted');
+            setShowPublishModal(false);
+            onSave();
+          }}
+        />
+      )}
     </motion.div>
   );
 }
@@ -3103,14 +3139,360 @@ function CalendarView({
   );
 }
 
-// Analytics View Component (placeholder)
-function AnalyticsView({ content }: { content: SocialContent[] }) {
+// Analytics data type
+interface AnalyticsData {
+  content_id: number;
+  platform: string;
+  views: number;
+  likes: number;
+  comments: number;
+  shares: number;
+  saves: number;
+  platform_url: string | null;
+  updated_at: string;
+}
+
+// Posting History / Reports View Component
+function PostingHistoryView({ content }: { content: SocialContent[] }) {
+  const [analytics, setAnalytics] = useState<Record<number, AnalyticsData[]>>({});
+  const [syncing, setSyncing] = useState(false);
+  const [lastSynced, setLastSynced] = useState<string | null>(null);
+
+  // Fetch analytics on mount
+  useEffect(() => {
+    fetchAnalytics();
+  }, []);
+
+  const fetchAnalytics = async () => {
+    try {
+      const res = await fetch('/api/admin/social/analytics/sync');
+      const data: { success?: boolean; analytics?: AnalyticsData[] } = await res.json();
+      if (data.success && data.analytics) {
+        // Group by content_id
+        const grouped: Record<number, AnalyticsData[]> = {};
+        data.analytics.forEach((a) => {
+          if (!grouped[a.content_id]) grouped[a.content_id] = [];
+          grouped[a.content_id].push(a);
+        });
+        setAnalytics(grouped);
+      }
+    } catch (err) {
+      console.error('Failed to fetch analytics:', err);
+    }
+  };
+
+  const handleSyncAnalytics = async () => {
+    setSyncing(true);
+    try {
+      const res = await fetch('/api/admin/social/analytics/sync', { method: 'POST' });
+      const data: { success?: boolean; synced?: number } = await res.json();
+      if (data.success) {
+        setLastSynced(new Date().toLocaleTimeString());
+        await fetchAnalytics();
+      }
+    } catch (err) {
+      console.error('Sync failed:', err);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  // Separate posted and scheduled content
+  const postedContent = content
+    .filter((c) => c.status === 'posted')
+    .sort((a, b) => {
+      const dateA = a.posted_at ? new Date(a.posted_at).getTime() : 0;
+      const dateB = b.posted_at ? new Date(b.posted_at).getTime() : 0;
+      return dateB - dateA; // Most recent first
+    });
+
+  const scheduledContent = content
+    .filter((c) => c.status === 'scheduled')
+    .sort((a, b) => {
+      const dateA = a.scheduled_for ? new Date(a.scheduled_for).getTime() : 0;
+      const dateB = b.scheduled_for ? new Date(b.scheduled_for).getTime() : 0;
+      return dateA - dateB; // Soonest first
+    });
+
+  // Calculate platform stats
+  const platformStats = { instagram: 0, tiktok: 0, youtube: 0 };
+  postedContent.forEach((item) => {
+    if (item.posted_platforms) {
+      try {
+        const platforms = JSON.parse(item.posted_platforms) as string[];
+        platforms.forEach((p) => {
+          if (p in platformStats) platformStats[p as keyof typeof platformStats]++;
+        });
+      } catch {
+        // Invalid JSON
+      }
+    }
+  });
+
+  // Calculate total engagement from analytics
+  const totalEngagement = Object.values(analytics).reduce((sum, analyticsArr) => {
+    return (
+      sum +
+      analyticsArr.reduce((s, a) => s + (a.views || 0) + (a.likes || 0) + (a.comments || 0), 0)
+    );
+  }, 0);
+
+  // Format date/time for display
+  const formatDateTime = (dateStr: string | null) => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+  };
+
+  // Parse platforms from JSON string
+  const parsePlatforms = (platformsStr: string | null): string[] => {
+    if (!platformsStr) return [];
+    try {
+      return JSON.parse(platformsStr);
+    } catch {
+      return [];
+    }
+  };
+
+  // Format number with K/M suffix
+  const formatNumber = (num: number): string => {
+    if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+    if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+    return num.toString();
+  };
+
+  // Get analytics for a content item
+  const getContentAnalytics = (contentId: number): AnalyticsData[] => {
+    return analytics[contentId] || [];
+  };
+
+  // Get total metrics for a content item across all platforms
+  const getTotalMetrics = (contentId: number) => {
+    const contentAnalytics = getContentAnalytics(contentId);
+    return contentAnalytics.reduce(
+      (totals, a) => ({
+        views: totals.views + (a.views || 0),
+        likes: totals.likes + (a.likes || 0),
+        comments: totals.comments + (a.comments || 0),
+        shares: totals.shares + (a.shares || 0),
+      }),
+      { views: 0, likes: 0, comments: 0, shares: 0 }
+    );
+  };
+
+  // Platform icons
+  const PlatformIcon = ({ platform }: { platform: string }) => {
+    switch (platform) {
+      case 'instagram':
+        return <span className="text-pink-400">📸</span>;
+      case 'tiktok':
+        return <span>🎵</span>;
+      case 'youtube':
+        return <span className="text-red-500">📺</span>;
+      default:
+        return <span>🌐</span>;
+    }
+  };
+
   return (
-    <div className="text-center py-20">
-      <div className="w-16 h-16 mx-auto mb-4 text-[#888]">{Icons.chart}</div>
-      <h3 className="text-lg font-medium mb-2">Analytics</h3>
-      <p className="text-[#888] mb-4">{content.length} posted items to track</p>
-      <p className="text-sm text-[#666]">Analytics tracking coming in Phase 3</p>
+    <div className="space-y-6">
+      {/* Header with Sync Button */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-medium text-[#ede8df]">Performance Overview</h2>
+          {lastSynced && <p className="text-xs text-[#666]">Last synced: {lastSynced}</p>}
+        </div>
+        <button
+          onClick={handleSyncAnalytics}
+          disabled={syncing}
+          className="flex items-center gap-2 px-4 py-2 bg-[#843c2d] hover:bg-[#6b3225] active:bg-[#5a2a1f] text-white rounded-lg transition-colors disabled:opacity-50 min-h-[44px]"
+        >
+          <svg
+            className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={1.5}
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"
+            />
+          </svg>
+          <span className="text-sm font-medium">{syncing ? 'Syncing...' : 'Sync Analytics'}</span>
+        </button>
+      </div>
+
+      {/* Summary Stats */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 sm:gap-4">
+        <div className="bg-[#1a1614] rounded-xl p-4 border border-[#b2a491]/10">
+          <div className="text-2xl sm:text-3xl font-bold text-[#ede8df]">{postedContent.length}</div>
+          <div className="text-xs sm:text-sm text-[#888]">Posted</div>
+        </div>
+        <div className="bg-[#1a1614] rounded-xl p-4 border border-[#b2a491]/10">
+          <div className="text-2xl sm:text-3xl font-bold text-blue-400">{scheduledContent.length}</div>
+          <div className="text-xs sm:text-sm text-[#888]">Scheduled</div>
+        </div>
+        <div className="bg-[#1a1614] rounded-xl p-4 border border-[#b2a491]/10">
+          <div className="text-2xl sm:text-3xl font-bold text-pink-400">{platformStats.instagram}</div>
+          <div className="text-xs sm:text-sm text-[#888] flex items-center gap-1">
+            <span>📸</span> Instagram
+          </div>
+        </div>
+        <div className="bg-[#1a1614] rounded-xl p-4 border border-[#b2a491]/10">
+          <div className="text-2xl sm:text-3xl font-bold text-[#ede8df]">{platformStats.tiktok}</div>
+          <div className="text-xs sm:text-sm text-[#888] flex items-center gap-1">
+            <span>🎵</span> TikTok
+          </div>
+        </div>
+        <div className="bg-[#1a1614] rounded-xl p-4 border border-[#b2a491]/10 col-span-2 sm:col-span-1">
+          <div className="text-2xl sm:text-3xl font-bold text-amber-400">{formatNumber(totalEngagement)}</div>
+          <div className="text-xs sm:text-sm text-[#888]">Total Engagement</div>
+        </div>
+      </div>
+
+      {/* Upcoming Scheduled */}
+      {scheduledContent.length > 0 && (
+        <div>
+          <h3 className="text-sm font-medium text-[#b2a491] mb-3 flex items-center gap-2">
+            <span>⏰</span> Upcoming ({scheduledContent.length})
+          </h3>
+          <div className="space-y-2">
+            {scheduledContent.map((item) => (
+              <div
+                key={item.id}
+                className="flex items-center gap-3 p-3 bg-[#1a1614] rounded-xl border border-blue-500/20"
+              >
+                {/* Thumbnail */}
+                {item.thumbnail_url ? (
+                  <img
+                    src={item.thumbnail_url}
+                    alt={item.title}
+                    className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
+                  />
+                ) : (
+                  <div className="w-12 h-12 rounded-lg bg-[#302927] flex items-center justify-center flex-shrink-0">
+                    <span className="text-xl">🎬</span>
+                  </div>
+                )}
+
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium text-[#ede8df] text-sm truncate">{item.title}</div>
+                  <div className="text-xs text-blue-400">{formatDateTime(item.scheduled_for)}</div>
+                </div>
+
+                {/* Platforms */}
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  {parsePlatforms(item.scheduled_platforms).map((p) => (
+                    <PlatformIcon key={p} platform={p} />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Posting History with Analytics */}
+      <div>
+        <h3 className="text-sm font-medium text-[#b2a491] mb-3 flex items-center gap-2">
+          <span>✅</span> Posting History ({postedContent.length})
+        </h3>
+        {postedContent.length === 0 ? (
+          <div className="text-center py-12 px-4 bg-[#1a1614] rounded-xl border border-[#b2a491]/10">
+            <div className="text-4xl mb-3">📊</div>
+            <h4 className="font-medium text-[#ede8df] mb-1">No Posts Yet</h4>
+            <p className="text-sm text-[#888]">Posts published through the CMS will appear here</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {postedContent.map((item) => {
+              const metrics = getTotalMetrics(item.id);
+              const hasAnalytics = metrics.views > 0 || metrics.likes > 0;
+
+              return (
+                <div
+                  key={item.id}
+                  className="p-3 bg-[#1a1614] rounded-xl border border-[#b2a491]/10"
+                >
+                  <div className="flex items-center gap-3">
+                    {/* Thumbnail */}
+                    {item.thumbnail_url ? (
+                      <img
+                        src={item.thumbnail_url}
+                        alt={item.title}
+                        className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-lg bg-[#302927] flex items-center justify-center flex-shrink-0">
+                        <span className="text-xl">🎬</span>
+                      </div>
+                    )}
+
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-[#ede8df] text-sm truncate">{item.title}</div>
+                      <div className="text-xs text-emerald-400">{formatDateTime(item.posted_at)}</div>
+                    </div>
+
+                    {/* Platforms */}
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      {parsePlatforms(item.posted_platforms).map((p) => (
+                        <PlatformIcon key={p} platform={p} />
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Analytics Row */}
+                  {hasAnalytics && (
+                    <div className="flex items-center gap-4 mt-3 pt-3 border-t border-[#302927]">
+                      <div className="flex items-center gap-1.5 text-xs">
+                        <span className="text-[#666]">👁</span>
+                        <span className="text-[#ede8df] font-medium">{formatNumber(metrics.views)}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-xs">
+                        <span className="text-red-400">❤️</span>
+                        <span className="text-[#ede8df] font-medium">{formatNumber(metrics.likes)}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-xs">
+                        <span className="text-blue-400">💬</span>
+                        <span className="text-[#ede8df] font-medium">{formatNumber(metrics.comments)}</span>
+                      </div>
+                      {metrics.shares > 0 && (
+                        <div className="flex items-center gap-1.5 text-xs">
+                          <span className="text-emerald-400">↗️</span>
+                          <span className="text-[#ede8df] font-medium">{formatNumber(metrics.shares)}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Per-platform breakdown on desktop */}
+                  {hasAnalytics && getContentAnalytics(item.id).length > 1 && (
+                    <div className="hidden sm:flex items-center gap-3 mt-2 text-xs text-[#666]">
+                      {getContentAnalytics(item.id).map((a) => (
+                        <div key={a.platform} className="flex items-center gap-1">
+                          <PlatformIcon platform={a.platform} />
+                          <span>
+                            {formatNumber(a.views)} views, {formatNumber(a.likes)} likes
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

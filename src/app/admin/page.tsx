@@ -240,6 +240,7 @@ const navItems: NavItem[] = [
     icon: Icons.social,
     children: [
       { id: 'social-cms', label: 'Content CMS', icon: Icons.commandCenter },
+      { id: 'social-accounts', label: 'Connected Accounts', icon: Icons.users },
       { id: 'ai-studio', label: 'AI Studio', icon: Icons.ai },
     ]
   },

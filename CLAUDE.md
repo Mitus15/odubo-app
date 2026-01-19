@@ -37,6 +37,9 @@ npm run lighthouse                             # Run Lighthouse performance audi
 git push origin main           # Triggers Vercel deploy (~2 min)
 npm run deploy:cf              # Deploy to Cloudflare Pages
 npm run deploy:cf:secrets      # Deploy with secrets update
+
+# Running TypeScript scripts directly
+tsx --env-file=.env.local scripts/<script-name>.ts  # Pattern for most scripts
 ```
 
 ---
@@ -96,10 +99,14 @@ Deployment:     Vercel
 ### Path Aliases
 
 TypeScript paths are configured for clean imports:
+- `@/*` → `src/*` (general catch-all)
 - `@/components/*` → `src/components/*`
 - `@/lib/*` → `src/lib/*`
 - `@/contexts/*` → `src/contexts/*`
 - `@/types/*` → `src/types/*`
+- `@/app/*` → `src/app/*`
+- `@/config/*` → `src/config/*`
+- `@/worker/*` → `src/worker/*`
 
 ### Directory Structure
 ```
@@ -193,7 +200,18 @@ Subdomain detection works in both production and local development.
 
 ### Database
 - `/src/lib/db.ts` — D1 database operations
-- `/database/migrations/` — Schema migrations
+- `/database/migrations/` — Schema migrations (numbered sequentially: `001_xxx.sql`, `002_xxx.sql`)
+- `/database/schema.sql` — Full schema reference
+
+### API Routes Organization
+API routes follow RESTful patterns under `/src/app/api/`:
+- `/api/clips/` — Clip CRUD and engagement tracking
+- `/api/shopify/` — Product data, checkout, webhooks
+- `/api/moments/` — Galleries, events, RSVPs, photo uploads
+- `/api/admin/` — Admin-only operations (users, R2, social, brand assets)
+- `/api/auth/` — Token verification
+- `/api/stream/` — Cloudflare Stream webhooks and live input
+- `/api/health/` — Health checks for DB, env, Cloudflare
 
 ---
 
@@ -305,7 +323,7 @@ Before ending work on a feature:
 
 ## Current Implementation Context
 
-> **Note:** This section contains implementation-specific details that may drift over time. Verify against actual code when in doubt. Consider moving detailed session notes to `/docs/sessions/`.
+> **Note:** This section contains implementation-specific details that may drift over time. Verify against actual code when in doubt. For session-specific notes, see `/docs/sessions/`.
 
 ### Clips Feed System
 

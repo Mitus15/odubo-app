@@ -18,21 +18,39 @@ export async function GET(req: NextRequest) {
     const statuses = searchParams.getAll('status'); // Filter by status
     const contentTypes = searchParams.getAll('content_type'); // Filter by content type
 
-    // Build query conditions
+    // Build query conditions for scheduled content
+    const scheduledConditions: string[] = [];
+    const scheduledParams: any[] = [];
+
+    // Date range filter for scheduled_for
+    if (start) {
+      scheduledConditions.push('sc.scheduled_for >= ?');
+      scheduledParams.push(start);
+    }
+    if (end) {
+      scheduledConditions.push('sc.scheduled_for <= ?');
+      scheduledParams.push(end);
+    }
+
+    // Build query conditions for posted content
+    const postedConditions: string[] = [];
+    const postedParams: any[] = [];
+
+    // Date range filter for posted_at
+    if (start) {
+      postedConditions.push('sc.posted_at >= ?');
+      postedParams.push(start);
+    }
+    if (end) {
+      postedConditions.push('sc.posted_at <= ?');
+      postedParams.push(end);
+    }
+
+    // Shared filter conditions
     const conditions: string[] = [];
     const params: any[] = [];
 
-    // Date range filter (required for calendar)
-    if (start) {
-      conditions.push('sc.scheduled_for >= ?');
-      params.push(start);
-    }
-    if (end) {
-      conditions.push('sc.scheduled_for <= ?');
-      params.push(end);
-    }
-
-    // Status filter
+    // Status filter (applies to both queries)
     if (statuses.length > 0) {
       conditions.push(`sc.status IN (${statuses.map(() => '?').join(', ')})`);
       params.push(...statuses);
@@ -44,25 +62,46 @@ export async function GET(req: NextRequest) {
       params.push(...contentTypes);
     }
 
-    // Platform filter (check scheduled_platforms JSON)
-    // Note: This is a simple LIKE check; for complex queries consider JSON functions
+    // Platform filter (check both scheduled_platforms and posted_platforms)
     if (platforms.length > 0) {
-      const platformConditions = platforms.map(() => 'sc.scheduled_platforms LIKE ?');
+      const platformConditions = platforms.map(
+        () => '(sc.scheduled_platforms LIKE ? OR sc.posted_platforms LIKE ?)'
+      );
       conditions.push(`(${platformConditions.join(' OR ')})`);
-      params.push(...platforms.map(p => `%"${p}"%`));
+      platforms.forEach((p) => {
+        params.push(`%"${p}"%`, `%"${p}"%`);
+      });
     }
 
-    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const sharedConditions = conditions.length > 0 ? conditions.join(' AND ') : '1=1';
 
-    // Fetch content with folder info
+    // Build WHERE clause for scheduled content (scheduled_for in range)
+    const scheduledWhere =
+      scheduledConditions.length > 0
+        ? `(${scheduledConditions.join(' AND ')}) AND ${sharedConditions}`
+        : sharedConditions;
+
+    // Build WHERE clause for posted content (posted_at in range)
+    const postedWhere =
+      postedConditions.length > 0
+        ? `(${postedConditions.join(' AND ')}) AND ${sharedConditions}`
+        : sharedConditions;
+
+    // Combine params: scheduled params + shared params + posted params + shared params
+    const allParams = [...scheduledParams, ...params, ...postedParams, ...params];
+
+    // Fetch content with folder info - UNION of scheduled and posted
+    // Use UNION to combine scheduled content (by scheduled_for) and posted content (by posted_at)
     const content = await queryDatabase(
-      `SELECT
+      `SELECT DISTINCT
         sc.id,
         sc.title,
         sc.status,
         sc.content_type,
         sc.scheduled_for,
         sc.scheduled_platforms,
+        sc.posted_at,
+        sc.posted_platforms,
         sc.platform_status,
         sc.upload_uid,
         sc.video_id,
@@ -73,30 +112,45 @@ export async function GET(req: NextRequest) {
         sc.import_source,
         sc.folder_id,
         sf.name as folder_name,
-        sf.slug as folder_slug
+        sf.slug as folder_slug,
+        COALESCE(sc.scheduled_for, sc.posted_at) as calendar_date
       FROM social_content sc
       LEFT JOIN social_folders sf ON sc.folder_id = sf.id
-      ${whereClause}
-      ORDER BY sc.scheduled_for ASC, sc.created_at DESC`,
-      params
+      WHERE (
+        (sc.scheduled_for IS NOT NULL AND ${scheduledWhere})
+        OR
+        (sc.posted_at IS NOT NULL AND ${postedWhere})
+      )
+      ORDER BY calendar_date ASC, sc.created_at DESC`,
+      allParams
     );
 
-    // Group content by date
+    // Group content by date (using calendar_date which is COALESCE of scheduled_for and posted_at)
     const groupedByDate: Record<string, any[]> = {};
 
     for (const item of content || []) {
-      if (item.scheduled_for) {
+      // Use calendar_date (already computed as COALESCE of scheduled_for, posted_at)
+      const calendarDate = item.calendar_date || item.scheduled_for || item.posted_at;
+      if (calendarDate) {
         // Extract date part (YYYY-MM-DD)
-        const dateKey = item.scheduled_for.split('T')[0];
+        const dateKey = calendarDate.split('T')[0];
         if (!groupedByDate[dateKey]) {
           groupedByDate[dateKey] = [];
         }
         // Safely parse JSON fields
         let scheduledPlatforms: string[] = [];
+        let postedPlatforms: string[] = [];
         let platformStatus: Record<string, string> = {};
         try {
           if (item.scheduled_platforms) {
             scheduledPlatforms = JSON.parse(item.scheduled_platforms);
+          }
+        } catch {
+          // Invalid JSON, use empty array
+        }
+        try {
+          if (item.posted_platforms) {
+            postedPlatforms = JSON.parse(item.posted_platforms);
           }
         } catch {
           // Invalid JSON, use empty array
@@ -111,7 +165,10 @@ export async function GET(req: NextRequest) {
         groupedByDate[dateKey].push({
           ...item,
           scheduled_platforms: scheduledPlatforms,
+          posted_platforms: postedPlatforms,
           platform_status: platformStatus,
+          // Add a computed field for display: scheduled_datetime for the time component
+          scheduled_datetime: item.scheduled_for || item.posted_at,
         });
       }
     }
