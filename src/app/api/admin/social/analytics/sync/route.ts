@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getRequestContext } from '@cloudflare/next-on-pages';
+import { queryDatabase, executeQuery } from '@/lib/db';
 import { getAccountFeed, FeedItem } from '@/lib/postforme';
 
 export const runtime = 'edge';
@@ -23,19 +23,15 @@ interface SocialContent {
  * POST /api/admin/social/analytics/sync
  * Sync analytics from Post for Me for all posted content
  */
-export async function POST(request: NextRequest) {
+export async function POST() {
   try {
-    const { env } = getRequestContext();
-    const db = env.DB;
-
     // Get all active social accounts
-    const accountsResult = await db
-      .prepare('SELECT * FROM social_accounts WHERE is_active = 1')
-      .all<SocialAccount>();
+    const accounts = await queryDatabase(
+      'SELECT * FROM social_accounts WHERE is_active = 1',
+      []
+    ) as SocialAccount[];
 
-    const accounts = (accountsResult.results || []) as SocialAccount[];
-
-    if (accounts.length === 0) {
+    if (!accounts || accounts.length === 0) {
       return NextResponse.json({
         success: true,
         message: 'No connected accounts to sync',
@@ -44,15 +40,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Get all posted content that has a postforme_id
-    const postedContentResult = await db
-      .prepare(
-        `SELECT id, postforme_id, posted_platforms, posted_at
-         FROM social_content
-         WHERE status = 'posted' AND postforme_id IS NOT NULL`
-      )
-      .all<SocialContent>();
-
-    const postedContent = (postedContentResult.results || []) as SocialContent[];
+    const postedContent = await queryDatabase(
+      `SELECT id, postforme_id, posted_platforms, posted_at
+       FROM social_content
+       WHERE status = 'posted' AND postforme_id IS NOT NULL`,
+      []
+    ) as SocialContent[];
 
     let totalSynced = 0;
     const errors: string[] = [];
@@ -83,55 +76,48 @@ export async function POST(request: NextRequest) {
 
           // Try to find matching content
           // We'll store analytics keyed by platform_post_id for matching
-          const existingAnalytics = await db
-            .prepare(
-              `SELECT id, content_id FROM social_analytics
-               WHERE platform = ? AND platform_post_id = ?`
-            )
-            .bind(account.platform, feedItem.platform_post_id)
-            .first<{ id: number; content_id: number }>();
+          const existingAnalytics = await queryDatabase(
+            `SELECT id, content_id FROM social_analytics
+             WHERE platform = ? AND platform_post_id = ?`,
+            [account.platform, feedItem.platform_post_id]
+          );
 
-          if (existingAnalytics) {
+          if (existingAnalytics && existingAnalytics.length > 0) {
             // Update existing analytics
-            await db
-              .prepare(
-                `UPDATE social_analytics
-                 SET views = ?, likes = ?, comments = ?, shares = ?, saves = ?,
-                     platform_url = ?, updated_at = CURRENT_TIMESTAMP
-                 WHERE id = ?`
-              )
-              .bind(
+            await executeQuery(
+              `UPDATE social_analytics
+               SET views = ?, likes = ?, comments = ?, shares = ?, saves = ?,
+                   platform_url = ?, updated_at = CURRENT_TIMESTAMP
+               WHERE id = ?`,
+              [
                 metrics.views,
                 metrics.likes,
                 metrics.comments,
                 metrics.shares,
                 metrics.saves,
                 feedItem.platform_url,
-                existingAnalytics.id
-              )
-              .run();
+                existingAnalytics[0].id,
+              ]
+            );
 
             totalSynced++;
           } else {
             // Try to find matching content by looking for recently posted items
             // Match by caption similarity or by posted_at time
             const matchingContent = await findMatchingContent(
-              db,
               feedItem,
               account.platform,
-              postedContent
+              postedContent || []
             );
 
             if (matchingContent) {
               // Insert new analytics record
-              await db
-                .prepare(
-                  `INSERT INTO social_analytics
-                   (content_id, platform, views, likes, comments, shares, saves,
-                    platform_post_id, platform_url, recorded_at, updated_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`
-                )
-                .bind(
+              await executeQuery(
+                `INSERT INTO social_analytics
+                 (content_id, platform, views, likes, comments, shares, saves,
+                  platform_post_id, platform_url, recorded_at, updated_at)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+                [
                   matchingContent.id,
                   account.platform,
                   metrics.views,
@@ -140,9 +126,9 @@ export async function POST(request: NextRequest) {
                   metrics.shares,
                   metrics.saves,
                   feedItem.platform_post_id,
-                  feedItem.platform_url
-                )
-                .run();
+                  feedItem.platform_url,
+                ]
+              );
 
               totalSynced++;
             }
@@ -175,9 +161,6 @@ export async function POST(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   try {
-    const { env } = getRequestContext();
-    const db = env.DB;
-
     const { searchParams } = new URL(request.url);
     const contentId = searchParams.get('content_id');
 
@@ -198,11 +181,11 @@ export async function GET(request: NextRequest) {
 
     query += ' ORDER BY sa.updated_at DESC';
 
-    const result = await db.prepare(query).bind(...params).all();
+    const result = await queryDatabase(query, params);
 
     return NextResponse.json({
       success: true,
-      analytics: result.results || [],
+      analytics: result || [],
     });
   } catch (error) {
     console.error('[Analytics] GET Error:', error);
@@ -239,7 +222,6 @@ function normalizeMetrics(feedItem: FeedItem): {
  * Try to find matching content for a feed item
  */
 async function findMatchingContent(
-  db: any,
   feedItem: FeedItem,
   platform: string,
   postedContent: SocialContent[]

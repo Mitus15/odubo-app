@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getRequestContext } from '@cloudflare/next-on-pages';
+import { queryDatabase, executeQuery } from '@/lib/db';
 import { createPost, CreatePostInput } from '@/lib/postforme';
 
 export const runtime = 'edge';
@@ -32,9 +32,6 @@ interface SocialAccount {
  */
 export async function POST(request: NextRequest) {
   try {
-    const { env } = getRequestContext();
-    const db = env.DB;
-
     const body = await request.json();
     const contentId = (body as { content_id?: number }).content_id;
     const platforms = (body as { platforms?: string[] }).platforms || [];
@@ -50,10 +47,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Get the content
-    const content = await db
-      .prepare('SELECT * FROM social_content WHERE id = ?')
-      .bind(contentId)
-      .first<SocialContent>();
+    const contentResult = await queryDatabase(
+      'SELECT * FROM social_content WHERE id = ?',
+      [contentId]
+    );
+    const content = contentResult?.[0] as SocialContent | undefined;
 
     if (!content) {
       return NextResponse.json({ error: 'Content not found' }, { status: 404 });
@@ -65,16 +63,12 @@ export async function POST(request: NextRequest) {
 
     // Get connected accounts for selected platforms
     const placeholders = platforms.map(() => '?').join(', ');
-    const accountsResult = await db
-      .prepare(
-        `SELECT * FROM social_accounts WHERE platform IN (${placeholders}) AND is_active = 1`
-      )
-      .bind(...platforms)
-      .all<SocialAccount>();
+    const accounts = await queryDatabase(
+      `SELECT * FROM social_accounts WHERE platform IN (${placeholders}) AND is_active = 1`,
+      platforms
+    ) as SocialAccount[];
 
-    const accounts = (accountsResult.results || []) as SocialAccount[];
-
-    if (accounts.length === 0) {
+    if (!accounts || accounts.length === 0) {
       return NextResponse.json(
         { error: `No connected accounts for: ${platforms.join(', ')}. Go to Connected Accounts tab to sync from PostForMe.` },
         { status: 400 }
@@ -155,32 +149,28 @@ export async function POST(request: NextRequest) {
 
     if (publishNow) {
       // Publishing immediately - set posted_at and posted_platforms
-      await db
-        .prepare(
-          `UPDATE social_content
-           SET status = ?,
-               posted_at = ?,
-               posted_platforms = ?,
-               postforme_id = ?,
-               updated_at = ?
-           WHERE id = ?`
-        )
-        .bind(newStatus, now, platformsJson, result.data?.id || null, now, contentId)
-        .run();
+      await executeQuery(
+        `UPDATE social_content
+         SET status = ?,
+             posted_at = ?,
+             posted_platforms = ?,
+             postforme_id = ?,
+             updated_at = ?
+         WHERE id = ?`,
+        [newStatus, now, platformsJson, result.data?.id || null, now, contentId]
+      );
     } else {
       // Scheduling - set scheduled_for and scheduled_platforms
-      await db
-        .prepare(
-          `UPDATE social_content
-           SET status = ?,
-               scheduled_for = ?,
-               scheduled_platforms = ?,
-               postforme_id = ?,
-               updated_at = ?
-           WHERE id = ?`
-        )
-        .bind(newStatus, scheduleAt, platformsJson, result.data?.id || null, now, contentId)
-        .run();
+      await executeQuery(
+        `UPDATE social_content
+         SET status = ?,
+             scheduled_for = ?,
+             scheduled_platforms = ?,
+             postforme_id = ?,
+             updated_at = ?
+         WHERE id = ?`,
+        [newStatus, scheduleAt, platformsJson, result.data?.id || null, now, contentId]
+      );
     }
 
     return NextResponse.json({
@@ -204,15 +194,19 @@ export async function POST(request: NextRequest) {
  */
 export async function GET() {
   try {
-    const { env } = getRequestContext();
-    const db = env.DB;
-
     // Get all active accounts
-    const result = await db
-      .prepare('SELECT * FROM social_accounts WHERE is_active = 1 ORDER BY platform')
-      .all<SocialAccount>();
+    const accounts = await queryDatabase(
+      'SELECT * FROM social_accounts WHERE is_active = 1 ORDER BY platform',
+      []
+    ) as SocialAccount[];
 
-    const accounts = (result.results || []) as SocialAccount[];
+    if (!accounts) {
+      return NextResponse.json({
+        success: true,
+        accounts: {},
+        platforms_available: [],
+      });
+    }
 
     // Group by platform
     const accountsByPlatform = accounts.reduce((acc, account) => {
