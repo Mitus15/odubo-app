@@ -1,7 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getRequestContext } from '@cloudflare/next-on-pages';
+import { queryDatabase, executeQuery } from '@/lib/db';
 
 export const runtime = 'edge';
+
+interface SocialAccount {
+  id: string;
+  entity_id: string | null;
+  platform: string;
+  account_handle: string;
+  account_name: string | null;
+  profile_image_url: string | null;
+  postforme_account_id: string;
+  is_active: number;
+  connected_at: string;
+  last_synced_at: string | null;
+}
 
 /**
  * GET /api/social/accounts
@@ -10,19 +23,13 @@ export const runtime = 'edge';
  */
 export async function GET(request: NextRequest) {
   try {
-    const { env } = getRequestContext();
-    const db = env.DB;
-
     const { searchParams } = new URL(request.url);
     const entityId = searchParams.get('entity_id');
     const platform = searchParams.get('platform');
     const activeOnly = searchParams.get('active') !== 'false';
     const groupByPlatform = searchParams.get('group') === 'platform';
 
-    let query = `
-      SELECT * FROM social_accounts
-      WHERE 1=1
-    `;
+    let query = `SELECT * FROM social_accounts WHERE 1=1`;
     const params: (string | number)[] = [];
 
     if (activeOnly) {
@@ -41,21 +48,20 @@ export async function GET(request: NextRequest) {
 
     query += ` ORDER BY platform, account_handle`;
 
-    const result = await db.prepare(query).bind(...params).all();
-    const accounts = result.results || [];
+    const accounts = await queryDatabase(query, params) as SocialAccount[];
 
     // Optionally group by platform for UI convenience
-    if (groupByPlatform) {
-      const grouped: Record<string, unknown[]> = {};
-      accounts.forEach((acc: unknown) => {
-        const p = (acc as { platform: string }).platform;
+    if (groupByPlatform && accounts) {
+      const grouped: Record<string, SocialAccount[]> = {};
+      accounts.forEach((acc) => {
+        const p = acc.platform;
         if (!grouped[p]) grouped[p] = [];
         grouped[p].push(acc);
       });
       return NextResponse.json({ accounts, grouped });
     }
 
-    return NextResponse.json({ accounts });
+    return NextResponse.json({ accounts: accounts || [] });
   } catch (error) {
     console.error('[Social Accounts] GET error:', error);
     return NextResponse.json({ error: 'Failed to fetch accounts' }, { status: 500 });
@@ -63,14 +69,11 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * DELETE /api/social/accounts/:id
+ * DELETE /api/social/accounts
  * Deactivate a social account (soft delete)
  */
 export async function DELETE(request: NextRequest) {
   try {
-    const { env } = getRequestContext();
-    const db = env.DB;
-
     const body = await request.json();
     const accountId = (body as { id?: string }).id;
 
@@ -78,10 +81,10 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Account ID required' }, { status: 400 });
     }
 
-    await db
-      .prepare(`UPDATE social_accounts SET is_active = 0 WHERE id = ?`)
-      .bind(accountId)
-      .run();
+    await executeQuery(
+      `UPDATE social_accounts SET is_active = 0 WHERE id = ?`,
+      [accountId]
+    );
 
     return NextResponse.json({ success: true });
   } catch (error) {
