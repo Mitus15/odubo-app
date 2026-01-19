@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { queryDatabase, executeQuery } from '@/lib/db';
+import { getUserFromRequest, isAdminUser } from '@/lib/auth';
 import { getAccountFeed, FeedItem } from '@/lib/postforme';
 
 export const runtime = 'edge';
@@ -23,7 +24,12 @@ interface SocialContent {
  * POST /api/admin/social/analytics/sync
  * Sync analytics from Post for Me for all posted content
  */
-export async function POST() {
+export async function POST(request: NextRequest) {
+  const user = getUserFromRequest(request);
+  if (!isAdminUser(user)) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
   try {
     // Get all active social accounts
     const accounts = await queryDatabase(
@@ -160,6 +166,11 @@ export async function POST() {
  * Get analytics for all posted content
  */
 export async function GET(request: NextRequest) {
+  const user = getUserFromRequest(request);
+  if (!isAdminUser(user)) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     const contentId = searchParams.get('content_id');

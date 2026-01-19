@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { queryDatabase, executeQuery } from '@/lib/db';
+import { getUserFromRequest, isAdminUser } from '@/lib/auth';
 import { createPost, CreatePostInput } from '@/lib/postforme';
 
 export const runtime = 'edge';
@@ -31,6 +32,11 @@ interface SocialAccount {
  * Publish social_content directly to platforms via Post for Me API
  */
 export async function POST(request: NextRequest) {
+  const user = getUserFromRequest(request);
+  if (!isAdminUser(user)) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
   try {
     const body = await request.json();
     const contentId = (body as { content_id?: number }).content_id;
@@ -192,7 +198,12 @@ export async function POST(request: NextRequest) {
  * GET /api/admin/social/publish
  * Get connected accounts for publishing
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const user = getUserFromRequest(request);
+  if (!isAdminUser(user)) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
   try {
     // Get all active accounts
     const accounts = await queryDatabase(
