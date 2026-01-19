@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getRequestContext } from '@cloudflare/next-on-pages';
+import { queryDatabase, executeQuery } from '@/lib/db';
 
 export const runtime = 'edge';
 
@@ -21,17 +21,13 @@ interface Entity {
  */
 export async function GET() {
   try {
-    const { env } = getRequestContext();
-    const db = env.DB;
-
-    const result = await db
-      .prepare(
-        `SELECT * FROM entities WHERE is_active = 1 ORDER BY name ASC`
-      )
-      .all<Entity>();
+    const entities = await queryDatabase(
+      `SELECT * FROM entities WHERE is_active = 1 ORDER BY name ASC`,
+      []
+    ) as Entity[];
 
     return NextResponse.json({
-      entities: result.results || [],
+      entities: entities || [],
     });
   } catch (error) {
     console.error('[Entities] GET error:', error);
@@ -48,9 +44,6 @@ export async function GET() {
  */
 export async function POST(request: NextRequest) {
   try {
-    const { env } = getRequestContext();
-    const db = env.DB;
-
     const body = await request.json();
     const { name, slug, description, logo_url, color } = body as {
       name?: string;
@@ -68,12 +61,12 @@ export async function POST(request: NextRequest) {
     const entitySlug = slug || name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
     // Check if slug already exists
-    const existing = await db
-      .prepare(`SELECT id FROM entities WHERE slug = ?`)
-      .bind(entitySlug)
-      .first();
+    const existing = await queryDatabase(
+      `SELECT id FROM entities WHERE slug = ?`,
+      [entitySlug]
+    );
 
-    if (existing) {
+    if (existing && existing.length > 0) {
       return NextResponse.json(
         { error: 'An entity with this slug already exists' },
         { status: 400 }
@@ -82,13 +75,11 @@ export async function POST(request: NextRequest) {
 
     const id = crypto.randomUUID().split('-')[0];
 
-    await db
-      .prepare(
-        `INSERT INTO entities (id, name, slug, description, logo_url, color)
-         VALUES (?, ?, ?, ?, ?, ?)`
-      )
-      .bind(id, name, entitySlug, description || null, logo_url || null, color || '#843c2d')
-      .run();
+    await executeQuery(
+      `INSERT INTO entities (id, name, slug, description, logo_url, color)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [id, name, entitySlug, description || null, logo_url || null, color || '#843c2d']
+    );
 
     return NextResponse.json({ success: true, id, slug: entitySlug }, { status: 201 });
   } catch (error) {
