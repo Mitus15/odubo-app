@@ -11,7 +11,6 @@ export const runtime = 'edge';
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const entityId = searchParams.get('entity_id');
     const status = searchParams.get('status');
     const limit = Math.min(parseInt(searchParams.get('limit') || '50', 10), 100);
     const offset = parseInt(searchParams.get('offset') || '0', 10);
@@ -34,10 +33,7 @@ export async function GET(request: NextRequest) {
 
     const bindings: (string | number)[] = [];
 
-    if (entityId) {
-      query += ` AND entity_id = ?`;
-      bindings.push(entityId);
-    }
+    // Entity filtering removed - show all posts regardless of entity
 
     if (status) {
       query += ` AND status = ?`;
@@ -68,10 +64,7 @@ export async function GET(request: NextRequest) {
     // Get total count
     let countQuery = `SELECT COUNT(*) as count FROM social_posts WHERE 1=1`;
     const countBindings: string[] = [];
-    if (entityId) {
-      countQuery += ` AND entity_id = ?`;
-      countBindings.push(entityId);
-    }
+    // Entity filtering removed
     if (status) {
       countQuery += ` AND status = ?`;
       countBindings.push(status);

@@ -2,16 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 
-interface Entity {
-  id: string;
-  name: string;
-  slug: string;
-  color?: string;
-}
-
 interface ConnectedAccount {
   id: string;
-  entity_id?: string;
   platform: string;
   account_handle: string;
   account_name?: string;
@@ -27,38 +19,19 @@ const PLATFORM_CONFIG: Record<string, { icon: string; color: string; name: strin
   youtube: { icon: '📺', color: '#FF0000', name: 'YouTube' },
   twitter: { icon: '🐦', color: '#1DA1F2', name: 'Twitter/X' },
   facebook: { icon: '👤', color: '#1877F2', name: 'Facebook' },
+  threads: { icon: '🧵', color: '#000000', name: 'Threads' },
 };
 
 export default function SocialAccountsTab() {
-  const [entities, setEntities] = useState<Entity[]>([]);
   const [accounts, setAccounts] = useState<ConnectedAccount[]>([]);
-  const [selectedEntity, setSelectedEntity] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
 
-  // Fetch entities
-  useEffect(() => {
-    const loadEntities = async () => {
-      try {
-        const res = await fetch('/api/entities');
-        const data = await res.json() as { entities?: Entity[] };
-        setEntities(data.entities || []);
-        if (data.entities && data.entities.length > 0 && !selectedEntity) {
-          setSelectedEntity(data.entities[0].id);
-        }
-      } catch (err) {
-        console.error('Failed to fetch entities:', err);
-      }
-    };
-    loadEntities();
-  }, [selectedEntity]);
-
-  // Fetch accounts for selected entity
+  // Fetch all accounts (no entity filtering)
   const fetchAccounts = useCallback(async () => {
-    if (!selectedEntity) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/social/accounts?entity_id=${selectedEntity}`);
+      const res = await fetch('/api/social/accounts');
       const data: { accounts?: ConnectedAccount[] } = await res.json();
       setAccounts(data.accounts || []);
     } catch (err) {
@@ -66,7 +39,7 @@ export default function SocialAccountsTab() {
     } finally {
       setLoading(false);
     }
-  }, [selectedEntity]);
+  }, []);
 
   useEffect(() => {
     fetchAccounts();
@@ -96,11 +69,9 @@ export default function SocialAccountsTab() {
     return acc;
   }, {} as Record<string, ConnectedAccount[]>);
 
-  const selectedEntityData = entities.find(e => e.id === selectedEntity);
-
   return (
     <div className="p-4 sm:p-6 max-w-4xl mx-auto">
-      {/* Header - stacks on mobile */}
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-[#ede8df]">Connected Accounts</h1>
@@ -119,28 +90,6 @@ export default function SocialAccountsTab() {
           <span className="font-medium">{syncing ? 'Syncing...' : 'Sync from PostForMe'}</span>
         </button>
       </div>
-
-      {/* Entity Selector - horizontal scroll on mobile */}
-      {entities.length > 1 && (
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-[#b2a491] mb-2">Entity</label>
-          <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-hide">
-            {entities.map(entity => (
-              <button
-                key={entity.id}
-                onClick={() => setSelectedEntity(entity.id)}
-                className={`flex-shrink-0 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors min-h-[44px] ${
-                  selectedEntity === entity.id
-                    ? 'bg-[#843c2d] text-white'
-                    : 'bg-[#1a1816] text-[#726d6c] hover:text-[#b2a491] border border-[#302927] active:bg-[#302927]'
-                }`}
-              >
-                {entity.name}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Accounts List */}
       {loading ? (

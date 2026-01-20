@@ -24,7 +24,6 @@ interface SocialAccount {
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const entityId = searchParams.get('entity_id');
     const platform = searchParams.get('platform');
     const activeOnly = searchParams.get('active') !== 'false';
     const groupByPlatform = searchParams.get('group') === 'platform';
@@ -36,10 +35,7 @@ export async function GET(request: NextRequest) {
       query += ` AND is_active = 1`;
     }
 
-    if (entityId) {
-      query += ` AND entity_id = ?`;
-      params.push(entityId);
-    }
+    // Entity filtering removed - show all accounts regardless of entity
 
     if (platform) {
       query += ` AND platform = ?`;

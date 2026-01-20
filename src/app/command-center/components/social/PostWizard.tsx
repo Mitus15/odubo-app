@@ -235,8 +235,8 @@ function VideoPreview({
 // =============================================================================
 
 interface PostWizardProps {
-  entityId: string;
-  entityName: string;
+  entityId?: string;
+  entityName?: string;
   accounts: SocialAccount[];
   onClose: () => void;
   onComplete: () => void;
@@ -398,7 +398,7 @@ export function PostWizard({ entityId, entityName, accounts, onClose, onComplete
 
       const postData = {
         status: 'draft', // Start as draft, publish will update
-        entity_id: entityId,
+        entity_id: entityId || null, // Optional - no entity filtering
         account_ids: state.selectedAccountIds,
         media_type: state.media?.type || 'video',
         media_url: state.media?.url,
@@ -606,7 +606,7 @@ function ContentStep({
   updateState: (updates: Partial<WizardState>) => void;
   libraryItems: MediaItem[];
   loadingLibrary: boolean;
-  entityId: string;
+  entityId?: string;
 }) {
   const [view, setView] = useState<'choose' | 'library' | 'upload'>('choose');
   const [previewItem, setPreviewItem] = useState<MediaItem | null>(null);
@@ -632,7 +632,9 @@ function ContentStep({
     try {
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('entity_id', entityId);
+      if (entityId) {
+        formData.append('entity_id', entityId);
+      }
 
       // Use XMLHttpRequest for progress tracking
       const xhr = new XMLHttpRequest();
@@ -1044,7 +1046,7 @@ function AccountsStep({
   onToggleAccount,
 }: {
   accounts: SocialAccount[];
-  entityName: string;
+  entityName?: string;
   selectedAccountIds: string[];
   onToggleAccount: (accountId: string) => void;
 }) {
@@ -1082,7 +1084,7 @@ function AccountsStep({
   return (
     <div className="p-4 space-y-6">
       <div>
-        <h3 className="text-lg font-medium">Select Accounts for {entityName}</h3>
+        <h3 className="text-lg font-medium">Select Accounts{entityName ? ` for ${entityName}` : ''}</h3>
         <p className="text-sm text-[#726d6c] mt-1">
           Choose which accounts to publish to.{' '}
           {selectedAccountIds.length > 0 && `${selectedAccountIds.length} selected`}

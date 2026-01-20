@@ -11,19 +11,9 @@ import { CalendarView } from './CalendarView';
 type ViewMode = 'dashboard' | 'create' | 'calendar' | 'library';
 type PostStatus = 'draft' | 'pending_approval' | 'scheduled' | 'publishing' | 'published' | 'failed';
 
-interface Entity {
-  id: string;
-  name: string;
-  slug: string;
-  description?: string;
-  logo_url?: string;
-  color?: string;
-}
-
 interface ScheduledPost {
   id: string;
   status: PostStatus;
-  entity_id?: string;
   account_ids?: string[];
   title?: string;
   caption?: string;
@@ -40,7 +30,6 @@ interface ScheduledPost {
 
 interface ConnectedAccount {
   id: string;
-  entity_id?: string;
   platform: string;
   account_handle: string;
   account_name?: string;
@@ -476,49 +465,23 @@ function LibraryView() {
 
 export function SocialPostingPanel() {
   const [viewMode, setViewMode] = useState<ViewMode>('dashboard');
-  const [entities, setEntities] = useState<Entity[]>([]);
-  const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null);
   const [posts, setPosts] = useState<ScheduledPost[]>([]);
   const [accounts, setAccounts] = useState<ConnectedAccount[]>([]);
   const [loading, setLoading] = useState(true);
-  const [entityDropdownOpen, setEntityDropdownOpen] = useState(false);
 
-  // Fetch entities first
-  useEffect(() => {
-    async function loadEntities() {
-      try {
-        const res = await fetch('/api/entities');
-        if (res.ok) {
-          const data = (await res.json()) as { entities?: Entity[] };
-          const entityList = data.entities || [];
-          setEntities(entityList);
-          // Auto-select first entity
-          if (entityList.length > 0 && !selectedEntityId) {
-            setSelectedEntityId(entityList[0].id);
-          }
-        }
-      } catch (err) {
-        console.error('[SocialPosting] Failed to load entities:', err);
-      }
-    }
-    loadEntities();
-  }, []);
-
-  // Fetch posts and accounts when entity changes
+  // Fetch posts and accounts (no entity filtering)
   const fetchData = useCallback(async () => {
-    if (!selectedEntityId) return;
-
     setLoading(true);
     try {
-      // Fetch posts filtered by entity
-      const postsRes = await fetch(`/api/social/posts?entity_id=${selectedEntityId}`);
+      // Fetch all posts
+      const postsRes = await fetch('/api/social/posts');
       if (postsRes.ok) {
         const postsData = (await postsRes.json()) as { posts?: ScheduledPost[] };
         setPosts(postsData.posts || []);
       }
 
-      // Fetch accounts filtered by entity
-      const accountsRes = await fetch(`/api/social/accounts?entity_id=${selectedEntityId}`);
+      // Fetch all accounts
+      const accountsRes = await fetch('/api/social/accounts');
       if (accountsRes.ok) {
         const accountsData = (await accountsRes.json()) as { accounts?: ConnectedAccount[] };
         setAccounts(accountsData.accounts || []);
@@ -528,15 +491,11 @@ export function SocialPostingPanel() {
     } finally {
       setLoading(false);
     }
-  }, [selectedEntityId]);
+  }, []);
 
   useEffect(() => {
-    if (selectedEntityId) {
-      fetchData();
-    }
-  }, [selectedEntityId, fetchData]);
-
-  const selectedEntity = entities.find((e) => e.id === selectedEntityId);
+    fetchData();
+  }, [fetchData]);
 
   const navItems = [
     { id: 'dashboard' as ViewMode, label: 'Dashboard', icon: Icons.dashboard },
@@ -549,7 +508,7 @@ export function SocialPostingPanel() {
     <div className="h-full flex flex-col bg-[#0d0c0a]">
       {/* Navigation Bar */}
       <div className="flex items-center justify-between p-3 border-b border-[#502d26]/20 bg-[#0d0c0a]/80 backdrop-blur-sm">
-        {/* Left: Nav Items */}
+        {/* Nav Items */}
         <div className="flex items-center gap-1">
           {navItems.map((item) => (
             <button
@@ -566,72 +525,6 @@ export function SocialPostingPanel() {
             </button>
           ))}
         </div>
-
-        {/* Right: Entity Selector */}
-        <div className="relative">
-          <button
-            onClick={() => setEntityDropdownOpen(!entityDropdownOpen)}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#171616] border border-[#502d26]/30 hover:border-[#502d26]/50 transition-colors"
-          >
-            {selectedEntity?.logo_url ? (
-              <img src={selectedEntity.logo_url} alt="" className="w-5 h-5 rounded-full" />
-            ) : (
-              <div
-                className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
-                style={{ backgroundColor: selectedEntity?.color || '#843c2d' }}
-              >
-                {selectedEntity?.name?.charAt(0) || '?'}
-              </div>
-            )}
-            <span className="text-sm font-medium">{selectedEntity?.name || 'Select'}</span>
-            <svg className="w-4 h-4 text-[#726d6c]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-            </svg>
-          </button>
-
-          {/* Dropdown */}
-          {entityDropdownOpen && (
-            <>
-              <div className="fixed inset-0 z-10" onClick={() => setEntityDropdownOpen(false)} />
-              <div className="absolute right-0 top-full mt-1 w-48 rounded-xl bg-[#171616] border border-[#502d26]/40 shadow-xl z-20 overflow-hidden">
-                {entities.map((entity) => (
-                  <button
-                    key={entity.id}
-                    onClick={() => {
-                      setSelectedEntityId(entity.id);
-                      setEntityDropdownOpen(false);
-                    }}
-                    className={`w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-[#302927] transition-colors ${
-                      selectedEntityId === entity.id ? 'bg-[#302927]' : ''
-                    }`}
-                  >
-                    {entity.logo_url ? (
-                      <img src={entity.logo_url} alt="" className="w-6 h-6 rounded-full" />
-                    ) : (
-                      <div
-                        className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white"
-                        style={{ backgroundColor: entity.color || '#843c2d' }}
-                      >
-                        {entity.name.charAt(0)}
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{entity.name}</p>
-                      {entity.description && (
-                        <p className="text-[10px] text-[#726d6c] truncate">{entity.description}</p>
-                      )}
-                    </div>
-                    {selectedEntityId === entity.id && (
-                      <svg className="w-4 h-4 text-[#843c2d]" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                    )}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
       </div>
 
       {/* Content Area */}
@@ -646,10 +539,8 @@ export function SocialPostingPanel() {
             onRefresh={fetchData}
           />
         )}
-        {viewMode === 'create' && selectedEntityId && (
+        {viewMode === 'create' && (
           <PostWizard
-            entityId={selectedEntityId}
-            entityName={selectedEntity?.name || ''}
             accounts={accounts}
             onClose={() => setViewMode('dashboard')}
             onComplete={() => {
