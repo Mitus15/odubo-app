@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { PostWizard } from './PostWizard';
 import { CalendarView } from './CalendarView';
+import { PostDetailModal } from './PostDetailModal';
 
 // =============================================================================
 // TYPES
@@ -159,6 +160,7 @@ function DashboardView({
   onCreatePost,
   onViewCalendar,
   onRefresh,
+  onPostClick,
 }: {
   posts: ScheduledPost[];
   accounts: ConnectedAccount[];
@@ -166,6 +168,7 @@ function DashboardView({
   onCreatePost: () => void;
   onViewCalendar: () => void;
   onRefresh: () => void;
+  onPostClick: (post: ScheduledPost) => void;
 }) {
   const now = new Date();
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -234,7 +237,10 @@ function DashboardView({
                   Review and retry failed posts
                 </p>
               </div>
-              <button className="px-3 py-1.5 rounded-lg bg-red-900/30 text-red-400 text-xs hover:bg-red-900/50 transition-colors">
+              <button
+                onClick={() => failedPosts[0] && onPostClick(failedPosts[0])}
+                className="px-3 py-1.5 rounded-lg bg-red-900/30 text-red-400 text-xs hover:bg-red-900/50 transition-colors"
+              >
                 View All
               </button>
             </div>
@@ -253,7 +259,7 @@ function DashboardView({
           {todayPosts.length > 0 ? (
             <div className="space-y-3">
               {todayPosts.map((post) => (
-                <PostCard key={post.id} post={post} />
+                <PostCard key={post.id} post={post} onClick={() => onPostClick(post)} />
               ))}
             </div>
           ) : (
@@ -280,7 +286,7 @@ function DashboardView({
             </div>
             <div className="space-y-3">
               {pendingApproval.slice(0, 3).map((post) => (
-                <PostCard key={post.id} post={post} />
+                <PostCard key={post.id} post={post} onClick={() => onPostClick(post)} />
               ))}
             </div>
           </section>
@@ -300,7 +306,7 @@ function DashboardView({
             </div>
             <div className="space-y-3">
               {upcomingPosts.slice(0, 5).map((post) => (
-                <PostCard key={post.id} post={post} compact />
+                <PostCard key={post.id} post={post} compact onClick={() => onPostClick(post)} />
               ))}
             </div>
           </section>
@@ -315,7 +321,7 @@ function DashboardView({
             </div>
             <div className="grid grid-cols-2 gap-3">
               {drafts.slice(0, 4).map((post) => (
-                <DraftCard key={post.id} post={post} />
+                <DraftCard key={post.id} post={post} onClick={() => onPostClick(post)} />
               ))}
             </div>
           </section>
@@ -348,12 +354,14 @@ function DashboardView({
 // SUB-COMPONENTS
 // =============================================================================
 
-function PostCard({ post, compact = false }: { post: ScheduledPost; compact?: boolean }) {
+function PostCard({ post, compact = false, onClick }: { post: ScheduledPost; compact?: boolean; onClick?: () => void }) {
   const statusBadge = getStatusBadge(post.status);
   const platforms = post.platforms || [];
 
   return (
-    <div className="flex items-center gap-4 p-4 rounded-xl bg-[#171616] border border-[#502d26]/20 hover:border-[#502d26]/40 transition-colors cursor-pointer">
+    <div
+      onClick={onClick}
+      className="flex items-center gap-4 p-4 rounded-xl bg-[#171616] border border-[#502d26]/20 hover:border-[#502d26]/40 transition-colors cursor-pointer">
       {/* Thumbnail */}
       <div className={`${compact ? 'w-12 h-12' : 'w-16 h-16'} rounded-lg overflow-hidden bg-[#302927] flex-shrink-0`}>
         {post.thumbnail_url ? (
@@ -403,9 +411,11 @@ function PostCard({ post, compact = false }: { post: ScheduledPost; compact?: bo
   );
 }
 
-function DraftCard({ post }: { post: ScheduledPost }) {
+function DraftCard({ post, onClick }: { post: ScheduledPost; onClick?: () => void }) {
   return (
-    <div className="p-3 rounded-xl bg-[#171616] border border-[#502d26]/20 hover:border-[#502d26]/40 transition-colors cursor-pointer">
+    <div
+      onClick={onClick}
+      className="p-3 rounded-xl bg-[#171616] border border-[#502d26]/20 hover:border-[#502d26]/40 transition-colors cursor-pointer">
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-lg overflow-hidden bg-[#302927] flex-shrink-0">
           {post.thumbnail_url ? (
@@ -468,6 +478,7 @@ export function SocialPostingPanel() {
   const [posts, setPosts] = useState<ScheduledPost[]>([]);
   const [accounts, setAccounts] = useState<ConnectedAccount[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
 
   // Fetch posts and accounts (no entity filtering)
   const fetchData = useCallback(async () => {
@@ -528,7 +539,7 @@ export function SocialPostingPanel() {
       </div>
 
       {/* Content Area */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-y-auto">
         {viewMode === 'dashboard' && (
           <DashboardView
             posts={posts}
@@ -537,6 +548,7 @@ export function SocialPostingPanel() {
             onCreatePost={() => setViewMode('create')}
             onViewCalendar={() => setViewMode('calendar')}
             onRefresh={fetchData}
+            onPostClick={(post) => setSelectedPostId(post.id)}
           />
         )}
         {viewMode === 'create' && (
@@ -552,10 +564,7 @@ export function SocialPostingPanel() {
         {viewMode === 'calendar' && (
           <CalendarView
             posts={posts}
-            onPostClick={(post) => {
-              // TODO: Open post detail/edit view
-              console.log('Post clicked:', post.id);
-            }}
+            onPostClick={(post) => setSelectedPostId(post.id)}
             onCreatePost={(date) => {
               // TODO: Pre-fill date in wizard
               console.log('Create post for:', date);
@@ -565,6 +574,14 @@ export function SocialPostingPanel() {
         )}
         {viewMode === 'library' && <LibraryView />}
       </div>
+
+      {/* Post Detail Modal */}
+      <PostDetailModal
+        postId={selectedPostId}
+        isOpen={!!selectedPostId}
+        onClose={() => setSelectedPostId(null)}
+        onRefresh={fetchData}
+      />
     </div>
   );
 }

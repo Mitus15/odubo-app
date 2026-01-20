@@ -136,25 +136,25 @@ export function CalendarView({ posts, onPostClick, onCreatePost }: CalendarViewP
           <div className="flex items-center gap-2">
             <button
               onClick={() => mode === 'week' ? navigateWeek(-1) : navigateMonth(-1)}
-              className="p-1.5 rounded-lg text-[#726d6c] hover:text-[#ede8df] hover:bg-[#302927]"
+              className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg text-[#726d6c] hover:text-[#ede8df] hover:bg-[#302927]"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
               </svg>
             </button>
 
             <button
               onClick={() => setCurrentDate(new Date())}
-              className="px-3 py-1 rounded-lg text-xs text-[#726d6c] hover:text-[#ede8df] hover:bg-[#302927]"
+              className="min-h-[44px] px-4 rounded-lg text-sm text-[#726d6c] hover:text-[#ede8df] hover:bg-[#302927]"
             >
               Today
             </button>
 
             <button
               onClick={() => mode === 'week' ? navigateWeek(1) : navigateMonth(1)}
-              className="p-1.5 rounded-lg text-[#726d6c] hover:text-[#ede8df] hover:bg-[#302927]"
+              className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg text-[#726d6c] hover:text-[#ede8df] hover:bg-[#302927]"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
               </svg>
             </button>

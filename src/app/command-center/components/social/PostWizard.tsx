@@ -411,7 +411,7 @@ export function PostWizard({ entityId, entityName, accounts, onClose, onComplete
         first_comment: state.firstComment,
         scheduled_at: publishNow
           ? new Date().toISOString()
-          : state.scheduledAt,
+          : new Date(state.scheduledAt).toISOString(), // Convert datetime-local to proper ISO 8601
         timezone: state.timezone,
         platforms, // Keep for backwards compatibility
         title: state.title,
@@ -493,7 +493,7 @@ export function PostWizard({ entityId, entityName, accounts, onClose, onComplete
                 key={step.id}
                 onClick={() => isClickable && goToStep(step.id)}
                 disabled={!isClickable}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
+                className={`flex items-center gap-2 px-3 py-2 min-h-[44px] rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
                   isCurrent
                     ? 'bg-[#843c2d] text-white'
                     : isCompleted
@@ -613,6 +613,17 @@ function ContentStep({
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadError, setUploadError] = useState<string | null>(null);
+
+  // Escape key handler to close preview
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && previewItem) {
+        setPreviewItem(null);
+      }
+    };
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [previewItem]);
 
   const selectMedia = (item: MediaItem) => {
     updateState({

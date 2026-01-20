@@ -158,8 +158,9 @@ export async function POST(request: NextRequest) {
     };
 
     // Add scheduling if not publishing now
+    // Ensure proper ISO 8601 format for Post for Me API
     if (!publishNow && post.scheduled_at) {
-      createPostInput.schedule_at = post.scheduled_at;
+      createPostInput.schedule_at = new Date(post.scheduled_at).toISOString();
     }
 
     // Call Post for Me API

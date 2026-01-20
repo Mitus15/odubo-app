@@ -1,167 +1,180 @@
-import { NextRequest, NextResponse } from "next/server";
-import { executeQuery, queryDatabase } from "@/lib/db";
-import { userHasAnyRole } from "@/lib/auth";
+import { NextRequest, NextResponse } from 'next/server';
+import { queryDatabase, executeQuery } from '@/lib/db';
 
-export async function GET(req: NextRequest, context: { params: Promise<{ id: string }> }) {
+export const runtime = 'edge';
+
+// Helper to safely parse JSON
+function parseJSON<T>(str: string | null | undefined, fallback: T): T {
+  if (!str) return fallback;
   try {
-    const hasRole = await userHasAnyRole(req, ["admin", "editor"]);
-    if (!hasRole) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return JSON.parse(str);
+  } catch {
+    return fallback;
+  }
+}
 
-    const { id: idStr } = await context.params;
-    const id = Number.parseInt(idStr, 10);
-    if (Number.isNaN(id)) return NextResponse.json({ error: "Invalid id" }, { status: 400 });
+/**
+ * GET /api/social/posts/[id]
+ * Get a single post by ID with all details
+ */
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
 
     const rows = await queryDatabase(
-      `SELECT sp.id, sp.uid, sp.goal, sp.content_id, sp.content_type, sp.created_at, sp.updated_at,
-              spt.platform, spt.caption, spt.status, spt.scheduled_at
-       FROM social_posts sp
-       LEFT JOIN social_post_targets spt ON spt.social_post_id = sp.id
-       WHERE sp.id = ?`,
+      `SELECT
+        id, status, created_by, approved_by,
+        entity_id, account_ids,
+        media_type, media_url, media_key, thumbnail_url,
+        source_type, source_id,
+        caption, caption_by_platform, hashtags, mentions, first_comment,
+        scheduled_at, published_at, timezone,
+        platforms, platform_status, platform_post_ids, platform_errors,
+        title, requires_approval, is_important, notes, tags,
+        error_message, retry_count, last_retry_at,
+        created_at, updated_at
+      FROM social_posts
+      WHERE id = ?`,
       [id]
     );
 
     if (!rows || rows.length === 0) {
-      return NextResponse.json({ error: "Not found" }, { status: 404 });
+      return NextResponse.json({ error: 'Post not found' }, { status: 404 });
     }
 
-    const base = rows[0];
-    const targets = rows
-      .filter((r: any) => r.platform)
-      .map((r: any) => ({
-        platform: (r.platform as string) || "",
-        caption: r.caption || "",
-        status: r.status || "draft",
-        scheduledAt: r.scheduled_at || null,
-      }));
+    const row = rows[0] as Record<string, unknown>;
 
+    // Parse JSON fields
     const post = {
-      id: base.id,
-      uid: base.uid,
-      goal: base.goal,
-      contentId: base.content_id,
-      contentType: base.content_type,
-      createdAt: base.created_at,
-      updatedAt: base.updated_at,
-      targets,
+      ...row,
+      account_ids: parseJSON(row.account_ids as string, []),
+      platforms: parseJSON(row.platforms as string, []),
+      platform_status: parseJSON(row.platform_status as string, {}),
+      platform_post_ids: row.platform_post_ids as string, // Keep as string for modal to parse
+      platform_errors: parseJSON(row.platform_errors as string, {}),
+      hashtags: parseJSON(row.hashtags as string, []),
+      mentions: parseJSON(row.mentions as string, []),
+      tags: parseJSON(row.tags as string, []),
+      caption_by_platform: parseJSON(row.caption_by_platform as string, {}),
+      requires_approval: Boolean(row.requires_approval),
+      is_important: Boolean(row.is_important),
     };
 
     return NextResponse.json({ post });
   } catch (error) {
-    console.error("GET /api/social/posts/:id error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    console.error('[Social Posts] GET [id] error:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch post', details: error instanceof Error ? error.message : 'Unknown' },
+      { status: 500 }
+    );
   }
 }
 
-export async function PATCH(req: NextRequest, context: { params: Promise<{ id: string }> }) {
+/**
+ * PATCH /api/social/posts/[id]
+ * Update a post (for editing drafts or updating status)
+ */
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    const hasRole = await userHasAnyRole(req, ["admin", "editor"]);
-    if (!hasRole) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    const { id } = await params;
+    const body = (await request.json()) as Record<string, unknown>;
 
-    const { id: idStr } = await context.params;
-    const id = Number.parseInt(idStr, 10);
-    if (Number.isNaN(id)) return NextResponse.json({ error: "Invalid id" }, { status: 400 });
+    // Build update query dynamically
+    const updates: string[] = [];
+    const values: (string | number | null)[] = [];
 
-    const body = (await req.json()) as {
-      goal?: string | null;
-      targets?: Array<{
-        platform: string;
-        caption?: string;
-        status?: string; // draft | scheduled | published | archived
-        scheduledAt?: string | null;
-      }>;
-    };
+    const allowedFields = [
+      'status',
+      'caption',
+      'hashtags',
+      'mentions',
+      'first_comment',
+      'scheduled_at',
+      'title',
+      'notes',
+      'requires_approval',
+      'is_important',
+      'error_message',
+    ];
 
-    // Update goal
-    if (typeof body.goal === "string") {
-      await executeQuery(
-        "UPDATE social_posts SET goal = ?, updated_at = datetime('now') WHERE id = ?;",
-        [body.goal, id]
-      );
-    }
-
-    // Update targets
-    if (Array.isArray(body.targets) && body.targets.length > 0) {
-      const clauses: string[] = [];
-      const paramsArr: any[] = [];
-      for (const t of body.targets) {
-        clauses.push(
-          "UPDATE social_post_targets SET caption = COALESCE(?, caption), status = COALESCE(?, status), scheduled_at = COALESCE(?, scheduled_at), updated_at = datetime('now') WHERE social_post_id = ? AND platform = ?;"
-        );
-        paramsArr.push(
-          t.caption ?? null,
-          t.status ?? null,
-          t.scheduledAt ?? null,
-          id,
-          (t.platform || '').toLowerCase()
-        );
+    for (const field of allowedFields) {
+      if (body[field] !== undefined) {
+        updates.push(`${field} = ?`);
+        if (['hashtags', 'mentions'].includes(field)) {
+          values.push(JSON.stringify(body[field]));
+        } else if (['requires_approval', 'is_important'].includes(field)) {
+          values.push(body[field] ? 1 : 0);
+        } else {
+          values.push(body[field] as string | number | null);
+        }
       }
-      await executeQuery(clauses.join("\n"), paramsArr);
     }
 
-    const updated = await queryDatabase(
-      `SELECT sp.id, sp.uid, sp.goal, sp.content_id, sp.content_type, sp.created_at, sp.updated_at,
-              GROUP_CONCAT(spt.platform || ':' || spt.status) as platform_statuses
-       FROM social_posts sp
-       LEFT JOIN social_post_targets spt ON spt.social_post_id = sp.id
-       WHERE sp.id = ?
-       GROUP BY sp.id`,
-      [id]
+    if (updates.length === 0) {
+      return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 });
+    }
+
+    updates.push("updated_at = datetime('now')");
+    values.push(id);
+
+    await executeQuery(
+      `UPDATE social_posts SET ${updates.join(', ')} WHERE id = ?`,
+      values
     );
 
-    return NextResponse.json({ ok: true, post: updated[0] || null });
+    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("PATCH /api/social/posts/:id error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    console.error('[Social Posts] PATCH [id] error:', error);
+    return NextResponse.json(
+      { error: 'Failed to update post', details: error instanceof Error ? error.message : 'Unknown' },
+      { status: 500 }
+    );
   }
 }
 
-export async function POST(req: NextRequest, context: { params: Promise<{ id: string }> }) {
+/**
+ * DELETE /api/social/posts/[id]
+ * Delete a post
+ */
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    const hasRole = await userHasAnyRole(req, ["admin", "editor"]);
-    if (!hasRole) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    const { id } = await params;
 
-    const { id: idStr } = await context.params;
-    const id = Number.parseInt(idStr, 10);
-    const action = new URL(req.url).searchParams.get('action');
+    // Check if post exists
+    const rows = await queryDatabase(
+      `SELECT id, status FROM social_posts WHERE id = ?`,
+      [id]
+    );
 
-    if (action === 'archive') {
-      if (Number.isNaN(id)) return NextResponse.json({ error: "Invalid id" }, { status: 400 });
-      await executeQuery(
-        "UPDATE social_post_targets SET status = 'archived', updated_at = datetime('now') WHERE social_post_id = ?;",
-        [id]
-      );
-      return NextResponse.json({ ok: true });
+    if (!rows || rows.length === 0) {
+      return NextResponse.json({ error: 'Post not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ error: "Unsupported action" }, { status: 400 });
-  } catch (error) {
-    console.error("POST /api/social/posts/:id?action=archive error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
-  }
-}
+    // Delete the post
+    await executeQuery(`DELETE FROM social_posts WHERE id = ?`, [id]);
 
-export async function DELETE(req: NextRequest, context: { params: Promise<{ id: string }> }) {
-  try {
-    const hasRole = await userHasAnyRole(req, ["admin", "editor"]);
-    if (!hasRole) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-
-    const { id: idStr } = await context.params;
-    const id = Number.parseInt(idStr, 10);
-    if (Number.isNaN(id)) return NextResponse.json({ error: "Invalid id" }, { status: 400 });
-
-    // Delete targets first due to FK
+    // Log activity
     await executeQuery(
-      "DELETE FROM social_post_targets WHERE social_post_id = ?;",
-      [id]
-    );
-    await executeQuery(
-      "DELETE FROM social_posts WHERE id = ?;",
-      [id]
+      `INSERT INTO social_activity_log (id, user_id, action, target_type, target_id, details)
+       VALUES (?, 'system', 'deleted', 'post', ?, ?)`,
+      [crypto.randomUUID().split('-')[0], id, JSON.stringify({ deleted_at: new Date().toISOString() })]
     );
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("DELETE /api/social/posts/:id error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    console.error('[Social Posts] DELETE [id] error:', error);
+    return NextResponse.json(
+      { error: 'Failed to delete post', details: error instanceof Error ? error.message : 'Unknown' },
+      { status: 500 }
+    );
   }
 }
