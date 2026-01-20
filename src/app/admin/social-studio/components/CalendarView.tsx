@@ -109,18 +109,18 @@ function getMonthDays(year: number, month: number): Date[] {
   return days;
 }
 
-function getStatusDot(status: string): string {
+function getStatusStyles(status: string): { dot: string; glow?: string } {
   switch (status) {
     case 'scheduled':
-      return 'bg-blue-500';
+      return { dot: 'bg-[#D4A853]', glow: 'shadow-[0_0_6px_rgba(212,168,83,0.5)]' };
     case 'published':
-      return 'bg-emerald-500';
+      return { dot: 'bg-emerald-400', glow: 'shadow-[0_0_6px_rgba(52,211,153,0.5)]' };
     case 'failed':
-      return 'bg-red-500';
+      return { dot: 'bg-red-400', glow: 'shadow-[0_0_6px_rgba(239,68,68,0.5)]' };
     case 'publishing':
-      return 'bg-purple-500';
+      return { dot: 'bg-purple-400' };
     default:
-      return 'bg-[#726d6c]';
+      return { dot: 'bg-[#5a5554]' };
   }
 }
 
@@ -130,18 +130,28 @@ function getStatusDot(status: string): string {
 
 const Icons = {
   chevronLeft: (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
     </svg>
   ),
   chevronRight: (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
     </svg>
   ),
   plus: (
     <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+    </svg>
+  ),
+  video: (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="m15.75 10.5 4.72-4.72a.75.75 0 0 1 1.28.53v11.38a.75.75 0 0 1-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25h-9A2.25 2.25 0 0 0 2.25 7.5v9a2.25 2.25 0 0 0 2.25 2.25Z" />
+    </svg>
+  ),
+  image: (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
     </svg>
   ),
 };
@@ -300,43 +310,43 @@ export default function CalendarView({
     : null;
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col bg-black">
       {/* Header */}
-      <div className="flex-shrink-0 px-4 pt-4 pb-3">
+      <div className="flex-shrink-0 px-4 pt-6 pb-4 bg-gradient-to-b from-black via-black to-transparent">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <button
               onClick={goToPrevious}
-              className="w-10 h-10 flex items-center justify-center rounded-xl bg-[#1a1a1a] text-white hover:bg-[#252525] transition-colors"
+              className="w-9 h-9 flex items-center justify-center rounded-xl bg-[#0f0f0f] border border-[#1a1a1a] text-[#8a8584] hover:text-white hover:bg-[#141414] hover:border-[#D4A853]/30 transition-all duration-300"
             >
               {Icons.chevronLeft}
             </button>
             <button
               onClick={goToNext}
-              className="w-10 h-10 flex items-center justify-center rounded-xl bg-[#1a1a1a] text-white hover:bg-[#252525] transition-colors"
+              className="w-9 h-9 flex items-center justify-center rounded-xl bg-[#0f0f0f] border border-[#1a1a1a] text-[#8a8584] hover:text-white hover:bg-[#141414] hover:border-[#D4A853]/30 transition-all duration-300"
             >
               {Icons.chevronRight}
             </button>
-            <h1 className="text-lg font-semibold text-white ml-2">{headerText}</h1>
+            <h1 className="text-lg font-semibold text-white ml-3 tracking-tight">{headerText}</h1>
           </div>
           <button
             onClick={goToToday}
-            className="px-3 py-1.5 rounded-lg bg-[#1a1a1a] text-sm text-[#D4A853] hover:bg-[#252525] transition-colors"
+            className="px-4 py-2 rounded-xl bg-[#0f0f0f] border border-[#1a1a1a] text-xs font-medium text-[#D4A853] hover:bg-[#141414] hover:border-[#D4A853]/30 hover:shadow-[0_0_15px_rgba(212,168,83,0.15)] transition-all duration-300 tracking-wide"
           >
             Today
           </button>
         </div>
 
         {/* View Mode Tabs */}
-        <div className="flex gap-1 p-1 bg-[#1a1a1a] rounded-xl">
+        <div className="flex gap-1 p-1 bg-[#0a0a0a] rounded-xl border border-[#1a1a1a]">
           {(['week', 'month', 'list'] as ViewMode[]).map((mode) => (
             <button
               key={mode}
               onClick={() => setViewMode(mode)}
-              className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
+              className={`flex-1 py-2.5 rounded-lg text-xs font-medium tracking-wide transition-all duration-300 ${
                 viewMode === mode
-                  ? 'bg-[#D4A853] text-black'
-                  : 'text-[#726d6c] hover:text-white'
+                  ? 'bg-gradient-to-r from-[#D4A853] to-[#B8923F] text-black shadow-[0_0_15px_rgba(212,168,83,0.3)]'
+                  : 'text-[#5a5554] hover:text-[#8a8584]'
               }`}
             >
               {mode.charAt(0).toUpperCase() + mode.slice(1)}
@@ -352,7 +362,7 @@ export default function CalendarView({
           <div className="flex-shrink-0 px-4">
             <div className="grid grid-cols-7 gap-1">
               {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, i) => (
-                <div key={i} className="text-center text-xs text-[#726d6c] py-2">
+                <div key={i} className="text-center text-[10px] text-[#5a5554] py-2 font-medium tracking-widest">
                   {day}
                 </div>
               ))}
@@ -372,35 +382,38 @@ export default function CalendarView({
                   <button
                     key={dateStr}
                     onClick={() => setSelectedDate(date)}
-                    className={`relative aspect-square flex flex-col items-center justify-center rounded-lg transition-colors ${
+                    className={`relative aspect-square flex flex-col items-center justify-center rounded-xl transition-all duration-300 ${
                       isSelected
-                        ? 'bg-[#D4A853] text-black'
+                        ? 'bg-gradient-to-br from-[#D4A853] to-[#B8923F] text-black shadow-[0_0_20px_rgba(212,168,83,0.4)]'
                         : dayData?.isToday
-                        ? 'bg-[#D4A853]/20 text-[#D4A853]'
+                        ? 'bg-[#D4A853]/15 text-[#D4A853] ring-1 ring-[#D4A853]/40'
                         : isCurrentMonth
-                        ? 'text-white hover:bg-[#1a1a1a]'
-                        : 'text-[#726d6c]/50'
+                        ? 'text-white hover:bg-[#0f0f0f] hover:ring-1 hover:ring-[#1a1a1a]'
+                        : 'text-[#3a3534]'
                     }`}
                   >
-                    <span className={`text-sm ${viewMode === 'month' ? 'text-xs' : ''}`}>
+                    <span className={`text-sm font-medium ${viewMode === 'month' ? 'text-xs' : ''}`}>
                       {date.getDate()}
                     </span>
 
                     {/* Status dots */}
                     {dayData && (dayData.posts.length > 0 || dayData.emptySlots.length > 0) && (
-                      <div className="flex items-center gap-0.5 mt-0.5">
-                        {dayData.posts.slice(0, 3).map((_, i) => (
-                          <div
-                            key={i}
-                            className={`w-1 h-1 rounded-full ${
-                              isSelected ? 'bg-black/60' : 'bg-blue-500'
-                            }`}
-                          />
-                        ))}
+                      <div className="flex items-center gap-0.5 mt-1">
+                        {dayData.posts.slice(0, 3).map((post, i) => {
+                          const style = getStatusStyles(post.status);
+                          return (
+                            <div
+                              key={i}
+                              className={`w-1.5 h-1.5 rounded-full ${
+                                isSelected ? 'bg-black/60' : style.dot
+                              }`}
+                            />
+                          );
+                        })}
                         {dayData.emptySlots.length > 0 && (
                           <div
-                            className={`w-1 h-1 rounded-full ${
-                              isSelected ? 'bg-black/40' : 'bg-[#726d6c]/50'
+                            className={`w-1.5 h-1.5 rounded-full border ${
+                              isSelected ? 'border-black/40' : 'border-[#5a5554]'
                             }`}
                           />
                         )}
@@ -417,80 +430,94 @@ export default function CalendarView({
       {/* Day Details (Week/Month view) */}
       {viewMode !== 'list' && selectedDayData && (
         <div className="flex-1 overflow-y-auto px-4 pb-24">
-          <div className="mb-3">
-            <h2 className="text-sm font-semibold text-white">
-              {selectedDayData.date.toLocaleDateString('en-US', {
-                weekday: 'long',
-                month: 'long',
-                day: 'numeric',
-              })}
+          <div className="mb-4 pt-2 border-t border-[#1a1a1a]">
+            <h2 className={`text-sm font-semibold tracking-wide ${selectedDayData.isToday ? 'text-[#D4A853]' : 'text-white'}`}>
+              {selectedDayData.isToday
+                ? 'Today'
+                : selectedDayData.date.toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    month: 'long',
+                    day: 'numeric',
+                  })}
             </h2>
           </div>
 
           {selectedDayData.posts.length === 0 && selectedDayData.emptySlots.length === 0 ? (
-            <div className="p-6 rounded-xl bg-[#1a1a1a] border border-[#252525] text-center">
-              <p className="text-sm text-[#726d6c]">No posts or slots for this day</p>
+            <div className="p-8 rounded-2xl bg-[#0a0a0a] border border-[#1a1a1a] text-center">
+              <div className="w-12 h-12 rounded-xl bg-[#0f0f0f] border border-[#1a1a1a] flex items-center justify-center mx-auto mb-3">
+                <span className="text-2xl opacity-40">📅</span>
+              </div>
+              <p className="text-sm text-[#5a5554]">No posts or slots for this day</p>
             </div>
           ) : (
             <div className="space-y-2">
               {/* Posts */}
-              {selectedDayData.posts.map((post) => (
-                <button
-                  key={post.id}
-                  onClick={() => onViewPost(post.id)}
-                  className="w-full flex items-center gap-3 p-3 rounded-xl bg-[#1a1a1a] border border-[#252525] hover:border-[#D4A853]/30 transition-colors text-left"
-                >
-                  <div className="w-12 h-12 rounded-lg overflow-hidden bg-[#252525] flex-shrink-0">
-                    {post.thumbnail_url ? (
-                      <img src={post.thumbnail_url} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-xl">
-                        {post.media_type === 'video' ? '🎬' : '📷'}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-[#D4A853] font-medium">
-                        {formatTime(post.scheduled_at!)}
-                      </span>
-                      <div className={`w-1.5 h-1.5 rounded-full ${getStatusDot(post.status)}`} />
-                      <span className="text-xs text-[#726d6c] capitalize">{post.status}</span>
-                    </div>
-                    <div className="text-sm text-white truncate mt-0.5">
-                      {post.title || post.caption?.slice(0, 40) || 'Untitled'}
-                    </div>
-                    <div className="flex items-center gap-1 mt-1">
-                      {post.platforms.slice(0, 3).map((p) => (
-                        <span key={p} className="text-xs">
-                          {PLATFORM_ICONS[p] || '📱'}
-                        </span>
-                      ))}
-                      {post.platforms.length > 3 && (
-                        <span className="text-[10px] text-[#726d6c]">
-                          +{post.platforms.length - 3}
-                        </span>
+              {selectedDayData.posts.map((post) => {
+                const statusStyle = getStatusStyles(post.status);
+                return (
+                  <button
+                    key={post.id}
+                    onClick={() => onViewPost(post.id)}
+                    className="group w-full flex items-center gap-3 p-3 rounded-2xl bg-[#0a0a0a] border border-[#1a1a1a] hover:border-[#D4A853]/30 hover:shadow-[0_0_25px_rgba(212,168,83,0.08)] transition-all duration-300 text-left"
+                  >
+                    <div className="w-12 h-12 rounded-xl overflow-hidden bg-[#0f0f0f] flex-shrink-0 border border-[#1a1a1a] group-hover:border-[#D4A853]/20 transition-colors">
+                      {post.thumbnail_url ? (
+                        <img src={post.thumbnail_url} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-[#3a3534]">
+                          {post.media_type === 'video' ? Icons.video : Icons.image}
+                        </div>
                       )}
                     </div>
-                  </div>
-                </button>
-              ))}
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-[#D4A853] font-medium">
+                          {formatTime(post.scheduled_at!)}
+                        </span>
+                        <div className={`w-1.5 h-1.5 rounded-full ${statusStyle.dot} ${statusStyle.glow || ''}`} />
+                        <span className="text-[10px] text-[#5a5554] uppercase tracking-wide">{post.status}</span>
+                      </div>
+                      <div className="text-sm text-white truncate mt-1 group-hover:text-[#D4A853] transition-colors">
+                        {post.title || post.caption?.slice(0, 40) || 'Untitled'}
+                      </div>
+                      <div className="flex items-center gap-1 mt-1.5">
+                        {post.platforms.slice(0, 3).map((p) => (
+                          <span key={p} className="text-xs opacity-70">
+                            {PLATFORM_ICONS[p] || '📱'}
+                          </span>
+                        ))}
+                        {post.platforms.length > 3 && (
+                          <span className="text-[10px] text-[#5a5554]">
+                            +{post.platforms.length - 3}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="text-[#3a3534] group-hover:text-[#D4A853] transition-colors">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                      </svg>
+                    </div>
+                  </button>
+                );
+              })}
 
               {/* Empty Slots */}
               {selectedDayData.emptySlots.map((slot) => (
                 <button
                   key={`${selectedDayData.dateStr}-${slot.time}`}
                   onClick={() => onCreateForSlot(selectedDayData.dateStr, slot.time)}
-                  className="w-full flex items-center gap-3 p-3 rounded-xl border-2 border-dashed border-[#252525] hover:border-[#D4A853]/30 transition-colors text-left"
+                  className="group w-full flex items-center gap-3 p-3 rounded-2xl border-2 border-dashed border-[#1a1a1a] hover:border-[#D4A853]/40 hover:bg-[#D4A853]/5 transition-all duration-300 text-left"
                 >
-                  <div className="w-12 h-12 rounded-lg bg-[#1a1a1a] flex items-center justify-center flex-shrink-0">
-                    <span className="text-[#726d6c]">{Icons.plus}</span>
+                  <div className="w-12 h-12 rounded-xl bg-[#0a0a0a] border border-[#1a1a1a] flex items-center justify-center flex-shrink-0 group-hover:border-[#D4A853]/30 transition-colors">
+                    <span className="text-[#5a5554] group-hover:text-[#D4A853] transition-colors">{Icons.plus}</span>
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <div className="text-xs text-[#726d6c]">{formatSlotTime(slot.time)}</div>
-                    <div className="text-sm text-[#D4A853] mt-0.5">+ Add Content</div>
+                    <div className="text-xs text-[#5a5554]">{formatSlotTime(slot.time)}</div>
+                    <div className="text-sm text-[#D4A853] mt-0.5 font-medium">+ Add Content</div>
                   </div>
                 </button>
               ))}
@@ -503,16 +530,19 @@ export default function CalendarView({
       {viewMode === 'list' && (
         <div className="flex-1 overflow-y-auto px-4 pb-24">
           {listDays.length === 0 ? (
-            <div className="p-6 rounded-xl bg-[#1a1a1a] border border-[#252525] text-center mt-4">
-              <p className="text-sm text-[#726d6c]">No posts scheduled for the next two weeks</p>
+            <div className="p-8 rounded-2xl bg-[#0a0a0a] border border-[#1a1a1a] text-center mt-4">
+              <div className="w-12 h-12 rounded-xl bg-[#0f0f0f] border border-[#1a1a1a] flex items-center justify-center mx-auto mb-3">
+                <span className="text-2xl opacity-40">📅</span>
+              </div>
+              <p className="text-sm text-[#5a5554]">No posts scheduled for the next two weeks</p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-6">
               {listDays.map((dayData) => (
                 <div key={dayData.dateStr}>
                   <h3
-                    className={`text-sm font-semibold mb-2 ${
-                      dayData.isToday ? 'text-[#D4A853]' : 'text-white'
+                    className={`text-xs font-semibold uppercase tracking-widest mb-3 ${
+                      dayData.isToday ? 'text-[#D4A853]' : 'text-[#5a5554]'
                     }`}
                   >
                     {dayData.isToday
@@ -526,64 +556,73 @@ export default function CalendarView({
 
                   <div className="space-y-2">
                     {/* Posts */}
-                    {dayData.posts.map((post) => (
-                      <button
-                        key={post.id}
-                        onClick={() => onViewPost(post.id)}
-                        className="w-full flex items-center gap-3 p-3 rounded-xl bg-[#1a1a1a] border border-[#252525] hover:border-[#D4A853]/30 transition-colors text-left"
-                      >
-                        <div className="w-12 h-12 rounded-lg overflow-hidden bg-[#252525] flex-shrink-0">
-                          {post.thumbnail_url ? (
-                            <img
-                              src={post.thumbnail_url}
-                              alt=""
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-xl">
-                              {post.media_type === 'video' ? '🎬' : '📷'}
+                    {dayData.posts.map((post) => {
+                      const statusStyle = getStatusStyles(post.status);
+                      return (
+                        <button
+                          key={post.id}
+                          onClick={() => onViewPost(post.id)}
+                          className="group w-full flex items-center gap-3 p-3 rounded-2xl bg-[#0a0a0a] border border-[#1a1a1a] hover:border-[#D4A853]/30 hover:shadow-[0_0_25px_rgba(212,168,83,0.08)] transition-all duration-300 text-left"
+                        >
+                          <div className="w-12 h-12 rounded-xl overflow-hidden bg-[#0f0f0f] flex-shrink-0 border border-[#1a1a1a] group-hover:border-[#D4A853]/20 transition-colors">
+                            {post.thumbnail_url ? (
+                              <img
+                                src={post.thumbnail_url}
+                                alt=""
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-[#3a3534]">
+                                {post.media_type === 'video' ? Icons.video : Icons.image}
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-[#D4A853] font-medium">
+                                {formatTime(post.scheduled_at!)}
+                              </span>
+                              <div
+                                className={`w-1.5 h-1.5 rounded-full ${statusStyle.dot} ${statusStyle.glow || ''}`}
+                              />
                             </div>
-                          )}
-                        </div>
-
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-[#D4A853] font-medium">
-                              {formatTime(post.scheduled_at!)}
-                            </span>
-                            <div
-                              className={`w-1.5 h-1.5 rounded-full ${getStatusDot(post.status)}`}
-                            />
+                            <div className="text-sm text-white truncate mt-1 group-hover:text-[#D4A853] transition-colors">
+                              {post.title || post.caption?.slice(0, 40) || 'Untitled'}
+                            </div>
                           </div>
-                          <div className="text-sm text-white truncate mt-0.5">
-                            {post.title || post.caption?.slice(0, 40) || 'Untitled'}
-                          </div>
-                        </div>
 
-                        <div className="flex items-center gap-1 flex-shrink-0">
-                          {post.platforms.slice(0, 2).map((p) => (
-                            <span key={p} className="text-sm">
-                              {PLATFORM_ICONS[p] || '📱'}
-                            </span>
-                          ))}
-                        </div>
-                      </button>
-                    ))}
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            {post.platforms.slice(0, 2).map((p) => (
+                              <span key={p} className="text-sm opacity-70">
+                                {PLATFORM_ICONS[p] || '📱'}
+                              </span>
+                            ))}
+                          </div>
+
+                          <div className="text-[#3a3534] group-hover:text-[#D4A853] transition-colors">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                            </svg>
+                          </div>
+                        </button>
+                      );
+                    })}
 
                     {/* Empty Slots */}
                     {dayData.emptySlots.map((slot) => (
                       <button
                         key={`${dayData.dateStr}-${slot.time}`}
                         onClick={() => onCreateForSlot(dayData.dateStr, slot.time)}
-                        className="w-full flex items-center gap-3 p-3 rounded-xl border-2 border-dashed border-[#252525] hover:border-[#D4A853]/30 transition-colors text-left"
+                        className="group w-full flex items-center gap-3 p-3 rounded-2xl border-2 border-dashed border-[#1a1a1a] hover:border-[#D4A853]/40 hover:bg-[#D4A853]/5 transition-all duration-300 text-left"
                       >
-                        <div className="w-12 h-12 rounded-lg bg-[#1a1a1a] flex items-center justify-center flex-shrink-0">
-                          <span className="text-[#726d6c]">{Icons.plus}</span>
+                        <div className="w-12 h-12 rounded-xl bg-[#0a0a0a] border border-[#1a1a1a] flex items-center justify-center flex-shrink-0 group-hover:border-[#D4A853]/30 transition-colors">
+                          <span className="text-[#5a5554] group-hover:text-[#D4A853] transition-colors">{Icons.plus}</span>
                         </div>
 
                         <div className="flex-1 min-w-0">
-                          <div className="text-xs text-[#726d6c]">{formatSlotTime(slot.time)}</div>
-                          <div className="text-sm text-[#D4A853] mt-0.5">+ Add Content</div>
+                          <div className="text-xs text-[#5a5554]">{formatSlotTime(slot.time)}</div>
+                          <div className="text-sm text-[#D4A853] mt-0.5 font-medium">+ Add Content</div>
                         </div>
                       </button>
                     ))}

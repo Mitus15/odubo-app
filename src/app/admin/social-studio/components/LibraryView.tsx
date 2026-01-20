@@ -85,20 +85,41 @@ function getStatusLabel(status: string): string {
   }
 }
 
-function getStatusColor(status: string): string {
+function getStatusStyles(status: string): { bg: string; text: string; glow?: string } {
   switch (status) {
     case 'scheduled':
-      return 'bg-blue-500';
+      return {
+        bg: 'bg-[#D4A853]/20',
+        text: 'text-[#D4A853]',
+        glow: 'shadow-[0_0_8px_rgba(212,168,83,0.3)]'
+      };
     case 'published':
-      return 'bg-emerald-500';
+      return {
+        bg: 'bg-emerald-500/20',
+        text: 'text-emerald-400',
+        glow: 'shadow-[0_0_8px_rgba(52,211,153,0.3)]'
+      };
     case 'publishing':
-      return 'bg-purple-500';
+      return {
+        bg: 'bg-purple-500/20',
+        text: 'text-purple-400'
+      };
     case 'failed':
-      return 'bg-red-500';
+      return {
+        bg: 'bg-red-500/20',
+        text: 'text-red-400',
+        glow: 'shadow-[0_0_8px_rgba(239,68,68,0.3)]'
+      };
     case 'draft':
-      return 'bg-[#726d6c]';
+      return {
+        bg: 'bg-[#5a5554]/20',
+        text: 'text-[#8a8584]'
+      };
     default:
-      return 'bg-[#726d6c]';
+      return {
+        bg: 'bg-[#5a5554]/20',
+        text: 'text-[#8a8584]'
+      };
   }
 }
 
@@ -112,13 +133,8 @@ const Icons = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
     </svg>
   ),
-  plus: (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-    </svg>
-  ),
   refresh: (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
     </svg>
   ),
@@ -130,6 +146,16 @@ const Icons = {
   list: (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zM3.75 12h.007v.008H3.75V12zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm-.375 5.25h.007v.008H3.75v-.008zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+    </svg>
+  ),
+  video: (
+    <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="m15.75 10.5 4.72-4.72a.75.75 0 0 1 1.28.53v11.38a.75.75 0 0 1-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25h-9A2.25 2.25 0 0 0 2.25 7.5v9a2.25 2.25 0 0 0 2.25 2.25Z" />
+    </svg>
+  ),
+  image: (
+    <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
     </svg>
   ),
 };
@@ -213,24 +239,22 @@ export default function LibraryView({
   }, [posts]);
 
   return (
-    <div className="h-full flex flex-col">
-      {/* Header */}
-      <div className="flex-shrink-0 px-4 pt-4 pb-3">
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl font-bold text-white">Library</h1>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={onRefresh}
-              className="w-10 h-10 flex items-center justify-center rounded-xl bg-[#1a1a1a] text-[#D4A853] hover:bg-[#252525] transition-colors"
-            >
-              {Icons.refresh}
-            </button>
-          </div>
+    <div className="h-full flex flex-col bg-black">
+      {/* Header - Glass effect */}
+      <div className="flex-shrink-0 px-4 pt-6 pb-4 bg-gradient-to-b from-black via-black to-transparent">
+        <div className="flex items-center justify-between mb-5">
+          <h1 className="text-2xl font-semibold text-white tracking-tight">Library</h1>
+          <button
+            onClick={onRefresh}
+            className="w-9 h-9 flex items-center justify-center rounded-xl bg-[#0f0f0f] border border-[#1a1a1a] text-[#D4A853] hover:bg-[#141414] hover:border-[#D4A853]/30 hover:shadow-[0_0_20px_rgba(212,168,83,0.15)] transition-all duration-300"
+          >
+            {Icons.refresh}
+          </button>
         </div>
 
-        {/* Search */}
+        {/* Search - Premium styling */}
         <div className="relative mb-4">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#726d6c]">
+          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#5a5554]">
             {Icons.search}
           </span>
           <input
@@ -238,24 +262,26 @@ export default function LibraryView({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search posts..."
-            className="w-full pl-10 pr-4 py-3 rounded-xl bg-[#1a1a1a] border border-[#252525] text-white placeholder-[#726d6c] outline-none focus:border-[#D4A853]/50 transition-colors"
+            className="w-full pl-12 pr-4 py-3.5 rounded-2xl bg-[#0a0a0a] border border-[#1a1a1a] text-white placeholder-[#5a5554] outline-none focus:border-[#D4A853]/40 focus:shadow-[0_0_20px_rgba(212,168,83,0.1)] transition-all duration-300 text-sm"
           />
         </div>
 
-        {/* Status Tabs */}
-        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4">
+        {/* Status Tabs - Gold active state */}
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide -mx-4 px-4">
           {(['all', 'scheduled', 'published', 'draft', 'failed'] as StatusFilter[]).map((status) => (
             <button
               key={status}
               onClick={() => setStatusFilter(status)}
-              className={`flex-shrink-0 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
+              className={`flex-shrink-0 px-4 py-2.5 rounded-xl text-xs font-medium tracking-wide transition-all duration-300 ${
                 statusFilter === status
-                  ? 'bg-[#D4A853] text-black'
-                  : 'bg-[#1a1a1a] text-white hover:bg-[#252525]'
+                  ? 'bg-gradient-to-r from-[#D4A853] to-[#B8923F] text-black shadow-[0_0_20px_rgba(212,168,83,0.3)]'
+                  : 'bg-[#0f0f0f] text-[#8a8584] hover:bg-[#141414] hover:text-white border border-[#1a1a1a]'
               }`}
             >
               {status.charAt(0).toUpperCase() + status.slice(1)}
-              <span className="ml-1.5 opacity-60">{statusCounts[status]}</span>
+              <span className={`ml-1.5 ${statusFilter === status ? 'opacity-70' : 'opacity-50'}`}>
+                {statusCounts[status]}
+              </span>
             </button>
           ))}
         </div>
@@ -264,13 +290,13 @@ export default function LibraryView({
       {/* Campaign Pills */}
       {campaigns.length > 0 && (
         <div className="flex-shrink-0 px-4 pb-3">
-          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4">
+          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide -mx-4 px-4">
             <button
               onClick={() => setCampaignFilter(null)}
-              className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+              className={`flex-shrink-0 px-3.5 py-2 rounded-full text-xs font-medium tracking-wide transition-all duration-300 ${
                 !campaignFilter
-                  ? 'bg-[#D4A853]/20 text-[#D4A853] border border-[#D4A853]'
-                  : 'bg-[#1a1a1a] text-[#726d6c] border border-[#252525] hover:border-[#D4A853]/30'
+                  ? 'bg-[#D4A853]/15 text-[#D4A853] border border-[#D4A853]/50 shadow-[0_0_12px_rgba(212,168,83,0.15)]'
+                  : 'bg-[#0a0a0a] text-[#5a5554] border border-[#1a1a1a] hover:border-[#D4A853]/30 hover:text-[#8a8584]'
               }`}
             >
               All Campaigns
@@ -283,24 +309,20 @@ export default function LibraryView({
                   onClick={() =>
                     setCampaignFilter(campaignFilter === campaign.id ? null : campaign.id)
                   }
-                  className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                  className={`flex-shrink-0 px-3.5 py-2 rounded-full text-xs font-medium tracking-wide transition-all duration-300 flex items-center gap-1.5 ${
                     campaignFilter === campaign.id
-                      ? 'bg-[#D4A853]/20 text-[#D4A853] border border-[#D4A853]'
-                      : 'bg-[#1a1a1a] text-[#726d6c] border border-[#252525] hover:border-[#D4A853]/30'
+                      ? 'bg-[#D4A853]/15 text-[#D4A853] border border-[#D4A853]/50 shadow-[0_0_12px_rgba(212,168,83,0.15)]'
+                      : 'bg-[#0a0a0a] text-[#5a5554] border border-[#1a1a1a] hover:border-[#D4A853]/30 hover:text-[#8a8584]'
                   }`}
-                  style={{
-                    borderColor:
-                      campaignFilter === campaign.id ? campaign.color || '#D4A853' : undefined,
-                  }}
                 >
                   {campaign.color && (
                     <span
-                      className="inline-block w-2 h-2 rounded-full mr-1.5"
+                      className="w-2 h-2 rounded-full"
                       style={{ backgroundColor: campaign.color }}
                     />
                   )}
                   {campaign.name}
-                  <span className="ml-1 opacity-60">{campaignCounts[campaign.id] || 0}</span>
+                  <span className="opacity-50">{campaignCounts[campaign.id] || 0}</span>
                 </button>
               ))}
           </div>
@@ -308,20 +330,24 @@ export default function LibraryView({
       )}
 
       {/* View Mode Toggle */}
-      <div className="flex-shrink-0 px-4 pb-2 flex justify-end">
-        <div className="flex gap-1 p-1 bg-[#1a1a1a] rounded-lg">
+      <div className="flex-shrink-0 px-4 pb-3 flex justify-end">
+        <div className="flex gap-1 p-1 bg-[#0a0a0a] rounded-xl border border-[#1a1a1a]">
           <button
             onClick={() => setViewMode('grid')}
-            className={`p-2 rounded-md transition-colors ${
-              viewMode === 'grid' ? 'bg-[#252525] text-white' : 'text-[#726d6c]'
+            className={`p-2 rounded-lg transition-all duration-300 ${
+              viewMode === 'grid'
+                ? 'bg-[#D4A853]/20 text-[#D4A853] shadow-[0_0_10px_rgba(212,168,83,0.2)]'
+                : 'text-[#5a5554] hover:text-[#8a8584]'
             }`}
           >
             {Icons.grid}
           </button>
           <button
             onClick={() => setViewMode('list')}
-            className={`p-2 rounded-md transition-colors ${
-              viewMode === 'list' ? 'bg-[#252525] text-white' : 'text-[#726d6c]'
+            className={`p-2 rounded-lg transition-all duration-300 ${
+              viewMode === 'list'
+                ? 'bg-[#D4A853]/20 text-[#D4A853] shadow-[0_0_10px_rgba(212,168,83,0.2)]'
+                : 'text-[#5a5554] hover:text-[#8a8584]'
             }`}
           >
             {Icons.list}
@@ -332,9 +358,11 @@ export default function LibraryView({
       {/* Content */}
       <div className="flex-1 overflow-y-auto px-4 pb-24">
         {filteredPosts.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16">
-            <div className="text-4xl mb-4">📭</div>
-            <p className="text-[#726d6c] text-center">
+          <div className="flex flex-col items-center justify-center py-20">
+            <div className="w-16 h-16 rounded-2xl bg-[#0f0f0f] border border-[#1a1a1a] flex items-center justify-center mb-4">
+              <span className="text-3xl opacity-50">📭</span>
+            </div>
+            <p className="text-[#5a5554] text-sm text-center">
               {searchQuery
                 ? 'No posts match your search'
                 : statusFilter !== 'all'
@@ -345,142 +373,162 @@ export default function LibraryView({
         ) : viewMode === 'grid' ? (
           /* Grid View */
           <div className="grid grid-cols-2 gap-3">
-            {filteredPosts.map((post) => (
-              <button
-                key={post.id}
-                onClick={() => onViewPost(post.id)}
-                className="rounded-xl overflow-hidden bg-[#1a1a1a] border border-[#252525] hover:border-[#D4A853]/30 transition-colors text-left"
-              >
-                {/* Thumbnail */}
-                <div className="aspect-square relative bg-[#252525]">
-                  {post.thumbnail_url ? (
-                    <img
-                      src={post.thumbnail_url}
-                      alt=""
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-4xl">
-                      {post.media_type === 'video' ? '🎬' : '📷'}
-                    </div>
-                  )}
+            {filteredPosts.map((post) => {
+              const statusStyle = getStatusStyles(post.status);
+              return (
+                <button
+                  key={post.id}
+                  onClick={() => onViewPost(post.id)}
+                  className="group rounded-2xl overflow-hidden bg-[#0a0a0a] border border-[#1a1a1a] hover:border-[#D4A853]/30 hover:shadow-[0_0_30px_rgba(212,168,83,0.1)] transition-all duration-300 text-left"
+                >
+                  {/* Thumbnail */}
+                  <div className="aspect-square relative bg-[#0f0f0f] overflow-hidden">
+                    {post.thumbnail_url ? (
+                      <img
+                        src={post.thumbnail_url}
+                        alt=""
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-[#3a3534]">
+                        {post.media_type === 'video' ? Icons.video : Icons.image}
+                      </div>
+                    )}
 
-                  {/* Status Badge */}
-                  <div className="absolute top-2 left-2">
-                    <span
-                      className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${getStatusColor(
-                        post.status
-                      )} text-white`}
-                    >
-                      {getStatusLabel(post.status)}
-                    </span>
-                  </div>
+                    {/* Gradient overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
 
-                  {/* Platform Icons */}
-                  <div className="absolute bottom-2 right-2 flex gap-0.5">
-                    {post.platforms.slice(0, 3).map((p) => (
+                    {/* Status Badge */}
+                    <div className="absolute top-2.5 left-2.5">
                       <span
-                        key={p}
-                        className="w-6 h-6 rounded-full bg-black/60 flex items-center justify-center text-xs"
+                        className={`px-2 py-1 rounded-lg text-[10px] font-semibold tracking-wide uppercase ${statusStyle.bg} ${statusStyle.text} ${statusStyle.glow || ''}`}
                       >
-                        {PLATFORM_ICONS[p] || '📱'}
+                        {getStatusLabel(post.status)}
                       </span>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Info */}
-                <div className="p-3">
-                  <div className="text-sm text-white truncate">
-                    {post.title || post.caption?.slice(0, 30) || 'Untitled'}
-                  </div>
-                  <div className="text-xs text-[#726d6c] mt-1">
-                    {post.status === 'scheduled' && post.scheduled_at
-                      ? `${formatScheduledDate(post.scheduled_at)} • ${formatTime(post.scheduled_at)}`
-                      : post.status === 'published' && post.published_at
-                      ? formatDate(post.published_at)
-                      : formatDate(post.created_at)}
-                  </div>
-                </div>
-              </button>
-            ))}
-          </div>
-        ) : (
-          /* List View */
-          <div className="space-y-2">
-            {filteredPosts.map((post) => (
-              <button
-                key={post.id}
-                onClick={() => onViewPost(post.id)}
-                className="w-full flex items-center gap-3 p-3 rounded-xl bg-[#1a1a1a] border border-[#252525] hover:border-[#D4A853]/30 transition-colors text-left"
-              >
-                {/* Thumbnail */}
-                <div className="w-16 h-16 rounded-lg overflow-hidden bg-[#252525] flex-shrink-0">
-                  {post.thumbnail_url ? (
-                    <img
-                      src={post.thumbnail_url}
-                      alt=""
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-2xl">
-                      {post.media_type === 'video' ? '🎬' : '📷'}
                     </div>
-                  )}
-                </div>
 
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-white truncate">
-                      {post.title || post.caption?.slice(0, 40) || 'Untitled'}
-                    </span>
+                    {/* Platform Icons */}
+                    <div className="absolute bottom-2.5 right-2.5 flex gap-1">
+                      {post.platforms.slice(0, 3).map((p) => (
+                        <span
+                          key={p}
+                          className="w-6 h-6 rounded-lg bg-black/70 backdrop-blur-sm flex items-center justify-center text-xs border border-white/10"
+                        >
+                          {PLATFORM_ICONS[p] || '📱'}
+                        </span>
+                      ))}
+                    </div>
                   </div>
 
-                  <div className="flex items-center gap-2 mt-1">
-                    <span
-                      className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${getStatusColor(
-                        post.status
-                      )} text-white`}
-                    >
-                      {getStatusLabel(post.status)}
-                    </span>
-
-                    <span className="text-xs text-[#726d6c]">
+                  {/* Info */}
+                  <div className="p-3 border-t border-[#1a1a1a]">
+                    <div className="text-sm text-white truncate font-medium">
+                      {post.title || post.caption?.slice(0, 30) || 'Untitled'}
+                    </div>
+                    <div className="text-xs text-[#5a5554] mt-1">
                       {post.status === 'scheduled' && post.scheduled_at
                         ? `${formatScheduledDate(post.scheduled_at)} • ${formatTime(post.scheduled_at)}`
                         : post.status === 'published' && post.published_at
                         ? formatDate(post.published_at)
                         : formatDate(post.created_at)}
-                    </span>
+                    </div>
                   </div>
-
-                  <div className="flex items-center gap-1 mt-1.5">
-                    {post.platforms.slice(0, 4).map((p) => (
-                      <span key={p} className="text-xs">
-                        {PLATFORM_ICONS[p] || '📱'}
-                      </span>
-                    ))}
-                    {post.platforms.length > 4 && (
-                      <span className="text-[10px] text-[#726d6c]">
-                        +{post.platforms.length - 4}
-                      </span>
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          /* List View */
+          <div className="space-y-2">
+            {filteredPosts.map((post) => {
+              const statusStyle = getStatusStyles(post.status);
+              return (
+                <button
+                  key={post.id}
+                  onClick={() => onViewPost(post.id)}
+                  className="group w-full flex items-center gap-3 p-3 rounded-2xl bg-[#0a0a0a] border border-[#1a1a1a] hover:border-[#D4A853]/30 hover:shadow-[0_0_25px_rgba(212,168,83,0.08)] transition-all duration-300 text-left"
+                >
+                  {/* Thumbnail */}
+                  <div className="w-16 h-16 rounded-xl overflow-hidden bg-[#0f0f0f] flex-shrink-0 border border-[#1a1a1a] group-hover:border-[#D4A853]/20 transition-colors">
+                    {post.thumbnail_url ? (
+                      <img
+                        src={post.thumbnail_url}
+                        alt=""
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-[#3a3534]">
+                        {post.media_type === 'video' ? (
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="m15.75 10.5 4.72-4.72a.75.75 0 0 1 1.28.53v11.38a.75.75 0 0 1-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25h-9A2.25 2.25 0 0 0 2.25 7.5v9a2.25 2.25 0 0 0 2.25 2.25Z" />
+                          </svg>
+                        ) : (
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+                          </svg>
+                        )}
+                      </div>
                     )}
                   </div>
-                </div>
 
-                {/* Campaign color indicator */}
-                {post.campaign_id && (
-                  <div
-                    className="w-1 h-12 rounded-full"
-                    style={{
-                      backgroundColor:
-                        campaigns.find((c) => c.id === post.campaign_id)?.color || '#726d6c',
-                    }}
-                  />
-                )}
-              </button>
-            ))}
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-white truncate group-hover:text-[#D4A853] transition-colors">
+                        {post.title || post.caption?.slice(0, 40) || 'Untitled'}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2 mt-1.5">
+                      <span
+                        className={`px-2 py-0.5 rounded-md text-[10px] font-semibold tracking-wide uppercase ${statusStyle.bg} ${statusStyle.text}`}
+                      >
+                        {getStatusLabel(post.status)}
+                      </span>
+
+                      <span className="text-xs text-[#5a5554]">
+                        {post.status === 'scheduled' && post.scheduled_at
+                          ? `${formatScheduledDate(post.scheduled_at)} • ${formatTime(post.scheduled_at)}`
+                          : post.status === 'published' && post.published_at
+                          ? formatDate(post.published_at)
+                          : formatDate(post.created_at)}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 mt-2">
+                      {post.platforms.slice(0, 4).map((p) => (
+                        <span key={p} className="text-xs opacity-70">
+                          {PLATFORM_ICONS[p] || '📱'}
+                        </span>
+                      ))}
+                      {post.platforms.length > 4 && (
+                        <span className="text-[10px] text-[#5a5554]">
+                          +{post.platforms.length - 4}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Campaign color indicator */}
+                  {post.campaign_id && (
+                    <div
+                      className="w-1 h-12 rounded-full flex-shrink-0"
+                      style={{
+                        backgroundColor:
+                          campaigns.find((c) => c.id === post.campaign_id)?.color || '#5a5554',
+                      }}
+                    />
+                  )}
+
+                  {/* Hover arrow */}
+                  <div className="text-[#3a3534] group-hover:text-[#D4A853] transition-colors">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                    </svg>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         )}
       </div>

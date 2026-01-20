@@ -64,15 +64,15 @@ function formatNumber(num: number): string {
 function getStatusColor(status: string): string {
   switch (status) {
     case 'scheduled':
-      return 'bg-blue-500';
+      return 'bg-blue-500/80';
     case 'published':
-      return 'bg-emerald-500';
+      return 'bg-emerald-500/80';
     case 'failed':
-      return 'bg-red-500';
+      return 'bg-red-500/80';
     case 'publishing':
-      return 'bg-purple-500';
+      return 'bg-purple-500/80';
     default:
-      return 'bg-[#726d6c]';
+      return 'bg-[#5a5554]';
   }
 }
 
@@ -191,8 +191,8 @@ export default function HomeView({
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-10 h-10 border-2 border-[#D4A853]/30 border-t-[#D4A853] rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-[#726d6c]">Loading your studio...</p>
+          <div className="w-10 h-10 border-2 border-[#D4A853]/20 border-t-[#D4A853] rounded-full animate-spin mx-auto mb-4 shadow-[0_0_20px_rgba(212,168,83,0.15)]" />
+          <p className="text-[#8a8584] tracking-wide">Loading your studio...</p>
         </div>
       </div>
     );
@@ -200,19 +200,19 @@ export default function HomeView({
 
   return (
     <div className="h-full overflow-y-auto">
-      <div className="px-4 pt-4 pb-24 space-y-6">
+      <div className="px-4 pt-6 pb-24 space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-white">Social Studio</h1>
-            <p className="text-sm text-[#726d6c] mt-0.5">
+            <h1 className="text-2xl font-semibold text-white tracking-tight">Social Studio</h1>
+            <p className="text-sm text-[#8a8584] mt-1 tracking-wide">
               {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
             </p>
           </div>
           <button
             onClick={onSync}
             disabled={syncing}
-            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#1a1a1a] text-[#D4A853] text-sm font-medium hover:bg-[#252525] active:bg-[#1a1a1a] transition-colors disabled:opacity-50 min-h-[44px]"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#141414] border border-[#D4A853]/20 text-[#D4A853] text-sm font-medium hover:bg-[#1a1a1a] hover:border-[#D4A853]/40 active:bg-[#0f0f0f] transition-all disabled:opacity-50 min-h-[44px] shadow-[0_0_20px_rgba(212,168,83,0.05)]"
           >
             <span className={syncing ? 'animate-spin' : ''}>{Icons.sync}</span>
             {syncing ? 'Syncing...' : 'Sync'}
@@ -222,9 +222,9 @@ export default function HomeView({
         {/* Today's Posts */}
         <section>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold text-[#D4A853] uppercase tracking-wide">Today</h2>
+            <h2 className="text-xs font-semibold text-[#D4A853] uppercase tracking-[0.15em]">Today</h2>
             {today.length > 0 && (
-              <span className="text-xs text-[#726d6c]">{today.length} post{today.length !== 1 ? 's' : ''}</span>
+              <span className="text-xs text-[#5a5554]">{today.length} post{today.length !== 1 ? 's' : ''}</span>
             )}
           </div>
 
@@ -234,12 +234,12 @@ export default function HomeView({
                 <button
                   key={post.id}
                   onClick={() => onViewPost(post.id)}
-                  className="flex-shrink-0 w-28 p-3 rounded-xl bg-[#1a1a1a] border border-[#252525] hover:border-[#D4A853]/30 transition-colors text-left"
+                  className="flex-shrink-0 w-28 p-3 rounded-2xl bg-[#0f0f0f] border border-[#1a1a1a] hover:border-[#D4A853]/30 hover:bg-[#141414] transition-all text-left group"
                 >
-                  <div className="text-xs text-[#D4A853] font-medium mb-2">
+                  <div className="text-xs text-[#D4A853] font-medium mb-2 tracking-wide">
                     {formatTime(post.scheduled_at!)}
                   </div>
-                  <div className="w-full aspect-square rounded-lg overflow-hidden bg-[#252525] mb-2">
+                  <div className="w-full aspect-square rounded-xl overflow-hidden bg-[#1a1a1a] mb-2 group-hover:ring-1 group-hover:ring-[#D4A853]/20 transition-all">
                     {post.thumbnail_url ? (
                       <img src={post.thumbnail_url} alt="" className="w-full h-full object-cover" />
                     ) : (
@@ -250,10 +250,10 @@ export default function HomeView({
                   </div>
                   <div className="flex items-center gap-1">
                     {post.platforms.slice(0, 2).map((p) => (
-                      <span key={p} className="text-xs">{PLATFORM_ICONS[p] || '📱'}</span>
+                      <span key={p} className="text-xs opacity-80">{PLATFORM_ICONS[p] || '📱'}</span>
                     ))}
                     {post.platforms.length > 2 && (
-                      <span className="text-[10px] text-[#726d6c]">+{post.platforms.length - 2}</span>
+                      <span className="text-[10px] text-[#5a5554]">+{post.platforms.length - 2}</span>
                     )}
                   </div>
                 </button>
@@ -262,75 +262,75 @@ export default function HomeView({
               {/* Add Post Button */}
               <button
                 onClick={() => onNavigate('create')}
-                className="flex-shrink-0 w-28 p-3 rounded-xl border-2 border-dashed border-[#252525] hover:border-[#D4A853]/30 transition-colors flex flex-col items-center justify-center text-[#726d6c] hover:text-[#D4A853]"
+                className="flex-shrink-0 w-28 p-3 rounded-2xl border border-dashed border-[#2a2a2a] hover:border-[#D4A853]/40 transition-all flex flex-col items-center justify-center text-[#5a5554] hover:text-[#D4A853]"
               >
                 {Icons.plus}
-                <span className="text-xs mt-1">Add</span>
+                <span className="text-xs mt-1 tracking-wide">Add</span>
               </button>
             </div>
           ) : (
             <button
               onClick={() => onNavigate('create')}
-              className="w-full p-6 rounded-xl border-2 border-dashed border-[#252525] hover:border-[#D4A853]/30 transition-colors text-center"
+              className="w-full p-8 rounded-2xl bg-[#0a0a0a] border border-dashed border-[#1a1a1a] hover:border-[#D4A853]/30 transition-all text-center group"
             >
-              <div className="text-3xl mb-2">📅</div>
-              <p className="text-sm text-[#726d6c]">Nothing scheduled for today</p>
-              <p className="text-xs text-[#D4A853] mt-1">Tap to create a post</p>
+              <div className="text-3xl mb-3 opacity-60 group-hover:opacity-80 transition-opacity">📅</div>
+              <p className="text-sm text-[#5a5554]">Nothing scheduled for today</p>
+              <p className="text-xs text-[#D4A853] mt-2 tracking-wide">Tap to create a post</p>
             </button>
           )}
         </section>
 
         {/* Needs Attention */}
         {hasAttention && (
-          <section className="p-4 rounded-xl bg-gradient-to-br from-amber-950/40 to-red-950/40 border border-amber-900/30">
+          <section className="p-4 rounded-2xl bg-gradient-to-br from-[#843c2d]/20 to-[#2a1510]/40 border border-[#843c2d]/30 backdrop-blur-sm">
             <div className="flex items-center gap-2 mb-3">
-              <span className="text-amber-400">{Icons.alert}</span>
-              <h2 className="text-sm font-semibold text-amber-400">Needs Attention</h2>
+              <span className="text-[#e8a090]">{Icons.alert}</span>
+              <h2 className="text-xs font-semibold text-[#e8a090] uppercase tracking-[0.1em]">Needs Attention</h2>
             </div>
 
             <div className="space-y-2">
               {attention.failed.length > 0 && (
                 <button
                   onClick={() => onViewPost(attention.failed[0].id)}
-                  className="w-full flex items-center justify-between p-3 rounded-lg bg-black/30 text-left hover:bg-black/40 transition-colors"
+                  className="w-full flex items-center justify-between p-3 rounded-xl bg-black/40 text-left hover:bg-black/50 transition-all group"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-2 h-2 rounded-full bg-red-500" />
-                    <span className="text-sm text-white">
+                    <div className="w-2 h-2 rounded-full bg-red-400" />
+                    <span className="text-sm text-white/90">
                       {attention.failed.length} failed post{attention.failed.length !== 1 ? 's' : ''}
                     </span>
                   </div>
-                  {Icons.chevronRight}
+                  <span className="text-[#5a5554] group-hover:text-[#8a8584] transition-colors">{Icons.chevronRight}</span>
                 </button>
               )}
 
               {attention.emptySlots > 0 && (
                 <button
                   onClick={() => onNavigate('calendar')}
-                  className="w-full flex items-center justify-between p-3 rounded-lg bg-black/30 text-left hover:bg-black/40 transition-colors"
+                  className="w-full flex items-center justify-between p-3 rounded-xl bg-black/40 text-left hover:bg-black/50 transition-all group"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-2 h-2 rounded-full bg-amber-500" />
-                    <span className="text-sm text-white">
+                    <div className="w-2 h-2 rounded-full bg-[#D4A853]" />
+                    <span className="text-sm text-white/90">
                       {attention.emptySlots} empty slot{attention.emptySlots !== 1 ? 's' : ''} this week
                     </span>
                   </div>
-                  {Icons.chevronRight}
+                  <span className="text-[#5a5554] group-hover:text-[#8a8584] transition-colors">{Icons.chevronRight}</span>
                 </button>
               )}
 
               {attention.pending.length > 0 && (
                 <button
                   onClick={() => onNavigate('library')}
-                  className="w-full flex items-center justify-between p-3 rounded-lg bg-black/30 text-left hover:bg-black/40 transition-colors"
+                  className="w-full flex items-center justify-between p-3 rounded-xl bg-black/40 text-left hover:bg-black/50 transition-all group"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-2 h-2 rounded-full bg-blue-500" />
-                    <span className="text-sm text-white">
+                    <div className="w-2 h-2 rounded-full bg-blue-400" />
+                    <span className="text-sm text-white/90">
                       {attention.pending.length} draft{attention.pending.length !== 1 ? 's' : ''} to finish
                     </span>
                   </div>
-                  {Icons.chevronRight}
+                  <span className="text-[#5a5554] group-hover:text-[#8a8584] transition-colors">{Icons.chevronRight}</span>
                 </button>
               )}
             </div>
@@ -338,33 +338,33 @@ export default function HomeView({
         )}
 
         {/* Week Stats */}
-        <section className="p-4 rounded-xl bg-[#1a1a1a] border border-[#252525]">
-          <div className="flex items-center gap-2 mb-4">
+        <section className="p-5 rounded-2xl bg-gradient-to-br from-[#0f0f0f] to-[#0a0a0a] border border-[#1a1a1a]">
+          <div className="flex items-center gap-2 mb-5">
             <span className="text-[#D4A853]">{Icons.chart}</span>
-            <h2 className="text-sm font-semibold text-white">This Week</h2>
+            <h2 className="text-xs font-semibold text-white uppercase tracking-[0.1em]">This Week</h2>
           </div>
 
-          <div className="grid grid-cols-3 gap-4 mb-4">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-white">{formatNumber(weekStats.views)}</div>
-              <div className="text-xs text-[#726d6c]">Views</div>
+          <div className="grid grid-cols-3 gap-4 mb-5">
+            <div className="text-center p-3 rounded-xl bg-[#141414]">
+              <div className="text-xl font-semibold text-white">{formatNumber(weekStats.views)}</div>
+              <div className="text-[10px] text-[#5a5554] uppercase tracking-wider mt-1">Views</div>
             </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-white">{formatNumber(weekStats.likes)}</div>
-              <div className="text-xs text-[#726d6c]">Likes</div>
+            <div className="text-center p-3 rounded-xl bg-[#141414]">
+              <div className="text-xl font-semibold text-white">{formatNumber(weekStats.likes)}</div>
+              <div className="text-[10px] text-[#5a5554] uppercase tracking-wider mt-1">Likes</div>
             </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-white">{weekStats.engagement}%</div>
-              <div className="text-xs text-[#726d6c]">Engage</div>
+            <div className="text-center p-3 rounded-xl bg-[#141414]">
+              <div className="text-xl font-semibold text-[#D4A853]">{weekStats.engagement}%</div>
+              <div className="text-[10px] text-[#5a5554] uppercase tracking-wider mt-1">Engage</div>
             </div>
           </div>
 
           {weekStats.topPost && (
             <button
               onClick={() => onViewPost(weekStats.topPost!.id)}
-              className="w-full flex items-center gap-3 p-3 rounded-lg bg-[#252525] hover:bg-[#2a2a2a] transition-colors"
+              className="w-full flex items-center gap-3 p-3 rounded-xl bg-[#141414] hover:bg-[#1a1a1a] border border-[#1a1a1a] hover:border-[#D4A853]/20 transition-all group"
             >
-              <div className="w-10 h-10 rounded-lg overflow-hidden bg-[#1a1a1a] flex-shrink-0">
+              <div className="w-11 h-11 rounded-xl overflow-hidden bg-[#0f0f0f] flex-shrink-0 ring-1 ring-[#1a1a1a] group-hover:ring-[#D4A853]/20 transition-all">
                 {weekStats.topPost.thumbnail_url ? (
                   <img src={weekStats.topPost.thumbnail_url} alt="" className="w-full h-full object-cover" />
                 ) : (
@@ -372,12 +372,12 @@ export default function HomeView({
                 )}
               </div>
               <div className="flex-1 text-left min-w-0">
-                <div className="text-xs text-[#D4A853]">Top Performer</div>
-                <div className="text-sm text-white truncate">
+                <div className="text-[10px] text-[#D4A853] uppercase tracking-wider">Top Performer</div>
+                <div className="text-sm text-white/90 truncate mt-0.5">
                   {weekStats.topPost.title || weekStats.topPost.caption?.slice(0, 30) || 'Untitled'}
                 </div>
               </div>
-              {Icons.chevronRight}
+              <span className="text-[#3a3a3a] group-hover:text-[#5a5554] transition-colors">{Icons.chevronRight}</span>
             </button>
           )}
         </section>
@@ -387,11 +387,11 @@ export default function HomeView({
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <span className="text-[#D4A853]">{Icons.calendar}</span>
-              <h2 className="text-sm font-semibold text-white">Upcoming</h2>
+              <h2 className="text-xs font-semibold text-white uppercase tracking-[0.1em]">Upcoming</h2>
             </div>
             <button
               onClick={() => onNavigate('calendar')}
-              className="text-xs text-[#D4A853] hover:text-[#E5B863] transition-colors"
+              className="text-xs text-[#D4A853] hover:text-[#E5B863] transition-colors tracking-wide"
             >
               View All →
             </button>
@@ -403,9 +403,9 @@ export default function HomeView({
                 <button
                   key={post.id}
                   onClick={() => onViewPost(post.id)}
-                  className="w-full flex items-center gap-3 p-3 rounded-xl bg-[#1a1a1a] border border-[#252525] hover:border-[#D4A853]/30 transition-colors text-left"
+                  className="w-full flex items-center gap-3 p-3 rounded-xl bg-[#0f0f0f] border border-[#1a1a1a] hover:border-[#D4A853]/20 hover:bg-[#141414] transition-all text-left group"
                 >
-                  <div className="w-12 h-12 rounded-lg overflow-hidden bg-[#252525] flex-shrink-0">
+                  <div className="w-12 h-12 rounded-xl overflow-hidden bg-[#1a1a1a] flex-shrink-0 group-hover:ring-1 group-hover:ring-[#D4A853]/20 transition-all">
                     {post.thumbnail_url ? (
                       <img src={post.thumbnail_url} alt="" className="w-full h-full object-cover" />
                     ) : (
@@ -417,13 +417,13 @@ export default function HomeView({
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-white truncate">
+                      <span className="text-sm font-medium text-white/90 truncate">
                         {post.title || post.caption?.slice(0, 30) || 'Untitled'}
                       </span>
                       <div className={`w-1.5 h-1.5 rounded-full ${getStatusColor(post.status)}`} />
                     </div>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-xs text-[#726d6c]">
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-xs text-[#5a5554]">
                         {formatDate(post.scheduled_at!)}
                       </span>
                       <span className="text-xs text-[#D4A853]">
@@ -434,18 +434,18 @@ export default function HomeView({
 
                   <div className="flex items-center gap-1 flex-shrink-0">
                     {post.platforms.slice(0, 3).map((p) => (
-                      <span key={p} className="text-sm">{PLATFORM_ICONS[p] || '📱'}</span>
+                      <span key={p} className="text-sm opacity-70">{PLATFORM_ICONS[p] || '📱'}</span>
                     ))}
                   </div>
                 </button>
               ))}
             </div>
           ) : (
-            <div className="p-6 rounded-xl bg-[#1a1a1a] border border-[#252525] text-center">
-              <p className="text-sm text-[#726d6c]">No posts scheduled this week</p>
+            <div className="p-6 rounded-2xl bg-[#0a0a0a] border border-[#1a1a1a] text-center">
+              <p className="text-sm text-[#5a5554]">No posts scheduled this week</p>
               <button
                 onClick={() => onNavigate('create')}
-                className="mt-2 text-xs text-[#D4A853] hover:text-[#E5B863] transition-colors"
+                className="mt-2 text-xs text-[#D4A853] hover:text-[#E5B863] transition-colors tracking-wide"
               >
                 Schedule your first post →
               </button>
@@ -455,30 +455,30 @@ export default function HomeView({
 
         {/* Connected Accounts Summary */}
         {accounts.length > 0 && (
-          <section className="p-4 rounded-xl bg-[#1a1a1a] border border-[#252525]">
+          <section className="p-4 rounded-2xl bg-[#0a0a0a] border border-[#1a1a1a]">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-semibold text-white">Connected Accounts</h2>
+              <h2 className="text-xs font-semibold text-white uppercase tracking-[0.1em]">Connected Accounts</h2>
               <button
                 onClick={() => onNavigate('settings')}
-                className="text-xs text-[#D4A853] hover:text-[#E5B863] transition-colors"
+                className="text-xs text-[#D4A853] hover:text-[#E5B863] transition-colors tracking-wide"
               >
                 Manage →
               </button>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               {accounts.filter((a) => a.is_active).slice(0, 5).map((account) => (
                 <div
                   key={account.id}
-                  className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-[#252525]"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#141414] border border-[#1a1a1a]"
                   title={`@${account.account_handle}`}
                 >
-                  <span className="text-sm">{PLATFORM_ICONS[account.platform] || '📱'}</span>
-                  <span className="text-xs text-white truncate max-w-[80px]">@{account.account_handle}</span>
+                  <span className="text-sm opacity-80">{PLATFORM_ICONS[account.platform] || '📱'}</span>
+                  <span className="text-xs text-white/80 truncate max-w-[80px]">@{account.account_handle}</span>
                 </div>
               ))}
               {accounts.filter((a) => a.is_active).length > 5 && (
-                <span className="text-xs text-[#726d6c]">+{accounts.filter((a) => a.is_active).length - 5} more</span>
+                <span className="text-xs text-[#5a5554]">+{accounts.filter((a) => a.is_active).length - 5} more</span>
               )}
             </div>
           </section>

@@ -109,8 +109,8 @@ function ViewLoading({ label }: { label: string }) {
   return (
     <div className="flex-1 flex items-center justify-center">
       <div className="text-center">
-        <div className="w-8 h-8 border-2 border-[#D4A853]/30 border-t-[#D4A853] rounded-full animate-spin mx-auto mb-3" />
-        <p className="text-sm text-[#726d6c]">Loading {label}...</p>
+        <div className="w-10 h-10 border-2 border-[#D4A853]/20 border-t-[#D4A853] rounded-full animate-spin mx-auto mb-4 shadow-[0_0_20px_rgba(212,168,83,0.15)]" />
+        <p className="text-sm text-[#8a8584] tracking-wide">Loading {label}...</p>
       </div>
     </div>
   );
@@ -316,35 +316,35 @@ export default function SocialStudioPage() {
         </Suspense>
       </div>
 
-      {/* Bottom Navigation - Fixed */}
-      <nav className="flex-shrink-0 bg-black border-t border-[#1a1a1a] safe-area-bottom">
+      {/* Bottom Navigation - Glass Effect */}
+      <nav className="flex-shrink-0 bg-black/80 backdrop-blur-xl border-t border-[#D4A853]/10 safe-area-bottom">
         <div className="flex items-center justify-around h-16">
           {/* Home */}
           <button
             onClick={() => setView('home')}
-            className={`flex flex-col items-center justify-center w-16 h-full transition-colors ${
-              view === 'home' ? 'text-[#D4A853]' : 'text-[#726d6c]'
+            className={`flex flex-col items-center justify-center w-16 h-full transition-all duration-200 ${
+              view === 'home' ? 'text-[#D4A853]' : 'text-[#5a5554] hover:text-[#8a8584]'
             }`}
           >
-            {Icons.home}
-            <span className="text-[10px] mt-0.5 font-medium">Home</span>
+            <span className={view === 'home' ? 'drop-shadow-[0_0_8px_rgba(212,168,83,0.5)]' : ''}>{Icons.home}</span>
+            <span className="text-[10px] mt-0.5 font-medium tracking-wide">{view === 'home' ? 'Home' : 'Home'}</span>
           </button>
 
           {/* Calendar */}
           <button
             onClick={() => setView('calendar')}
-            className={`flex flex-col items-center justify-center w-16 h-full transition-colors ${
-              view === 'calendar' ? 'text-[#D4A853]' : 'text-[#726d6c]'
+            className={`flex flex-col items-center justify-center w-16 h-full transition-all duration-200 ${
+              view === 'calendar' ? 'text-[#D4A853]' : 'text-[#5a5554] hover:text-[#8a8584]'
             }`}
           >
-            {Icons.calendar}
-            <span className="text-[10px] mt-0.5 font-medium">Calendar</span>
+            <span className={view === 'calendar' ? 'drop-shadow-[0_0_8px_rgba(212,168,83,0.5)]' : ''}>{Icons.calendar}</span>
+            <span className="text-[10px] mt-0.5 font-medium tracking-wide">Calendar</span>
           </button>
 
-          {/* Create (Center - Gold) */}
+          {/* Create (Center - Gold with glow) */}
           <button
             onClick={() => setView('create')}
-            className="flex items-center justify-center w-14 h-14 -mt-4 rounded-full bg-[#D4A853] text-black shadow-lg shadow-[#D4A853]/30 active:scale-95 transition-transform"
+            className="flex items-center justify-center w-14 h-14 -mt-5 rounded-full bg-gradient-to-br from-[#D4A853] to-[#B8923F] text-black shadow-[0_0_30px_rgba(212,168,83,0.4)] active:scale-95 transition-all duration-200 hover:shadow-[0_0_40px_rgba(212,168,83,0.5)]"
           >
             {Icons.create}
           </button>
@@ -352,23 +352,23 @@ export default function SocialStudioPage() {
           {/* Library */}
           <button
             onClick={() => setView('library')}
-            className={`flex flex-col items-center justify-center w-16 h-full transition-colors ${
-              view === 'library' ? 'text-[#D4A853]' : 'text-[#726d6c]'
+            className={`flex flex-col items-center justify-center w-16 h-full transition-all duration-200 ${
+              view === 'library' ? 'text-[#D4A853]' : 'text-[#5a5554] hover:text-[#8a8584]'
             }`}
           >
-            {Icons.library}
-            <span className="text-[10px] mt-0.5 font-medium">Library</span>
+            <span className={view === 'library' ? 'drop-shadow-[0_0_8px_rgba(212,168,83,0.5)]' : ''}>{Icons.library}</span>
+            <span className="text-[10px] mt-0.5 font-medium tracking-wide">Library</span>
           </button>
 
           {/* Settings */}
           <button
             onClick={() => setView('settings')}
-            className={`flex flex-col items-center justify-center w-16 h-full transition-colors ${
-              view === 'settings' ? 'text-[#D4A853]' : 'text-[#726d6c]'
+            className={`flex flex-col items-center justify-center w-16 h-full transition-all duration-200 ${
+              view === 'settings' ? 'text-[#D4A853]' : 'text-[#5a5554] hover:text-[#8a8584]'
             }`}
           >
-            {Icons.settings}
-            <span className="text-[10px] mt-0.5 font-medium">More</span>
+            <span className={view === 'settings' ? 'drop-shadow-[0_0_8px_rgba(212,168,83,0.5)]' : ''}>{Icons.settings}</span>
+            <span className="text-[10px] mt-0.5 font-medium tracking-wide">More</span>
           </button>
         </div>
       </nav>

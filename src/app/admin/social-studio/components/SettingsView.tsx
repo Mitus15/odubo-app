@@ -45,7 +45,6 @@ const PLATFORM_COLORS: Record<string, string> = {
 };
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-const SHORT_DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 // =============================================================================
 // HELPERS
@@ -74,19 +73,9 @@ const Icons = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
     </svg>
   ),
-  check: (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-    </svg>
-  ),
   clock: (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-    </svg>
-  ),
-  calendar: (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
     </svg>
   ),
   users: (
@@ -105,13 +94,13 @@ const Icons = {
     </svg>
   ),
   trash: (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
     </svg>
   ),
-  edit: (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+  archive: (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
     </svg>
   ),
 };
@@ -128,9 +117,8 @@ export default function SettingsView({
 }: SettingsViewProps) {
   const [expandedSection, setExpandedSection] = useState<SettingsSection | null>('accounts');
   const [syncing, setSyncing] = useState(false);
-  const [editingSlot, setEditingSlot] = useState<string | null>(null);
-  const [newSlotTime, setNewSlotTime] = useState('14:00');
   const [showNewSlotForm, setShowNewSlotForm] = useState(false);
+  const [newSlotTime, setNewSlotTime] = useState('14:00');
   const [showNewCampaignForm, setShowNewCampaignForm] = useState(false);
   const [newCampaignName, setNewCampaignName] = useState('');
   const [newCampaignColor, setNewCampaignColor] = useState('#D4A853');
@@ -160,7 +148,7 @@ export default function SettingsView({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           time: newSlotTime,
-          day_of_week: null, // Every day
+          day_of_week: null,
           platforms: ['instagram', 'tiktok'],
           is_active: true,
         }),
@@ -176,9 +164,7 @@ export default function SettingsView({
   // Delete slot
   const handleDeleteSlot = async (slotId: string) => {
     try {
-      await fetch(`/api/social/studio/slots/${slotId}`, {
-        method: 'DELETE',
-      });
+      await fetch(`/api/social/studio/slots/${slotId}`, { method: 'DELETE' });
       onRefresh();
     } catch (error) {
       console.error('[Settings] Delete slot error:', error);
@@ -221,42 +207,61 @@ export default function SettingsView({
     }
   };
 
+  // Section Header Component
+  const SectionHeader = ({
+    icon,
+    title,
+    subtitle,
+    section,
+  }: {
+    icon: React.ReactNode;
+    title: string;
+    subtitle: string;
+    section: SettingsSection;
+  }) => (
+    <button
+      onClick={() => setExpandedSection(expandedSection === section ? null : section)}
+      className="w-full flex items-center justify-between p-4 text-left group"
+    >
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl bg-[#0f0f0f] flex items-center justify-center text-[#D4A853] group-hover:bg-[#141414] transition-colors">
+          {icon}
+        </div>
+        <div>
+          <div className="text-white font-medium tracking-tight">{title}</div>
+          <div className="text-xs text-[#5a5554]">{subtitle}</div>
+        </div>
+      </div>
+      <span
+        className={`text-[#5a5554] transition-all duration-300 ${
+          expandedSection === section ? 'rotate-90 text-[#D4A853]' : ''
+        }`}
+      >
+        {Icons.chevronRight}
+      </span>
+    </button>
+  );
+
   return (
-    <div className="h-full overflow-y-auto">
-      <div className="px-4 pt-4 pb-24 space-y-4">
+    <div className="h-full overflow-y-auto bg-black">
+      <div className="px-4 pt-6 pb-28 space-y-4">
         {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-white">Settings</h1>
-          <p className="text-sm text-[#726d6c] mt-1">
-            Configure your posting schedule and accounts
+        <div className="mb-8">
+          <p className="text-[10px] uppercase tracking-widest text-[#D4A853] mb-1">Configuration</p>
+          <h1 className="text-2xl font-bold text-white tracking-tight">Settings</h1>
+          <p className="text-sm text-[#5a5554] mt-1">
+            Manage your accounts, schedule, and campaigns
           </p>
         </div>
 
         {/* Connected Accounts Section */}
-        <section className="rounded-xl bg-[#1a1a1a] border border-[#252525] overflow-hidden">
-          <button
-            onClick={() =>
-              setExpandedSection(expandedSection === 'accounts' ? null : 'accounts')
-            }
-            className="w-full flex items-center justify-between p-4 text-left"
-          >
-            <div className="flex items-center gap-3">
-              <span className="text-[#D4A853]">{Icons.users}</span>
-              <div>
-                <div className="text-white font-medium">Connected Accounts</div>
-                <div className="text-xs text-[#726d6c]">
-                  {activeAccounts.length} active account{activeAccounts.length !== 1 ? 's' : ''}
-                </div>
-              </div>
-            </div>
-            <span
-              className={`text-[#726d6c] transition-transform ${
-                expandedSection === 'accounts' ? 'rotate-90' : ''
-              }`}
-            >
-              {Icons.chevronRight}
-            </span>
-          </button>
+        <section className="rounded-2xl bg-[#0a0a0a] border border-[#1a1a1a] overflow-hidden hover:border-[#D4A853]/20 transition-all duration-300">
+          <SectionHeader
+            icon={Icons.users}
+            title="Connected Accounts"
+            subtitle={`${activeAccounts.length} active account${activeAccounts.length !== 1 ? 's' : ''}`}
+            section="accounts"
+          />
 
           {expandedSection === 'accounts' && (
             <div className="px-4 pb-4 space-y-3">
@@ -264,7 +269,7 @@ export default function SettingsView({
               <button
                 onClick={handleSyncAccounts}
                 disabled={syncing}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-[#252525] text-[#D4A853] font-medium hover:bg-[#2a2a2a] transition-colors disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-[#D4A853] to-[#B8923F] text-black font-semibold tracking-wide shadow-[0_0_20px_rgba(212,168,83,0.2)] hover:shadow-[0_0_30px_rgba(212,168,83,0.3)] transition-all duration-300 disabled:opacity-50"
               >
                 <span className={syncing ? 'animate-spin' : ''}>{Icons.sync}</span>
                 {syncing ? 'Syncing...' : 'Sync from Post for Me'}
@@ -275,16 +280,16 @@ export default function SettingsView({
                 {accounts.map((account) => (
                   <div
                     key={account.id}
-                    className={`flex items-center gap-3 p-3 rounded-xl ${
+                    className={`flex items-center gap-3 p-3 rounded-xl transition-all duration-300 ${
                       account.is_active
-                        ? 'bg-[#252525]'
-                        : 'bg-[#252525]/50 opacity-50'
+                        ? 'bg-[#0f0f0f] border border-[#1a1a1a] hover:border-[#D4A853]/20'
+                        : 'bg-[#0f0f0f]/50 opacity-40'
                     }`}
                   >
                     <div
-                      className={`w-10 h-10 rounded-lg bg-gradient-to-br ${
+                      className={`w-11 h-11 rounded-xl bg-gradient-to-br ${
                         PLATFORM_COLORS[account.platform] || 'from-gray-600 to-gray-700'
-                      } flex items-center justify-center overflow-hidden`}
+                      } flex items-center justify-center overflow-hidden shadow-lg`}
                     >
                       {account.profile_image_url ? (
                         <img
@@ -298,17 +303,17 @@ export default function SettingsView({
                     </div>
 
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium text-white">
+                      <div className="text-sm font-medium text-white tracking-tight">
                         {account.account_name || `@${account.account_handle}`}
                       </div>
-                      <div className="text-xs text-[#726d6c]">
+                      <div className="text-xs text-[#5a5554]">
                         {account.platform.charAt(0).toUpperCase() + account.platform.slice(1)} •
                         @{account.account_handle}
                       </div>
                     </div>
 
                     {account.is_active && (
-                      <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-xs">
+                      <span className="px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-400 text-[10px] font-semibold uppercase tracking-wider shadow-[0_0_8px_rgba(52,211,153,0.2)]">
                         Active
                       </span>
                     )}
@@ -316,8 +321,11 @@ export default function SettingsView({
                 ))}
 
                 {accounts.length === 0 && (
-                  <div className="p-6 text-center">
-                    <p className="text-sm text-[#726d6c]">No accounts connected</p>
+                  <div className="p-8 text-center rounded-xl bg-[#0f0f0f] border border-dashed border-[#1a1a1a]">
+                    <div className="w-12 h-12 rounded-full bg-[#141414] flex items-center justify-center mx-auto mb-3">
+                      <span className="text-[#5a5554]">{Icons.users}</span>
+                    </div>
+                    <p className="text-sm text-[#8a8584]">No accounts connected</p>
                     <p className="text-xs text-[#D4A853] mt-1">
                       Connect accounts via Post for Me
                     </p>
@@ -329,55 +337,40 @@ export default function SettingsView({
         </section>
 
         {/* Posting Schedule Section */}
-        <section className="rounded-xl bg-[#1a1a1a] border border-[#252525] overflow-hidden">
-          <button
-            onClick={() =>
-              setExpandedSection(expandedSection === 'schedule' ? null : 'schedule')
-            }
-            className="w-full flex items-center justify-between p-4 text-left"
-          >
-            <div className="flex items-center gap-3">
-              <span className="text-[#D4A853]">{Icons.clock}</span>
-              <div>
-                <div className="text-white font-medium">Posting Schedule</div>
-                <div className="text-xs text-[#726d6c]">
-                  {activeSlots.length} time slot{activeSlots.length !== 1 ? 's' : ''} per day
-                </div>
-              </div>
-            </div>
-            <span
-              className={`text-[#726d6c] transition-transform ${
-                expandedSection === 'schedule' ? 'rotate-90' : ''
-              }`}
-            >
-              {Icons.chevronRight}
-            </span>
-          </button>
+        <section className="rounded-2xl bg-[#0a0a0a] border border-[#1a1a1a] overflow-hidden hover:border-[#D4A853]/20 transition-all duration-300">
+          <SectionHeader
+            icon={Icons.clock}
+            title="Posting Schedule"
+            subtitle={`${activeSlots.length} time slot${activeSlots.length !== 1 ? 's' : ''} per day`}
+            section="schedule"
+          />
 
           {expandedSection === 'schedule' && (
             <div className="px-4 pb-4 space-y-3">
-              <div className="text-xs text-[#726d6c] mb-2">
+              <p className="text-xs text-[#5a5554] px-1">
                 Content auto-schedules to these time slots
-              </div>
+              </p>
 
               {/* Slot List */}
               <div className="space-y-2">
                 {slots.map((slot) => (
                   <div
                     key={slot.id}
-                    className={`flex items-center gap-3 p-3 rounded-xl ${
-                      slot.is_active ? 'bg-[#252525]' : 'bg-[#252525]/50 opacity-50'
+                    className={`flex items-center gap-3 p-3 rounded-xl transition-all duration-300 ${
+                      slot.is_active
+                        ? 'bg-[#0f0f0f] border border-[#1a1a1a] hover:border-[#D4A853]/20'
+                        : 'bg-[#0f0f0f]/50 opacity-40'
                     }`}
                   >
-                    <div className="w-10 h-10 rounded-lg bg-[#1a1a1a] flex items-center justify-center">
+                    <div className="w-11 h-11 rounded-xl bg-[#141414] border border-[#1a1a1a] flex items-center justify-center">
                       <span className="text-[#D4A853]">{Icons.clock}</span>
                     </div>
 
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium text-white">
+                      <div className="text-sm font-semibold text-white tracking-tight">
                         {formatSlotTime(slot.time)}
                       </div>
-                      <div className="text-xs text-[#726d6c]">
+                      <div className="text-xs text-[#5a5554]">
                         {slot.day_of_week !== null
                           ? DAY_NAMES[slot.day_of_week]
                           : 'Every day'}
@@ -387,7 +380,7 @@ export default function SettingsView({
 
                     <button
                       onClick={() => handleDeleteSlot(slot.id)}
-                      className="w-8 h-8 flex items-center justify-center rounded-lg text-[#726d6c] hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                      className="w-9 h-9 flex items-center justify-center rounded-xl text-[#5a5554] hover:text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-all duration-300"
                     >
                       {Icons.trash}
                     </button>
@@ -395,33 +388,39 @@ export default function SettingsView({
                 ))}
 
                 {slots.length === 0 && (
-                  <div className="p-6 text-center">
-                    <p className="text-sm text-[#726d6c]">No time slots configured</p>
+                  <div className="p-8 text-center rounded-xl bg-[#0f0f0f] border border-dashed border-[#1a1a1a]">
+                    <div className="w-12 h-12 rounded-full bg-[#141414] flex items-center justify-center mx-auto mb-3">
+                      <span className="text-[#5a5554]">{Icons.clock}</span>
+                    </div>
+                    <p className="text-sm text-[#8a8584]">No time slots configured</p>
                   </div>
                 )}
               </div>
 
               {/* Add New Slot */}
               {showNewSlotForm ? (
-                <div className="p-4 rounded-xl bg-[#252525] space-y-3">
-                  <div className="flex gap-2">
+                <div className="p-4 rounded-xl bg-[#0f0f0f] border border-[#1a1a1a] space-y-4">
+                  <div>
+                    <label className="block text-[10px] uppercase tracking-widest text-[#8a8584] mb-2">
+                      Time
+                    </label>
                     <input
                       type="time"
                       value={newSlotTime}
                       onChange={(e) => setNewSlotTime(e.target.value)}
-                      className="flex-1 px-3 py-2 rounded-lg bg-[#1a1a1a] border border-[#333] text-white text-sm"
+                      className="w-full px-4 py-3 rounded-xl bg-[#141414] border border-[#1a1a1a] text-white text-sm focus:border-[#D4A853]/50 focus:outline-none transition-colors"
                     />
                   </div>
                   <div className="flex gap-2">
                     <button
                       onClick={() => setShowNewSlotForm(false)}
-                      className="flex-1 py-2 rounded-lg bg-[#1a1a1a] text-[#726d6c] text-sm hover:bg-[#252525] transition-colors"
+                      className="flex-1 py-3 rounded-xl bg-[#141414] border border-[#1a1a1a] text-[#8a8584] text-sm font-medium hover:bg-[#1a1a1a] transition-colors"
                     >
                       Cancel
                     </button>
                     <button
                       onClick={handleCreateSlot}
-                      className="flex-1 py-2 rounded-lg bg-[#D4A853] text-black text-sm font-medium"
+                      className="flex-1 py-3 rounded-xl bg-gradient-to-r from-[#D4A853] to-[#B8923F] text-black text-sm font-semibold shadow-[0_0_15px_rgba(212,168,83,0.2)]"
                     >
                       Add Slot
                     </button>
@@ -430,10 +429,10 @@ export default function SettingsView({
               ) : (
                 <button
                   onClick={() => setShowNewSlotForm(true)}
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-[#252525] text-[#726d6c] hover:border-[#D4A853]/30 hover:text-[#D4A853] transition-colors"
+                  className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl border border-dashed border-[#1a1a1a] text-[#5a5554] hover:border-[#D4A853]/30 hover:text-[#D4A853] hover:bg-[#D4A853]/5 transition-all duration-300"
                 >
                   {Icons.plus}
-                  <span className="text-sm">Add Time Slot</span>
+                  <span className="text-sm font-medium">Add Time Slot</span>
                 </button>
               )}
             </div>
@@ -441,103 +440,100 @@ export default function SettingsView({
         </section>
 
         {/* Campaigns Section */}
-        <section className="rounded-xl bg-[#1a1a1a] border border-[#252525] overflow-hidden">
-          <button
-            onClick={() =>
-              setExpandedSection(expandedSection === 'campaigns' ? null : 'campaigns')
-            }
-            className="w-full flex items-center justify-between p-4 text-left"
-          >
-            <div className="flex items-center gap-3">
-              <span className="text-[#D4A853]">{Icons.folder}</span>
-              <div>
-                <div className="text-white font-medium">Campaigns</div>
-                <div className="text-xs text-[#726d6c]">
-                  {activeCampaigns.length} active campaign
-                  {activeCampaigns.length !== 1 ? 's' : ''}
-                </div>
-              </div>
-            </div>
-            <span
-              className={`text-[#726d6c] transition-transform ${
-                expandedSection === 'campaigns' ? 'rotate-90' : ''
-              }`}
-            >
-              {Icons.chevronRight}
-            </span>
-          </button>
+        <section className="rounded-2xl bg-[#0a0a0a] border border-[#1a1a1a] overflow-hidden hover:border-[#D4A853]/20 transition-all duration-300">
+          <SectionHeader
+            icon={Icons.folder}
+            title="Campaigns"
+            subtitle={`${activeCampaigns.length} active campaign${activeCampaigns.length !== 1 ? 's' : ''}`}
+            section="campaigns"
+          />
 
           {expandedSection === 'campaigns' && (
             <div className="px-4 pb-4 space-y-3">
-              <div className="text-xs text-[#726d6c] mb-2">
+              <p className="text-xs text-[#5a5554] px-1">
                 Organize posts by project or theme
-              </div>
+              </p>
 
               {/* Campaign List */}
               <div className="space-y-2">
                 {campaigns.map((campaign) => (
                   <div
                     key={campaign.id}
-                    className={`flex items-center gap-3 p-3 rounded-xl ${
+                    className={`flex items-center gap-3 p-3 rounded-xl transition-all duration-300 ${
                       campaign.status === 'active'
-                        ? 'bg-[#252525]'
-                        : 'bg-[#252525]/50 opacity-50'
+                        ? 'bg-[#0f0f0f] border border-[#1a1a1a] hover:border-[#D4A853]/20'
+                        : 'bg-[#0f0f0f]/50 opacity-40'
                     }`}
                   >
                     <div
-                      className="w-3 h-10 rounded-full"
-                      style={{ backgroundColor: campaign.color || '#726d6c' }}
+                      className="w-2 h-10 rounded-full"
+                      style={{
+                        backgroundColor: campaign.color || '#5a5554',
+                        boxShadow: campaign.status === 'active' ? `0 0 10px ${campaign.color || '#5a5554'}40` : 'none'
+                      }}
                     />
 
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium text-white">{campaign.name}</div>
-                      <div className="text-xs text-[#726d6c]">
+                      <div className="text-sm font-medium text-white tracking-tight">{campaign.name}</div>
+                      <div className="text-xs text-[#5a5554]">
                         {campaign.post_count} post{campaign.post_count !== 1 ? 's' : ''} •{' '}
-                        {campaign.status}
+                        <span className={campaign.status === 'active' ? 'text-emerald-400' : ''}>
+                          {campaign.status}
+                        </span>
                       </div>
                     </div>
 
                     {campaign.status === 'active' && (
                       <button
                         onClick={() => handleArchiveCampaign(campaign.id)}
-                        className="w-8 h-8 flex items-center justify-center rounded-lg text-[#726d6c] hover:text-amber-400 hover:bg-amber-500/10 transition-colors"
+                        className="w-9 h-9 flex items-center justify-center rounded-xl text-[#5a5554] hover:text-amber-400 hover:bg-amber-500/10 border border-transparent hover:border-amber-500/20 transition-all duration-300"
                         title="Archive"
                       >
-                        {Icons.folder}
+                        {Icons.archive}
                       </button>
                     )}
                   </div>
                 ))}
 
                 {campaigns.length === 0 && (
-                  <div className="p-6 text-center">
-                    <p className="text-sm text-[#726d6c]">No campaigns created</p>
+                  <div className="p-8 text-center rounded-xl bg-[#0f0f0f] border border-dashed border-[#1a1a1a]">
+                    <div className="w-12 h-12 rounded-full bg-[#141414] flex items-center justify-center mx-auto mb-3">
+                      <span className="text-[#5a5554]">{Icons.folder}</span>
+                    </div>
+                    <p className="text-sm text-[#8a8584]">No campaigns created</p>
                   </div>
                 )}
               </div>
 
               {/* Add New Campaign */}
               {showNewCampaignForm ? (
-                <div className="p-4 rounded-xl bg-[#252525] space-y-3">
-                  <input
-                    type="text"
-                    value={newCampaignName}
-                    onChange={(e) => setNewCampaignName(e.target.value)}
-                    placeholder="Campaign name..."
-                    className="w-full px-3 py-2 rounded-lg bg-[#1a1a1a] border border-[#333] text-white text-sm placeholder-[#726d6c]"
-                  />
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-[#726d6c]">Color:</span>
+                <div className="p-4 rounded-xl bg-[#0f0f0f] border border-[#1a1a1a] space-y-4">
+                  <div>
+                    <label className="block text-[10px] uppercase tracking-widest text-[#8a8584] mb-2">
+                      Campaign Name
+                    </label>
+                    <input
+                      type="text"
+                      value={newCampaignName}
+                      onChange={(e) => setNewCampaignName(e.target.value)}
+                      placeholder="e.g., Album Launch"
+                      className="w-full px-4 py-3 rounded-xl bg-[#141414] border border-[#1a1a1a] text-white text-sm placeholder-[#5a5554] focus:border-[#D4A853]/50 focus:outline-none transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] uppercase tracking-widest text-[#8a8584] mb-2">
+                      Color
+                    </label>
                     <div className="flex gap-2">
-                      {['#D4A853', '#843c2d', '#3B82F6', '#10B981', '#8B5CF6', '#EC4899'].map(
+                      {['#D4A853', '#843c2d', '#3B82F6', '#10B981', '#8B5CF6', '#EC4899', '#F97316', '#06B6D4'].map(
                         (color) => (
                           <button
                             key={color}
                             onClick={() => setNewCampaignColor(color)}
-                            className={`w-6 h-6 rounded-full ${
+                            className={`w-8 h-8 rounded-lg transition-all duration-200 ${
                               newCampaignColor === color
-                                ? 'ring-2 ring-white ring-offset-2 ring-offset-[#252525]'
-                                : ''
+                                ? 'ring-2 ring-white ring-offset-2 ring-offset-[#0f0f0f] scale-110'
+                                : 'hover:scale-105'
                             }`}
                             style={{ backgroundColor: color }}
                           />
@@ -548,14 +544,14 @@ export default function SettingsView({
                   <div className="flex gap-2">
                     <button
                       onClick={() => setShowNewCampaignForm(false)}
-                      className="flex-1 py-2 rounded-lg bg-[#1a1a1a] text-[#726d6c] text-sm hover:bg-[#252525] transition-colors"
+                      className="flex-1 py-3 rounded-xl bg-[#141414] border border-[#1a1a1a] text-[#8a8584] text-sm font-medium hover:bg-[#1a1a1a] transition-colors"
                     >
                       Cancel
                     </button>
                     <button
                       onClick={handleCreateCampaign}
                       disabled={!newCampaignName.trim()}
-                      className="flex-1 py-2 rounded-lg bg-[#D4A853] text-black text-sm font-medium disabled:opacity-50"
+                      className="flex-1 py-3 rounded-xl bg-gradient-to-r from-[#D4A853] to-[#B8923F] text-black text-sm font-semibold shadow-[0_0_15px_rgba(212,168,83,0.2)] disabled:opacity-50"
                     >
                       Create
                     </button>
@@ -564,10 +560,10 @@ export default function SettingsView({
               ) : (
                 <button
                   onClick={() => setShowNewCampaignForm(true)}
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-[#252525] text-[#726d6c] hover:border-[#D4A853]/30 hover:text-[#D4A853] transition-colors"
+                  className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl border border-dashed border-[#1a1a1a] text-[#5a5554] hover:border-[#D4A853]/30 hover:text-[#D4A853] hover:bg-[#D4A853]/5 transition-all duration-300"
                 >
                   {Icons.plus}
-                  <span className="text-sm">New Campaign</span>
+                  <span className="text-sm font-medium">New Campaign</span>
                 </button>
               )}
             </div>
@@ -575,12 +571,17 @@ export default function SettingsView({
         </section>
 
         {/* About Section */}
-        <section className="rounded-xl bg-[#1a1a1a] border border-[#252525] p-4">
-          <div className="text-center">
-            <div className="text-2xl mb-2">📱</div>
-            <div className="text-sm font-medium text-white">Social Studio</div>
-            <div className="text-xs text-[#726d6c] mt-1">
-              Powered by Post for Me
+        <section className="rounded-2xl bg-gradient-to-br from-[#0a0a0a] to-[#0f0f0f] border border-[#1a1a1a] p-6 text-center">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#D4A853]/20 to-[#D4A853]/5 flex items-center justify-center mx-auto mb-3 shadow-[0_0_20px_rgba(212,168,83,0.1)]">
+            <span className="text-2xl">📱</span>
+          </div>
+          <div className="text-sm font-semibold text-white tracking-tight">Social Studio</div>
+          <div className="text-xs text-[#5a5554] mt-1">
+            Powered by Post for Me
+          </div>
+          <div className="mt-4 pt-4 border-t border-[#1a1a1a]">
+            <div className="text-[10px] uppercase tracking-widest text-[#D4A853]">
+              Odubo Platform
             </div>
           </div>
         </section>
