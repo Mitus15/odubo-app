@@ -32,11 +32,25 @@ interface PostDraft {
 }
 
 interface Clip {
-  id: string;
+  id: number;
   title: string;
-  media_url: string;
-  thumbnail_url?: string;
-  media_type: 'video' | 'image';
+  url: string;  // HLS stream URL
+  uid: string;  // Cloudflare Stream UID for thumbnail
+  mp4_url?: string;
+  thumbnail?: string;
+  poster_url?: string;
+}
+
+// Construct thumbnail URL from Cloudflare Stream UID
+function getClipThumbnail(clip: Clip): string {
+  // If thumbnail or poster_url exists and is not empty, use it
+  if (clip.thumbnail && clip.thumbnail.length > 0) return clip.thumbnail;
+  if (clip.poster_url && clip.poster_url.length > 0) return clip.poster_url;
+  // Otherwise construct from UID
+  if (clip.uid) {
+    return `https://customer-tpkm273r1u0s40no.cloudflarestream.com/${clip.uid}/thumbnails/thumbnail.jpg?time=2s`;
+  }
+  return '';
 }
 
 // =============================================================================
@@ -57,10 +71,10 @@ const PLATFORM_ICONS: Record<string, string> = {
 
 const PLATFORM_COLORS: Record<string, string> = {
   instagram: 'from-pink-500 to-purple-600',
-  tiktok: 'from-black to-gray-800',
+  tiktok: 'from-[#00f2ea] to-[#ff0050]', // TikTok brand colors (cyan to red)
   youtube: 'from-red-600 to-red-700',
   facebook: 'from-blue-600 to-blue-700',
-  threads: 'from-gray-800 to-black',
+  threads: 'from-gray-600 to-gray-700',
   twitter: 'from-sky-400 to-sky-500',
   linkedin: 'from-blue-700 to-blue-800',
   pinterest: 'from-red-600 to-red-700',
@@ -79,11 +93,16 @@ function formatSlotTime(time: string): string {
   return `${displayHour}:${minutes} ${suffix}`;
 }
 
-function getNextSlot(slots: PostingSlot[]): { date: string; time: string } | null {
-  const now = new Date();
+function getNextSlot(slots: PostingSlot[]): { date: string; time: string; timezone: string } | null {
   const activeSlots = slots.filter((s) => s.is_active);
-
   if (activeSlots.length === 0) return null;
+
+  // Get the timezone from slots (assume all slots use same timezone)
+  const slotTimezone = activeSlots[0]?.timezone || 'America/Los_Angeles';
+
+  // Get current time in the slot's timezone
+  const now = new Date();
+  const nowInSlotTz = new Date(now.toLocaleString('en-US', { timeZone: slotTimezone }));
 
   // Sort slots by time (earliest first)
   const sortedSlots = [...activeSlots].sort((a, b) => {
@@ -94,7 +113,7 @@ function getNextSlot(slots: PostingSlot[]): { date: string; time: string } | nul
 
   // Look through next 7 days
   for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
-    const checkDate = new Date(now);
+    const checkDate = new Date(nowInSlotTz);
     checkDate.setDate(checkDate.getDate() + dayOffset);
     const dayOfWeek = checkDate.getDay();
 
@@ -102,17 +121,23 @@ function getNextSlot(slots: PostingSlot[]): { date: string; time: string } | nul
       // Check if slot applies to this day (null = every day)
       if (slot.day_of_week !== null && slot.day_of_week !== dayOfWeek) continue;
 
-      // Build the actual datetime for this slot
+      // Build the slot datetime in the slot's timezone
       const [slotHours, slotMinutes] = slot.time.split(':').map(Number);
       const slotDate = new Date(checkDate);
       slotDate.setHours(slotHours, slotMinutes, 0, 0);
 
       // Skip if this slot time has already passed
-      if (slotDate <= now) continue;
+      if (slotDate <= nowInSlotTz) continue;
+
+      // Format date as YYYY-MM-DD
+      const year = checkDate.getFullYear();
+      const month = String(checkDate.getMonth() + 1).padStart(2, '0');
+      const day = String(checkDate.getDate()).padStart(2, '0');
 
       return {
-        date: checkDate.toISOString().split('T')[0],
+        date: `${year}-${month}-${day}`,
         time: slot.time,
+        timezone: slotTimezone,
       };
     }
   }
@@ -288,9 +313,9 @@ export default function CreateFlow({
   const handleSelectClip = (clip: Clip) => {
     setDraft((d) => ({
       ...d,
-      mediaUrl: clip.media_url,
-      mediaType: clip.media_type || 'video',
-      thumbnailUrl: clip.thumbnail_url,
+      mediaUrl: clip.mp4_url || clip.url, // Prefer MP4 for social posting
+      mediaType: 'video',
+      thumbnailUrl: getClipThumbnail(clip),
       title: clip.title || d.title,
     }));
     setShowClipsPicker(false);
@@ -1105,42 +1130,42 @@ export default function CreateFlow({
                 </div>
               ) : (
                 <div className="grid grid-cols-2 gap-3">
-                  {clips.map((clip) => (
-                    <button
-                      key={clip.id}
-                      onClick={() => handleSelectClip(clip)}
-                      className="group relative aspect-[9/16] rounded-2xl overflow-hidden bg-[#141414] border border-[#1a1a1a] hover:border-[#D4A853]/50 transition-all active:scale-95"
-                    >
-                      {clip.thumbnail_url ? (
-                        <img
-                          src={clip.thumbnail_url}
-                          alt={clip.title}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <video
-                          src={clip.media_url}
-                          className="w-full h-full object-cover"
-                          muted
-                          playsInline
-                        />
-                      )}
+                  {clips.map((clip) => {
+                    const thumbUrl = getClipThumbnail(clip);
+                    return (
+                      <button
+                        key={clip.id}
+                        onClick={() => handleSelectClip(clip)}
+                        className="group relative aspect-[9/16] rounded-2xl overflow-hidden bg-[#141414] border border-[#1a1a1a] hover:border-[#D4A853]/50 transition-all active:scale-95"
+                      >
+                        {thumbUrl ? (
+                          <img
+                            src={thumbUrl}
+                            alt={clip.title}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-[#0f0f0f]">
+                            <span className="text-3xl">🎬</span>
+                          </div>
+                        )}
 
-                      {/* Title overlay */}
-                      <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/90 via-black/50 to-transparent">
-                        <p className="text-xs text-white font-medium truncate">
-                          {clip.title || 'Untitled'}
-                        </p>
-                      </div>
+                        {/* Title overlay */}
+                        <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/90 via-black/50 to-transparent">
+                          <p className="text-xs text-white font-medium truncate">
+                            {clip.title || 'Untitled'}
+                          </p>
+                        </div>
 
-                      {/* Hover overlay */}
-                      <div className="absolute inset-0 bg-[#D4A853]/0 group-hover:bg-[#D4A853]/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                        <span className="text-[#D4A853] scale-0 group-hover:scale-100 transition-transform">
-                          {Icons.check}
-                        </span>
-                      </div>
-                    </button>
-                  ))}
+                        {/* Hover overlay */}
+                        <div className="absolute inset-0 bg-[#D4A853]/0 group-hover:bg-[#D4A853]/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                          <span className="text-[#D4A853] scale-0 group-hover:scale-100 transition-transform">
+                            {Icons.check}
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </div>

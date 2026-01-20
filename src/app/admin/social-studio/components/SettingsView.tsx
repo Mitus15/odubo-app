@@ -34,10 +34,10 @@ const PLATFORM_ICONS: Record<string, string> = {
 
 const PLATFORM_COLORS: Record<string, string> = {
   instagram: 'from-pink-500 to-purple-600',
-  tiktok: 'from-gray-800 to-black',
+  tiktok: 'from-[#00f2ea] to-[#ff0050]', // TikTok brand colors
   youtube: 'from-red-600 to-red-700',
   facebook: 'from-blue-600 to-blue-700',
-  threads: 'from-gray-700 to-gray-800',
+  threads: 'from-gray-600 to-gray-700',
   twitter: 'from-sky-400 to-sky-500',
   linkedin: 'from-blue-700 to-blue-800',
   pinterest: 'from-red-600 to-red-700',
