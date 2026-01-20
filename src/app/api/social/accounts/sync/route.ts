@@ -57,7 +57,7 @@ export async function POST() {
           [
             platform,
             account.username,
-            account.username, // PostForMe doesn't provide display name separately
+            account.username,
             account.profile_photo_url || null,
             now,
             account.id,

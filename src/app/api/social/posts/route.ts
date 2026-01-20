@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getRequestContext } from '@cloudflare/next-on-pages';
+import { queryDatabase, executeQuery } from '@/lib/db';
 
 export const runtime = 'edge';
 
@@ -10,9 +10,6 @@ export const runtime = 'edge';
  */
 export async function GET(request: NextRequest) {
   try {
-    const { env } = getRequestContext();
-    const db = env.DB;
-
     const { searchParams } = new URL(request.url);
     const entityId = searchParams.get('entity_id');
     const status = searchParams.get('status');
@@ -52,10 +49,10 @@ export async function GET(request: NextRequest) {
       LIMIT ? OFFSET ?`;
     bindings.push(limit, offset);
 
-    const result = await db.prepare(query).bind(...bindings).all();
+    const result = await queryDatabase(query, bindings) || [];
 
     // Parse JSON fields
-    const posts = (result.results || []).map((row: Record<string, unknown>) => ({
+    const posts = result.map((row: Record<string, unknown>) => ({
       ...row,
       account_ids: parseJSON(row.account_ids as string, []),
       platforms: parseJSON(row.platforms as string, []),
@@ -79,10 +76,8 @@ export async function GET(request: NextRequest) {
       countQuery += ` AND status = ?`;
       countBindings.push(status);
     }
-    const countResult = await db
-      .prepare(countQuery)
-      .bind(...countBindings)
-      .first();
+    const countResults = await queryDatabase(countQuery, countBindings);
+    const countResult = countResults?.[0];
 
     return NextResponse.json({
       posts,
@@ -106,9 +101,6 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const { env } = getRequestContext();
-    const db = env.DB;
-
     const body = await request.json();
     const {
       status = 'draft',
@@ -154,18 +146,16 @@ export async function POST(request: NextRequest) {
 
     const id = crypto.randomUUID().split('-')[0];
 
-    await db
-      .prepare(
-        `INSERT INTO social_posts (
-          id, status, created_by, entity_id, account_ids,
-          media_type, media_url, media_key, thumbnail_url,
-          source_type, source_id,
-          caption, caption_by_platform, hashtags, mentions, first_comment,
-          scheduled_at, timezone,
-          platforms, title, requires_approval, is_important, notes, tags
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-      )
-      .bind(
+    await executeQuery(
+      `INSERT INTO social_posts (
+        id, status, created_by, entity_id, account_ids,
+        media_type, media_url, media_key, thumbnail_url,
+        source_type, source_id,
+        caption, caption_by_platform, hashtags, mentions, first_comment,
+        scheduled_at, timezone,
+        platforms, title, requires_approval, is_important, notes, tags
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
         id,
         status,
         created_by,
@@ -190,22 +180,20 @@ export async function POST(request: NextRequest) {
         is_important ? 1 : 0,
         notes || null,
         JSON.stringify(tags || [])
-      )
-      .run();
+      ]
+    );
 
     // Log activity
-    await db
-      .prepare(
-        `INSERT INTO social_activity_log (id, user_id, action, target_type, target_id, details)
-         VALUES (?, ?, 'created', 'post', ?, ?)`
-      )
-      .bind(
+    await executeQuery(
+      `INSERT INTO social_activity_log (id, user_id, action, target_type, target_id, details)
+       VALUES (?, ?, 'created', 'post', ?, ?)`,
+      [
         crypto.randomUUID().split('-')[0],
         created_by,
         id,
         JSON.stringify({ status, entity_id, account_ids, platforms })
-      )
-      .run();
+      ]
+    );
 
     return NextResponse.json({ success: true, id }, { status: 201 });
   } catch (error) {

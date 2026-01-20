@@ -1,7 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
-// @ts-ignore
-import { getRequestContext } from '@cloudflare/next-on-pages';
-import { getAvailablePlatforms, type Platform } from '@/lib/platform-oauth';
+import { NextResponse } from 'next/server';
+import { queryDatabase } from '@/lib/db';
+import { getAvailablePlatforms } from '@/lib/platform-oauth';
 
 export const runtime = 'edge';
 
@@ -13,12 +12,10 @@ export const runtime = 'edge';
  */
 export async function GET() {
   try {
-    const { env } = getRequestContext();
-    const db = env.DB;
-
     // Get all connections from database
-    const connections = await db
-      .prepare(
+    let connectionResults: any[] = [];
+    try {
+      connectionResults = await queryDatabase(
         `SELECT
            id,
            platform,
@@ -30,16 +27,18 @@ export async function GET() {
            created_at,
            updated_at
          FROM platform_connections
-         ORDER BY created_at DESC`
-      )
-      .all()
-      .catch(() => ({ results: [] }));
+         ORDER BY created_at DESC`,
+        []
+      ) || [];
+    } catch {
+      connectionResults = [];
+    }
 
     // Get available platforms with configuration status
     const availablePlatforms = getAvailablePlatforms();
 
     // Format connections
-    const connectedPlatforms = ((connections as any)?.results || []).map((conn: any) => ({
+    const connectedPlatforms = connectionResults.map((conn: any) => ({
       id: conn.id,
       platform: conn.platform,
       accountId: conn.account_id,

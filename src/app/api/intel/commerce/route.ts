@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-// @ts-ignore
-import { getRequestContext } from '@cloudflare/next-on-pages';
+import { queryDatabase } from '@/lib/db';
 
 export const runtime = 'edge';
 
@@ -16,9 +15,6 @@ export const runtime = 'edge';
  */
 export async function GET(request: NextRequest) {
   try {
-    const { env } = getRequestContext();
-    const db = env.DB;
-
     const { searchParams } = new URL(request.url);
     const period = searchParams.get('period') || '30d';
 
@@ -32,120 +28,115 @@ export async function GET(request: NextRequest) {
 
     // Run all queries in parallel
     const [
-      currentMetrics,
-      previousMetrics,
-      topProducts,
-      recentOrders,
-      dailyTrend,
-      syncStatus,
+      currentMetricsResults,
+      previousMetricsResults,
+      topProductsResults,
+      recentOrdersResults,
+      dailyTrendResults,
+      syncStatusResults,
     ] = await Promise.all([
       // Current period metrics
-      db
-        .prepare(
-          `SELECT
-             COUNT(*) as total_orders,
-             COALESCE(SUM(total_price_cents), 0) as total_revenue_cents,
-             COALESCE(AVG(total_price_cents), 0) as avg_order_value_cents,
-             COUNT(DISTINCT customer_id) as unique_customers
-           FROM commerce_orders
-           WHERE shopify_created_at >= datetime('now', '-${days} days')
-             AND financial_status NOT IN ('voided', 'refunded')`
-        )
-        .first()
-        .catch(() => ({
-          total_orders: 0,
-          total_revenue_cents: 0,
-          avg_order_value_cents: 0,
-          unique_customers: 0,
-        })),
+      queryDatabase(
+        `SELECT
+           COUNT(*) as total_orders,
+           COALESCE(SUM(total_price_cents), 0) as total_revenue_cents,
+           COALESCE(AVG(total_price_cents), 0) as avg_order_value_cents,
+           COUNT(DISTINCT customer_id) as unique_customers
+         FROM commerce_orders
+         WHERE shopify_created_at >= datetime('now', '-${days} days')
+           AND financial_status NOT IN ('voided', 'refunded')`,
+        []
+      ).catch(() => []),
 
       // Previous period metrics (for comparison)
-      db
-        .prepare(
-          `SELECT
-             COUNT(*) as total_orders,
-             COALESCE(SUM(total_price_cents), 0) as total_revenue_cents,
-             COALESCE(AVG(total_price_cents), 0) as avg_order_value_cents,
-             COUNT(DISTINCT customer_id) as unique_customers
-           FROM commerce_orders
-           WHERE shopify_created_at >= datetime('now', '-${days * 2} days')
-             AND shopify_created_at < datetime('now', '-${days} days')
-             AND financial_status NOT IN ('voided', 'refunded')`
-        )
-        .first()
-        .catch(() => ({
-          total_orders: 0,
-          total_revenue_cents: 0,
-          avg_order_value_cents: 0,
-          unique_customers: 0,
-        })),
+      queryDatabase(
+        `SELECT
+           COUNT(*) as total_orders,
+           COALESCE(SUM(total_price_cents), 0) as total_revenue_cents,
+           COALESCE(AVG(total_price_cents), 0) as avg_order_value_cents,
+           COUNT(DISTINCT customer_id) as unique_customers
+         FROM commerce_orders
+         WHERE shopify_created_at >= datetime('now', '-${days * 2} days')
+           AND shopify_created_at < datetime('now', '-${days} days')
+           AND financial_status NOT IN ('voided', 'refunded')`,
+        []
+      ).catch(() => []),
 
       // Top products by revenue
-      db
-        .prepare(
-          `SELECT
-             i.product_title,
-             i.product_id,
-             SUM(i.quantity) as units_sold,
-             SUM(i.price_cents) as revenue_cents
-           FROM commerce_order_items i
-           JOIN commerce_orders o ON o.id = i.order_id
-           WHERE o.shopify_created_at >= datetime('now', '-${days} days')
-             AND o.financial_status NOT IN ('voided', 'refunded')
-           GROUP BY i.product_id
-           ORDER BY revenue_cents DESC
-           LIMIT 10`
-        )
-        .all()
-        .catch(() => ({ results: [] })),
+      queryDatabase(
+        `SELECT
+           i.product_title,
+           i.product_id,
+           SUM(i.quantity) as units_sold,
+           SUM(i.price_cents) as revenue_cents
+         FROM commerce_order_items i
+         JOIN commerce_orders o ON o.id = i.order_id
+         WHERE o.shopify_created_at >= datetime('now', '-${days} days')
+           AND o.financial_status NOT IN ('voided', 'refunded')
+         GROUP BY i.product_id
+         ORDER BY revenue_cents DESC
+         LIMIT 10`,
+        []
+      ).catch(() => []),
 
       // Recent orders
-      db
-        .prepare(
-          `SELECT
-             id,
-             shopify_order_number,
-             total_price_cents,
-             financial_status,
-             fulfillment_status,
-             source_name,
-             shopify_created_at
-           FROM commerce_orders
-           ORDER BY shopify_created_at DESC
-           LIMIT 10`
-        )
-        .all()
-        .catch(() => ({ results: [] })),
+      queryDatabase(
+        `SELECT
+           id,
+           shopify_order_number,
+           total_price_cents,
+           financial_status,
+           fulfillment_status,
+           source_name,
+           shopify_created_at
+         FROM commerce_orders
+         ORDER BY shopify_created_at DESC
+         LIMIT 10`,
+        []
+      ).catch(() => []),
 
       // Daily trend data
-      db
-        .prepare(
-          `SELECT
-             date,
-             total_orders,
-             total_revenue_cents,
-             avg_order_value_cents
-           FROM commerce_daily_metrics
-           WHERE date >= date('now', '-${days} days')
-           ORDER BY date ASC`
-        )
-        .all()
-        .catch(() => ({ results: [] })),
+      queryDatabase(
+        `SELECT
+           date,
+           total_orders,
+           total_revenue_cents,
+           avg_order_value_cents
+         FROM commerce_daily_metrics
+         WHERE date >= date('now', '-${days} days')
+         ORDER BY date ASC`,
+        []
+      ).catch(() => []),
 
       // Sync status
-      db
-        .prepare(
-          `SELECT
-             last_updated_at,
-             total_synced,
-             status,
-             completed_at
-           FROM commerce_sync_status
-           WHERE sync_type = 'orders'`
-        )
-        .first()
-        .catch(() => null),
+      queryDatabase(
+        `SELECT
+           last_updated_at,
+           total_synced,
+           status,
+           completed_at
+         FROM commerce_sync_status
+         WHERE sync_type = 'orders'`,
+        []
+      ).catch(() => []),
     ]);
+
+    const currentMetrics = currentMetricsResults?.[0] || {
+      total_orders: 0,
+      total_revenue_cents: 0,
+      avg_order_value_cents: 0,
+      unique_customers: 0,
+    };
+    const previousMetrics = previousMetricsResults?.[0] || {
+      total_orders: 0,
+      total_revenue_cents: 0,
+      avg_order_value_cents: 0,
+      unique_customers: 0,
+    };
+    const topProducts = topProductsResults || [];
+    const recentOrders = recentOrdersResults || [];
+    const dailyTrend = dailyTrendResults || [];
+    const syncStatus = syncStatusResults?.[0] || null;
 
     // Calculate changes
     const calculateChange = (
@@ -206,13 +197,13 @@ export async function GET(request: NextRequest) {
           trend: customersChange.trend,
         },
       },
-      topProducts: ((topProducts as any)?.results || []).map((p: any) => ({
+      topProducts: topProducts.map((p: any) => ({
         title: p.product_title || 'Unknown Product',
         productId: p.product_id,
         unitsSold: p.units_sold,
         revenue: p.revenue_cents,
       })),
-      recentOrders: ((recentOrders as any)?.results || []).map((o: any) => ({
+      recentOrders: recentOrders.map((o: any) => ({
         id: o.id,
         orderNumber: o.shopify_order_number,
         total: o.total_price_cents,
@@ -221,7 +212,7 @@ export async function GET(request: NextRequest) {
         source: o.source_name,
         createdAt: o.shopify_created_at,
       })),
-      trend: ((dailyTrend as any)?.results || []).map((d: any) => ({
+      trend: dailyTrend.map((d: any) => ({
         date: d.date,
         orders: d.total_orders,
         revenue: d.total_revenue_cents,

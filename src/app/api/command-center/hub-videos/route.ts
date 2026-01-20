@@ -1,13 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getRequestContext } from '@cloudflare/next-on-pages';
+import { queryDatabase } from '@/lib/db';
 
 // GET /api/command-center/hub-videos - List videos from the hub (Cloudflare Stream)
 // These are existing videos that can be imported into video distribution
 export async function GET(request: NextRequest) {
   try {
-    const { env } = getRequestContext();
-    const db = env.DB;
-
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search') || '';
     const excludeImported = searchParams.get('excludeImported') === 'true';
@@ -56,7 +53,7 @@ export async function GET(request: NextRequest) {
     query += ` ORDER BY v.created_at DESC LIMIT ? OFFSET ?`;
     params.push(pageSize, offset);
 
-    const result = await db.prepare(query).bind(...params).all();
+    const result = await queryDatabase(query, params) || [];
 
     // Get total count
     let countQuery = `
@@ -78,13 +75,11 @@ export async function GET(request: NextRequest) {
       countParams.push(`%${search}%`, `%${search}%`);
     }
 
-    const countResult = await db
-      .prepare(countQuery)
-      .bind(...countParams)
-      .first<{ total: number }>();
+    const countResults = await queryDatabase(countQuery, countParams);
+    const countResult = countResults?.[0] as { total: number } | undefined;
 
     // Process videos to extract Stream UID and generate thumbnails
-    const videos = (result.results || []).map((row: any) => {
+    const videos = result.map((row: any) => {
       // Get the Stream UID - prefer uid column, fall back to stream_video_id or extract from URL
       let streamUid = row.uid || row.streamVideoId;
       if (!streamUid && row.url) {

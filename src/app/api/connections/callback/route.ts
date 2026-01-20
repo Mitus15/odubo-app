@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-// @ts-ignore
-import { getRequestContext } from '@cloudflare/next-on-pages';
+import { queryDatabase, executeQuery } from '@/lib/db';
 import {
   parseOAuthState,
   exchangeCodeForTokens,
   getAccountInfo,
-  platformConfigs,
 } from '@/lib/platform-oauth';
 
 export const runtime = 'edge';
@@ -51,9 +49,6 @@ export async function GET(request: NextRequest) {
   const { platform, returnUrl } = state;
 
   try {
-    const { env } = getRequestContext();
-    const db = env.DB;
-
     // Generate redirect URI (must match what was used in authorization)
     const baseUrl = new URL(request.url).origin;
     const redirectUri = `${baseUrl}/api/connections/callback`;
@@ -73,48 +68,43 @@ export async function GET(request: NextRequest) {
     const connectionId = `conn_${platform}_${Date.now().toString(36)}`;
 
     // Check if connection already exists for this platform
-    const existing = await db
-      .prepare(
-        `SELECT id FROM platform_connections WHERE platform = ? LIMIT 1`
-      )
-      .bind(platform)
-      .first();
+    const existingResults = await queryDatabase(
+      `SELECT id FROM platform_connections WHERE platform = ? LIMIT 1`,
+      [platform]
+    );
+    const existing = existingResults?.[0];
 
     if (existing) {
       // Update existing connection
-      await db
-        .prepare(
-          `UPDATE platform_connections SET
-             account_id = ?,
-             account_name = ?,
-             access_token = ?,
-             refresh_token = ?,
-             token_expires_at = ?,
-             status = 'active',
-             last_error = NULL,
-             updated_at = datetime('now')
-           WHERE platform = ?`
-        )
-        .bind(
+      await executeQuery(
+        `UPDATE platform_connections SET
+           account_id = ?,
+           account_name = ?,
+           access_token = ?,
+           refresh_token = ?,
+           token_expires_at = ?,
+           status = 'active',
+           last_error = NULL,
+           updated_at = datetime('now')
+         WHERE platform = ?`,
+        [
           accountInfo.id,
           accountInfo.name,
           tokens.accessToken,
           tokens.refreshToken || null,
           expiresAt,
           platform
-        )
-        .run();
+        ]
+      );
     } else {
       // Create new connection
-      await db
-        .prepare(
-          `INSERT INTO platform_connections (
-             id, platform, account_id, account_name,
-             access_token, refresh_token, token_expires_at,
-             status, created_at, updated_at
-           ) VALUES (?, ?, ?, ?, ?, ?, ?, 'active', datetime('now'), datetime('now'))`
-        )
-        .bind(
+      await executeQuery(
+        `INSERT INTO platform_connections (
+           id, platform, account_id, account_name,
+           access_token, refresh_token, token_expires_at,
+           status, created_at, updated_at
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, 'active', datetime('now'), datetime('now'))`,
+        [
           connectionId,
           platform,
           accountInfo.id,
@@ -122,18 +112,16 @@ export async function GET(request: NextRequest) {
           tokens.accessToken,
           tokens.refreshToken || null,
           expiresAt
-        )
-        .run();
+        ]
+      );
     }
 
     // Log the connection
-    await db
-      .prepare(
-        `INSERT INTO sync_logs (job_type, platform, status, completed_at)
-         VALUES ('oauth_connect', ?, 'completed', datetime('now'))`
-      )
-      .bind(platform)
-      .run();
+    await executeQuery(
+      `INSERT INTO sync_logs (job_type, platform, status, completed_at)
+       VALUES ('oauth_connect', ?, 'completed', datetime('now'))`,
+      [platform]
+    );
 
     // Redirect back to admin with success
     const successUrl = new URL(returnUrl, request.url);
@@ -146,13 +134,11 @@ export async function GET(request: NextRequest) {
 
     // Log the error
     try {
-      const { env } = getRequestContext();
-      await env.DB.prepare(
+      await executeQuery(
         `INSERT INTO sync_logs (job_type, platform, status, error_message, completed_at)
-         VALUES ('oauth_connect', ?, 'failed', ?, datetime('now'))`
-      )
-        .bind(platform, err instanceof Error ? err.message : 'Unknown error')
-        .run();
+         VALUES ('oauth_connect', ?, 'failed', ?, datetime('now'))`,
+        [platform, err instanceof Error ? err.message : 'Unknown error']
+      );
     } catch {
       // Ignore logging errors
     }

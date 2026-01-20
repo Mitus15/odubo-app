@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getRequestContext } from '@cloudflare/next-on-pages';
+import { queryDatabase, executeQuery } from '@/lib/db';
 
 // GET /api/command-center/video-releases/[id]/assets - List assets for a release
 export async function GET(
@@ -7,47 +7,43 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { env } = getRequestContext();
-    const db = env.DB;
     const { id } = await params;
 
-    const assets = await db
-      .prepare(
-        `
-        SELECT
-          id,
-          release_id as releaseId,
-          label,
-          version_type as versionType,
-          file_url as fileUrl,
-          r2_key as r2Key,
-          cloudflare_uid as cloudflareUid,
-          duration_seconds as durationSeconds,
-          width,
-          height,
-          aspect_ratio as aspectRatio,
-          framerate,
-          codec,
-          bitrate_kbps as bitrateKbps,
-          file_size_bytes as fileSizeBytes,
-          audio_codec as audioCodec,
-          audio_bitrate_kbps as audioBitrateKbps,
-          audio_channels as audioChannels,
-          status,
-          processing_error as processingError,
-          is_primary as isPrimary,
-          created_at as createdAt,
-          updated_at as updatedAt
-        FROM video_assets
-        WHERE release_id = ?
-        ORDER BY is_primary DESC, created_at ASC
+    const assets = await queryDatabase(
       `
-      )
-      .bind(id)
-      .all();
+      SELECT
+        id,
+        release_id as releaseId,
+        label,
+        version_type as versionType,
+        file_url as fileUrl,
+        r2_key as r2Key,
+        cloudflare_uid as cloudflareUid,
+        duration_seconds as durationSeconds,
+        width,
+        height,
+        aspect_ratio as aspectRatio,
+        framerate,
+        codec,
+        bitrate_kbps as bitrateKbps,
+        file_size_bytes as fileSizeBytes,
+        audio_codec as audioCodec,
+        audio_bitrate_kbps as audioBitrateKbps,
+        audio_channels as audioChannels,
+        status,
+        processing_error as processingError,
+        is_primary as isPrimary,
+        created_at as createdAt,
+        updated_at as updatedAt
+      FROM video_assets
+      WHERE release_id = ?
+      ORDER BY is_primary DESC, created_at ASC
+    `,
+      [id]
+    ) || [];
 
     return NextResponse.json({
-      assets: (assets.results || []).map((a: any) => ({
+      assets: assets.map((a: any) => ({
         ...a,
         isPrimary: Boolean(a.isPrimary),
       })),
@@ -64,8 +60,6 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { env } = getRequestContext();
-    const db = env.DB;
     const { id: releaseId } = await params;
 
     const body = (await request.json()) as {
@@ -117,24 +111,22 @@ export async function POST(
 
     // If this is primary, unset any existing primary
     if (isPrimary) {
-      await db
-        .prepare('UPDATE video_assets SET is_primary = 0 WHERE release_id = ?')
-        .bind(releaseId)
-        .run();
+      await executeQuery(
+        'UPDATE video_assets SET is_primary = 0 WHERE release_id = ?',
+        [releaseId]
+      );
     }
 
-    await db
-      .prepare(
-        `
-        INSERT INTO video_assets (
-          id, release_id, label, version_type, file_url, r2_key, cloudflare_uid,
-          duration_seconds, width, height, aspect_ratio, framerate, codec, bitrate_kbps,
-          file_size_bytes, audio_codec, audio_bitrate_kbps, audio_channels,
-          status, is_primary, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ready', ?, ?, ?)
+    await executeQuery(
       `
-      )
-      .bind(
+      INSERT INTO video_assets (
+        id, release_id, label, version_type, file_url, r2_key, cloudflare_uid,
+        duration_seconds, width, height, aspect_ratio, framerate, codec, bitrate_kbps,
+        file_size_bytes, audio_codec, audio_bitrate_kbps, audio_channels,
+        status, is_primary, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ready', ?, ?, ?)
+    `,
+      [
         assetId,
         releaseId,
         label,
@@ -156,23 +148,23 @@ export async function POST(
         isPrimary ? 1 : 0,
         now,
         now
-      )
-      .run();
+      ]
+    );
 
     // Update release's primary asset if this is primary
     if (isPrimary) {
-      await db
-        .prepare('UPDATE video_releases SET primary_asset_id = ?, updated_at = ? WHERE id = ?')
-        .bind(assetId, now, releaseId)
-        .run();
+      await executeQuery(
+        'UPDATE video_releases SET primary_asset_id = ?, updated_at = ? WHERE id = ?',
+        [assetId, now, releaseId]
+      );
 
       // Also set thumbnail from Cloudflare Stream if available
       if (cloudflareUid) {
         const thumbnailUrl = `https://videodelivery.net/${cloudflareUid}/thumbnails/thumbnail.jpg`;
-        await db
-          .prepare('UPDATE video_releases SET thumbnail_url = ? WHERE id = ? AND thumbnail_url IS NULL')
-          .bind(thumbnailUrl, releaseId)
-          .run();
+        await executeQuery(
+          'UPDATE video_releases SET thumbnail_url = ? WHERE id = ? AND thumbnail_url IS NULL',
+          [thumbnailUrl, releaseId]
+        );
       }
     }
 

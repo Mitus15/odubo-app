@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getRequestContext } from '@cloudflare/next-on-pages';
+import { queryDatabase } from '@/lib/db';
 
 export async function GET(request: NextRequest) {
   try {
-    const { env } = getRequestContext();
-    const db = env.DB;
-
     const { searchParams } = new URL(request.url);
     const days = Math.min(Math.max(parseInt(searchParams.get('days') || '30', 10), 1), 365);
     const dateFilter = `date >= date('now', '-${days} days')`;
@@ -14,31 +11,31 @@ export async function GET(request: NextRequest) {
     // Run all queries in parallel
     const [
       // Social platform overview
-      socialOverviewResult,
+      socialOverviewResults,
       // Per-platform metrics
-      platformMetricsResult,
+      platformMetricsResults,
       // Content type performance
-      contentTypeResult,
+      contentTypeResults,
       // Top performing social content
-      topSocialContentResult,
+      topSocialContentResults,
       // Cross-platform attribution
-      attributionResult,
+      attributionResults,
       // Platform conversion rates
-      conversionRatesResult,
+      conversionRatesResults,
       // Long-form video metrics
-      longformMetricsResult,
+      longformMetricsResults,
       // Streaming vs Social correlation
-      streamVsSocialResult,
+      streamVsSocialResults,
       // Trending audio
-      trendingAudioResult,
+      trendingAudioResults,
       // Account growth
-      accountGrowthResult,
+      accountGrowthResults,
       // Funnel by source platform
-      funnelByPlatformResult,
+      funnelByPlatformResults,
     ] = await Promise.all([
       // Social overview (aggregate all platforms)
-      db.prepare(`
-        SELECT
+      queryDatabase(
+        `SELECT
           COALESCE(SUM(views), 0) as totalViews,
           COALESCE(SUM(impressions), 0) as totalImpressions,
           COALESCE(SUM(reach), 0) as totalReach,
@@ -51,12 +48,13 @@ export async function GET(request: NextRequest) {
           COALESCE(SUM(link_clicks), 0) as totalLinkClicks,
           AVG(engagement_rate) as avgEngagementRate
         FROM social_metrics
-        WHERE ${dateFilter}
-      `).first(),
+        WHERE ${dateFilter}`,
+        []
+      ).catch(() => []),
 
       // Per-platform breakdown
-      db.prepare(`
-        SELECT
+      queryDatabase(
+        `SELECT
           sc.platform,
           COUNT(DISTINCT sc.id) as contentCount,
           COALESCE(SUM(sm.views), 0) as views,
@@ -72,12 +70,13 @@ export async function GET(request: NextRequest) {
         LEFT JOIN social_metrics sm ON sc.id = sm.content_id AND sm.${dateFilter}
         WHERE sc.status = 'published'
         GROUP BY sc.platform
-        ORDER BY views DESC
-      `).all(),
+        ORDER BY views DESC`,
+        []
+      ).catch(() => []),
 
       // Content type performance
-      db.prepare(`
-        SELECT
+      queryDatabase(
+        `SELECT
           sc.content_type,
           COUNT(DISTINCT sc.id) as contentCount,
           COALESCE(SUM(sm.views), 0) as views,
@@ -89,12 +88,13 @@ export async function GET(request: NextRequest) {
         LEFT JOIN social_metrics sm ON sc.id = sm.content_id AND sm.${dateFilter}
         WHERE sc.status = 'published'
         GROUP BY sc.content_type
-        ORDER BY views DESC
-      `).all(),
+        ORDER BY views DESC`,
+        []
+      ).catch(() => []),
 
       // Top performing social content
-      db.prepare(`
-        SELECT
+      queryDatabase(
+        `SELECT
           sc.id,
           sc.platform,
           sc.content_type,
@@ -113,12 +113,13 @@ export async function GET(request: NextRequest) {
         WHERE sc.status = 'published'
         GROUP BY sc.id
         ORDER BY views DESC
-        LIMIT 20
-      `).all(),
+        LIMIT 20`,
+        []
+      ).catch(() => []),
 
       // Cross-platform attribution summary
-      db.prepare(`
-        SELECT
+      queryDatabase(
+        `SELECT
           source_platform,
           event_type,
           COUNT(*) as eventCount,
@@ -127,12 +128,13 @@ export async function GET(request: NextRequest) {
         FROM cross_platform_events
         WHERE ${datetimeFilter}
         GROUP BY source_platform, event_type
-        ORDER BY eventCount DESC
-      `).all(),
+        ORDER BY eventCount DESC`,
+        []
+      ).catch(() => []),
 
       // Platform conversion rates (source → purchase)
-      db.prepare(`
-        WITH platform_starts AS (
+      queryDatabase(
+        `WITH platform_starts AS (
           SELECT source_platform, COUNT(DISTINCT session_id) as sessions
           FROM cross_platform_events
           WHERE event_type = 'site_visit' AND ${datetimeFilter}
@@ -156,12 +158,13 @@ export async function GET(request: NextRequest) {
                ELSE 0 END as conversionRate
         FROM platform_starts ps
         LEFT JOIN platform_purchases pp ON ps.source_platform = pp.source_platform
-        ORDER BY conversionRate DESC
-      `).all(),
+        ORDER BY conversionRate DESC`,
+        []
+      ).catch(() => []),
 
       // Long-form video overview
-      db.prepare(`
-        SELECT
+      queryDatabase(
+        `SELECT
           platform,
           COUNT(DISTINCT external_id) as videoCount,
           COALESCE(SUM(views), 0) as views,
@@ -173,12 +176,13 @@ export async function GET(request: NextRequest) {
           AVG(avg_view_percent) as avgViewPercent
         FROM longform_metrics
         WHERE ${dateFilter}
-        GROUP BY platform
-      `).all(),
+        GROUP BY platform`,
+        []
+      ).catch(() => []),
 
       // Streaming vs Social correlation (social driving streams)
-      db.prepare(`
-        WITH social_to_stream AS (
+      queryDatabase(
+        `WITH social_to_stream AS (
           SELECT
             source_platform,
             COUNT(*) as streamClicks
@@ -204,12 +208,13 @@ export async function GET(request: NextRequest) {
                ELSE 0 END as socialToStreamRate
         FROM social_views sv
         LEFT JOIN social_to_stream sts ON sv.platform = sts.source_platform
-        ORDER BY socialToStreamRate DESC
-      `).all(),
+        ORDER BY socialToStreamRate DESC`,
+        []
+      ).catch(() => []),
 
       // Trending audio using our tracks
-      db.prepare(`
-        SELECT
+      queryDatabase(
+        `SELECT
           platform,
           audio_name,
           audio_author,
@@ -221,24 +226,26 @@ export async function GET(request: NextRequest) {
         FROM trending_audio
         WHERE is_owned = 1 AND ${dateFilter}
         ORDER BY uses_count DESC
-        LIMIT 10
-      `).all(),
+        LIMIT 10`,
+        []
+      ).catch(() => []),
 
       // Account growth trend
-      db.prepare(`
-        SELECT
+      queryDatabase(
+        `SELECT
           platform,
           date,
           followers,
           follower_change
         FROM social_account_metrics
         WHERE ${dateFilter}
-        ORDER BY platform, date ASC
-      `).all(),
+        ORDER BY platform, date ASC`,
+        []
+      ).catch(() => []),
 
       // Full funnel broken down by source platform
-      db.prepare(`
-        SELECT
+      queryDatabase(
+        `SELECT
           source_platform,
           SUM(CASE WHEN event_type = 'site_visit' THEN 1 ELSE 0 END) as visits,
           SUM(CASE WHEN event_type = 'clip_view' THEN 1 ELSE 0 END) as clipViews,
@@ -253,12 +260,13 @@ export async function GET(request: NextRequest) {
         FROM cross_platform_events
         WHERE ${datetimeFilter}
         GROUP BY source_platform
-        ORDER BY purchases DESC
-      `).all(),
+        ORDER BY purchases DESC`,
+        []
+      ).catch(() => []),
     ]);
 
     // Process and structure the response
-    const socialOverview = socialOverviewResult || {};
+    const socialOverview = socialOverviewResults?.[0] || {};
 
     // Calculate overall engagement rate
     const totalEngagements =
@@ -290,7 +298,7 @@ export async function GET(request: NextRequest) {
       threads: 'Threads',
     };
 
-    const platforms = (platformMetricsResult.results || []).map((p: any) => ({
+    const platforms = (platformMetricsResults || []).map((p: any) => ({
       ...p,
       name: platformNames[p.platform] || p.platform,
       color: platformColors[p.platform] || '#726d6c',
@@ -304,7 +312,7 @@ export async function GET(request: NextRequest) {
     }, null);
 
     // Process conversion rates
-    const conversionRates = (conversionRatesResult.results || []).map((p: any) => ({
+    const conversionRates = (conversionRatesResults || []).map((p: any) => ({
       platform: p.source_platform,
       name: platformNames[p.source_platform] || p.source_platform,
       color: platformColors[p.source_platform] || '#726d6c',
@@ -321,7 +329,7 @@ export async function GET(request: NextRequest) {
     }, null);
 
     // Process funnel by platform
-    const funnelByPlatform = (funnelByPlatformResult.results || []).map((p: any) => ({
+    const funnelByPlatform = (funnelByPlatformResults || []).map((p: any) => ({
       platform: p.source_platform,
       name: platformNames[p.source_platform] || p.source_platform,
       color: platformColors[p.source_platform] || '#726d6c',
@@ -343,7 +351,7 @@ export async function GET(request: NextRequest) {
     }));
 
     // Long-form metrics
-    const longformMetrics = (longformMetricsResult.results || []).map((l: any) => ({
+    const longformMetrics = (longformMetricsResults || []).map((l: any) => ({
       ...l,
       revenue: (l.revenueCents || 0) / 100,
     }));
@@ -368,29 +376,29 @@ export async function GET(request: NextRequest) {
         },
         platforms,
         bestPlatform,
-        contentTypes: contentTypeResult.results || [],
-        topContent: topSocialContentResult.results || [],
+        contentTypes: contentTypeResults || [],
+        topContent: topSocialContentResults || [],
       },
 
       // Cross-platform attribution
       attribution: {
-        events: attributionResult.results || [],
+        events: attributionResults || [],
         conversionRates,
         bestConvertingPlatform,
         funnelByPlatform,
       },
 
       // Social to streaming correlation
-      socialToStreaming: streamVsSocialResult.results || [],
+      socialToStreaming: streamVsSocialResults || [],
 
       // Long-form video
       longform: longformMetrics,
 
       // Trending audio
-      trendingAudio: trendingAudioResult.results || [],
+      trendingAudio: trendingAudioResults || [],
 
       // Account growth
-      accountGrowth: accountGrowthResult.results || [],
+      accountGrowth: accountGrowthResults || [],
 
       // Insights (computed)
       insights: generateInsights({

@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getRequestContext } from '@cloudflare/next-on-pages';
+import { queryDatabase, executeQuery } from '@/lib/db';
 
 // GET /api/command-center/video-releases - List all video releases
 export async function GET(request: NextRequest) {
   try {
-    const { env } = getRequestContext();
-    const db = env.DB;
-
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
     const videoType = searchParams.get('videoType');
@@ -65,7 +62,7 @@ export async function GET(request: NextRequest) {
     query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
     params.push(pageSize, offset);
 
-    const result = await db.prepare(query).bind(...params).all();
+    const result = await queryDatabase(query, params) || [];
 
     // Get total count
     let countQuery = 'SELECT COUNT(*) as total FROM video_releases';
@@ -73,12 +70,10 @@ export async function GET(request: NextRequest) {
       countQuery += ' WHERE ' + conditions.join(' AND ');
     }
     const countParams = params.slice(0, -2); // Remove LIMIT and OFFSET
-    const countResult = await db
-      .prepare(countQuery)
-      .bind(...countParams)
-      .first<{ total: number }>();
+    const countResults = await queryDatabase(countQuery, countParams);
+    const countResult = countResults?.[0] as { total: number } | undefined;
 
-    const releases = (result.results || []).map((row: any) => ({
+    const releases = result.map((row: any) => ({
       ...row,
       tags: row.tags ? JSON.parse(row.tags) : [],
       premiereEnabled: Boolean(row.premiereEnabled),
@@ -102,9 +97,6 @@ export async function GET(request: NextRequest) {
 // POST /api/command-center/video-releases - Create a new video release
 export async function POST(request: NextRequest) {
   try {
-    const { env } = getRequestContext();
-    const db = env.DB;
-
     const body = await request.json();
 
     const {
@@ -143,22 +135,20 @@ export async function POST(request: NextRequest) {
     const id = crypto.randomUUID().replace(/-/g, '').slice(0, 16);
     const now = new Date().toISOString();
 
-    await db
-      .prepare(
-        `
-        INSERT INTO video_releases (
-          id, title, artist_name, video_type, description,
-          linked_track_id, linked_release_id, isrc,
-          thumbnail_url, premiere_enabled, premiere_date, premiere_countdown_theme,
-          content_id_enabled, content_id_policy,
-          status, genre, tags, language,
-          made_for_kids, age_restricted,
-          director, producer, cinematographer, editor,
-          internal_video_id, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    await executeQuery(
       `
-      )
-      .bind(
+      INSERT INTO video_releases (
+        id, title, artist_name, video_type, description,
+        linked_track_id, linked_release_id, isrc,
+        thumbnail_url, premiere_enabled, premiere_date, premiere_countdown_theme,
+        content_id_enabled, content_id_policy,
+        status, genre, tags, language,
+        made_for_kids, age_restricted,
+        director, producer, cinematographer, editor,
+        internal_video_id, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `,
+      [
         id,
         title,
         artistName,
@@ -185,8 +175,8 @@ export async function POST(request: NextRequest) {
         internalVideoId || null,
         now,
         now
-      )
-      .run();
+      ]
+    );
 
     return NextResponse.json({ id, success: true });
   } catch (error) {

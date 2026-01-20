@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-// @ts-ignore
-import { getRequestContext } from '@cloudflare/next-on-pages';
+import { queryDatabase, executeQuery } from '@/lib/db';
 import { platformConfigs, type Platform } from '@/lib/platform-oauth';
 
 export const runtime = 'edge';
@@ -26,14 +25,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { env } = getRequestContext();
-    const db = env.DB;
-
     // Check if connection exists
-    const connection = await db
-      .prepare(`SELECT id, account_name FROM platform_connections WHERE platform = ?`)
-      .bind(platform)
-      .first();
+    const connections = await queryDatabase(
+      `SELECT id, account_name FROM platform_connections WHERE platform = ?`,
+      [platform]
+    );
+    const connection = connections?.[0];
 
     if (!connection) {
       return NextResponse.json(
@@ -43,19 +40,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Delete the connection
-    await db
-      .prepare(`DELETE FROM platform_connections WHERE platform = ?`)
-      .bind(platform)
-      .run();
+    await executeQuery(
+      `DELETE FROM platform_connections WHERE platform = ?`,
+      [platform]
+    );
 
     // Log the disconnection
-    await db
-      .prepare(
-        `INSERT INTO sync_logs (job_type, platform, status, completed_at)
-         VALUES ('oauth_disconnect', ?, 'completed', datetime('now'))`
-      )
-      .bind(platform)
-      .run();
+    await executeQuery(
+      `INSERT INTO sync_logs (job_type, platform, status, completed_at)
+       VALUES ('oauth_disconnect', ?, 'completed', datetime('now'))`,
+      [platform]
+    );
 
     return NextResponse.json({
       success: true,

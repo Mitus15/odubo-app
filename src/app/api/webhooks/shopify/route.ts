@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-// @ts-ignore
-import { getRequestContext } from '@cloudflare/next-on-pages';
-import { toCents, extractOrderNumber, hashCustomerId, parseUtmParams } from '@/lib/shopify-admin';
+import { queryDatabase, executeQuery } from '@/lib/db';
+import { hashCustomerId, parseUtmParams } from '@/lib/shopify-admin';
 
 export const runtime = 'edge';
 
@@ -87,21 +86,18 @@ async function handleWebhook(
   payload: any,
   shopDomain: string | null
 ): Promise<NextResponse> {
-  const { env } = getRequestContext();
-  const db = env.DB;
-
   switch (topic) {
     case 'orders/create':
     case 'orders/updated':
-      await handleOrderWebhook(db, payload);
+      await handleOrderWebhook(payload);
       break;
 
     case 'orders/cancelled':
-      await handleOrderCancelled(db, payload);
+      await handleOrderCancelled(payload);
       break;
 
     case 'refunds/create':
-      await handleRefund(db, payload);
+      await handleRefund(payload);
       break;
 
     default:
@@ -109,13 +105,11 @@ async function handleWebhook(
   }
 
   // Log webhook
-  await db
-    .prepare(
-      `INSERT INTO sync_logs (job_type, platform, status, records_fetched, records_inserted, completed_at)
-       VALUES (?, 'shopify', 'completed', 1, 1, datetime('now'))`
-    )
-    .bind(`webhook_${topic}`)
-    .run();
+  await executeQuery(
+    `INSERT INTO sync_logs (job_type, platform, status, records_fetched, records_inserted, completed_at)
+     VALUES (?, 'shopify', 'completed', 1, 1, datetime('now'))`,
+    [`webhook_${topic}`]
+  );
 
   return NextResponse.json({ success: true, topic });
 }
@@ -127,7 +121,7 @@ async function handleWebhook(
  * - id
  * - No email, name, or address
  */
-async function handleOrderWebhook(db: any, order: any) {
+async function handleOrderWebhook(order: any) {
   const orderId = `order_${order.id}`;
   const shopifyId = `gid://shopify/Order/${order.id}`;
   const orderNumber = order.order_number || 0;
@@ -145,32 +139,30 @@ async function handleOrderWebhook(db: any, order: any) {
   const totalDiscountsCents = Math.round(parseFloat(order.total_discounts || '0') * 100);
 
   // Upsert order
-  await db
-    .prepare(
-      `INSERT INTO commerce_orders (
-         id, shopify_id, shopify_order_number,
-         total_price_cents, subtotal_price_cents, total_tax_cents, total_discounts_cents, currency,
-         financial_status, fulfillment_status,
-         customer_id, customer_hash,
-         source_name, referring_site, landing_site,
-         utm_source, utm_medium, utm_campaign,
-         shopify_created_at, shopify_updated_at, processed_at, closed_at, cancelled_at,
-         data_source, synced_at, updated_at
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'webhook', datetime('now'), datetime('now'))
-       ON CONFLICT(shopify_id) DO UPDATE SET
-         total_price_cents = excluded.total_price_cents,
-         subtotal_price_cents = excluded.subtotal_price_cents,
-         total_tax_cents = excluded.total_tax_cents,
-         total_discounts_cents = excluded.total_discounts_cents,
-         financial_status = excluded.financial_status,
-         fulfillment_status = excluded.fulfillment_status,
-         shopify_updated_at = excluded.shopify_updated_at,
-         closed_at = excluded.closed_at,
-         cancelled_at = excluded.cancelled_at,
-         synced_at = datetime('now'),
-         updated_at = datetime('now')`
-    )
-    .bind(
+  await executeQuery(
+    `INSERT INTO commerce_orders (
+       id, shopify_id, shopify_order_number,
+       total_price_cents, subtotal_price_cents, total_tax_cents, total_discounts_cents, currency,
+       financial_status, fulfillment_status,
+       customer_id, customer_hash,
+       source_name, referring_site, landing_site,
+       utm_source, utm_medium, utm_campaign,
+       shopify_created_at, shopify_updated_at, processed_at, closed_at, cancelled_at,
+       data_source, synced_at, updated_at
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'webhook', datetime('now'), datetime('now'))
+     ON CONFLICT(shopify_id) DO UPDATE SET
+       total_price_cents = excluded.total_price_cents,
+       subtotal_price_cents = excluded.subtotal_price_cents,
+       total_tax_cents = excluded.total_tax_cents,
+       total_discounts_cents = excluded.total_discounts_cents,
+       financial_status = excluded.financial_status,
+       fulfillment_status = excluded.fulfillment_status,
+       shopify_updated_at = excluded.shopify_updated_at,
+       closed_at = excluded.closed_at,
+       cancelled_at = excluded.cancelled_at,
+       synced_at = datetime('now'),
+       updated_at = datetime('now')`,
+    [
       orderId,
       shopifyId,
       orderNumber,
@@ -193,24 +185,22 @@ async function handleOrderWebhook(db: any, order: any) {
       order.updated_at,
       order.processed_at,
       order.closed_at,
-      order.cancelled_at
-    )
-    .run();
+      order.cancelled_at,
+    ]
+  );
 
   // Delete existing line items and re-insert
-  await db.prepare(`DELETE FROM commerce_order_items WHERE order_id = ?`).bind(orderId).run();
+  await executeQuery(`DELETE FROM commerce_order_items WHERE order_id = ?`, [orderId]);
 
   // Insert line items
   for (const item of order.line_items || []) {
-    await db
-      .prepare(
-        `INSERT INTO commerce_order_items (
-           order_id, shopify_line_item_id,
-           product_id, product_title, variant_id, variant_title, sku,
-           quantity, price_cents, total_discount_cents
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-      )
-      .bind(
+    await executeQuery(
+      `INSERT INTO commerce_order_items (
+         order_id, shopify_line_item_id,
+         product_id, product_title, variant_id, variant_title, sku,
+         quantity, price_cents, total_discount_cents
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
         orderId,
         `${item.id}`,
         item.product_id ? `gid://shopify/Product/${item.product_id}` : null,
@@ -220,102 +210,88 @@ async function handleOrderWebhook(db: any, order: any) {
         item.sku,
         item.quantity,
         Math.round(parseFloat(item.price || '0') * 100 * item.quantity),
-        Math.round(parseFloat(item.total_discount || '0') * 100)
-      )
-      .run();
+        Math.round(parseFloat(item.total_discount || '0') * 100),
+      ]
+    );
   }
 
   // Update/create customer record
   if (order.customer?.id && customerHash) {
-    await db
-      .prepare(
-        `INSERT INTO commerce_customers (id, shopify_customer_id, customer_hash, total_orders, first_order_at, last_order_at)
-         VALUES (?, ?, ?, 1, ?, ?)
-         ON CONFLICT(shopify_customer_id) DO UPDATE SET
-           total_orders = commerce_customers.total_orders + 1,
-           last_order_at = MAX(commerce_customers.last_order_at, excluded.last_order_at),
-           updated_at = datetime('now')`
-      )
-      .bind(customerHash, `${order.customer.id}`, customerHash, order.created_at, order.created_at)
-      .run();
+    await executeQuery(
+      `INSERT INTO commerce_customers (id, shopify_customer_id, customer_hash, total_orders, first_order_at, last_order_at)
+       VALUES (?, ?, ?, 1, ?, ?)
+       ON CONFLICT(shopify_customer_id) DO UPDATE SET
+         total_orders = commerce_customers.total_orders + 1,
+         last_order_at = MAX(commerce_customers.last_order_at, excluded.last_order_at),
+         updated_at = datetime('now')`,
+      [customerHash, `${order.customer.id}`, customerHash, order.created_at, order.created_at]
+    );
   }
 
   // Update daily metrics for this order's date
   const orderDate = order.created_at?.split('T')[0];
   if (orderDate) {
-    await updateDailyMetrics(db, orderDate);
+    await updateDailyMetrics(orderDate);
   }
 }
 
 /**
  * Handle order cancelled webhook
  */
-async function handleOrderCancelled(db: any, order: any) {
+async function handleOrderCancelled(order: any) {
   const shopifyId = `gid://shopify/Order/${order.id}`;
 
-  await db
-    .prepare(
-      `UPDATE commerce_orders SET
-         cancelled_at = ?,
-         updated_at = datetime('now')
-       WHERE shopify_id = ?`
-    )
-    .bind(order.cancelled_at, shopifyId)
-    .run();
+  await executeQuery(
+    `UPDATE commerce_orders SET
+       cancelled_at = ?,
+       updated_at = datetime('now')
+     WHERE shopify_id = ?`,
+    [order.cancelled_at, shopifyId]
+  );
 }
 
 /**
  * Handle refund webhook
  */
-async function handleRefund(db: any, refund: any) {
+async function handleRefund(refund: any) {
   const shopifyOrderId = `gid://shopify/Order/${refund.order_id}`;
 
   // Update order financial status
-  await db
-    .prepare(
-      `UPDATE commerce_orders SET
-         financial_status = 'refunded',
-         updated_at = datetime('now')
-       WHERE shopify_id = ?`
-    )
-    .bind(shopifyOrderId)
-    .run();
+  await executeQuery(
+    `UPDATE commerce_orders SET
+       financial_status = 'refunded',
+       updated_at = datetime('now')
+     WHERE shopify_id = ?`,
+    [shopifyOrderId]
+  );
 }
 
 /**
  * Update daily metrics for a specific date
  */
-async function updateDailyMetrics(db: any, date: string) {
-  const result = await db
-    .prepare(
-      `SELECT
-         COUNT(*) as total_orders,
-         SUM(total_price_cents) as total_revenue_cents,
-         AVG(total_price_cents) as avg_order_value_cents
-       FROM commerce_orders
-       WHERE date(shopify_created_at) = ?
-         AND financial_status NOT IN ('voided', 'refunded')`
-    )
-    .bind(date)
-    .first();
+async function updateDailyMetrics(date: string) {
+  const results = await queryDatabase(
+    `SELECT
+       COUNT(*) as total_orders,
+       SUM(total_price_cents) as total_revenue_cents,
+       AVG(total_price_cents) as avg_order_value_cents
+     FROM commerce_orders
+     WHERE date(shopify_created_at) = ?
+       AND financial_status NOT IN ('voided', 'refunded')`,
+    [date]
+  );
 
+  const result = results?.[0] as any;
   if (result) {
-    await db
-      .prepare(
-        `INSERT INTO commerce_daily_metrics (date, total_orders, total_revenue_cents, avg_order_value_cents, computed_at)
-         VALUES (?, ?, ?, ?, datetime('now'))
-         ON CONFLICT(date) DO UPDATE SET
-           total_orders = excluded.total_orders,
-           total_revenue_cents = excluded.total_revenue_cents,
-           avg_order_value_cents = excluded.avg_order_value_cents,
-           computed_at = datetime('now')`
-      )
-      .bind(
-        date,
-        result.total_orders || 0,
-        result.total_revenue_cents || 0,
-        Math.round(result.avg_order_value_cents || 0)
-      )
-      .run();
+    await executeQuery(
+      `INSERT INTO commerce_daily_metrics (date, total_orders, total_revenue_cents, avg_order_value_cents, computed_at)
+       VALUES (?, ?, ?, ?, datetime('now'))
+       ON CONFLICT(date) DO UPDATE SET
+         total_orders = excluded.total_orders,
+         total_revenue_cents = excluded.total_revenue_cents,
+         avg_order_value_cents = excluded.avg_order_value_cents,
+         computed_at = datetime('now')`,
+      [date, result.total_orders || 0, result.total_revenue_cents || 0, Math.round(result.avg_order_value_cents || 0)]
+    );
   }
 }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getRequestContext } from '@cloudflare/next-on-pages';
+import { queryDatabase, executeQuery } from '@/lib/db';
 import { createPost, CreatePostInput } from '@/lib/postforme';
 
 export const runtime = 'edge';
@@ -16,8 +16,8 @@ interface SocialPost {
   mentions?: string;
   first_comment?: string;
   scheduled_at?: string;
-  platforms: string; // Legacy, kept for backwards compatibility
-  account_ids: string; // JSON array of account IDs (new)
+  platforms: string;
+  account_ids: string;
   platform_status?: string;
   platform_post_ids?: string;
   platform_errors?: string;
@@ -37,9 +37,6 @@ interface SocialAccount {
  */
 export async function POST(request: NextRequest) {
   try {
-    const { env } = getRequestContext();
-    const db = env.DB;
-
     const body = await request.json();
     const postId = (body as { post_id?: string }).post_id;
     const publishNow = (body as { publish_now?: boolean }).publish_now ?? false;
@@ -49,12 +46,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Get the post
-    const post = await db
-      .prepare(
-        `SELECT * FROM social_posts WHERE id = ?`
-      )
-      .bind(postId)
-      .first<SocialPost>();
+    const posts = await queryDatabase(
+      `SELECT * FROM social_posts WHERE id = ?`,
+      [postId]
+    );
+    const post = posts?.[0] as SocialPost | undefined;
 
     if (!post) {
       return NextResponse.json({ error: 'Post not found' }, { status: 404 });
@@ -91,13 +87,10 @@ export async function POST(request: NextRequest) {
     if (accountIds.length > 0) {
       // New approach: fetch by specific account IDs
       const placeholders = accountIds.map(() => '?').join(', ');
-      const result = await db
-        .prepare(
-          `SELECT * FROM social_accounts WHERE id IN (${placeholders}) AND is_active = 1`
-        )
-        .bind(...accountIds)
-        .all<SocialAccount>();
-      fetchedAccounts = (result.results || []) as SocialAccount[];
+      fetchedAccounts = await queryDatabase(
+        `SELECT * FROM social_accounts WHERE id IN (${placeholders}) AND is_active = 1`,
+        accountIds
+      ) as SocialAccount[] || [];
 
       // Check all accounts were found
       const foundIds = fetchedAccounts.map((a) => a.id);
@@ -111,13 +104,10 @@ export async function POST(request: NextRequest) {
     } else {
       // Legacy approach: fetch by platform names
       const placeholders = platforms.map(() => '?').join(', ');
-      const result = await db
-        .prepare(
-          `SELECT * FROM social_accounts WHERE platform IN (${placeholders}) AND is_active = 1`
-        )
-        .bind(...platforms)
-        .all<SocialAccount>();
-      fetchedAccounts = (result.results || []) as SocialAccount[];
+      fetchedAccounts = await queryDatabase(
+        `SELECT * FROM social_accounts WHERE platform IN (${placeholders}) AND is_active = 1`,
+        platforms
+      ) as SocialAccount[] || [];
 
       // Check we have accounts for all platforms
       const foundPlatforms = new Set(fetchedAccounts.map((a) => a.platform));
@@ -135,12 +125,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Update status to publishing
-    await db
-      .prepare(
-        `UPDATE social_posts SET status = 'publishing', updated_at = datetime('now') WHERE id = ?`
-      )
-      .bind(postId)
-      .run();
+    await executeQuery(
+      `UPDATE social_posts SET status = 'publishing', updated_at = datetime('now') WHERE id = ?`,
+      [postId]
+    );
 
     // Build the Post for Me API request
     const postForMeAccountIds = fetchedAccounts.map((acc) => acc.postforme_account_id);
@@ -179,24 +167,20 @@ export async function POST(request: NextRequest) {
 
     if (!result.success) {
       // Update post status to failed
-      await db
-        .prepare(
-          `UPDATE social_posts
-           SET status = 'failed', error_message = ?, retry_count = retry_count + 1,
-               last_retry_at = datetime('now'), updated_at = datetime('now')
-           WHERE id = ?`
-        )
-        .bind(result.error || 'Unknown error', postId)
-        .run();
+      await executeQuery(
+        `UPDATE social_posts
+         SET status = 'failed', error_message = ?, retry_count = retry_count + 1,
+             last_retry_at = datetime('now'), updated_at = datetime('now')
+         WHERE id = ?`,
+        [result.error || 'Unknown error', postId]
+      );
 
       // Log the failure
-      await db
-        .prepare(
-          `INSERT INTO social_activity_log (id, user_id, action, target_type, target_id, details)
-           VALUES (?, 'system', 'publish_failed', 'post', ?, ?)`
-        )
-        .bind(crypto.randomUUID().split('-')[0], postId, JSON.stringify({ error: result.error }))
-        .run();
+      await executeQuery(
+        `INSERT INTO social_activity_log (id, user_id, action, target_type, target_id, details)
+         VALUES (?, 'system', 'publish_failed', 'post', ?, ?)`,
+        [crypto.randomUUID().split('-')[0], postId, JSON.stringify({ error: result.error })]
+      );
 
       return NextResponse.json({ success: false, error: result.error }, { status: 500 });
     }
@@ -205,24 +189,27 @@ export async function POST(request: NextRequest) {
     const newStatus = publishNow ? 'published' : 'scheduled';
     const platformPostIds = result.data ? { postforme_id: result.data.id } : {};
 
-    await db
-      .prepare(
+    if (publishNow) {
+      await executeQuery(
         `UPDATE social_posts
-         SET status = ?, platform_post_ids = ?,
-             ${publishNow ? "published_at = datetime('now')," : ''}
-             updated_at = datetime('now')
-         WHERE id = ?`
-      )
-      .bind(newStatus, JSON.stringify(platformPostIds), postId)
-      .run();
+         SET status = ?, platform_post_ids = ?, published_at = datetime('now'), updated_at = datetime('now')
+         WHERE id = ?`,
+        [newStatus, JSON.stringify(platformPostIds), postId]
+      );
+    } else {
+      await executeQuery(
+        `UPDATE social_posts
+         SET status = ?, platform_post_ids = ?, updated_at = datetime('now')
+         WHERE id = ?`,
+        [newStatus, JSON.stringify(platformPostIds), postId]
+      );
+    }
 
     // Log success
-    await db
-      .prepare(
-        `INSERT INTO social_activity_log (id, user_id, action, target_type, target_id, details)
-         VALUES (?, 'system', ?, 'post', ?, ?)`
-      )
-      .bind(
+    await executeQuery(
+      `INSERT INTO social_activity_log (id, user_id, action, target_type, target_id, details)
+       VALUES (?, 'system', ?, 'post', ?, ?)`,
+      [
         crypto.randomUUID().split('-')[0],
         publishNow ? 'published' : 'scheduled',
         postId,
@@ -231,8 +218,8 @@ export async function POST(request: NextRequest) {
           account_ids: fetchedAccounts.map((a) => a.id),
           postforme_id: result.data?.id,
         })
-      )
-      .run();
+      ]
+    );
 
     return NextResponse.json({
       success: true,

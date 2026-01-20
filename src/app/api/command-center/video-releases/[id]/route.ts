@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getRequestContext } from '@cloudflare/next-on-pages';
+import { queryDatabase, executeQuery } from '@/lib/db';
 
 // GET /api/command-center/video-releases/[id] - Get a single video release
 export async function GET(
@@ -7,130 +7,123 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { env } = getRequestContext();
-    const db = env.DB;
     const { id } = await params;
 
-    const release = await db
-      .prepare(
-        `
-        SELECT
-          id,
-          title,
-          artist_name as artistName,
-          video_type as videoType,
-          description,
-          description_template as descriptionTemplate,
-          linked_track_id as linkedTrackId,
-          linked_release_id as linkedReleaseId,
-          isrc,
-          primary_asset_id as primaryAssetId,
-          thumbnail_url as thumbnailUrl,
-          thumbnail_r2_key as thumbnailR2Key,
-          custom_thumbnails as customThumbnails,
-          premiere_enabled as premiereEnabled,
-          premiere_date as premiereDate,
-          premiere_countdown_theme as premiereCountdownTheme,
-          content_id_enabled as contentIdEnabled,
-          content_id_policy as contentIdPolicy,
-          status,
-          genre,
-          tags,
-          language,
-          made_for_kids as madeForKids,
-          age_restricted as ageRestricted,
-          director,
-          producer,
-          cinematographer,
-          editor,
-          credits_json as creditsJson,
-          internal_video_id as internalVideoId,
-          created_at as createdAt,
-          updated_at as updatedAt,
-          scheduled_at as scheduledAt,
-          published_at as publishedAt
-        FROM video_releases
-        WHERE id = ?
+    const releases = await queryDatabase(
       `
-      )
-      .bind(id)
-      .first();
+      SELECT
+        id,
+        title,
+        artist_name as artistName,
+        video_type as videoType,
+        description,
+        description_template as descriptionTemplate,
+        linked_track_id as linkedTrackId,
+        linked_release_id as linkedReleaseId,
+        isrc,
+        primary_asset_id as primaryAssetId,
+        thumbnail_url as thumbnailUrl,
+        thumbnail_r2_key as thumbnailR2Key,
+        custom_thumbnails as customThumbnails,
+        premiere_enabled as premiereEnabled,
+        premiere_date as premiereDate,
+        premiere_countdown_theme as premiereCountdownTheme,
+        content_id_enabled as contentIdEnabled,
+        content_id_policy as contentIdPolicy,
+        status,
+        genre,
+        tags,
+        language,
+        made_for_kids as madeForKids,
+        age_restricted as ageRestricted,
+        director,
+        producer,
+        cinematographer,
+        editor,
+        credits_json as creditsJson,
+        internal_video_id as internalVideoId,
+        created_at as createdAt,
+        updated_at as updatedAt,
+        scheduled_at as scheduledAt,
+        published_at as publishedAt
+      FROM video_releases
+      WHERE id = ?
+    `,
+      [id]
+    );
+    const release = releases?.[0];
 
     if (!release) {
       return NextResponse.json({ error: 'Video release not found' }, { status: 404 });
     }
 
     // Get assets
-    const assets = await db
-      .prepare(
-        `
-        SELECT
-          id,
-          release_id as releaseId,
-          label,
-          version_type as versionType,
-          file_url as fileUrl,
-          r2_key as r2Key,
-          cloudflare_uid as cloudflareUid,
-          duration_seconds as durationSeconds,
-          width,
-          height,
-          aspect_ratio as aspectRatio,
-          framerate,
-          codec,
-          bitrate_kbps as bitrateKbps,
-          file_size_bytes as fileSizeBytes,
-          audio_codec as audioCodec,
-          audio_bitrate_kbps as audioBitrateKbps,
-          audio_channels as audioChannels,
-          status,
-          processing_error as processingError,
-          is_primary as isPrimary,
-          created_at as createdAt,
-          updated_at as updatedAt
-        FROM video_assets
-        WHERE release_id = ?
-        ORDER BY is_primary DESC, created_at ASC
+    const assets = await queryDatabase(
       `
-      )
-      .bind(id)
-      .all();
+      SELECT
+        id,
+        release_id as releaseId,
+        label,
+        version_type as versionType,
+        file_url as fileUrl,
+        r2_key as r2Key,
+        cloudflare_uid as cloudflareUid,
+        duration_seconds as durationSeconds,
+        width,
+        height,
+        aspect_ratio as aspectRatio,
+        framerate,
+        codec,
+        bitrate_kbps as bitrateKbps,
+        file_size_bytes as fileSizeBytes,
+        audio_codec as audioCodec,
+        audio_bitrate_kbps as audioBitrateKbps,
+        audio_channels as audioChannels,
+        status,
+        processing_error as processingError,
+        is_primary as isPrimary,
+        created_at as createdAt,
+        updated_at as updatedAt
+      FROM video_assets
+      WHERE release_id = ?
+      ORDER BY is_primary DESC, created_at ASC
+    `,
+      [id]
+    ) || [];
 
     // Get platform targets
-    const platforms = await db
-      .prepare(
-        `
-        SELECT
-          id,
-          release_id as releaseId,
-          platform,
-          enabled,
-          asset_id as assetId,
-          title_override as titleOverride,
-          description_override as descriptionOverride,
-          tags_override as tagsOverride,
-          youtube_category as youtubeCategory,
-          youtube_playlist_id as youtubePlaylistId,
-          youtube_end_screen as youtubeEndScreen,
-          youtube_cards as youtubeCards,
-          external_id as externalId,
-          external_url as externalUrl,
-          status,
-          status_message as statusMessage,
-          views,
-          likes,
-          comments,
-          metrics_updated_at as metricsUpdatedAt,
-          scheduled_at as scheduledAt,
-          published_at as publishedAt,
-          created_at as createdAt,
-          updated_at as updatedAt
-        FROM video_platforms
-        WHERE release_id = ?
+    const platforms = await queryDatabase(
       `
-      )
-      .bind(id)
-      .all();
+      SELECT
+        id,
+        release_id as releaseId,
+        platform,
+        enabled,
+        asset_id as assetId,
+        title_override as titleOverride,
+        description_override as descriptionOverride,
+        tags_override as tagsOverride,
+        youtube_category as youtubeCategory,
+        youtube_playlist_id as youtubePlaylistId,
+        youtube_end_screen as youtubeEndScreen,
+        youtube_cards as youtubeCards,
+        external_id as externalId,
+        external_url as externalUrl,
+        status,
+        status_message as statusMessage,
+        views,
+        likes,
+        comments,
+        metrics_updated_at as metricsUpdatedAt,
+        scheduled_at as scheduledAt,
+        published_at as publishedAt,
+        created_at as createdAt,
+        updated_at as updatedAt
+      FROM video_platforms
+      WHERE release_id = ?
+    `,
+      [id]
+    ) || [];
 
     return NextResponse.json({
       release: {
@@ -146,11 +139,11 @@ export async function GET(
         contentIdEnabled: Boolean((release as any).contentIdEnabled),
         madeForKids: Boolean((release as any).madeForKids),
         ageRestricted: Boolean((release as any).ageRestricted),
-        assets: (assets.results || []).map((a: any) => ({
+        assets: assets.map((a: any) => ({
           ...a,
           isPrimary: Boolean(a.isPrimary),
         })),
-        platforms: (platforms.results || []).map((p: any) => ({
+        platforms: platforms.map((p: any) => ({
           ...p,
           enabled: Boolean(p.enabled),
           tagsOverride: p.tagsOverride ? JSON.parse(p.tagsOverride) : [],
@@ -171,8 +164,6 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { env } = getRequestContext();
-    const db = env.DB;
     const { id } = await params;
 
     const body = await request.json();
@@ -254,10 +245,10 @@ export async function PATCH(
     values.push(new Date().toISOString());
     values.push(id);
 
-    await db
-      .prepare(`UPDATE video_releases SET ${updates.join(', ')} WHERE id = ?`)
-      .bind(...values)
-      .run();
+    await executeQuery(
+      `UPDATE video_releases SET ${updates.join(', ')} WHERE id = ?`,
+      values
+    );
 
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -272,15 +263,14 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { env } = getRequestContext();
-    const db = env.DB;
     const { id } = await params;
 
     // Check if release exists and is a draft
-    const release = await db
-      .prepare('SELECT status FROM video_releases WHERE id = ?')
-      .bind(id)
-      .first<{ status: string }>();
+    const releases = await queryDatabase(
+      'SELECT status FROM video_releases WHERE id = ?',
+      [id]
+    );
+    const release = releases?.[0] as { status: string } | undefined;
 
     if (!release) {
       return NextResponse.json({ error: 'Video release not found' }, { status: 404 });
@@ -294,9 +284,9 @@ export async function DELETE(
     }
 
     // Delete related records first
-    await db.prepare('DELETE FROM video_platforms WHERE release_id = ?').bind(id).run();
-    await db.prepare('DELETE FROM video_assets WHERE release_id = ?').bind(id).run();
-    await db.prepare('DELETE FROM video_releases WHERE id = ?').bind(id).run();
+    await executeQuery('DELETE FROM video_platforms WHERE release_id = ?', [id]);
+    await executeQuery('DELETE FROM video_assets WHERE release_id = ?', [id]);
+    await executeQuery('DELETE FROM video_releases WHERE id = ?', [id]);
 
     return NextResponse.json({ success: true });
   } catch (error) {

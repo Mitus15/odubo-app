@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getRequestContext } from '@cloudflare/next-on-pages';
+import { queryDatabase, executeQuery } from '@/lib/db';
 
 // GET /api/command-center/releases/[id] - Get a single release
 export async function GET(
@@ -7,108 +7,101 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { env } = getRequestContext();
-    const db = env.DB;
     const { id } = await params;
 
-    const release = await db
-      .prepare(
-        `
-        SELECT
-          id,
-          title,
-          release_type as releaseType,
-          artist_name as artistName,
-          label_name as labelName,
-          upc,
-          catalog_number as catalogNumber,
-          cover_art_url as coverArtUrl,
-          original_release_date as originalReleaseDate,
-          distribution_release_date as distributionReleaseDate,
-          distributor,
-          distributor_release_id as distributorReleaseId,
-          status,
-          price_tier as priceTier,
-          territories,
-          explicit_content as explicitContent,
-          genre,
-          subgenre,
-          language,
-          copyright_line as copyrightLine,
-          phonographic_line as phonographicLine,
-          internal_album_id as internalAlbumId,
-          created_at as createdAt,
-          updated_at as updatedAt,
-          submitted_at as submittedAt,
-          live_at as liveAt
-        FROM distribution_releases
-        WHERE id = ?
+    const releases = await queryDatabase(
       `
-      )
-      .bind(id)
-      .first();
+      SELECT
+        id,
+        title,
+        release_type as releaseType,
+        artist_name as artistName,
+        label_name as labelName,
+        upc,
+        catalog_number as catalogNumber,
+        cover_art_url as coverArtUrl,
+        original_release_date as originalReleaseDate,
+        distribution_release_date as distributionReleaseDate,
+        distributor,
+        distributor_release_id as distributorReleaseId,
+        status,
+        price_tier as priceTier,
+        territories,
+        explicit_content as explicitContent,
+        genre,
+        subgenre,
+        language,
+        copyright_line as copyrightLine,
+        phonographic_line as phonographicLine,
+        internal_album_id as internalAlbumId,
+        created_at as createdAt,
+        updated_at as updatedAt,
+        submitted_at as submittedAt,
+        live_at as liveAt
+      FROM distribution_releases
+      WHERE id = ?
+    `,
+      [id]
+    );
+    const release = releases?.[0];
 
     if (!release) {
       return NextResponse.json({ error: 'Release not found' }, { status: 404 });
     }
 
     // Get tracks
-    const tracks = await db
-      .prepare(
-        `
-        SELECT
-          id,
-          release_id as releaseId,
-          disc_number as discNumber,
-          track_number as trackNumber,
-          title,
-          version,
-          artist_name as artistName,
-          featuring_artists as featuringArtists,
-          isrc,
-          audio_url as audioUrl,
-          duration_seconds as durationSeconds,
-          composers,
-          producers,
-          performers,
-          royalty_splits as royaltySplits,
-          explicit,
-          instrumental,
-          lyrics,
-          lyrics_language as lyricsLanguage,
-          internal_track_id as internalTrackId,
-          status,
-          rejection_reason as rejectionReason,
-          created_at as createdAt,
-          updated_at as updatedAt
-        FROM distribution_release_tracks
-        WHERE release_id = ?
-        ORDER BY disc_number, track_number
+    const tracks = await queryDatabase(
       `
-      )
-      .bind(id)
-      .all();
+      SELECT
+        id,
+        release_id as releaseId,
+        disc_number as discNumber,
+        track_number as trackNumber,
+        title,
+        version,
+        artist_name as artistName,
+        featuring_artists as featuringArtists,
+        isrc,
+        audio_url as audioUrl,
+        duration_seconds as durationSeconds,
+        composers,
+        producers,
+        performers,
+        royalty_splits as royaltySplits,
+        explicit,
+        instrumental,
+        lyrics,
+        lyrics_language as lyricsLanguage,
+        internal_track_id as internalTrackId,
+        status,
+        rejection_reason as rejectionReason,
+        created_at as createdAt,
+        updated_at as updatedAt
+      FROM distribution_release_tracks
+      WHERE release_id = ?
+      ORDER BY disc_number, track_number
+    `,
+      [id]
+    ) || [];
 
     // Get DSP targets
-    const dspTargets = await db
-      .prepare(
-        `
-        SELECT
-          id,
-          release_id as releaseId,
-          dsp,
-          enabled,
-          external_id as externalId,
-          external_url as externalUrl,
-          status,
-          live_at as liveAt,
-          created_at as createdAt
-        FROM distribution_release_dsps
-        WHERE release_id = ?
+    const dspTargets = await queryDatabase(
       `
-      )
-      .bind(id)
-      .all();
+      SELECT
+        id,
+        release_id as releaseId,
+        dsp,
+        enabled,
+        external_id as externalId,
+        external_url as externalUrl,
+        status,
+        live_at as liveAt,
+        created_at as createdAt
+      FROM distribution_release_dsps
+      WHERE release_id = ?
+    `,
+      [id]
+    ) || [];
 
     return NextResponse.json({
       release: {
@@ -117,7 +110,7 @@ export async function GET(
           ? JSON.parse((release as any).territories)
           : ['worldwide'],
         explicitContent: Boolean((release as any).explicitContent),
-        tracks: (tracks.results || []).map((t: any) => ({
+        tracks: tracks.map((t: any) => ({
           ...t,
           featuringArtists: t.featuringArtists ? JSON.parse(t.featuringArtists) : [],
           composers: t.composers ? JSON.parse(t.composers) : [],
@@ -127,7 +120,7 @@ export async function GET(
           explicit: Boolean(t.explicit),
           instrumental: Boolean(t.instrumental),
         })),
-        dspTargets: (dspTargets.results || []).map((d: any) => ({
+        dspTargets: dspTargets.map((d: any) => ({
           ...d,
           enabled: Boolean(d.enabled),
         })),
@@ -145,8 +138,6 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { env } = getRequestContext();
-    const db = env.DB;
     const { id } = await params;
 
     const body = await request.json();
@@ -203,10 +194,10 @@ export async function PATCH(
     values.push(new Date().toISOString());
     values.push(id);
 
-    await db
-      .prepare(`UPDATE distribution_releases SET ${updates.join(', ')} WHERE id = ?`)
-      .bind(...values)
-      .run();
+    await executeQuery(
+      `UPDATE distribution_releases SET ${updates.join(', ')} WHERE id = ?`,
+      values
+    );
 
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -221,15 +212,14 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { env } = getRequestContext();
-    const db = env.DB;
     const { id } = await params;
 
     // Check if release exists and is a draft
-    const release = await db
-      .prepare('SELECT status FROM distribution_releases WHERE id = ?')
-      .bind(id)
-      .first<{ status: string }>();
+    const releases = await queryDatabase(
+      'SELECT status FROM distribution_releases WHERE id = ?',
+      [id]
+    );
+    const release = releases?.[0] as { status: string } | undefined;
 
     if (!release) {
       return NextResponse.json({ error: 'Release not found' }, { status: 404 });
@@ -243,9 +233,9 @@ export async function DELETE(
     }
 
     // Delete tracks first (cascade should handle this, but being explicit)
-    await db.prepare('DELETE FROM distribution_release_tracks WHERE release_id = ?').bind(id).run();
-    await db.prepare('DELETE FROM distribution_release_dsps WHERE release_id = ?').bind(id).run();
-    await db.prepare('DELETE FROM distribution_releases WHERE id = ?').bind(id).run();
+    await executeQuery('DELETE FROM distribution_release_tracks WHERE release_id = ?', [id]);
+    await executeQuery('DELETE FROM distribution_release_dsps WHERE release_id = ?', [id]);
+    await executeQuery('DELETE FROM distribution_releases WHERE id = ?', [id]);
 
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -1,12 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-// @ts-ignore
-import { getRequestContext } from '@cloudflare/next-on-pages';
+import { queryDatabase } from '@/lib/db';
 
 export async function GET(request: NextRequest) {
   try {
-    const { env } = getRequestContext();
-    const db = env.DB;
-
     const { searchParams } = new URL(request.url);
     const period = searchParams.get('period') || '30d';
 
@@ -21,89 +17,92 @@ export async function GET(request: NextRequest) {
 
     // Run all queries in parallel
     const [
-      currentStreamingResult,
-      previousStreamingResult,
-      currentClipsResult,
-      previousClipsResult,
-      currentRevenueResult,
-      previousRevenueResult,
-      fansResult,
-      previousFansResult,
-      connectionsResult,
-      insightsResult,
+      currentStreamingResults,
+      previousStreamingResults,
+      currentClipsResults,
+      currentRevenueResults,
+      previousRevenueResults,
+      fansResults,
+      previousFansResults,
+      connectionsResults,
+      insightsResults,
     ] = await Promise.all([
       // Current period streaming
-      db.prepare(`
-        SELECT
+      queryDatabase(
+        `SELECT
           COALESCE(SUM(streams), 0) as total
         FROM streaming_analytics
-        WHERE date >= date('now', '-${days} days')
-      `).first(),
+        WHERE date >= date('now', '-${days} days')`,
+        []
+      ).catch(() => []),
 
       // Previous period streaming (for comparison)
-      db.prepare(`
-        SELECT
+      queryDatabase(
+        `SELECT
           COALESCE(SUM(streams), 0) as total
         FROM streaming_analytics
         WHERE date >= date('now', '-${previousDays} days')
-          AND date < date('now', '-${days} days')
-      `).first(),
+          AND date < date('now', '-${days} days')`,
+        []
+      ).catch(() => []),
 
       // Current clip views
-      db.prepare(`
-        SELECT
+      queryDatabase(
+        `SELECT
           COALESCE(SUM(view_count), 0) as total
-        FROM clip_engagement
-      `).first(),
-
-      // Previous clip views (approximation - we don't have date filtering on clip_engagement aggregate)
-      // For now, return 0 for comparison - this will be improved when we add time-series clip data
-      Promise.resolve({ total: 0 }),
+        FROM clip_engagement`,
+        []
+      ).catch(() => []),
 
       // Current revenue (streaming + commerce)
-      db.prepare(`
-        SELECT
+      queryDatabase(
+        `SELECT
           COALESCE(SUM(revenue_cents), 0) as streamingRevenue
         FROM streaming_analytics
-        WHERE date >= date('now', '-${days} days')
-      `).first(),
+        WHERE date >= date('now', '-${days} days')`,
+        []
+      ).catch(() => []),
 
       // Previous revenue
-      db.prepare(`
-        SELECT
+      queryDatabase(
+        `SELECT
           COALESCE(SUM(revenue_cents), 0) as streamingRevenue
         FROM streaming_analytics
         WHERE date >= date('now', '-${previousDays} days')
-          AND date < date('now', '-${days} days')
-      `).first(),
+          AND date < date('now', '-${days} days')`,
+        []
+      ).catch(() => []),
 
       // Fan profiles count (current)
-      db.prepare(`
-        SELECT COUNT(*) as total FROM fan_profiles
-        WHERE created_at >= datetime('now', '-${days} days')
-      `).first().catch(() => ({ total: 0 })),
+      queryDatabase(
+        `SELECT COUNT(*) as total FROM fan_profiles
+        WHERE created_at >= datetime('now', '-${days} days')`,
+        []
+      ).catch(() => []),
 
       // Fan profiles count (previous)
-      db.prepare(`
-        SELECT COUNT(*) as total FROM fan_profiles
+      queryDatabase(
+        `SELECT COUNT(*) as total FROM fan_profiles
         WHERE created_at >= datetime('now', '-${previousDays} days')
-          AND created_at < datetime('now', '-${days} days')
-      `).first().catch(() => ({ total: 0 })),
+          AND created_at < datetime('now', '-${days} days')`,
+        []
+      ).catch(() => []),
 
       // Platform connections
-      db.prepare(`
-        SELECT
+      queryDatabase(
+        `SELECT
           platform,
           account_name,
           status,
           last_sync_at
         FROM platform_connections
-        ORDER BY created_at DESC
-      `).all().catch(() => ({ results: [] })),
+        ORDER BY created_at DESC`,
+        []
+      ).catch(() => []),
 
       // Recent insights
-      db.prepare(`
-        SELECT
+      queryDatabase(
+        `SELECT
           id,
           title,
           description,
@@ -113,8 +112,9 @@ export async function GET(request: NextRequest) {
         FROM correlation_insights
         WHERE status = 'active'
         ORDER BY computed_at DESC
-        LIMIT 5
-      `).all().catch(() => ({ results: [] })),
+        LIMIT 5`,
+        []
+      ).catch(() => []),
     ]);
 
     // Calculate changes
@@ -130,17 +130,17 @@ export async function GET(request: NextRequest) {
     };
 
     // Extract values with defaults
-    const currentStreams = (currentStreamingResult as any)?.total || 0;
-    const previousStreams = (previousStreamingResult as any)?.total || 0;
-    const currentClips = (currentClipsResult as any)?.total || 0;
-    const previousClips = (previousClipsResult as any)?.total || 0;
-    const currentRevenue = (currentRevenueResult as any)?.streamingRevenue || 0;
-    const previousRevenue = (previousRevenueResult as any)?.streamingRevenue || 0;
-    const currentFans = (fansResult as any)?.total || 0;
-    const previousFans = (previousFansResult as any)?.total || 0;
+    const currentStreams = (currentStreamingResults?.[0] as any)?.total || 0;
+    const previousStreams = (previousStreamingResults?.[0] as any)?.total || 0;
+    const currentClips = (currentClipsResults?.[0] as any)?.total || 0;
+    const previousClips = 0; // We don't have date filtering on clip_engagement aggregate
+    const currentRevenue = (currentRevenueResults?.[0] as any)?.streamingRevenue || 0;
+    const previousRevenue = (previousRevenueResults?.[0] as any)?.streamingRevenue || 0;
+    const currentFans = (fansResults?.[0] as any)?.total || 0;
+    const previousFans = (previousFansResults?.[0] as any)?.total || 0;
 
     // Format connections
-    const connections = ((connectionsResult as any)?.results || []).map((conn: any) => ({
+    const connections = (connectionsResults || []).map((conn: any) => ({
       platform: conn.platform,
       accountName: conn.account_name || 'Unknown',
       status: conn.status || 'unknown',
@@ -148,7 +148,7 @@ export async function GET(request: NextRequest) {
     }));
 
     // Format insights
-    const recentInsights = ((insightsResult as any)?.results || []).map((insight: any) => ({
+    const recentInsights = (insightsResults || []).map((insight: any) => ({
       id: insight.id,
       title: insight.title,
       description: insight.description,

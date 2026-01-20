@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getRequestContext } from '@cloudflare/next-on-pages';
+import { queryDatabase, executeQuery } from '@/lib/db';
 
 // GET /api/command-center/releases - List all releases
 export async function GET(request: NextRequest) {
   try {
-    const { env } = getRequestContext();
-    const db = env.DB;
-
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
     const page = parseInt(searchParams.get('page') || '1');
@@ -54,19 +51,19 @@ export async function GET(request: NextRequest) {
     query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
     params.push(pageSize, offset);
 
-    const result = await db.prepare(query).bind(...params).all();
+    const result = await queryDatabase(query, params) || [];
 
     // Get total count
     let countQuery = 'SELECT COUNT(*) as total FROM distribution_releases';
+    const countParams: any[] = [];
     if (status && status !== 'all') {
       countQuery += ' WHERE status = ?';
+      countParams.push(status);
     }
-    const countResult = await db
-      .prepare(countQuery)
-      .bind(...(status && status !== 'all' ? [status] : []))
-      .first<{ total: number }>();
+    const countResults = await queryDatabase(countQuery, countParams);
+    const countResult = countResults?.[0] as { total: number } | undefined;
 
-    const releases = (result.results || []).map((row: any) => ({
+    const releases = result.map((row: any) => ({
       ...row,
       territories: row.territories ? JSON.parse(row.territories) : ['worldwide'],
       explicitContent: Boolean(row.explicitContent),
@@ -87,9 +84,6 @@ export async function GET(request: NextRequest) {
 // POST /api/command-center/releases - Create a new release
 export async function POST(request: NextRequest) {
   try {
-    const { env } = getRequestContext();
-    const db = env.DB;
-
     const body = await request.json();
 
     const {
@@ -124,21 +118,19 @@ export async function POST(request: NextRequest) {
     const id = crypto.randomUUID().replace(/-/g, '').slice(0, 16);
     const now = new Date().toISOString();
 
-    await db
-      .prepare(
-        `
-        INSERT INTO distribution_releases (
-          id, title, release_type, artist_name, label_name,
-          upc, catalog_number, cover_art_url,
-          original_release_date, distribution_release_date,
-          distributor, status, price_tier, territories,
-          explicit_content, genre, subgenre, language,
-          copyright_line, phonographic_line, internal_album_id,
-          created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    await executeQuery(
       `
-      )
-      .bind(
+      INSERT INTO distribution_releases (
+        id, title, release_type, artist_name, label_name,
+        upc, catalog_number, cover_art_url,
+        original_release_date, distribution_release_date,
+        distributor, status, price_tier, territories,
+        explicit_content, genre, subgenre, language,
+        copyright_line, phonographic_line, internal_album_id,
+        created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `,
+      [
         id,
         title,
         releaseType,
@@ -161,8 +153,8 @@ export async function POST(request: NextRequest) {
         internalAlbumId || null,
         now,
         now
-      )
-      .run();
+      ]
+    );
 
     return NextResponse.json({ id, success: true });
   } catch (error) {
