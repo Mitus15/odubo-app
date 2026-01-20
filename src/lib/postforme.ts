@@ -239,7 +239,20 @@ export async function getPosts(params?: {
   if (params?.offset) searchParams.set('offset', params.offset.toString());
 
   const query = searchParams.toString();
-  return apiRequest<SocialPost[]>(`/social-posts${query ? `?${query}` : ''}`);
+  const response = await apiRequest<PaginatedResponse<SocialPost>>(`/social-posts${query ? `?${query}` : ''}`);
+
+  if (!response.success || !response.data) {
+    return {
+      success: false,
+      error: response.error || 'Failed to fetch posts',
+    };
+  }
+
+  // Unwrap the data array from the paginated response
+  return {
+    success: true,
+    data: response.data.data,
+  };
 }
 
 /**
