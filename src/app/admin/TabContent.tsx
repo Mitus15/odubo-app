@@ -17,6 +17,7 @@ const StoreSettingsTab = dynamic(() => import('./tabs/StoreSettingsTab'));
 // === NEW TAB WRAPPERS (from page content) ===
 const SocialCMSTab = dynamic(() => import('./tabs/SocialCMSTab'));
 const SocialAccountsTab = dynamic(() => import('./tabs/SocialAccountsTab'));
+const SocialStudioTab = dynamic(() => import('./tabs/SocialStudioTab'));
 const VideosTab = dynamic(() => import('./tabs/VideosTab'));
 const MusicTab = dynamic(() => import('./tabs/MusicTab'));
 const BrandAssetsTab = dynamic(() => import('./tabs/BrandAssetsTab'));
@@ -74,7 +75,7 @@ type AdminTab =
   // Content
   | 'music' | 'videos' | 'moments' | 'brand-assets' | 'links'
   // Social
-  | 'social-cms' | 'social-accounts' | 'ai-studio'
+  | 'social-cms' | 'social-accounts' | 'social-studio' | 'ai-studio'
   // Commerce
   | 'products' | 'orders' | 'customers' | 'discounts' | 'store-settings'
   // Analytics
@@ -144,6 +145,12 @@ export default function TabContent({ activeTab, canAccess }: TabContentProps) {
       return (
         <Suspense fallback={<LoadingFallback title="Social CMS" />}>
           <SocialCMSTab />
+        </Suspense>
+      );
+    case 'social-studio':
+      return (
+        <Suspense fallback={<LoadingFallback title="Social Studio" />}>
+          <SocialStudioTab />
         </Suspense>
       );
     case 'social-accounts':

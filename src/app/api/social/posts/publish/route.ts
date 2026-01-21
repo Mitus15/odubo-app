@@ -124,12 +124,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No valid accounts to publish to' }, { status: 400 });
     }
 
-    // Update status to publishing
-    await executeQuery(
-      `UPDATE social_posts SET status = 'publishing', updated_at = datetime('now') WHERE id = ?`,
-      [postId]
-    );
-
     // Build the Post for Me API request
     const postForMeAccountIds = fetchedAccounts.map((acc) => acc.postforme_account_id);
     const publishPlatforms = fetchedAccounts.map((acc) => acc.platform);
@@ -157,13 +151,61 @@ export async function POST(request: NextRequest) {
       first_comment: post.first_comment || undefined,
     };
 
-    // Add scheduling if not publishing now
-    // Ensure proper ISO 8601 format for Post for Me API
-    if (!publishNow && post.scheduled_at) {
-      createPostInput.schedule_at = new Date(post.scheduled_at).toISOString();
+    if (!publishNow) {
+      if (!post.scheduled_at) {
+        return NextResponse.json({ error: 'scheduled_at is required for scheduling' }, { status: 400 });
+      }
+
+      const scheduledDate = new Date(post.scheduled_at);
+      if (Number.isNaN(scheduledDate.getTime())) {
+        return NextResponse.json({ error: 'scheduled_at is invalid' }, { status: 400 });
+      }
+
+      if (scheduledDate.getTime() <= Date.now()) {
+        return NextResponse.json({ error: 'scheduled_at must be in the future' }, { status: 400 });
+      }
     }
 
-    // Call Post for Me API
+    // CRITICAL: For scheduled posts, do NOT send to Post for Me yet
+    // Instead, store locally and let cron job publish at scheduled time
+    if (!publishNow) {
+      // Just update status to scheduled - cron will handle actual publishing
+      await executeQuery(
+        `UPDATE social_posts
+         SET status = 'scheduled', updated_at = datetime('now')
+         WHERE id = ?`,
+        ['scheduled', postId]
+      );
+
+      // Log scheduling
+      await executeQuery(
+        `INSERT INTO social_activity_log (id, user_id, action, target_type, target_id, details)
+         VALUES (?, 'system', 'scheduled', 'post', ?, ?)`,
+        [
+          crypto.randomUUID().split('-')[0],
+          postId,
+          JSON.stringify({
+            platforms: publishPlatforms,
+            account_ids: fetchedAccounts.map((a) => a.id),
+            scheduled_at: post.scheduled_at,
+          })
+        ]
+      );
+
+      return NextResponse.json({
+        success: true,
+        status: 'scheduled',
+        message: 'Post scheduled successfully. It will be published at the scheduled time.',
+      });
+    }
+
+    // For immediate posts, update status to publishing and call Post for Me
+    await executeQuery(
+      `UPDATE social_posts SET status = 'publishing', updated_at = datetime('now') WHERE id = ?`,
+      [postId]
+    );
+
+    // Call Post for Me API (without schedule_at - publish immediately)
     const result = await createPost(createPostInput);
 
     if (!result.success) {
@@ -186,33 +228,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: result.error }, { status: 500 });
     }
 
-    // Success! Update post status
-    const newStatus = publishNow ? 'published' : 'scheduled';
+    // Success! Update post status to published
     const platformPostIds = result.data ? { postforme_id: result.data.id } : {};
 
-    if (publishNow) {
-      await executeQuery(
-        `UPDATE social_posts
-         SET status = ?, platform_post_ids = ?, published_at = datetime('now'), updated_at = datetime('now')
-         WHERE id = ?`,
-        [newStatus, JSON.stringify(platformPostIds), postId]
-      );
-    } else {
-      await executeQuery(
-        `UPDATE social_posts
-         SET status = ?, platform_post_ids = ?, updated_at = datetime('now')
-         WHERE id = ?`,
-        [newStatus, JSON.stringify(platformPostIds), postId]
-      );
-    }
+    await executeQuery(
+      `UPDATE social_posts
+       SET status = 'published', platform_post_ids = ?, published_at = datetime('now'), updated_at = datetime('now')
+       WHERE id = ?`,
+      ['published', JSON.stringify(platformPostIds), postId]
+    );
 
     // Log success
     await executeQuery(
       `INSERT INTO social_activity_log (id, user_id, action, target_type, target_id, details)
-       VALUES (?, 'system', ?, 'post', ?, ?)`,
+       VALUES (?, 'system', 'published', 'post', ?, ?)`,
       [
         crypto.randomUUID().split('-')[0],
-        publishNow ? 'published' : 'scheduled',
         postId,
         JSON.stringify({
           platforms: publishPlatforms,
@@ -224,7 +255,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      status: newStatus,
+      status: 'published',
       postforme_id: result.data?.id,
     });
   } catch (error) {

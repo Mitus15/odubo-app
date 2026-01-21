@@ -239,7 +239,7 @@ const navItems: NavItem[] = [
     label: 'Social',
     icon: Icons.social,
     children: [
-      { id: 'social-studio', label: 'Social Studio', icon: Icons.commandCenter, href: '/admin/social-studio' },
+      { id: 'social-studio', label: 'Social Studio', icon: Icons.commandCenter },
       { id: 'social-accounts', label: 'Connected Accounts', icon: Icons.users },
       { id: 'ai-studio', label: 'AI Studio', icon: Icons.ai },
     ]

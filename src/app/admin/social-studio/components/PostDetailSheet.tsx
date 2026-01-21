@@ -196,6 +196,7 @@ export default function PostDetailSheet({
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  const [refreshingAnalytics, setRefreshingAnalytics] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   // Fetch post details
@@ -226,6 +227,18 @@ export default function PostDetailSheet({
       console.error('[PostDetailSheet] Error fetching analytics:', error);
     }
   }, [postId]);
+
+  const handleRefreshAnalytics = async () => {
+    setRefreshingAnalytics(true);
+    try {
+      await fetch(`/api/social/posts/${postId}/sync`, { method: 'POST' });
+      await fetchAnalytics();
+    } catch (error) {
+      console.error('[PostDetailSheet] Analytics refresh error:', error);
+    } finally {
+      setRefreshingAnalytics(false);
+    }
+  };
 
   // Initial fetch
   useEffect(() => {
@@ -278,6 +291,12 @@ export default function PostDetailSheet({
   // Get linked accounts
   const linkedAccounts = accounts.filter((a) => post?.account_ids?.includes(a.id));
   const statusStyles = post ? getStatusStyles(post.status) : null;
+  const platformLinks = post?.platform_post_ids
+    ? Object.entries(post.platform_post_ids)
+        .filter(([key, value]) => key !== 'postforme_id' && typeof value === 'string')
+        .map(([platform, url]) => ({ platform, url: url as string }))
+        .filter((item) => /^https?:\/\//i.test(item.url))
+    : [];
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center">
@@ -428,7 +447,17 @@ export default function PostDetailSheet({
               {/* Analytics (Published posts only) */}
               {post.status === 'published' && analytics && (
                 <div className="p-4 rounded-2xl bg-[#0f0f0f] border border-[#1a1a1a]">
-                  <div className="text-[10px] text-[#5a5554] uppercase tracking-widest mb-4">Performance</div>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="text-[10px] text-[#5a5554] uppercase tracking-widest">Performance</div>
+                    <button
+                      onClick={handleRefreshAnalytics}
+                      disabled={refreshingAnalytics}
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#141414] border border-[#1a1a1a] text-[10px] text-[#D4A853] hover:border-[#D4A853]/30 disabled:opacity-60"
+                    >
+                      <span className={refreshingAnalytics ? 'animate-spin' : ''}>{Icons.sync}</span>
+                      {refreshingAnalytics ? 'Refreshing' : 'Refresh'}
+                    </button>
+                  </div>
                   <div className="grid grid-cols-3 gap-4 mb-4">
                     <div className="text-center p-3 rounded-xl bg-[#0a0a0a] border border-[#1a1a1a]">
                       <div className="text-xl font-bold text-white">
@@ -479,26 +508,30 @@ export default function PostDetailSheet({
                 </div>
               )}
 
+              {post.status === 'published' && !analytics && (
+                <div className="p-4 rounded-2xl bg-[#0f0f0f] border border-[#1a1a1a] text-sm text-[#5a5554]">
+                  Analytics aren’t available yet. Use Refresh to sync.
+                </div>
+              )}
+
               {/* View on Platform Links */}
-              {post.status === 'published' && post.platform_post_ids && (
+              {post.status === 'published' && platformLinks.length > 0 && (
                 <div>
                   <div className="text-[10px] text-[#5a5554] uppercase tracking-widest mb-3">View on</div>
                   <div className="flex flex-wrap gap-2">
-                    {Object.entries(post.platform_post_ids)
-                      .filter(([key]) => key !== 'postforme_id')
-                      .map(([platform, url]) => (
-                        <a
-                          key={platform}
-                          href={url as string}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="group flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#0f0f0f] border border-[#1a1a1a] text-white text-sm hover:border-[#D4A853]/30 hover:shadow-[0_0_20px_rgba(212,168,83,0.1)] transition-all duration-300"
-                        >
-                          {PLATFORM_ICONS[platform] || '🔗'}
-                          <span className="capitalize">{platform}</span>
-                          <span className="text-[#5a5554] group-hover:text-[#D4A853] transition-colors">{Icons.externalLink}</span>
-                        </a>
-                      ))}
+                    {platformLinks.map(({ platform, url }) => (
+                      <a
+                        key={platform}
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="group flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#0f0f0f] border border-[#1a1a1a] text-white text-sm hover:border-[#D4A853]/30 hover:shadow-[0_0_20px_rgba(212,168,83,0.1)] transition-all duration-300"
+                      >
+                        {PLATFORM_ICONS[platform] || '🔗'}
+                        <span className="capitalize">{platform}</span>
+                        <span className="text-[#5a5554] group-hover:text-[#D4A853] transition-colors">{Icons.externalLink}</span>
+                      </a>
+                    ))}
                   </div>
                 </div>
               )}

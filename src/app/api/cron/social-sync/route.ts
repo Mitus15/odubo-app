@@ -22,7 +22,32 @@ export async function GET(request: NextRequest) {
     const url = new URL(request.url);
     const baseUrl = `${url.protocol}//${url.host}`;
 
-    // Call the sync endpoint
+    // Step 1: Process scheduled posts that are due
+    console.log('[Cron Social Sync] Processing scheduled posts...');
+    const processResponse = await fetch(`${baseUrl}/api/social/posts/process-scheduled`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': cronSecret ? `Bearer ${cronSecret}` : '',
+      },
+    });
+
+    const processResult = (await processResponse.json()) as {
+      success?: boolean;
+      processed?: number;
+      published?: number;
+      failed?: number;
+      errors?: Array<{ post_id: string; error: string }>;
+    };
+
+    if (!processResponse.ok) {
+      console.error('[Cron Social Sync] Process scheduled failed:', processResult);
+    } else {
+      console.log('[Cron Social Sync] Scheduled posts processed:', processResult);
+    }
+
+    // Step 2: Sync data from Post for Me
+    console.log('[Cron Social Sync] Syncing from Post for Me...');
     const syncResponse = await fetch(`${baseUrl}/api/social/sync`, {
       method: 'POST',
       headers: {
@@ -56,11 +81,18 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      sync_id: syncResult.sync_id,
-      accounts_synced: syncResult.accounts_synced,
-      posts_synced: syncResult.posts_synced,
-      metrics_synced: syncResult.metrics_synced,
-      duration_ms: syncResult.duration_ms,
+      scheduled_posts: {
+        processed: processResult.processed || 0,
+        published: processResult.published || 0,
+        failed: processResult.failed || 0,
+      },
+      sync: {
+        sync_id: syncResult.sync_id,
+        accounts_synced: syncResult.accounts_synced,
+        posts_synced: syncResult.posts_synced,
+        metrics_synced: syncResult.metrics_synced,
+        duration_ms: syncResult.duration_ms,
+      },
     });
   } catch (error) {
     console.error('[Cron Social Sync] Error:', error);

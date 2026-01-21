@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { queryDatabase } from '@/lib/db';
-import { getPostAnalytics, getAccountFeed } from '@/lib/postforme';
+import { queryDatabase, executeQuery } from '@/lib/db';
+import { getPostAnalytics, getAccountFeed, getPost } from '@/lib/postforme';
 
 export const runtime = 'edge';
 
@@ -51,8 +51,28 @@ export async function GET(
       });
     }
 
-    const platformPostIds = parseJSON<Record<string, string>>(post.platform_post_ids, {});
+    let platformPostIds = parseJSON<Record<string, string>>(post.platform_post_ids, {});
     const accountIds = parseJSON<string[]>(post.account_ids, []);
+
+    if (platformPostIds.postforme_id && (!platformPostIds.external_id || !platformPostIds.external_url)) {
+      try {
+        const pfmPost = await getPost(platformPostIds.postforme_id);
+        if (pfmPost.success && pfmPost.data) {
+          platformPostIds = {
+            ...platformPostIds,
+            external_id: pfmPost.data.external_id || platformPostIds.external_id,
+            external_url: pfmPost.data.external_url || platformPostIds.external_url,
+          };
+
+          await executeQuery(
+            `UPDATE social_posts SET platform_post_ids = ?, updated_at = datetime('now') WHERE id = ?`,
+            [JSON.stringify(platformPostIds), id]
+          );
+        }
+      } catch (err) {
+        console.error('[Analytics] Error syncing postforme metadata:', err);
+      }
+    }
 
     // Default analytics structure
     let analytics = {

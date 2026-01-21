@@ -15,6 +15,8 @@ interface LibraryViewProps {
 }
 
 type StatusFilter = 'all' | 'scheduled' | 'published' | 'draft' | 'failed';
+type MediaFilter = 'all' | 'video' | 'image';
+type SourceFilter = 'all' | 'clips' | 'uploads' | 'imported';
 
 // =============================================================================
 // PLATFORM ICONS
@@ -123,6 +125,74 @@ function getStatusStyles(status: string): { bg: string; text: string; glow?: str
   }
 }
 
+function getSourceBadge(post: Post): { icon: string; label: string; color: string } | null {
+  // If imported from social platforms
+  if (post.created_by === 'imported') {
+    // Check if we can detect which platform it came from
+    if (post.platforms && post.platforms.length > 0) {
+      const platform = post.platforms[0];
+      return {
+        icon: PLATFORM_ICONS[platform] || '🔄',
+        label: `${platform.charAt(0).toUpperCase() + platform.slice(1)} Sync`,
+        color: 'from-blue-500/20 to-purple-500/20 text-blue-300 border-blue-500/30'
+      };
+    }
+    return {
+      icon: '🔄',
+      label: 'Synced',
+      color: 'from-blue-500/20 to-purple-500/20 text-blue-300 border-blue-500/30'
+    };
+  }
+  
+  // If from clips library
+  if (post.source_type === 'clip') {
+    return {
+      icon: '🎬',
+      label: 'Clip',
+      color: 'from-[#D4A853]/20 to-[#B8923F]/20 text-[#D4A853] border-[#D4A853]/30'
+    };
+  }
+  
+  // If uploaded
+  if (post.source_type === 'upload' || post.source_type === 'url') {
+    return {
+      icon: '📤',
+      label: 'Upload',
+      color: 'from-emerald-500/20 to-teal-500/20 text-emerald-300 border-emerald-500/30'
+    };
+  }
+  
+  return null;
+}
+
+// Detect if content is likely landscape (music video) vs portrait (social clip)
+function getContentOrientation(post: Post): 'landscape' | 'portrait' | 'unknown' {
+  // Heuristic: YouTube videos are usually landscape (16:9)
+  // TikTok/Instagram Reels are usually portrait (9:16)
+  if (post.platforms) {
+    const hasYouTube = post.platforms.includes('youtube');
+    const hasTikTok = post.platforms.includes('tiktok');
+    const hasInstagram = post.platforms.includes('instagram');
+    
+    // If only YouTube or YouTube with imported source, likely landscape
+    if (hasYouTube && post.created_by === 'imported' && !hasTikTok && !hasInstagram) {
+      return 'landscape';
+    }
+    
+    // If TikTok or Instagram with clip source, likely portrait
+    if ((hasTikTok || hasInstagram) && post.source_type === 'clip') {
+      return 'portrait';
+    }
+  }
+  
+  // Clip source type strongly suggests portrait (9:16 social clips)
+  if (post.source_type === 'clip') {
+    return 'portrait';
+  }
+  
+  return 'unknown';
+}
+
 // =============================================================================
 // ICONS
 // =============================================================================
@@ -170,14 +240,34 @@ export default function LibraryView({
   onViewPost,
   onRefresh,
 }: LibraryViewProps) {
+  const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [platformFilter, setPlatformFilter] = useState<string>('all');
+  const [mediaFilter, setMediaFilter] = useState<MediaFilter>('all');
   const [campaignFilter, setCampaignFilter] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
+  const platformOptions = useMemo(() => {
+    const platforms = new Set<string>();
+    posts.forEach((post) => post.platforms?.forEach((p) => platforms.add(p)));
+    return ['all', ...Array.from(platforms)];
+  }, [posts]);
+
   // Filter posts
   const filteredPosts = useMemo(() => {
     let result = posts;
+
+    // Source filter (primary categorization)
+    if (sourceFilter !== 'all') {
+      if (sourceFilter === 'clips') {
+        result = result.filter((p) => p.source_type === 'clip');
+      } else if (sourceFilter === 'uploads') {
+        result = result.filter((p) => p.source_type === 'upload' || p.source_type === 'url');
+      } else if (sourceFilter === 'imported') {
+        result = result.filter((p) => p.created_by === 'imported');
+      }
+    }
 
     // Status filter
     if (statusFilter !== 'all') {
@@ -187,6 +277,16 @@ export default function LibraryView({
     // Campaign filter
     if (campaignFilter) {
       result = result.filter((p) => p.campaign_id === campaignFilter);
+    }
+
+    // Platform filter
+    if (platformFilter !== 'all') {
+      result = result.filter((p) => p.platforms?.includes(platformFilter));
+    }
+
+    // Media filter
+    if (mediaFilter !== 'all') {
+      result = result.filter((p) => p.media_type === mediaFilter);
     }
 
     // Search filter
@@ -206,7 +306,7 @@ export default function LibraryView({
       const dateB = b.scheduled_at || b.created_at;
       return new Date(dateB).getTime() - new Date(dateA).getTime();
     });
-  }, [posts, statusFilter, campaignFilter, searchQuery]);
+  }, [posts, sourceFilter, statusFilter, campaignFilter, searchQuery, platformFilter, mediaFilter]);
 
   // Count by status
   const statusCounts = useMemo(() => {
@@ -264,6 +364,53 @@ export default function LibraryView({
             placeholder="Search posts..."
             className="w-full pl-12 pr-4 py-3.5 rounded-2xl bg-[#0a0a0a] border border-[#1a1a1a] text-white placeholder-[#5a5554] outline-none focus:border-[#D4A853]/40 focus:shadow-[0_0_20px_rgba(212,168,83,0.1)] transition-all duration-300 text-sm"
           />
+        </div>
+
+        {/* Source Filter Tabs - Primary content categorization */}
+        <div className="flex gap-2 overflow-x-auto pb-3 mb-4 scrollbar-hide -mx-4 px-4 border-b border-[#1a1a1a]">
+          {[
+            { value: 'all', label: 'All Content', icon: '📚' },
+            { value: 'clips', label: 'Clips', icon: '🎬' },
+            { value: 'uploads', label: 'Uploads', icon: '📤' },
+            { value: 'imported', label: 'Synced Posts', icon: '🔄' },
+          ].map((source) => (
+            <button
+              key={source.value}
+              onClick={() => setSourceFilter(source.value as SourceFilter)}
+              className={`flex-shrink-0 px-4 py-2.5 rounded-xl text-xs font-medium tracking-wide transition-all duration-300 flex items-center gap-2 ${
+                sourceFilter === source.value
+                  ? 'bg-gradient-to-r from-[#D4A853] to-[#B8923F] text-black shadow-[0_0_20px_rgba(212,168,83,0.3)]'
+                  : 'bg-[#0f0f0f] text-[#8a8584] hover:bg-[#141414] hover:text-white border border-[#1a1a1a]'
+              }`}
+            >
+              <span className="text-base">{source.icon}</span>
+              {source.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Filters */}
+        <div className="grid grid-cols-2 gap-2 mb-4">
+          <select
+            value={platformFilter}
+            onChange={(e) => setPlatformFilter(e.target.value)}
+            className="w-full px-3 py-2.5 rounded-xl bg-[#0a0a0a] border border-[#1a1a1a] text-white text-xs focus:border-[#D4A853]/40 transition-colors"
+          >
+            {platformOptions.map((platform) => (
+              <option key={platform} value={platform}>
+                {platform === 'all' ? 'All Platforms' : platform}
+              </option>
+            ))}
+          </select>
+          <select
+            value={mediaFilter}
+            onChange={(e) => setMediaFilter(e.target.value as MediaFilter)}
+            className="w-full px-3 py-2.5 rounded-xl bg-[#0a0a0a] border border-[#1a1a1a] text-white text-xs focus:border-[#D4A853]/40 transition-colors"
+          >
+            <option value="all">All Media</option>
+            <option value="video">Video</option>
+            <option value="image">Image</option>
+          </select>
         </div>
 
         {/* Status Tabs - Gold active state */}
@@ -375,14 +522,20 @@ export default function LibraryView({
           <div className="grid grid-cols-2 gap-3">
             {filteredPosts.map((post) => {
               const statusStyle = getStatusStyles(post.status);
+              const sourceBadge = getSourceBadge(post);
+              const orientation = getContentOrientation(post);
+              const isLandscape = orientation === 'landscape';
+              
               return (
                 <button
                   key={post.id}
                   onClick={() => onViewPost(post.id)}
                   className="group rounded-2xl overflow-hidden bg-[#0a0a0a] border border-[#1a1a1a] hover:border-[#D4A853]/30 hover:shadow-[0_0_30px_rgba(212,168,83,0.1)] transition-all duration-300 text-left"
                 >
-                  {/* Thumbnail */}
-                  <div className="aspect-square relative bg-[#0f0f0f] overflow-hidden">
+                  {/* Thumbnail - Dynamic aspect ratio */}
+                  <div className={`relative bg-[#0f0f0f] overflow-hidden ${
+                    isLandscape ? 'aspect-video' : 'aspect-square'
+                  }`}>
                     {post.thumbnail_url ? (
                       <img
                         src={post.thumbnail_url}
@@ -398,14 +551,35 @@ export default function LibraryView({
                     {/* Gradient overlay */}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
 
+                    {/* Landscape indicator */}
+                    {isLandscape && (
+                      <div className="absolute top-2.5 left-2.5">
+                        <span className="px-2 py-1 rounded-lg text-[10px] font-medium bg-black/70 backdrop-blur-md text-white border border-white/20">
+                          16:9
+                        </span>
+                      </div>
+                    )}
+
                     {/* Status Badge */}
-                    <div className="absolute top-2.5 left-2.5">
+                    <div className={`absolute ${isLandscape ? 'top-2.5 left-14' : 'top-2.5 left-2.5'}`}>
                       <span
                         className={`px-2 py-1 rounded-lg text-[10px] font-semibold tracking-wide uppercase ${statusStyle.bg} ${statusStyle.text} ${statusStyle.glow || ''}`}
                       >
                         {getStatusLabel(post.status)}
                       </span>
                     </div>
+
+                    {/* Source Badge - top right */}
+                    {sourceBadge && (
+                      <div className="absolute top-2.5 right-2.5">
+                        <span
+                          className={`px-2 py-1 rounded-lg text-[10px] font-medium backdrop-blur-md bg-gradient-to-r border flex items-center gap-1 ${sourceBadge.color}`}
+                        >
+                          <span className="text-xs">{sourceBadge.icon}</span>
+                          {sourceBadge.label}
+                        </span>
+                      </div>
+                    )}
 
                     {/* Platform Icons */}
                     <div className="absolute bottom-2.5 right-2.5 flex gap-1">
@@ -442,6 +616,7 @@ export default function LibraryView({
           <div className="space-y-2">
             {filteredPosts.map((post) => {
               const statusStyle = getStatusStyles(post.status);
+              const sourceBadge = getSourceBadge(post);
               return (
                 <button
                   key={post.id}
@@ -479,12 +654,21 @@ export default function LibraryView({
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-2 mt-1.5">
+                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                       <span
                         className={`px-2 py-0.5 rounded-md text-[10px] font-semibold tracking-wide uppercase ${statusStyle.bg} ${statusStyle.text}`}
                       >
                         {getStatusLabel(post.status)}
                       </span>
+
+                      {sourceBadge && (
+                        <span
+                          className={`px-2 py-0.5 rounded-md text-[10px] font-medium bg-gradient-to-r border flex items-center gap-1 ${sourceBadge.color}`}
+                        >
+                          <span className="text-xs">{sourceBadge.icon}</span>
+                          {sourceBadge.label}
+                        </span>
+                      )}
 
                       <span className="text-xs text-[#5a5554]">
                         {post.status === 'scheduled' && post.scheduled_at

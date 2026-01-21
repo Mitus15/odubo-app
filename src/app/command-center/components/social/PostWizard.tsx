@@ -108,6 +108,19 @@ const DEFAULT_STATE: WizardState = {
   notes: '',
 };
 
+function formatLocalDateTime(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
+function getDaysInMonth(year: number, month: number) {
+  return new Date(year, month, 0).getDate();
+}
+
 // =============================================================================
 // ICONS
 // =============================================================================
@@ -395,6 +408,15 @@ export function PostWizard({ entityId, entityName, accounts, onClose, onComplete
       const platforms = [...new Set(selectedAccounts.map((acc) => acc.platform))];
 
       const publishNow = state.scheduleMode === 'now';
+
+      if (!publishNow && state.scheduledAt) {
+        const scheduledTime = new Date(state.scheduledAt);
+        if (Number.isNaN(scheduledTime.getTime()) || scheduledTime.getTime() <= Date.now()) {
+          alert('Please choose a future time to schedule this post.');
+          setSaving(false);
+          return;
+        }
+      }
 
       const postData = {
         status: 'draft', // Start as draft, publish will update
@@ -1333,14 +1355,32 @@ function ScheduleStep({
   state: WizardState;
   updateState: (updates: Partial<WizardState>) => void;
 }) {
+  useEffect(() => {
+    if (state.scheduleMode === 'scheduled' && !state.scheduledAt) {
+      const nextHour = new Date();
+      nextHour.setHours(nextHour.getHours() + 1, 0, 0, 0);
+      updateState({ scheduledAt: formatLocalDateTime(nextHour) });
+    }
+  }, [state.scheduleMode, state.scheduledAt, updateState]);
+
   // Generate suggested times (next few hours)
   const suggestedTimes: string[] = [];
   const now = new Date();
   for (let i = 1; i <= 4; i++) {
     const time = new Date(now.getTime() + i * 3600000);
     time.setMinutes(0, 0, 0);
-    suggestedTimes.push(time.toISOString().slice(0, 16));
+    suggestedTimes.push(formatLocalDateTime(time));
   }
+
+  const scheduledDate = state.scheduledAt?.split('T')[0] || formatLocalDateTime(new Date()).split('T')[0];
+  const scheduledTime = state.scheduledAt?.split('T')[1] || '12:00';
+  const [year, month, day] = scheduledDate.split('-').map(Number);
+  const [hour, minute] = scheduledTime.split(':').map(Number);
+  const daysInMonth = getDaysInMonth(year, month);
+
+  const updateScheduledAt = (dateStr: string, timeStr: string) => {
+    updateState({ scheduledAt: `${dateStr}T${timeStr}` });
+  };
 
   return (
     <div className="p-4 space-y-6">
@@ -1380,13 +1420,90 @@ function ScheduleStep({
           {/* Date/Time Picker */}
           <div className="space-y-2">
             <label className="text-sm font-medium">Date & Time</label>
-            <input
-              type="datetime-local"
-              value={state.scheduledAt}
-              onChange={(e) => updateState({ scheduledAt: e.target.value })}
-              min={new Date().toISOString().slice(0, 16)}
-              className="w-full px-3 py-2 rounded-lg bg-[#171616] border border-[#502d26]/40 text-sm focus:outline-none focus:border-[#843c2d]"
-            />
+            <div className="flex flex-wrap gap-2">
+              <select
+                value={String(month)}
+                onChange={(e) => {
+                  const nextMonth = Number(e.target.value);
+                  const safeDay = Math.min(day, getDaysInMonth(year, nextMonth));
+                  const dateStr = `${year}-${String(nextMonth).padStart(2, '0')}-${String(safeDay).padStart(2, '0')}`;
+                  updateScheduledAt(dateStr, `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`);
+                }}
+                className="px-3 py-2 rounded-lg bg-[#171616] border border-[#502d26]/40 text-sm focus:outline-none focus:border-[#843c2d]"
+              >
+                {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                  <option key={m} value={m}>
+                    {new Date(2020, m - 1, 1).toLocaleDateString('en-US', { month: 'short' })}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={String(day)}
+                onChange={(e) => {
+                  const nextDay = Number(e.target.value);
+                  const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(nextDay).padStart(2, '0')}`;
+                  updateScheduledAt(dateStr, `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`);
+                }}
+                className="px-3 py-2 rounded-lg bg-[#171616] border border-[#502d26]/40 text-sm focus:outline-none focus:border-[#843c2d]"
+              >
+                {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((d) => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={String(year)}
+                onChange={(e) => {
+                  const nextYear = Number(e.target.value);
+                  const safeDay = Math.min(day, getDaysInMonth(nextYear, month));
+                  const dateStr = `${nextYear}-${String(month).padStart(2, '0')}-${String(safeDay).padStart(2, '0')}`;
+                  updateScheduledAt(dateStr, `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`);
+                }}
+                className="px-3 py-2 rounded-lg bg-[#171616] border border-[#502d26]/40 text-sm focus:outline-none focus:border-[#843c2d]"
+              >
+                {[0, 1].map((offset) => {
+                  const y = new Date().getFullYear() + offset;
+                  return (
+                    <option key={y} value={y}>
+                      {y}
+                    </option>
+                  );
+                })}
+              </select>
+
+              <select
+                value={String(hour)}
+                onChange={(e) => {
+                  const nextHour = String(e.target.value).padStart(2, '0');
+                  updateScheduledAt(scheduledDate, `${nextHour}:${String(minute).padStart(2, '0')}`);
+                }}
+                className="px-3 py-2 rounded-lg bg-[#171616] border border-[#502d26]/40 text-sm focus:outline-none focus:border-[#843c2d]"
+              >
+                {Array.from({ length: 24 }, (_, i) => i).map((h) => (
+                  <option key={h} value={h}>
+                    {new Date(2020, 0, 1, h).toLocaleTimeString('en-US', { hour: 'numeric' })}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={String(minute)}
+                onChange={(e) => {
+                  const nextMinute = String(e.target.value).padStart(2, '0');
+                  updateScheduledAt(scheduledDate, `${String(hour).padStart(2, '0')}:${nextMinute}`);
+                }}
+                className="px-3 py-2 rounded-lg bg-[#171616] border border-[#502d26]/40 text-sm focus:outline-none focus:border-[#843c2d]"
+              >
+                {Array.from({ length: 12 }, (_, i) => i * 5).map((m) => (
+                  <option key={m} value={m}>
+                    {String(m).padStart(2, '0')}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {/* Suggested Times */}

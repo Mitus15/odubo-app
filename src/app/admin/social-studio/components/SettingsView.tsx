@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { Account, Campaign, PostingSlot } from '../page';
 
 // =============================================================================
@@ -14,7 +14,7 @@ interface SettingsViewProps {
   onRefresh: () => void;
 }
 
-type SettingsSection = 'accounts' | 'schedule' | 'campaigns';
+type SettingsSection = 'general' | 'accounts' | 'schedule' | 'campaigns';
 
 // =============================================================================
 // PLATFORM DATA
@@ -115,17 +115,64 @@ export default function SettingsView({
   slots,
   onRefresh,
 }: SettingsViewProps) {
-  const [expandedSection, setExpandedSection] = useState<SettingsSection | null>('accounts');
+  const [expandedSection, setExpandedSection] = useState<SettingsSection | null>('general');
   const [syncing, setSyncing] = useState(false);
   const [showNewSlotForm, setShowNewSlotForm] = useState(false);
   const [newSlotTime, setNewSlotTime] = useState('14:00');
   const [showNewCampaignForm, setShowNewCampaignForm] = useState(false);
   const [newCampaignName, setNewCampaignName] = useState('');
   const [newCampaignColor, setNewCampaignColor] = useState('#D4A853');
+  
+  // General settings state
+  const [settings, setSettings] = useState<{
+    slots_per_day: number;
+    default_timezone: string;
+    auto_hashtag_limit: number;
+    require_approval: boolean;
+  } | null>(null);
+  const [savingSettings, setSavingSettings] = useState(false);
 
   const activeAccounts = accounts.filter((a) => a.is_active);
   const activeSlots = slots.filter((s) => s.is_active);
   const activeCampaigns = campaigns.filter((c) => c.status === 'active');
+
+  // Load settings
+  useEffect(() => {
+    fetchSettings();
+  }, []);
+
+  const fetchSettings = async () => {
+    try {
+      const response = await fetch('/api/admin/social/settings');
+      const data = await response.json();
+      if (data.success) {
+        setSettings(data.settings);
+      }
+    } catch (error) {
+      console.error('[Settings] Fetch error:', error);
+    }
+  };
+
+  const handleUpdateSettings = async (updates: Partial<typeof settings>) => {
+    if (!settings) return;
+    
+    setSavingSettings(true);
+    try {
+      const response = await fetch('/api/admin/social/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
+      
+      if (response.ok) {
+        setSettings({ ...settings, ...updates });
+      }
+    } catch (error) {
+      console.error('[Settings] Update error:', error);
+    } finally {
+      setSavingSettings(false);
+    }
+  };
 
   // Sync accounts
   const handleSyncAccounts = async () => {
@@ -250,9 +297,115 @@ export default function SettingsView({
           <p className="text-[10px] uppercase tracking-widest text-[#D4A853] mb-1">Configuration</p>
           <h1 className="text-2xl font-bold text-white tracking-tight">Settings</h1>
           <p className="text-sm text-[#5a5554] mt-1">
-            Manage your accounts, schedule, and campaigns
+            Manage your publishing settings, accounts, and campaigns
           </p>
         </div>
+
+        {/* General Settings Section */}
+        <section className="rounded-2xl bg-[#0a0a0a] border border-[#1a1a1a] overflow-hidden hover:border-[#D4A853]/20 transition-all duration-300">
+          <SectionHeader
+            icon={Icons.clock}
+            title="General Settings"
+            subtitle="Daily slots, timezone, and posting preferences"
+            section="general"
+          />
+
+          {expandedSection === 'general' && settings && (
+            <div className="px-4 pb-4 space-y-4">
+              {/* Slots Per Day */}
+              <div>
+                <label className="block text-sm font-medium text-white mb-2">
+                  Posts Per Day
+                </label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="range"
+                    min="1"
+                    max="5"
+                    value={settings.slots_per_day}
+                    onChange={(e) => handleUpdateSettings({ slots_per_day: parseInt(e.target.value) })}
+                    disabled={savingSettings}
+                    className="flex-1 h-2 bg-[#1a1a1a] rounded-lg appearance-none cursor-pointer accent-[#D4A853]"
+                  />
+                  <div className="w-16 text-center">
+                    <div className="text-2xl font-bold text-[#D4A853]">{settings.slots_per_day}</div>
+                    <div className="text-xs text-[#5a5554]">slots</div>
+                  </div>
+                </div>
+                <p className="text-xs text-[#5a5554] mt-2">
+                  💡 All posts publish at midnight. Slot numbers help organize multiple posts per day.
+                </p>
+              </div>
+
+              {/* Timezone */}
+              <div>
+                <label className="block text-sm font-medium text-white mb-2">
+                  Default Timezone
+                </label>
+                <select
+                  value={settings.default_timezone}
+                  onChange={(e) => handleUpdateSettings({ default_timezone: e.target.value })}
+                  disabled={savingSettings}
+                  className="w-full px-4 py-3 rounded-xl bg-[#0f0f0f] border border-[#1a1a1a] text-white text-sm focus:border-[#D4A853]/40 focus:outline-none transition-colors"
+                >
+                  <option value="America/Los_Angeles">Pacific Time (PT)</option>
+                  <option value="America/Denver">Mountain Time (MT)</option>
+                  <option value="America/Chicago">Central Time (CT)</option>
+                  <option value="America/New_York">Eastern Time (ET)</option>
+                  <option value="UTC">UTC</option>
+                </select>
+              </div>
+
+              {/* Auto Hashtag Limit */}
+              <div>
+                <label className="block text-sm font-medium text-white mb-2">
+                  Max Hashtags (AI Suggestions)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="30"
+                  value={settings.auto_hashtag_limit}
+                  onChange={(e) => handleUpdateSettings({ auto_hashtag_limit: parseInt(e.target.value) || 0 })}
+                  disabled={savingSettings}
+                  className="w-full px-4 py-3 rounded-xl bg-[#0f0f0f] border border-[#1a1a1a] text-white text-sm focus:border-[#D4A853]/40 focus:outline-none transition-colors"
+                />
+                <p className="text-xs text-[#5a5554] mt-2">
+                  Limit how many hashtags AI suggests per post (0-30)
+                </p>
+              </div>
+
+              {/* Require Approval Toggle */}
+              <div className="flex items-center justify-between p-4 rounded-xl bg-[#0f0f0f] border border-[#1a1a1a]">
+                <div>
+                  <div className="text-sm font-medium text-white">Require Approval</div>
+                  <div className="text-xs text-[#5a5554] mt-1">
+                    Posts need manual approval before publishing
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleUpdateSettings({ require_approval: !settings.require_approval })}
+                  disabled={savingSettings}
+                  className={`relative w-12 h-6 rounded-full transition-all duration-300 ${
+                    settings.require_approval ? 'bg-[#D4A853]' : 'bg-[#1a1a1a]'
+                  }`}
+                >
+                  <div
+                    className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-transform duration-300 ${
+                      settings.require_approval ? 'translate-x-6' : ''
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {savingSettings && (
+                <div className="text-xs text-[#D4A853] text-center py-2">
+                  Saving...
+                </div>
+              )}
+            </div>
+          )}
+        </section>
 
         {/* Connected Accounts Section */}
         <section className="rounded-2xl bg-[#0a0a0a] border border-[#1a1a1a] overflow-hidden hover:border-[#D4A853]/20 transition-all duration-300">

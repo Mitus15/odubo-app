@@ -9,8 +9,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // Find videos not yet used in any social_post_targets
-    // (videos that don't have a social_posts row linking to them via content_id)
+    // Find videos not yet used in any social_posts via source_id
     const clips = await queryDatabase(
       `SELECT 
         v.id,
@@ -27,8 +26,9 @@ export async function GET(req: NextRequest) {
        WHERE v.publication_status = 'live'
          AND v.status = 'published'
          AND NOT EXISTS (
-           SELECT 1 FROM social_posts sp 
-           WHERE CAST(sp.content_id AS TEXT) = CAST(v.id AS TEXT)
+           SELECT 1 FROM social_posts sp
+           WHERE sp.source_type = 'clip'
+             AND CAST(sp.source_id AS TEXT) = CAST(v.id AS TEXT)
          )
        ORDER BY v.created_at DESC
        LIMIT 100`,

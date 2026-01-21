@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import type { Post, Account, PostingSlot, StudioView } from '../page';
 
 // =============================================================================
@@ -111,6 +111,11 @@ const Icons = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
     </svg>
   ),
+  lightning: (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+    </svg>
+  ),
 };
 
 // =============================================================================
@@ -128,6 +133,45 @@ export default function HomeView({
   onCreateForSlot,
   onNavigate,
 }: HomeViewProps) {
+  const [processing, setProcessing] = useState(false);
+  const [processResult, setProcessResult] = useState<{ published: number; failed: number } | null>(null);
+
+  // Handle manual post processing
+  const handleProcessScheduled = async () => {
+    setProcessing(true);
+    setProcessResult(null);
+    try {
+      const response = await fetch('/api/social/posts/process-scheduled', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to process scheduled posts');
+      }
+
+      const data = await response.json() as { published: number; failed: number };
+      setProcessResult(data);
+
+      // Refresh the posts after processing
+      if (data.published > 0) {
+        setTimeout(() => {
+          onSync();
+        }, 1000);
+      }
+
+      // Clear result after 5 seconds
+      setTimeout(() => {
+        setProcessResult(null);
+      }, 5000);
+    } catch (error) {
+      console.error('[HomeView] Process scheduled error:', error);
+      alert('Failed to process scheduled posts');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   // Calculate dashboard data
   const dashboardData = useMemo(() => {
     const now = new Date();
@@ -168,13 +212,7 @@ export default function HomeView({
     }).length;
     const emptySlots = Math.max(0, slotsPerWeek - scheduledThisWeek);
 
-    // Week stats (mock for now - would come from analytics)
-    const weekStats = {
-      views: 12400,
-      likes: 847,
-      engagement: 2.8,
-      topPost: posts.find((p) => p.status === 'published') || null,
-    };
+    const weekStats = null;
 
     return {
       today,
@@ -209,15 +247,35 @@ export default function HomeView({
               {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
             </p>
           </div>
-          <button
-            onClick={onSync}
-            disabled={syncing}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#141414] border border-[#D4A853]/20 text-[#D4A853] text-sm font-medium hover:bg-[#1a1a1a] hover:border-[#D4A853]/40 active:bg-[#0f0f0f] transition-all disabled:opacity-50 min-h-[44px] shadow-[0_0_20px_rgba(212,168,83,0.05)]"
-          >
-            <span className={syncing ? 'animate-spin' : ''}>{Icons.sync}</span>
-            {syncing ? 'Syncing...' : 'Sync'}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleProcessScheduled}
+              disabled={processing || syncing}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#141414] border border-[#D4A853]/20 text-[#D4A853] text-sm font-medium hover:bg-[#1a1a1a] hover:border-[#D4A853]/40 active:bg-[#0f0f0f] transition-all disabled:opacity-50 min-h-[44px] shadow-[0_0_20px_rgba(212,168,83,0.05)]"
+            >
+              <span className={processing ? 'animate-pulse' : ''}>{Icons.lightning}</span>
+              {processing ? 'Processing...' : 'Auto Post'}
+            </button>
+            <button
+              onClick={onSync}
+              disabled={syncing || processing}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#141414] border border-[#D4A853]/20 text-[#D4A853] text-sm font-medium hover:bg-[#1a1a1a] hover:border-[#D4A853]/40 active:bg-[#0f0f0f] transition-all disabled:opacity-50 min-h-[44px] shadow-[0_0_20px_rgba(212,168,83,0.05)]"
+            >
+              <span className={syncing ? 'animate-spin' : ''}>{Icons.sync}</span>
+              {syncing ? 'Syncing...' : 'Sync'}
+            </button>
+          </div>
         </div>
+
+        {/* Process Result Banner */}
+        {processResult && (
+          <div className="p-4 rounded-xl bg-[#D4A853]/10 border border-[#D4A853]/20">
+            <p className="text-sm text-white">
+              ✅ Published {processResult.published} post{processResult.published !== 1 ? 's' : ''}
+              {processResult.failed > 0 && ` • ❌ ${processResult.failed} failed`}
+            </p>
+          </div>
+        )}
 
         {/* Today's Posts */}
         <section>
@@ -344,41 +402,49 @@ export default function HomeView({
             <h2 className="text-xs font-semibold text-white uppercase tracking-[0.1em]">This Week</h2>
           </div>
 
-          <div className="grid grid-cols-3 gap-4 mb-5">
-            <div className="text-center p-3 rounded-xl bg-[#141414]">
-              <div className="text-xl font-semibold text-white">{formatNumber(weekStats.views)}</div>
-              <div className="text-[10px] text-[#5a5554] uppercase tracking-wider mt-1">Views</div>
-            </div>
-            <div className="text-center p-3 rounded-xl bg-[#141414]">
-              <div className="text-xl font-semibold text-white">{formatNumber(weekStats.likes)}</div>
-              <div className="text-[10px] text-[#5a5554] uppercase tracking-wider mt-1">Likes</div>
-            </div>
-            <div className="text-center p-3 rounded-xl bg-[#141414]">
-              <div className="text-xl font-semibold text-[#D4A853]">{weekStats.engagement}%</div>
-              <div className="text-[10px] text-[#5a5554] uppercase tracking-wider mt-1">Engage</div>
-            </div>
-          </div>
-
-          {weekStats.topPost && (
-            <button
-              onClick={() => onViewPost(weekStats.topPost!.id)}
-              className="w-full flex items-center gap-3 p-3 rounded-xl bg-[#141414] hover:bg-[#1a1a1a] border border-[#1a1a1a] hover:border-[#D4A853]/20 transition-all group"
-            >
-              <div className="w-11 h-11 rounded-xl overflow-hidden bg-[#0f0f0f] flex-shrink-0 ring-1 ring-[#1a1a1a] group-hover:ring-[#D4A853]/20 transition-all">
-                {weekStats.topPost.thumbnail_url ? (
-                  <img src={weekStats.topPost.thumbnail_url} alt="" className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">🎬</div>
-                )}
-              </div>
-              <div className="flex-1 text-left min-w-0">
-                <div className="text-[10px] text-[#D4A853] uppercase tracking-wider">Top Performer</div>
-                <div className="text-sm text-white/90 truncate mt-0.5">
-                  {weekStats.topPost.title || weekStats.topPost.caption?.slice(0, 30) || 'Untitled'}
+          {weekStats ? (
+            <>
+              <div className="grid grid-cols-3 gap-4 mb-5">
+                <div className="text-center p-3 rounded-xl bg-[#141414]">
+                  <div className="text-xl font-semibold text-white">{formatNumber(weekStats.views)}</div>
+                  <div className="text-[10px] text-[#5a5554] uppercase tracking-wider mt-1">Views</div>
+                </div>
+                <div className="text-center p-3 rounded-xl bg-[#141414]">
+                  <div className="text-xl font-semibold text-white">{formatNumber(weekStats.likes)}</div>
+                  <div className="text-[10px] text-[#5a5554] uppercase tracking-wider mt-1">Likes</div>
+                </div>
+                <div className="text-center p-3 rounded-xl bg-[#141414]">
+                  <div className="text-xl font-semibold text-[#D4A853]">{weekStats.engagement}%</div>
+                  <div className="text-[10px] text-[#5a5554] uppercase tracking-wider mt-1">Engage</div>
                 </div>
               </div>
-              <span className="text-[#3a3a3a] group-hover:text-[#5a5554] transition-colors">{Icons.chevronRight}</span>
-            </button>
+
+              {weekStats.topPost && (
+                <button
+                  onClick={() => onViewPost(weekStats.topPost!.id)}
+                  className="w-full flex items-center gap-3 p-3 rounded-xl bg-[#141414] hover:bg-[#1a1a1a] border border-[#1a1a1a] hover:border-[#D4A853]/20 transition-all group"
+                >
+                  <div className="w-11 h-11 rounded-xl overflow-hidden bg-[#0f0f0f] flex-shrink-0 ring-1 ring-[#1a1a1a] group-hover:ring-[#D4A853]/20 transition-all">
+                    {weekStats.topPost.thumbnail_url ? (
+                      <img src={weekStats.topPost.thumbnail_url} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">🎬</div>
+                    )}
+                  </div>
+                  <div className="flex-1 text-left min-w-0">
+                    <div className="text-[10px] text-[#D4A853] uppercase tracking-wider">Top Performer</div>
+                    <div className="text-sm text-white/90 truncate mt-0.5">
+                      {weekStats.topPost.title || weekStats.topPost.caption?.slice(0, 30) || 'Untitled'}
+                    </div>
+                  </div>
+                  <span className="text-[#3a3a3a] group-hover:text-[#5a5554] transition-colors">{Icons.chevronRight}</span>
+                </button>
+              )}
+            </>
+          ) : (
+            <div className="text-sm text-[#5a5554]">
+              Analytics aren’t synced yet. Use Sync to refresh.
+            </div>
           )}
         </section>
 

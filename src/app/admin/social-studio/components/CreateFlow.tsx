@@ -23,11 +23,14 @@ interface PostDraft {
   mediaType: 'video' | 'image';
   thumbnailUrl?: string;
   title?: string;
+  sourceType?: 'clip' | 'upload' | 'url';
+  sourceId?: string;
   accountIds: string[];
   caption: string;
   hashtags: string[];
-  scheduleMode: 'slot' | 'time' | 'now';
-  scheduledAt?: string;
+  scheduleMode: 'day' | 'now';
+  scheduledDate?: string; // YYYY-MM-DD format
+  slotNumber?: number; // Which slot on that day (dynamic based on settings)
   campaignId?: string;
 }
 
@@ -39,6 +42,11 @@ interface Clip {
   mp4_url?: string;
   thumbnail?: string;
   poster_url?: string;
+}
+
+interface AiSuggestions {
+  captions: Record<string, string[]>;
+  hashtags: Record<string, string[]>;
 }
 
 // Construct thumbnail URL from Cloudflare Stream UID
@@ -93,6 +101,68 @@ function formatSlotTime(time: string): string {
   return `${displayHour}:${minutes} ${suffix}`;
 }
 
+function getZonedParts(date: Date, timeZone: string) {
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
+  const parts = formatter.formatToParts(date);
+  const get = (type: string) => Number(parts.find((p) => p.type === type)?.value || 0);
+  return {
+    year: get('year'),
+    month: get('month'),
+    day: get('day'),
+    hour: get('hour'),
+    minute: get('minute'),
+    second: get('second'),
+  };
+}
+
+function toComparableDate(parts: { year: number; month: number; day: number; hour?: number; minute?: number; second?: number }) {
+  return new Date(Date.UTC(
+    parts.year,
+    parts.month - 1,
+    parts.day,
+    parts.hour || 0,
+    parts.minute || 0,
+    parts.second || 0
+  ));
+}
+
+function formatSlotDate(dateStr: string, timeZone: string): string {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+  return date.toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    timeZone,
+  });
+}
+
+function formatLocalDate(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function formatLocalTime(date: Date) {
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${hours}:${minutes}`;
+}
+
+function getDaysInMonth(year: number, month: number) {
+  return new Date(year, month, 0).getDate();
+}
+
 function getNextSlot(slots: PostingSlot[]): { date: string; time: string; timezone: string } | null {
   const activeSlots = slots.filter((s) => s.is_active);
   if (activeSlots.length === 0) return null;
@@ -100,9 +170,9 @@ function getNextSlot(slots: PostingSlot[]): { date: string; time: string; timezo
   // Get the timezone from slots (assume all slots use same timezone)
   const slotTimezone = activeSlots[0]?.timezone || 'America/Los_Angeles';
 
-  // Get current time in the slot's timezone
-  const now = new Date();
-  const nowInSlotTz = new Date(now.toLocaleString('en-US', { timeZone: slotTimezone }));
+  // Get current time in the slot's timezone (comparable date)
+  const nowParts = getZonedParts(new Date(), slotTimezone);
+  const nowInSlotTz = toComparableDate(nowParts);
 
   // Sort slots by time (earliest first)
   const sortedSlots = [...activeSlots].sort((a, b) => {
@@ -114,8 +184,12 @@ function getNextSlot(slots: PostingSlot[]): { date: string; time: string; timezo
   // Look through next 7 days
   for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
     const checkDate = new Date(nowInSlotTz);
-    checkDate.setDate(checkDate.getDate() + dayOffset);
-    const dayOfWeek = checkDate.getDay();
+    checkDate.setUTCDate(checkDate.getUTCDate() + dayOffset);
+    const dayOfWeek = new Date(Date.UTC(
+      checkDate.getUTCFullYear(),
+      checkDate.getUTCMonth(),
+      checkDate.getUTCDate()
+    )).getUTCDay();
 
     for (const slot of sortedSlots) {
       // Check if slot applies to this day (null = every day)
@@ -123,16 +197,21 @@ function getNextSlot(slots: PostingSlot[]): { date: string; time: string; timezo
 
       // Build the slot datetime in the slot's timezone
       const [slotHours, slotMinutes] = slot.time.split(':').map(Number);
-      const slotDate = new Date(checkDate);
-      slotDate.setHours(slotHours, slotMinutes, 0, 0);
+      const slotDate = toComparableDate({
+        year: checkDate.getUTCFullYear(),
+        month: checkDate.getUTCMonth() + 1,
+        day: checkDate.getUTCDate(),
+        hour: slotHours,
+        minute: slotMinutes,
+      });
 
       // Skip if this slot time has already passed
       if (slotDate <= nowInSlotTz) continue;
 
       // Format date as YYYY-MM-DD
-      const year = checkDate.getFullYear();
-      const month = String(checkDate.getMonth() + 1).padStart(2, '0');
-      const day = String(checkDate.getDate()).padStart(2, '0');
+      const year = checkDate.getUTCFullYear();
+      const month = String(checkDate.getUTCMonth() + 1).padStart(2, '0');
+      const day = String(checkDate.getUTCDate()).padStart(2, '0');
 
       return {
         date: `${year}-${month}-${day}`,
@@ -219,10 +298,9 @@ export default function CreateFlow({
     accountIds: accounts.filter((a) => a.is_active).map((a) => a.id),
     caption: '',
     hashtags: [],
-    scheduleMode: prefillSlot ? 'time' : 'slot',
-    scheduledAt: prefillSlot
-      ? `${prefillSlot.date}T${prefillSlot.time}:00`
-      : undefined,
+    scheduleMode: 'day',
+    scheduledDate: new Date().toISOString().split('T')[0], // Today
+    slotNumber: 1, // Default to slot 1
     campaignId: undefined,
   });
   const [urlInput, setUrlInput] = useState('');
@@ -232,26 +310,71 @@ export default function CreateFlow({
   const [showClipsPicker, setShowClipsPicker] = useState(false);
   const [clips, setClips] = useState<Clip[]>([]);
   const [loadingClips, setLoadingClips] = useState(false);
+  const [clipFilter, setClipFilter] = useState<'all' | 'unposted'>('unposted');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiSuggestions, setAiSuggestions] = useState<AiSuggestions | null>(null);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiFeedback, setAiFeedback] = useState<Record<string, 'up' | 'down'>>({});
+  const [aiPlatform, setAiPlatform] = useState<string>('instagram');
+  const [slotsPerDay, setSlotsPerDay] = useState(2); // Default to 2 slots
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
   const nextSlot = useMemo(() => getNextSlot(slots), [slots]);
 
+  // Fetch settings to get slots_per_day
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await fetch('/api/admin/social/settings');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.settings?.slots_per_day) {
+            setSlotsPerDay(data.settings.slots_per_day);
+          }
+        }
+      } catch (error) {
+        console.error('[CreateFlow] Failed to fetch settings:', error);
+      }
+    };
+    fetchSettings();
+  }, []);
+
+  // Auto-select next available slot
+  useEffect(() => {
+    if (draft.scheduleMode === 'day' && !draft.scheduledDate) {
+      const today = new Date().toISOString().split('T')[0];
+      setDraft((d) => ({ ...d, scheduledDate: today, slotNumber: 1 }));
+    }
+  }, [draft.scheduleMode, draft.scheduledDate]);
+
   // Fetch clips when picker opens
   useEffect(() => {
-    if (showClipsPicker && clips.length === 0) {
+    if (showClipsPicker) {
       fetchClips();
     }
-  }, [showClipsPicker]);
+  }, [showClipsPicker, clipFilter]);
 
   const fetchClips = async () => {
     setLoadingClips(true);
     try {
-      const res = await fetch('/api/clips?limit=50');
+      const endpoint = clipFilter === 'unposted'
+        ? '/api/social/undistributed-clips'
+        : '/api/clips?limit=50';
+      const res = await fetch(endpoint);
       if (res.ok) {
         const data = await res.json();
-        setClips(data.clips || []);
+        const normalized = (data.clips || []).map((clip: any) => ({
+          id: Number(clip.id),
+          uid: clip.uid,
+          title: clip.title || 'Untitled',
+          url: clip.url,
+          mp4_url: clip.mp4_url,
+          thumbnail: clip.thumbnail,
+          poster_url: clip.poster_url || clip.posterUrl,
+        }));
+        setClips(normalized);
       }
     } catch (error) {
       console.error('[CreateFlow] Error fetching clips:', error);
@@ -288,6 +411,8 @@ export default function CreateFlow({
           ...d,
           mediaUrl: data.url,
           mediaType: data.type || (isVideo ? 'video' : 'image'),
+          sourceType: 'upload',
+          sourceId: data.id ? String(data.id) : d.sourceId,
         }));
         // Revoke local URL since upload succeeded
         URL.revokeObjectURL(localUrl);
@@ -298,6 +423,7 @@ export default function CreateFlow({
           ...d,
           mediaUrl: localUrl,
           mediaType: isVideo ? 'video' : 'image',
+          sourceType: 'upload',
         }));
       }
     } catch (error) {
@@ -317,6 +443,8 @@ export default function CreateFlow({
       mediaType: 'video',
       thumbnailUrl: getClipThumbnail(clip),
       title: clip.title || d.title,
+      sourceType: 'clip',
+      sourceId: String(clip.id),
     }));
     setShowClipsPicker(false);
   };
@@ -335,6 +463,38 @@ export default function CreateFlow({
     return grouped;
   }, [activeAccounts]);
 
+  const uniquePlatforms = useMemo(
+    () => Array.from(new Set(selectedAccounts.map((acc) => acc.platform))),
+    [selectedAccounts]
+  );
+
+  useEffect(() => {
+    if (uniquePlatforms.length > 0) {
+      setAiPlatform((prev) => (uniquePlatforms.includes(prev) ? prev : uniquePlatforms[0]));
+    }
+  }, [uniquePlatforms]);
+
+  const scheduledDate = useMemo(() => {
+    const dateStr = draft.scheduledAt?.split('T')[0] || nextSlot?.date || formatLocalDate(new Date());
+    const [year, month, day] = dateStr.split('-').map(Number);
+    return { dateStr, year, month, day };
+  }, [draft.scheduledAt, nextSlot]);
+
+  const scheduledTime = useMemo(() => {
+    const timeStr = draft.scheduledAt?.split('T')[1]?.slice(0, 5) || nextSlot?.time || '12:00';
+    const [hour, minute] = timeStr.split(':').map(Number);
+    return { timeStr, hour, minute };
+  }, [draft.scheduledAt, nextSlot]);
+
+  const daysInMonth = useMemo(
+    () => getDaysInMonth(scheduledDate.year, scheduledDate.month),
+    [scheduledDate]
+  );
+
+  const updateScheduledAt = (dateStr: string, timeStr: string) => {
+    setDraft((d) => ({ ...d, scheduledAt: `${dateStr}T${timeStr}:00` }));
+  };
+
   // Handle media URL submission
   const handleUrlSubmit = () => {
     if (!urlInput.trim()) return;
@@ -347,8 +507,69 @@ export default function CreateFlow({
       ...d,
       mediaUrl: url,
       mediaType: isVideo ? 'video' : 'image',
+      sourceType: 'url',
     }));
     setUrlInput('');
+  };
+
+  const handleAiHelp = async () => {
+    if (aiLoading) return;
+    setAiLoading(true);
+    setAiError(null);
+    try {
+      const response = await fetch('/api/admin/social/ai/suggest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: draft.title,
+          caption: draft.caption,
+          platforms: uniquePlatforms.length > 0 ? uniquePlatforms : ['instagram'],
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const errorMsg = errorData?.details || errorData?.error || 'AI request failed';
+        throw new Error(errorMsg);
+      }
+
+      const data = await response.json();
+      setAiSuggestions(data.suggestions || null);
+    } catch (error) {
+      console.error('[CreateFlow] AI help error:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      setAiError(`AI suggestions unavailable: ${errorMsg}`);
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const handleApplySuggestion = (caption: string, hashtags: string[]) => {
+    setDraft((d) => ({
+      ...d,
+      caption,
+      hashtags: hashtags.map((tag) => tag.replace(/^#/, '')),
+    }));
+  };
+
+  const submitAiFeedback = async (platform: string, text: string, rating: 'up' | 'down') => {
+    const key = `${platform}:${text}`;
+    setAiFeedback((prev) => ({ ...prev, [key]: rating }));
+
+    try {
+      await fetch('/api/admin/social/ai/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          platform,
+          generated_text: text,
+          rating: rating === 'up' ? 1 : 0,
+          source: 'create_flow',
+        }),
+      });
+    } catch (error) {
+      console.error('[CreateFlow] Feedback error:', error);
+    }
   };
 
   // Handle account toggle
@@ -380,15 +601,15 @@ export default function CreateFlow({
     }));
   };
 
-  // Calculate scheduled datetime
+  // Calculate scheduled datetime - always midnight since cron runs at midnight
   const getScheduledAt = useCallback((): string | undefined => {
     if (draft.scheduleMode === 'now') return undefined;
-    if (draft.scheduleMode === 'time' && draft.scheduledAt) return draft.scheduledAt;
-    if (draft.scheduleMode === 'slot' && nextSlot) {
-      return `${nextSlot.date}T${nextSlot.time}:00`;
+    if (draft.scheduleMode === 'day' && draft.scheduledDate) {
+      // Set to midnight - cron processes all posts for the day at midnight
+      return `${draft.scheduledDate}T00:00:00`;
     }
     return undefined;
-  }, [draft.scheduleMode, draft.scheduledAt, nextSlot]);
+  }, [draft.scheduleMode, draft.scheduledDate]);
 
   // Submit post
   const handleSubmit = async () => {
@@ -397,6 +618,17 @@ export default function CreateFlow({
     setSubmitting(true);
     try {
       const scheduledAt = getScheduledAt();
+      if (draft.scheduleMode !== 'now' && scheduledAt) {
+        const scheduledTime = new Date(scheduledAt);
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+        if (Number.isNaN(scheduledTime.getTime()) || scheduledTime.getTime() < todayStart.getTime()) {
+          alert('Please choose today or a future date to schedule this post.');
+          setSubmitting(false);
+          return;
+        }
+      }
+      const scheduledAtIso = scheduledAt ? new Date(scheduledAt).toISOString() : undefined;
 
       const response = await fetch('/api/social/posts', {
         method: 'POST',
@@ -410,14 +642,36 @@ export default function CreateFlow({
           hashtags: draft.hashtags,
           account_ids: draft.accountIds,
           platforms: [...new Set(selectedAccounts.map((a) => a.platform))],
-          scheduled_at: scheduledAt,
+          source_type: draft.sourceType,
+          source_id: draft.sourceId,
+          scheduled_at: scheduledAtIso,
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
           campaign_id: draft.campaignId,
-          status: draft.scheduleMode === 'now' ? 'publishing' : 'scheduled',
+          status: 'draft',
         }),
       });
 
       if (!response.ok) {
         throw new Error('Failed to create post');
+      }
+
+      const data = await response.json();
+      const postId = data?.id as string | undefined;
+
+      if (postId) {
+        const publishRes = await fetch('/api/social/posts/publish', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            post_id: postId,
+            publish_now: draft.scheduleMode === 'now',
+          }),
+        });
+
+        if (!publishRes.ok) {
+          const errorData = await publishRes.json().catch(() => ({}));
+          console.error('[CreateFlow] Publish error:', errorData);
+        }
       }
 
       onComplete();
@@ -672,104 +926,83 @@ export default function CreateFlow({
                 Schedule
               </h2>
 
-              <div className="space-y-2">
-                {nextSlot && (
-                  <button
-                    onClick={() =>
-                      setDraft((d) => ({
-                        ...d,
-                        scheduleMode: 'slot',
-                        scheduledAt: undefined,
-                      }))
-                    }
-                    className={`w-full flex items-center gap-3 p-4 rounded-2xl border transition-all duration-300 ${
-                      draft.scheduleMode === 'slot'
-                        ? 'bg-[#D4A853]/10 border-[#D4A853]/50 shadow-[0_0_20px_rgba(212,168,83,0.1)]'
-                        : 'bg-[#0a0a0a] border-[#1a1a1a] hover:border-[#D4A853]/30'
-                    }`}
-                  >
-                    <div
-                      className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
-                        draft.scheduleMode === 'slot'
-                          ? 'border-[#D4A853] bg-[#D4A853]'
-                          : 'border-[#3a3534]'
-                      }`}
-                    >
-                      {draft.scheduleMode === 'slot' && (
-                        <div className="w-2 h-2 rounded-full bg-black" />
-                      )}
-                    </div>
-                    <div className="flex-1 text-left">
-                      <div className="text-sm text-white font-medium">Next available slot</div>
-                      <div className="text-xs text-[#5a5554]">
-                        {new Date(nextSlot.date).toLocaleDateString('en-US', {
-                          weekday: 'short',
-                          month: 'short',
-                          day: 'numeric',
-                        })}{' '}
-                        at {formatSlotTime(nextSlot.time)}
-                      </div>
-                    </div>
-                  </button>
-                )}
-
+              <div className="space-y-3">
+                {/* Day-based scheduling */}
                 <button
-                  onClick={() => setDraft((d) => ({ ...d, scheduleMode: 'time' }))}
+                  onClick={() => setDraft((d) => ({ ...d, scheduleMode: 'day' }))}
                   className={`w-full flex items-center gap-3 p-4 rounded-2xl border transition-all duration-300 ${
-                    draft.scheduleMode === 'time'
+                    draft.scheduleMode === 'day'
                       ? 'bg-[#D4A853]/10 border-[#D4A853]/50 shadow-[0_0_20px_rgba(212,168,83,0.1)]'
                       : 'bg-[#0a0a0a] border-[#1a1a1a] hover:border-[#D4A853]/30'
                   }`}
                 >
                   <div
                     className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
-                      draft.scheduleMode === 'time'
+                      draft.scheduleMode === 'day'
                         ? 'border-[#D4A853] bg-[#D4A853]'
                         : 'border-[#3a3534]'
                     }`}
                   >
-                    {draft.scheduleMode === 'time' && (
+                    {draft.scheduleMode === 'day' && (
                       <div className="w-2 h-2 rounded-full bg-black" />
                     )}
                   </div>
                   <div className="flex-1 text-left">
-                    <div className="text-sm text-white font-medium">Pick a time</div>
+                    <div className="text-sm text-white font-medium">Schedule for a day</div>
+                    <div className="text-xs text-[#5a5554]">Posts at midnight • {slotsPerDay} slots per day</div>
                   </div>
                 </button>
 
-                {draft.scheduleMode === 'time' && (
-                  <div className="flex gap-2 pl-8">
-                    <input
-                      type="date"
-                      value={draft.scheduledAt?.split('T')[0] || ''}
-                      onChange={(e) =>
-                        setDraft((d) => ({
-                          ...d,
-                          scheduledAt: `${e.target.value}T${d.scheduledAt?.split('T')[1] || '14:00:00'}`,
-                        }))
-                      }
-                      className="flex-1 px-4 py-2.5 rounded-xl bg-[#0a0a0a] border border-[#1a1a1a] text-white text-sm focus:border-[#D4A853]/40 transition-colors"
-                    />
-                    <input
-                      type="time"
-                      value={draft.scheduledAt?.split('T')[1]?.slice(0, 5) || ''}
-                      onChange={(e) =>
-                        setDraft((d) => ({
-                          ...d,
-                          scheduledAt: `${d.scheduledAt?.split('T')[0] || new Date().toISOString().split('T')[0]}T${e.target.value}:00`,
-                        }))
-                      }
-                      className="w-28 px-4 py-2.5 rounded-xl bg-[#0a0a0a] border border-[#1a1a1a] text-white text-sm focus:border-[#D4A853]/40 transition-colors"
-                    />
+                {draft.scheduleMode === 'day' && (
+                  <div className="pl-8 space-y-3">
+                    {/* Date Picker */}
+                    <div>
+                      <label className="block text-xs text-[#8a8584] mb-2">Select Date</label>
+                      <input
+                        type="date"
+                        value={draft.scheduledDate || ''}
+                        min={new Date().toISOString().split('T')[0]}
+                        onChange={(e) => setDraft((d) => ({ ...d, scheduledDate: e.target.value }))}
+                        className="w-full px-4 py-3 rounded-xl bg-[#0a0a0a] border border-[#1a1a1a] text-white text-sm focus:border-[#D4A853]/40 focus:outline-none transition-colors"
+                      />
+                    </div>
+
+                    {/* Slot Picker - Dynamic */}
+                    <div>
+                      <label className="block text-xs text-[#8a8584] mb-2">Slot Number</label>
+                      <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${Math.min(slotsPerDay, 3)}, 1fr)` }}>
+                        {Array.from({ length: slotsPerDay }, (_, i) => i + 1).map((slotNum) => (
+                          <button
+                            key={slotNum}
+                            onClick={() => setDraft((d) => ({ ...d, slotNumber: slotNum }))}
+                            className={`px-4 py-3 rounded-xl border transition-all ${
+                              draft.slotNumber === slotNum
+                                ? 'bg-[#D4A853]/20 border-[#D4A853] text-white'
+                                : 'bg-[#0a0a0a] border-[#1a1a1a] text-[#8a8584] hover:border-[#D4A853]/30'
+                            }`}
+                          >
+                            <div className="text-sm font-medium">Slot {slotNum}</div>
+                            <div className="text-xs opacity-70">
+                              {slotNum === 1 ? 'First' : slotNum === 2 ? 'Second' : slotNum === 3 ? 'Third' : `#${slotNum}`}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                      <p className="text-xs text-[#5a5554] mt-2">
+                        💡 All slots post at midnight. Use slot numbers to organize your daily posts.
+                      </p>
+                    </div>
                   </div>
                 )}
 
+                {/* Post Now Option */}
                 <button
                   onClick={() =>
                     setDraft((d) => ({
                       ...d,
                       scheduleMode: 'now',
-                      scheduledAt: undefined,
+                      scheduledDate: undefined,
+                      slotNumber: undefined,
                     }))
                   }
                   className={`w-full flex items-center gap-3 p-4 rounded-2xl border transition-all duration-300 ${
@@ -790,7 +1023,8 @@ export default function CreateFlow({
                     )}
                   </div>
                   <div className="flex-1 text-left">
-                    <div className="text-sm text-white font-medium">Post now</div>
+                    <div className="text-sm text-white font-medium">Post immediately</div>
+                    <div className="text-xs text-[#5a5554]">Publishes right now</div>
                   </div>
                 </button>
               </div>
@@ -851,9 +1085,13 @@ export default function CreateFlow({
                 <label className="text-[10px] font-semibold text-[#D4A853] uppercase tracking-widest">
                   Caption
                 </label>
-                <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#0f0f0f] border border-[#1a1a1a] text-xs text-[#D4A853] font-medium hover:border-[#D4A853]/30 transition-all duration-300">
+                <button
+                  onClick={handleAiHelp}
+                  disabled={aiLoading}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#0f0f0f] border border-[#1a1a1a] text-xs text-[#D4A853] font-medium hover:border-[#D4A853]/30 transition-all duration-300 disabled:opacity-60"
+                >
                   {Icons.sparkles}
-                  AI Help
+                  {aiLoading ? 'Thinking…' : 'AI Help'}
                 </button>
               </div>
               <textarea
@@ -863,6 +1101,72 @@ export default function CreateFlow({
                 rows={4}
                 className="w-full px-4 py-3.5 rounded-2xl bg-[#0a0a0a] border border-[#1a1a1a] text-white placeholder-[#5a5554] outline-none focus:border-[#D4A853]/40 focus:shadow-[0_0_20px_rgba(212,168,83,0.1)] transition-all duration-300 resize-none text-sm"
               />
+
+              {aiError && (
+                <div className="mt-2 text-xs text-red-400">
+                  {aiError}
+                </div>
+              )}
+
+              {aiSuggestions && aiSuggestions.captions && (
+                <div className="mt-3 space-y-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="text-[10px] uppercase tracking-widest text-[#5a5554]">AI Suggestions</div>
+                    {uniquePlatforms.map((platform) => (
+                      <button
+                        key={platform}
+                        onClick={() => setAiPlatform(platform)}
+                        className={`px-2.5 py-1 rounded-lg text-[10px] uppercase tracking-widest border transition-all ${
+                          aiPlatform === platform
+                            ? 'bg-[#D4A853]/15 border-[#D4A853]/50 text-[#D4A853]'
+                            : 'bg-[#0f0f0f] border-[#1a1a1a] text-[#8a8584] hover:border-[#D4A853]/30'
+                        }`}
+                      >
+                        {platform}
+                      </button>
+                    ))}
+                  </div>
+
+                  {(aiSuggestions.captions[aiPlatform] || []).slice(0, 3).map((caption, index) => {
+                    const hashtags = aiSuggestions.hashtags?.[aiPlatform] || [];
+                    const key = `${aiPlatform}:${caption}`;
+                    const feedback = aiFeedback[key];
+
+                    return (
+                      <div key={`${primaryPlatform}-${index}`} className="p-3 rounded-xl bg-[#0f0f0f] border border-[#1a1a1a] space-y-2">
+                        <p className="text-sm text-white whitespace-pre-wrap">{caption}</p>
+                        {hashtags.length > 0 && (
+                          <p className="text-xs text-[#D4A853]">
+                            {hashtags.map((tag) => (tag.startsWith('#') ? tag : `#${tag}`)).join(' ')}
+                          </p>
+                        )}
+                        <div className="flex items-center justify-between">
+                          <button
+                            onClick={() => handleApplySuggestion(caption, hashtags)}
+                            className="text-xs px-3 py-1.5 rounded-lg bg-[#141414] border border-[#1a1a1a] text-white hover:border-[#D4A853]/30"
+                          >
+                            Use this
+                          </button>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => submitAiFeedback(aiPlatform, caption, 'up')}
+                              className={`text-xs px-2.5 py-1.5 rounded-lg border ${feedback === 'up' ? 'border-emerald-400 text-emerald-300' : 'border-[#1a1a1a] text-[#8a8584] hover:border-emerald-400/40'}`}
+                            >
+                              👍
+                            </button>
+                            <button
+                              onClick={() => submitAiFeedback(aiPlatform, caption, 'down')}
+                              className={`text-xs px-2.5 py-1.5 rounded-lg border ${feedback === 'down' ? 'border-red-400 text-red-300' : 'border-[#1a1a1a] text-[#8a8584] hover:border-red-400/40'}`}
+                            >
+                              👎
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </section>
 
             {/* Hashtags */}
@@ -1008,11 +1312,7 @@ export default function CreateFlow({
                       {draft.scheduleMode === 'now'
                         ? 'Posting immediately'
                         : draft.scheduleMode === 'slot' && nextSlot
-                        ? `${new Date(nextSlot.date).toLocaleDateString('en-US', {
-                            weekday: 'long',
-                            month: 'long',
-                            day: 'numeric',
-                          })} at ${formatSlotTime(nextSlot.time)}`
+                        ? `${formatSlotDate(nextSlot.date, nextSlot.timezone)} at ${formatSlotTime(nextSlot.time)}`
                         : draft.scheduledAt
                         ? `${new Date(draft.scheduledAt).toLocaleDateString('en-US', {
                             weekday: 'long',
@@ -1115,6 +1415,31 @@ export default function CreateFlow({
 
             {/* Content */}
             <div className="flex-1 overflow-y-auto p-4">
+              <div className="flex items-center justify-between mb-4">
+                <div className="text-xs text-[#5a5554] uppercase tracking-widest">Clips</div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setClipFilter('unposted')}
+                    className={`px-3 py-1.5 rounded-lg text-[10px] uppercase tracking-widest border transition-all ${
+                      clipFilter === 'unposted'
+                        ? 'bg-[#D4A853]/15 border-[#D4A853]/50 text-[#D4A853]'
+                        : 'bg-[#0f0f0f] border-[#1a1a1a] text-[#8a8584] hover:border-[#D4A853]/30'
+                    }`}
+                  >
+                    Unposted
+                  </button>
+                  <button
+                    onClick={() => setClipFilter('all')}
+                    className={`px-3 py-1.5 rounded-lg text-[10px] uppercase tracking-widest border transition-all ${
+                      clipFilter === 'all'
+                        ? 'bg-[#D4A853]/15 border-[#D4A853]/50 text-[#D4A853]'
+                        : 'bg-[#0f0f0f] border-[#1a1a1a] text-[#8a8584] hover:border-[#D4A853]/30'
+                    }`}
+                  >
+                    All
+                  </button>
+                </div>
+              </div>
               {loadingClips ? (
                 <div className="flex flex-col items-center justify-center py-12">
                   <div className="w-10 h-10 border-2 border-[#D4A853]/20 border-t-[#D4A853] rounded-full animate-spin mb-3" />
@@ -1152,9 +1477,16 @@ export default function CreateFlow({
 
                         {/* Title overlay */}
                         <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/90 via-black/50 to-transparent">
-                          <p className="text-xs text-white font-medium truncate">
-                            {clip.title || 'Untitled'}
-                          </p>
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-xs text-white font-medium truncate flex-1">
+                              {clip.title || 'Untitled'}
+                            </p>
+                            {clipFilter === 'unposted' && (
+                              <span className="flex-shrink-0 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                                Unused
+                              </span>
+                            )}
+                          </div>
                         </div>
 
                         {/* Hover overlay */}

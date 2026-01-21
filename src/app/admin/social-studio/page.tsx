@@ -207,6 +207,9 @@ export default function SocialStudioPage() {
       // Sync accounts first
       await fetch('/api/social/accounts/sync', { method: 'POST' });
 
+      // Trigger full social sync (posts + analytics)
+      await fetch('/api/cron/social-sync', { method: 'POST' });
+
       // Refetch data
       await fetchData();
     } catch (err) {
