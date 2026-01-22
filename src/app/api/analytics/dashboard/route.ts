@@ -120,6 +120,7 @@ export async function GET(req: NextRequest) {
       // Summary metrics
       summary: {
         visitors: websiteMetrics.visitors,
+        uniqueVisitors: websiteMetrics.uniqueVisitors,
         sessions: websiteMetrics.sessions,
         pageViews: websiteMetrics.pageViews,
         avgSessionDuration: websiteMetrics.avgSessionDuration,
@@ -184,6 +185,7 @@ export async function GET(req: NextRequest) {
 
 interface WebsiteMetrics {
   visitors: number;
+  uniqueVisitors: number;
   sessions: number;
   pageViews: number;
   avgSessionDuration: number;
@@ -191,14 +193,14 @@ interface WebsiteMetrics {
 }
 
 function getDefaultWebsiteMetrics(): WebsiteMetrics {
-  return { visitors: 0, sessions: 0, pageViews: 0, avgSessionDuration: 0, bounceRate: 0 };
+  return { visitors: 0, uniqueVisitors: 0, sessions: 0, pageViews: 0, avgSessionDuration: 0, bounceRate: 0 };
 }
 
 async function getWebsiteMetrics(startDate: string, endDate?: string): Promise<WebsiteMetrics | null> {
   try {
     const endDateStr = endDate || new Date().toISOString().split('T')[0];
 
-    // Get from bi_website_metrics if available
+    // Get aggregated metrics from bi_website_metrics
     const rows = await queryDatabase(
       `SELECT
         COALESCE(SUM(unique_visitors), 0) as visitors,
@@ -211,10 +213,24 @@ async function getWebsiteMetrics(startDate: string, endDate?: string): Promise<W
       [startDate, endDateStr]
     );
 
+    // Get TRUE unique visitors using COUNT(DISTINCT fan_id) from fan_activity
+    // This prevents double-counting visitors across days
+    const uniqueVisitorRows = await queryDatabase(
+      `SELECT COUNT(DISTINCT fan_id) as uniqueVisitors
+       FROM fan_activity
+       WHERE date(created_at) >= ? AND date(created_at) <= ?`,
+      [startDate, endDateStr]
+    );
+
+    const uniqueVisitors = uniqueVisitorRows && uniqueVisitorRows.length > 0
+      ? (uniqueVisitorRows[0] as any).uniqueVisitors || 0
+      : 0;
+
     if (rows && rows.length > 0) {
       const row = rows[0] as any;
       return {
         visitors: row.visitors || 0,
+        uniqueVisitors,
         sessions: row.sessions || 0,
         pageViews: row.pageViews || 0,
         avgSessionDuration: row.avgSessionDuration || 0,
@@ -238,6 +254,7 @@ async function getWebsiteMetrics(startDate: string, endDate?: string): Promise<W
       const row = activityRows[0] as any;
       return {
         visitors: row.visitors || 0,
+        uniqueVisitors,
         sessions: row.sessions || 0,
         pageViews: row.pageViews || 0,
         avgSessionDuration: 0,
@@ -430,6 +447,7 @@ async function getFunnelData(startDate: string) {
 async function getModalMetrics(startDate: string): Promise<{ store: ModalMetrics; moments: ModalMetrics; media: ModalMetrics } | null> {
   try {
     // Get modal opens and durations from fan_activity metadata
+    // Query modal_open events (not shop_visit which is a different action)
     const rows = await queryDatabase(
       `SELECT
         content_type,
@@ -438,7 +456,7 @@ async function getModalMetrics(startDate: string): Promise<{ store: ModalMetrics
         SUM(CASE WHEN duration_seconds < 5 THEN 1 ELSE 0 END) as bounces
        FROM fan_activity
        WHERE date(created_at) >= ?
-         AND activity_type = 'shop_visit'
+         AND activity_type = 'modal_open'
        GROUP BY content_type`,
       [startDate]
     );

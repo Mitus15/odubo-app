@@ -45,7 +45,7 @@ export default function BarChart({
   }
 
   return (
-    <div style={{ height }}>
+    <div style={{ height, minWidth: 0, width: '100%' }}>
       <ResponsiveContainer width="100%" height="100%">
         <RechartsBarChart
           data={data}

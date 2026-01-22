@@ -10,6 +10,7 @@ import { AreaChart, BarChart, PieChart, MetricCard, FunnelChart } from '@/compon
 interface DashboardData {
   summary: {
     visitors: number;
+    uniqueVisitors: number;
     sessions: number;
     pageViews: number;
     avgSessionDuration: number;
@@ -294,12 +295,18 @@ export default function AnalyticsTab({ view = 'analytics-overview' }: AnalyticsT
       </div>
 
       {/* Summary Metrics */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
         <MetricCard
-          label="Visitors"
+          label="Unique Visitors"
+          value={summary.uniqueVisitors}
+          icon={<span>👤</span>}
+          sublabel="distinct users"
+        />
+        <MetricCard
+          label="Total Visits"
           value={summary.visitors}
           change={comparison?.visitorsChange}
-          icon={<span>👤</span>}
+          icon={<span>👥</span>}
         />
         <MetricCard
           label="Sessions"
