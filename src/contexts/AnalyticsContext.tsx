@@ -46,6 +46,9 @@ export type AnalyticsEventType =
   // Video tracking
   | 'video_open'
   | 'video_progress'
+  // Clip tracking
+  | 'clip_view'
+  | 'clip_complete'
   // Music tracking
   | 'album_view'
   | 'track_play';
@@ -90,7 +93,7 @@ interface AnalyticsContextValue {
   trackTrackPlay: (albumId: string, trackId: string, playSeconds: number) => void;
 
   // Clip tracking for journey analytics
-  trackClipView: (clipId: number) => void;
+  trackClipView: (clipId: number, clipTitle?: string) => void;
 
   // Identity
   visitorId: string;
@@ -485,10 +488,25 @@ export function AnalyticsProvider({ children }: { children: ReactNode }) {
   // Clip Tracking (for journey analytics)
   // ============================================
 
-  const trackClipView = useCallback((clipId: number) => {
+  const trackClipView = useCallback((clipId: number, clipTitle?: string) => {
+    // Avoid tracking the same clip twice in a row (e.g., from scroll bouncing)
+    if (lastClipIdRef.current === clipId) return;
+
     clipsViewedThisSessionRef.current += 1;
     lastClipIdRef.current = clipId;
-  }, []);
+
+    // Queue actual clip_view event for analytics
+    queueEvent({
+      type: 'clip_view' as AnalyticsEventType,
+      path: `/clips/${clipId}`,
+      timestamp: Date.now(),
+      metadata: {
+        clipId,
+        clipTitle: clipTitle || null,
+        clipIndex: clipsViewedThisSessionRef.current,
+      },
+    });
+  }, [queueEvent]);
 
   // ============================================
   // Context Value

@@ -200,61 +200,24 @@ async function getWebsiteMetrics(startDate: string, endDate?: string): Promise<W
   try {
     const endDateStr = endDate || new Date().toISOString().split('T')[0];
 
-    // Get aggregated metrics from bi_website_metrics
+    // Query fan_activity directly (bi_website_metrics is empty/not populated)
+    // This is the authoritative source of truth for visitor/session data
     const rows = await queryDatabase(
       `SELECT
-        COALESCE(SUM(unique_visitors), 0) as visitors,
-        COALESCE(SUM(sessions), 0) as sessions,
-        COALESCE(SUM(page_views), 0) as pageViews,
-        COALESCE(AVG(avg_session_duration_seconds), 0) as avgSessionDuration,
-        COALESCE(AVG(bounce_rate), 0) as bounceRate
-       FROM bi_website_metrics
-       WHERE date >= ? AND date <= ?`,
-      [startDate, endDateStr]
-    );
-
-    // Get TRUE unique visitors using COUNT(DISTINCT fan_id) from fan_activity
-    // This prevents double-counting visitors across days
-    const uniqueVisitorRows = await queryDatabase(
-      `SELECT COUNT(DISTINCT fan_id) as uniqueVisitors
+        COUNT(DISTINCT fan_id) as uniqueVisitors,
+        COUNT(DISTINCT fan_id) as visitors,
+        COUNT(DISTINCT session_id) as sessions,
+        COUNT(CASE WHEN activity_type IN ('page_view', 'site_visit') THEN 1 END) as pageViews
        FROM fan_activity
        WHERE date(created_at) >= ? AND date(created_at) <= ?`,
       [startDate, endDateStr]
     );
 
-    const uniqueVisitors = uniqueVisitorRows && uniqueVisitorRows.length > 0
-      ? (uniqueVisitorRows[0] as any).uniqueVisitors || 0
-      : 0;
-
     if (rows && rows.length > 0) {
       const row = rows[0] as any;
       return {
         visitors: row.visitors || 0,
-        uniqueVisitors,
-        sessions: row.sessions || 0,
-        pageViews: row.pageViews || 0,
-        avgSessionDuration: row.avgSessionDuration || 0,
-        bounceRate: row.bounceRate || 0,
-      };
-    }
-
-    // Fallback: calculate from fan_activity
-    const activityRows = await queryDatabase(
-      `SELECT
-        COUNT(DISTINCT fan_id) as visitors,
-        COUNT(DISTINCT session_id) as sessions,
-        COUNT(*) as pageViews
-       FROM fan_activity
-       WHERE date(created_at) >= ? AND date(created_at) <= ?
-         AND activity_type IN ('page_view', 'site_visit')`,
-      [startDate, endDateStr]
-    );
-
-    if (activityRows && activityRows.length > 0) {
-      const row = activityRows[0] as any;
-      return {
-        visitors: row.visitors || 0,
-        uniqueVisitors,
+        uniqueVisitors: row.uniqueVisitors || 0,
         sessions: row.sessions || 0,
         pageViews: row.pageViews || 0,
         avgSessionDuration: 0,
@@ -271,7 +234,7 @@ async function getWebsiteMetrics(startDate: string, endDate?: string): Promise<W
 
 async function getDailyTrend(startDate: string, days: number): Promise<DailyTrend[]> {
   try {
-    // Generate date range
+    // Generate date range with zero defaults
     const result: DailyTrend[] = [];
     const start = new Date(startDate);
 
@@ -290,43 +253,30 @@ async function getDailyTrend(startDate: string, days: number): Promise<DailyTren
       });
     }
 
-    // Fetch from bi_website_metrics
+    // Fetch all daily metrics from fan_activity (primary source)
     const rows = await queryDatabase(
-      `SELECT date, unique_visitors, sessions, page_views
-       FROM bi_website_metrics
-       WHERE date >= ?
-       ORDER BY date ASC`,
-      [startDate]
-    );
-
-    // Merge data
-    if (rows) {
-      for (const row of rows as any[]) {
-        const idx = result.findIndex(r => r.date === row.date);
-        if (idx >= 0) {
-          result[idx].visitors = row.unique_visitors || 0;
-          result[idx].sessions = row.sessions || 0;
-          result[idx].pageViews = row.page_views || 0;
-        }
-      }
-    }
-
-    // Fetch activity counts per day from fan_activity
-    const activityRows = await queryDatabase(
       `SELECT
         date(created_at) as date,
+        COUNT(DISTINCT fan_id) as visitors,
+        COUNT(DISTINCT session_id) as sessions,
+        SUM(CASE WHEN activity_type IN ('page_view', 'site_visit') THEN 1 ELSE 0 END) as pageViews,
         SUM(CASE WHEN activity_type = 'clip_view' THEN 1 ELSE 0 END) as clipViews,
         SUM(CASE WHEN activity_type = 'shop_visit' THEN 1 ELSE 0 END) as shopClicks
        FROM fan_activity
        WHERE date(created_at) >= ?
-       GROUP BY date(created_at)`,
+       GROUP BY date(created_at)
+       ORDER BY date ASC`,
       [startDate]
     );
 
-    if (activityRows) {
-      for (const row of activityRows as any[]) {
+    // Merge data into date range
+    if (rows) {
+      for (const row of rows as any[]) {
         const idx = result.findIndex(r => r.date === row.date);
         if (idx >= 0) {
+          result[idx].visitors = row.visitors || 0;
+          result[idx].sessions = row.sessions || 0;
+          result[idx].pageViews = row.pageViews || 0;
           result[idx].clipViews = row.clipViews || 0;
           result[idx].shopClicks = row.shopClicks || 0;
         }
@@ -446,17 +396,17 @@ async function getFunnelData(startDate: string) {
 
 async function getModalMetrics(startDate: string): Promise<{ store: ModalMetrics; moments: ModalMetrics; media: ModalMetrics } | null> {
   try {
-    // Get modal opens and durations from fan_activity metadata
-    // Query modal_open events (not shop_visit which is a different action)
+    // Query shop_visit events - this is how modal opens are tracked in events/route.ts
+    // content_type distinguishes: 'store', 'gallery' (moments), 'media'/'video'
     const rows = await queryDatabase(
       `SELECT
         content_type,
         COUNT(*) as opens,
         AVG(duration_seconds) as avgDuration,
-        SUM(CASE WHEN duration_seconds < 5 THEN 1 ELSE 0 END) as bounces
+        SUM(CASE WHEN duration_seconds IS NULL OR duration_seconds < 5 THEN 1 ELSE 0 END) as bounces
        FROM fan_activity
        WHERE date(created_at) >= ?
-         AND activity_type = 'modal_open'
+         AND activity_type = 'shop_visit'
        GROUP BY content_type`,
       [startDate]
     );
@@ -470,9 +420,21 @@ async function getModalMetrics(startDate: string): Promise<{ store: ModalMetrics
     if (!rows) return result;
 
     for (const row of rows as any[]) {
-      const type = row.content_type as 'store' | 'moments' | 'media';
-      if (type === 'store' || type === 'moments' || type === 'media') {
-        result[type] = {
+      // Map content_type to dashboard categories
+      // 'store' -> store, 'gallery' -> moments, 'media'/'video' -> media
+      let category: 'store' | 'moments' | 'media' | null = null;
+      const contentType = row.content_type?.toLowerCase();
+
+      if (contentType === 'store') {
+        category = 'store';
+      } else if (contentType === 'gallery' || contentType === 'moments') {
+        category = 'moments';
+      } else if (contentType === 'media' || contentType === 'video') {
+        category = 'media';
+      }
+
+      if (category) {
+        result[category] = {
           opens: row.opens || 0,
           avgDurationSeconds: row.avgDuration || 0,
           bounceRate: row.opens > 0 ? ((row.bounces || 0) / row.opens) * 100 : 0,
@@ -489,23 +451,29 @@ async function getModalMetrics(startDate: string): Promise<{ store: ModalMetrics
 
 async function getTopClips(startDate: string): Promise<TopClip[]> {
   try {
+    // Query clip views from fan_activity, join with videos for titles
     const rows = await queryDatabase(
       `SELECT
-        ce.clip_id as id,
-        v.title,
-        ce.view_count as views,
-        ce.completion_count as completions,
-        ce.shop_click_count as shopClicks
-       FROM clip_engagement ce
-       LEFT JOIN videos v ON ce.clip_id = v.id
-       ORDER BY ce.view_count DESC
-       LIMIT 5`
+        fa.content_id as id,
+        COALESCE(fa.content_title, v.title, 'Untitled') as title,
+        COUNT(CASE WHEN fa.activity_type = 'clip_view' THEN 1 END) as views,
+        COUNT(CASE WHEN fa.activity_type = 'clip_complete' THEN 1 END) as completions,
+        COUNT(CASE WHEN fa.activity_type = 'shop_visit' AND fa.content_type = 'clip' THEN 1 END) as shopClicks
+       FROM fan_activity fa
+       LEFT JOIN videos v ON CAST(fa.content_id AS INTEGER) = v.id
+       WHERE date(fa.created_at) >= ?
+         AND fa.activity_type IN ('clip_view', 'clip_complete', 'shop_visit')
+         AND fa.content_id IS NOT NULL
+       GROUP BY fa.content_id
+       ORDER BY views DESC
+       LIMIT 5`,
+      [startDate]
     );
 
     if (!rows) return [];
 
     return (rows as any[]).map(row => ({
-      id: row.id,
+      id: typeof row.id === 'string' ? parseInt(row.id, 10) || 0 : row.id || 0,
       title: row.title || 'Untitled',
       views: row.views || 0,
       completions: row.completions || 0,

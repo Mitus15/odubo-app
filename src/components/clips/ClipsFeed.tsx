@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState, type MutableRefObject } from 
 import type { ClipItem, ClipApiRow } from '@/types/clips';
 import { mapClipRows } from '@/lib/clipsMapper';
 import { useAudio } from '@/contexts/AudioContext';
+import { useAnalyticsSafe } from '@/contexts/AnalyticsContext';
 import PosterCard from '@/components/clips/PosterCard';
 
 const PAGE_SIZE = 12; // Larger pages for better infinite scroll
@@ -43,6 +44,7 @@ export default function ClipsFeed({
   scrollToNextRef,
 }: ClipsFeedProps) {
   const { armAudio } = useAudio();
+  const analytics = useAnalyticsSafe();
 
   const [displayClips, setDisplayClips] = useState<Array<ClipItem & { uniqueKey: string }>>([]);
   const [loading, setLoading] = useState(true);
@@ -343,6 +345,13 @@ export default function ClipsFeed({
     const activeClip = displayClips.find(c => c.id === activeId);
     onActiveClipChange(activeClip || null);
   }, [activeId, displayClips, onActiveClipChange]);
+
+  // Track clip views for analytics when active clip changes
+  useEffect(() => {
+    if (!activeId || !analytics) return;
+    const activeClip = displayClips.find(c => c.id === activeId);
+    analytics.trackClipView(activeId, activeClip?.title);
+  }, [activeId, analytics, displayClips]);
 
   // Notify parent when clips are ready
   useEffect(() => {
