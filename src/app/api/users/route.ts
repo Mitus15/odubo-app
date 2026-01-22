@@ -541,13 +541,18 @@ export async function POST(req: NextRequest) {
       
       try {
         // Also set httpOnly cookie for server-side auth (clients can migrate off localStorage gradually)
-        res.cookies.set('token', token, {
+        const cookieOptions: any = {
           httpOnly: true,
           secure: process.env.NODE_ENV === 'production',
           sameSite: 'lax',
           path: '/',
           maxAge: 60 * 60 * 24 * 7,
-        });
+        };
+        // In production, set domain to work across subdomains (admin.odubo.studio and odubo.studio)
+        if (process.env.NODE_ENV === 'production') {
+          cookieOptions.domain = '.odubo.studio';
+        }
+        res.cookies.set('token', token, cookieOptions);
       } catch {}
       
       return res;

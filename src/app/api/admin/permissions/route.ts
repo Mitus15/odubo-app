@@ -53,7 +53,10 @@ export async function GET(request: NextRequest) {
   try {
     const user = getUserFromRequest(request);
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      console.log('[Permissions] No user found in request. Headers:', Object.fromEntries(request.headers.entries()));
+      const cookieToken = request.cookies.get('token');
+      console.log('[Permissions] Cookie token exists:', !!cookieToken, 'Value length:', cookieToken?.value?.length || 0);
+      return NextResponse.json({ error: 'Unauthorized - No valid token found' }, { status: 401 });
     }
 
     // Legacy admin check - if is_admin is true, grant full access
