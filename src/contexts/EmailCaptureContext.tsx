@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import { ecommerce } from '@/components/analytics/GoogleAnalytics';
+import { linkVisitorToFan } from '@/lib/visitorId';
 
 interface EmailCaptureContextValue {
   // Modal state
@@ -154,6 +155,11 @@ export function EmailCaptureProvider({ children }: { children: ReactNode }) {
 
       // Track in GA4
       ecommerce.signUp('email_popup');
+
+      // Link anonymous visitor to fan profile for analytics
+      linkVisitorToFan(email).catch(() => {
+        // Non-fatal: don't break UX if identity linking fails
+      });
 
       // Persist to localStorage
       const storageData: StorageData = {

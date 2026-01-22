@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '@/contexts/StoreContext';
 import { useCartOverlay } from './StoreOrchestrator';
+import { useAnalyticsSafe } from '@/contexts/AnalyticsContext';
 import type { Product, ProductVariant } from '@/lib/store/types';
 
 // ============================================
@@ -172,11 +173,13 @@ export default function ProductDetailFeed() {
   } = useStore();
 
   const { openCart } = useCartOverlay();
+  const analytics = useAnalyticsSafe();
 
   // Selected options state
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
   const [addedFeedback, setAddedFeedback] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
+  const hasTrackedProductViewRef = useRef<string | null>(null);
 
   // Initialize options when product changes
   useEffect(() => {
@@ -190,6 +193,14 @@ export default function ProductDetailFeed() {
       setSelectedOptions(initial);
     }
   }, [currentProduct?.id]);
+
+  // Track product view when product loads
+  useEffect(() => {
+    if (currentProduct && currentProduct.handle !== hasTrackedProductViewRef.current) {
+      analytics?.trackProductView(currentProduct.handle);
+      hasTrackedProductViewRef.current = currentProduct.handle;
+    }
+  }, [currentProduct, analytics]);
 
   // Find selected variant
   const selectedVariant = useMemo(() => {
@@ -222,9 +233,16 @@ export default function ProductDetailFeed() {
       image: currentProduct.images[0] || null,
     });
 
+    // Track add to cart
+    analytics?.trackAddToCart(
+      currentProduct.handle,
+      selectedVariant.price,
+      selectedVariant.id
+    );
+
     setAddedFeedback(true);
     setTimeout(() => setAddedFeedback(false), 2000);
-  }, [selectedVariant, addToCart, currentProduct]);
+  }, [selectedVariant, addToCart, currentProduct, analytics]);
 
   const variantInCart = selectedVariant ? isInCart(selectedVariant.id) : false;
 

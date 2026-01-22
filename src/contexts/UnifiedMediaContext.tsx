@@ -1,6 +1,7 @@
 'use client';
 
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useRef, type ReactNode } from 'react';
+import { useAnalyticsSafe, type ModalType } from '@/contexts/AnalyticsContext';
 
 // ============================================================================
 // Types
@@ -142,6 +143,12 @@ interface UnifiedMediaContextValue {
 const UnifiedMediaContext = createContext<UnifiedMediaContextValue | null>(null);
 
 export function UnifiedMediaProvider({ children }: { children: ReactNode }) {
+  // Analytics
+  const analytics = useAnalyticsSafe();
+
+  // Modal timing for analytics
+  const modalOpenTimeRef = useRef<number | null>(null);
+
   // Modal stack state
   const [modalStack, setModalStack] = useState<ModalState[]>([]);
 
@@ -176,10 +183,13 @@ export function UnifiedMediaProvider({ children }: { children: ReactNode }) {
       if (prev.length > 0 && prev[prev.length - 1].type === 'hub') {
         return prev;
       }
+      // Track modal open for analytics
+      modalOpenTimeRef.current = Date.now();
+      analytics?.trackModalOpen('media' as ModalType, { tab: tab || activeTab });
       // Fresh entry
       return [{ type: 'hub' }];
     });
-  }, []);
+  }, [analytics, activeTab]);
 
   const openVideoPlayer = useCallback((videoId: number) => {
     setModalStack(prev => [...prev, { type: 'video-player', videoId }]);
@@ -206,14 +216,26 @@ export function UnifiedMediaProvider({ children }: { children: ReactNode }) {
       if (prev[prev.length - 1]?.type === 'moments-gallery') {
         setLightboxIndex(null);
       }
+      // Track modal close if stack becomes empty
+      if (newStack.length === 0 && modalOpenTimeRef.current) {
+        const duration = Date.now() - modalOpenTimeRef.current;
+        analytics?.trackModalClose('media' as ModalType, duration, 'navigation');
+        modalOpenTimeRef.current = null;
+      }
       return newStack;
     });
-  }, []);
+  }, [analytics]);
 
   const closeAll = useCallback(() => {
+    // Track modal close with duration
+    if (modalOpenTimeRef.current) {
+      const duration = Date.now() - modalOpenTimeRef.current;
+      analytics?.trackModalClose('media' as ModalType, duration, 'button');
+      modalOpenTimeRef.current = null;
+    }
     setModalStack([]);
     setLightboxIndex(null);
-  }, []);
+  }, [analytics]);
 
   const currentModal = modalStack.length > 0 ? modalStack[modalStack.length - 1] : null;
 

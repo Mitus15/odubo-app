@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import Image from 'next/image';
 import { useOmniMedia, type VideoDetail } from '@/contexts/UnifiedMediaContext';
 import { useAudio } from '@/contexts/AudioContext';
+import { useAnalyticsSafe } from '@/contexts/AnalyticsContext';
 import { attachHls, type HlsHandle } from '@/lib/hlsPlayer';
 
 interface VideoPlayerModalProps {
@@ -14,8 +15,11 @@ interface VideoPlayerModalProps {
 export default function VideoPlayerModal({ videoId }: VideoPlayerModalProps) {
   const { goBack, closeAll, getCachedVideo, cacheVideo, modalStack } = useOmniMedia();
   const { setVideoPlaying } = useAudio();
+  const analytics = useAnalyticsSafe();
 
   const [video, setVideo] = useState<VideoDetail | null>(getCachedVideo(videoId) || null);
+  const hasTrackedOpenRef = useRef(false);
+  const progressMilestonesRef = useRef<Set<number>>(new Set());
   const [loading, setLoading] = useState(!video);
   const [error, setError] = useState<string | null>(null);
   const [videoError, setVideoError] = useState<string | null>(null);
@@ -84,6 +88,30 @@ export default function VideoPlayerModal({ videoId }: VideoPlayerModalProps) {
 
     fetchVideo();
   }, [videoId, video, cacheVideo]);
+
+  // Track video open when video is loaded
+  useEffect(() => {
+    if (video && !hasTrackedOpenRef.current) {
+      analytics?.trackVideoOpen(videoId, video.title);
+      hasTrackedOpenRef.current = true;
+      progressMilestonesRef.current.clear();
+    }
+  }, [video, videoId, analytics]);
+
+  // Track video progress milestones (25%, 50%, 75%, 100%)
+  useEffect(() => {
+    if (!duration || duration <= 0) return;
+
+    const percentage = Math.round((currentTime / duration) * 100);
+    const milestones = [25, 50, 75, 100];
+
+    for (const milestone of milestones) {
+      if (percentage >= milestone && !progressMilestonesRef.current.has(milestone)) {
+        progressMilestonesRef.current.add(milestone);
+        analytics?.trackVideoProgress(videoId, milestone, Math.round(currentTime));
+      }
+    }
+  }, [currentTime, duration, videoId, analytics]);
 
   // Setup video playback
   useEffect(() => {

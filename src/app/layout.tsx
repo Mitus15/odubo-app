@@ -29,6 +29,7 @@ import EmailCaptureModal from "@/components/marketing/EmailCaptureModal";
 import GoogleAnalytics from "@/components/analytics/GoogleAnalytics";
 import { QuickShopProvider } from "@/contexts/QuickShopContext";
 import QuickShopModal from "@/components/shop/QuickShopModal";
+import { AnalyticsProvider } from "@/contexts/AnalyticsContext";
 // import AccessibilityEnhancer from "./components/AccessibilityEnhancer";
 
 const geistSans = Geist({
@@ -86,6 +87,7 @@ export default function RootLayout({
         <GoogleAnalytics />
         {/* <AuthProvider> */}
           <PWAProvider>
+            <AnalyticsProvider>
             <AudioProvider>
               <MusicPlayerProvider>
                 {/* Media priority bridge - connects AudioContext and MusicPlayerContext */}
@@ -126,6 +128,7 @@ export default function RootLayout({
                 </OmniShopProvider>
               </MusicPlayerProvider>
             </AudioProvider>
+            </AnalyticsProvider>
           </PWAProvider>
         {/* </AuthProvider> */}
       </body>

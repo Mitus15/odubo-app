@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import { useUnifiedMedia } from '@/contexts/UnifiedMediaContext';
 import { useMusicPlayer } from '@/contexts/MusicPlayerContext';
+import { useAnalyticsSafe } from '@/contexts/AnalyticsContext';
 import type { Track, Album } from '@/types/music';
 
 interface AlbumDetailViewProps {
@@ -32,11 +33,17 @@ export default function AlbumDetailView({ albumId }: AlbumDetailViewProps) {
     cycleRepeatMode,
     addToQueue,
   } = useMusicPlayer();
+  const analytics = useAnalyticsSafe();
 
   const [album, setAlbum] = useState<Album | null>(null);
   const [tracks, setTracks] = useState<Track[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Analytics tracking
+  const hasTrackedAlbumViewRef = useRef(false);
+  const lastTrackedTrackRef = useRef<string | null>(null);
+  const trackPlayStartTimeRef = useRef<number>(0);
 
   // Fetch album data
   useEffect(() => {
@@ -74,6 +81,52 @@ export default function AlbumDetailView({ albumId }: AlbumDetailViewProps) {
 
     fetchAlbum();
   }, [albumId]);
+
+  // Track album view when album loads
+  useEffect(() => {
+    if (album && tracks.length > 0 && !hasTrackedAlbumViewRef.current) {
+      analytics?.trackAlbumView(album.id, tracks.length);
+      hasTrackedAlbumViewRef.current = true;
+    }
+  }, [album, tracks.length, analytics]);
+
+  // Track when a track starts playing from this album
+  useEffect(() => {
+    const currentTrack = state.currentTrack;
+    const currentAlbum = state.currentAlbum;
+
+    // Only track if playing a track from this album
+    if (currentTrack && currentAlbum?.id === albumId) {
+      const trackId = String(currentTrack.id);
+
+      // Track play started for new track
+      if (trackId !== lastTrackedTrackRef.current) {
+        // Track the previous track's play time if any
+        if (lastTrackedTrackRef.current && trackPlayStartTimeRef.current > 0) {
+          const playSeconds = Math.round((Date.now() - trackPlayStartTimeRef.current) / 1000);
+          if (playSeconds > 0) {
+            analytics?.trackTrackPlay(albumId, lastTrackedTrackRef.current, playSeconds);
+          }
+        }
+
+        // Start tracking new track
+        lastTrackedTrackRef.current = trackId;
+        trackPlayStartTimeRef.current = Date.now();
+      }
+    }
+  }, [state.currentTrack?.id, state.currentAlbum?.id, albumId, analytics]);
+
+  // Track final play duration when component unmounts or album changes
+  useEffect(() => {
+    return () => {
+      if (lastTrackedTrackRef.current && trackPlayStartTimeRef.current > 0) {
+        const playSeconds = Math.round((Date.now() - trackPlayStartTimeRef.current) / 1000);
+        if (playSeconds > 0) {
+          analytics?.trackTrackPlay(albumId, lastTrackedTrackRef.current, playSeconds);
+        }
+      }
+    };
+  }, [albumId, analytics]);
 
   // Play entire album
   const handlePlayAll = useCallback(() => {

@@ -12,6 +12,7 @@ import {
 } from 'react';
 import { useCart, type UseCartReturn } from '@/hooks/useCart';
 import { fetchProducts, fetchProduct, createCheckout } from '@/lib/store/api';
+import { useAnalyticsSafe, type ModalType } from '@/contexts/AnalyticsContext';
 import type {
   ProductSummary,
   Product,
@@ -79,6 +80,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   // Cart hook
   const cartHook = useCart();
 
+  // Analytics
+  const analytics = useAnalyticsSafe();
+
   // Store access
   const [isStoreAccessible, setIsStoreAccessible] = useState(false);
   const [isCheckingAccess, setIsCheckingAccess] = useState(true);
@@ -104,6 +108,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   // Checkout
   const [isCheckingOut, setIsCheckingOut] = useState(false);
+
+  // Modal timing for analytics
+  const storeOpenTimeRef = useRef<number | null>(null);
 
   // ============================================
   // Store Access Check
@@ -134,13 +141,24 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const openStore = useCallback(() => {
     if (!isStoreAccessible) return;
     setView('browse');
-  }, [isStoreAccessible]);
+    // Track modal open time
+    storeOpenTimeRef.current = Date.now();
+    // Track shop visit (legacy) and modal open
+    analytics?.trackShopVisit();
+    analytics?.trackModalOpen('store' as ModalType);
+  }, [isStoreAccessible, analytics]);
 
   const closeStore = useCallback(() => {
+    // Track modal close with duration
+    if (storeOpenTimeRef.current) {
+      const duration = Date.now() - storeOpenTimeRef.current;
+      analytics?.trackModalClose('store' as ModalType, duration, 'button');
+      storeOpenTimeRef.current = null;
+    }
     setView('closed');
     setSelectedProductIndex(null);
     setCurrentProduct(null);
-  }, []);
+  }, [analytics]);
 
   const openProductDetail = useCallback((index: number) => {
     setSelectedProductIndex(index);

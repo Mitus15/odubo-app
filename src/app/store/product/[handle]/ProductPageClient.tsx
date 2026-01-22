@@ -3,6 +3,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import ScreenLayout from '@/components/ui/ScreenLayout';
 import ScrollContainer from '@/components/ui/ScrollContainer';
+import { usePageAnalytics } from '@/hooks/usePageAnalytics';
+import { useAnalyticsSafe } from '@/contexts/AnalyticsContext';
 
 // Define the shape of the product data
 interface ShopifyProduct {
@@ -35,6 +37,17 @@ export default function ProductPageClient({ product }: ProductPageClientProps) {
   const [qty, setQty] = useState<number>(1);
   const [hasCartItems, setHasCartItems] = useState<boolean>(false);
   const [justAdded, setJustAdded] = useState<boolean>(false);
+
+  // Page analytics
+  usePageAnalytics({ title: `${product?.title} | Odubo Studio` });
+  const analytics = useAnalyticsSafe();
+
+  // Track product view on mount
+  useEffect(() => {
+    if (product?.handle) {
+      analytics?.trackProductView(product.handle);
+    }
+  }, [product?.handle, analytics]);
 
   // Initialize cart presence from localStorage
   useEffect(() => {
@@ -130,6 +143,10 @@ export default function ProductPageClient({ product }: ProductPageClientProps) {
       const existing = cart.find(c => c.variantId === variantId);
       if (existing) existing.qty += qty; else cart.push({ variantId: variantId, qty, title: `${product?.title} — ${v.title}`, price: parseFloat(String(v.price)), image: v.image?.src || product?.images?.[0]?.src });
       localStorage.setItem('cart', JSON.stringify(cart));
+
+      // Track add to cart
+      analytics?.trackAddToCart(product?.handle || '', parseFloat(String(v.price)), variantId);
+
       // update UI state
       setHasCartItems(true);
       setJustAdded(true);

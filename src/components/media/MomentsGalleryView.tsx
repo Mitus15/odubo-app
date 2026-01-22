@@ -4,6 +4,7 @@ import { useEffect, useCallback, useRef, useState, memo, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUnifiedMedia, type Photo } from '@/contexts/UnifiedMediaContext';
+import { useAnalyticsSafe } from '@/contexts/AnalyticsContext';
 
 // Hook to detect mobile vs desktop
 function useIsMobile() {
@@ -141,9 +142,12 @@ export default function MomentsGalleryView({ galleryId }: MomentsGalleryViewProp
     openMomentsCamera,
   } = useUnifiedMedia();
 
+  const analytics = useAnalyticsSafe();
+
   const { photos, lightboxIndex, isLoadingPhotos } = moments;
   const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
   const isMobile = useIsMobile();
+  const hasTrackedGalleryRef = useRef(false);
 
   // Touch handling for lightbox swipe
   const touchStartX = useRef(0);
@@ -160,6 +164,21 @@ export default function MomentsGalleryView({ galleryId }: MomentsGalleryViewProp
       refreshPhotos(galleryId);
     }
   }, [galleryId, refreshPhotos]);
+
+  // Track gallery view when photos load
+  useEffect(() => {
+    if (!isLoadingPhotos && photos.length > 0 && !hasTrackedGalleryRef.current) {
+      analytics?.trackGalleryView(galleryId, photos.length);
+      hasTrackedGalleryRef.current = true;
+    }
+  }, [isLoadingPhotos, photos.length, galleryId, analytics]);
+
+  // Track photo view when lightbox opens
+  useEffect(() => {
+    if (lightboxIndex !== null) {
+      analytics?.trackPhotoView(galleryId, lightboxIndex);
+    }
+  }, [lightboxIndex, galleryId, analytics]);
 
   // Lightbox navigation
   const prev = useCallback(() => {

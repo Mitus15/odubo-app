@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuickShop } from '@/contexts/QuickShopContext';
+import { useAnalyticsSafe } from '@/contexts/AnalyticsContext';
 import Link from 'next/link';
 
 interface ProductDetail {
@@ -25,6 +26,7 @@ interface ProductDetail {
 
 export default function QuickShopModal() {
   const { isOpen, productHandle, closeQuickShop } = useQuickShop();
+  const analytics = useAnalyticsSafe();
 
   const [product, setProduct] = useState<ProductDetail | null>(null);
   const [loading, setLoading] = useState(false);
@@ -104,6 +106,9 @@ export default function QuickShopModal() {
 
         setProduct(detail);
 
+        // Track product view
+        analytics?.trackProductView(productHandle);
+
         // Initialize options to first variant
         if (detail.options?.length) {
           const initial: Record<string, string> = {};
@@ -120,7 +125,7 @@ export default function QuickShopModal() {
     };
 
     fetchProduct();
-  }, [productHandle, isOpen]);
+  }, [productHandle, isOpen, analytics]);
 
   // Find selected variant
   const selectedVariant = useMemo(() => {
@@ -158,12 +163,16 @@ export default function QuickShopModal() {
           )
         : [...cart, base];
       localStorage.setItem('cart', JSON.stringify(nextCart));
+
+      // Track add to cart
+      analytics?.trackAddToCart(product.handle, selectedVariant.price, selectedVariant.id);
+
       setAddFeedback('Added to bag');
       setTimeout(() => setAddFeedback(null), 1800);
     } catch (e) {
       console.error('Add to cart failed', e);
     }
-  }, [product, selectedVariant]);
+  }, [product, selectedVariant, analytics]);
 
   // Close on escape
   useEffect(() => {

@@ -12,6 +12,7 @@ import LinkTreeModal from '@/components/linktree/LinkTreeModal';
 import { useAudio } from '@/contexts/AudioContext';
 import { useStore } from '@/contexts/StoreContext';
 import { useUnifiedMedia } from '@/contexts/UnifiedMediaContext';
+import { usePageAnalytics } from '@/hooks/usePageAnalytics';
 import type { ClipItem } from '@/types/clips';
 
 // Modal types that can be opened via URL
@@ -61,6 +62,9 @@ export default function HomePageClient({ verseOfTheDay, initialClipId, initialCl
   // Modal contexts
   const { openStore, view: storeView, closeStore } = useStore();
   const { openHub, modalStack, closeAll: closeMedia } = useUnifiedMedia();
+
+  // Page analytics tracking - tracks page views, scroll depth, time on page
+  usePageAnalytics({ title: defaultModal ? `${defaultModal.charAt(0).toUpperCase() + defaultModal.slice(1)} | Odubo Studio` : 'Clips | Odubo Studio' });
 
   // Auto-open modal based on defaultModal prop
   useEffect(() => {

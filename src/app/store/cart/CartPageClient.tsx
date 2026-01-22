@@ -3,11 +3,17 @@ import ScreenLayout from '@/components/ui/ScreenLayout';
 import ScrollContainer from '@/components/ui/ScrollContainer';
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
+import { usePageAnalytics } from '@/hooks/usePageAnalytics';
+import { useAnalyticsSafe } from '@/contexts/AnalyticsContext';
 
 export default function CartPage() {
   type CartItem = { variantId: string; qty: number; title: string; price: number; image?: string };
   const [items, setItems] = useState<CartItem[]>([]);
   const [isRedirecting, setIsRedirecting] = useState(false);
+
+  // Page analytics
+  usePageAnalytics({ title: 'Cart | Odubo Studio' });
+  const analytics = useAnalyticsSafe();
 
   useEffect(() => {
     try {
@@ -41,16 +47,19 @@ export default function CartPage() {
   const handleCheckout = () => {
     if (items.length === 0) return;
     setIsRedirecting(true);
-    
+
+    // Track checkout start
+    analytics?.trackCheckoutStart(subtotal, items.reduce((sum, i) => sum + i.qty, 0));
+
     // Construct Shopify Cart Permalink
     // Format: https://{shop}.myshopify.com/cart/{variant_id}:{quantity},{variant_id}:{quantity}
     const shopUrl = 'odubostudio.myshopify.com';
     const variantString = items.map(i => {
       // Ensure variant ID is just the numeric part if it comes as a GID
-      const id = i.variantId.split('/').pop(); 
+      const id = i.variantId.split('/').pop();
       return `${id}:${i.qty}`;
     }).join(',');
-    
+
     const checkoutUrl = `https://${shopUrl}/cart/${variantString}`;
     window.location.href = checkoutUrl;
   };
