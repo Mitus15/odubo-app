@@ -58,6 +58,9 @@ const VALID_EVENT_TYPES = [
   // Video tracking
   'video_open',
   'video_progress',
+  // Clip tracking
+  'clip_view',
+  'clip_complete',
   // Music tracking
   'album_view',
   'track_play',
@@ -107,6 +110,9 @@ function mapEventToActivityType(eventType: EventType): string {
     // Video tracking - map to page_view with video metadata
     video_open: 'page_view',
     video_progress: 'page_view',
+    // Clip tracking
+    clip_view: 'clip_view',
+    clip_complete: 'clip_complete',
     // Music tracking - map to music events
     album_view: 'page_view',
     track_play: 'music_play',
@@ -127,12 +133,14 @@ function mapEventToContentType(eventType: EventType, path: string): string {
   }
   if (eventType === 'gallery_view' || eventType === 'photo_view' || eventType === 'rsvp_submit') return 'gallery';
   if (eventType === 'video_open' || eventType === 'video_progress') return 'video';
+  if (eventType === 'clip_view' || eventType === 'clip_complete') return 'clip';
   if (eventType === 'album_view' || eventType === 'track_play') return 'music';
   // Path-based fallbacks
   if (path.startsWith('/store')) return 'store';
   if (path.startsWith('/music')) return 'music';
   if (path.startsWith('/media')) return 'media';
   if (path.startsWith('/moments')) return 'gallery';
+  if (path.startsWith('/clips')) return 'clip';
   return 'page';
 }
 
@@ -219,7 +227,7 @@ export async function POST(req: NextRequest) {
           activityType,
           event.path, // Use path as content_id for page views
           contentType,
-          event.metadata?.title || null,
+          event.metadata?.clipTitle || event.metadata?.title || null,
           'odubo',
           null, // Device type could be extracted from user agent
           attribution?.source || null,

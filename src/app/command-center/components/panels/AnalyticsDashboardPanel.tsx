@@ -497,7 +497,7 @@ export function AnalyticsDashboardPanel() {
                       <div className="space-y-2 max-h-[300px] overflow-y-auto">
                         {comprehensiveData.social.topContent.slice(0, 5).map((content, i) => (
                           <div
-                            key={content.id}
+                            key={`content-${content.id}-${i}`}
                             className="flex items-center gap-2 p-2 rounded-lg hover:bg-[#171616] transition-colors"
                           >
                             <span className="text-xs text-[#726d6c] w-4">{i + 1}</span>
@@ -698,7 +698,7 @@ export function AnalyticsDashboardPanel() {
                         <div className="space-y-3">
                           {comprehensiveData.social.topContent.slice(0, 10).map((content, i) => (
                             <div
-                              key={content.id}
+                              key={`topcontent-${content.id}-${i}`}
                               className="flex items-center gap-3 p-2 rounded-lg hover:bg-[#171616] transition-colors"
                             >
                               <span className="text-xs text-[#726d6c] w-4">{i + 1}</span>

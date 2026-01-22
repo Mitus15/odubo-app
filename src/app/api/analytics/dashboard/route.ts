@@ -472,13 +472,28 @@ async function getTopClips(startDate: string): Promise<TopClip[]> {
 
     if (!rows) return [];
 
-    return (rows as any[]).map(row => ({
-      id: typeof row.id === 'string' ? parseInt(row.id, 10) || 0 : row.id || 0,
-      title: row.title || 'Untitled',
-      views: row.views || 0,
-      completions: row.completions || 0,
-      shopClicks: row.shopClicks || 0,
-    }));
+    return (rows as any[]).map(row => {
+      // content_id is a path like "/clips/123" - extract the numeric ID
+      let clipId = 0;
+      if (typeof row.id === 'string') {
+        const match = row.id.match(/\/clips\/(\d+)/);
+        if (match) {
+          clipId = parseInt(match[1], 10) || 0;
+        } else {
+          clipId = parseInt(row.id, 10) || 0;
+        }
+      } else {
+        clipId = row.id || 0;
+      }
+
+      return {
+        id: clipId,
+        title: row.title || 'Untitled',
+        views: row.views || 0,
+        completions: row.completions || 0,
+        shopClicks: row.shopClicks || 0,
+      };
+    });
   } catch (err) {
     console.error('Error fetching top clips:', err);
     return [];

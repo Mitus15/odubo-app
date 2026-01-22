@@ -413,7 +413,7 @@ export default function AnalyticsTab({ view = 'analytics-overview' }: AnalyticsT
           {topClips.length > 0 ? (
             <div className="space-y-2">
               {topClips.map((clip, idx) => (
-                <div key={clip.id} className="flex items-center justify-between p-2 bg-[#171616]/50 rounded-lg">
+                <div key={`clip-${clip.id}-${idx}`} className="flex items-center justify-between p-2 bg-[#171616]/50 rounded-lg">
                   <div className="flex items-center gap-2 min-w-0 flex-1">
                     <span className="text-sm text-[#b2a491] w-5">#{idx + 1}</span>
                     <div className="min-w-0 flex-1">
