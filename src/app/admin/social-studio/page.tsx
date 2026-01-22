@@ -109,8 +109,8 @@ function ViewLoading({ label }: { label: string }) {
   return (
     <div className="flex-1 flex items-center justify-center">
       <div className="text-center">
-        <div className="w-10 h-10 border-2 border-[#D4A853]/20 border-t-[#D4A853] rounded-full animate-spin mx-auto mb-4 shadow-[0_0_20px_rgba(212,168,83,0.15)]" />
-        <p className="text-sm text-[#8a8584] tracking-wide">Loading {label}...</p>
+        <div className="w-10 h-10 border-2 border-[#e8a990]/25 border-t-[#843c2d] rounded-full animate-spin mx-auto mb-4 shadow-[0_0_20px_rgba(212,168,83,0.15)]" />
+        <p className="text-sm text-[#726d6c] tracking-wide">Loading {label}...</p>
       </div>
     </div>
   );
@@ -320,13 +320,13 @@ export default function SocialStudioPage() {
       </div>
 
       {/* Bottom Navigation - Glass Effect */}
-      <nav className="flex-shrink-0 bg-black/80 backdrop-blur-xl border-t border-[#D4A853]/10 safe-area-bottom">
+      <nav className="flex-shrink-0 bg-black/80 backdrop-blur-xl border-t border-[#843c2d]/10 safe-area-bottom">
         <div className="flex items-center justify-around h-16">
           {/* Home */}
           <button
             onClick={() => setView('home')}
             className={`flex flex-col items-center justify-center w-16 h-full transition-all duration-200 ${
-              view === 'home' ? 'text-[#D4A853]' : 'text-[#5a5554] hover:text-[#8a8584]'
+              view === 'home' ? 'text-[#e8a990]' : 'text-[#726d6c] hover:text-[#726d6c]'
             }`}
           >
             <span className={view === 'home' ? 'drop-shadow-[0_0_8px_rgba(212,168,83,0.5)]' : ''}>{Icons.home}</span>
@@ -337,7 +337,7 @@ export default function SocialStudioPage() {
           <button
             onClick={() => setView('calendar')}
             className={`flex flex-col items-center justify-center w-16 h-full transition-all duration-200 ${
-              view === 'calendar' ? 'text-[#D4A853]' : 'text-[#5a5554] hover:text-[#8a8584]'
+              view === 'calendar' ? 'text-[#e8a990]' : 'text-[#726d6c] hover:text-[#726d6c]'
             }`}
           >
             <span className={view === 'calendar' ? 'drop-shadow-[0_0_8px_rgba(212,168,83,0.5)]' : ''}>{Icons.calendar}</span>
@@ -347,7 +347,7 @@ export default function SocialStudioPage() {
           {/* Create (Center - Gold with glow) */}
           <button
             onClick={() => setView('create')}
-            className="flex items-center justify-center w-14 h-14 -mt-5 rounded-full bg-gradient-to-br from-[#D4A853] to-[#B8923F] text-black shadow-[0_0_30px_rgba(212,168,83,0.4)] active:scale-95 transition-all duration-200 hover:shadow-[0_0_40px_rgba(212,168,83,0.5)]"
+            className="flex items-center justify-center w-14 h-14 -mt-5 rounded-full bg-gradient-to-br from-[#843c2d] to-[#6b3323] text-black shadow-[0_0_30px_rgba(212,168,83,0.4)] active:scale-95 transition-all duration-200 hover:shadow-[0_0_40px_rgba(212,168,83,0.5)]"
           >
             {Icons.create}
           </button>
@@ -356,7 +356,7 @@ export default function SocialStudioPage() {
           <button
             onClick={() => setView('library')}
             className={`flex flex-col items-center justify-center w-16 h-full transition-all duration-200 ${
-              view === 'library' ? 'text-[#D4A853]' : 'text-[#5a5554] hover:text-[#8a8584]'
+              view === 'library' ? 'text-[#e8a990]' : 'text-[#726d6c] hover:text-[#726d6c]'
             }`}
           >
             <span className={view === 'library' ? 'drop-shadow-[0_0_8px_rgba(212,168,83,0.5)]' : ''}>{Icons.library}</span>
@@ -367,7 +367,7 @@ export default function SocialStudioPage() {
           <button
             onClick={() => setView('settings')}
             className={`flex flex-col items-center justify-center w-16 h-full transition-all duration-200 ${
-              view === 'settings' ? 'text-[#D4A853]' : 'text-[#5a5554] hover:text-[#8a8584]'
+              view === 'settings' ? 'text-[#e8a990]' : 'text-[#726d6c] hover:text-[#726d6c]'
             }`}
           >
             <span className={view === 'settings' ? 'drop-shadow-[0_0_8px_rgba(212,168,83,0.5)]' : ''}>{Icons.settings}</span>

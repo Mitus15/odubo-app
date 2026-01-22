@@ -26,8 +26,20 @@ function parseJsonFromText(text: string) {
   if (start === -1 || end === -1) {
     throw new Error('No JSON in AI response');
   }
-  const jsonText = text.slice(start, end + 1);
-  return JSON.parse(jsonText);
+  let jsonText = text.slice(start, end + 1);
+  
+  // Clean up common AI JSON mistakes
+  // Remove trailing commas before ] or }
+  jsonText = jsonText.replace(/,(\s*[}\]])/g, '$1');
+  // Remove markdown code blocks
+  jsonText = jsonText.replace(/```json\s*/g, '').replace(/```\s*/g, '');
+  
+  try {
+    return JSON.parse(jsonText);
+  } catch (e) {
+    console.error('[AI Suggest] JSON parse error, raw text:', jsonText.substring(0, 500));
+    throw new Error('Invalid JSON from AI response');
+  }
 }
 
 function buildVoiceInstructions(profile: VoiceProfile | null, examples: TrainingExample[]) {
@@ -80,7 +92,7 @@ function buildPrompt({
   profile?: VoiceProfile | null;
   examples?: TrainingExample[];
 }) {
-  const voiceInstructions = buildVoiceInstructions(profile, examples || []);
+  const voiceInstructions = buildVoiceInstructions(profile || null, examples || []);
   const maxHashtags = profile?.max_hashtags || 7;
 
   return `You are a social media assistant for an artist brand called "Odubo".
@@ -93,7 +105,7 @@ Existing caption (if any): ${caption || 'None'}
 Generate 3 caption options per platform and ${maxHashtags} hashtags per platform.
 Platforms: ${platforms.join(', ')}
 
-Respond with ONLY valid JSON:
+IMPORTANT: Respond with ONLY valid JSON. No trailing commas, no comments, no markdown.
 {
   "captions": {
     ${platforms.map((p) => `"${p}": ["caption1", "caption2", "caption3"]`).join(',\n    ')}
@@ -104,15 +116,41 @@ Respond with ONLY valid JSON:
 }`;
 }
 
+// Generate fallback suggestions when AI is unavailable
+function generateFallbackSuggestions(platforms: string[], title?: string) {
+  const genericCaptions = [
+    `${title || 'New content'} 🎨 Check it out!`,
+    `Drop your thoughts below! 💭`,
+    `What do you think? Let me know! ✨`,
+  ];
+  
+  const genericHashtags = ['#art', '#creative', '#odubo', '#artist', '#newpost'];
+  
+  const suggestions: { captions: Record<string, string[]>; hashtags: Record<string, string[]> } = {
+    captions: {},
+    hashtags: {},
+  };
+  
+  platforms.forEach((platform) => {
+    suggestions.captions[platform] = genericCaptions;
+    suggestions.hashtags[platform] = genericHashtags;
+  });
+  
+  return suggestions;
+}
+
 export async function POST(req: NextRequest) {
   const user = getUserFromRequest(req);
   if (!isAdminUser(user)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
+  let body: Record<string, unknown> = {};
+  let platforms: string[] = [];
+
   try {
-    const body = (await req.json()) as Record<string, unknown>;
-    const platforms = Array.isArray(body.platforms) ? body.platforms as string[] : [];
+    body = (await req.json()) as Record<string, unknown>;
+    platforms = Array.isArray(body.platforms) ? body.platforms as string[] : [];
 
     if (!platforms.length) {
       return NextResponse.json({ error: 'platforms required' }, { status: 400 });
@@ -126,7 +164,14 @@ export async function POST(req: NextRequest) {
     const voiceProfile = (profiles?.[0] as VoiceProfile | undefined) || null;
 
     if (!voiceProfile) {
-      console.warn('[AI Suggest] No active voice profile found - using defaults');
+      console.warn('[AI Suggest] No active voice profile - using defaults');
+      // Return friendly message with fallback
+      return NextResponse.json({
+        error: 'No AI voice profile configured',
+        details: 'Create an AI voice profile in Settings → AI Voice to get personalized suggestions',
+        hint: 'Using default generic suggestions',
+        suggestions: generateFallbackSuggestions(platforms, body.title as string | undefined),
+      });
     }
 
     // Get training examples if profile exists
@@ -143,8 +188,8 @@ export async function POST(req: NextRequest) {
 
     // Build prompt
     const prompt = buildPrompt({
-      title: body.title,
-      caption: body.caption,
+      title: body.title as string | undefined,
+      caption: body.caption as string | undefined,
       platforms,
       profile: voiceProfile,
       examples: trainingExamples,
@@ -179,12 +224,30 @@ export async function POST(req: NextRequest) {
     const errorMsg = error instanceof Error ? error.message : 'Unknown error';
     console.error('[AI Suggest] Error:', errorMsg, error);
     
-    // Return more detailed error for debugging
+    // Determine specific error type and provide helpful message
+    let userMessage = 'Failed to generate AI suggestions';
+    let hint = 'Try again or use manual captions';
+    
+    if (errorMsg.includes('API key') || errorMsg.includes('GEMINI')) {
+      userMessage = 'AI service not configured';
+      hint = 'Contact administrator to set up Gemini API key';
+    } else if (errorMsg.includes('quota') || errorMsg.includes('rate limit')) {
+      userMessage = 'AI service quota exceeded';
+      hint = 'Try again in a few moments';
+    } else if (errorMsg.includes('network') || errorMsg.includes('timeout')) {
+      userMessage = 'AI service unavailable';
+      hint = 'Check your internet connection and try again';
+    }
+    
+    // Return error with fallback suggestions using already-parsed body
+    const fallbackPlatforms = platforms.length > 0 ? platforms : ['instagram'];
+    
     return NextResponse.json(
       { 
-        error: 'Failed to generate AI suggestions', 
+        error: userMessage, 
         details: errorMsg,
-        hint: 'Check if Gemini API key is configured and voice profile exists'
+        hint,
+        suggestions: generateFallbackSuggestions(fallbackPlatforms, body.title as string | undefined),
       },
       { status: 500 }
     );

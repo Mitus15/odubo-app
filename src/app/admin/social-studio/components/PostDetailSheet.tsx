@@ -111,8 +111,8 @@ function getStatusStyles(status: string): { bg: string; text: string; glow?: str
   switch (status) {
     case 'scheduled':
       return {
-        bg: 'bg-[#D4A853]/20',
-        text: 'text-[#D4A853]',
+        bg: 'bg-[#843c2d]/20',
+        text: 'text-[#e8a990]',
         glow: 'shadow-[0_0_12px_rgba(212,168,83,0.3)]'
       };
     case 'published':
@@ -134,13 +134,13 @@ function getStatusStyles(status: string): { bg: string; text: string; glow?: str
       };
     case 'draft':
       return {
-        bg: 'bg-[#5a5554]/20',
-        text: 'text-[#8a8584]'
+        bg: 'bg-[#726d6c]/20',
+        text: 'text-[#726d6c]'
       };
     default:
       return {
-        bg: 'bg-[#5a5554]/20',
-        text: 'text-[#8a8584]'
+        bg: 'bg-[#726d6c]/20',
+        text: 'text-[#726d6c]'
       };
   }
 }
@@ -307,18 +307,18 @@ export default function PostDetailSheet({
       />
 
       {/* Sheet */}
-      <div className="relative w-full max-w-lg max-h-[92vh] bg-[#0a0a0a] rounded-t-[2rem] overflow-hidden flex flex-col animate-slide-up border-t border-[#1a1a1a] shadow-[0_-20px_60px_rgba(0,0,0,0.8)]">
+      <div className="relative w-full max-w-lg max-h-[92vh] bg-black rounded-t-[2rem] overflow-hidden flex flex-col animate-slide-up border-t border-[#302927] shadow-[0_-20px_60px_rgba(0,0,0,0.8)]">
         {/* Drag Handle */}
         <div className="flex-shrink-0 flex justify-center py-4">
-          <div className="w-12 h-1 rounded-full bg-[#2a2a2a]" />
+          <div className="w-12 h-1 rounded-full bg-[#302927]" />
         </div>
 
         {/* Header */}
-        <div className="flex-shrink-0 flex items-center justify-between px-5 pb-4 border-b border-[#1a1a1a]">
+        <div className="flex-shrink-0 flex items-center justify-between px-5 pb-4 border-b border-[#302927]">
           <h2 className="text-lg font-semibold text-white tracking-tight">Post Details</h2>
           <button
             onClick={onClose}
-            className="w-9 h-9 flex items-center justify-center rounded-xl bg-[#141414] border border-[#1a1a1a] text-[#5a5554] hover:text-white hover:border-[#D4A853]/30 transition-all duration-300"
+            className="w-9 h-9 flex items-center justify-center rounded-xl bg-[#302927] border border-[#302927] text-[#726d6c] hover:text-white hover:border-[#e8a990]/35 transition-all duration-300"
           >
             {Icons.close}
           </button>
@@ -328,12 +328,12 @@ export default function PostDetailSheet({
         <div className="flex-1 overflow-y-auto">
           {loading ? (
             <div className="flex items-center justify-center py-24">
-              <div className="w-10 h-10 border-2 border-[#D4A853]/20 border-t-[#D4A853] rounded-full animate-spin shadow-[0_0_20px_rgba(212,168,83,0.15)]" />
+              <div className="w-10 h-10 border-2 border-[#e8a990]/25 border-t-[#843c2d] rounded-full animate-spin shadow-[0_0_20px_rgba(212,168,83,0.15)]" />
             </div>
           ) : post ? (
             <div className="px-5 pb-24 space-y-5">
               {/* Media Preview */}
-              <div className="relative rounded-2xl overflow-hidden bg-[#0f0f0f] aspect-video mt-4 border border-[#1a1a1a]">
+              <div className="relative rounded-2xl overflow-hidden bg-[#0d0c0a] aspect-video mt-4 border border-[#302927]">
                 {post.media_type === 'video' ? (
                   <video
                     src={post.media_url}
@@ -375,9 +375,9 @@ export default function PostDetailSheet({
 
               {/* Schedule Info */}
               {(post.scheduled_at || post.published_at) && (
-                <div className="flex items-center gap-4 p-4 rounded-2xl bg-[#0f0f0f] border border-[#1a1a1a]">
-                  <div className="w-10 h-10 rounded-xl bg-[#D4A853]/10 flex items-center justify-center flex-shrink-0">
-                    <span className="text-[#D4A853]">{Icons.calendar}</span>
+                <div className="flex items-center gap-4 p-4 rounded-2xl bg-[#0d0c0a] border border-[#302927]">
+                  <div className="w-10 h-10 rounded-xl bg-[#843c2d]/10 flex items-center justify-center flex-shrink-0">
+                    <span className="text-[#e8a990]">{Icons.calendar}</span>
                   </div>
                   <div>
                     <div className="text-sm text-white font-medium">
@@ -388,7 +388,7 @@ export default function PostDetailSheet({
                         : 'Not scheduled'}
                     </div>
                     {post.scheduled_at && post.status !== 'published' && (
-                      <div className="text-xs text-[#5a5554] mt-0.5">
+                      <div className="text-xs text-[#726d6c] mt-0.5">
                         at {formatTime(post.scheduled_at)}
                       </div>
                     )}
@@ -397,8 +397,8 @@ export default function PostDetailSheet({
               )}
 
               {/* Platforms */}
-              <div className="p-4 rounded-2xl bg-[#0f0f0f] border border-[#1a1a1a]">
-                <div className="text-[10px] text-[#5a5554] uppercase tracking-widest mb-3">
+              <div className="p-4 rounded-2xl bg-[#0d0c0a] border border-[#302927]">
+                <div className="text-[10px] text-[#726d6c] uppercase tracking-widest mb-3">
                   {post.status === 'published' ? 'Posted to' : 'Posting to'}
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -406,7 +406,7 @@ export default function PostDetailSheet({
                     linkedAccounts.map((acc) => (
                       <div
                         key={acc.id}
-                        className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#0a0a0a] border border-[#1a1a1a]"
+                        className="flex items-center gap-2 px-3 py-2 rounded-xl bg-black border border-[#302927]"
                       >
                         <span>{PLATFORM_ICONS[acc.platform] || '📱'}</span>
                         <span className="text-sm text-white">@{acc.account_handle}</span>
@@ -416,7 +416,7 @@ export default function PostDetailSheet({
                     post.platforms.map((p) => (
                       <div
                         key={p}
-                        className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#0a0a0a] border border-[#1a1a1a]"
+                        className="flex items-center gap-2 px-3 py-2 rounded-xl bg-black border border-[#302927]"
                       >
                         <span>{PLATFORM_ICONS[p] || '📱'}</span>
                         <span className="text-sm text-white capitalize">{p}</span>
@@ -429,7 +429,7 @@ export default function PostDetailSheet({
               {/* Caption */}
               {post.caption && (
                 <div>
-                  <div className="text-[10px] text-[#5a5554] uppercase tracking-widest mb-2">Caption</div>
+                  <div className="text-[10px] text-[#726d6c] uppercase tracking-widest mb-2">Caption</div>
                   <div className="text-sm text-[#b8b2b1] whitespace-pre-wrap leading-relaxed">{post.caption}</div>
                 </div>
               )}
@@ -437,8 +437,8 @@ export default function PostDetailSheet({
               {/* Hashtags */}
               {post.hashtags && post.hashtags.length > 0 && (
                 <div>
-                  <div className="text-[10px] text-[#5a5554] uppercase tracking-widest mb-2">Hashtags</div>
-                  <div className="text-sm text-[#D4A853]">
+                  <div className="text-[10px] text-[#726d6c] uppercase tracking-widest mb-2">Hashtags</div>
+                  <div className="text-sm text-[#e8a990]">
                     {post.hashtags.map((t) => `#${t}`).join(' ')}
                   </div>
                 </div>
@@ -446,70 +446,70 @@ export default function PostDetailSheet({
 
               {/* Analytics (Published posts only) */}
               {post.status === 'published' && analytics && (
-                <div className="p-4 rounded-2xl bg-[#0f0f0f] border border-[#1a1a1a]">
+                <div className="p-4 rounded-2xl bg-[#0d0c0a] border border-[#302927]">
                   <div className="flex items-center justify-between mb-4">
-                    <div className="text-[10px] text-[#5a5554] uppercase tracking-widest">Performance</div>
+                    <div className="text-[10px] text-[#726d6c] uppercase tracking-widest">Performance</div>
                     <button
                       onClick={handleRefreshAnalytics}
                       disabled={refreshingAnalytics}
-                      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#141414] border border-[#1a1a1a] text-[10px] text-[#D4A853] hover:border-[#D4A853]/30 disabled:opacity-60"
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#302927] border border-[#302927] text-[10px] text-[#e8a990] hover:border-[#e8a990]/35 disabled:opacity-60"
                     >
                       <span className={refreshingAnalytics ? 'animate-spin' : ''}>{Icons.sync}</span>
                       {refreshingAnalytics ? 'Refreshing' : 'Refresh'}
                     </button>
                   </div>
                   <div className="grid grid-cols-3 gap-4 mb-4">
-                    <div className="text-center p-3 rounded-xl bg-[#0a0a0a] border border-[#1a1a1a]">
+                    <div className="text-center p-3 rounded-xl bg-black border border-[#302927]">
                       <div className="text-xl font-bold text-white">
                         {formatNumber(analytics.views)}
                       </div>
-                      <div className="text-[10px] text-[#5a5554] uppercase tracking-wide mt-1">Views</div>
+                      <div className="text-[10px] text-[#726d6c] uppercase tracking-wide mt-1">Views</div>
                     </div>
-                    <div className="text-center p-3 rounded-xl bg-[#0a0a0a] border border-[#1a1a1a]">
+                    <div className="text-center p-3 rounded-xl bg-black border border-[#302927]">
                       <div className="text-xl font-bold text-white">
                         {formatNumber(analytics.likes)}
                       </div>
-                      <div className="text-[10px] text-[#5a5554] uppercase tracking-wide mt-1">Likes</div>
+                      <div className="text-[10px] text-[#726d6c] uppercase tracking-wide mt-1">Likes</div>
                     </div>
-                    <div className="text-center p-3 rounded-xl bg-[#D4A853]/10 border border-[#D4A853]/20">
-                      <div className="text-xl font-bold text-[#D4A853]">
+                    <div className="text-center p-3 rounded-xl bg-[#843c2d]/10 border border-[#e8a990]/25">
+                      <div className="text-xl font-bold text-[#e8a990]">
                         {analytics.engagement_rate.toFixed(1)}%
                       </div>
-                      <div className="text-[10px] text-[#D4A853]/70 uppercase tracking-wide mt-1">Engage</div>
+                      <div className="text-[10px] text-[#e8a990]/70 uppercase tracking-wide mt-1">Engage</div>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-4 gap-2 pt-4 border-t border-[#1a1a1a]">
+                  <div className="grid grid-cols-4 gap-2 pt-4 border-t border-[#302927]">
                     <div className="text-center">
                       <div className="text-sm font-medium text-white">
                         {formatNumber(analytics.comments)}
                       </div>
-                      <div className="text-[9px] text-[#5a5554] uppercase tracking-wide mt-0.5">Comments</div>
+                      <div className="text-[9px] text-[#726d6c] uppercase tracking-wide mt-0.5">Comments</div>
                     </div>
                     <div className="text-center">
                       <div className="text-sm font-medium text-white">
                         {formatNumber(analytics.shares)}
                       </div>
-                      <div className="text-[9px] text-[#5a5554] uppercase tracking-wide mt-0.5">Shares</div>
+                      <div className="text-[9px] text-[#726d6c] uppercase tracking-wide mt-0.5">Shares</div>
                     </div>
                     <div className="text-center">
                       <div className="text-sm font-medium text-white">
                         {formatNumber(analytics.saves)}
                       </div>
-                      <div className="text-[9px] text-[#5a5554] uppercase tracking-wide mt-0.5">Saves</div>
+                      <div className="text-[9px] text-[#726d6c] uppercase tracking-wide mt-0.5">Saves</div>
                     </div>
                     <div className="text-center">
                       <div className="text-sm font-medium text-white">
                         {formatNumber(analytics.reach)}
                       </div>
-                      <div className="text-[9px] text-[#5a5554] uppercase tracking-wide mt-0.5">Reach</div>
+                      <div className="text-[9px] text-[#726d6c] uppercase tracking-wide mt-0.5">Reach</div>
                     </div>
                   </div>
                 </div>
               )}
 
               {post.status === 'published' && !analytics && (
-                <div className="p-4 rounded-2xl bg-[#0f0f0f] border border-[#1a1a1a] text-sm text-[#5a5554]">
+                <div className="p-4 rounded-2xl bg-[#0d0c0a] border border-[#302927] text-sm text-[#726d6c]">
                   Analytics aren’t available yet. Use Refresh to sync.
                 </div>
               )}
@@ -517,7 +517,7 @@ export default function PostDetailSheet({
               {/* View on Platform Links */}
               {post.status === 'published' && platformLinks.length > 0 && (
                 <div>
-                  <div className="text-[10px] text-[#5a5554] uppercase tracking-widest mb-3">View on</div>
+                  <div className="text-[10px] text-[#726d6c] uppercase tracking-widest mb-3">View on</div>
                   <div className="flex flex-wrap gap-2">
                     {platformLinks.map(({ platform, url }) => (
                       <a
@@ -525,11 +525,11 @@ export default function PostDetailSheet({
                         href={url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="group flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#0f0f0f] border border-[#1a1a1a] text-white text-sm hover:border-[#D4A853]/30 hover:shadow-[0_0_20px_rgba(212,168,83,0.1)] transition-all duration-300"
+                        className="group flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#0d0c0a] border border-[#302927] text-white text-sm hover:border-[#e8a990]/35 hover:shadow-[0_0_20px_rgba(212,168,83,0.1)] transition-all duration-300"
                       >
                         {PLATFORM_ICONS[platform] || '🔗'}
                         <span className="capitalize">{platform}</span>
-                        <span className="text-[#5a5554] group-hover:text-[#D4A853] transition-colors">{Icons.externalLink}</span>
+                        <span className="text-[#726d6c] group-hover:text-[#e8a990] transition-colors">{Icons.externalLink}</span>
                       </a>
                     ))}
                   </div>
@@ -548,7 +548,7 @@ export default function PostDetailSheet({
                 <button
                   onClick={handleSync}
                   disabled={syncing}
-                  className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl bg-[#0f0f0f] border border-[#1a1a1a] text-white text-sm font-medium hover:border-[#D4A853]/30 hover:shadow-[0_0_20px_rgba(212,168,83,0.1)] transition-all duration-300 disabled:opacity-50"
+                  className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl bg-[#0d0c0a] border border-[#302927] text-white text-sm font-medium hover:border-[#e8a990]/35 hover:shadow-[0_0_20px_rgba(212,168,83,0.1)] transition-all duration-300 disabled:opacity-50"
                 >
                   <span className={syncing ? 'animate-spin' : ''}>{Icons.sync}</span>
                   {syncing ? 'Syncing...' : 'Sync'}
@@ -557,7 +557,7 @@ export default function PostDetailSheet({
                 {post.status === 'failed' && (
                   <button
                     onClick={handleRetry}
-                    className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl bg-gradient-to-r from-[#D4A853] to-[#B8923F] text-black text-sm font-semibold hover:shadow-[0_0_25px_rgba(212,168,83,0.4)] transition-all duration-300"
+                    className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl bg-gradient-to-r from-[#843c2d] to-[#6b3323] text-black text-sm font-semibold hover:shadow-[0_0_25px_rgba(212,168,83,0.4)] transition-all duration-300"
                   >
                     {Icons.retry}
                     Retry
@@ -578,10 +578,10 @@ export default function PostDetailSheet({
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center py-24">
-              <div className="w-14 h-14 rounded-2xl bg-[#0f0f0f] border border-[#1a1a1a] flex items-center justify-center mb-4">
+              <div className="w-14 h-14 rounded-2xl bg-[#0d0c0a] border border-[#302927] flex items-center justify-center mb-4">
                 <span className="text-2xl opacity-40">📭</span>
               </div>
-              <p className="text-sm text-[#5a5554]">Post not found</p>
+              <p className="text-sm text-[#726d6c]">Post not found</p>
             </div>
           )}
         </div>

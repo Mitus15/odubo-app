@@ -91,8 +91,8 @@ function getStatusStyles(status: string): { bg: string; text: string; glow?: str
   switch (status) {
     case 'scheduled':
       return {
-        bg: 'bg-[#D4A853]/20',
-        text: 'text-[#D4A853]',
+        bg: 'bg-[#843c2d]/20',
+        text: 'text-[#e8a990]',
         glow: 'shadow-[0_0_8px_rgba(212,168,83,0.3)]'
       };
     case 'published':
@@ -114,51 +114,25 @@ function getStatusStyles(status: string): { bg: string; text: string; glow?: str
       };
     case 'draft':
       return {
-        bg: 'bg-[#5a5554]/20',
-        text: 'text-[#8a8584]'
+        bg: 'bg-[#726d6c]/20',
+        text: 'text-[#726d6c]'
       };
     default:
       return {
-        bg: 'bg-[#5a5554]/20',
-        text: 'text-[#8a8584]'
+        bg: 'bg-[#726d6c]/20',
+        text: 'text-[#726d6c]'
       };
   }
 }
 
 function getSourceBadge(post: Post): { icon: string; label: string; color: string } | null {
   // If imported from social platforms
-  if (post.created_by === 'imported') {
-    // Check if we can detect which platform it came from
-    if (post.platforms && post.platforms.length > 0) {
-      const platform = post.platforms[0];
-      return {
-        icon: PLATFORM_ICONS[platform] || '🔄',
-        label: `${platform.charAt(0).toUpperCase() + platform.slice(1)} Sync`,
-        color: 'from-blue-500/20 to-purple-500/20 text-blue-300 border-blue-500/30'
-      };
-    }
+  if (post.created_at && post.platforms && post.platforms.length > 0) {
+    const platform = post.platforms[0];
     return {
-      icon: '🔄',
-      label: 'Synced',
+      icon: PLATFORM_ICONS[platform] || '🔄',
+      label: `${platform.charAt(0).toUpperCase() + platform.slice(1)} Sync`,
       color: 'from-blue-500/20 to-purple-500/20 text-blue-300 border-blue-500/30'
-    };
-  }
-  
-  // If from clips library
-  if (post.source_type === 'clip') {
-    return {
-      icon: '🎬',
-      label: 'Clip',
-      color: 'from-[#D4A853]/20 to-[#B8923F]/20 text-[#D4A853] border-[#D4A853]/30'
-    };
-  }
-  
-  // If uploaded
-  if (post.source_type === 'upload' || post.source_type === 'url') {
-    return {
-      icon: '📤',
-      label: 'Upload',
-      color: 'from-emerald-500/20 to-teal-500/20 text-emerald-300 border-emerald-500/30'
     };
   }
   
@@ -174,20 +148,15 @@ function getContentOrientation(post: Post): 'landscape' | 'portrait' | 'unknown'
     const hasTikTok = post.platforms.includes('tiktok');
     const hasInstagram = post.platforms.includes('instagram');
     
-    // If only YouTube or YouTube with imported source, likely landscape
-    if (hasYouTube && post.created_by === 'imported' && !hasTikTok && !hasInstagram) {
+    // If only YouTube, likely landscape
+    if (hasYouTube && !hasTikTok && !hasInstagram) {
       return 'landscape';
     }
     
-    // If TikTok or Instagram with clip source, likely portrait
-    if ((hasTikTok || hasInstagram) && post.source_type === 'clip') {
+    // If TikTok or Instagram, likely portrait
+    if (hasTikTok || hasInstagram) {
       return 'portrait';
     }
-  }
-  
-  // Clip source type strongly suggests portrait (9:16 social clips)
-  if (post.source_type === 'clip') {
-    return 'portrait';
   }
   
   return 'unknown';
@@ -261,11 +230,11 @@ export default function LibraryView({
     // Source filter (primary categorization)
     if (sourceFilter !== 'all') {
       if (sourceFilter === 'clips') {
-        result = result.filter((p) => p.source_type === 'clip');
+        result = result.filter((p) => p.platforms && p.platforms.length > 0);
       } else if (sourceFilter === 'uploads') {
-        result = result.filter((p) => p.source_type === 'upload' || p.source_type === 'url');
+        result = result.filter((p) => p.platforms && p.platforms.length === 0);
       } else if (sourceFilter === 'imported') {
-        result = result.filter((p) => p.created_by === 'imported');
+        result = result.filter((p) => p.platforms && p.platforms.length > 0);
       }
     }
 
@@ -343,110 +312,128 @@ export default function LibraryView({
       {/* Header - Glass effect */}
       <div className="flex-shrink-0 px-4 pt-6 pb-4 bg-gradient-to-b from-black via-black to-transparent">
         <div className="flex items-center justify-between mb-5">
-          <h1 className="text-2xl font-semibold text-white tracking-tight">Library</h1>
+          <div>
+            <h1 className="text-2xl font-semibold text-white tracking-tight">Library</h1>
+            <p className="text-xs text-[#726d6c] mt-1">{filteredPosts.length} {filteredPosts.length === 1 ? 'post' : 'posts'}</p>
+          </div>
           <button
             onClick={onRefresh}
-            className="w-9 h-9 flex items-center justify-center rounded-xl bg-[#0f0f0f] border border-[#1a1a1a] text-[#D4A853] hover:bg-[#141414] hover:border-[#D4A853]/30 hover:shadow-[0_0_20px_rgba(212,168,83,0.15)] transition-all duration-300"
+            className="w-10 h-10 flex items-center justify-center rounded-xl bg-[#0d0c0a] border border-[#302927] text-[#e8a990] hover:bg-[#302927] hover:border-[#e8a990]/35 hover:shadow-[0_0_20px_rgba(232,169,144,0.2)] transition-all duration-300 active:scale-95"
           >
             {Icons.refresh}
           </button>
         </div>
 
         {/* Search - Premium styling */}
-        <div className="relative mb-4">
-          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#5a5554]">
+        <div className="relative mb-5">
+          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#726d6c]">
             {Icons.search}
           </span>
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search posts..."
-            className="w-full pl-12 pr-4 py-3.5 rounded-2xl bg-[#0a0a0a] border border-[#1a1a1a] text-white placeholder-[#5a5554] outline-none focus:border-[#D4A853]/40 focus:shadow-[0_0_20px_rgba(212,168,83,0.1)] transition-all duration-300 text-sm"
+            placeholder="Search by title, caption, or hashtags..."
+            className="w-full pl-12 pr-4 py-3.5 rounded-2xl bg-black border border-[#302927] text-white placeholder-[#726d6c] outline-none focus:border-[#e8a990]/40 focus:shadow-[0_0_20px_rgba(232,169,144,0.15)] transition-all duration-300 text-sm"
           />
         </div>
 
         {/* Source Filter Tabs - Primary content categorization */}
-        <div className="flex gap-2 overflow-x-auto pb-3 mb-4 scrollbar-hide -mx-4 px-4 border-b border-[#1a1a1a]">
-          {[
-            { value: 'all', label: 'All Content', icon: '📚' },
-            { value: 'clips', label: 'Clips', icon: '🎬' },
-            { value: 'uploads', label: 'Uploads', icon: '📤' },
-            { value: 'imported', label: 'Synced Posts', icon: '🔄' },
-          ].map((source) => (
-            <button
-              key={source.value}
-              onClick={() => setSourceFilter(source.value as SourceFilter)}
-              className={`flex-shrink-0 px-4 py-2.5 rounded-xl text-xs font-medium tracking-wide transition-all duration-300 flex items-center gap-2 ${
-                sourceFilter === source.value
-                  ? 'bg-gradient-to-r from-[#D4A853] to-[#B8923F] text-black shadow-[0_0_20px_rgba(212,168,83,0.3)]'
-                  : 'bg-[#0f0f0f] text-[#8a8584] hover:bg-[#141414] hover:text-white border border-[#1a1a1a]'
-              }`}
-            >
-              <span className="text-base">{source.icon}</span>
-              {source.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Filters */}
-        <div className="grid grid-cols-2 gap-2 mb-4">
-          <select
-            value={platformFilter}
-            onChange={(e) => setPlatformFilter(e.target.value)}
-            className="w-full px-3 py-2.5 rounded-xl bg-[#0a0a0a] border border-[#1a1a1a] text-white text-xs focus:border-[#D4A853]/40 transition-colors"
-          >
-            {platformOptions.map((platform) => (
-              <option key={platform} value={platform}>
-                {platform === 'all' ? 'All Platforms' : platform}
-              </option>
+        <div className="mb-5">
+          <p className="text-[10px] uppercase tracking-widest text-[#e8a990] mb-2.5">Content Type</p>
+          <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-4 px-4">
+            {[
+              { value: 'all', label: 'All', icon: '📚' },
+              { value: 'clips', label: 'Clips', icon: '🎬' },
+              { value: 'uploads', label: 'Uploads', icon: '📤' },
+              { value: 'imported', label: 'Synced', icon: '🔄' },
+            ].map((source) => (
+              <button
+                key={source.value}
+                onClick={() => setSourceFilter(source.value as SourceFilter)}
+                className={`flex-shrink-0 px-4 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all duration-300 flex items-center gap-2 active:scale-95 ${
+                  sourceFilter === source.value
+                    ? 'bg-gradient-to-r from-[#e8a990] to-[#c97b63] text-black shadow-[0_0_25px_rgba(232,169,144,0.35)]'
+                    : 'bg-[#0d0c0a] text-[#726d6c] hover:bg-[#302927] hover:text-white border border-[#302927] hover:border-[#302927]'
+                }`}
+              >
+                <span className="text-base">{source.icon}</span>
+                {source.label}
+              </button>
             ))}
-          </select>
-          <select
-            value={mediaFilter}
-            onChange={(e) => setMediaFilter(e.target.value as MediaFilter)}
-            className="w-full px-3 py-2.5 rounded-xl bg-[#0a0a0a] border border-[#1a1a1a] text-white text-xs focus:border-[#D4A853]/40 transition-colors"
-          >
-            <option value="all">All Media</option>
-            <option value="video">Video</option>
-            <option value="image">Image</option>
-          </select>
+          </div>
         </div>
 
-        {/* Status Tabs - Gold active state */}
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide -mx-4 px-4">
-          {(['all', 'scheduled', 'published', 'draft', 'failed'] as StatusFilter[]).map((status) => (
-            <button
-              key={status}
-              onClick={() => setStatusFilter(status)}
-              className={`flex-shrink-0 px-4 py-2.5 rounded-xl text-xs font-medium tracking-wide transition-all duration-300 ${
-                statusFilter === status
-                  ? 'bg-gradient-to-r from-[#D4A853] to-[#B8923F] text-black shadow-[0_0_20px_rgba(212,168,83,0.3)]'
-                  : 'bg-[#0f0f0f] text-[#8a8584] hover:bg-[#141414] hover:text-white border border-[#1a1a1a]'
-              }`}
-            >
-              {status.charAt(0).toUpperCase() + status.slice(1)}
-              <span className={`ml-1.5 ${statusFilter === status ? 'opacity-70' : 'opacity-50'}`}>
-                {statusCounts[status]}
-              </span>
-            </button>
-          ))}
+        {/* Status Tabs */}
+        <div className="mb-4">
+          <p className="text-[10px] uppercase tracking-widest text-[#e8a990] mb-2.5">Status</p>
+          <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-4 px-4">
+            {(['all', 'scheduled', 'published', 'draft', 'failed'] as StatusFilter[]).map((status) => (
+              <button
+                key={status}
+                onClick={() => setStatusFilter(status)}
+                className={`flex-shrink-0 px-4 py-2 rounded-xl text-xs font-medium tracking-wide transition-all duration-300 active:scale-95 ${
+                  statusFilter === status
+                    ? 'bg-[#e8a990]/15 text-[#e8a990] border border-[#e8a990]/40 shadow-[0_0_15px_rgba(232,169,144,0.2)]'
+                    : 'bg-[#0d0c0a] text-[#726d6c] hover:bg-[#302927] hover:text-white border border-[#302927]'
+                }`}
+              >
+                {status.charAt(0).toUpperCase() + status.slice(1)}
+                <span className={`ml-1.5 text-[10px] ${
+                  statusFilter === status ? 'opacity-80' : 'opacity-40'
+                }`}>
+                  {statusCounts[status]}
+                </span>
+              </button>
+            ))}
+          </div>
         </div>
+
+        {/* Secondary Filters - Collapsed */}
+        <details className="group">
+          <summary className="flex items-center justify-between cursor-pointer text-xs text-[#726d6c] hover:text-[#e8a990] transition-colors mb-3">
+            <span className="uppercase tracking-widest">Advanced Filters</span>
+            <span className="group-open:rotate-180 transition-transform">▼</span>
+          </summary>
+          <div className="grid grid-cols-2 gap-2 mb-3">
+            <select
+              value={platformFilter}
+              onChange={(e) => setPlatformFilter(e.target.value)}
+              className="w-full px-3 py-2.5 rounded-xl bg-black border border-[#302927] text-white text-xs focus:border-[#e8a990]/40 focus:outline-none transition-colors"
+            >
+              {platformOptions.map((platform) => (
+                <option key={platform} value={platform}>
+                  {platform === 'all' ? 'All Platforms' : platform}
+                </option>
+              ))}
+            </select>
+            <select
+              value={mediaFilter}
+              onChange={(e) => setMediaFilter(e.target.value as MediaFilter)}
+              className="w-full px-3 py-2.5 rounded-xl bg-black border border-[#302927] text-white text-xs focus:border-[#e8a990]/40 focus:outline-none transition-colors"
+            >
+              <option value="all">All Media</option>
+              <option value="video">Video</option>
+              <option value="image">Image</option>
+            </select>
+          </div>
+        </details>
       </div>
 
       {/* Campaign Pills */}
       {campaigns.length > 0 && (
-        <div className="flex-shrink-0 px-4 pb-3">
-          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide -mx-4 px-4">
+        <div className="flex-shrink-0 px-4 pb-4">
+          <p className="text-[10px] uppercase tracking-widest text-[#e8a990] mb-2.5">Campaigns</p>
+          <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-4 px-4">
             <button
               onClick={() => setCampaignFilter(null)}
-              className={`flex-shrink-0 px-3.5 py-2 rounded-full text-xs font-medium tracking-wide transition-all duration-300 ${
+              className={`flex-shrink-0 px-3.5 py-2 rounded-full text-xs font-medium tracking-wide transition-all duration-300 active:scale-95 ${
                 !campaignFilter
-                  ? 'bg-[#D4A853]/15 text-[#D4A853] border border-[#D4A853]/50 shadow-[0_0_12px_rgba(212,168,83,0.15)]'
-                  : 'bg-[#0a0a0a] text-[#5a5554] border border-[#1a1a1a] hover:border-[#D4A853]/30 hover:text-[#8a8584]'
+                  ? 'bg-[#e8a990]/15 text-[#e8a990] border border-[#e8a990]/40 shadow-[0_0_15px_rgba(232,169,144,0.2)]'
+                  : 'bg-black text-[#726d6c] border border-[#302927] hover:border-[#e8a990]/35 hover:text-white'
               }`}
             >
-              All Campaigns
+              All
             </button>
             {campaigns
               .filter((c) => c.status === 'active')
@@ -456,20 +443,20 @@ export default function LibraryView({
                   onClick={() =>
                     setCampaignFilter(campaignFilter === campaign.id ? null : campaign.id)
                   }
-                  className={`flex-shrink-0 px-3.5 py-2 rounded-full text-xs font-medium tracking-wide transition-all duration-300 flex items-center gap-1.5 ${
+                  className={`flex-shrink-0 px-3.5 py-2 rounded-full text-xs font-medium tracking-wide transition-all duration-300 flex items-center gap-1.5 active:scale-95 ${
                     campaignFilter === campaign.id
-                      ? 'bg-[#D4A853]/15 text-[#D4A853] border border-[#D4A853]/50 shadow-[0_0_12px_rgba(212,168,83,0.15)]'
-                      : 'bg-[#0a0a0a] text-[#5a5554] border border-[#1a1a1a] hover:border-[#D4A853]/30 hover:text-[#8a8584]'
+                      ? 'bg-[#e8a990]/15 text-[#e8a990] border border-[#e8a990]/40 shadow-[0_0_15px_rgba(232,169,144,0.2)]'
+                      : 'bg-black text-[#726d6c] border border-[#302927] hover:border-[#e8a990]/35 hover:text-white'
                   }`}
                 >
                   {campaign.color && (
                     <span
-                      className="w-2 h-2 rounded-full"
+                      className="w-2 h-2 rounded-full flex-shrink-0"
                       style={{ backgroundColor: campaign.color }}
                     />
                   )}
-                  {campaign.name}
-                  <span className="opacity-50">{campaignCounts[campaign.id] || 0}</span>
+                  <span className="truncate max-w-[120px]">{campaign.name}</span>
+                  <span className="opacity-50 text-[10px]">{campaignCounts[campaign.id] || 0}</span>
                 </button>
               ))}
           </div>
@@ -478,13 +465,13 @@ export default function LibraryView({
 
       {/* View Mode Toggle */}
       <div className="flex-shrink-0 px-4 pb-3 flex justify-end">
-        <div className="flex gap-1 p-1 bg-[#0a0a0a] rounded-xl border border-[#1a1a1a]">
+        <div className="flex gap-1 p-1 bg-black rounded-xl border border-[#302927]">
           <button
             onClick={() => setViewMode('grid')}
             className={`p-2 rounded-lg transition-all duration-300 ${
               viewMode === 'grid'
-                ? 'bg-[#D4A853]/20 text-[#D4A853] shadow-[0_0_10px_rgba(212,168,83,0.2)]'
-                : 'text-[#5a5554] hover:text-[#8a8584]'
+                ? 'bg-[#843c2d]/20 text-[#e8a990] shadow-[0_0_10px_rgba(212,168,83,0.2)]'
+                : 'text-[#726d6c] hover:text-[#726d6c]'
             }`}
           >
             {Icons.grid}
@@ -493,8 +480,8 @@ export default function LibraryView({
             onClick={() => setViewMode('list')}
             className={`p-2 rounded-lg transition-all duration-300 ${
               viewMode === 'list'
-                ? 'bg-[#D4A853]/20 text-[#D4A853] shadow-[0_0_10px_rgba(212,168,83,0.2)]'
-                : 'text-[#5a5554] hover:text-[#8a8584]'
+                ? 'bg-[#843c2d]/20 text-[#e8a990] shadow-[0_0_10px_rgba(212,168,83,0.2)]'
+                : 'text-[#726d6c] hover:text-[#726d6c]'
             }`}
           >
             {Icons.list}
@@ -506,10 +493,10 @@ export default function LibraryView({
       <div className="flex-1 overflow-y-auto px-4 pb-24">
         {filteredPosts.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20">
-            <div className="w-16 h-16 rounded-2xl bg-[#0f0f0f] border border-[#1a1a1a] flex items-center justify-center mb-4">
+            <div className="w-16 h-16 rounded-2xl bg-[#0d0c0a] border border-[#302927] flex items-center justify-center mb-4">
               <span className="text-3xl opacity-50">📭</span>
             </div>
-            <p className="text-[#5a5554] text-sm text-center">
+            <p className="text-[#726d6c] text-sm text-center">
               {searchQuery
                 ? 'No posts match your search'
                 : statusFilter !== 'all'
@@ -530,10 +517,10 @@ export default function LibraryView({
                 <button
                   key={post.id}
                   onClick={() => onViewPost(post.id)}
-                  className="group rounded-2xl overflow-hidden bg-[#0a0a0a] border border-[#1a1a1a] hover:border-[#D4A853]/30 hover:shadow-[0_0_30px_rgba(212,168,83,0.1)] transition-all duration-300 text-left"
+                  className="group rounded-2xl overflow-hidden bg-black border border-[#302927] hover:border-[#e8a990]/35 hover:shadow-[0_0_30px_rgba(212,168,83,0.1)] transition-all duration-300 text-left"
                 >
                   {/* Thumbnail - Dynamic aspect ratio */}
-                  <div className={`relative bg-[#0f0f0f] overflow-hidden ${
+                  <div className={`relative bg-[#0d0c0a] overflow-hidden ${
                     isLandscape ? 'aspect-video' : 'aspect-square'
                   }`}>
                     {post.thumbnail_url ? (
@@ -595,11 +582,11 @@ export default function LibraryView({
                   </div>
 
                   {/* Info */}
-                  <div className="p-3 border-t border-[#1a1a1a]">
+                  <div className="p-3 border-t border-[#302927]">
                     <div className="text-sm text-white truncate font-medium">
                       {post.title || post.caption?.slice(0, 30) || 'Untitled'}
                     </div>
-                    <div className="text-xs text-[#5a5554] mt-1">
+                    <div className="text-xs text-[#726d6c] mt-1">
                       {post.status === 'scheduled' && post.scheduled_at
                         ? `${formatScheduledDate(post.scheduled_at)} • ${formatTime(post.scheduled_at)}`
                         : post.status === 'published' && post.published_at
@@ -621,10 +608,10 @@ export default function LibraryView({
                 <button
                   key={post.id}
                   onClick={() => onViewPost(post.id)}
-                  className="group w-full flex items-center gap-3 p-3 rounded-2xl bg-[#0a0a0a] border border-[#1a1a1a] hover:border-[#D4A853]/30 hover:shadow-[0_0_25px_rgba(212,168,83,0.08)] transition-all duration-300 text-left"
+                  className="group w-full flex items-center gap-3 p-3 rounded-2xl bg-black border border-[#302927] hover:border-[#e8a990]/35 hover:shadow-[0_0_25px_rgba(212,168,83,0.08)] transition-all duration-300 text-left"
                 >
                   {/* Thumbnail */}
-                  <div className="w-16 h-16 rounded-xl overflow-hidden bg-[#0f0f0f] flex-shrink-0 border border-[#1a1a1a] group-hover:border-[#D4A853]/20 transition-colors">
+                  <div className="w-16 h-16 rounded-xl overflow-hidden bg-[#0d0c0a] flex-shrink-0 border border-[#302927] group-hover:border-[#e8a990]/25 transition-colors">
                     {post.thumbnail_url ? (
                       <img
                         src={post.thumbnail_url}
@@ -649,7 +636,7 @@ export default function LibraryView({
                   {/* Info */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-white truncate group-hover:text-[#D4A853] transition-colors">
+                      <span className="text-sm font-medium text-white truncate group-hover:text-[#e8a990] transition-colors">
                         {post.title || post.caption?.slice(0, 40) || 'Untitled'}
                       </span>
                     </div>
@@ -670,7 +657,7 @@ export default function LibraryView({
                         </span>
                       )}
 
-                      <span className="text-xs text-[#5a5554]">
+                      <span className="text-xs text-[#726d6c]">
                         {post.status === 'scheduled' && post.scheduled_at
                           ? `${formatScheduledDate(post.scheduled_at)} • ${formatTime(post.scheduled_at)}`
                           : post.status === 'published' && post.published_at
@@ -686,7 +673,7 @@ export default function LibraryView({
                         </span>
                       ))}
                       {post.platforms.length > 4 && (
-                        <span className="text-[10px] text-[#5a5554]">
+                        <span className="text-[10px] text-[#726d6c]">
                           +{post.platforms.length - 4}
                         </span>
                       )}
@@ -699,13 +686,13 @@ export default function LibraryView({
                       className="w-1 h-12 rounded-full flex-shrink-0"
                       style={{
                         backgroundColor:
-                          campaigns.find((c) => c.id === post.campaign_id)?.color || '#5a5554',
+                          campaigns.find((c) => c.id === post.campaign_id)?.color || '#726d6c',
                       }}
                     />
                   )}
 
                   {/* Hover arrow */}
-                  <div className="text-[#3a3534] group-hover:text-[#D4A853] transition-colors">
+                  <div className="text-[#3a3534] group-hover:text-[#e8a990] transition-colors">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
                     </svg>

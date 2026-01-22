@@ -14,7 +14,9 @@ interface SettingsViewProps {
   onRefresh: () => void;
 }
 
-type SettingsSection = 'general' | 'accounts' | 'schedule' | 'campaigns';
+type SettingsSection = 'general' | 'ai' | 'accounts' | 'schedule' | 'campaigns';
+
+type TonePreset = 'professional' | 'casual' | 'playful' | 'artistic' | 'custom';
 
 // =============================================================================
 // PLATFORM DATA
@@ -103,6 +105,16 @@ const Icons = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
     </svg>
   ),
+  sparkles: (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 22.5l-.394-1.933a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
+    </svg>
+  ),
+  externalLink: (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+    </svg>
+  ),
 };
 
 // =============================================================================
@@ -121,7 +133,7 @@ export default function SettingsView({
   const [newSlotTime, setNewSlotTime] = useState('14:00');
   const [showNewCampaignForm, setShowNewCampaignForm] = useState(false);
   const [newCampaignName, setNewCampaignName] = useState('');
-  const [newCampaignColor, setNewCampaignColor] = useState('#D4A853');
+  const [newCampaignColor, setNewCampaignColor] = useState('#843c2d');
   
   // General settings state
   const [settings, setSettings] = useState<{
@@ -132,6 +144,22 @@ export default function SettingsView({
   } | null>(null);
   const [savingSettings, setSavingSettings] = useState(false);
 
+  // AI Voice settings state
+  const [aiProfile, setAiProfile] = useState<{
+    id: number;
+    tone_description: string | null;
+    custom_instructions: string | null;
+    max_emojis: number;
+    max_hashtags: number;
+    is_active: number;
+  } | null>(null);
+  const [tonePreset, setTonePreset] = useState<TonePreset>('casual');
+  const [customTone, setCustomTone] = useState('');
+  const [customInstructions, setCustomInstructions] = useState('');
+  const [maxEmojis, setMaxEmojis] = useState(1);
+  const [maxHashtags, setMaxHashtags] = useState(7);
+  const [savingAi, setSavingAi] = useState(false);
+
   const activeAccounts = accounts.filter((a) => a.is_active);
   const activeSlots = slots.filter((s) => s.is_active);
   const activeCampaigns = campaigns.filter((c) => c.status === 'active');
@@ -139,12 +167,13 @@ export default function SettingsView({
   // Load settings
   useEffect(() => {
     fetchSettings();
+    fetchAiProfile();
   }, []);
 
   const fetchSettings = async () => {
     try {
       const response = await fetch('/api/admin/social/settings');
-      const data = await response.json();
+      const data = await response.json() as { success: boolean; settings: typeof settings };
       if (data.success) {
         setSettings(data.settings);
       }
@@ -171,6 +200,108 @@ export default function SettingsView({
       console.error('[Settings] Update error:', error);
     } finally {
       setSavingSettings(false);
+    }
+  };
+
+  // Fetch AI profile
+  const fetchAiProfile = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/admin/ai-studio/profiles', {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        credentials: 'include',
+      });
+      
+      if (response.ok) {
+        const data = await response.json() as { activeProfile: typeof aiProfile };
+        const active = data.activeProfile;
+        if (active) {
+          setAiProfile(active);
+          setCustomTone(active.tone_description || '');
+          setCustomInstructions(active.custom_instructions || '');
+          setMaxEmojis(active.max_emojis || 1);
+          setMaxHashtags(active.max_hashtags || 7);
+          
+          // Determine preset from tone description
+          const tone = (active.tone_description || '').toLowerCase();
+          if (tone.includes('professional') || tone.includes('corporate')) setTonePreset('professional');
+          else if (tone.includes('playful') || tone.includes('fun')) setTonePreset('playful');
+          else if (tone.includes('artistic') || tone.includes('creative')) setTonePreset('artistic');
+          else if (tone.includes('casual') || tone.includes('friendly')) setTonePreset('casual');
+          else setTonePreset('custom');
+        }
+      }
+    } catch (error) {
+      console.error('[Settings] AI profile fetch error:', error);
+    }
+  };
+
+  // Save AI profile
+  const handleSaveAiProfile = async () => {
+    setSavingAi(true);
+    try {
+      const token = localStorage.getItem('token');
+      
+      // Get tone description based on preset
+      let toneDescription = customTone;
+      if (tonePreset === 'professional') {
+        toneDescription = 'Professional, polished, and business-appropriate. Clear and concise messaging.';
+      } else if (tonePreset === 'casual') {
+        toneDescription = 'Casual, friendly, and approachable. Conversational and relatable.';
+      } else if (tonePreset === 'playful') {
+        toneDescription = 'Playful, energetic, and fun. Engaging with personality and humor.';
+      } else if (tonePreset === 'artistic') {
+        toneDescription = 'Artistic, creative, and expressive. Poetic and thought-provoking.';
+      }
+
+      if (aiProfile) {
+        // Update existing profile
+        const response = await fetch('/api/admin/ai-studio/profiles', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            id: aiProfile.id,
+            tone_description: toneDescription,
+            custom_instructions: customInstructions || null,
+            max_emojis: maxEmojis,
+            max_hashtags: maxHashtags,
+          }),
+        });
+        
+        if (response.ok) {
+          await fetchAiProfile();
+        }
+      } else {
+        // Create new profile
+        const response = await fetch('/api/admin/ai-studio/profiles', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            name: 'Social Studio Voice',
+            tone_description: toneDescription,
+            custom_instructions: customInstructions || null,
+            max_emojis: maxEmojis,
+            max_hashtags: maxHashtags,
+            is_active: true,
+          }),
+        });
+        
+        if (response.ok) {
+          await fetchAiProfile();
+        }
+      }
+    } catch (error) {
+      console.error('[Settings] AI profile save error:', error);
+    } finally {
+      setSavingAi(false);
     }
   };
 
@@ -233,7 +364,7 @@ export default function SettingsView({
       });
       setShowNewCampaignForm(false);
       setNewCampaignName('');
-      setNewCampaignColor('#D4A853');
+      setNewCampaignColor('#843c2d');
       onRefresh();
     } catch (error) {
       console.error('[Settings] Create campaign error:', error);
@@ -271,17 +402,17 @@ export default function SettingsView({
       className="w-full flex items-center justify-between p-4 text-left group"
     >
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-[#0f0f0f] flex items-center justify-center text-[#D4A853] group-hover:bg-[#141414] transition-colors">
+        <div className="w-10 h-10 rounded-xl bg-[#0d0c0a] flex items-center justify-center text-[#e8a990] group-hover:bg-[#302927] transition-colors">
           {icon}
         </div>
         <div>
           <div className="text-white font-medium tracking-tight">{title}</div>
-          <div className="text-xs text-[#5a5554]">{subtitle}</div>
+          <div className="text-xs text-[#726d6c]">{subtitle}</div>
         </div>
       </div>
       <span
-        className={`text-[#5a5554] transition-all duration-300 ${
-          expandedSection === section ? 'rotate-90 text-[#D4A853]' : ''
+        className={`text-[#726d6c] transition-all duration-300 ${
+          expandedSection === section ? 'rotate-90 text-[#e8a990]' : ''
         }`}
       >
         {Icons.chevronRight}
@@ -294,15 +425,15 @@ export default function SettingsView({
       <div className="px-4 pt-6 pb-28 space-y-4">
         {/* Header */}
         <div className="mb-8">
-          <p className="text-[10px] uppercase tracking-widest text-[#D4A853] mb-1">Configuration</p>
+          <p className="text-[10px] uppercase tracking-widest text-[#e8a990] mb-1">Configuration</p>
           <h1 className="text-2xl font-bold text-white tracking-tight">Settings</h1>
-          <p className="text-sm text-[#5a5554] mt-1">
+          <p className="text-sm text-[#726d6c] mt-1">
             Manage your publishing settings, accounts, and campaigns
           </p>
         </div>
 
         {/* General Settings Section */}
-        <section className="rounded-2xl bg-[#0a0a0a] border border-[#1a1a1a] overflow-hidden hover:border-[#D4A853]/20 transition-all duration-300">
+        <section className="rounded-2xl bg-black border border-[#302927] overflow-hidden hover:border-[#e8a990]/25 transition-all duration-300">
           <SectionHeader
             icon={Icons.clock}
             title="General Settings"
@@ -325,14 +456,14 @@ export default function SettingsView({
                     value={settings.slots_per_day}
                     onChange={(e) => handleUpdateSettings({ slots_per_day: parseInt(e.target.value) })}
                     disabled={savingSettings}
-                    className="flex-1 h-2 bg-[#1a1a1a] rounded-lg appearance-none cursor-pointer accent-[#D4A853]"
+                    className="flex-1 h-2 bg-[#302927] rounded-lg appearance-none cursor-pointer accent-[#843c2d]"
                   />
                   <div className="w-16 text-center">
-                    <div className="text-2xl font-bold text-[#D4A853]">{settings.slots_per_day}</div>
-                    <div className="text-xs text-[#5a5554]">slots</div>
+                    <div className="text-2xl font-bold text-[#e8a990]">{settings.slots_per_day}</div>
+                    <div className="text-xs text-[#726d6c]">slots</div>
                   </div>
                 </div>
-                <p className="text-xs text-[#5a5554] mt-2">
+                <p className="text-xs text-[#726d6c] mt-2">
                   💡 All posts publish at midnight. Slot numbers help organize multiple posts per day.
                 </p>
               </div>
@@ -346,7 +477,7 @@ export default function SettingsView({
                   value={settings.default_timezone}
                   onChange={(e) => handleUpdateSettings({ default_timezone: e.target.value })}
                   disabled={savingSettings}
-                  className="w-full px-4 py-3 rounded-xl bg-[#0f0f0f] border border-[#1a1a1a] text-white text-sm focus:border-[#D4A853]/40 focus:outline-none transition-colors"
+                  className="w-full px-4 py-3 rounded-xl bg-[#0d0c0a] border border-[#302927] text-white text-sm focus:border-[#843c2d]/40 focus:outline-none transition-colors"
                 >
                   <option value="America/Los_Angeles">Pacific Time (PT)</option>
                   <option value="America/Denver">Mountain Time (MT)</option>
@@ -368,18 +499,18 @@ export default function SettingsView({
                   value={settings.auto_hashtag_limit}
                   onChange={(e) => handleUpdateSettings({ auto_hashtag_limit: parseInt(e.target.value) || 0 })}
                   disabled={savingSettings}
-                  className="w-full px-4 py-3 rounded-xl bg-[#0f0f0f] border border-[#1a1a1a] text-white text-sm focus:border-[#D4A853]/40 focus:outline-none transition-colors"
+                  className="w-full px-4 py-3 rounded-xl bg-[#0d0c0a] border border-[#302927] text-white text-sm focus:border-[#843c2d]/40 focus:outline-none transition-colors"
                 />
-                <p className="text-xs text-[#5a5554] mt-2">
+                <p className="text-xs text-[#726d6c] mt-2">
                   Limit how many hashtags AI suggests per post (0-30)
                 </p>
               </div>
 
               {/* Require Approval Toggle */}
-              <div className="flex items-center justify-between p-4 rounded-xl bg-[#0f0f0f] border border-[#1a1a1a]">
+              <div className="flex items-center justify-between p-4 rounded-xl bg-[#0d0c0a] border border-[#302927]">
                 <div>
                   <div className="text-sm font-medium text-white">Require Approval</div>
-                  <div className="text-xs text-[#5a5554] mt-1">
+                  <div className="text-xs text-[#726d6c] mt-1">
                     Posts need manual approval before publishing
                   </div>
                 </div>
@@ -387,7 +518,7 @@ export default function SettingsView({
                   onClick={() => handleUpdateSettings({ require_approval: !settings.require_approval })}
                   disabled={savingSettings}
                   className={`relative w-12 h-6 rounded-full transition-all duration-300 ${
-                    settings.require_approval ? 'bg-[#D4A853]' : 'bg-[#1a1a1a]'
+                    settings.require_approval ? 'bg-[#843c2d]' : 'bg-[#302927]'
                   }`}
                 >
                   <div
@@ -399,7 +530,7 @@ export default function SettingsView({
               </div>
 
               {savingSettings && (
-                <div className="text-xs text-[#D4A853] text-center py-2">
+                <div className="text-xs text-[#e8a990] text-center py-2">
                   Saving...
                 </div>
               )}
@@ -407,8 +538,144 @@ export default function SettingsView({
           )}
         </section>
 
+        {/* AI Voice Section */}
+        <section className="rounded-2xl bg-black border border-[#302927] overflow-hidden hover:border-[#e8a990]/25 transition-all duration-300">
+          <SectionHeader
+            icon={Icons.sparkles}
+            title="AI Voice"
+            subtitle={aiProfile ? "✨ AI Ready" : "Setup AI captions & hashtags"}
+            section="ai"
+          />
+
+          {expandedSection === 'ai' && (
+            <div className="px-4 pb-4 space-y-4">
+              {/* Tone Presets */}
+              <div>
+                <label className="block text-sm font-medium text-white mb-2">
+                  Brand Tone
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {(['professional', 'casual', 'playful', 'artistic'] as const).map((preset) => (
+                    <button
+                      key={preset}
+                      onClick={() => {
+                        setTonePreset(preset);
+                        setCustomTone('');
+                      }}
+                      className={`py-3 px-4 rounded-xl text-sm font-medium transition-all duration-300 ${
+                        tonePreset === preset
+                          ? 'bg-gradient-to-r from-[#843c2d] to-[#6b3323] text-black shadow-[0_0_15px_rgba(212,168,83,0.2)]'
+                          : 'bg-[#0d0c0a] border border-[#302927] text-[#726d6c] hover:border-[#e8a990]/35 hover:text-white'
+                      }`}
+                    >
+                      {preset === 'professional' && '💼'} 
+                      {preset === 'casual' && '😊'} 
+                      {preset === 'playful' && '🎉'} 
+                      {preset === 'artistic' && '🎨'}
+                      {' '}
+                      {preset.charAt(0).toUpperCase() + preset.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Custom Tone (for custom preset) */}
+              {tonePreset === 'custom' && (
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">
+                    Custom Tone Description
+                  </label>
+                  <textarea
+                    value={customTone}
+                    onChange={(e) => setCustomTone(e.target.value)}
+                    placeholder="e.g., Edgy and bold with a street art influence..."
+                    className="w-full px-4 py-3 rounded-xl bg-[#0d0c0a] border border-[#302927] text-white text-sm focus:border-[#843c2d]/40 focus:outline-none transition-colors resize-none"
+                    rows={3}
+                  />
+                </div>
+              )}
+
+              {/* Custom Instructions */}
+              <div>
+                <label className="block text-sm font-medium text-white mb-2">
+                  Custom Instructions (Optional)
+                </label>
+                <textarea
+                  value={customInstructions}
+                  onChange={(e) => setCustomInstructions(e.target.value)}
+                  placeholder="e.g., Always mention the artist name, avoid slang, include call-to-action..."
+                  className="w-full px-4 py-3 rounded-xl bg-[#0d0c0a] border border-[#302927] text-white text-sm focus:border-[#843c2d]/40 focus:outline-none transition-colors resize-none"
+                  rows={3}
+                />
+              </div>
+
+              {/* Max Emojis */}
+              <div>
+                <label className="block text-sm font-medium text-white mb-2">
+                  Max Emojis per Post
+                </label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="range"
+                    min="0"
+                    max="5"
+                    value={maxEmojis}
+                    onChange={(e) => setMaxEmojis(parseInt(e.target.value))}
+                    className="flex-1 h-2 bg-[#302927] rounded-lg appearance-none cursor-pointer accent-[#843c2d]"
+                  />
+                  <div className="w-12 text-center">
+                    <div className="text-lg font-bold text-[#e8a990]">{maxEmojis}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Max Hashtags */}
+              <div>
+                <label className="block text-sm font-medium text-white mb-2">
+                  Max Hashtags per Post
+                </label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="range"
+                    min="3"
+                    max="15"
+                    value={maxHashtags}
+                    onChange={(e) => setMaxHashtags(parseInt(e.target.value))}
+                    className="flex-1 h-2 bg-[#302927] rounded-lg appearance-none cursor-pointer accent-[#843c2d]"
+                  />
+                  <div className="w-12 text-center">
+                    <div className="text-lg font-bold text-[#e8a990]">{maxHashtags}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Save Button */}
+              <button
+                onClick={handleSaveAiProfile}
+                disabled={savingAi}
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-[#843c2d] to-[#6b3323] text-black font-semibold tracking-wide shadow-[0_0_20px_rgba(212,168,83,0.2)] hover:shadow-[0_0_30px_rgba(212,168,83,0.3)] transition-all duration-300 disabled:opacity-50"
+              >
+                {savingAi ? 'Saving...' : aiProfile ? 'Update AI Voice' : 'Create AI Voice'}
+              </button>
+
+              {/* Link to Advanced Settings */}
+              <a
+                href="/admin/ai-studio"
+                className="flex items-center justify-center gap-2 w-full py-3 rounded-xl border border-[#302927] text-[#726d6c] text-sm font-medium hover:border-[#e8a990]/35 hover:text-[#e8a990] hover:bg-[#843c2d]/5 transition-all duration-300"
+              >
+                <span>Advanced AI Settings</span>
+                {Icons.externalLink}
+              </a>
+
+              <div className="text-xs text-[#726d6c] text-center mt-2">
+                💡 AI will auto-suggest captions when you create posts
+              </div>
+            </div>
+          )}
+        </section>
+
         {/* Connected Accounts Section */}
-        <section className="rounded-2xl bg-[#0a0a0a] border border-[#1a1a1a] overflow-hidden hover:border-[#D4A853]/20 transition-all duration-300">
+        <section className="rounded-2xl bg-black border border-[#302927] overflow-hidden hover:border-[#e8a990]/25 transition-all duration-300">
           <SectionHeader
             icon={Icons.users}
             title="Connected Accounts"
@@ -422,7 +689,7 @@ export default function SettingsView({
               <button
                 onClick={handleSyncAccounts}
                 disabled={syncing}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-[#D4A853] to-[#B8923F] text-black font-semibold tracking-wide shadow-[0_0_20px_rgba(212,168,83,0.2)] hover:shadow-[0_0_30px_rgba(212,168,83,0.3)] transition-all duration-300 disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-[#843c2d] to-[#6b3323] text-black font-semibold tracking-wide shadow-[0_0_20px_rgba(212,168,83,0.2)] hover:shadow-[0_0_30px_rgba(212,168,83,0.3)] transition-all duration-300 disabled:opacity-50"
               >
                 <span className={syncing ? 'animate-spin' : ''}>{Icons.sync}</span>
                 {syncing ? 'Syncing...' : 'Sync from Post for Me'}
@@ -435,8 +702,8 @@ export default function SettingsView({
                     key={account.id}
                     className={`flex items-center gap-3 p-3 rounded-xl transition-all duration-300 ${
                       account.is_active
-                        ? 'bg-[#0f0f0f] border border-[#1a1a1a] hover:border-[#D4A853]/20'
-                        : 'bg-[#0f0f0f]/50 opacity-40'
+                        ? 'bg-[#0d0c0a] border border-[#302927] hover:border-[#e8a990]/25'
+                        : 'bg-[#0d0c0a]/50 opacity-40'
                     }`}
                   >
                     <div
@@ -459,7 +726,7 @@ export default function SettingsView({
                       <div className="text-sm font-medium text-white tracking-tight">
                         {account.account_name || `@${account.account_handle}`}
                       </div>
-                      <div className="text-xs text-[#5a5554]">
+                      <div className="text-xs text-[#726d6c]">
                         {account.platform.charAt(0).toUpperCase() + account.platform.slice(1)} •
                         @{account.account_handle}
                       </div>
@@ -474,12 +741,12 @@ export default function SettingsView({
                 ))}
 
                 {accounts.length === 0 && (
-                  <div className="p-8 text-center rounded-xl bg-[#0f0f0f] border border-dashed border-[#1a1a1a]">
-                    <div className="w-12 h-12 rounded-full bg-[#141414] flex items-center justify-center mx-auto mb-3">
-                      <span className="text-[#5a5554]">{Icons.users}</span>
+                  <div className="p-8 text-center rounded-xl bg-[#0d0c0a] border border-dashed border-[#302927]">
+                    <div className="w-12 h-12 rounded-full bg-[#302927] flex items-center justify-center mx-auto mb-3">
+                      <span className="text-[#726d6c]">{Icons.users}</span>
                     </div>
-                    <p className="text-sm text-[#8a8584]">No accounts connected</p>
-                    <p className="text-xs text-[#D4A853] mt-1">
+                    <p className="text-sm text-[#726d6c]">No accounts connected</p>
+                    <p className="text-xs text-[#e8a990] mt-1">
                       Connect accounts via Post for Me
                     </p>
                   </div>
@@ -490,7 +757,7 @@ export default function SettingsView({
         </section>
 
         {/* Posting Schedule Section */}
-        <section className="rounded-2xl bg-[#0a0a0a] border border-[#1a1a1a] overflow-hidden hover:border-[#D4A853]/20 transition-all duration-300">
+        <section className="rounded-2xl bg-black border border-[#302927] overflow-hidden hover:border-[#e8a990]/25 transition-all duration-300">
           <SectionHeader
             icon={Icons.clock}
             title="Posting Schedule"
@@ -500,7 +767,7 @@ export default function SettingsView({
 
           {expandedSection === 'schedule' && (
             <div className="px-4 pb-4 space-y-3">
-              <p className="text-xs text-[#5a5554] px-1">
+              <p className="text-xs text-[#726d6c] px-1">
                 Content auto-schedules to these time slots
               </p>
 
@@ -511,19 +778,19 @@ export default function SettingsView({
                     key={slot.id}
                     className={`flex items-center gap-3 p-3 rounded-xl transition-all duration-300 ${
                       slot.is_active
-                        ? 'bg-[#0f0f0f] border border-[#1a1a1a] hover:border-[#D4A853]/20'
-                        : 'bg-[#0f0f0f]/50 opacity-40'
+                        ? 'bg-[#0d0c0a] border border-[#302927] hover:border-[#e8a990]/25'
+                        : 'bg-[#0d0c0a]/50 opacity-40'
                     }`}
                   >
-                    <div className="w-11 h-11 rounded-xl bg-[#141414] border border-[#1a1a1a] flex items-center justify-center">
-                      <span className="text-[#D4A853]">{Icons.clock}</span>
+                    <div className="w-11 h-11 rounded-xl bg-[#302927] border border-[#302927] flex items-center justify-center">
+                      <span className="text-[#e8a990]">{Icons.clock}</span>
                     </div>
 
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-semibold text-white tracking-tight">
                         {formatSlotTime(slot.time)}
                       </div>
-                      <div className="text-xs text-[#5a5554]">
+                      <div className="text-xs text-[#726d6c]">
                         {slot.day_of_week !== null
                           ? DAY_NAMES[slot.day_of_week]
                           : 'Every day'}
@@ -533,7 +800,7 @@ export default function SettingsView({
 
                     <button
                       onClick={() => handleDeleteSlot(slot.id)}
-                      className="w-9 h-9 flex items-center justify-center rounded-xl text-[#5a5554] hover:text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-all duration-300"
+                      className="w-9 h-9 flex items-center justify-center rounded-xl text-[#726d6c] hover:text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-all duration-300"
                     >
                       {Icons.trash}
                     </button>
@@ -541,39 +808,39 @@ export default function SettingsView({
                 ))}
 
                 {slots.length === 0 && (
-                  <div className="p-8 text-center rounded-xl bg-[#0f0f0f] border border-dashed border-[#1a1a1a]">
-                    <div className="w-12 h-12 rounded-full bg-[#141414] flex items-center justify-center mx-auto mb-3">
-                      <span className="text-[#5a5554]">{Icons.clock}</span>
+                  <div className="p-8 text-center rounded-xl bg-[#0d0c0a] border border-dashed border-[#302927]">
+                    <div className="w-12 h-12 rounded-full bg-[#302927] flex items-center justify-center mx-auto mb-3">
+                      <span className="text-[#726d6c]">{Icons.clock}</span>
                     </div>
-                    <p className="text-sm text-[#8a8584]">No time slots configured</p>
+                    <p className="text-sm text-[#726d6c]">No time slots configured</p>
                   </div>
                 )}
               </div>
 
               {/* Add New Slot */}
               {showNewSlotForm ? (
-                <div className="p-4 rounded-xl bg-[#0f0f0f] border border-[#1a1a1a] space-y-4">
+                <div className="p-4 rounded-xl bg-[#0d0c0a] border border-[#302927] space-y-4">
                   <div>
-                    <label className="block text-[10px] uppercase tracking-widest text-[#8a8584] mb-2">
+                    <label className="block text-[10px] uppercase tracking-widest text-[#726d6c] mb-2">
                       Time
                     </label>
                     <input
                       type="time"
                       value={newSlotTime}
                       onChange={(e) => setNewSlotTime(e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl bg-[#141414] border border-[#1a1a1a] text-white text-sm focus:border-[#D4A853]/50 focus:outline-none transition-colors"
+                      className="w-full px-4 py-3 rounded-xl bg-[#302927] border border-[#302927] text-white text-sm focus:border-[#843c2d]/50 focus:outline-none transition-colors"
                     />
                   </div>
                   <div className="flex gap-2">
                     <button
                       onClick={() => setShowNewSlotForm(false)}
-                      className="flex-1 py-3 rounded-xl bg-[#141414] border border-[#1a1a1a] text-[#8a8584] text-sm font-medium hover:bg-[#1a1a1a] transition-colors"
+                      className="flex-1 py-3 rounded-xl bg-[#302927] border border-[#302927] text-[#726d6c] text-sm font-medium hover:bg-[#302927] transition-colors"
                     >
                       Cancel
                     </button>
                     <button
                       onClick={handleCreateSlot}
-                      className="flex-1 py-3 rounded-xl bg-gradient-to-r from-[#D4A853] to-[#B8923F] text-black text-sm font-semibold shadow-[0_0_15px_rgba(212,168,83,0.2)]"
+                      className="flex-1 py-3 rounded-xl bg-gradient-to-r from-[#843c2d] to-[#6b3323] text-black text-sm font-semibold shadow-[0_0_15px_rgba(212,168,83,0.2)]"
                     >
                       Add Slot
                     </button>
@@ -582,7 +849,7 @@ export default function SettingsView({
               ) : (
                 <button
                   onClick={() => setShowNewSlotForm(true)}
-                  className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl border border-dashed border-[#1a1a1a] text-[#5a5554] hover:border-[#D4A853]/30 hover:text-[#D4A853] hover:bg-[#D4A853]/5 transition-all duration-300"
+                  className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl border border-dashed border-[#302927] text-[#726d6c] hover:border-[#e8a990]/35 hover:text-[#e8a990] hover:bg-[#843c2d]/5 transition-all duration-300"
                 >
                   {Icons.plus}
                   <span className="text-sm font-medium">Add Time Slot</span>
@@ -593,7 +860,7 @@ export default function SettingsView({
         </section>
 
         {/* Campaigns Section */}
-        <section className="rounded-2xl bg-[#0a0a0a] border border-[#1a1a1a] overflow-hidden hover:border-[#D4A853]/20 transition-all duration-300">
+        <section className="rounded-2xl bg-black border border-[#302927] overflow-hidden hover:border-[#e8a990]/25 transition-all duration-300">
           <SectionHeader
             icon={Icons.folder}
             title="Campaigns"
@@ -603,7 +870,7 @@ export default function SettingsView({
 
           {expandedSection === 'campaigns' && (
             <div className="px-4 pb-4 space-y-3">
-              <p className="text-xs text-[#5a5554] px-1">
+              <p className="text-xs text-[#726d6c] px-1">
                 Organize posts by project or theme
               </p>
 
@@ -614,21 +881,21 @@ export default function SettingsView({
                     key={campaign.id}
                     className={`flex items-center gap-3 p-3 rounded-xl transition-all duration-300 ${
                       campaign.status === 'active'
-                        ? 'bg-[#0f0f0f] border border-[#1a1a1a] hover:border-[#D4A853]/20'
-                        : 'bg-[#0f0f0f]/50 opacity-40'
+                        ? 'bg-[#0d0c0a] border border-[#302927] hover:border-[#e8a990]/25'
+                        : 'bg-[#0d0c0a]/50 opacity-40'
                     }`}
                   >
                     <div
                       className="w-2 h-10 rounded-full"
                       style={{
-                        backgroundColor: campaign.color || '#5a5554',
-                        boxShadow: campaign.status === 'active' ? `0 0 10px ${campaign.color || '#5a5554'}40` : 'none'
+                        backgroundColor: campaign.color || '#726d6c',
+                        boxShadow: campaign.status === 'active' ? `0 0 10px ${campaign.color || '#726d6c'}40` : 'none'
                       }}
                     />
 
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-medium text-white tracking-tight">{campaign.name}</div>
-                      <div className="text-xs text-[#5a5554]">
+                      <div className="text-xs text-[#726d6c]">
                         {campaign.post_count} post{campaign.post_count !== 1 ? 's' : ''} •{' '}
                         <span className={campaign.status === 'active' ? 'text-emerald-400' : ''}>
                           {campaign.status}
@@ -639,7 +906,7 @@ export default function SettingsView({
                     {campaign.status === 'active' && (
                       <button
                         onClick={() => handleArchiveCampaign(campaign.id)}
-                        className="w-9 h-9 flex items-center justify-center rounded-xl text-[#5a5554] hover:text-amber-400 hover:bg-amber-500/10 border border-transparent hover:border-amber-500/20 transition-all duration-300"
+                        className="w-9 h-9 flex items-center justify-center rounded-xl text-[#726d6c] hover:text-amber-400 hover:bg-amber-500/10 border border-transparent hover:border-amber-500/20 transition-all duration-300"
                         title="Archive"
                       >
                         {Icons.archive}
@@ -649,20 +916,20 @@ export default function SettingsView({
                 ))}
 
                 {campaigns.length === 0 && (
-                  <div className="p-8 text-center rounded-xl bg-[#0f0f0f] border border-dashed border-[#1a1a1a]">
-                    <div className="w-12 h-12 rounded-full bg-[#141414] flex items-center justify-center mx-auto mb-3">
-                      <span className="text-[#5a5554]">{Icons.folder}</span>
+                  <div className="p-8 text-center rounded-xl bg-[#0d0c0a] border border-dashed border-[#302927]">
+                    <div className="w-12 h-12 rounded-full bg-[#302927] flex items-center justify-center mx-auto mb-3">
+                      <span className="text-[#726d6c]">{Icons.folder}</span>
                     </div>
-                    <p className="text-sm text-[#8a8584]">No campaigns created</p>
+                    <p className="text-sm text-[#726d6c]">No campaigns created</p>
                   </div>
                 )}
               </div>
 
               {/* Add New Campaign */}
               {showNewCampaignForm ? (
-                <div className="p-4 rounded-xl bg-[#0f0f0f] border border-[#1a1a1a] space-y-4">
+                <div className="p-4 rounded-xl bg-[#0d0c0a] border border-[#302927] space-y-4">
                   <div>
-                    <label className="block text-[10px] uppercase tracking-widest text-[#8a8584] mb-2">
+                    <label className="block text-[10px] uppercase tracking-widest text-[#726d6c] mb-2">
                       Campaign Name
                     </label>
                     <input
@@ -670,22 +937,22 @@ export default function SettingsView({
                       value={newCampaignName}
                       onChange={(e) => setNewCampaignName(e.target.value)}
                       placeholder="e.g., Album Launch"
-                      className="w-full px-4 py-3 rounded-xl bg-[#141414] border border-[#1a1a1a] text-white text-sm placeholder-[#5a5554] focus:border-[#D4A853]/50 focus:outline-none transition-colors"
+                      className="w-full px-4 py-3 rounded-xl bg-[#302927] border border-[#302927] text-white text-sm placeholder-[#726d6c] focus:border-[#843c2d]/50 focus:outline-none transition-colors"
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] uppercase tracking-widest text-[#8a8584] mb-2">
+                    <label className="block text-[10px] uppercase tracking-widest text-[#726d6c] mb-2">
                       Color
                     </label>
                     <div className="flex gap-2">
-                      {['#D4A853', '#843c2d', '#3B82F6', '#10B981', '#8B5CF6', '#EC4899', '#F97316', '#06B6D4'].map(
+                      {['#843c2d', '#843c2d', '#3B82F6', '#10B981', '#8B5CF6', '#EC4899', '#F97316', '#06B6D4'].map(
                         (color) => (
                           <button
                             key={color}
                             onClick={() => setNewCampaignColor(color)}
                             className={`w-8 h-8 rounded-lg transition-all duration-200 ${
                               newCampaignColor === color
-                                ? 'ring-2 ring-white ring-offset-2 ring-offset-[#0f0f0f] scale-110'
+                                ? 'ring-2 ring-white ring-offset-2 ring-offset-[#0d0c0a] scale-110'
                                 : 'hover:scale-105'
                             }`}
                             style={{ backgroundColor: color }}
@@ -697,14 +964,14 @@ export default function SettingsView({
                   <div className="flex gap-2">
                     <button
                       onClick={() => setShowNewCampaignForm(false)}
-                      className="flex-1 py-3 rounded-xl bg-[#141414] border border-[#1a1a1a] text-[#8a8584] text-sm font-medium hover:bg-[#1a1a1a] transition-colors"
+                      className="flex-1 py-3 rounded-xl bg-[#302927] border border-[#302927] text-[#726d6c] text-sm font-medium hover:bg-[#302927] transition-colors"
                     >
                       Cancel
                     </button>
                     <button
                       onClick={handleCreateCampaign}
                       disabled={!newCampaignName.trim()}
-                      className="flex-1 py-3 rounded-xl bg-gradient-to-r from-[#D4A853] to-[#B8923F] text-black text-sm font-semibold shadow-[0_0_15px_rgba(212,168,83,0.2)] disabled:opacity-50"
+                      className="flex-1 py-3 rounded-xl bg-gradient-to-r from-[#843c2d] to-[#6b3323] text-black text-sm font-semibold shadow-[0_0_15px_rgba(212,168,83,0.2)] disabled:opacity-50"
                     >
                       Create
                     </button>
@@ -713,7 +980,7 @@ export default function SettingsView({
               ) : (
                 <button
                   onClick={() => setShowNewCampaignForm(true)}
-                  className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl border border-dashed border-[#1a1a1a] text-[#5a5554] hover:border-[#D4A853]/30 hover:text-[#D4A853] hover:bg-[#D4A853]/5 transition-all duration-300"
+                  className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl border border-dashed border-[#302927] text-[#726d6c] hover:border-[#e8a990]/35 hover:text-[#e8a990] hover:bg-[#843c2d]/5 transition-all duration-300"
                 >
                   {Icons.plus}
                   <span className="text-sm font-medium">New Campaign</span>
@@ -724,16 +991,16 @@ export default function SettingsView({
         </section>
 
         {/* About Section */}
-        <section className="rounded-2xl bg-gradient-to-br from-[#0a0a0a] to-[#0f0f0f] border border-[#1a1a1a] p-6 text-center">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#D4A853]/20 to-[#D4A853]/5 flex items-center justify-center mx-auto mb-3 shadow-[0_0_20px_rgba(212,168,83,0.1)]">
+        <section className="rounded-2xl bg-gradient-to-br from-[black] to-[#0d0c0a] border border-[#302927] p-6 text-center">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#843c2d]/20 to-[#843c2d]/5 flex items-center justify-center mx-auto mb-3 shadow-[0_0_20px_rgba(212,168,83,0.1)]">
             <span className="text-2xl">📱</span>
           </div>
           <div className="text-sm font-semibold text-white tracking-tight">Social Studio</div>
-          <div className="text-xs text-[#5a5554] mt-1">
+          <div className="text-xs text-[#726d6c] mt-1">
             Powered by Post for Me
           </div>
-          <div className="mt-4 pt-4 border-t border-[#1a1a1a]">
-            <div className="text-[10px] uppercase tracking-widest text-[#D4A853]">
+          <div className="mt-4 pt-4 border-t border-[#302927]">
+            <div className="text-[10px] uppercase tracking-widest text-[#e8a990]">
               Odubo Platform
             </div>
           </div>

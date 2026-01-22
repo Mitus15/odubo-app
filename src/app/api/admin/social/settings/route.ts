@@ -90,7 +90,7 @@ export async function PATCH(request: NextRequest) {
   }
 
   try {
-    const body = await request.json();
+    const body = await request.json() as Record<string, unknown>;
     const updates: string[] = [];
     const values: (string | number)[] = [];
 

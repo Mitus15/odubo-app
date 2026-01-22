@@ -112,7 +112,7 @@ function getMonthDays(year: number, month: number): Date[] {
 function getStatusStyles(status: string): { dot: string; glow?: string } {
   switch (status) {
     case 'scheduled':
-      return { dot: 'bg-[#D4A853]', glow: 'shadow-[0_0_6px_rgba(212,168,83,0.5)]' };
+      return { dot: 'bg-[#843c2d]', glow: 'shadow-[0_0_6px_rgba(212,168,83,0.5)]' };
     case 'published':
       return { dot: 'bg-emerald-400', glow: 'shadow-[0_0_6px_rgba(52,211,153,0.5)]' };
     case 'failed':
@@ -120,7 +120,7 @@ function getStatusStyles(status: string): { dot: string; glow?: string } {
     case 'publishing':
       return { dot: 'bg-purple-400' };
     default:
-      return { dot: 'bg-[#5a5554]' };
+      return { dot: 'bg-[#726d6c]' };
   }
 }
 
@@ -317,13 +317,13 @@ export default function CalendarView({
           <div className="flex items-center gap-2">
             <button
               onClick={goToPrevious}
-              className="w-9 h-9 flex items-center justify-center rounded-xl bg-[#0f0f0f] border border-[#1a1a1a] text-[#8a8584] hover:text-white hover:bg-[#141414] hover:border-[#D4A853]/30 transition-all duration-300"
+              className="w-9 h-9 flex items-center justify-center rounded-xl bg-[#0d0c0a] border border-[#302927] text-[#726d6c] hover:text-white hover:bg-[#302927] hover:border-[#e8a990]/35 transition-all duration-300"
             >
               {Icons.chevronLeft}
             </button>
             <button
               onClick={goToNext}
-              className="w-9 h-9 flex items-center justify-center rounded-xl bg-[#0f0f0f] border border-[#1a1a1a] text-[#8a8584] hover:text-white hover:bg-[#141414] hover:border-[#D4A853]/30 transition-all duration-300"
+              className="w-9 h-9 flex items-center justify-center rounded-xl bg-[#0d0c0a] border border-[#302927] text-[#726d6c] hover:text-white hover:bg-[#302927] hover:border-[#e8a990]/35 transition-all duration-300"
             >
               {Icons.chevronRight}
             </button>
@@ -331,22 +331,22 @@ export default function CalendarView({
           </div>
           <button
             onClick={goToToday}
-            className="px-4 py-2 rounded-xl bg-[#0f0f0f] border border-[#1a1a1a] text-xs font-medium text-[#D4A853] hover:bg-[#141414] hover:border-[#D4A853]/30 hover:shadow-[0_0_15px_rgba(212,168,83,0.15)] transition-all duration-300 tracking-wide"
+            className="px-4 py-2 rounded-xl bg-[#0d0c0a] border border-[#302927] text-xs font-medium text-[#e8a990] hover:bg-[#302927] hover:border-[#e8a990]/35 hover:shadow-[0_0_15px_rgba(212,168,83,0.15)] transition-all duration-300 tracking-wide"
           >
             Today
           </button>
         </div>
 
         {/* View Mode Tabs */}
-        <div className="flex gap-1 p-1 bg-[#0a0a0a] rounded-xl border border-[#1a1a1a]">
+        <div className="flex gap-1 p-1 bg-black rounded-xl border border-[#302927]">
           {(['week', 'month', 'list'] as ViewMode[]).map((mode) => (
             <button
               key={mode}
               onClick={() => setViewMode(mode)}
               className={`flex-1 py-2.5 rounded-lg text-xs font-medium tracking-wide transition-all duration-300 ${
                 viewMode === mode
-                  ? 'bg-gradient-to-r from-[#D4A853] to-[#B8923F] text-black shadow-[0_0_15px_rgba(212,168,83,0.3)]'
-                  : 'text-[#5a5554] hover:text-[#8a8584]'
+                  ? 'bg-gradient-to-r from-[#843c2d] to-[#6b3323] text-black shadow-[0_0_15px_rgba(212,168,83,0.3)]'
+                  : 'text-[#726d6c] hover:text-[#726d6c]'
               }`}
             >
               {mode.charAt(0).toUpperCase() + mode.slice(1)}
@@ -362,7 +362,7 @@ export default function CalendarView({
           <div className="flex-shrink-0 px-4">
             <div className="grid grid-cols-7 gap-1">
               {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, i) => (
-                <div key={i} className="text-center text-[10px] text-[#5a5554] py-2 font-medium tracking-widest">
+                <div key={i} className="text-center text-[10px] text-[#726d6c] py-2 font-medium tracking-widest">
                   {day}
                 </div>
               ))}
@@ -384,11 +384,11 @@ export default function CalendarView({
                     onClick={() => setSelectedDate(date)}
                     className={`relative aspect-square flex flex-col items-center justify-center rounded-xl transition-all duration-300 ${
                       isSelected
-                        ? 'bg-gradient-to-br from-[#D4A853] to-[#B8923F] text-black shadow-[0_0_20px_rgba(212,168,83,0.4)]'
+                        ? 'bg-gradient-to-br from-[#843c2d] to-[#6b3323] text-black shadow-[0_0_20px_rgba(212,168,83,0.4)]'
                         : dayData?.isToday
-                        ? 'bg-[#D4A853]/15 text-[#D4A853] ring-1 ring-[#D4A853]/40'
+                        ? 'bg-[#843c2d]/15 text-[#e8a990] ring-1 ring-[#843c2d]/40'
                         : isCurrentMonth
-                        ? 'text-white hover:bg-[#0f0f0f] hover:ring-1 hover:ring-[#1a1a1a]'
+                        ? 'text-white hover:bg-[#0d0c0a] hover:ring-1 hover:ring-[#302927]'
                         : 'text-[#3a3534]'
                     }`}
                   >
@@ -413,7 +413,7 @@ export default function CalendarView({
                         {dayData.emptySlots.length > 0 && (
                           <div
                             className={`w-1.5 h-1.5 rounded-full border ${
-                              isSelected ? 'border-black/40' : 'border-[#5a5554]'
+                              isSelected ? 'border-black/40' : 'border-[#726d6c]'
                             }`}
                           />
                         )}
@@ -430,8 +430,8 @@ export default function CalendarView({
       {/* Day Details (Week/Month view) */}
       {viewMode !== 'list' && selectedDayData && (
         <div className="flex-1 overflow-y-auto px-4 pb-24">
-          <div className="mb-4 pt-2 border-t border-[#1a1a1a]">
-            <h2 className={`text-sm font-semibold tracking-wide ${selectedDayData.isToday ? 'text-[#D4A853]' : 'text-white'}`}>
+          <div className="mb-4 pt-2 border-t border-[#302927]">
+            <h2 className={`text-sm font-semibold tracking-wide ${selectedDayData.isToday ? 'text-[#e8a990]' : 'text-white'}`}>
               {selectedDayData.isToday
                 ? 'Today'
                 : selectedDayData.date.toLocaleDateString('en-US', {
@@ -443,11 +443,11 @@ export default function CalendarView({
           </div>
 
           {selectedDayData.posts.length === 0 && selectedDayData.emptySlots.length === 0 ? (
-            <div className="p-8 rounded-2xl bg-[#0a0a0a] border border-[#1a1a1a] text-center">
-              <div className="w-12 h-12 rounded-xl bg-[#0f0f0f] border border-[#1a1a1a] flex items-center justify-center mx-auto mb-3">
+            <div className="p-8 rounded-2xl bg-black border border-[#302927] text-center">
+              <div className="w-12 h-12 rounded-xl bg-[#0d0c0a] border border-[#302927] flex items-center justify-center mx-auto mb-3">
                 <span className="text-2xl opacity-40">📅</span>
               </div>
-              <p className="text-sm text-[#5a5554]">No posts or slots for this day</p>
+              <p className="text-sm text-[#726d6c]">No posts or slots for this day</p>
             </div>
           ) : (
             <div className="space-y-2">
@@ -458,9 +458,9 @@ export default function CalendarView({
                   <button
                     key={post.id}
                     onClick={() => onViewPost(post.id)}
-                    className="group w-full flex items-center gap-3 p-3 rounded-2xl bg-[#0a0a0a] border border-[#1a1a1a] hover:border-[#D4A853]/30 hover:shadow-[0_0_25px_rgba(212,168,83,0.08)] transition-all duration-300 text-left"
+                    className="group w-full flex items-center gap-3 p-3 rounded-2xl bg-black border border-[#302927] hover:border-[#e8a990]/35 hover:shadow-[0_0_25px_rgba(212,168,83,0.08)] transition-all duration-300 text-left"
                   >
-                    <div className="w-12 h-12 rounded-xl overflow-hidden bg-[#0f0f0f] flex-shrink-0 border border-[#1a1a1a] group-hover:border-[#D4A853]/20 transition-colors">
+                    <div className="w-12 h-12 rounded-xl overflow-hidden bg-[#0d0c0a] flex-shrink-0 border border-[#302927] group-hover:border-[#e8a990]/25 transition-colors">
                       {post.thumbnail_url ? (
                         <img src={post.thumbnail_url} alt="" className="w-full h-full object-cover" />
                       ) : (
@@ -472,13 +472,13 @@ export default function CalendarView({
 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs text-[#D4A853] font-medium">
+                        <span className="text-xs text-[#e8a990] font-medium">
                           {formatTime(post.scheduled_at!)}
                         </span>
                         <div className={`w-1.5 h-1.5 rounded-full ${statusStyle.dot} ${statusStyle.glow || ''}`} />
-                        <span className="text-[10px] text-[#5a5554] uppercase tracking-wide">{post.status}</span>
+                        <span className="text-[10px] text-[#726d6c] uppercase tracking-wide">{post.status}</span>
                       </div>
-                      <div className="text-sm text-white truncate mt-1 group-hover:text-[#D4A853] transition-colors">
+                      <div className="text-sm text-white truncate mt-1 group-hover:text-[#e8a990] transition-colors">
                         {post.title || post.caption?.slice(0, 40) || 'Untitled'}
                       </div>
                       <div className="flex items-center gap-1 mt-1.5">
@@ -488,14 +488,14 @@ export default function CalendarView({
                           </span>
                         ))}
                         {post.platforms.length > 3 && (
-                          <span className="text-[10px] text-[#5a5554]">
+                          <span className="text-[10px] text-[#726d6c]">
                             +{post.platforms.length - 3}
                           </span>
                         )}
                       </div>
                     </div>
 
-                    <div className="text-[#3a3534] group-hover:text-[#D4A853] transition-colors">
+                    <div className="text-[#3a3534] group-hover:text-[#e8a990] transition-colors">
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
                       </svg>
@@ -509,15 +509,15 @@ export default function CalendarView({
                 <button
                   key={`${selectedDayData.dateStr}-${slot.time}`}
                   onClick={() => onCreateForSlot(selectedDayData.dateStr, slot.time)}
-                  className="group w-full flex items-center gap-3 p-3 rounded-2xl border-2 border-dashed border-[#1a1a1a] hover:border-[#D4A853]/40 hover:bg-[#D4A853]/5 transition-all duration-300 text-left"
+                  className="group w-full flex items-center gap-3 p-3 rounded-2xl border-2 border-dashed border-[#302927] hover:border-[#843c2d]/40 hover:bg-[#843c2d]/5 transition-all duration-300 text-left"
                 >
-                  <div className="w-12 h-12 rounded-xl bg-[#0a0a0a] border border-[#1a1a1a] flex items-center justify-center flex-shrink-0 group-hover:border-[#D4A853]/30 transition-colors">
-                    <span className="text-[#5a5554] group-hover:text-[#D4A853] transition-colors">{Icons.plus}</span>
+                  <div className="w-12 h-12 rounded-xl bg-black border border-[#302927] flex items-center justify-center flex-shrink-0 group-hover:border-[#e8a990]/35 transition-colors">
+                    <span className="text-[#726d6c] group-hover:text-[#e8a990] transition-colors">{Icons.plus}</span>
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <div className="text-xs text-[#5a5554]">{formatSlotTime(slot.time)}</div>
-                    <div className="text-sm text-[#D4A853] mt-0.5 font-medium">+ Add Content</div>
+                    <div className="text-xs text-[#726d6c]">{formatSlotTime(slot.time)}</div>
+                    <div className="text-sm text-[#e8a990] mt-0.5 font-medium">+ Add Content</div>
                   </div>
                 </button>
               ))}
@@ -530,11 +530,11 @@ export default function CalendarView({
       {viewMode === 'list' && (
         <div className="flex-1 overflow-y-auto px-4 pb-24">
           {listDays.length === 0 ? (
-            <div className="p-8 rounded-2xl bg-[#0a0a0a] border border-[#1a1a1a] text-center mt-4">
-              <div className="w-12 h-12 rounded-xl bg-[#0f0f0f] border border-[#1a1a1a] flex items-center justify-center mx-auto mb-3">
+            <div className="p-8 rounded-2xl bg-black border border-[#302927] text-center mt-4">
+              <div className="w-12 h-12 rounded-xl bg-[#0d0c0a] border border-[#302927] flex items-center justify-center mx-auto mb-3">
                 <span className="text-2xl opacity-40">📅</span>
               </div>
-              <p className="text-sm text-[#5a5554]">No posts scheduled for the next two weeks</p>
+              <p className="text-sm text-[#726d6c]">No posts scheduled for the next two weeks</p>
             </div>
           ) : (
             <div className="space-y-6">
@@ -542,7 +542,7 @@ export default function CalendarView({
                 <div key={dayData.dateStr}>
                   <h3
                     className={`text-xs font-semibold uppercase tracking-widest mb-3 ${
-                      dayData.isToday ? 'text-[#D4A853]' : 'text-[#5a5554]'
+                      dayData.isToday ? 'text-[#e8a990]' : 'text-[#726d6c]'
                     }`}
                   >
                     {dayData.isToday
@@ -562,9 +562,9 @@ export default function CalendarView({
                         <button
                           key={post.id}
                           onClick={() => onViewPost(post.id)}
-                          className="group w-full flex items-center gap-3 p-3 rounded-2xl bg-[#0a0a0a] border border-[#1a1a1a] hover:border-[#D4A853]/30 hover:shadow-[0_0_25px_rgba(212,168,83,0.08)] transition-all duration-300 text-left"
+                          className="group w-full flex items-center gap-3 p-3 rounded-2xl bg-black border border-[#302927] hover:border-[#e8a990]/35 hover:shadow-[0_0_25px_rgba(212,168,83,0.08)] transition-all duration-300 text-left"
                         >
-                          <div className="w-12 h-12 rounded-xl overflow-hidden bg-[#0f0f0f] flex-shrink-0 border border-[#1a1a1a] group-hover:border-[#D4A853]/20 transition-colors">
+                          <div className="w-12 h-12 rounded-xl overflow-hidden bg-[#0d0c0a] flex-shrink-0 border border-[#302927] group-hover:border-[#e8a990]/25 transition-colors">
                             {post.thumbnail_url ? (
                               <img
                                 src={post.thumbnail_url}
@@ -580,14 +580,14 @@ export default function CalendarView({
 
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
-                              <span className="text-xs text-[#D4A853] font-medium">
+                              <span className="text-xs text-[#e8a990] font-medium">
                                 {formatTime(post.scheduled_at!)}
                               </span>
                               <div
                                 className={`w-1.5 h-1.5 rounded-full ${statusStyle.dot} ${statusStyle.glow || ''}`}
                               />
                             </div>
-                            <div className="text-sm text-white truncate mt-1 group-hover:text-[#D4A853] transition-colors">
+                            <div className="text-sm text-white truncate mt-1 group-hover:text-[#e8a990] transition-colors">
                               {post.title || post.caption?.slice(0, 40) || 'Untitled'}
                             </div>
                           </div>
@@ -600,7 +600,7 @@ export default function CalendarView({
                             ))}
                           </div>
 
-                          <div className="text-[#3a3534] group-hover:text-[#D4A853] transition-colors">
+                          <div className="text-[#3a3534] group-hover:text-[#e8a990] transition-colors">
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
                             </svg>
@@ -614,15 +614,15 @@ export default function CalendarView({
                       <button
                         key={`${dayData.dateStr}-${slot.time}`}
                         onClick={() => onCreateForSlot(dayData.dateStr, slot.time)}
-                        className="group w-full flex items-center gap-3 p-3 rounded-2xl border-2 border-dashed border-[#1a1a1a] hover:border-[#D4A853]/40 hover:bg-[#D4A853]/5 transition-all duration-300 text-left"
+                        className="group w-full flex items-center gap-3 p-3 rounded-2xl border-2 border-dashed border-[#302927] hover:border-[#843c2d]/40 hover:bg-[#843c2d]/5 transition-all duration-300 text-left"
                       >
-                        <div className="w-12 h-12 rounded-xl bg-[#0a0a0a] border border-[#1a1a1a] flex items-center justify-center flex-shrink-0 group-hover:border-[#D4A853]/30 transition-colors">
-                          <span className="text-[#5a5554] group-hover:text-[#D4A853] transition-colors">{Icons.plus}</span>
+                        <div className="w-12 h-12 rounded-xl bg-black border border-[#302927] flex items-center justify-center flex-shrink-0 group-hover:border-[#e8a990]/35 transition-colors">
+                          <span className="text-[#726d6c] group-hover:text-[#e8a990] transition-colors">{Icons.plus}</span>
                         </div>
 
                         <div className="flex-1 min-w-0">
-                          <div className="text-xs text-[#5a5554]">{formatSlotTime(slot.time)}</div>
-                          <div className="text-sm text-[#D4A853] mt-0.5 font-medium">+ Add Content</div>
+                          <div className="text-xs text-[#726d6c]">{formatSlotTime(slot.time)}</div>
+                          <div className="text-sm text-[#e8a990] mt-0.5 font-medium">+ Add Content</div>
                         </div>
                       </button>
                     ))}

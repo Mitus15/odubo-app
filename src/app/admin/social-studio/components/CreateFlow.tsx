@@ -317,6 +317,8 @@ export default function CreateFlow({
   const [aiFeedback, setAiFeedback] = useState<Record<string, 'up' | 'down'>>({});
   const [aiPlatform, setAiPlatform] = useState<string>('instagram');
   const [slotsPerDay, setSlotsPerDay] = useState(2); // Default to 2 slots
+  const [aiProfileStatus, setAiProfileStatus] = useState<'loading' | 'ready' | 'none'>('loading');
+  const [showAiSetup, setShowAiSetup] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -329,7 +331,7 @@ export default function CreateFlow({
       try {
         const res = await fetch('/api/admin/social/settings');
         if (res.ok) {
-          const data = await res.json();
+          const data = await res.json() as { settings?: { slots_per_day?: number } };
           if (data.settings?.slots_per_day) {
             setSlotsPerDay(data.settings.slots_per_day);
           }
@@ -339,6 +341,27 @@ export default function CreateFlow({
       }
     };
     fetchSettings();
+
+    // Check AI profile status
+    const checkAiProfile = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const res = await fetch('/api/admin/ai-studio/profiles', {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          credentials: 'include',
+        });
+        if (res.ok) {
+          const data = await res.json() as { activeProfile?: boolean };
+          setAiProfileStatus(data.activeProfile ? 'ready' : 'none');
+        } else {
+          setAiProfileStatus('none');
+        }
+      } catch (error) {
+        console.error('[CreateFlow] AI profile check error:', error);
+        setAiProfileStatus('none');
+      }
+    };
+    checkAiProfile();
   }, []);
 
   // Auto-select next available slot
@@ -364,7 +387,7 @@ export default function CreateFlow({
         : '/api/clips?limit=50';
       const res = await fetch(endpoint);
       if (res.ok) {
-        const data = await res.json();
+        const data = await res.json() as { clips?: Clip[] };
         const normalized = (data.clips || []).map((clip: any) => ({
           id: Number(clip.id),
           uid: clip.uid,
@@ -406,7 +429,7 @@ export default function CreateFlow({
       });
 
       if (res.ok) {
-        const data = await res.json();
+        const data = await res.json() as { url: string; type?: 'video' | 'image'; id?: number };
         setDraft((d) => ({
           ...d,
           mediaUrl: data.url,
@@ -475,16 +498,16 @@ export default function CreateFlow({
   }, [uniquePlatforms]);
 
   const scheduledDate = useMemo(() => {
-    const dateStr = draft.scheduledAt?.split('T')[0] || nextSlot?.date || formatLocalDate(new Date());
+    const dateStr = draft.scheduledDate || nextSlot?.date || formatLocalDate(new Date());
     const [year, month, day] = dateStr.split('-').map(Number);
     return { dateStr, year, month, day };
-  }, [draft.scheduledAt, nextSlot]);
+  }, [draft.scheduledDate, nextSlot]);
 
   const scheduledTime = useMemo(() => {
-    const timeStr = draft.scheduledAt?.split('T')[1]?.slice(0, 5) || nextSlot?.time || '12:00';
+    const timeStr = nextSlot?.time || '12:00';
     const [hour, minute] = timeStr.split(':').map(Number);
     return { timeStr, hour, minute };
-  }, [draft.scheduledAt, nextSlot]);
+  }, [nextSlot]);
 
   const daysInMonth = useMemo(
     () => getDaysInMonth(scheduledDate.year, scheduledDate.month),
@@ -528,13 +551,29 @@ export default function CreateFlow({
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
+        const errorData = await response.json().catch(() => ({})) as Record<string, any>;
         const errorMsg = errorData?.details || errorData?.error || 'AI request failed';
         throw new Error(errorMsg);
       }
 
-      const data = await response.json();
-      setAiSuggestions(data.suggestions || null);
+      const data = await response.json() as { suggestions?: AiSuggestions | null };
+      const suggestions = data.suggestions || null;
+      setAiSuggestions(suggestions);
+      
+      // Auto-populate caption if it's empty and we have suggestions
+      if (suggestions && !draft.caption) {
+        const primaryPlatform = uniquePlatforms[0] || 'instagram';
+        const firstCaption = suggestions.captions?.[primaryPlatform]?.[0];
+        const firstHashtags = suggestions.hashtags?.[primaryPlatform] || [];
+        
+        if (firstCaption) {
+          setDraft((d) => ({
+            ...d,
+            caption: firstCaption,
+            hashtags: firstHashtags.map((tag: string) => tag.replace(/^#/, '')),
+          }));
+        }
+      }
     } catch (error) {
       console.error('[CreateFlow] AI help error:', error);
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
@@ -655,7 +694,7 @@ export default function CreateFlow({
         throw new Error('Failed to create post');
       }
 
-      const data = await response.json();
+      const data = await response.json() as { id?: string };
       const postId = data?.id as string | undefined;
 
       if (postId) {
@@ -695,8 +734,15 @@ export default function CreateFlow({
 
   // Handle next
   const handleNext = () => {
-    if (step === 'content') setStep('details');
-    else if (step === 'details') setStep('review');
+    if (step === 'content') {
+      setStep('details');
+      // Auto-trigger AI suggestions when moving to details step if AI is ready
+      if (aiProfileStatus === 'ready' && draft.mediaUrl && !aiSuggestions && !aiLoading) {
+        setTimeout(() => handleAiHelp(), 300); // Small delay to let step transition complete
+      }
+    } else if (step === 'details') {
+      setStep('review');
+    }
   };
 
   // Handle back
@@ -709,35 +755,102 @@ export default function CreateFlow({
   return (
     <div className="h-full flex flex-col bg-black">
       {/* Header */}
-      <div className="flex-shrink-0 flex items-center justify-between px-4 py-4 border-b border-[#1a1a1a] bg-gradient-to-b from-black to-transparent">
-        <button
-          onClick={handleBack}
-          className="w-9 h-9 flex items-center justify-center rounded-xl bg-[#0f0f0f] border border-[#1a1a1a] text-[#8a8584] hover:text-white hover:border-[#D4A853]/30 transition-all duration-300"
-        >
-          {step === 'content' ? Icons.close : Icons.back}
-        </button>
-
-        <h1 className="text-lg font-semibold text-white tracking-tight">
-          {step === 'content' && 'Create Post'}
-          {step === 'details' && 'Add Details'}
-          {step === 'review' && 'Review'}
-        </h1>
-
-        {step !== 'review' ? (
+      <div className="flex-shrink-0 border-b border-[#302927] bg-gradient-to-b from-black to-transparent">
+        {/* Top bar */}
+        <div className="flex items-center justify-between px-4 py-4">
           <button
-            onClick={handleNext}
-            disabled={!canProceed}
-            className={`px-5 py-2.5 rounded-xl text-sm font-semibold tracking-wide transition-all duration-300 ${
-              canProceed
-                ? 'bg-gradient-to-r from-[#D4A853] to-[#B8923F] text-black shadow-[0_0_20px_rgba(212,168,83,0.3)]'
-                : 'bg-[#141414] text-[#5a5554] border border-[#1a1a1a]'
-            }`}
+            onClick={handleBack}
+            className="w-9 h-9 flex items-center justify-center rounded-xl bg-[#0d0c0a] border border-[#302927] text-[#726d6c] hover:text-white hover:border-[#e8a990]/35 hover:bg-[#302927] transition-all duration-300 active:scale-95"
           >
-            Next
+            {step === 'content' ? Icons.close : Icons.back}
           </button>
-        ) : (
-          <div className="w-9" />
-        )}
+
+          <div className="flex items-center gap-3">
+            <h1 className="text-lg font-semibold text-white tracking-tight">
+              {step === 'content' && 'Create Post'}
+              {step === 'details' && 'Add Details'}
+              {step === 'review' && 'Review'}
+            </h1>
+            
+            {/* AI Status Badge */}
+            {aiProfileStatus === 'ready' && (
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#e8a990]/10 border border-[#e8a990]/20">
+                {Icons.sparkles}
+                <span className="text-[10px] font-medium text-[#e8a990] uppercase tracking-wider">AI Ready</span>
+              </div>
+            )}
+            {aiProfileStatus === 'none' && step === 'details' && (
+              <button
+                onClick={() => setShowAiSetup(true)}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#302927] border border-[#302927] hover:border-[#e8a990]/35 transition-colors"
+              >
+                <span className="text-[10px] font-medium text-[#726d6c] uppercase tracking-wider">🔧 Setup AI</span>
+              </button>
+            )}
+          </div>
+
+          {step !== 'review' ? (
+            <button
+              onClick={handleNext}
+              disabled={!canProceed}
+              className={`px-5 py-2.5 rounded-xl text-sm font-semibold tracking-wide transition-all duration-300 active:scale-95 ${
+                canProceed
+                  ? 'bg-gradient-to-r from-[#e8a990] to-[#c97b63] text-black shadow-[0_0_20px_rgba(232,169,144,0.3)] hover:shadow-[0_0_30px_rgba(232,169,144,0.4)]'
+                  : 'bg-[#302927] text-[#726d6c] border border-[#302927] cursor-not-allowed'
+              }`}
+            >
+              Next
+            </button>
+          ) : (
+            <div className="w-9" />
+          )}
+        </div>
+
+        {/* Step Progress Bar */}
+        <div className="px-4 pb-3">
+          <div className="flex items-center gap-2">
+            {/* Step 1 */}
+            <div className="flex items-center gap-2 flex-1">
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold transition-all duration-300 ${
+                step === 'content' 
+                  ? 'bg-[#e8a990] text-black' 
+                  : step === 'details' || step === 'review'
+                  ? 'bg-[#e8a990]/20 text-[#e8a990] border border-[#e8a990]/30'
+                  : 'bg-[#302927] text-[#726d6c]'
+              }`}>
+                {step === 'details' || step === 'review' ? '✓' : '1'}
+              </div>
+              <div className={`h-1 flex-1 rounded-full transition-all duration-300 ${
+                step === 'details' || step === 'review' ? 'bg-[#e8a990]/30' : 'bg-[#302927]'
+              }`} />
+            </div>
+
+            {/* Step 2 */}
+            <div className="flex items-center gap-2 flex-1">
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold transition-all duration-300 ${
+                step === 'details' 
+                  ? 'bg-[#e8a990] text-black' 
+                  : step === 'review'
+                  ? 'bg-[#e8a990]/20 text-[#e8a990] border border-[#e8a990]/30'
+                  : 'bg-[#302927] text-[#726d6c]'
+              }`}>
+                {step === 'review' ? '✓' : '2'}
+              </div>
+              <div className={`h-1 flex-1 rounded-full transition-all duration-300 ${
+                step === 'review' ? 'bg-[#e8a990]/30' : 'bg-[#302927]'
+              }`} />
+            </div>
+
+            {/* Step 3 */}
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold transition-all duration-300 ${
+              step === 'review' 
+                ? 'bg-[#e8a990] text-black' 
+                : 'bg-[#302927] text-[#726d6c]'
+            }`}>
+              3
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Content */}
@@ -747,7 +860,7 @@ export default function CreateFlow({
           <div className="py-5 space-y-6">
             {/* Media Selection */}
             <section>
-              <h2 className="text-[10px] font-semibold text-[#D4A853] uppercase tracking-widest mb-3">
+              <h2 className="text-[10px] font-semibold text-[#e8a990] uppercase tracking-widest mb-3">
                 Select Content
               </h2>
 
@@ -772,9 +885,9 @@ export default function CreateFlow({
 
                   {/* Uploading Overlay */}
                   {uploading && (
-                    <div className="mb-4 p-6 rounded-2xl bg-[#0a0a0a] border border-[#D4A853]/30 flex flex-col items-center justify-center">
-                      <div className="w-10 h-10 border-2 border-[#D4A853]/20 border-t-[#D4A853] rounded-full animate-spin mb-3" />
-                      <p className="text-sm text-[#D4A853]">Uploading...</p>
+                    <div className="mb-4 p-6 rounded-2xl bg-black border border-[#e8a990]/35 flex flex-col items-center justify-center">
+                      <div className="w-10 h-10 border-2 border-[#e8a990]/25 border-t-[#843c2d] rounded-full animate-spin mb-3" />
+                      <p className="text-sm text-[#e8a990]">Uploading...</p>
                     </div>
                   )}
 
@@ -783,42 +896,42 @@ export default function CreateFlow({
                     <div className="grid grid-cols-2 gap-3 mb-4">
                       <button
                         onClick={() => setShowClipsPicker(true)}
-                        className="group flex flex-col items-center justify-center gap-3 p-6 rounded-2xl bg-[#0a0a0a] border border-[#1a1a1a] hover:border-[#D4A853]/30 hover:shadow-[0_0_25px_rgba(212,168,83,0.08)] transition-all duration-300 active:scale-95"
+                        className="group flex flex-col items-center justify-center gap-3 p-6 rounded-2xl bg-black border border-[#302927] hover:border-[#e8a990]/35 hover:shadow-[0_0_25px_rgba(212,168,83,0.08)] transition-all duration-300 active:scale-95"
                       >
-                        <span className="text-[#D4A853] group-hover:scale-110 transition-transform">{Icons.folder}</span>
+                        <span className="text-[#e8a990] group-hover:scale-110 transition-transform">{Icons.folder}</span>
                         <span className="text-sm text-white font-medium">From Clips</span>
                       </button>
 
                       <button
                         onClick={() => cameraInputRef.current?.click()}
-                        className="group flex flex-col items-center justify-center gap-3 p-6 rounded-2xl bg-[#0a0a0a] border border-[#1a1a1a] hover:border-[#D4A853]/30 hover:shadow-[0_0_25px_rgba(212,168,83,0.08)] transition-all duration-300 active:scale-95"
+                        className="group flex flex-col items-center justify-center gap-3 p-6 rounded-2xl bg-black border border-[#302927] hover:border-[#e8a990]/35 hover:shadow-[0_0_25px_rgba(212,168,83,0.08)] transition-all duration-300 active:scale-95"
                       >
-                        <span className="text-[#D4A853] group-hover:scale-110 transition-transform">{Icons.camera}</span>
+                        <span className="text-[#e8a990] group-hover:scale-110 transition-transform">{Icons.camera}</span>
                         <span className="text-sm text-white font-medium">Camera Roll</span>
                       </button>
 
                       <button
                         onClick={() => fileInputRef.current?.click()}
-                        className="group flex flex-col items-center justify-center gap-3 p-6 rounded-2xl bg-[#0a0a0a] border border-[#1a1a1a] hover:border-[#D4A853]/30 hover:shadow-[0_0_25px_rgba(212,168,83,0.08)] transition-all duration-300 active:scale-95"
+                        className="group flex flex-col items-center justify-center gap-3 p-6 rounded-2xl bg-black border border-[#302927] hover:border-[#e8a990]/35 hover:shadow-[0_0_25px_rgba(212,168,83,0.08)] transition-all duration-300 active:scale-95"
                       >
-                        <span className="text-[#D4A853] group-hover:scale-110 transition-transform">{Icons.upload}</span>
+                        <span className="text-[#e8a990] group-hover:scale-110 transition-transform">{Icons.upload}</span>
                         <span className="text-sm text-white font-medium">Upload</span>
                       </button>
 
-                      <div className="flex flex-col p-5 rounded-2xl bg-[#0a0a0a] border border-[#1a1a1a]">
-                        <span className="text-[#D4A853] mb-3">{Icons.link}</span>
+                      <div className="flex flex-col p-5 rounded-2xl bg-black border border-[#302927]">
+                        <span className="text-[#e8a990] mb-3">{Icons.link}</span>
                         <input
                           type="url"
                           value={urlInput}
                           onChange={(e) => setUrlInput(e.target.value)}
                           onKeyDown={(e) => e.key === 'Enter' && handleUrlSubmit()}
                           placeholder="Paste URL..."
-                          className="w-full bg-transparent text-sm text-white placeholder-[#5a5554] outline-none"
+                          className="w-full bg-transparent text-sm text-white placeholder-[#726d6c] outline-none"
                         />
                         {urlInput && (
                           <button
                             onClick={handleUrlSubmit}
-                            className="mt-3 text-xs text-[#D4A853] font-medium hover:underline"
+                            className="mt-3 text-xs text-[#e8a990] font-medium hover:underline"
                           >
                             Use URL
                           </button>
@@ -829,7 +942,7 @@ export default function CreateFlow({
                 </>
               ) : (
                 /* Media Preview */
-                <div className="relative rounded-2xl overflow-hidden bg-[#0f0f0f] aspect-[9/16] max-h-[300px] border border-[#1a1a1a]">
+                <div className="relative rounded-2xl overflow-hidden bg-[#0d0c0a] aspect-[9/16] max-h-[300px] border border-[#302927]">
                   {draft.mediaType === 'video' ? (
                     <video
                       src={draft.mediaUrl}
@@ -857,7 +970,7 @@ export default function CreateFlow({
 
             {/* Platform Selection */}
             <section>
-              <h2 className="text-[10px] font-semibold text-[#D4A853] uppercase tracking-widest mb-3">
+              <h2 className="text-[10px] font-semibold text-[#e8a990] uppercase tracking-widest mb-3">
                 Platforms
               </h2>
 
@@ -870,8 +983,8 @@ export default function CreateFlow({
                         onClick={() => toggleAccount(account.id)}
                         className={`w-full flex items-center gap-3 p-3.5 rounded-2xl border transition-all duration-300 ${
                           draft.accountIds.includes(account.id)
-                            ? 'bg-[#D4A853]/10 border-[#D4A853]/50 shadow-[0_0_20px_rgba(212,168,83,0.1)]'
-                            : 'bg-[#0a0a0a] border-[#1a1a1a] hover:border-[#D4A853]/30'
+                            ? 'bg-[#843c2d]/10 border-[#843c2d]/50 shadow-[0_0_20px_rgba(212,168,83,0.1)]'
+                            : 'bg-black border-[#302927] hover:border-[#e8a990]/35'
                         }`}
                       >
                         <div
@@ -892,7 +1005,7 @@ export default function CreateFlow({
                           <div className="text-sm font-medium text-white">
                             {account.account_name || `@${account.account_handle}`}
                           </div>
-                          <div className="text-xs text-[#5a5554]">
+                          <div className="text-xs text-[#726d6c]">
                             @{account.account_handle}
                           </div>
                         </div>
@@ -900,7 +1013,7 @@ export default function CreateFlow({
                         <div
                           className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${
                             draft.accountIds.includes(account.id)
-                              ? 'border-[#D4A853] bg-[#D4A853] text-black'
+                              ? 'border-[#843c2d] bg-[#843c2d] text-black'
                               : 'border-[#3a3534]'
                           }`}
                         >
@@ -912,9 +1025,9 @@ export default function CreateFlow({
                 ))}
 
                 {Object.keys(accountsByPlatform).length === 0 && (
-                  <div className="p-8 rounded-2xl bg-[#0a0a0a] border border-[#1a1a1a] text-center">
-                    <p className="text-sm text-[#5a5554]">No connected accounts</p>
-                    <p className="text-xs text-[#D4A853] mt-1">Connect accounts in Settings</p>
+                  <div className="p-8 rounded-2xl bg-black border border-[#302927] text-center">
+                    <p className="text-sm text-[#726d6c]">No connected accounts</p>
+                    <p className="text-xs text-[#e8a990] mt-1">Connect accounts in Settings</p>
                   </div>
                 )}
               </div>
@@ -922,7 +1035,7 @@ export default function CreateFlow({
 
             {/* Schedule */}
             <section>
-              <h2 className="text-[10px] font-semibold text-[#D4A853] uppercase tracking-widest mb-3">
+              <h2 className="text-[10px] font-semibold text-[#e8a990] uppercase tracking-widest mb-3">
                 Schedule
               </h2>
 
@@ -932,14 +1045,14 @@ export default function CreateFlow({
                   onClick={() => setDraft((d) => ({ ...d, scheduleMode: 'day' }))}
                   className={`w-full flex items-center gap-3 p-4 rounded-2xl border transition-all duration-300 ${
                     draft.scheduleMode === 'day'
-                      ? 'bg-[#D4A853]/10 border-[#D4A853]/50 shadow-[0_0_20px_rgba(212,168,83,0.1)]'
-                      : 'bg-[#0a0a0a] border-[#1a1a1a] hover:border-[#D4A853]/30'
+                      ? 'bg-[#843c2d]/10 border-[#843c2d]/50 shadow-[0_0_20px_rgba(212,168,83,0.1)]'
+                      : 'bg-black border-[#302927] hover:border-[#e8a990]/35'
                   }`}
                 >
                   <div
                     className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
                       draft.scheduleMode === 'day'
-                        ? 'border-[#D4A853] bg-[#D4A853]'
+                        ? 'border-[#843c2d] bg-[#843c2d]'
                         : 'border-[#3a3534]'
                     }`}
                   >
@@ -949,7 +1062,7 @@ export default function CreateFlow({
                   </div>
                   <div className="flex-1 text-left">
                     <div className="text-sm text-white font-medium">Schedule for a day</div>
-                    <div className="text-xs text-[#5a5554]">Posts at midnight • {slotsPerDay} slots per day</div>
+                    <div className="text-xs text-[#726d6c]">Posts at midnight • {slotsPerDay} slots per day</div>
                   </div>
                 </button>
 
@@ -957,19 +1070,19 @@ export default function CreateFlow({
                   <div className="pl-8 space-y-3">
                     {/* Date Picker */}
                     <div>
-                      <label className="block text-xs text-[#8a8584] mb-2">Select Date</label>
+                      <label className="block text-xs text-[#726d6c] mb-2">Select Date</label>
                       <input
                         type="date"
                         value={draft.scheduledDate || ''}
                         min={new Date().toISOString().split('T')[0]}
                         onChange={(e) => setDraft((d) => ({ ...d, scheduledDate: e.target.value }))}
-                        className="w-full px-4 py-3 rounded-xl bg-[#0a0a0a] border border-[#1a1a1a] text-white text-sm focus:border-[#D4A853]/40 focus:outline-none transition-colors"
+                        className="w-full px-4 py-3 rounded-xl bg-black border border-[#302927] text-white text-sm focus:border-[#843c2d]/40 focus:outline-none transition-colors"
                       />
                     </div>
 
                     {/* Slot Picker - Dynamic */}
                     <div>
-                      <label className="block text-xs text-[#8a8584] mb-2">Slot Number</label>
+                      <label className="block text-xs text-[#726d6c] mb-2">Slot Number</label>
                       <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${Math.min(slotsPerDay, 3)}, 1fr)` }}>
                         {Array.from({ length: slotsPerDay }, (_, i) => i + 1).map((slotNum) => (
                           <button
@@ -977,8 +1090,8 @@ export default function CreateFlow({
                             onClick={() => setDraft((d) => ({ ...d, slotNumber: slotNum }))}
                             className={`px-4 py-3 rounded-xl border transition-all ${
                               draft.slotNumber === slotNum
-                                ? 'bg-[#D4A853]/20 border-[#D4A853] text-white'
-                                : 'bg-[#0a0a0a] border-[#1a1a1a] text-[#8a8584] hover:border-[#D4A853]/30'
+                                ? 'bg-[#843c2d]/20 border-[#843c2d] text-white'
+                                : 'bg-black border-[#302927] text-[#726d6c] hover:border-[#e8a990]/35'
                             }`}
                           >
                             <div className="text-sm font-medium">Slot {slotNum}</div>
@@ -988,7 +1101,7 @@ export default function CreateFlow({
                           </button>
                         ))}
                       </div>
-                      <p className="text-xs text-[#5a5554] mt-2">
+                      <p className="text-xs text-[#726d6c] mt-2">
                         💡 All slots post at midnight. Use slot numbers to organize your daily posts.
                       </p>
                     </div>
@@ -1007,14 +1120,14 @@ export default function CreateFlow({
                   }
                   className={`w-full flex items-center gap-3 p-4 rounded-2xl border transition-all duration-300 ${
                     draft.scheduleMode === 'now'
-                      ? 'bg-[#D4A853]/10 border-[#D4A853]/50 shadow-[0_0_20px_rgba(212,168,83,0.1)]'
-                      : 'bg-[#0a0a0a] border-[#1a1a1a] hover:border-[#D4A853]/30'
+                      ? 'bg-[#843c2d]/10 border-[#843c2d]/50 shadow-[0_0_20px_rgba(212,168,83,0.1)]'
+                      : 'bg-black border-[#302927] hover:border-[#e8a990]/35'
                   }`}
                 >
                   <div
                     className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
                       draft.scheduleMode === 'now'
-                        ? 'border-[#D4A853] bg-[#D4A853]'
+                        ? 'border-[#843c2d] bg-[#843c2d]'
                         : 'border-[#3a3534]'
                     }`}
                   >
@@ -1024,7 +1137,7 @@ export default function CreateFlow({
                   </div>
                   <div className="flex-1 text-left">
                     <div className="text-sm text-white font-medium">Post immediately</div>
-                    <div className="text-xs text-[#5a5554]">Publishes right now</div>
+                    <div className="text-xs text-[#726d6c]">Publishes right now</div>
                   </div>
                 </button>
               </div>
@@ -1036,7 +1149,7 @@ export default function CreateFlow({
         {step === 'details' && (
           <div className="py-5 space-y-6">
             {/* Preview */}
-            <section className="relative rounded-2xl overflow-hidden bg-[#0f0f0f] aspect-video border border-[#1a1a1a]">
+            <section className="relative rounded-2xl overflow-hidden bg-[#0d0c0a] aspect-video border border-[#302927]">
               {draft.mediaType === 'video' ? (
                 <video
                   src={draft.mediaUrl}
@@ -1067,7 +1180,7 @@ export default function CreateFlow({
 
             {/* Title (optional) */}
             <section>
-              <label className="block text-[10px] font-semibold text-[#D4A853] uppercase tracking-widest mb-2">
+              <label className="block text-[10px] font-semibold text-[#e8a990] uppercase tracking-widest mb-2">
                 Title (Optional)
               </label>
               <input
@@ -1075,31 +1188,41 @@ export default function CreateFlow({
                 value={draft.title || ''}
                 onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
                 placeholder="Give your post a title..."
-                className="w-full px-4 py-3.5 rounded-2xl bg-[#0a0a0a] border border-[#1a1a1a] text-white placeholder-[#5a5554] outline-none focus:border-[#D4A853]/40 focus:shadow-[0_0_20px_rgba(212,168,83,0.1)] transition-all duration-300 text-sm"
+                className="w-full px-4 py-3.5 rounded-2xl bg-black border border-[#302927] text-white placeholder-[#726d6c] outline-none focus:border-[#843c2d]/40 focus:shadow-[0_0_20px_rgba(212,168,83,0.1)] transition-all duration-300 text-sm"
               />
             </section>
 
             {/* Caption */}
             <section>
               <div className="flex items-center justify-between mb-2">
-                <label className="text-[10px] font-semibold text-[#D4A853] uppercase tracking-widest">
+                <label className="text-[10px] font-semibold text-[#e8a990] uppercase tracking-widest">
                   Caption
                 </label>
-                <button
-                  onClick={handleAiHelp}
-                  disabled={aiLoading}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#0f0f0f] border border-[#1a1a1a] text-xs text-[#D4A853] font-medium hover:border-[#D4A853]/30 transition-all duration-300 disabled:opacity-60"
-                >
-                  {Icons.sparkles}
-                  {aiLoading ? 'Thinking…' : 'AI Help'}
-                </button>
+                {aiProfileStatus === 'ready' && (
+                  <button
+                    onClick={handleAiHelp}
+                    disabled={aiLoading}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#0d0c0a] border border-[#302927] text-xs text-[#e8a990] font-medium hover:border-[#e8a990]/35 transition-all duration-300 disabled:opacity-60"
+                  >
+                    {Icons.sparkles}
+                    {aiLoading ? 'Thinking…' : 'Refresh AI'}
+                  </button>
+                )}
               </div>
+              
+              {aiLoading && (
+                <div className="mb-3 p-4 rounded-xl bg-[#0d0c0a] border border-[#e8a990]/25 flex items-center gap-3">
+                  <div className="w-5 h-5 border-2 border-[#e8a990]/25 border-t-[#843c2d] rounded-full animate-spin" />
+                  <span className="text-sm text-[#e8a990]">AI is crafting suggestions...</span>
+                </div>
+              )}
+              
               <textarea
                 value={draft.caption}
                 onChange={(e) => setDraft((d) => ({ ...d, caption: e.target.value }))}
-                placeholder="Write your caption..."
+                placeholder={aiProfileStatus === 'none' ? "Write your caption... (AI suggestions available after setup)" : "Write your caption... (AI will suggest automatically)"}
                 rows={4}
-                className="w-full px-4 py-3.5 rounded-2xl bg-[#0a0a0a] border border-[#1a1a1a] text-white placeholder-[#5a5554] outline-none focus:border-[#D4A853]/40 focus:shadow-[0_0_20px_rgba(212,168,83,0.1)] transition-all duration-300 resize-none text-sm"
+                className="w-full px-4 py-3.5 rounded-2xl bg-black border border-[#302927] text-white placeholder-[#726d6c] outline-none focus:border-[#843c2d]/40 focus:shadow-[0_0_20px_rgba(212,168,83,0.1)] transition-all duration-300 resize-none text-sm"
               />
 
               {aiError && (
@@ -1111,15 +1234,15 @@ export default function CreateFlow({
               {aiSuggestions && aiSuggestions.captions && (
                 <div className="mt-3 space-y-3">
                   <div className="flex flex-wrap items-center gap-2">
-                    <div className="text-[10px] uppercase tracking-widest text-[#5a5554]">AI Suggestions</div>
+                    <div className="text-[10px] uppercase tracking-widest text-[#726d6c]">AI Suggestions</div>
                     {uniquePlatforms.map((platform) => (
                       <button
                         key={platform}
                         onClick={() => setAiPlatform(platform)}
                         className={`px-2.5 py-1 rounded-lg text-[10px] uppercase tracking-widest border transition-all ${
                           aiPlatform === platform
-                            ? 'bg-[#D4A853]/15 border-[#D4A853]/50 text-[#D4A853]'
-                            : 'bg-[#0f0f0f] border-[#1a1a1a] text-[#8a8584] hover:border-[#D4A853]/30'
+                            ? 'bg-[#843c2d]/15 border-[#843c2d]/50 text-[#e8a990]'
+                            : 'bg-[#0d0c0a] border-[#302927] text-[#726d6c] hover:border-[#e8a990]/35'
                         }`}
                       >
                         {platform}
@@ -1133,30 +1256,30 @@ export default function CreateFlow({
                     const feedback = aiFeedback[key];
 
                     return (
-                      <div key={`${primaryPlatform}-${index}`} className="p-3 rounded-xl bg-[#0f0f0f] border border-[#1a1a1a] space-y-2">
+                      <div key={`${aiPlatform}-${index}`} className="p-3 rounded-xl bg-[#0d0c0a] border border-[#302927] space-y-2">
                         <p className="text-sm text-white whitespace-pre-wrap">{caption}</p>
                         {hashtags.length > 0 && (
-                          <p className="text-xs text-[#D4A853]">
+                          <p className="text-xs text-[#e8a990]">
                             {hashtags.map((tag) => (tag.startsWith('#') ? tag : `#${tag}`)).join(' ')}
                           </p>
                         )}
                         <div className="flex items-center justify-between">
                           <button
                             onClick={() => handleApplySuggestion(caption, hashtags)}
-                            className="text-xs px-3 py-1.5 rounded-lg bg-[#141414] border border-[#1a1a1a] text-white hover:border-[#D4A853]/30"
+                            className="text-xs px-3 py-1.5 rounded-lg bg-[#302927] border border-[#302927] text-white hover:border-[#e8a990]/35"
                           >
                             Use this
                           </button>
                           <div className="flex items-center gap-2">
                             <button
                               onClick={() => submitAiFeedback(aiPlatform, caption, 'up')}
-                              className={`text-xs px-2.5 py-1.5 rounded-lg border ${feedback === 'up' ? 'border-emerald-400 text-emerald-300' : 'border-[#1a1a1a] text-[#8a8584] hover:border-emerald-400/40'}`}
+                              className={`text-xs px-2.5 py-1.5 rounded-lg border ${feedback === 'up' ? 'border-emerald-400 text-emerald-300' : 'border-[#302927] text-[#726d6c] hover:border-emerald-400/40'}`}
                             >
                               👍
                             </button>
                             <button
                               onClick={() => submitAiFeedback(aiPlatform, caption, 'down')}
-                              className={`text-xs px-2.5 py-1.5 rounded-lg border ${feedback === 'down' ? 'border-red-400 text-red-300' : 'border-[#1a1a1a] text-[#8a8584] hover:border-red-400/40'}`}
+                              className={`text-xs px-2.5 py-1.5 rounded-lg border ${feedback === 'down' ? 'border-red-400 text-red-300' : 'border-[#302927] text-[#726d6c] hover:border-red-400/40'}`}
                             >
                               👎
                             </button>
@@ -1171,7 +1294,7 @@ export default function CreateFlow({
 
             {/* Hashtags */}
             <section>
-              <label className="block text-[10px] font-semibold text-[#D4A853] uppercase tracking-widest mb-2">
+              <label className="block text-[10px] font-semibold text-[#e8a990] uppercase tracking-widest mb-2">
                 Hashtags
               </label>
 
@@ -1182,11 +1305,11 @@ export default function CreateFlow({
                   onChange={(e) => setHashtagInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && addHashtag()}
                   placeholder="#hashtag"
-                  className="flex-1 px-4 py-2.5 rounded-xl bg-[#0a0a0a] border border-[#1a1a1a] text-white placeholder-[#5a5554] outline-none focus:border-[#D4A853]/40 transition-colors text-sm"
+                  className="flex-1 px-4 py-2.5 rounded-xl bg-black border border-[#302927] text-white placeholder-[#726d6c] outline-none focus:border-[#843c2d]/40 transition-colors text-sm"
                 />
                 <button
                   onClick={addHashtag}
-                  className="px-5 py-2.5 rounded-xl bg-[#141414] border border-[#1a1a1a] text-white text-sm font-medium hover:border-[#D4A853]/30 transition-colors"
+                  className="px-5 py-2.5 rounded-xl bg-[#302927] border border-[#302927] text-white text-sm font-medium hover:border-[#e8a990]/35 transition-colors"
                 >
                   Add
                 </button>
@@ -1198,7 +1321,7 @@ export default function CreateFlow({
                     <button
                       key={tag}
                       onClick={() => removeHashtag(tag)}
-                      className="px-3 py-1.5 rounded-xl bg-[#0a0a0a] border border-[#1a1a1a] text-sm text-white hover:border-red-500/30 hover:text-red-400 transition-colors"
+                      className="px-3 py-1.5 rounded-xl bg-black border border-[#302927] text-sm text-white hover:border-red-500/30 hover:text-red-400 transition-colors"
                     >
                       #{tag} ×
                     </button>
@@ -1210,7 +1333,7 @@ export default function CreateFlow({
             {/* Campaign */}
             {campaigns.length > 0 && (
               <section>
-                <label className="block text-[10px] font-semibold text-[#D4A853] uppercase tracking-widest mb-2">
+                <label className="block text-[10px] font-semibold text-[#e8a990] uppercase tracking-widest mb-2">
                   Campaign (Optional)
                 </label>
 
@@ -1219,8 +1342,8 @@ export default function CreateFlow({
                     onClick={() => setDraft((d) => ({ ...d, campaignId: undefined }))}
                     className={`px-4 py-2.5 rounded-xl border transition-all duration-300 text-sm font-medium ${
                       !draft.campaignId
-                        ? 'bg-[#D4A853]/10 border-[#D4A853]/50 text-[#D4A853]'
-                        : 'bg-[#0a0a0a] border-[#1a1a1a] text-white hover:border-[#D4A853]/30'
+                        ? 'bg-[#843c2d]/10 border-[#843c2d]/50 text-[#e8a990]'
+                        : 'bg-black border-[#302927] text-white hover:border-[#e8a990]/35'
                     }`}
                   >
                     None
@@ -1233,8 +1356,8 @@ export default function CreateFlow({
                         onClick={() => setDraft((d) => ({ ...d, campaignId: campaign.id }))}
                         className={`px-4 py-2.5 rounded-xl border transition-all duration-300 text-sm font-medium flex items-center gap-2 ${
                           draft.campaignId === campaign.id
-                            ? 'bg-[#D4A853]/10 border-[#D4A853]/50 text-[#D4A853]'
-                            : 'bg-[#0a0a0a] border-[#1a1a1a] text-white hover:border-[#D4A853]/30'
+                            ? 'bg-[#843c2d]/10 border-[#843c2d]/50 text-[#e8a990]'
+                            : 'bg-black border-[#302927] text-white hover:border-[#e8a990]/35'
                         }`}
                       >
                         {campaign.color && (
@@ -1256,7 +1379,7 @@ export default function CreateFlow({
         {step === 'review' && (
           <div className="py-5 space-y-5">
             {/* Preview */}
-            <section className="relative rounded-2xl overflow-hidden bg-[#0f0f0f] aspect-video border border-[#1a1a1a]">
+            <section className="relative rounded-2xl overflow-hidden bg-[#0d0c0a] aspect-video border border-[#302927]">
               {draft.mediaType === 'video' ? (
                 <video
                   src={draft.mediaUrl}
@@ -1278,7 +1401,7 @@ export default function CreateFlow({
               {/* Title */}
               {draft.title && (
                 <div>
-                  <div className="text-[10px] text-[#5a5554] uppercase tracking-widest mb-1">Title</div>
+                  <div className="text-[10px] text-[#726d6c] uppercase tracking-widest mb-1">Title</div>
                   <div className="text-white font-medium">{draft.title}</div>
                 </div>
               )}
@@ -1286,7 +1409,7 @@ export default function CreateFlow({
               {/* Caption */}
               {draft.caption && (
                 <div>
-                  <div className="text-[10px] text-[#5a5554] uppercase tracking-widest mb-1">Caption</div>
+                  <div className="text-[10px] text-[#726d6c] uppercase tracking-widest mb-1">Caption</div>
                   <div className="text-[#b8b2b1] text-sm whitespace-pre-wrap leading-relaxed">{draft.caption}</div>
                 </div>
               )}
@@ -1294,35 +1417,29 @@ export default function CreateFlow({
               {/* Hashtags */}
               {draft.hashtags.length > 0 && (
                 <div>
-                  <div className="text-[10px] text-[#5a5554] uppercase tracking-widest mb-1">Hashtags</div>
-                  <div className="text-[#D4A853] text-sm">
+                  <div className="text-[10px] text-[#726d6c] uppercase tracking-widest mb-1">Hashtags</div>
+                  <div className="text-[#e8a990] text-sm">
                     {draft.hashtags.map((t) => `#${t}`).join(' ')}
                   </div>
                 </div>
               )}
 
               {/* Schedule */}
-              <div className="p-4 rounded-2xl bg-[#0a0a0a] border border-[#1a1a1a]">
+              <div className="p-4 rounded-2xl bg-black border border-[#302927]">
                 <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-[#D4A853]/10 flex items-center justify-center flex-shrink-0">
-                    <span className="text-[#D4A853]">{Icons.calendar}</span>
+                  <div className="w-10 h-10 rounded-xl bg-[#843c2d]/10 flex items-center justify-center flex-shrink-0">
+                    <span className="text-[#e8a990]">{Icons.calendar}</span>
                   </div>
                   <div>
                     <div className="text-sm text-white font-medium">
                       {draft.scheduleMode === 'now'
                         ? 'Posting immediately'
-                        : draft.scheduleMode === 'slot' && nextSlot
-                        ? `${formatSlotDate(nextSlot.date, nextSlot.timezone)} at ${formatSlotTime(nextSlot.time)}`
-                        : draft.scheduledAt
-                        ? `${new Date(draft.scheduledAt).toLocaleDateString('en-US', {
+                        : draft.scheduledDate
+                        ? `${new Date(`${draft.scheduledDate}T00:00:00`).toLocaleDateString('en-US', {
                             weekday: 'long',
                             month: 'long',
                             day: 'numeric',
-                          })} at ${new Date(draft.scheduledAt).toLocaleTimeString('en-US', {
-                            hour: 'numeric',
-                            minute: '2-digit',
-                            hour12: true,
-                          })}`
+                          })} at midnight`
                         : 'No schedule set'}
                     </div>
                   </div>
@@ -1330,13 +1447,13 @@ export default function CreateFlow({
               </div>
 
               {/* Platforms */}
-              <div className="p-4 rounded-2xl bg-[#0a0a0a] border border-[#1a1a1a]">
-                <div className="text-[10px] text-[#5a5554] uppercase tracking-widest mb-3">Posting to</div>
+              <div className="p-4 rounded-2xl bg-black border border-[#302927]">
+                <div className="text-[10px] text-[#726d6c] uppercase tracking-widest mb-3">Posting to</div>
                 <div className="flex flex-wrap gap-2">
                   {selectedAccounts.map((acc) => (
                     <div
                       key={acc.id}
-                      className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#0f0f0f] border border-[#1a1a1a]"
+                      className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#0d0c0a] border border-[#302927]"
                     >
                       <span>{PLATFORM_ICONS[acc.platform]}</span>
                       <span className="text-sm text-white">@{acc.account_handle}</span>
@@ -1347,8 +1464,8 @@ export default function CreateFlow({
 
               {/* Campaign */}
               {draft.campaignId && (
-                <div className="p-4 rounded-2xl bg-[#0a0a0a] border border-[#1a1a1a]">
-                  <div className="text-[10px] text-[#5a5554] uppercase tracking-widest mb-1">Campaign</div>
+                <div className="p-4 rounded-2xl bg-black border border-[#302927]">
+                  <div className="text-[10px] text-[#726d6c] uppercase tracking-widest mb-1">Campaign</div>
                   <div className="text-white font-medium flex items-center gap-2">
                     {(() => {
                       const camp = campaigns.find((c) => c.id === draft.campaignId);
@@ -1371,11 +1488,11 @@ export default function CreateFlow({
 
       {/* Footer (Review step only) */}
       {step === 'review' && (
-        <div className="flex-shrink-0 p-4 border-t border-[#1a1a1a] bg-black safe-area-bottom">
+        <div className="flex-shrink-0 p-4 border-t border-[#302927] bg-black safe-area-bottom">
           <button
             onClick={handleSubmit}
             disabled={submitting}
-            className="w-full py-4 rounded-2xl bg-gradient-to-r from-[#D4A853] to-[#B8923F] text-black font-semibold text-lg disabled:opacity-50 active:scale-[0.98] transition-all shadow-[0_0_30px_rgba(212,168,83,0.3)] hover:shadow-[0_0_40px_rgba(212,168,83,0.4)]"
+            className="w-full py-4 rounded-2xl bg-gradient-to-r from-[#843c2d] to-[#6b3323] text-black font-semibold text-lg disabled:opacity-50 active:scale-[0.98] transition-all shadow-[0_0_30px_rgba(212,168,83,0.3)] hover:shadow-[0_0_40px_rgba(212,168,83,0.4)]"
           >
             {submitting
               ? 'Creating...'
@@ -1396,18 +1513,18 @@ export default function CreateFlow({
           />
 
           {/* Sheet */}
-          <div className="relative w-full max-w-lg max-h-[85vh] bg-[#0a0a0a] rounded-t-3xl overflow-hidden flex flex-col border-t border-[#1a1a1a] animate-slide-up">
+          <div className="relative w-full max-w-lg max-h-[85vh] bg-black rounded-t-3xl overflow-hidden flex flex-col border-t border-[#302927] animate-slide-up">
             {/* Handle */}
             <div className="flex justify-center pt-3 pb-2">
               <div className="w-10 h-1 rounded-full bg-[#3a3534]" />
             </div>
 
             {/* Header */}
-            <div className="flex items-center justify-between px-4 pb-4 border-b border-[#1a1a1a]">
+            <div className="flex items-center justify-between px-4 pb-4 border-b border-[#302927]">
               <h2 className="text-lg font-semibold text-white">Select from Clips</h2>
               <button
                 onClick={() => setShowClipsPicker(false)}
-                className="w-9 h-9 flex items-center justify-center rounded-xl bg-[#141414] text-[#8a8584] hover:text-white transition-colors"
+                className="w-9 h-9 flex items-center justify-center rounded-xl bg-[#302927] text-[#726d6c] hover:text-white transition-colors"
               >
                 {Icons.close}
               </button>
@@ -1416,14 +1533,14 @@ export default function CreateFlow({
             {/* Content */}
             <div className="flex-1 overflow-y-auto p-4">
               <div className="flex items-center justify-between mb-4">
-                <div className="text-xs text-[#5a5554] uppercase tracking-widest">Clips</div>
+                <div className="text-xs text-[#726d6c] uppercase tracking-widest">Clips</div>
                 <div className="flex gap-2">
                   <button
                     onClick={() => setClipFilter('unposted')}
                     className={`px-3 py-1.5 rounded-lg text-[10px] uppercase tracking-widest border transition-all ${
                       clipFilter === 'unposted'
-                        ? 'bg-[#D4A853]/15 border-[#D4A853]/50 text-[#D4A853]'
-                        : 'bg-[#0f0f0f] border-[#1a1a1a] text-[#8a8584] hover:border-[#D4A853]/30'
+                        ? 'bg-[#843c2d]/15 border-[#843c2d]/50 text-[#e8a990]'
+                        : 'bg-[#0d0c0a] border-[#302927] text-[#726d6c] hover:border-[#e8a990]/35'
                     }`}
                   >
                     Unposted
@@ -1432,8 +1549,8 @@ export default function CreateFlow({
                     onClick={() => setClipFilter('all')}
                     className={`px-3 py-1.5 rounded-lg text-[10px] uppercase tracking-widest border transition-all ${
                       clipFilter === 'all'
-                        ? 'bg-[#D4A853]/15 border-[#D4A853]/50 text-[#D4A853]'
-                        : 'bg-[#0f0f0f] border-[#1a1a1a] text-[#8a8584] hover:border-[#D4A853]/30'
+                        ? 'bg-[#843c2d]/15 border-[#843c2d]/50 text-[#e8a990]'
+                        : 'bg-[#0d0c0a] border-[#302927] text-[#726d6c] hover:border-[#e8a990]/35'
                     }`}
                   >
                     All
@@ -1442,16 +1559,16 @@ export default function CreateFlow({
               </div>
               {loadingClips ? (
                 <div className="flex flex-col items-center justify-center py-12">
-                  <div className="w-10 h-10 border-2 border-[#D4A853]/20 border-t-[#D4A853] rounded-full animate-spin mb-3" />
-                  <p className="text-sm text-[#5a5554]">Loading clips...</p>
+                  <div className="w-10 h-10 border-2 border-[#e8a990]/25 border-t-[#843c2d] rounded-full animate-spin mb-3" />
+                  <p className="text-sm text-[#726d6c]">Loading clips...</p>
                 </div>
               ) : clips.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12">
-                  <div className="w-14 h-14 rounded-2xl bg-[#141414] flex items-center justify-center mb-4">
-                    <span className="text-2xl text-[#5a5554]">{Icons.folder}</span>
+                  <div className="w-14 h-14 rounded-2xl bg-[#302927] flex items-center justify-center mb-4">
+                    <span className="text-2xl text-[#726d6c]">{Icons.folder}</span>
                   </div>
-                  <p className="text-sm text-[#8a8584]">No clips available</p>
-                  <p className="text-xs text-[#5a5554] mt-1">Upload clips to use them here</p>
+                  <p className="text-sm text-[#726d6c]">No clips available</p>
+                  <p className="text-xs text-[#726d6c] mt-1">Upload clips to use them here</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-2 gap-3">
@@ -1461,7 +1578,7 @@ export default function CreateFlow({
                       <button
                         key={clip.id}
                         onClick={() => handleSelectClip(clip)}
-                        className="group relative aspect-[9/16] rounded-2xl overflow-hidden bg-[#141414] border border-[#1a1a1a] hover:border-[#D4A853]/50 transition-all active:scale-95"
+                        className="group relative aspect-[9/16] rounded-2xl overflow-hidden bg-[#302927] border border-[#302927] hover:border-[#843c2d]/50 transition-all active:scale-95"
                       >
                         {thumbUrl ? (
                           <img
@@ -1470,7 +1587,7 @@ export default function CreateFlow({
                             className="w-full h-full object-cover"
                           />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-[#0f0f0f]">
+                          <div className="w-full h-full flex items-center justify-center bg-[#0d0c0a]">
                             <span className="text-3xl">🎬</span>
                           </div>
                         )}
@@ -1490,8 +1607,8 @@ export default function CreateFlow({
                         </div>
 
                         {/* Hover overlay */}
-                        <div className="absolute inset-0 bg-[#D4A853]/0 group-hover:bg-[#D4A853]/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                          <span className="text-[#D4A853] scale-0 group-hover:scale-100 transition-transform">
+                        <div className="absolute inset-0 bg-[#843c2d]/0 group-hover:bg-[#843c2d]/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                          <span className="text-[#e8a990] scale-0 group-hover:scale-100 transition-transform">
                             {Icons.check}
                           </span>
                         </div>
@@ -1500,6 +1617,106 @@ export default function CreateFlow({
                   })}
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* AI Setup Modal */}
+      {showAiSetup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md bg-black border border-[#302927] rounded-2xl overflow-hidden shadow-2xl">
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-[#302927] flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {Icons.sparkles}
+                <h3 className="text-lg font-semibold text-white">Quick AI Setup</h3>
+              </div>
+              <button
+                onClick={() => setShowAiSetup(false)}
+                className="w-8 h-8 flex items-center justify-center rounded-lg text-[#726d6c] hover:text-white hover:bg-[#302927] transition-colors"
+              >
+                {Icons.close}
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="px-6 py-5 space-y-4">
+              <p className="text-sm text-[#726d6c]">
+                Set up your AI voice to get personalized caption suggestions that match your brand tone.
+              </p>
+
+              {/* Quick Presets */}
+              <div>
+                <label className="block text-sm font-medium text-white mb-2">
+                  Choose Your Tone
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {(['professional', 'casual', 'playful', 'artistic'] as const).map((preset) => (
+                    <button
+                      key={preset}
+                      onClick={async () => {
+                        try {
+                          const token = localStorage.getItem('token');
+                          let toneDescription = '';
+                          
+                          if (preset === 'professional') {
+                            toneDescription = 'Professional, polished, and business-appropriate. Clear and concise messaging.';
+                          } else if (preset === 'casual') {
+                            toneDescription = 'Casual, friendly, and approachable. Conversational and relatable.';
+                          } else if (preset === 'playful') {
+                            toneDescription = 'Playful, energetic, and fun. Engaging with personality and humor.';
+                          } else if (preset === 'artistic') {
+                            toneDescription = 'Artistic, creative, and expressive. Poetic and thought-provoking.';
+                          }
+
+                          const response = await fetch('/api/admin/ai-studio/profiles', {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json',
+                              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                            },
+                            credentials: 'include',
+                            body: JSON.stringify({
+                              name: 'Social Studio Voice',
+                              tone_description: toneDescription,
+                              max_emojis: 1,
+                              max_hashtags: 7,
+                              is_active: true,
+                            }),
+                          });
+
+                          if (response.ok) {
+                            setAiProfileStatus('ready');
+                            setShowAiSetup(false);
+                            // Trigger AI suggestions immediately
+                            setTimeout(() => handleAiHelp(), 300);
+                          }
+                        } catch (error) {
+                          console.error('[CreateFlow] AI setup error:', error);
+                        }
+                      }}
+                      className="py-3 px-4 rounded-xl text-sm font-medium bg-[#0d0c0a] border border-[#302927] text-white hover:border-[#e8a990]/35 hover:bg-[#843c2d]/5 transition-all duration-300"
+                    >
+                      {preset === 'professional' && '💼'} 
+                      {preset === 'casual' && '😊'} 
+                      {preset === 'playful' && '🎉'} 
+                      {preset === 'artistic' && '🎨'}
+                      {' '}
+                      {preset.charAt(0).toUpperCase() + preset.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-[#302927]">
+                <a
+                  href="/admin/ai-studio"
+                  className="text-sm text-[#e8a990] hover:text-[#c97b63] transition-colors"
+                >
+                  Or customize in Advanced Settings →
+                </a>
+              </div>
             </div>
           </div>
         </div>

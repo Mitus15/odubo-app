@@ -35,7 +35,7 @@ export default function SocialStudioTab() {
   }
 
   return (
-    <div className="h-full bg-black">
+    <div className="h-full w-full bg-black overflow-hidden">
       <SocialStudioPage />
     </div>
   );
