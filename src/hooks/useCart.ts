@@ -1,9 +1,11 @@
 'use client';
 
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import type { CartItem, Cart, ProductVariant, ProductImage } from '@/lib/store/types';
 
 const CART_STORAGE_KEY = 'odubo_cart';
+const VISITOR_ID_KEY = 'odubo_visitor_id';
+const SYNC_DEBOUNCE_MS = 500;
 
 /**
  * useCart - Unified cart management hook
@@ -12,36 +14,117 @@ const CART_STORAGE_KEY = 'odubo_cart';
 export function useCart() {
   const [items, setItems] = useState<CartItem[]>([]);
   const [isHydrated, setIsHydrated] = useState(false);
+  const [visitorId, setVisitorId] = useState<string | null>(null);
+  const syncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSyncRef = useRef<string>('');
+
+  // ============================================
+  // Visitor ID Management
+  // ============================================
+
+  useEffect(() => {
+    let id = localStorage.getItem(VISITOR_ID_KEY);
+    if (!id) {
+      id = `v_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+      localStorage.setItem(VISITOR_ID_KEY, id);
+    }
+    setVisitorId(id);
+  }, []);
 
   // ============================================
   // Persistence
   // ============================================
 
-  // Load cart from localStorage on mount
+  // Load cart from localStorage on mount, merge with server if empty
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(CART_STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) {
-          setItems(parsed);
-        }
-      }
-    } catch (error) {
-      console.error('Failed to load cart from localStorage:', error);
-    }
-    setIsHydrated(true);
-  }, []);
+    const loadCart = async () => {
+      try {
+        const stored = localStorage.getItem(CART_STORAGE_KEY);
+        let localItems: CartItem[] = [];
 
-  // Save cart to localStorage on change
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed)) {
+            localItems = parsed;
+          }
+        }
+
+        // If local cart is empty and we have visitor ID, try to load from server
+        if (localItems.length === 0 && visitorId) {
+          try {
+            const res = await fetch(`/api/store/cart/sync?visitorId=${visitorId}`);
+            if (res.ok) {
+              const data = await res.json();
+              if (Array.isArray(data.items) && data.items.length > 0) {
+                localItems = data.items;
+                localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(localItems));
+              }
+            }
+          } catch (e) {
+            // Server sync failed, use local only
+          }
+        }
+
+        setItems(localItems);
+      } catch (error) {
+        console.error('Failed to load cart:', error);
+      }
+      setIsHydrated(true);
+    };
+
+    if (visitorId !== null) {
+      loadCart();
+    }
+  }, [visitorId]);
+
+  // Save cart to localStorage and sync to server on change (debounced)
   useEffect(() => {
     if (!isHydrated) return;
+
+    // Save to localStorage immediately
     try {
       localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
     } catch (error) {
       console.error('Failed to save cart to localStorage:', error);
     }
-  }, [items, isHydrated]);
+
+    // Debounced sync to server
+    if (!visitorId) return;
+
+    const itemsHash = JSON.stringify(items);
+    if (itemsHash === lastSyncRef.current) return;
+
+    if (syncTimeoutRef.current) {
+      clearTimeout(syncTimeoutRef.current);
+    }
+
+    syncTimeoutRef.current = setTimeout(async () => {
+      try {
+        const subtotalCents = Math.round(
+          items.reduce((sum, item) => sum + item.price * item.quantity * 100, 0)
+        );
+        await fetch('/api/store/cart/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            visitorId,
+            items,
+            subtotalCents,
+            currency: items[0]?.currency || 'USD',
+          }),
+        });
+        lastSyncRef.current = itemsHash;
+      } catch (e) {
+        // Sync failed, cart still saved locally
+      }
+    }, SYNC_DEBOUNCE_MS);
+
+    return () => {
+      if (syncTimeoutRef.current) {
+        clearTimeout(syncTimeoutRef.current);
+      }
+    };
+  }, [items, isHydrated, visitorId]);
 
   // Cross-tab sync
   useEffect(() => {
@@ -149,6 +232,7 @@ export function useCart() {
     itemCount: cart.itemCount,
     subtotal: cart.subtotal,
     isHydrated,
+    visitorId,
     addToCart,
     updateQuantity,
     removeItem,

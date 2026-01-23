@@ -328,9 +328,20 @@ export async function fetchProduct(handle: string): Promise<Product | null> {
   }
 }
 
-export async function createCheckout(items: { variantId: string; quantity: number }[]): Promise<string | null> {
+export interface CheckoutAttribution {
+  sessionId?: string;
+  utmSource?: string;
+  utmMedium?: string;
+  utmCampaign?: string;
+  visitorId?: string;
+}
+
+export async function createCheckout(
+  items: { variantId: string; quantity: number }[],
+  attribution?: CheckoutAttribution
+): Promise<string | null> {
   const { endpoint, accessToken } = getConfig();
-  
+
   const query = `#graphql
     mutation CartCreate($input: CartInput!) {
       cartCreate(input: $input) {
@@ -345,12 +356,33 @@ export async function createCheckout(items: { variantId: string; quantity: numbe
       }
     }
   `;
-  
+
   const lines = items.map(item => ({
     merchandiseId: item.variantId,
     quantity: item.quantity,
   }));
-  
+
+  // Build attribution attributes
+  const attributes = [
+    { key: '_source', value: 'odubo_store' },
+  ];
+
+  if (attribution?.sessionId) {
+    attributes.push({ key: '_session', value: attribution.sessionId });
+  }
+  if (attribution?.visitorId) {
+    attributes.push({ key: '_visitor', value: attribution.visitorId });
+  }
+  if (attribution?.utmSource) {
+    attributes.push({ key: '_utm_source', value: attribution.utmSource });
+  }
+  if (attribution?.utmMedium) {
+    attributes.push({ key: '_utm_medium', value: attribution.utmMedium });
+  }
+  if (attribution?.utmCampaign) {
+    attributes.push({ key: '_utm_campaign', value: attribution.utmCampaign });
+  }
+
   try {
     const response = await fetch(endpoint, {
       method: 'POST',
@@ -363,21 +395,19 @@ export async function createCheckout(items: { variantId: string; quantity: numbe
         variables: {
           input: {
             lines,
-            attributes: [
-              { key: '_source', value: 'odubo_store' },
-            ],
+            attributes,
           },
         },
       }),
     });
-    
+
     const json = await response.json() as any;
-    
+
     if (json.data?.cartCreate?.userErrors?.length > 0) {
       console.error('Cart creation errors:', json.data.cartCreate.userErrors);
       return null;
     }
-    
+
     return json.data?.cartCreate?.cart?.checkoutUrl || null;
   } catch (error) {
     console.error('Error creating checkout:', error);

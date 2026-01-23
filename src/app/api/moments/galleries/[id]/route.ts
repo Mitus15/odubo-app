@@ -10,7 +10,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
     const { id: idStr } = await ctx.params;
     const id = Number(idStr);
     if (!Number.isFinite(id)) return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
-    const rows = await queryDatabase('SELECT id, code, title, description, starts_at, ends_at, created_by, created_at, updated_at, config FROM galleries WHERE id = ? LIMIT 1', [id]);
+    const rows = await queryDatabase('SELECT id, code, title, description, starts_at, ends_at, created_by, created_at, updated_at, config, shopify_product_id, shopify_product_handle FROM galleries WHERE id = ? LIMIT 1', [id]);
     if (!rows[0]) return NextResponse.json({ error: 'Not found' }, { status: 404 });
     return NextResponse.json({ gallery: rows[0] });
   } catch (e: any) {

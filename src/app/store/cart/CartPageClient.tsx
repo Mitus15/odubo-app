@@ -3,17 +3,40 @@ import ScreenLayout from '@/components/ui/ScreenLayout';
 import ScrollContainer from '@/components/ui/ScrollContainer';
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { usePageAnalytics } from '@/hooks/usePageAnalytics';
 import { useAnalyticsSafe } from '@/contexts/AnalyticsContext';
+import { createCheckout, type CheckoutAttribution } from '@/lib/store/api';
 
 export default function CartPage() {
   type CartItem = { variantId: string; qty: number; title: string; price: number; image?: string };
   const [items, setItems] = useState<CartItem[]>([]);
   const [isRedirecting, setIsRedirecting] = useState(false);
+  const [inventoryError, setInventoryError] = useState<string | null>(null);
+  const [isChecking, setIsChecking] = useState(false);
+  const searchParams = useSearchParams();
 
   // Page analytics
   usePageAnalytics({ title: 'Cart | Odubo Studio' });
   const analytics = useAnalyticsSafe();
+
+  // Get attribution data
+  const getAttribution = (): CheckoutAttribution => {
+    const sessionId = typeof sessionStorage !== 'undefined'
+      ? sessionStorage.getItem('odubo_session_id') || undefined
+      : undefined;
+    const visitorId = typeof localStorage !== 'undefined'
+      ? localStorage.getItem('odubo_visitor_id') || undefined
+      : undefined;
+
+    return {
+      sessionId,
+      visitorId,
+      utmSource: searchParams?.get('utm_source') || undefined,
+      utmMedium: searchParams?.get('utm_medium') || undefined,
+      utmCampaign: searchParams?.get('utm_campaign') || undefined,
+    };
+  };
 
   useEffect(() => {
     try {
@@ -44,24 +67,66 @@ export default function CartPage() {
     save(items.filter(i => i.variantId !== variantId));
   };
 
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
     if (items.length === 0) return;
-    setIsRedirecting(true);
+    setInventoryError(null);
+    setIsChecking(true);
 
-    // Track checkout start
-    analytics?.trackCheckoutStart(subtotal, items.reduce((sum, i) => sum + i.qty, 0));
+    try {
+      // Step 1: Check inventory
+      const variantIds = items.map(i => i.variantId);
+      const inventoryRes = await fetch('/api/store/inventory', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ variantIds }),
+      });
 
-    // Construct Shopify Cart Permalink
-    // Format: https://{shop}.myshopify.com/cart/{variant_id}:{quantity},{variant_id}:{quantity}
-    const shopUrl = 'odubostudio.myshopify.com';
-    const variantString = items.map(i => {
-      // Ensure variant ID is just the numeric part if it comes as a GID
-      const id = i.variantId.split('/').pop();
-      return `${id}:${i.qty}`;
-    }).join(',');
+      if (inventoryRes.ok) {
+        const inventoryData = await inventoryRes.json();
+        if (!inventoryData.valid && inventoryData.outOfStock?.length > 0) {
+          const outOfStockNames = inventoryData.outOfStock
+            .map((item: any) => `${item.productTitle} - ${item.title}`)
+            .join(', ');
+          setInventoryError(`Out of stock: ${outOfStockNames}`);
+          setIsChecking(false);
+          return;
+        }
+      }
 
-    const checkoutUrl = `https://${shopUrl}/cart/${variantString}`;
-    window.location.href = checkoutUrl;
+      // Step 2: Track checkout start
+      setIsRedirecting(true);
+      analytics?.trackCheckoutStart(subtotal, items.reduce((sum, i) => sum + i.qty, 0));
+
+      // Step 3: Create checkout with attribution via Shopify API
+      const checkoutItems = items.map(i => ({
+        variantId: i.variantId,
+        quantity: i.qty,
+      }));
+
+      const checkoutUrl = await createCheckout(checkoutItems, getAttribution());
+
+      if (checkoutUrl) {
+        window.location.href = checkoutUrl;
+      } else {
+        // Fallback to cart permalink if createCheckout fails
+        const shopUrl = 'odubostudio.myshopify.com';
+        const variantString = items.map(i => {
+          const id = i.variantId.split('/').pop();
+          return `${id}:${i.qty}`;
+        }).join(',');
+        window.location.href = `https://${shopUrl}/cart/${variantString}`;
+      }
+    } catch (error) {
+      console.error('Checkout error:', error);
+      // Fallback to cart permalink on any error
+      setIsRedirecting(true);
+      const shopUrl = 'odubostudio.myshopify.com';
+      const variantString = items.map(i => {
+        const id = i.variantId.split('/').pop();
+        return `${id}:${i.qty}`;
+      }).join(',');
+      window.location.href = `https://${shopUrl}/cart/${variantString}`;
+    }
   };
 
   return (
@@ -153,12 +218,18 @@ export default function CartPage() {
                     <span className="text-[#b2a491] text-[10px] uppercase tracking-widest text-right leading-tight">Calculated at<br/>checkout</span>
                   </div>
 
-                  <button 
+                  {inventoryError && (
+                    <div className="mb-4 p-3 rounded border border-red-500/30 bg-red-500/10 text-red-300 text-sm">
+                      {inventoryError}
+                    </div>
+                  )}
+
+                  <button
                     onClick={handleCheckout}
-                    disabled={isRedirecting}
+                    disabled={isRedirecting || isChecking}
                     className="w-full py-4 bg-[#843c2d] text-[#ede8df] text-sm uppercase tracking-[0.2em] hover:bg-[#a0472f] transition-colors disabled:opacity-50 disabled:cursor-wait"
                   >
-                    {isRedirecting ? 'Redirecting...' : 'Checkout'}
+                    {isChecking ? 'Checking...' : isRedirecting ? 'Redirecting...' : 'Checkout'}
                   </button>
                   
                   <p className="mt-4 text-center text-[10px] text-[#502d26] uppercase tracking-widest">
