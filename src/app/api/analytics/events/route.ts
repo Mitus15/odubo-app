@@ -36,6 +36,30 @@ setInterval(() => {
   }
 }, 60000);
 
+// Bot detection patterns - filter out crawlers and automated traffic
+const BOT_PATTERNS = [
+  // Search engine crawlers
+  'googlebot', 'bingbot', 'slurp', 'duckduckbot', 'baiduspider', 'yandexbot',
+  // Social media crawlers (link previews)
+  'facebookexternalhit', 'twitterbot', 'linkedinbot', 'pinterestbot', 'slackbot',
+  'discordbot', 'telegrambot', 'whatsapp',
+  // Generic bot indicators
+  'bot', 'crawler', 'spider', 'scraper', 'curl', 'wget', 'python-requests',
+  'axios', 'node-fetch', 'go-http-client',
+  // Testing/audit tools
+  'lighthouse', 'pagespeed', 'gtmetrix', 'pingdom', 'uptimerobot',
+  // Headless browsers
+  'headless', 'phantomjs', 'puppeteer', 'playwright', 'selenium',
+  // Preview generators
+  'preview', 'embed', 'oembed',
+];
+
+function isBot(userAgent: string | null): boolean {
+  if (!userAgent) return true; // No user-agent is suspicious
+  const ua = userAgent.toLowerCase();
+  return BOT_PATTERNS.some(pattern => ua.includes(pattern));
+}
+
 // Valid event types that map to fan_activity.activity_type
 const VALID_EVENT_TYPES = [
   'page_view',
@@ -151,6 +175,12 @@ function mapEventToContentType(eventType: EventType, path: string): string {
  */
 export async function POST(req: NextRequest) {
   try {
+    // Filter bot traffic early - before any processing
+    const userAgent = req.headers.get('user-agent');
+    if (isBot(userAgent)) {
+      return NextResponse.json({ success: true, filtered: 'bot' });
+    }
+
     // Handle sendBeacon which sends as text
     const contentType = req.headers.get('content-type') || '';
     let body;

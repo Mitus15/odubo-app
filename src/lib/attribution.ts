@@ -78,6 +78,16 @@ function inferMediumFromSource(source: string, hasReferrer: boolean): string {
 }
 
 /**
+ * Check if the UTM medium indicates paid traffic.
+ */
+function isPaidMedium(utmMedium: string | null): boolean {
+  if (!utmMedium) return false;
+  const medium = utmMedium.toLowerCase();
+  const paidIndicators = ['cpc', 'ppc', 'paid', 'ad', 'ads', 'paidsocial', 'display', 'retargeting'];
+  return paidIndicators.some(indicator => medium.includes(indicator));
+}
+
+/**
  * Capture attribution from current page context.
  * Should be called on initial page load.
  */
@@ -111,19 +121,32 @@ export function captureAttribution(): Attribution {
   const ttclid = params.get('ttclid'); // TikTok Ads
 
   // Infer source if not explicitly provided
+  // Note: Click IDs (fbclid, gclid, ttclid) are added to ALL links by platforms,
+  // not just paid ads. Only classify as ads when utm_medium indicates paid traffic.
   let source = utmSource || '';
   if (!source) {
-    if (fbclid) source = 'facebook_ads';
-    else if (gclid) source = 'google_ads';
-    else if (ttclid) source = 'tiktok_ads';
-    else source = inferSourceFromReferrer(referrer);
+    const isPaid = isPaidMedium(utmMedium);
+
+    if (fbclid && isPaid) {
+      source = 'facebook_ads';
+    } else if (gclid && isPaid) {
+      source = 'google_ads';
+    } else if (ttclid && isPaid) {
+      source = 'tiktok_ads';
+    } else {
+      source = inferSourceFromReferrer(referrer);
+    }
   }
 
   // Infer medium if not explicitly provided
   let medium = utmMedium || '';
   if (!medium) {
-    if (fbclid || gclid || ttclid) medium = 'cpc';
-    else medium = inferMediumFromSource(source, !!referrer);
+    const isPaid = isPaidMedium(utmMedium);
+    if ((fbclid || gclid || ttclid) && isPaid) {
+      medium = 'cpc';
+    } else {
+      medium = inferMediumFromSource(source, !!referrer);
+    }
   }
 
   // Deep link clip ID
