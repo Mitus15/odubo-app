@@ -13,6 +13,7 @@ import { useAudio } from '@/contexts/AudioContext';
 import { useStore } from '@/contexts/StoreContext';
 import { useUnifiedMedia } from '@/contexts/UnifiedMediaContext';
 import { usePageAnalytics } from '@/hooks/usePageAnalytics';
+import { useAnalyticsSafe } from '@/contexts/AnalyticsContext';
 import type { ClipItem } from '@/types/clips';
 
 // Modal types that can be opened via URL
@@ -65,6 +66,29 @@ export default function HomePageClient({ verseOfTheDay, initialClipId, initialCl
 
   // Page analytics tracking - tracks page views, scroll depth, time on page
   usePageAnalytics({ title: defaultModal ? `${defaultModal.charAt(0).toUpperCase() + defaultModal.slice(1)} | Odubo Studio` : 'Clips | Odubo Studio' });
+
+  // Clip intelligence analytics
+  const analytics = useAnalyticsSafe();
+
+  // Clip milestone callback - track 25%, 50%, 75% watch milestones
+  const handleWatchMilestone = useCallback((
+    clipId: number,
+    milestone: number,
+    watchSeconds: number,
+    durationSeconds: number
+  ) => {
+    analytics?.trackClipMilestone(clipId, milestone, watchSeconds, durationSeconds);
+  }, [analytics]);
+
+  // Clip completion callback - track when video ends naturally
+  const handleWatchComplete = useCallback((
+    clipId: number,
+    watchPercent: number,
+    watchSeconds: number,
+    durationSeconds: number
+  ) => {
+    analytics?.trackClipComplete(clipId, watchPercent, watchSeconds, durationSeconds, false);
+  }, [analytics]);
 
   // Auto-open modal based on defaultModal prop
   useEffect(() => {
@@ -218,6 +242,8 @@ export default function HomePageClient({ verseOfTheDay, initialClipId, initialCl
             onVideoReady={setVideoReady}
             scrollDirection={scrollDirection}
             onAdvanceToNext={handleAdvanceToNext}
+            onWatchMilestone={handleWatchMilestone}
+            onWatchComplete={handleWatchComplete}
           />
         )}
 

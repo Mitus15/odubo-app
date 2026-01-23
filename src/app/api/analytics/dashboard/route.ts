@@ -36,6 +36,8 @@ interface TopClip {
   views: number;
   completions: number;
   shopClicks: number;
+  avgWatchPercent: number;
+  fullCompletions: number;
 }
 
 interface TopProduct {
@@ -493,6 +495,33 @@ async function getTopClips(startDate: string): Promise<TopClip[]> {
 
     if (!rows) return [];
 
+    // Get watch metrics from clip_complete events
+    const watchMetricsRows = await queryDatabase(
+      `SELECT
+        content_id as id,
+        AVG(CAST(JSON_EXTRACT(metadata, '$.watchPercent') AS REAL)) as avgWatchPercent,
+        SUM(CASE WHEN JSON_EXTRACT(metadata, '$.isFullCompletion') = 1 THEN 1 ELSE 0 END) as fullCompletions
+       FROM fan_activity
+       WHERE activity_type = 'clip_complete'
+         AND date(created_at) >= ?
+         AND content_id IS NOT NULL
+       GROUP BY content_id`,
+      [startDate]
+    );
+
+    // Create a map of watch metrics by content_id
+    const watchMetricsMap = new Map<string, { avgWatchPercent: number; fullCompletions: number }>();
+    if (watchMetricsRows) {
+      for (const row of watchMetricsRows as any[]) {
+        if (row.id) {
+          watchMetricsMap.set(row.id, {
+            avgWatchPercent: row.avgWatchPercent || 0,
+            fullCompletions: row.fullCompletions || 0,
+          });
+        }
+      }
+    }
+
     return (rows as any[]).map(row => {
       // content_id is a path like "/clips/123" - extract the numeric ID
       let clipId = 0;
@@ -507,12 +536,17 @@ async function getTopClips(startDate: string): Promise<TopClip[]> {
         clipId = row.id || 0;
       }
 
+      // Look up watch metrics for this clip
+      const watchMetrics = watchMetricsMap.get(row.id) || { avgWatchPercent: 0, fullCompletions: 0 };
+
       return {
         id: clipId,
         title: row.title || 'Untitled',
         views: row.views || 0,
         completions: row.completions || 0,
         shopClicks: row.shopClicks || 0,
+        avgWatchPercent: Math.round(watchMetrics.avgWatchPercent),
+        fullCompletions: watchMetrics.fullCompletions,
       };
     });
   } catch (err) {

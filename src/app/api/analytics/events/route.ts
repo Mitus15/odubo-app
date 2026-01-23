@@ -84,6 +84,7 @@ const VALID_EVENT_TYPES = [
   'video_progress',
   // Clip tracking
   'clip_view',
+  'clip_milestone',
   'clip_complete',
   // Music tracking
   'album_view',
@@ -136,6 +137,7 @@ function mapEventToActivityType(eventType: EventType): string {
     video_progress: 'page_view',
     // Clip tracking
     clip_view: 'clip_view',
+    clip_milestone: 'clip_milestone',
     clip_complete: 'clip_complete',
     // Music tracking - map to music events
     album_view: 'page_view',
@@ -157,7 +159,7 @@ function mapEventToContentType(eventType: EventType, path: string): string {
   }
   if (eventType === 'gallery_view' || eventType === 'photo_view' || eventType === 'rsvp_submit') return 'gallery';
   if (eventType === 'video_open' || eventType === 'video_progress') return 'video';
-  if (eventType === 'clip_view' || eventType === 'clip_complete') return 'clip';
+  if (eventType === 'clip_view' || eventType === 'clip_milestone' || eventType === 'clip_complete') return 'clip';
   if (eventType === 'album_view' || eventType === 'track_play') return 'music';
   // Path-based fallbacks
   if (path.startsWith('/store')) return 'store';
@@ -240,6 +242,12 @@ export async function POST(req: NextRequest) {
       let completionPercent = event.metadata?.depth as number | undefined;
       if (!completionPercent && event.metadata?.watchPercentage) {
         completionPercent = event.metadata.watchPercentage as number;
+      }
+      if (!completionPercent && event.metadata?.watchPercent) {
+        completionPercent = event.metadata.watchPercent as number;
+      }
+      if (!completionPercent && event.metadata?.milestone) {
+        completionPercent = event.metadata.milestone as number;
       }
 
       // Serialize metadata to JSON

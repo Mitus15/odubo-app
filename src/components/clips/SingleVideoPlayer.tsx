@@ -13,6 +13,9 @@ interface SingleVideoPlayerProps {
   onVideoReady?: (ready: boolean) => void;
   scrollDirection?: 'forward' | 'backward' | null;
   onAdvanceToNext?: () => void;
+  // Clip intelligence callbacks
+  onWatchMilestone?: (clipId: number, milestone: number, watchSeconds: number, durationSeconds: number) => void;
+  onWatchComplete?: (clipId: number, watchPercent: number, watchSeconds: number, durationSeconds: number) => void;
 }
 
 /**
@@ -31,6 +34,8 @@ export default function SingleVideoPlayer({
   onVideoReady,
   scrollDirection = null,
   onAdvanceToNext,
+  onWatchMilestone,
+  onWatchComplete,
 }: SingleVideoPlayerProps) {
   const { isMuted, armAudio, syncFromVideo, hasUserPreference } = useAudio();
 
@@ -42,6 +47,8 @@ export default function SingleVideoPlayer({
   const userPausedRef = useRef(false);
   const playPromiseRef = useRef<Promise<void> | null>(null);
   const lastActiveIndexRef = useRef(-1);
+  // Milestone tracking - which milestones have been reached for current clip
+  const milestonesReachedRef = useRef<Set<number>>(new Set());
 
   const [showPlayButton, setShowPlayButton] = useState(false);
   const [isBuffering, setIsBuffering] = useState(false);
@@ -165,12 +172,19 @@ export default function SingleVideoPlayer({
 
   // Video ended handler - auto-advance forward, loop backward
   const handleEnded = useCallback(() => {
+    // Fire completion event with 100% watch
+    const v = videoRef.current;
+    if (v && activeClip && v.duration) {
+      onWatchComplete?.(activeClip.id, 100, v.duration, v.duration);
+    }
+
     onEnded?.();
 
     if (scrollDirection === 'backward') {
-      const v = videoRef.current;
       if (v) {
         v.currentTime = 0;
+        // Reset milestones for replay
+        milestonesReachedRef.current.clear();
         attemptPlay(v);
       }
       return;
@@ -180,7 +194,7 @@ export default function SingleVideoPlayer({
     if (mountedRef.current && onAdvanceToNext) {
       onAdvanceToNext();
     }
-  }, [onEnded, scrollDirection, onAdvanceToNext, attemptPlay]);
+  }, [onEnded, scrollDirection, onAdvanceToNext, attemptPlay, activeClip, onWatchComplete]);
 
   // Mount tracking
   useEffect(() => {
@@ -211,6 +225,8 @@ export default function SingleVideoPlayer({
       setShowPlayButton(false);
       setIsUserPaused(false);
       userPausedRef.current = false;
+      // Reset milestones for new clip
+      milestonesReachedRef.current.clear();
 
       // Set source and play immediately - don't wait for any events
       v.src = videoUrl;
@@ -218,6 +234,29 @@ export default function SingleVideoPlayer({
       attemptPlay(v);
     }
   }, [activeIndex, activeClip, getVideoUrl, attemptPlay, onVideoReady]);
+
+  // Milestone tracking via timeupdate
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v || !activeClip) return;
+
+    const handleTimeUpdate = () => {
+      if (!v.duration || v.duration === 0) return;
+
+      const percent = (v.currentTime / v.duration) * 100;
+      const milestones = [25, 50, 75];
+
+      for (const milestone of milestones) {
+        if (percent >= milestone && !milestonesReachedRef.current.has(milestone)) {
+          milestonesReachedRef.current.add(milestone);
+          onWatchMilestone?.(activeClip.id, milestone, v.currentTime, v.duration);
+        }
+      }
+    };
+
+    v.addEventListener('timeupdate', handleTimeUpdate);
+    return () => v.removeEventListener('timeupdate', handleTimeUpdate);
+  }, [activeClip, onWatchMilestone]);
 
   // Preload next clip into hidden video element
   // DEFERRED: Only start after first frame renders (after LCP)

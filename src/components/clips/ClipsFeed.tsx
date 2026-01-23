@@ -58,6 +58,8 @@ export default function ClipsFeed({
   const inflightRef = useRef(0);
   const abortRef = useRef<AbortController | null>(null);
   const prevScrollTopRef = useRef(0);
+  // Track previous clip for skip detection
+  const prevClipRef = useRef<{ id: number; startTime: number; duration?: number | null } | null>(null);
   // Session seed for consistent random order across pagination
   const sessionSeedRef = useRef(Math.random().toString(36).substring(2, 12));
   const keyCounterRef = useRef(0);
@@ -346,12 +348,43 @@ export default function ClipsFeed({
     onActiveClipChange(activeClip || null);
   }, [activeId, displayClips, onActiveClipChange]);
 
-  // Track clip views for analytics when active clip changes
+  // Track clip views and skips for analytics when active clip changes
   useEffect(() => {
     if (!activeId || !analytics) return;
+
+    // When clip changes, track skip for previous clip
+    if (prevClipRef.current && prevClipRef.current.id !== activeId) {
+      const watchMs = Date.now() - prevClipRef.current.startTime;
+      const watchSeconds = watchMs / 1000;
+      const prevDuration = prevClipRef.current.duration;
+
+      // Only track skip if we have duration and watched less than 80%
+      if (prevDuration && prevDuration > 0) {
+        const watchPercent = Math.min(100, (watchSeconds / prevDuration) * 100);
+        // Only track if it's a meaningful skip (not a natural completion already tracked)
+        if (watchPercent < 80) {
+          analytics.trackClipComplete(
+            prevClipRef.current.id,
+            watchPercent,
+            watchSeconds,
+            prevDuration,
+            true // wasSkipped
+          );
+        }
+      }
+    }
+
+    // Track new clip view with feed position
     const activeClip = displayClips.find(c => c.id === activeId);
-    analytics.trackClipView(activeId, activeClip?.title);
-  }, [activeId, analytics, displayClips]);
+    analytics.trackClipView(activeId, activeClip?.title, activeIndex);
+
+    // Store current clip info for skip tracking
+    prevClipRef.current = {
+      id: activeId,
+      startTime: Date.now(),
+      duration: activeClip?.duration,
+    };
+  }, [activeId, analytics, displayClips, activeIndex]);
 
   // Notify parent when clips are ready
   useEffect(() => {

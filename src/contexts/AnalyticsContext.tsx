@@ -48,6 +48,7 @@ export type AnalyticsEventType =
   | 'video_progress'
   // Clip tracking
   | 'clip_view'
+  | 'clip_milestone'
   | 'clip_complete'
   // Music tracking
   | 'album_view'
@@ -93,7 +94,9 @@ interface AnalyticsContextValue {
   trackTrackPlay: (albumId: string, trackId: string, playSeconds: number) => void;
 
   // Clip tracking for journey analytics
-  trackClipView: (clipId: number, clipTitle?: string) => void;
+  trackClipView: (clipId: number, clipTitle?: string, feedPosition?: number) => void;
+  trackClipMilestone: (clipId: number, milestone: number, watchSeconds: number, durationSeconds: number) => void;
+  trackClipComplete: (clipId: number, watchPercent: number, watchSeconds: number, durationSeconds: number, wasSkipped: boolean) => void;
 
   // Identity
   visitorId: string;
@@ -101,6 +104,7 @@ interface AnalyticsContextValue {
 
   // Session state for journey analytics
   clipsViewedThisSession: number;
+  clipViewsInSession: Set<number>;
 
   // State
   isInitialized: boolean;
@@ -131,6 +135,8 @@ export function AnalyticsProvider({ children }: { children: ReactNode }) {
   // Journey analytics state
   const clipsViewedThisSessionRef = useRef<number>(0);
   const lastClipIdRef = useRef<number | null>(null);
+  // Track which clips have been viewed this session (for rewatch detection)
+  const clipViewsInSessionRef = useRef<Map<number, number>>(new Map());
 
   // Initialize on mount
   useEffect(() => {
@@ -488,12 +494,17 @@ export function AnalyticsProvider({ children }: { children: ReactNode }) {
   // Clip Tracking (for journey analytics)
   // ============================================
 
-  const trackClipView = useCallback((clipId: number, clipTitle?: string) => {
+  const trackClipView = useCallback((clipId: number, clipTitle?: string, feedPosition?: number) => {
     // Avoid tracking the same clip twice in a row (e.g., from scroll bouncing)
     if (lastClipIdRef.current === clipId) return;
 
     clipsViewedThisSessionRef.current += 1;
     lastClipIdRef.current = clipId;
+
+    // Check if this is a rewatch (clip was viewed before in this session)
+    const previousViews = clipViewsInSessionRef.current.get(clipId) || 0;
+    const isRewatch = previousViews > 0;
+    clipViewsInSessionRef.current.set(clipId, previousViews + 1);
 
     // Queue actual clip_view event for analytics
     queueEvent({
@@ -504,6 +515,52 @@ export function AnalyticsProvider({ children }: { children: ReactNode }) {
         clipId,
         clipTitle: clipTitle || null,
         clipIndex: clipsViewedThisSessionRef.current,
+        feedPosition: feedPosition ?? null,
+        isRewatch,
+        rewatchCount: previousViews,
+      },
+    });
+  }, [queueEvent]);
+
+  // Track milestone reached (25%, 50%, 75%)
+  const trackClipMilestone = useCallback((
+    clipId: number,
+    milestone: number,
+    watchSeconds: number,
+    durationSeconds: number
+  ) => {
+    queueEvent({
+      type: 'clip_milestone' as AnalyticsEventType,
+      path: `/clips/${clipId}`,
+      timestamp: Date.now(),
+      metadata: {
+        clipId,
+        milestone,
+        watchSeconds: Math.round(watchSeconds * 10) / 10,
+        durationSeconds: Math.round(durationSeconds * 10) / 10,
+      },
+    });
+  }, [queueEvent]);
+
+  // Track clip end/skip
+  const trackClipComplete = useCallback((
+    clipId: number,
+    watchPercent: number,
+    watchSeconds: number,
+    durationSeconds: number,
+    wasSkipped: boolean
+  ) => {
+    queueEvent({
+      type: 'clip_complete' as AnalyticsEventType,
+      path: `/clips/${clipId}`,
+      timestamp: Date.now(),
+      metadata: {
+        clipId,
+        watchPercent: Math.round(watchPercent),
+        watchSeconds: Math.round(watchSeconds * 10) / 10,
+        durationSeconds: Math.round(durationSeconds * 10) / 10,
+        wasSkipped,
+        isFullCompletion: watchPercent >= 80,
       },
     });
   }, [queueEvent]);
@@ -537,11 +594,14 @@ export function AnalyticsProvider({ children }: { children: ReactNode }) {
     trackTrackPlay,
     // Clip tracking
     trackClipView,
+    trackClipMilestone,
+    trackClipComplete,
     // Identity
     visitorId: visitorIdRef.current,
     sessionId: sessionIdRef.current,
     // Session state
     clipsViewedThisSession: clipsViewedThisSessionRef.current,
+    clipViewsInSession: new Set(clipViewsInSessionRef.current.keys()),
     // State
     isInitialized: isInitializedRef.current,
   };
