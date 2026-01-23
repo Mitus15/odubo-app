@@ -11,9 +11,9 @@
 | Phase | Status | Completed |
 |-------|--------|-----------|
 | Phase 1: Reliability Hardening | ✅ Complete | 2025-01-22 |
-| Phase 2: Financial Truth | ⏳ Pending | - |
+| Phase 2: Financial Truth | ✅ Already Implemented | (previously) |
 | Phase 3: Content Intelligence | ✅ Complete | 2025-01-22 |
-| Phase 4: Commerce Optimization | ⏳ Pending | - |
+| Phase 4: Commerce Optimization | ✅ Complete | 2025-01-22 |
 | Phase 5: Resilience | ⏳ Pending | - |
 
 ---
@@ -48,37 +48,22 @@
 
 ---
 
-## Phase 2: Financial Truth (The "Profit" Layer)
+## Phase 2: Financial Truth (The "Profit" Layer) ✅ ALREADY IMPLEMENTED
 
 *Goal: Move from "Vanity Revenue" to "Net Profit" reporting.*
 
-### 2.1 Create Financial Schema
+**Discovery:** This phase was already implemented prior to this work:
+- `bi_product_costs` table exists in migration 079
+- `bi_expenses` table exists in migration 079
+- Dashboard revenue already sources from `commerce_orders.total_price_cents`
 
-**Context:** We need to track costs to calculate true profit.
+### 2.1 Create Financial Schema ✅
 
-* **Action:** Create migration `database/migrations/085_create_finance_tables.sql`.
-* **SQL:**
-```sql
-CREATE TABLE product_costs (
-    variant_id TEXT PRIMARY KEY,
-    cost_per_item_cents INTEGER NOT NULL, -- COGS
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-CREATE TABLE expenses (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL, -- e.g. "Cloudflare", "Ads"
-    amount_cents INTEGER NOT NULL,
-    frequency TEXT DEFAULT 'monthly', -- or 'one_time'
-    date_incurred DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-```
+* **Status:** `bi_product_costs` and `bi_expenses` tables exist
 
-### 2.2 Switch Revenue Source of Truth
+### 2.2 Switch Revenue Source of Truth ✅
 
-**Context:** Analytics currently relies on frontend events, which AdBlockers kill.
-
-* **Action:** Edit `src/app/api/analytics/dashboard/route.ts`.
-* **Task:** Change the "Total Revenue" query to sum `total_amount` from the `shopify_orders` table (synced via webhook) instead of the `fan_activity` table.
+* **Status:** Dashboard uses `commerce_orders` table for revenue calculations
 
 ---
 
@@ -117,40 +102,46 @@ CREATE TABLE expenses (
 
 ---
 
-## Phase 4: Commerce Optimization (The "Closing" Layer)
+## Phase 4: Commerce Optimization (The "Closing" Layer) ✅
 
 *Goal: Recover lost sales and prevent overselling.*
 
-### 4.1 Persistent Server-Side Cart
+### 4.1 Persistent Server-Side Cart ✅
 
 **Context:** Carts currently live in `localStorage` and die if the user switches devices.
 
-* **Action:**
-  1. Create `carts` table in D1.
-  2. Create API `/api/store/cart/sync`.
-  3. Update `src/hooks/useCart.ts` to sync local state to the server on change (debounced).
+* **Completed:** 2025-01-22
+  - Created `carts` table (migration 086)
+  - Created `/api/store/cart/sync` API (POST: sync, GET: retrieve)
+  - Updated `useCart.ts` with debounced server sync (500ms)
+  - Added visitor ID management for cross-device persistence
 
-### 4.2 Real-Time Inventory Guard
+### 4.2 Real-Time Inventory Guard ✅
 
 **Context:** 60s cache on products risks overselling viral drops.
 
-* **Action:** Create API `/api/store/inventory`.
-* **Task:** When the user clicks "Checkout" in `CartModal.tsx`, fetch *live* inventory for those specific variants from Shopify Admin API. If out of stock, block checkout and show error.
+* **Completed:** 2025-01-22
+  - Created `/api/store/inventory` API using Shopify Admin API
+  - Updated `CartPageClient.tsx` to check inventory before checkout
+  - Shows error for out-of-stock items, prevents redirect
+  - Fails open (allows checkout) if API unavailable
 
-### 4.3 Attribution Injection
+### 4.3 Attribution Injection ✅
 
 **Context:** Pass tracking data to Shopify so we know where sales came from.
 
-* **Action:** Edit `createCheckout` in `src/lib/store/api.ts`.
-* **Task:** Inject `session_id`, `utm_source`, and `utm_medium` into the Shopify Checkout `customAttributes` or `attributes` field.
+* **Completed:** 2025-01-22
+  - Updated `createCheckout` in `src/lib/store/api.ts`
+  - Injects: `_source`, `_session`, `_visitor`, `_utm_source`, `_utm_medium`, `_utm_campaign`
 
-### 4.4 Shoppable Moments
+### 4.4 Shoppable Moments ✅
 
 **Context:** Convert content views directly to sales.
 
-* **Action:**
-  1. Add `shopify_product_id` column to `moments` table.
-  2. Update `MomentsGalleryView.tsx`: If a product is linked, show a "Shop Now" pill that opens the `QuickShopModal`.
+* **Completed:** 2025-01-22
+  - Added `shopify_product_id` and `shopify_product_handle` columns to `galleries` table
+  - Updated gallery API to return product fields
+  - Added "Shop Now" button to gallery page that opens QuickShopModal
 
 ---
 
@@ -173,6 +164,6 @@ CREATE TABLE expenses (
 ## Execution Order
 
 1. **Phase 1** ✅ - Stops the bleeding (bad data, bot traffic)
-2. **Phase 3** - Unique value prop (Clip/Music analytics)
-3. **Phase 2 & 4** - Bridge "Cool App" to "Business Tool"
-4. **Phase 5** - Edge case optimization
+2. **Phase 3** ✅ - Unique value prop (Clip/Music analytics)
+3. **Phase 2 & 4** ✅ - Bridge "Cool App" to "Business Tool"
+4. **Phase 5** ⏳ - Edge case optimization (remaining)
