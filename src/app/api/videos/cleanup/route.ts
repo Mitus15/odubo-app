@@ -29,29 +29,12 @@ export async function POST(req: NextRequest) {
     
     console.log(`Found ${r2Files.length} files in R2 bucket`);
 
-    // Get all video URLs from database
-    let videoUrls: string[] = [];
-    try {
-      // Try with newer schema first
-      const videos = await queryDatabase(
-        'SELECT url, poster_url FROM videos'
-      );
-      videoUrls = videos.flatMap(video => [
-        video.url,
-        video.poster_url
-      ]).filter(Boolean);
-    } catch (error) {
-      console.log('Trying fallback query for video URLs...');
-      // Fallback to different column names
-      const videos = await queryDatabase(
-        'SELECT url, thumbnail_url, poster_url FROM videos'
-      );
-      videoUrls = videos.flatMap(video => [
-        video.url,
-        video.thumbnail_url,
-        video.poster_url
-      ]).filter(Boolean);
-    }
+    // Get all video URLs from database - fail loudly if schema is wrong
+    const videos = await queryDatabase('SELECT url, poster_url FROM videos');
+    const videoUrls = videos.flatMap(video => [
+      video.url,
+      video.poster_url
+    ]).filter(Boolean);
 
     console.log(`Found ${videoUrls.length} video URLs in database`);
 
@@ -157,26 +140,12 @@ export async function GET(req: NextRequest) {
     const r2Response = await s3Client.send(listCommand);
     const r2Files = r2Response.Contents || [];
 
-    // Get all video URLs from database
-    let videoUrls: string[] = [];
-    try {
-      const videos = await queryDatabase(
-        'SELECT url, poster_url FROM videos'
-      );
-      videoUrls = videos.flatMap(video => [
-        video.url,
-        video.poster_url
-      ]).filter(Boolean);
-    } catch (error) {
-      const videos = await queryDatabase(
-        'SELECT url, thumbnail_url, poster_url FROM videos'
-      );
-      videoUrls = videos.flatMap(video => [
-        video.url,
-        video.thumbnail_url,
-        video.poster_url
-      ]).filter(Boolean);
-    }
+    // Get all video URLs from database - fail loudly if schema is wrong
+    const videos = await queryDatabase('SELECT url, poster_url FROM videos');
+    const videoUrls = videos.flatMap(video => [
+      video.url,
+      video.poster_url
+    ]).filter(Boolean);
 
     // Extract keys from database URLs
     const extractKeyFromUrl = (url: string): string | null => {

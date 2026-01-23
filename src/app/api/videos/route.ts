@@ -18,124 +18,67 @@ export async function GET(req: NextRequest) {
     const excludeType = url.searchParams.get('exclude_type'); // e.g., 'clip' to exclude clips
     const hasFilter = publicationStatus === 'live' || publicationStatus === 'archived';
 
-    // Try with full schema first, fallback to basic schema if columns don't exist
-    let videos;
-    try {
-      const whereClauses: string[] = [];
-      const paramsFull: any[] = [];
+    // Build query with all required columns - fail loudly if schema is wrong
+    const whereClauses: string[] = [];
+    const params: any[] = [];
 
-      if (uid) {
-        whereClauses.push('uid = ?');
-        paramsFull.push(uid);
-      } else if (hasFilter) {
-        whereClauses.push("COALESCE(publication_status,'archived') = ?");
-        paramsFull.push(publicationStatus);
-      }
-
-      // Exclude specific type (e.g., clips)
-      if (excludeType) {
-        whereClauses.push("COALESCE(type, '') != ?");
-        paramsFull.push(excludeType);
-      }
-
-      const where = whereClauses.length > 0 ? 'WHERE ' + whereClauses.join(' AND ') : '';
-
-      paramsFull.push(limit);
-      paramsFull.push(offset);
-
-      videos = await queryDatabase(
-        `SELECT 
-          id,
-          COALESCE(uid, '') as uid,
-          title,
-          COALESCE(artist_name, '') as artist_name,
-          description,
-          COALESCE(short_description, '') as short_description,
-          COALESCE(long_description, '') as long_description,
-          COALESCE(tags, '[]') as tags,
-          url,
-          url as video_url,
-          poster_url,
-          poster_url as thumbnail_url,
-          thumbnail,
-          duration,
-          duration_seconds,
-          category,
-          is_public,
-          type,
-          mood,
-          credits,
-          related_projects,
-          COALESCE(status, 'published') as status,
-          COALESCE(stream_video_id, '') as stream_video_id,
-          COALESCE(publication_status, 'archived') as publication_status,
-          ai_description,
-          thumbnail_timestamp_pct,
-          shopify_product_id,
-          shopify_product_handle,
-          created_at,
-          COALESCE(updated_at, created_at) as updated_at
-        FROM videos 
-        ${where}
-        ORDER BY created_at DESC
-        LIMIT ? OFFSET ?`,
-        paramsFull
-      );
-    } catch (schemaError) {
-      // Fallback to basic schema if new columns don't exist
-      console.log('Using fallback query for videos table');
-      const paramsBasic: any[] = [];
-      let whereBasic = '';
-      
-      if (uid) {
-        whereBasic = 'WHERE uid = ?';
-        paramsBasic.push(uid);
-      }
-
-      paramsBasic.push(limit);
-      paramsBasic.push(offset);
-
-      videos = await queryDatabase(
-        `SELECT 
-          id,
-          uid,
-          title,
-          description,
-          url as video_url,
-          poster_url as thumbnail_url,
-          thumbnail,
-          duration,
-          category,
-          is_public,
-          type,
-          mood,
-          credits,
-          related_projects,
-          created_at
-        FROM videos 
-        ${whereBasic}
-        ORDER BY created_at DESC
-        LIMIT ? OFFSET ?`,
-        paramsBasic
-      );
-      
-      // Add missing fields for compatibility
-      videos = videos.map((video: any) => ({
-        ...video,
-        artist_name: video.artist_name || '',
-        status: video.status || 'published',
-        stream_video_id: video.stream_video_id || '',
-        publication_status: video.publication_status || 'archived',
-        updated_at: video.updated_at || video.created_at || new Date().toISOString(),
-        thumbnail_url: video.thumbnail_url || video.poster_url || video.thumbnail || '',
-        short_description: video.short_description || '',
-        long_description: video.long_description || '',
-        tags: video.tags || '[]',
-        duration_seconds: video.duration_seconds || null,
-        ai_description: video.ai_description || null,
-        thumbnail_timestamp_pct: video.thumbnail_timestamp_pct || null,
-      }));
+    if (uid) {
+      whereClauses.push('uid = ?');
+      params.push(uid);
+    } else if (hasFilter) {
+      whereClauses.push("COALESCE(publication_status,'archived') = ?");
+      params.push(publicationStatus);
     }
+
+    // Exclude specific type (e.g., clips)
+    if (excludeType) {
+      whereClauses.push("COALESCE(type, '') != ?");
+      params.push(excludeType);
+    }
+
+    const where = whereClauses.length > 0 ? 'WHERE ' + whereClauses.join(' AND ') : '';
+
+    params.push(limit);
+    params.push(offset);
+
+    const videos = await queryDatabase(
+      `SELECT
+        id,
+        COALESCE(uid, '') as uid,
+        title,
+        COALESCE(artist_name, '') as artist_name,
+        description,
+        COALESCE(short_description, '') as short_description,
+        COALESCE(long_description, '') as long_description,
+        COALESCE(tags, '[]') as tags,
+        url,
+        url as video_url,
+        poster_url,
+        poster_url as thumbnail_url,
+        thumbnail,
+        duration,
+        duration_seconds,
+        category,
+        is_public,
+        type,
+        mood,
+        credits,
+        related_projects,
+        COALESCE(status, 'published') as status,
+        COALESCE(stream_video_id, '') as stream_video_id,
+        COALESCE(publication_status, 'archived') as publication_status,
+        ai_description,
+        thumbnail_timestamp_pct,
+        shopify_product_id,
+        shopify_product_handle,
+        created_at,
+        COALESCE(updated_at, created_at) as updated_at
+      FROM videos
+      ${where}
+      ORDER BY created_at DESC
+      LIMIT ? OFFSET ?`,
+      params
+    );
 
     const transformedVideos = (videos as any[]).map((video) => {
       let parsedTags: any = [];

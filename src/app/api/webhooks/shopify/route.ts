@@ -126,6 +126,13 @@ async function handleOrderWebhook(order: any) {
   const shopifyId = `gid://shopify/Order/${order.id}`;
   const orderNumber = order.order_number || 0;
 
+  // Check if this is a new order (before the order UPSERT)
+  const existingOrder = await queryDatabase(
+    `SELECT id FROM commerce_orders WHERE shopify_id = ?`,
+    [shopifyId]
+  );
+  const isNewOrder = existingOrder.length === 0;
+
   // Parse UTM from landing site
   const utm = parseUtmParams(order.landing_site);
 
@@ -189,17 +196,24 @@ async function handleOrderWebhook(order: any) {
     ]
   );
 
-  // Delete existing line items and re-insert
-  await executeQuery(`DELETE FROM commerce_order_items WHERE order_id = ?`, [orderId]);
-
-  // Insert line items
-  for (const item of order.line_items || []) {
+  // UPSERT line items (idempotent - safe for duplicate webhooks)
+  const lineItems = order.line_items || [];
+  for (const item of lineItems) {
     await executeQuery(
       `INSERT INTO commerce_order_items (
          order_id, shopify_line_item_id,
          product_id, product_title, variant_id, variant_title, sku,
          quantity, price_cents, total_discount_cents
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(order_id, shopify_line_item_id) DO UPDATE SET
+         product_id = excluded.product_id,
+         product_title = excluded.product_title,
+         variant_id = excluded.variant_id,
+         variant_title = excluded.variant_title,
+         sku = excluded.sku,
+         quantity = excluded.quantity,
+         price_cents = excluded.price_cents,
+         total_discount_cents = excluded.total_discount_cents`,
       [
         orderId,
         `${item.id}`,
@@ -215,17 +229,38 @@ async function handleOrderWebhook(order: any) {
     );
   }
 
-  // Update/create customer record
-  if (order.customer?.id && customerHash) {
+  // Clean up removed items (items no longer in order)
+  if (lineItems.length > 0) {
+    const itemIds = lineItems.map((i: any) => `${i.id}`);
+    const placeholders = itemIds.map(() => '?').join(',');
     await executeQuery(
-      `INSERT INTO commerce_customers (id, shopify_customer_id, customer_hash, total_orders, first_order_at, last_order_at)
-       VALUES (?, ?, ?, 1, ?, ?)
-       ON CONFLICT(shopify_customer_id) DO UPDATE SET
-         total_orders = commerce_customers.total_orders + 1,
-         last_order_at = MAX(commerce_customers.last_order_at, excluded.last_order_at),
-         updated_at = datetime('now')`,
-      [customerHash, `${order.customer.id}`, customerHash, order.created_at, order.created_at]
+      `DELETE FROM commerce_order_items WHERE order_id = ? AND shopify_line_item_id NOT IN (${placeholders})`,
+      [orderId, ...itemIds]
     );
+  }
+
+  // Update/create customer record - only increment total_orders for NEW orders
+  if (order.customer?.id && customerHash) {
+    if (isNewOrder) {
+      await executeQuery(
+        `INSERT INTO commerce_customers (id, shopify_customer_id, customer_hash, total_orders, first_order_at, last_order_at)
+         VALUES (?, ?, ?, 1, ?, ?)
+         ON CONFLICT(shopify_customer_id) DO UPDATE SET
+           total_orders = commerce_customers.total_orders + 1,
+           last_order_at = MAX(commerce_customers.last_order_at, excluded.last_order_at),
+           updated_at = datetime('now')`,
+        [customerHash, `${order.customer.id}`, customerHash, order.created_at, order.created_at]
+      );
+    } else {
+      // For existing orders, only update last_order_at (don't increment total_orders)
+      await executeQuery(
+        `UPDATE commerce_customers SET
+           last_order_at = MAX(last_order_at, ?),
+           updated_at = datetime('now')
+         WHERE shopify_customer_id = ?`,
+        [order.created_at, `${order.customer.id}`]
+      );
+    }
   }
 
   // Update daily metrics for this order's date
