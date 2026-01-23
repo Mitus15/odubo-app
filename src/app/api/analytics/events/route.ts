@@ -124,9 +124,9 @@ function mapEventToActivityType(eventType: EventType): string {
     shop_visit: 'shop_visit',
     add_to_cart: 'add_to_cart',
     checkout_start: 'page_view', // Tracked as page_view for checkout page
-    // Modal tracking - map to page_view with metadata distinguishing
-    modal_open: 'shop_visit', // Modal opens tracked as visits
-    modal_close: 'page_view', // Close events tracked with duration metadata
+    // Modal tracking - preserve as modal_open/modal_close for accurate duration/bounce tracking
+    modal_open: 'modal_open',
+    modal_close: 'modal_close',
     // Gallery/Moments tracking
     gallery_view: 'page_view', // Gallery views
     photo_view: 'page_view', // Photo views with index metadata

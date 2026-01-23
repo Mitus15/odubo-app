@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuickShop } from '@/contexts/QuickShopContext';
 import { useAnalyticsSafe } from '@/contexts/AnalyticsContext';
@@ -182,6 +182,23 @@ export default function QuickShopModal() {
     window.addEventListener('keydown', handleEscape);
     return () => window.removeEventListener('keydown', handleEscape);
   }, [isOpen, closeQuickShop]);
+
+  // Modal analytics tracking
+  const openTimeRef = useRef<number>(0);
+  useEffect(() => {
+    if (isOpen) {
+      openTimeRef.current = Date.now();
+      analytics?.trackModalOpen('store', { tab: 'quickshop' });
+    }
+
+    return () => {
+      if (openTimeRef.current > 0) {
+        const duration = Date.now() - openTimeRef.current;
+        analytics?.trackModalClose('store', duration, 'unmount');
+        openTimeRef.current = 0;
+      }
+    };
+  }, [isOpen, analytics]);
 
   return (
     <AnimatePresence>

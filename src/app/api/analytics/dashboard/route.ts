@@ -367,12 +367,12 @@ async function getFunnelData(startDate: string) {
       counts[row.activity_type] = row.count || 0;
     }
 
-    // Get revenue from purchases
+    // Get revenue from webhook-synced Shopify orders (immune to AdBlockers)
     const revenueRows = await queryDatabase(
-      `SELECT COALESCE(SUM(value_cents), 0) as revenue
-       FROM fan_activity
-       WHERE date(created_at) >= ?
-         AND activity_type = 'purchase'`,
+      `SELECT COALESCE(SUM(total_price_cents), 0) as revenue
+       FROM commerce_orders
+       WHERE financial_status = 'paid'
+         AND date(shopify_created_at) >= ?`,
       [startDate]
     );
 
@@ -396,49 +396,70 @@ async function getFunnelData(startDate: string) {
 
 async function getModalMetrics(startDate: string): Promise<{ store: ModalMetrics; moments: ModalMetrics; media: ModalMetrics } | null> {
   try {
-    // Query shop_visit events - this is how modal opens are tracked in events/route.ts
-    // content_type distinguishes: 'store', 'gallery' (moments), 'media'/'video'
-    const rows = await queryDatabase(
-      `SELECT
-        content_type,
-        COUNT(*) as opens,
-        AVG(duration_seconds) as avgDuration,
-        SUM(CASE WHEN duration_seconds IS NULL OR duration_seconds < 5 THEN 1 ELSE 0 END) as bounces
-       FROM fan_activity
-       WHERE date(created_at) >= ?
-         AND activity_type = 'shop_visit'
-       GROUP BY content_type`,
-      [startDate]
-    );
-
     const result = {
       store: { opens: 0, avgDurationSeconds: 0, bounceRate: 0 },
       moments: { opens: 0, avgDurationSeconds: 0, bounceRate: 0 },
       media: { opens: 0, avgDurationSeconds: 0, bounceRate: 0 },
     };
 
-    if (!rows) return result;
+    // Get opens from modal_open events
+    const openRows = await queryDatabase(
+      `SELECT
+        JSON_EXTRACT(metadata, '$.modalType') as modalType,
+        COUNT(*) as opens
+       FROM fan_activity
+       WHERE date(created_at) >= ?
+         AND activity_type = 'modal_open'
+       GROUP BY JSON_EXTRACT(metadata, '$.modalType')`,
+      [startDate]
+    );
 
-    for (const row of rows as any[]) {
-      // Map content_type to dashboard categories
-      // 'store' -> store, 'gallery' -> moments, 'media'/'video' -> media
-      let category: 'store' | 'moments' | 'media' | null = null;
-      const contentType = row.content_type?.toLowerCase();
+    // Get duration and bounce data from modal_close events (where duration is stored)
+    const closeRows = await queryDatabase(
+      `SELECT
+        JSON_EXTRACT(metadata, '$.modalType') as modalType,
+        AVG(CAST(JSON_EXTRACT(metadata, '$.durationMs') AS REAL)) / 1000.0 as avgDurationSeconds,
+        SUM(CASE WHEN JSON_EXTRACT(metadata, '$.isQuickBounce') = 1 THEN 1 ELSE 0 END) as bounces,
+        COUNT(*) as total
+       FROM fan_activity
+       WHERE date(created_at) >= ?
+         AND activity_type = 'modal_close'
+       GROUP BY JSON_EXTRACT(metadata, '$.modalType')`,
+      [startDate]
+    );
 
-      if (contentType === 'store') {
-        category = 'store';
-      } else if (contentType === 'gallery' || contentType === 'moments') {
-        category = 'moments';
-      } else if (contentType === 'media' || contentType === 'video') {
-        category = 'media';
+    // Map modal_open counts
+    if (openRows) {
+      for (const row of openRows as any[]) {
+        const modalType = row.modalType?.toLowerCase();
+        if (modalType === 'store') {
+          result.store.opens = row.opens || 0;
+        } else if (modalType === 'moments' || modalType === 'gallery') {
+          result.moments.opens = row.opens || 0;
+        } else if (modalType === 'media' || modalType === 'video') {
+          result.media.opens = row.opens || 0;
+        }
       }
+    }
 
-      if (category) {
-        result[category] = {
-          opens: row.opens || 0,
-          avgDurationSeconds: row.avgDuration || 0,
-          bounceRate: row.opens > 0 ? ((row.bounces || 0) / row.opens) * 100 : 0,
-        };
+    // Map modal_close duration and bounce rate
+    if (closeRows) {
+      for (const row of closeRows as any[]) {
+        const modalType = row.modalType?.toLowerCase();
+        let category: 'store' | 'moments' | 'media' | null = null;
+
+        if (modalType === 'store') {
+          category = 'store';
+        } else if (modalType === 'moments' || modalType === 'gallery') {
+          category = 'moments';
+        } else if (modalType === 'media' || modalType === 'video') {
+          category = 'media';
+        }
+
+        if (category) {
+          result[category].avgDurationSeconds = row.avgDurationSeconds || 0;
+          result[category].bounceRate = row.total > 0 ? ((row.bounces || 0) / row.total) * 100 : 0;
+        }
       }
     }
 

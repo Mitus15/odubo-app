@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { useOmniShop, type ProductDetail } from '@/contexts/OmniShopContext';
 import { extractColorsFromImage, type ExtractedColors } from '@/lib/colorExtraction';
+import { useAnalyticsSafe } from '@/contexts/AnalyticsContext';
 
 interface ProductDetailModalProps {
   productHandle: string;
@@ -20,6 +21,7 @@ export default function ProductDetailModal({ productHandle }: ProductDetailModal
     getCachedProduct,
     cacheProduct,
   } = useOmniShop();
+  const analytics = useAnalyticsSafe();
 
   const [product, setProduct] = useState<ProductDetail | null>(null);
   const [loading, setLoading] = useState(false);
@@ -172,6 +174,18 @@ export default function ProductDetailModal({ productHandle }: ProductDetailModal
 
     extractColorsFromImage(displayImage).then(setColors);
   }, [displayImage]);
+
+  // Modal analytics tracking
+  const openTimeRef = useRef<number>(Date.now());
+  useEffect(() => {
+    openTimeRef.current = Date.now();
+    analytics?.trackModalOpen('store', { tab: 'product' });
+
+    return () => {
+      const duration = Date.now() - openTimeRef.current;
+      analytics?.trackModalClose('store', duration, 'unmount');
+    };
+  }, [analytics]);
 
   // Dynamic styles based on extracted colors
   const dynamicStyles = useMemo(() => {

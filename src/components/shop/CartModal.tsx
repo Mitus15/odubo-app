@@ -1,9 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { useOmniShop } from '@/contexts/OmniShopContext';
+import { getAttribution, getSessionId } from '@/lib/attribution';
+import { useAnalyticsSafe } from '@/contexts/AnalyticsContext';
 
 export default function CartModal() {
   const {
@@ -16,8 +18,21 @@ export default function CartModal() {
     openMaison,
     modalStack,
   } = useOmniShop();
+  const analytics = useAnalyticsSafe();
 
   const [isRedirecting, setIsRedirecting] = useState(false);
+
+  // Modal analytics tracking
+  const openTimeRef = useRef<number>(Date.now());
+  useEffect(() => {
+    openTimeRef.current = Date.now();
+    analytics?.trackModalOpen('store', { tab: 'cart' });
+
+    return () => {
+      const duration = Date.now() - openTimeRef.current;
+      analytics?.trackModalClose('store', duration, 'unmount');
+    };
+  }, [analytics]);
 
   const hasBackStack = modalStack.length > 1;
 
@@ -26,6 +41,10 @@ export default function CartModal() {
     setIsRedirecting(true);
 
     try {
+      // Get attribution data for conversion tracking
+      const attr = getAttribution();
+      const sessionId = getSessionId();
+
       // Create checkout using Shopify Storefront API
       const response = await fetch('/api/shopify/checkout', {
         method: 'POST',
@@ -34,7 +53,13 @@ export default function CartModal() {
           lineItems: cart.map(item => ({
             variantId: item.variantId,
             quantity: item.qty
-          }))
+          })),
+          attribution: {
+            sessionId,
+            source: attr?.source,
+            medium: attr?.medium,
+            campaign: attr?.campaign,
+          }
         })
       });
 

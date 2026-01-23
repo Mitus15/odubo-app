@@ -5,8 +5,16 @@ interface LineItem {
   quantity: number;
 }
 
+interface Attribution {
+  sessionId?: string;
+  source?: string;
+  medium?: string;
+  campaign?: string;
+}
+
 interface CheckoutRequestBody {
   lineItems: LineItem[];
+  attribution?: Attribution;
 }
 
 interface CartResponse {
@@ -34,7 +42,7 @@ interface CartResponse {
  */
 export async function POST(request: NextRequest) {
   try {
-    const { lineItems } = await request.json() as CheckoutRequestBody;
+    const { lineItems, attribution } = await request.json() as CheckoutRequestBody;
 
     if (!lineItems || lineItems.length === 0) {
       return NextResponse.json(
@@ -81,15 +89,13 @@ export async function POST(request: NextRequest) {
         })),
         // Add custom attributes for tracking
         attributes: [
-          {
-            key: '_source',
-            value: 'odubo_headless_store'
-          },
-          {
-            key: '_return_url',
-            value: process.env.NEXT_PUBLIC_SITE_URL || 'https://odubo.studio'
-          }
-        ]
+          { key: '_source', value: 'odubo_headless_store' },
+          { key: '_return_url', value: process.env.NEXT_PUBLIC_SITE_URL || 'https://odubo.studio' },
+          { key: '_session_id', value: attribution?.sessionId || '' },
+          { key: '_utm_source', value: attribution?.source || '' },
+          { key: '_utm_medium', value: attribution?.medium || '' },
+          { key: '_utm_campaign', value: attribution?.campaign || '' },
+        ].filter(attr => attr.value) // Remove empty attributes
       }
     };
 
