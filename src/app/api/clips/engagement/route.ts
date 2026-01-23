@@ -87,17 +87,25 @@ export async function POST(req: NextRequest) {
       const watchDurationSeconds = Math.floor(watchDurationMs / 1000);
       const completed = event.completed ? 1 : 0;
 
-      // Insert view event
+      // Calculate percentage watched (loops) - cap at 10 for sanity
+      const clipDurationMs = event.clipDuration || null;
+      const pctWatched = clipDurationMs && clipDurationMs > 0
+        ? Math.min(watchDurationMs / clipDurationMs, 10)
+        : null;
+
+      // Insert view event with enhanced tracking
       await executeQuery(
         `INSERT INTO clip_view_events (
-          clip_id, session_id, watch_duration_ms, completed,
-          source, referrer, utm_source, utm_medium, utm_campaign,
+          clip_id, session_id, watch_duration_ms, clip_duration_ms, pct_watched,
+          completed, source, referrer, utm_source, utm_medium, utm_campaign,
           user_agent, ip_hash
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           event.clipId,
           sessionId,
           watchDurationMs,
+          clipDurationMs,
+          pctWatched,
           completed,
           attribution?.source || 'direct',
           attribution?.referrer || '',

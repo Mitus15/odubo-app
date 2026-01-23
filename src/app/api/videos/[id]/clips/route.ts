@@ -61,13 +61,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     await executeQuery(
       `INSERT INTO videos (
-        title, artist_name, uid, url, poster_url, thumbnail, duration, 
-        status, type, is_public, publication_status, related_projects, 
-        created_at, updated_at
+        title, artist_name, uid, url, poster_url, thumbnail, duration,
+        status, type, is_public, publication_status, related_projects,
+        parent_video_id, created_at, updated_at
       ) VALUES (
-        ?, ?, ?, ?, ?, ?, ?, 
-        'published', 'clip', ?, 'live', ?, 
-        datetime('now'), datetime('now')
+        ?, ?, ?, ?, ?, ?, ?,
+        'published', 'clip', ?, 'live', ?,
+        ?, datetime('now'), datetime('now')
       )`,
       [
         title,
@@ -78,7 +78,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         thumbnail || '',
         duration || 0,
         (is_public ? 1 : undefined) ?? (parentPublic ? 1 : 0),
-        JSON.stringify([`parent_id:${id}`, `style:vertical`])
+        JSON.stringify([`parent_id:${id}`, `style:vertical`]),
+        id  // explicit parent_video_id FK
       ]
     );
 

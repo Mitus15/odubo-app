@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { ClipItem } from '@/types/clips';
@@ -37,6 +38,7 @@ export default function SingleVideoPlayer({
   onWatchMilestone,
   onWatchComplete,
 }: SingleVideoPlayerProps) {
+  const router = useRouter();
   const { isMuted, armAudio, syncFromVideo, hasUserPreference } = useAudio();
 
   // Single stable refs - no computed refs, no stale closures
@@ -518,6 +520,42 @@ export default function SingleVideoPlayer({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Watch Full Video button - Gateway Drug metric */}
+      {activeClip.parentId && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            // Track the conversion event (non-blocking)
+            fetch('/api/analytics/events', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                sessionId: 'anon', // Will be replaced by analytics context
+                events: [{
+                  type: 'full_video_click',
+                  path: `/clips/${activeClip.id}`,
+                  timestamp: Date.now(),
+                  metadata: {
+                    clipId: activeClip.id,
+                    parentVideoId: activeClip.parentId,
+                    clipTitle: activeClip.title,
+                  },
+                }],
+              }),
+            }).catch(() => {}); // Fire and forget
+            // Navigate to parent video
+            router.push(`/media/${activeClip.parentId}`);
+          }}
+          className="absolute bottom-24 right-4 flex items-center gap-2 px-4 py-2.5 rounded-full bg-white/15 backdrop-blur-md border border-white/20 text-white text-sm font-medium pointer-events-auto hover:bg-white/25 active:scale-95 transition-all z-30"
+          aria-label="Watch full video"
+        >
+          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M4 4h16v12H4V4zm2 2v8h12V6H6zm8 10v4h6v-2h-4v-2h-2z" />
+          </svg>
+          <span>Full Video</span>
+        </button>
+      )}
     </div>
   );
 }

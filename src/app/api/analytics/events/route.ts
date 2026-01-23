@@ -86,6 +86,7 @@ const VALID_EVENT_TYPES = [
   'clip_view',
   'clip_milestone',
   'clip_complete',
+  'full_video_click',  // Gateway: clip → full video conversion
   // Music tracking
   'album_view',
   'track_play',
@@ -139,6 +140,7 @@ function mapEventToActivityType(eventType: EventType): string {
     clip_view: 'clip_view',
     clip_milestone: 'clip_milestone',
     clip_complete: 'clip_complete',
+    full_video_click: 'full_video_click',  // Gateway metric
     // Music tracking - map to music events
     album_view: 'page_view',
     track_play: 'music_play',
@@ -159,7 +161,7 @@ function mapEventToContentType(eventType: EventType, path: string): string {
   }
   if (eventType === 'gallery_view' || eventType === 'photo_view' || eventType === 'rsvp_submit') return 'gallery';
   if (eventType === 'video_open' || eventType === 'video_progress') return 'video';
-  if (eventType === 'clip_view' || eventType === 'clip_milestone' || eventType === 'clip_complete') return 'clip';
+  if (eventType === 'clip_view' || eventType === 'clip_milestone' || eventType === 'clip_complete' || eventType === 'full_video_click') return 'clip';
   if (eventType === 'album_view' || eventType === 'track_play') return 'music';
   // Path-based fallbacks
   if (path.startsWith('/store')) return 'store';
