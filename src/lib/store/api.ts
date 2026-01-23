@@ -334,6 +334,11 @@ export interface CheckoutAttribution {
   utmMedium?: string;
   utmCampaign?: string;
   visitorId?: string;
+  // Entry content attribution
+  entryClipId?: number;
+  entryGalleryId?: number;
+  entryAlbumId?: string;
+  entryPath?: string;
 }
 
 export async function createCheckout(
@@ -362,7 +367,7 @@ export async function createCheckout(
     quantity: item.quantity,
   }));
 
-  // Build attribution attributes
+  // Build attribution attributes for revenue tracking
   const attributes = [
     { key: '_source', value: 'odubo_store' },
   ];
@@ -381,6 +386,19 @@ export async function createCheckout(
   }
   if (attribution?.utmCampaign) {
     attributes.push({ key: '_utm_campaign', value: attribution.utmCampaign });
+  }
+  // Entry content attribution for "which content drove this sale"
+  if (attribution?.entryClipId) {
+    attributes.push({ key: '_entry_clip_id', value: String(attribution.entryClipId) });
+  }
+  if (attribution?.entryGalleryId) {
+    attributes.push({ key: '_entry_gallery_id', value: String(attribution.entryGalleryId) });
+  }
+  if (attribution?.entryAlbumId) {
+    attributes.push({ key: '_entry_album_id', value: attribution.entryAlbumId });
+  }
+  if (attribution?.entryPath) {
+    attributes.push({ key: '_entry_path', value: attribution.entryPath });
   }
 
   try {

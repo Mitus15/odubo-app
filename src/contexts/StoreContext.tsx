@@ -13,6 +13,8 @@ import {
 import { useCart, type UseCartReturn } from '@/hooks/useCart';
 import { fetchProducts, fetchProduct, createCheckout } from '@/lib/store/api';
 import { useAnalyticsSafe, type ModalType } from '@/contexts/AnalyticsContext';
+import { getAttribution, getSessionId } from '@/lib/attribution';
+import { getVisitorId } from '@/lib/visitorId';
 import type {
   ProductSummary,
   Product,
@@ -276,17 +278,33 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const checkout = useCallback(async () => {
     if (cartHook.items.length === 0) return;
-    
+
     setIsCheckingOut(true);
-    
+
     try {
+      // Get attribution data for revenue tracking
+      const attribution = getAttribution();
+      const sessionId = getSessionId();
+      const visitorId = getVisitorId();
+
       const checkoutUrl = await createCheckout(
         cartHook.items.map(item => ({
           variantId: item.variantId,
           quantity: item.quantity,
-        }))
+        })),
+        {
+          sessionId,
+          visitorId,
+          utmSource: attribution?.source,
+          utmMedium: attribution?.medium,
+          utmCampaign: attribution?.campaign,
+          entryClipId: attribution?.entryClipId,
+          entryGalleryId: attribution?.entryGalleryId,
+          entryAlbumId: attribution?.entryAlbumId,
+          entryPath: attribution?.landingPage,
+        }
       );
-      
+
       if (checkoutUrl) {
         window.location.href = checkoutUrl;
       } else {

@@ -7,6 +7,8 @@ import { useSearchParams } from 'next/navigation';
 import { usePageAnalytics } from '@/hooks/usePageAnalytics';
 import { useAnalyticsSafe } from '@/contexts/AnalyticsContext';
 import { createCheckout, type CheckoutAttribution } from '@/lib/store/api';
+import { getAttribution as getStoredAttribution, getSessionId } from '@/lib/attribution';
+import { getVisitorId } from '@/lib/visitorId';
 
 export default function CartPage() {
   type CartItem = { variantId: string; qty: number; title: string; price: number; image?: string };
@@ -20,21 +22,23 @@ export default function CartPage() {
   usePageAnalytics({ title: 'Cart | Odubo Studio' });
   const analytics = useAnalyticsSafe();
 
-  // Get attribution data
+  // Get attribution data for revenue tracking
   const getAttribution = (): CheckoutAttribution => {
-    const sessionId = typeof sessionStorage !== 'undefined'
-      ? sessionStorage.getItem('odubo_session_id') || undefined
-      : undefined;
-    const visitorId = typeof localStorage !== 'undefined'
-      ? localStorage.getItem('odubo_visitor_id') || undefined
-      : undefined;
+    const attribution = getStoredAttribution();
+    const sessionId = getSessionId();
+    const visitorId = getVisitorId();
 
     return {
       sessionId,
       visitorId,
-      utmSource: searchParams?.get('utm_source') || undefined,
-      utmMedium: searchParams?.get('utm_medium') || undefined,
-      utmCampaign: searchParams?.get('utm_campaign') || undefined,
+      utmSource: attribution?.source || searchParams?.get('utm_source') || undefined,
+      utmMedium: attribution?.medium || searchParams?.get('utm_medium') || undefined,
+      utmCampaign: attribution?.campaign || searchParams?.get('utm_campaign') || undefined,
+      // Entry content attribution for "which content drove this sale"
+      entryClipId: attribution?.entryClipId,
+      entryGalleryId: attribution?.entryGalleryId,
+      entryAlbumId: attribution?.entryAlbumId,
+      entryPath: attribution?.landingPage,
     };
   };
 

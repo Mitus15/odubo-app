@@ -94,7 +94,7 @@ interface AnalyticsContextValue {
   trackTrackPlay: (albumId: string, trackId: string, playSeconds: number) => void;
 
   // Clip tracking for journey analytics
-  trackClipView: (clipId: number, clipTitle?: string, feedPosition?: number) => void;
+  trackClipView: (clipId: number, clipTitle?: string, feedPosition?: number, durationSeconds?: number) => void;
   trackClipMilestone: (clipId: number, milestone: number, watchSeconds: number, durationSeconds: number) => void;
   trackClipComplete: (clipId: number, watchPercent: number, watchSeconds: number, durationSeconds: number, wasSkipped: boolean) => void;
 
@@ -119,6 +119,8 @@ const AnalyticsContext = createContext<AnalyticsContextValue | null>(null);
 const FLUSH_INTERVAL_MS = 10000; // 10 seconds
 const MAX_BUFFER_SIZE = 50;
 const API_ENDPOINT = '/api/analytics/events';
+const STALE_EVENTS_KEY = 'odubo_stale_events';
+const STALE_EVENTS_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 // ============================================
 // Provider
@@ -494,7 +496,7 @@ export function AnalyticsProvider({ children }: { children: ReactNode }) {
   // Clip Tracking (for journey analytics)
   // ============================================
 
-  const trackClipView = useCallback((clipId: number, clipTitle?: string, feedPosition?: number) => {
+  const trackClipView = useCallback((clipId: number, clipTitle?: string, feedPosition?: number, durationSeconds?: number) => {
     // Avoid tracking the same clip twice in a row (e.g., from scroll bouncing)
     if (lastClipIdRef.current === clipId) return;
 
@@ -516,6 +518,7 @@ export function AnalyticsProvider({ children }: { children: ReactNode }) {
         clipTitle: clipTitle || null,
         clipIndex: clipsViewedThisSessionRef.current,
         feedPosition: feedPosition ?? null,
+        durationSeconds: durationSeconds ?? null,
         isRewatch,
         rewatchCount: previousViews,
       },

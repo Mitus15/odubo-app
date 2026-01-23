@@ -196,7 +196,18 @@ async function upsertOrder(order: ShopifyAdminOrder): Promise<boolean> {
   // Hash customer ID for privacy
   const customerHash = order.customer ? hashCustomerId(order.customer.id) : null;
 
-  // Upsert order
+  // Extract entry content attribution from custom attributes
+  const getAttr = (key: string): string | null => {
+    const attr = order.customAttributes?.find(a => a.key === key);
+    return attr?.value || null;
+  };
+  const entryClipId = getAttr('_entry_clip_id');
+  const entryGalleryId = getAttr('_entry_gallery_id');
+  const entryAlbumId = getAttr('_entry_album_id');
+  const entryPath = getAttr('_entry_path');
+  const sessionId = getAttr('_session');
+
+  // Upsert order with entry content attribution
   await executeQuery(
     `INSERT INTO commerce_orders (
        id, shopify_id, shopify_order_number,
@@ -205,9 +216,10 @@ async function upsertOrder(order: ShopifyAdminOrder): Promise<boolean> {
        customer_id, customer_hash,
        source_name, referring_site, landing_site,
        utm_source, utm_medium, utm_campaign,
+       entry_clip_id, entry_gallery_id, entry_album_id, entry_path, session_id,
        shopify_created_at, shopify_updated_at, processed_at, closed_at, cancelled_at,
        synced_at, updated_at
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
      ON CONFLICT(shopify_id) DO UPDATE SET
        total_price_cents = excluded.total_price_cents,
        subtotal_price_cents = excluded.subtotal_price_cents,
@@ -218,6 +230,11 @@ async function upsertOrder(order: ShopifyAdminOrder): Promise<boolean> {
        shopify_updated_at = excluded.shopify_updated_at,
        closed_at = excluded.closed_at,
        cancelled_at = excluded.cancelled_at,
+       entry_clip_id = COALESCE(excluded.entry_clip_id, commerce_orders.entry_clip_id),
+       entry_gallery_id = COALESCE(excluded.entry_gallery_id, commerce_orders.entry_gallery_id),
+       entry_album_id = COALESCE(excluded.entry_album_id, commerce_orders.entry_album_id),
+       entry_path = COALESCE(excluded.entry_path, commerce_orders.entry_path),
+       session_id = COALESCE(excluded.session_id, commerce_orders.session_id),
        synced_at = datetime('now'),
        updated_at = datetime('now')`,
     [
@@ -239,6 +256,11 @@ async function upsertOrder(order: ShopifyAdminOrder): Promise<boolean> {
       utm.utm_source || null,
       utm.utm_medium || null,
       utm.utm_campaign || null,
+      entryClipId ? parseInt(entryClipId, 10) : null,
+      entryGalleryId ? parseInt(entryGalleryId, 10) : null,
+      entryAlbumId,
+      entryPath,
+      sessionId,
       order.createdAt,
       order.updatedAt,
       order.processedAt,

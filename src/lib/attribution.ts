@@ -12,8 +12,11 @@ export interface Attribution {
   content: string;      // utm_content (e.g., specific ad creative)
   term: string;         // utm_term
   referrer: string;     // Raw document.referrer
-  entryClipId?: number; // Deep link clip ID if present
+  entryClipId?: number;    // Deep link clip ID if present
+  entryGalleryId?: number; // Gallery ID if landed on moments
+  entryAlbumId?: string;   // Album ID if landed on music
   landingPage: string;  // Path user landed on
+  sessionId?: string;   // Session ID for journey linking
   timestamp: number;    // When attribution was captured
 }
 
@@ -149,9 +152,34 @@ export function captureAttribution(): Attribution {
     }
   }
 
-  // Deep link clip ID
+  // Deep link clip ID (from ?clip= param or path)
   const clipParam = params.get('clip');
-  const entryClipId = clipParam ? parseInt(clipParam, 10) : undefined;
+  let entryClipId = clipParam ? parseInt(clipParam, 10) : undefined;
+
+  // Extract content IDs from landing path
+  const path = window.location.pathname;
+
+  // /clips/123 or / (home with clips)
+  if (!entryClipId) {
+    const clipMatch = path.match(/^\/clips\/(\d+)/);
+    if (clipMatch) {
+      entryClipId = parseInt(clipMatch[1], 10);
+    }
+  }
+
+  // /moments/gallery/123
+  let entryGalleryId: number | undefined;
+  const galleryMatch = path.match(/^\/moments\/gallery\/(\d+)/);
+  if (galleryMatch) {
+    entryGalleryId = parseInt(galleryMatch[1], 10);
+  }
+
+  // /music/albums/abc123
+  let entryAlbumId: string | undefined;
+  const albumMatch = path.match(/^\/music\/albums?\/([^/]+)/);
+  if (albumMatch) {
+    entryAlbumId = albumMatch[1];
+  }
 
   return {
     source,
@@ -161,7 +189,10 @@ export function captureAttribution(): Attribution {
     term: utmTerm,
     referrer,
     entryClipId: entryClipId && Number.isFinite(entryClipId) ? entryClipId : undefined,
-    landingPage: window.location.pathname,
+    entryGalleryId: entryGalleryId && Number.isFinite(entryGalleryId) ? entryGalleryId : undefined,
+    entryAlbumId,
+    landingPage: path,
+    sessionId: getSessionId(),
     timestamp: Date.now(),
   };
 }

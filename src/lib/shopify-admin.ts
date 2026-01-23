@@ -33,6 +33,8 @@ export interface ShopifyAdminOrder {
   sourceName: string;
   landingSite: string | null;
   referringSite: string | null;
+  // Custom attributes from checkout (for attribution tracking)
+  customAttributes: Array<{ key: string; value: string | null }>;
   lineItems: {
     edges: Array<{
       node: {
@@ -185,6 +187,10 @@ export async function fetchOrders(options: {
             sourceName
             landingSite
             referringSite
+            customAttributes {
+              key
+              value
+            }
             lineItems(first: 50) {
               edges {
                 node {

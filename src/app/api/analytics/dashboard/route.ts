@@ -204,10 +204,11 @@ async function getWebsiteMetrics(startDate: string, endDate?: string): Promise<W
 
     // Query fan_activity directly (bi_website_metrics is empty/not populated)
     // This is the authoritative source of truth for visitor/session data
+    // Note: visitors = total site visits, uniqueVisitors = distinct users
     const rows = await queryDatabase(
       `SELECT
         COUNT(DISTINCT fan_id) as uniqueVisitors,
-        COUNT(DISTINCT fan_id) as visitors,
+        COUNT(CASE WHEN activity_type = 'site_visit' THEN 1 END) as visitors,
         COUNT(DISTINCT session_id) as sessions,
         COUNT(CASE WHEN activity_type IN ('page_view', 'site_visit') THEN 1 END) as pageViews
        FROM fan_activity
@@ -369,16 +370,19 @@ async function getFunnelData(startDate: string) {
       counts[row.activity_type] = row.count || 0;
     }
 
-    // Get revenue from webhook-synced Shopify orders (immune to AdBlockers)
-    const revenueRows = await queryDatabase(
-      `SELECT COALESCE(SUM(total_price_cents), 0) as revenue
+    // Get revenue and purchase count from webhook-synced Shopify orders (immune to AdBlockers)
+    // This is the source of truth for actual purchases, not client-side tracking
+    const orderRows = await queryDatabase(
+      `SELECT
+        COUNT(*) as purchases,
+        COALESCE(SUM(total_price_cents), 0) as revenue
        FROM commerce_orders
        WHERE financial_status = 'paid'
          AND date(shopify_created_at) >= ?`,
       [startDate]
     );
 
-    const revenue = revenueRows && revenueRows.length > 0 ? (revenueRows[0] as any).revenue || 0 : 0;
+    const orderData = orderRows && orderRows.length > 0 ? orderRows[0] as { purchases: number; revenue: number } : { purchases: 0, revenue: 0 };
 
     return {
       clipViews: counts['clip_view'] || 0,
@@ -386,9 +390,9 @@ async function getFunnelData(startDate: string) {
       shopClicks: counts['shop_visit'] || 0,
       productViews: counts['product_view'] || 0,
       addToCarts: counts['add_to_cart'] || 0,
-      checkoutStarts: counts['page_view'] || 0, // Checkout pages tracked as page_view
-      purchases: counts['purchase'] || 0,
-      revenue,
+      checkoutStarts: counts['checkout_start'] || 0,
+      purchases: orderData.purchases || 0,
+      revenue: orderData.revenue || 0,
     };
   } catch (err) {
     console.error('Error fetching funnel data:', err);
@@ -405,28 +409,29 @@ async function getModalMetrics(startDate: string): Promise<{ store: ModalMetrics
     };
 
     // Get opens from modal_open events
+    // Note: Use ->> operator to get unquoted JSON values (JSON_EXTRACT returns quoted strings)
     const openRows = await queryDatabase(
       `SELECT
-        JSON_EXTRACT(metadata, '$.modalType') as modalType,
+        metadata->>'$.modalType' as modalType,
         COUNT(*) as opens
        FROM fan_activity
        WHERE date(created_at) >= ?
          AND activity_type = 'modal_open'
-       GROUP BY JSON_EXTRACT(metadata, '$.modalType')`,
+       GROUP BY metadata->>'$.modalType'`,
       [startDate]
     );
 
     // Get duration and bounce data from modal_close events (where duration is stored)
     const closeRows = await queryDatabase(
       `SELECT
-        JSON_EXTRACT(metadata, '$.modalType') as modalType,
-        AVG(CAST(JSON_EXTRACT(metadata, '$.durationMs') AS REAL)) / 1000.0 as avgDurationSeconds,
-        SUM(CASE WHEN JSON_EXTRACT(metadata, '$.isQuickBounce') = 1 THEN 1 ELSE 0 END) as bounces,
+        metadata->>'$.modalType' as modalType,
+        AVG(CAST(metadata->>'$.durationMs' AS REAL)) / 1000.0 as avgDurationSeconds,
+        SUM(CASE WHEN metadata->>'$.isQuickBounce' = '1' OR metadata->>'$.isQuickBounce' = 'true' THEN 1 ELSE 0 END) as bounces,
         COUNT(*) as total
        FROM fan_activity
        WHERE date(created_at) >= ?
          AND activity_type = 'modal_close'
-       GROUP BY JSON_EXTRACT(metadata, '$.modalType')`,
+       GROUP BY metadata->>'$.modalType'`,
       [startDate]
     );
 
@@ -499,8 +504,8 @@ async function getTopClips(startDate: string): Promise<TopClip[]> {
     const watchMetricsRows = await queryDatabase(
       `SELECT
         content_id as id,
-        AVG(CAST(JSON_EXTRACT(metadata, '$.watchPercent') AS REAL)) as avgWatchPercent,
-        SUM(CASE WHEN JSON_EXTRACT(metadata, '$.isFullCompletion') = 1 THEN 1 ELSE 0 END) as fullCompletions
+        AVG(CAST(metadata->>'$.watchPercent' AS REAL)) as avgWatchPercent,
+        SUM(CASE WHEN metadata->>'$.isFullCompletion' = '1' OR metadata->>'$.isFullCompletion' = 'true' THEN 1 ELSE 0 END) as fullCompletions
        FROM fan_activity
        WHERE activity_type = 'clip_complete'
          AND date(created_at) >= ?

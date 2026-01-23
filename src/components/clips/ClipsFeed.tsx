@@ -374,9 +374,9 @@ export default function ClipsFeed({
       }
     }
 
-    // Track new clip view with feed position
+    // Track new clip view with feed position and duration
     const activeClip = displayClips.find(c => c.id === activeId);
-    analytics.trackClipView(activeId, activeClip?.title, activeIndex);
+    analytics.trackClipView(activeId, activeClip?.title, activeIndex, activeClip?.duration ?? undefined);
 
     // Store current clip info for skip tracking
     prevClipRef.current = {
