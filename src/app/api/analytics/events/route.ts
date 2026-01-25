@@ -40,24 +40,53 @@ setInterval(() => {
 const BOT_PATTERNS = [
   // Search engine crawlers
   'googlebot', 'bingbot', 'slurp', 'duckduckbot', 'baiduspider', 'yandexbot',
+  'applebot', 'mj12bot', 'dotbot', 'rogerbot', 'seznambot',
+  // SEO/Marketing tools
+  'semrushbot', 'ahrefsbot', 'petalbot', 'dataforseo', 'screaming frog',
+  'sitebulb', 'seokicks', 'blexbot', 'linkdexbot', 'megaindex',
+  // AI crawlers
+  'gptbot', 'chatgpt-user', 'claudebot', 'anthropic', 'bytespider', 'ccbot',
+  'cohere-ai', 'perplexitybot', 'youbot',
   // Social media crawlers (link previews)
   'facebookexternalhit', 'twitterbot', 'linkedinbot', 'pinterestbot', 'slackbot',
-  'discordbot', 'telegrambot', 'whatsapp',
+  'discordbot', 'telegrambot', 'whatsapp', 'snapchat',
   // Generic bot indicators
   'bot', 'crawler', 'spider', 'scraper', 'curl', 'wget', 'python-requests',
-  'axios', 'node-fetch', 'go-http-client',
-  // Testing/audit tools
-  'lighthouse', 'pagespeed', 'gtmetrix', 'pingdom', 'uptimerobot',
+  'axios', 'node-fetch', 'go-http-client', 'http-client', 'java/', 'libwww',
+  // Testing/audit/monitoring tools
+  'lighthouse', 'pagespeed', 'gtmetrix', 'pingdom', 'uptimerobot', 'statuscake',
+  'newrelic', 'datadog', 'site24x7', 'synthetics', 'monitoring',
   // Headless browsers
-  'headless', 'phantomjs', 'puppeteer', 'playwright', 'selenium',
+  'headless', 'phantomjs', 'puppeteer', 'playwright', 'selenium', 'webdriver',
   // Preview generators
-  'preview', 'embed', 'oembed',
+  'preview', 'embed', 'oembed', 'iframely', 'embedly',
+  // Misc automated tools
+  'feedfetcher', 'feedparser', 'rss', 'favicon', 'validator',
 ];
 
-function isBot(userAgent: string | null): boolean {
-  if (!userAgent) return true; // No user-agent is suspicious
+function isBot(userAgent: string | null, headers?: Headers): boolean {
+  // No user-agent is very suspicious
+  if (!userAgent) return true;
+
   const ua = userAgent.toLowerCase();
-  return BOT_PATTERNS.some(pattern => ua.includes(pattern));
+
+  // Check bot patterns
+  if (BOT_PATTERNS.some(pattern => ua.includes(pattern))) {
+    return true;
+  }
+
+  // Additional heuristics for sophisticated bots
+  if (headers) {
+    // Missing Accept-Language is suspicious for real browsers
+    const acceptLang = headers.get('accept-language');
+    if (!acceptLang) return true;
+
+    // Check for suspicious Accept header (bots often use */*)
+    const accept = headers.get('accept');
+    if (accept === '*/*' && !ua.includes('mobile')) return true;
+  }
+
+  return false;
 }
 
 // Valid event types that map to fan_activity.activity_type
@@ -181,7 +210,7 @@ export async function POST(req: NextRequest) {
   try {
     // Filter bot traffic early - before any processing
     const userAgent = req.headers.get('user-agent');
-    if (isBot(userAgent)) {
+    if (isBot(userAgent, req.headers)) {
       return NextResponse.json({ success: true, filtered: 'bot' });
     }
 
