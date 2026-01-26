@@ -9,7 +9,8 @@ import { rateLimit } from '@/lib/rateLimit';
 export async function POST(req: Request) {
   try {
     // Optionally verify user (attendee can be anonymous)
-  const _user = getUserFromRequest(req as any) || null;
+    const _user = getUserFromRequest(req as any) || null;
+    const isAdmin = isAdminUser(_user);
 
     const body = await req.json() as any;
     const galleryId = body.galleryId;
@@ -18,22 +19,40 @@ export async function POST(req: Request) {
     const contentType = body.contentType || getMimeType(originalName) || 'application/octet-stream';
     if (!galleryId && !code) return NextResponse.json({ error: 'Missing gallery identifier (galleryId or code)' }, { status: 400 });
 
-    // Load gallery (by id or code) and enforce schedule window
+    // Load gallery (by id or code) with upload_mode for permission check
     const rows = code
-      ? await queryDatabase('SELECT id, code, title, starts_at, ends_at FROM galleries WHERE code = ? LIMIT 1', [code])
-      : await queryDatabase('SELECT id, code, title, starts_at, ends_at FROM galleries WHERE id = ? LIMIT 1', [galleryId]);
+      ? await queryDatabase('SELECT id, code, title, starts_at, ends_at, upload_mode, gallery_type FROM galleries WHERE code = ? LIMIT 1', [code])
+      : await queryDatabase('SELECT id, code, title, starts_at, ends_at, upload_mode, gallery_type FROM galleries WHERE id = ? LIMIT 1', [galleryId]);
     if (!rows[0]) return NextResponse.json({ error: 'Gallery not found' }, { status: 404 });
-  const { id, starts_at, ends_at, code: gCode, title } = rows[0] as { id: number; starts_at?: string | null; ends_at?: string | null; code?: string | null; title?: string | null };
-    const now = Date.now();
-    const startOk = !starts_at || !Number.isNaN(Date.parse(starts_at)) ? (!starts_at || now >= Date.parse(starts_at!)) : true;
-    const endOk = !ends_at || !Number.isNaN(Date.parse(ends_at)) ? (!ends_at || now <= Date.parse(ends_at!)) : true;
-    if (!(startOk && endOk)) {
-      return NextResponse.json({ error: 'This gallery is not accepting uploads at this time.' }, { status: 403 });
+
+    const { id, starts_at, ends_at, code: gCode, title, upload_mode, gallery_type } = rows[0] as {
+      id: number;
+      starts_at?: string | null;
+      ends_at?: string | null;
+      code?: string | null;
+      title?: string | null;
+      upload_mode?: string;
+      gallery_type?: string;
+    };
+
+    // Check upload permission based on upload_mode
+    const uploadMode = upload_mode || 'public';
+    if (uploadMode === 'admin' && !isAdmin) {
+      return NextResponse.json({ error: 'This gallery only accepts uploads from administrators.' }, { status: 403 });
+    }
+
+    // For public galleries, check time windows (admin bypasses time restrictions)
+    if (!isAdmin) {
+      const now = Date.now();
+      const startOk = !starts_at || !Number.isNaN(Date.parse(starts_at)) ? (!starts_at || now >= Date.parse(starts_at!)) : true;
+      const endOk = !ends_at || !Number.isNaN(Date.parse(ends_at)) ? (!ends_at || now <= Date.parse(ends_at!)) : true;
+      if (!(startOk && endOk)) {
+        return NextResponse.json({ error: 'This gallery is not accepting uploads at this time.' }, { status: 403 });
+      }
     }
 
     // Accept uploads via galleryId (preferred) or by valid event code.
     // If a code is provided by the client, validate it; otherwise allow by galleryId.
-    const isAdmin = isAdminUser(_user);
     const hasCode = typeof code === 'string' && code.length > 0;
     if (!isAdmin && hasCode && code !== gCode) {
       return NextResponse.json({ error: 'Invalid event code' }, { status: 403 });

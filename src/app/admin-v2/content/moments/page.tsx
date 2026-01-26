@@ -2,7 +2,8 @@
 
 /**
  * The Hub - Moments/Galleries Manager
- * Event galleries with photo/video collection
+ * Multi-purpose galleries with photo/video collection
+ * Supports: events, collections, lookbooks, showcases, bts, campaigns, archives
  */
 
 import React, { useEffect, useState, useCallback } from 'react';
@@ -14,12 +15,26 @@ import { ShareButton } from '@/components/admin/ShareButton';
 // TYPES
 // =============================================================================
 
+type GalleryType = 'event' | 'collection' | 'lookbook' | 'showcase' | 'bts' | 'campaign' | 'archive';
+type UploadMode = 'public' | 'admin';
+type LinkType = 'product' | 'video' | 'clip' | 'track' | 'album' | 'event' | 'gallery';
+
 interface GalleryConfig {
   featured?: boolean;
   persistent?: boolean;
   capacity?: number;
   ticket_price?: number;
   is_public?: boolean;
+}
+
+interface GalleryLink {
+  id?: number;
+  link_type: LinkType;
+  link_id: string;
+  link_handle?: string;
+  is_primary?: boolean;
+  display_label?: string;
+  sort_order?: number;
 }
 
 interface GalleryRow {
@@ -33,7 +48,33 @@ interface GalleryRow {
   config: GalleryConfig;
   photo_count?: number;
   video_count?: number;
+  gallery_type?: GalleryType;
+  upload_mode?: UploadMode;
+  cover_photo_key?: string | null;
+  sort_order?: number;
+  links?: GalleryLink[];
 }
+
+// Gallery type metadata
+const GALLERY_TYPES: { type: GalleryType; label: string; description: string; icon: string }[] = [
+  { type: 'event', label: 'Event', description: 'Concerts, meetups, live shows', icon: '🎪' },
+  { type: 'collection', label: 'Collection', description: 'Curated photo sets', icon: '📸' },
+  { type: 'lookbook', label: 'Lookbook', description: 'Product/fashion showcase', icon: '👗' },
+  { type: 'showcase', label: 'Showcase', description: 'Best-of compilations', icon: '✨' },
+  { type: 'bts', label: 'BTS', description: 'Behind-the-scenes content', icon: '🎬' },
+  { type: 'campaign', label: 'Campaign', description: 'Album launches, product drops', icon: '🚀' },
+  { type: 'archive', label: 'Archive', description: 'Historical photos', icon: '📦' },
+];
+
+const LINK_TYPES: { type: LinkType; label: string; icon: string }[] = [
+  { type: 'product', label: 'Product', icon: '🛍️' },
+  { type: 'album', label: 'Album', icon: '💿' },
+  { type: 'track', label: 'Track', icon: '🎵' },
+  { type: 'video', label: 'Video', icon: '🎥' },
+  { type: 'clip', label: 'Clip', icon: '📱' },
+  { type: 'event', label: 'Event', icon: '🎪' },
+  { type: 'gallery', label: 'Gallery', icon: '🖼️' },
+];
 
 interface Photo {
   id: number;
@@ -68,6 +109,36 @@ function StatusBadge({ gallery }: { gallery: GalleryRow }) {
     return <span className="hub-badge hub-badge-success">Live</span>;
   }
   return <span className="hub-badge hub-badge-default">Draft</span>;
+}
+
+function GalleryTypeBadge({ type }: { type: GalleryType }) {
+  const typeInfo = GALLERY_TYPES.find(t => t.type === type);
+  if (!typeInfo) return null;
+
+  const colorMap: Record<GalleryType, string> = {
+    event: 'hub-badge-accent',
+    collection: 'hub-badge-primary',
+    lookbook: 'hub-badge-secondary',
+    showcase: 'hub-badge-warning',
+    bts: 'hub-badge-default',
+    campaign: 'hub-badge-success',
+    archive: 'hub-badge-default',
+  };
+
+  return (
+    <span className={`hub-badge ${colorMap[type]} flex items-center gap-1`}>
+      <span className="text-xs">{typeInfo.icon}</span>
+      {typeInfo.label}
+    </span>
+  );
+}
+
+function UploadModeBadge({ mode }: { mode: UploadMode }) {
+  return (
+    <span className={`hub-badge ${mode === 'admin' ? 'hub-badge-warning' : 'hub-badge-success'} text-xs`}>
+      {mode === 'admin' ? '🔒 Admin Only' : '🌐 Public'}
+    </span>
+  );
 }
 
 function formatDate(iso: string | null): string {
@@ -108,17 +179,30 @@ function GalleryCard({
   onViewPhotos: () => void;
 }) {
   const totalMedia = (gallery.photo_count || 0) + (gallery.video_count || 0);
+  const galleryType = gallery.gallery_type || 'event';
+  const uploadMode = gallery.upload_mode || 'public';
 
   return (
     <div className="hub-card overflow-hidden">
       {/* Header gradient */}
       <div className="h-20 bg-gradient-to-br from-[var(--hub-accent)] to-[var(--hub-accent-hover)] relative">
-        <div className="absolute top-2 left-2">
+        <div className="absolute top-2 left-2 flex items-center gap-1.5">
+          <GalleryTypeBadge type={galleryType} />
           <StatusBadge gallery={gallery} />
         </div>
-        {gallery.config?.featured && (
-          <div className="absolute top-2 right-2">
+        <div className="absolute top-2 right-2 flex items-center gap-1.5">
+          {uploadMode === 'admin' && <UploadModeBadge mode={uploadMode} />}
+          {gallery.config?.featured && (
             <span className="hub-badge hub-badge-warning">Featured</span>
+          )}
+        </div>
+        {/* Links indicator */}
+        {gallery.links && gallery.links.length > 0 && (
+          <div className="absolute bottom-2 left-2 flex items-center gap-1 text-white/80 text-xs">
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m9.193-9.193a4.5 4.5 0 00-6.364 6.364l4.5 4.5a4.5 4.5 0 007.244 1.242" />
+            </svg>
+            {gallery.links.length} linked
           </div>
         )}
       </div>
@@ -212,6 +296,240 @@ function GalleryCard({
 }
 
 // =============================================================================
+// CONTENT LINK MANAGER
+// =============================================================================
+
+function ContentLinkManager({
+  links,
+  onChange,
+}: {
+  links: GalleryLink[];
+  onChange: (links: GalleryLink[]) => void;
+}) {
+  const [showAddLink, setShowAddLink] = useState(false);
+  const [newLinkType, setNewLinkType] = useState<LinkType>('product');
+  const [newLinkId, setNewLinkId] = useState('');
+  const [newLinkHandle, setNewLinkHandle] = useState('');
+  const [newLinkLabel, setNewLinkLabel] = useState('');
+  const [newLinkPrimary, setNewLinkPrimary] = useState(false);
+
+  const addLink = () => {
+    if (!newLinkId.trim()) return;
+
+    const newLink: GalleryLink = {
+      link_type: newLinkType,
+      link_id: newLinkId.trim(),
+      link_handle: newLinkHandle.trim() || undefined,
+      display_label: newLinkLabel.trim() || undefined,
+      is_primary: newLinkPrimary,
+      sort_order: links.length,
+    };
+
+    // If this is primary, unset others
+    const updatedLinks = newLinkPrimary
+      ? links.map(l => ({ ...l, is_primary: false }))
+      : [...links];
+
+    onChange([...updatedLinks, newLink]);
+
+    // Reset form
+    setNewLinkId('');
+    setNewLinkHandle('');
+    setNewLinkLabel('');
+    setNewLinkPrimary(false);
+    setShowAddLink(false);
+  };
+
+  const removeLink = (index: number) => {
+    onChange(links.filter((_, i) => i !== index));
+  };
+
+  const togglePrimary = (index: number) => {
+    onChange(links.map((l, i) => ({
+      ...l,
+      is_primary: i === index ? !l.is_primary : false,
+    })));
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <span className="text-sm text-[var(--hub-text-secondary)]">Content Links</span>
+        <button
+          type="button"
+          onClick={() => setShowAddLink(!showAddLink)}
+          className="hub-btn hub-btn-secondary text-xs py-1"
+        >
+          {showAddLink ? 'Cancel' : '+ Add Link'}
+        </button>
+      </div>
+
+      {/* Add Link Form */}
+      {showAddLink && (
+        <div className="p-3 rounded-lg border border-[var(--hub-border)] bg-[var(--hub-bg-tertiary)] space-y-3">
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <span className="text-xs text-[var(--hub-text-muted)]">Type</span>
+              <select
+                value={newLinkType}
+                onChange={(e) => setNewLinkType(e.target.value as LinkType)}
+                className="hub-input mt-1 text-sm"
+              >
+                {LINK_TYPES.map(lt => (
+                  <option key={lt.type} value={lt.type}>
+                    {lt.icon} {lt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <span className="text-xs text-[var(--hub-text-muted)]">ID</span>
+              <input
+                type="text"
+                value={newLinkId}
+                onChange={(e) => setNewLinkId(e.target.value)}
+                className="hub-input mt-1 text-sm"
+                placeholder="product-123"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <span className="text-xs text-[var(--hub-text-muted)]">Handle (optional)</span>
+              <input
+                type="text"
+                value={newLinkHandle}
+                onChange={(e) => setNewLinkHandle(e.target.value)}
+                className="hub-input mt-1 text-sm"
+                placeholder="url-slug"
+              />
+            </div>
+            <div>
+              <span className="text-xs text-[var(--hub-text-muted)]">Label (optional)</span>
+              <input
+                type="text"
+                value={newLinkLabel}
+                onChange={(e) => setNewLinkLabel(e.target.value)}
+                className="hub-input mt-1 text-sm"
+                placeholder="Featured Item"
+              />
+            </div>
+          </div>
+          <div className="flex items-center justify-between">
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={newLinkPrimary}
+                onChange={(e) => setNewLinkPrimary(e.target.checked)}
+                className="rounded border-[var(--hub-border)] bg-[var(--hub-bg-tertiary)]"
+              />
+              <span className="text-xs text-[var(--hub-text-secondary)]">Primary link</span>
+            </label>
+            <button
+              type="button"
+              onClick={addLink}
+              disabled={!newLinkId.trim()}
+              className="hub-btn hub-btn-primary text-xs py-1 disabled:opacity-50"
+            >
+              Add
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Links List */}
+      {links.length > 0 && (
+        <div className="space-y-2">
+          {links.map((link, index) => {
+            const typeInfo = LINK_TYPES.find(t => t.type === link.link_type);
+            return (
+              <div
+                key={index}
+                className="flex items-center gap-2 p-2 rounded-lg border border-[var(--hub-border)] bg-[var(--hub-bg-tertiary)]"
+              >
+                <span className="text-sm">{typeInfo?.icon}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm text-[var(--hub-text-primary)] truncate">
+                    {link.display_label || link.link_handle || link.link_id}
+                  </div>
+                  <div className="text-xs text-[var(--hub-text-muted)]">
+                    {typeInfo?.label} • {link.link_id}
+                  </div>
+                </div>
+                {link.is_primary && (
+                  <span className="hub-badge hub-badge-accent text-xs">Primary</span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => togglePrimary(index)}
+                  className="p-1 text-[var(--hub-text-muted)] hover:text-[var(--hub-accent)]"
+                  title="Set as primary"
+                >
+                  <svg className="w-4 h-4" fill={link.is_primary ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => removeLink(index)}
+                  className="p-1 text-[var(--hub-text-muted)] hover:text-red-500"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {links.length === 0 && !showAddLink && (
+        <p className="text-xs text-[var(--hub-text-muted)] italic">
+          No content linked. Link products, albums, videos, etc.
+        </p>
+      )}
+    </div>
+  );
+}
+
+// =============================================================================
+// GALLERY TYPE SELECTOR
+// =============================================================================
+
+function GalleryTypeSelector({
+  value,
+  onChange,
+}: {
+  value: GalleryType;
+  onChange: (type: GalleryType) => void;
+}) {
+  return (
+    <div className="space-y-2">
+      <span className="text-sm text-[var(--hub-text-secondary)]">Gallery Type</span>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        {GALLERY_TYPES.map((t) => (
+          <button
+            key={t.type}
+            type="button"
+            onClick={() => onChange(t.type)}
+            className={`p-2 rounded-lg border text-left transition-all ${
+              value === t.type
+                ? 'border-[var(--hub-accent)] bg-[var(--hub-accent)]/10'
+                : 'border-[var(--hub-border)] hover:border-[var(--hub-text-muted)]'
+            }`}
+          >
+            <div className="text-lg mb-0.5">{t.icon}</div>
+            <div className="text-xs font-medium text-[var(--hub-text-primary)]">{t.label}</div>
+            <div className="text-[10px] text-[var(--hub-text-muted)] line-clamp-1">{t.description}</div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// =============================================================================
 // CREATE/EDIT MODAL
 // =============================================================================
 
@@ -232,6 +550,14 @@ function GalleryModal({
   const [persistent, setPersistent] = useState(!!initial?.config?.persistent);
   const [featured, setFeatured] = useState(!!initial?.config?.featured);
   const [isPublic, setIsPublic] = useState(initial?.config?.is_public !== false);
+
+  // New fields
+  const [galleryType, setGalleryType] = useState<GalleryType>(initial?.gallery_type || 'event');
+  const [uploadMode, setUploadMode] = useState<UploadMode>(initial?.upload_mode || 'public');
+  const [links, setLinks] = useState<GalleryLink[]>(initial?.links || []);
+
+  // For non-event types, we often don't need time windows
+  const needsTimeWindows = galleryType === 'event' || galleryType === 'bts' || galleryType === 'campaign';
 
   function generateCode(): string {
     return Math.random().toString(36).slice(2, 8).toUpperCase();
@@ -259,13 +585,16 @@ function GalleryModal({
       title,
       code,
       description: description || null,
-      starts_at: toIso(startsAt),
-      ends_at: persistent ? null : toIso(endsAt),
+      starts_at: needsTimeWindows ? toIso(startsAt) : null,
+      ends_at: needsTimeWindows && !persistent ? toIso(endsAt) : null,
       config: {
         featured,
-        persistent,
+        persistent: needsTimeWindows ? persistent : false,
         is_public: isPublic,
       },
+      gallery_type: galleryType,
+      upload_mode: uploadMode,
+      links: links.length > 0 ? links : undefined,
     };
     onSubmit(data);
   }
@@ -273,7 +602,7 @@ function GalleryModal({
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl border border-[var(--hub-border)] bg-[var(--hub-bg-secondary)] overflow-hidden max-h-[90vh] flex flex-col">
+      <div className="relative w-full sm:max-w-2xl rounded-t-2xl sm:rounded-2xl border border-[var(--hub-border)] bg-[var(--hub-bg-secondary)] overflow-hidden max-h-[90vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--hub-border)]">
           <h2 className="text-lg font-semibold text-[var(--hub-text-primary)]">
@@ -287,7 +616,45 @@ function GalleryModal({
         </div>
 
         {/* Form */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div className="flex-1 overflow-y-auto p-4 space-y-5">
+          {/* Gallery Type Selector */}
+          <GalleryTypeSelector value={galleryType} onChange={setGalleryType} />
+
+          {/* Upload Mode */}
+          <div className="space-y-2">
+            <span className="text-sm text-[var(--hub-text-secondary)]">Who can upload photos?</span>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setUploadMode('public')}
+                className={`flex-1 p-3 rounded-lg border text-center transition-all ${
+                  uploadMode === 'public'
+                    ? 'border-green-500 bg-green-500/10'
+                    : 'border-[var(--hub-border)] hover:border-[var(--hub-text-muted)]'
+                }`}
+              >
+                <div className="text-lg mb-1">🌐</div>
+                <div className="text-xs font-medium text-[var(--hub-text-primary)]">Public</div>
+                <div className="text-[10px] text-[var(--hub-text-muted)]">Anyone can contribute</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setUploadMode('admin')}
+                className={`flex-1 p-3 rounded-lg border text-center transition-all ${
+                  uploadMode === 'admin'
+                    ? 'border-amber-500 bg-amber-500/10'
+                    : 'border-[var(--hub-border)] hover:border-[var(--hub-text-muted)]'
+                }`}
+              >
+                <div className="text-lg mb-1">🔒</div>
+                <div className="text-xs font-medium text-[var(--hub-text-primary)]">Admin Only</div>
+                <div className="text-[10px] text-[var(--hub-text-muted)]">Curated content</div>
+              </button>
+            </div>
+          </div>
+
+          <hr className="border-[var(--hub-border)]" />
+
           <label className="block">
             <span className="text-sm text-[var(--hub-text-secondary)]">Title</span>
             <input
@@ -295,12 +662,12 @@ function GalleryModal({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               className="hub-input mt-1"
-              placeholder="Event name"
+              placeholder="Gallery name"
             />
           </label>
 
           <label className="block">
-            <span className="text-sm text-[var(--hub-text-secondary)]">Event Code</span>
+            <span className="text-sm text-[var(--hub-text-secondary)]">Gallery Code</span>
             <div className="flex gap-2 mt-1">
               <input
                 type="text"
@@ -325,42 +692,55 @@ function GalleryModal({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               className="hub-input mt-1 h-20 resize-none"
-              placeholder="Event details..."
+              placeholder="Gallery details..."
             />
           </label>
 
-          <div className="grid grid-cols-2 gap-4">
-            <label className="block">
-              <span className="text-sm text-[var(--hub-text-secondary)]">Start Date/Time</span>
-              <input
-                type="datetime-local"
-                value={startsAt}
-                onChange={(e) => setStartsAt(e.target.value)}
-                className="hub-input mt-1"
-              />
-            </label>
-            <label className="block">
-              <span className="text-sm text-[var(--hub-text-secondary)]">End Date/Time</span>
-              <input
-                type="datetime-local"
-                value={endsAt}
-                onChange={(e) => setEndsAt(e.target.value)}
-                disabled={persistent}
-                className="hub-input mt-1 disabled:opacity-50"
-              />
-            </label>
-          </div>
+          {/* Time Windows (only for event-like types) */}
+          {needsTimeWindows && (
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                <label className="block">
+                  <span className="text-sm text-[var(--hub-text-secondary)]">Start Date/Time</span>
+                  <input
+                    type="datetime-local"
+                    value={startsAt}
+                    onChange={(e) => setStartsAt(e.target.value)}
+                    className="hub-input mt-1"
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-sm text-[var(--hub-text-secondary)]">End Date/Time</span>
+                  <input
+                    type="datetime-local"
+                    value={endsAt}
+                    onChange={(e) => setEndsAt(e.target.value)}
+                    disabled={persistent}
+                    className="hub-input mt-1 disabled:opacity-50"
+                  />
+                </label>
+              </div>
 
-          <div className="space-y-3 pt-2">
-            <label className="flex items-center gap-3">
-              <input
-                type="checkbox"
-                checked={persistent}
-                onChange={(e) => setPersistent(e.target.checked)}
-                className="rounded border-[var(--hub-border)] bg-[var(--hub-bg-tertiary)]"
-              />
-              <span className="text-sm text-[var(--hub-text-secondary)]">Persistent (no end date)</span>
-            </label>
+              <label className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={persistent}
+                  onChange={(e) => setPersistent(e.target.checked)}
+                  className="rounded border-[var(--hub-border)] bg-[var(--hub-bg-tertiary)]"
+                />
+                <span className="text-sm text-[var(--hub-text-secondary)]">Persistent (no end date)</span>
+              </label>
+            </>
+          )}
+
+          <hr className="border-[var(--hub-border)]" />
+
+          {/* Content Links */}
+          <ContentLinkManager links={links} onChange={setLinks} />
+
+          <hr className="border-[var(--hub-border)]" />
+
+          <div className="space-y-3">
             <label className="flex items-center gap-3">
               <input
                 type="checkbox"
@@ -368,7 +748,7 @@ function GalleryModal({
                 onChange={(e) => setFeatured(e.target.checked)}
                 className="rounded border-[var(--hub-border)] bg-[var(--hub-bg-tertiary)]"
               />
-              <span className="text-sm text-[var(--hub-text-secondary)]">Featured</span>
+              <span className="text-sm text-[var(--hub-text-secondary)]">Featured on homepage</span>
             </label>
             <label className="flex items-center gap-3">
               <input
@@ -377,7 +757,7 @@ function GalleryModal({
                 onChange={(e) => setIsPublic(e.target.checked)}
                 className="rounded border-[var(--hub-border)] bg-[var(--hub-bg-tertiary)]"
               />
-              <span className="text-sm text-[var(--hub-text-secondary)]">Public</span>
+              <span className="text-sm text-[var(--hub-text-secondary)]">Publicly visible</span>
             </label>
           </div>
         </div>
@@ -515,7 +895,8 @@ export default function MomentsPage() {
   const { canAccess } = useHubUser();
   const [galleries, setGalleries] = useState<GalleryRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [filter, setFilter] = useState<'all' | 'live' | 'featured'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'live' | 'featured'>('all');
+  const [typeFilter, setTypeFilter] = useState<GalleryType | 'all'>('all');
   const [editingGallery, setEditingGallery] = useState<GalleryRow | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [photosGallery, setPhotosGallery] = useState<GalleryRow | null>(null);
@@ -555,8 +936,12 @@ export default function MomentsPage() {
 
   // Filter galleries
   const filteredGalleries = galleries.filter((g) => {
-    if (filter === 'featured') return g.config?.featured;
-    if (filter === 'live') {
+    // Type filter
+    if (typeFilter !== 'all' && (g.gallery_type || 'event') !== typeFilter) return false;
+
+    // Status filter
+    if (statusFilter === 'featured') return g.config?.featured;
+    if (statusFilter === 'live') {
       const now = new Date();
       const startsAt = g.starts_at ? new Date(g.starts_at) : null;
       const endsAt = g.ends_at ? new Date(g.ends_at) : null;
@@ -565,6 +950,13 @@ export default function MomentsPage() {
     }
     return true;
   });
+
+  // Count galleries by type
+  const typeCounts = galleries.reduce((acc, g) => {
+    const type = g.gallery_type || 'event';
+    acc[type] = (acc[type] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
 
   // Toggle featured
   const toggleFeatured = async (gallery: GalleryRow) => {
@@ -660,8 +1052,11 @@ export default function MomentsPage() {
             <span>Moments</span>
           </div>
           <h1 className="text-2xl font-semibold text-[var(--hub-text-primary)]">
-            Event Galleries
+            Galleries
           </h1>
+          <p className="text-sm text-[var(--hub-text-muted)] mt-1">
+            Events, lookbooks, collections, and more
+          </p>
         </div>
         {canWrite && (
           <button
@@ -671,39 +1066,64 @@ export default function MomentsPage() {
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
             </svg>
-            <span className="hidden sm:inline">Create Event</span>
+            <span className="hidden sm:inline">Create Gallery</span>
           </button>
         )}
       </div>
 
-      {/* Filters */}
-      <div className="flex gap-2 overflow-x-auto pb-2 -mb-2 hub-scroll-hidden">
-        {(['all', 'live', 'featured'] as const).map((f) => (
+      {/* Type Filters */}
+      <div className="space-y-3">
+        <div className="flex gap-2 overflow-x-auto pb-2 -mb-2 hub-scroll-hidden">
           <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={`hub-btn ${
-              filter === f ? 'hub-btn-primary' : 'hub-btn-secondary'
-            } whitespace-nowrap`}
+            onClick={() => setTypeFilter('all')}
+            className={`hub-btn ${typeFilter === 'all' ? 'hub-btn-primary' : 'hub-btn-secondary'} whitespace-nowrap`}
           >
-            {f.charAt(0).toUpperCase() + f.slice(1)}
-            {f !== 'all' && (
-              <span className="ml-1 opacity-70">
-                ({galleries.filter((g) => {
-                  if (f === 'featured') return g.config?.featured;
-                  if (f === 'live') {
-                    const now = new Date();
-                    const startsAt = g.starts_at ? new Date(g.starts_at) : null;
-                    const endsAt = g.ends_at ? new Date(g.ends_at) : null;
-                    if (g.config?.persistent) return true;
-                    return startsAt && endsAt && now >= startsAt && now <= endsAt;
-                  }
-                  return true;
-                }).length})
-              </span>
-            )}
+            All Types
+            <span className="ml-1 opacity-70">({galleries.length})</span>
           </button>
-        ))}
+          {GALLERY_TYPES.filter(t => typeCounts[t.type]).map((t) => (
+            <button
+              key={t.type}
+              onClick={() => setTypeFilter(t.type)}
+              className={`hub-btn ${typeFilter === t.type ? 'hub-btn-primary' : 'hub-btn-secondary'} whitespace-nowrap`}
+            >
+              <span className="mr-1">{t.icon}</span>
+              {t.label}
+              <span className="ml-1 opacity-70">({typeCounts[t.type] || 0})</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Status Filters */}
+        <div className="flex gap-2 overflow-x-auto pb-2 -mb-2 hub-scroll-hidden">
+          {(['all', 'live', 'featured'] as const).map((f) => (
+            <button
+              key={f}
+              onClick={() => setStatusFilter(f)}
+              className={`hub-btn text-xs ${
+                statusFilter === f ? 'hub-btn-accent' : 'hub-btn-secondary'
+              } whitespace-nowrap`}
+            >
+              {f.charAt(0).toUpperCase() + f.slice(1)}
+              {f !== 'all' && (
+                <span className="ml-1 opacity-70">
+                  ({galleries.filter((g) => {
+                    if (typeFilter !== 'all' && (g.gallery_type || 'event') !== typeFilter) return false;
+                    if (f === 'featured') return g.config?.featured;
+                    if (f === 'live') {
+                      const now = new Date();
+                      const startsAt = g.starts_at ? new Date(g.starts_at) : null;
+                      const endsAt = g.ends_at ? new Date(g.ends_at) : null;
+                      if (g.config?.persistent) return true;
+                      return startsAt && endsAt && now >= startsAt && now <= endsAt;
+                    }
+                    return true;
+                  }).length})
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Content */}

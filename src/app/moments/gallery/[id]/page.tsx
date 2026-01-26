@@ -16,10 +16,77 @@ interface Photo {
   moderated?: number;
 }
 
+type LinkType = 'product' | 'video' | 'clip' | 'track' | 'album' | 'event' | 'gallery';
+type GalleryType = 'event' | 'collection' | 'lookbook' | 'showcase' | 'bts' | 'campaign' | 'archive';
+type UploadMode = 'public' | 'admin';
+
+interface GalleryLink {
+  id: number;
+  link_type: LinkType;
+  link_id: string;
+  link_handle?: string;
+  is_primary?: boolean;
+  display_label?: string;
+  sort_order?: number;
+}
+
 interface GalleryInfo {
   title?: string;
   description?: string;
   shopifyProductHandle?: string;
+  gallery_type?: GalleryType;
+  upload_mode?: UploadMode;
+  links?: GalleryLink[];
+}
+
+// Helper to get action button for a link
+function getLinkAction(link: GalleryLink): { label: string; icon: React.ReactNode; href?: string } | null {
+  switch (link.link_type) {
+    case 'product':
+      return {
+        label: link.display_label || 'Shop',
+        icon: (
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+          </svg>
+        ),
+      };
+    case 'album':
+    case 'track':
+      return {
+        label: link.display_label || 'Listen',
+        icon: (
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 9l10.5-3m0 6.553v3.75a2.25 2.25 0 01-1.632 2.163l-1.32.377a1.803 1.803 0 11-.99-3.467l2.31-.66a2.25 2.25 0 001.632-2.163zm0 0V2.25L9 5.25v10.303m0 0v3.75a2.25 2.25 0 01-1.632 2.163l-1.32.377a1.803 1.803 0 01-.99-3.467l2.31-.66A2.25 2.25 0 009 15.553z" />
+          </svg>
+        ),
+        href: link.link_handle ? `/music/${link.link_handle}` : `/music`,
+      };
+    case 'video':
+    case 'clip':
+      return {
+        label: link.display_label || 'Watch',
+        icon: (
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z" />
+          </svg>
+        ),
+        href: link.link_type === 'clip' ? `/?clipId=${link.link_id}` : `/media/${link.link_handle || link.link_id}`,
+      };
+    case 'event':
+    case 'gallery':
+      return {
+        label: link.display_label || 'View',
+        icon: (
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3 10.5V6a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 6v4.5M3 10.5h18" />
+          </svg>
+        ),
+        href: `/moments/gallery/${link.link_id}`,
+      };
+    default:
+      return null;
+  }
 }
 
 export default function GalleryViewer({ params }: { params: Promise<{ id: string }> }) {
@@ -66,6 +133,9 @@ export default function GalleryViewer({ params }: { params: Promise<{ id: string
             title: infoData.gallery.title,
             description: infoData.gallery.description,
             shopifyProductHandle: infoData.gallery.shopify_product_handle || undefined,
+            gallery_type: infoData.gallery.gallery_type || 'event',
+            upload_mode: infoData.gallery.upload_mode || 'public',
+            links: infoData.gallery.links || [],
           });
         }
       }
@@ -173,9 +243,21 @@ export default function GalleryViewer({ params }: { params: Promise<{ id: string
           </Link>
 
           <div className="flex-1 min-w-0">
-            <h1 className="text-base font-semibold text-[#ede8df] truncate">
-              {galleryInfo?.title || 'Gallery'}
-            </h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-base font-semibold text-[#ede8df] truncate">
+                {galleryInfo?.title || 'Gallery'}
+              </h1>
+              {galleryInfo?.gallery_type && galleryInfo.gallery_type !== 'event' && (
+                <span className="text-xs px-2 py-0.5 rounded-full bg-[#252221] text-[#726d6c] capitalize">
+                  {galleryInfo.gallery_type}
+                </span>
+              )}
+            </div>
+            {galleryInfo?.description && (
+              <p className="text-xs text-[#726d6c] truncate mt-0.5">
+                {galleryInfo.description}
+              </p>
+            )}
           </div>
 
           <span className="text-sm text-[#726d6c] tabular-nums">{photos.length}</span>
@@ -209,13 +291,19 @@ export default function GalleryViewer({ params }: { params: Promise<{ id: string
               </svg>
             </div>
             <p className="text-[#ede8df] font-medium mb-1">No photos yet</p>
-            <p className="text-sm text-[#726d6c] mb-4">Be the first to capture a moment</p>
-            <Link
-              href={`/moments?galleryId=${id}`}
-              className="inline-block px-4 py-2 rounded-lg bg-[#843c2d] text-white text-sm font-medium"
-            >
-              Open Camera
-            </Link>
+            {galleryInfo?.upload_mode === 'admin' ? (
+              <p className="text-sm text-[#726d6c]">This gallery is curated by the team</p>
+            ) : (
+              <>
+                <p className="text-sm text-[#726d6c] mb-4">Be the first to capture a moment</p>
+                <Link
+                  href={`/moments?galleryId=${id}`}
+                  className="inline-block px-4 py-2 rounded-lg bg-[#843c2d] text-white text-sm font-medium"
+                >
+                  Open Camera
+                </Link>
+              </>
+            )}
           </div>
         )}
 
@@ -250,18 +338,65 @@ export default function GalleryViewer({ params }: { params: Promise<{ id: string
         )}
       </main>
 
-      {/* Shop Now Button - shows when gallery has linked product */}
-      {galleryInfo?.shopifyProductHandle && (
-        <button
-          onClick={() => openQuickShop(galleryInfo.shopifyProductHandle!)}
-          className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-5 py-3 rounded-full bg-white text-black font-medium shadow-lg hover:bg-neutral-100 transition-colors"
-          style={{ paddingBottom: 'max(12px, calc(12px + env(safe-area-inset-bottom, 0px)))' }}
+      {/* Linked Content Action Buttons */}
+      {(galleryInfo?.links?.length || galleryInfo?.shopifyProductHandle) && (
+        <div
+          className="fixed bottom-6 right-6 z-40 flex flex-col gap-2 items-end"
+          style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
-          </svg>
-          Shop Now
-        </button>
+          {/* Legacy shopify product handle support */}
+          {galleryInfo?.shopifyProductHandle && !galleryInfo?.links?.some(l => l.link_type === 'product') && (
+            <button
+              onClick={() => openQuickShop(galleryInfo.shopifyProductHandle!)}
+              className="flex items-center gap-2 px-5 py-3 rounded-full bg-white text-black font-medium shadow-lg hover:bg-neutral-100 transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+              </svg>
+              Shop Now
+            </button>
+          )}
+
+          {/* New links system */}
+          {galleryInfo?.links?.map((link) => {
+            const action = getLinkAction(link);
+            if (!action) return null;
+
+            // Product links use QuickShop
+            if (link.link_type === 'product') {
+              return (
+                <button
+                  key={link.id}
+                  onClick={() => openQuickShop(link.link_handle || link.link_id)}
+                  className={`flex items-center gap-2 px-5 py-3 rounded-full font-medium shadow-lg transition-colors ${
+                    link.is_primary
+                      ? 'bg-white text-black hover:bg-neutral-100'
+                      : 'bg-black/80 text-white hover:bg-black/90 border border-white/20'
+                  }`}
+                >
+                  {action.icon}
+                  {action.label}
+                </button>
+              );
+            }
+
+            // Other links navigate to their destination
+            return (
+              <Link
+                key={link.id}
+                href={action.href || '#'}
+                className={`flex items-center gap-2 px-5 py-3 rounded-full font-medium shadow-lg transition-colors ${
+                  link.is_primary
+                    ? 'bg-white text-black hover:bg-neutral-100'
+                    : 'bg-black/80 text-white hover:bg-black/90 border border-white/20'
+                }`}
+              >
+                {action.icon}
+                {action.label}
+              </Link>
+            );
+          })}
+        </div>
       )}
 
       {/* Fullscreen Viewer - rendered via Portal to escape all stacking contexts */}
