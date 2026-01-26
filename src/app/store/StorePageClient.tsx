@@ -42,6 +42,22 @@ const CATEGORY_GROUPS: Record<string, string> = {
 // Display order for filter pills
 const CATEGORY_ORDER = ['All', 'T-Shirts', 'Pants', 'Hoodies', 'Vests'];
 
+// Extract image filename from Shopify URL for comparison
+// URLs like: https://cdn.shopify.com/.../products/image-name_abc123.jpg?v=1234
+function getImageIdentifier(url: string | null | undefined): string {
+  if (!url) return '';
+  try {
+    // Get pathname and extract filename without query params
+    const pathname = new URL(url).pathname;
+    // Get last segment (filename)
+    const filename = pathname.split('/').pop() || '';
+    // Remove size suffixes like _100x, _200x200, etc.
+    return filename.replace(/_\d+x\d*|\?\S+$/g, '');
+  } catch {
+    return url;
+  }
+}
+
 // Helper to normalize and map category
 function getDisplayCategory(productType: string): string {
   if (!productType) return '';
@@ -496,13 +512,7 @@ export default function StorePageClient({ isStoreOpen, isAdmin, initialProducts 
       };
 
       setProductDetails(prev => ({ ...prev, [handle]: detail }));
-      // Initialize options to first variant
-      if (detail.options?.length) {
-        const initial: Record<string, string> = {};
-        detail.options.forEach((opt: any) => { initial[opt.name] = opt.values?.[0]; });
-        setSelectedOptions(initial);
-        setOpenOption(detail.options[0]?.name || null);
-      }
+      // Options initialization handled by the useEffect that finds matching variant
     } catch (e: any) {
       setDetailError(e?.message || 'Failed to load product');
     } finally {
@@ -525,19 +535,39 @@ export default function StorePageClient({ isStoreOpen, isAdmin, initialProducts 
   }, [selectedHandle]);
 
   // Initialize default options when product details load (after reset above)
+  // Find the variant that matches the product's featured image shown in the grid
   useEffect(() => {
     if (!selectedProduct) return;
 
     const detail = productDetails[selectedProduct.handle];
-    if (!detail?.options?.length) return;
+    if (!detail?.variants?.length) return;
 
-    // Set defaults for this product
-    const defaults: Record<string, string> = {};
-    detail.options.forEach((opt: any) => {
-      defaults[opt.name] = opt.values?.[0];
-    });
-    setSelectedOptions(defaults);
-  }, [selectedProduct?.handle, productDetails]);
+    // Extract image identifier from grid image for comparison
+    const gridImageId = getImageIdentifier(selectedProduct.image);
+
+    // Find variant whose image matches the product's grid image (compare by filename)
+    const matchingVariant = gridImageId
+      ? detail.variants.find((v: any) => {
+          const variantImageId = getImageIdentifier(v.image);
+          return variantImageId && variantImageId === gridImageId;
+        })
+      : null;
+
+    // Use matching variant or fall back to first variant
+    const targetVariant = matchingVariant || detail.variants[0];
+
+    // Set options to match that variant
+    if (targetVariant?.selectedOptions) {
+      setSelectedOptions(targetVariant.selectedOptions);
+    } else if (detail.options?.length) {
+      // Fallback to first values
+      const defaults: Record<string, string> = {};
+      detail.options.forEach((opt: any) => {
+        defaults[opt.name] = opt.values?.[0];
+      });
+      setSelectedOptions(defaults);
+    }
+  }, [selectedProduct?.handle, selectedProduct?.image, productDetails]);
 
   const updateOption = (name: string, value: string) => {
     setSelectedOptions(prev => ({ ...prev, [name]: value }));
@@ -666,7 +696,7 @@ export default function StorePageClient({ isStoreOpen, isAdmin, initialProducts 
         </div>
       </header>
 
-      <ScrollContainer>
+      <ScrollContainer className="mt-16">
         {/* Category Filter Pills */}
         {availableCategories.length > 1 && (
           <div className="sticky top-0 z-20 bg-[#0b0b0b]/95 backdrop-blur-sm border-b border-white/5">
@@ -692,8 +722,8 @@ export default function StorePageClient({ isStoreOpen, isAdmin, initialProducts 
 
         {/* Content area with consistent spacing */}
         <div
-          className="pt-4 pb-40"
-          style={{ paddingBottom: 'calc(160px + env(safe-area-inset-bottom, 0px))' }}
+          className="pt-4"
+          style={{ paddingBottom: 'calc(220px + env(safe-area-inset-bottom, 0px))' }}
         >
           {/* Loading state */}
           {loading && (

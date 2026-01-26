@@ -26,6 +26,7 @@ const AIStudioTab = dynamic(() => import('./tabs/AIStudioTab'));
 const StorageTab = dynamic(() => import('./tabs/StorageTab'));
 const DatabaseTab = dynamic(() => import('./tabs/DatabaseTab'));
 const UsersTab = dynamic(() => import('./tabs/UsersTab'));
+const ArsenalTab = dynamic(() => import('./tabs/ArsenalTab'));
 
 // === BUSINESS / BI TABS ===
 const ReportsTab = dynamic(() => import('./tabs/ReportsTab'));
@@ -73,7 +74,7 @@ type AdminTab =
   // Dashboard
   | 'overview'
   // Content
-  | 'music' | 'videos' | 'moments' | 'brand-assets' | 'links'
+  | 'arsenal' | 'music' | 'videos' | 'moments' | 'brand-assets' | 'links'
   // Social
   | 'social-cms' | 'social-accounts' | 'social-studio' | 'ai-studio'
   // Commerce
@@ -109,6 +110,12 @@ export default function TabContent({ activeTab, canAccess }: TabContentProps) {
       );
 
     // === CONTENT ===
+    case 'arsenal':
+      return (
+        <Suspense fallback={<LoadingFallback title="Arsenal" />}>
+          <ArsenalTab />
+        </Suspense>
+      );
     case 'music':
       return (
         <Suspense fallback={<LoadingFallback title="Music" />}>

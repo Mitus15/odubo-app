@@ -81,6 +81,44 @@ export async function POST(req: NextRequest) {
 
     await executeQuery(`UPDATE video_upload_sessions SET status = 'done', updated_at = datetime('now') WHERE id = ?`, [sessionId]);
 
+    // Capture video context for Woda passive learning
+    try {
+      // Get the newly created video ID
+      const videoRows = await queryDatabase('SELECT id, parent_video_id FROM videos WHERE uid = ? LIMIT 1', [uid]);
+      if (videoRows.length > 0) {
+        const videoId = videoRows[0].id as number;
+        const parentVideoId = videoRows[0].parent_video_id as number | null;
+
+        await executeQuery(
+          `INSERT INTO woda_video_context (video_id, title, description, mood, category, type, artist_name, is_clip, parent_video_id, captured_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+           ON CONFLICT(video_id) DO UPDATE SET
+             title = excluded.title,
+             description = excluded.description,
+             mood = excluded.mood,
+             category = excluded.category,
+             type = excluded.type,
+             artist_name = excluded.artist_name,
+             is_clip = excluded.is_clip,
+             parent_video_id = excluded.parent_video_id,
+             updated_at = datetime('now')`,
+          [
+            videoId,
+            meta.title || uid,
+            meta.description || '',
+            meta.mood || '',
+            meta.category || '',
+            meta.type || '',
+            meta.artist_name || '',
+            parentVideoId ? 1 : 0,
+            parentVideoId,
+          ]
+        );
+      }
+    } catch (e) {
+      console.warn('[Woda] Failed to capture video context:', e);
+    }
+
     try { await writeAuditLog(req, user, 'videos.finalize', String(sessionId), { uid, publication_status }); } catch {}
     return NextResponse.json({ success: true, uid, url: embedUrl });
   } catch (error) {

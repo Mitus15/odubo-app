@@ -40,13 +40,27 @@ export default function LinkTreeModal({ isOpen, onClose }: LinkTreeModalProps) {
     }
   }, [isOpen]);
 
-  // Filter out shopify/baad store links when store is not accessible
+  // Filter and sort links
   const visibleLinks = useMemo(() => {
-    if (checkingStoreAccess) return links;
-    if (!storeAccessible) {
-      return links.filter(link => link.platform !== 'shopify' && link.platform !== 'baad');
+    let filtered = links;
+
+    // Filter out store links when store is not accessible
+    if (!checkingStoreAccess && !storeAccessible) {
+      filtered = links.filter(link => link.platform !== 'shopify' && link.platform !== 'baad');
     }
-    return links;
+
+    // Custom sort: Store first, YouTube second, then rest in original order
+    const platformPriority: Record<string, number> = {
+      'shopify': 0,
+      'baad': 0,
+      'youtube': 1,
+    };
+
+    return [...filtered].sort((a, b) => {
+      const priorityA = platformPriority[a.platform || ''] ?? 99;
+      const priorityB = platformPriority[b.platform || ''] ?? 99;
+      return priorityA - priorityB;
+    });
   }, [links, storeAccessible, checkingStoreAccess]);
 
   if (!isOpen || !mounted) return null;

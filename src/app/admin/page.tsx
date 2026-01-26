@@ -227,6 +227,7 @@ const navItems: NavItem[] = [
     label: 'Content',
     icon: Icons.cms,
     children: [
+      { id: 'arsenal', label: 'Arsenal', icon: Icons.distribution },
       { id: 'music', label: 'Music', icon: Icons.music },
       { id: 'videos', label: 'Videos', icon: Icons.videos },
       { id: 'moments', label: 'Moments', icon: Icons.moments },

@@ -11,6 +11,15 @@ export type ClipApiRow = {
   created_at?: string | null;
   shopify_product_handle?: string | null;
   related_projects?: string | null;
+  // Clip identity fields
+  original_filename?: string | null;
+  clip_index?: number | null;
+  total_siblings?: number | null;
+  // Platform URL backfeed
+  youtube_url?: string | null;
+  youtube_shorts_url?: string | null;
+  tiktok_url?: string | null;
+  instagram_reels_url?: string | null;
   // Engagement fields (optional, only present when withEngagement=true)
   view_count?: number;
   completion_count?: number;
@@ -31,6 +40,15 @@ export type ClipItem = {
   productHandle?: string | null;
   parentId?: number | null;
   uid?: string; // Cloudflare Stream UID for URL generation
+  // Clip identity (Magazine & Bullets)
+  originalFilename?: string | null;   // e.g., "BAAD_Teaser_v3_final.mp4"
+  clipIndex?: number | null;          // Position within parent (1-based)
+  totalSiblings?: number | null;      // Total clips in magazine → "Clip 3 of 7"
+  // Platform URL backfeed
+  youtubeUrl?: string | null;
+  youtubeShortsUrl?: string | null;
+  tiktokUrl?: string | null;
+  instagramReelsUrl?: string | null;
   // Engagement data (optional)
   engagementScore?: number;
   viewCount?: number;

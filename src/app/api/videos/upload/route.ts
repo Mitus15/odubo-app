@@ -78,8 +78,8 @@ export async function POST(req: NextRequest) {
     const sql = `INSERT INTO videos (
       uid, title, artist_name, description, url, poster_url, thumbnail, duration,
       category, is_public, type, mood, credits, related_projects, status, stream_video_id,
-      created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'published', ?, datetime('now'), datetime('now'))`;
+      original_filename, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'published', ?, ?, datetime('now'), datetime('now'))`;
 
     const params = [
       streamVideoId, // use Stream UID as our uid
@@ -97,6 +97,7 @@ export async function POST(req: NextRequest) {
       credits,
       related_projects,
       streamVideoId,
+      videoFile.name, // original_filename - preserve for Arsenal
     ];
 
     await executeQuery(sql, params);

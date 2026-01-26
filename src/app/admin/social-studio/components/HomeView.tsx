@@ -254,7 +254,7 @@ export default function HomeView({
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#302927] border border-[#e8a990]/25 text-[#e8a990] text-sm font-medium hover:bg-[#302927] hover:border-[#843c2d]/40 active:bg-[#0d0c0a] transition-all disabled:opacity-50 min-h-[44px] shadow-[0_0_20px_rgba(212,168,83,0.05)]"
             >
               <span className={processing ? 'animate-pulse' : ''}>{Icons.lightning}</span>
-              {processing ? 'Processing...' : 'Auto Post'}
+              {processing ? 'Publishing...' : 'Publish'}
             </button>
             <button
               onClick={onSync}

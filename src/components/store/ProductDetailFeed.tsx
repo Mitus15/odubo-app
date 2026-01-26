@@ -7,6 +7,20 @@ import { useCartOverlay } from './StoreOrchestrator';
 import { useAnalyticsSafe } from '@/contexts/AnalyticsContext';
 import type { Product, ProductVariant } from '@/lib/store/types';
 
+// Helper to extract image filename for comparison
+// Shopify URLs can differ between list and detail views even for same image
+function getImageIdentifier(url: string | null | undefined): string {
+  if (!url) return '';
+  try {
+    const pathname = new URL(url).pathname;
+    const filename = pathname.split('/').pop() || '';
+    // Remove size suffixes like _100x, _200x200, etc.
+    return filename.replace(/_\d+x\d*|\?\S+$/g, '');
+  } catch {
+    return url;
+  }
+}
+
 // ============================================
 // Variant Selector
 // ============================================
@@ -170,6 +184,8 @@ export default function ProductDetailFeed() {
     cartItemCount,
     addToCart,
     isInCart,
+    products,
+    selectedProductIndex,
   } = useStore();
 
   const { openCart } = useCartOverlay();
@@ -181,18 +197,52 @@ export default function ProductDetailFeed() {
   const [showDetails, setShowDetails] = useState(false);
   const hasTrackedProductViewRef = useRef<string | null>(null);
 
-  // Initialize options when product changes
+  // Initialize options when product changes - match variant to grid image
   useEffect(() => {
-    if (currentProduct?.options && currentProduct.options.length > 0) {
-      const initial: Record<string, string> = {};
+    if (!currentProduct?.options || currentProduct.options.length === 0) return;
+
+    // Get the grid image from the product summary (what user clicked on)
+    const gridProduct = selectedProductIndex !== null ? products[selectedProductIndex] : null;
+    const gridImageId = gridProduct?.image?.url ? getImageIdentifier(gridProduct.image.url) : '';
+
+    // Find variant whose image matches the grid image
+    let matchingVariant: ProductVariant | null = null;
+    if (gridImageId && currentProduct.variants?.length) {
+      matchingVariant = currentProduct.variants.find((v) => {
+        const variantImageId = getImageIdentifier(v.image?.url);
+        return variantImageId && variantImageId === gridImageId;
+      }) || null;
+    }
+
+    // Initialize options from matching variant, or fall back to first option values
+    const initial: Record<string, string> = {};
+    if (matchingVariant?.selectedOptions) {
+      // Use the matched variant's options (for color, etc.)
+      Object.assign(initial, matchingVariant.selectedOptions);
+    } else {
+      // Fall back to first value for each option
       currentProduct.options.forEach((opt) => {
         if (opt.values && opt.values.length > 0) {
           initial[opt.name] = opt.values[0];
         }
       });
-      setSelectedOptions(initial);
     }
-  }, [currentProduct?.id]);
+
+    // Override size to Medium if available
+    const sizeOption = currentProduct.options.find(
+      (opt) => opt.name.toLowerCase() === 'size'
+    );
+    if (sizeOption?.values) {
+      const mediumValue = sizeOption.values.find(
+        (v) => v.toLowerCase() === 'medium' || v.toLowerCase() === 'm'
+      );
+      if (mediumValue) {
+        initial[sizeOption.name] = mediumValue;
+      }
+    }
+
+    setSelectedOptions(initial);
+  }, [currentProduct?.id, products, selectedProductIndex]);
 
   // Track product view when product loads
   useEffect(() => {

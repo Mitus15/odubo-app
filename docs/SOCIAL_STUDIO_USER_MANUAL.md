@@ -1,17 +1,17 @@
 # Social Studio User Manual
 
-*Last Updated: January 21, 2026*
+*Last Updated: January 24, 2026*
 
 ---
 
 ## Table of Contents
 
 1. [Overview](#overview)
-2. [How Day-Based Scheduling Works](#how-day-based-scheduling-works)
+2. [How Scheduling Works](#how-scheduling-works)
 3. [Getting Started](#getting-started)
 4. [Creating & Scheduling Posts](#creating--scheduling-posts)
 5. [Settings Configuration](#settings-configuration)
-6. [Manual Publishing with Auto Post](#manual-publishing-with-auto-post)
+6. [Publishing Your Posts](#publishing-your-posts)
 7. [Managing Your Content](#managing-your-content)
 8. [Troubleshooting](#troubleshooting)
 
@@ -23,10 +23,9 @@ Social Studio is your campaign management hub for scheduling and publishing soci
 
 ### Key Features
 
-- **Day-Based Scheduling**: Schedule posts by date (not specific times)
+- **Queue & Publish**: Schedule posts by date, publish when you're ready
 - **Multiple Slots Per Day**: Organize multiple posts per day using slot numbers
-- **Automated Publishing**: Daily cron job publishes scheduled posts at midnight
-- **Manual Trigger**: "Auto Post" button for on-demand publishing
+- **Manual Control**: You decide exactly when posts go live
 - **AI Captions**: Gemini AI generates platform-specific captions and hashtags
 - **Multi-Platform**: Instagram, TikTok, YouTube, Facebook, Threads, Twitter, LinkedIn, Pinterest, Bluesky
 - **Campaign Organization**: Group related posts into campaigns
@@ -34,32 +33,34 @@ Social Studio is your campaign management hub for scheduling and publishing soci
 
 ---
 
-## How Day-Based Scheduling Works
+## How Scheduling Works
 
-### The Reality: Midnight Publishing
+### Manual Publishing Model
 
-**Important**: All scheduled posts publish at **midnight** via an automated cron job, regardless of when you schedule them. This is by design to ensure reliable, hands-free operation.
+Social Studio uses a **queue-and-publish** workflow. You schedule posts for specific dates, then manually publish them when you're ready using the **Publish** button.
 
-### Why Day-Based (Not Time-Based)?
+This gives you full control over timing — publish when engagement is highest, when you're online to respond to comments, or whenever feels right.
 
-Since the cron runs once daily at midnight, time-specific scheduling (e.g., "7:00 AM" or "3:00 PM") would be misleading. Instead, Social Studio uses a **day + slot number** system:
+### Day + Slot Organization
 
-- **Date**: Choose which day the post should publish
+Posts are organized by **date** and **slot number**:
+
+- **Date**: Choose which day the post is intended for
 - **Slot Number**: Organize multiple posts on the same day (Slot 1, Slot 2, etc.)
 
 **Example**:
-- Monday, Slot 1 → Posts at midnight Monday
-- Monday, Slot 2 → Also posts at midnight Monday (but labeled as second post)
-- Tuesday, Slot 1 → Posts at midnight Tuesday
+- Monday, Slot 1 → First post planned for Monday
+- Monday, Slot 2 → Second post planned for Monday
+- Tuesday, Slot 1 → First post planned for Tuesday
 
 ### Slot Numbers Explained
 
-Slot numbers are **organizational labels**, not publishing times. They help you:
+Slot numbers are **organizational labels** to help you:
 - Keep track of which post is "first" vs "second" on a given day
 - Preview your daily posting schedule
 - Maintain a consistent posting order
 
-**All slots on the same date publish simultaneously at midnight.**
+**Posts don't publish automatically** — you decide when to hit Publish.
 
 ---
 
@@ -152,7 +153,7 @@ This is where day-based scheduling happens:
    - Pick an available slot or overwrite existing
 3. **Review**: See final preview with date and slot
 
-**Important**: The post will publish at **midnight** on the selected date, regardless of slot number.
+**Note**: The post won't publish automatically — use the **Publish** button when you're ready.
 
 ### Step 4: Review & Publish
 
@@ -185,7 +186,7 @@ Access via **Settings** tab in Social Studio.
 
 **Example**:
 - Set to 3 slots → Create Flow shows Slot 1, Slot 2, Slot 3
-- All 3 slots still publish at midnight (just organizational)
+- All 3 slots are organizational labels for planning your day
 
 #### **Default Timezone**
 
@@ -226,36 +227,37 @@ Access via **Settings** tab in Social Studio.
 
 ---
 
-## Manual Publishing with Auto Post
+## Publishing Your Posts
 
-### What is Auto Post?
+### The Publish Button
 
-The **"Auto Post"** button (⚡ lightning icon) in the Home view lets you **manually trigger** the scheduled post processor. This is the same logic that runs automatically at midnight.
+The **"Publish"** button (⚡ lightning icon) in the Home view is how you send scheduled posts to your social platforms.
 
 ### When to Use It
 
-- **Testing**: Verify scheduled posts will publish correctly
-- **Early Release**: Publish today's posts before midnight
-- **On-Demand**: Process a backlog of due posts
+- **Daily routine**: Check Social Studio, review today's posts, hit Publish
+- **Peak engagement**: Publish when your audience is most active
+- **Real-time response**: Stay online to engage with comments right after posting
+- **Batch processing**: Publish multiple queued posts at once
 
 ### How It Works
 
 1. Go to **Home** view
-2. Click **"⚡ Auto Post"** button (top-right corner)
-3. System queries all posts with:
+2. Click **"⚡ Publish"** button (top-right corner)
+3. System finds all posts with:
    - `status = 'scheduled'`
-   - `scheduled_at <= NOW()`
-4. Each post is sent to Post for Me API
+   - `scheduled_at <= today`
+4. Each post is sent to your connected platforms
 5. Results banner shows:
    - ✅ **X posts published successfully**
    - ❌ **Y posts failed** (if any)
 
 ### Important Notes
 
-- Only processes posts **due now or in the past**
-- Future posts remain untouched
-- Does NOT reschedule or retry automatically
-- Failed posts require manual review (check error logs)
+- Only processes posts scheduled for **today or earlier**
+- Future posts remain in queue untouched
+- Failed posts require manual review (check Library for errors)
+- You control the timing — nothing publishes without you
 
 ---
 
@@ -299,15 +301,15 @@ Visual calendar showing:
 
 ## Troubleshooting
 
-### Posts Not Publishing at Midnight
+### Posts Not Publishing
 
 **Check**:
 1. Post status is `scheduled` (not `draft`)
 2. `scheduled_at` date is today or past
-3. Vercel cron is running (check logs)
+3. Social platform accounts are connected and active
 4. Post for Me API credentials valid
 
-**Solution**: Use **"Auto Post"** button to manually process
+**Solution**: Review error messages in Library view, reconnect accounts if needed
 
 ### AI Captions Not Working
 
@@ -361,7 +363,7 @@ Visual calendar showing:
 1. **Batch Create Posts**: Queue up a week's worth at once
 2. **Use Campaigns**: Group related content for easy tracking
 3. **Preview Calendar**: Check for conflicts or gaps
-4. **Test First**: Use "Auto Post" to verify before going live
+4. **Daily Check-In**: Review Home view and Publish when ready
 
 ### Content Strategy
 
@@ -383,28 +385,28 @@ Visual calendar showing:
 
 ## FAQs
 
-**Q: Can I change the midnight publish time?**
-A: Not currently. The cron is set to midnight. Future updates may add custom times.
+**Q: Do posts publish automatically?**
+A: No. You manually click the Publish button when you're ready. This gives you full control over timing.
 
 **Q: What happens if I schedule 2 posts in Slot 1 on the same day?**
 A: The latest one overwrites the slot. Check Calendar view to avoid conflicts.
 
 **Q: Do slots publish in order (1, 2, 3)?**
-A: No, all slots on the same date publish simultaneously at midnight. Slot numbers are just labels.
+A: All slots for the same date are processed together when you hit Publish. Slot numbers are organizational labels.
 
 **Q: Can I cancel a scheduled post?**
 A: Yes, go to Library → find post → Delete or change status to Draft.
 
-**Q: How do I know if Auto Post worked?**
-A: Check the success/failure banner after clicking. Also review Home view for status updates.
+**Q: How do I know if publishing worked?**
+A: Check the success/failure banner after clicking Publish. Also review Library for post status updates.
 
 **Q: Can I increase slots above 5?**
 A: Currently limited to 5 in UI. Contact developer to adjust if needed.
 
-**Q: What's the difference between "Publish Now" and "Auto Post"?**
-A: 
-- **Publish Now**: Creates new post and publishes immediately
-- **Auto Post**: Processes existing scheduled posts that are due
+**Q: What's the difference between "Post Now" and the Publish button?**
+A:
+- **Post Now** (in Create Flow): Creates AND publishes a new post immediately
+- **Publish button** (on Home): Publishes all scheduled posts that are due
 
 ---
 
@@ -422,6 +424,10 @@ For technical issues or feature requests, contact the development team or review
 
 ## Changelog
 
+**v2.1 (January 2026)**
+- Switched to manual publishing model (removed automatic midnight cron)
+- Full control over when posts go live
+
 **v2.0 (January 2026)**
 - Switched from time-based to day-based scheduling
 - Added configurable slots per day in Settings
@@ -432,7 +438,6 @@ For technical issues or feature requests, contact the development team or review
 **v1.0 (December 2025)**
 - Initial release
 - Time-based scheduling (deprecated)
-- Cron integration
 - Multi-platform support
 
 ---

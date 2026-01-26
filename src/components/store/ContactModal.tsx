@@ -94,7 +94,7 @@ export default function ContactModal({ isOpen, onClose }: ContactModalProps) {
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label="Contact Us">
+        <div className="fixed inset-0 z-[100]" role="dialog" aria-modal="true" aria-label="Contact Us">
           {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -106,16 +106,20 @@ export default function ContactModal({ isOpen, onClose }: ContactModalProps) {
           />
 
           {/* Close button */}
-          <button
+          <motion.button
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
             aria-label="Close"
             onClick={onClose}
-            className="absolute right-4 z-50 text-[#0b0b0b] bg-[#f8f2ea] hover:bg-white rounded-full p-2.5 border border-white/60 shadow-2xl transition-colors"
+            className="absolute right-4 z-[101] p-2 text-stone-400 hover:text-white transition-colors"
             style={{ top: 'calc(1rem + env(safe-area-inset-top, 0px))' }}
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
-          </button>
+          </motion.button>
 
           {/* Modal content */}
           <motion.div

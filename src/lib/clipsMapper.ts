@@ -46,6 +46,15 @@ export function mapClipRow(row: ClipApiRow): ClipItem | null {
     productHandle: row.shopify_product_handle || null,
     parentId: parseParentId(row.related_projects),
     uid: row.uid, // Include UID for MP4 URL generation
+    // Clip identity (Magazine & Bullets)
+    originalFilename: row.original_filename ?? null,
+    clipIndex: row.clip_index ?? null,
+    totalSiblings: row.total_siblings ?? null,
+    // Platform URL backfeed
+    youtubeUrl: row.youtube_url ?? null,
+    youtubeShortsUrl: row.youtube_shorts_url ?? null,
+    tiktokUrl: row.tiktok_url ?? null,
+    instagramReelsUrl: row.instagram_reels_url ?? null,
     // Include engagement data if present
     engagementScore: row.engagement_score,
     viewCount: row.view_count,

@@ -152,12 +152,9 @@ export default function EmailCaptureModal() {
               // Form state
               <div className="p-8">
                 <div className="text-center mb-6">
-                  <h2 className="text-2xl font-semibold text-[#ede8df] mb-2">
-                    Join the Inner Circle
+                  <h2 className="text-2xl font-semibold text-[#ede8df]">
+                    Welcome
                   </h2>
-                  <p className="text-stone-300">
-                    Get early access to drops, exclusive content, and 10% off your first order.
-                  </p>
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
@@ -218,14 +215,10 @@ export default function EmailCaptureModal() {
                         Joining...
                       </span>
                     ) : (
-                      'Get 10% Off'
+                      "Let's go"
                     )}
                   </button>
                 </form>
-
-                <p className="text-xs text-stone-500 text-center mt-4">
-                  No spam, ever. Unsubscribe anytime.
-                </p>
               </div>
             )}
           </motion.div>

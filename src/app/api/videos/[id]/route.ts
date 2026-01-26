@@ -274,6 +274,41 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       console.warn('Stream metadata sync skipped/failed:', e);
     }
 
+    // Update Woda video context for passive learning
+    try {
+      // Get parent_video_id from the current video
+      const videoRows = await queryDatabase('SELECT parent_video_id FROM videos WHERE id = ? LIMIT 1', [id]);
+      const parentVideoId = videoRows?.[0]?.parent_video_id as number | null;
+
+      await executeQuery(
+        `INSERT INTO woda_video_context (video_id, title, description, mood, category, type, artist_name, is_clip, parent_video_id, captured_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+         ON CONFLICT(video_id) DO UPDATE SET
+           title = COALESCE(excluded.title, woda_video_context.title),
+           description = COALESCE(excluded.description, woda_video_context.description),
+           mood = COALESCE(excluded.mood, woda_video_context.mood),
+           category = COALESCE(excluded.category, woda_video_context.category),
+           type = COALESCE(excluded.type, woda_video_context.type),
+           artist_name = COALESCE(excluded.artist_name, woda_video_context.artist_name),
+           is_clip = COALESCE(excluded.is_clip, woda_video_context.is_clip),
+           parent_video_id = COALESCE(excluded.parent_video_id, woda_video_context.parent_video_id),
+           updated_at = datetime('now')`,
+        [
+          id,
+          updatable.title || null,
+          updatable.description || null,
+          updatable.mood || null,
+          updatable.category || null,
+          updatable.type || null,
+          updatable.artist_name || null,
+          parentVideoId ? 1 : 0,
+          parentVideoId,
+        ]
+      );
+    } catch (e) {
+      console.warn('[Woda] Failed to update video context:', e);
+    }
+
     // Audit
     await writeAuditLog(req, user, 'videos.update', String(id), { fields: Object.keys(updatable).filter(k => updatable[k] !== null && updatable[k] !== undefined) });
     return NextResponse.json({ success: true });
