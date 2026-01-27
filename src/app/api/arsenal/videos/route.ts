@@ -9,6 +9,7 @@ export const runtime = 'nodejs';
  */
 export async function GET() {
   try {
+    console.log('[Arsenal] Fetching videos...');
     // Fetch ALL videos for Arsenal management (including unpublished)
     const results = await queryDatabase(
       `SELECT
@@ -52,8 +53,9 @@ export async function GET() {
     return NextResponse.json({ videos: results || [] });
   } catch (error) {
     console.error('[Arsenal] Error fetching videos:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
-      { error: 'Failed to fetch videos' },
+      { error: 'Failed to fetch videos', details: errorMessage },
       { status: 500 }
     );
   }

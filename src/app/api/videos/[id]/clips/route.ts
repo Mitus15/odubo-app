@@ -59,6 +59,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
+    // Always generate thumbnail URL from UID if not provided
+    const posterUrl = thumbnail || `https://videodelivery.net/${uid}/thumbnails/thumbnail.jpg`;
+    const embedUrl = url || `https://iframe.videodelivery.net/${uid}`;
+
     await executeQuery(
       `INSERT INTO videos (
         title, artist_name, uid, url, poster_url, thumbnail, duration,
@@ -73,9 +77,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         title,
         parentArtist,
         uid,
-        url || '',
-        thumbnail || '',
-        thumbnail || '',
+        embedUrl,
+        posterUrl,
+        posterUrl,
         duration || 0,
         (is_public ? 1 : undefined) ?? (parentPublic ? 1 : 0),
         JSON.stringify([`parent_id:${id}`, `style:vertical`]),

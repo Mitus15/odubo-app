@@ -171,8 +171,11 @@ export async function POST(req: NextRequest) {
   const ai_description = body.ai_description ?? null;
   const tagsJson = Array.isArray(body.tags) ? JSON.stringify(body.tags) : (typeof body.tags === 'string' ? body.tags : '[]');
     const url = (body as any).url || (body as any).video_url || '';
-    const poster_url = (body as any).poster_url || (body as any).thumbnail_url || '';
-    const thumbnail = body.thumbnail || '';
+    const uid = (body as any).uid || '';
+    // Auto-generate poster_url from uid if not provided
+    const poster_url = (body as any).poster_url || (body as any).thumbnail_url ||
+      (uid ? `https://videodelivery.net/${uid}/thumbnails/thumbnail.jpg` : '');
+    const thumbnail = body.thumbnail || poster_url;
     const duration = body.duration ?? '';
   const duration_seconds = body.duration_seconds === '' ? null : (body.duration_seconds as any);
     const category = body.category || '';
@@ -184,8 +187,7 @@ export async function POST(req: NextRequest) {
     const related_projects = typeof body.related_projects === 'string' ? body.related_projects : JSON.stringify(body.related_projects || []);
     const status = 'published';
     const publication_status: 'live' | 'archived' = 'live';
-  const thumbnail_timestamp_pct = (body.thumbnail_timestamp_pct === '' ? null : (body.thumbnail_timestamp_pct as any));
-    const uid = (body as any).uid || '';
+    const thumbnail_timestamp_pct = (body.thumbnail_timestamp_pct === '' ? null : (body.thumbnail_timestamp_pct as any));
 
     if (!title || !url) {
       return NextResponse.json(
