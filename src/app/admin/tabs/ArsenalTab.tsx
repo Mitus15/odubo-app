@@ -146,6 +146,26 @@ const Icons = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
     </svg>
   ),
+  trash: (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+    </svg>
+  ),
+  rocket: (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 006.16-12.12A14.98 14.98 0 009.631 8.41m5.96 5.96a14.926 14.926 0 01-5.841 2.58m-.119-8.54a6 6 0 00-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 00-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 01-2.448-2.448 14.9 14.9 0 01.06-.312m-2.24 2.39a4.493 4.493 0 00-1.757 4.306 4.493 4.493 0 004.306-1.758M16.5 9a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
+    </svg>
+  ),
+  moreVertical: (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 12.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 18.75a.75.75 0 110-1.5.75.75 0 010 1.5z" />
+    </svg>
+  ),
+  edit: (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+    </svg>
+  ),
 };
 
 // Platform status indicator
@@ -198,6 +218,8 @@ function VideoCard({
   onSaveTitle,
   onTogglePublish,
   isTogglingPublish,
+  onDelete,
+  onDeploy,
 }: {
   video: Video;
   children?: Video[];
@@ -212,10 +234,14 @@ function VideoCard({
   onSaveTitle?: (id: number) => void;
   onTogglePublish?: (id: number, currentlyPublished: boolean) => void;
   isTogglingPublish?: boolean;
+  onDelete?: (id: number) => void;
+  onDeploy?: (id: number) => void;
 }) {
+  const [showActions, setShowActions] = useState(false);
   const hasChildren = children && children.length > 0;
   const isClip = video.parent_video_id !== null;
   const isPublished = video.is_public === 1 || video.publication_status === 'live';
+  const isDeployed = !!(video.youtube_url || video.youtube_shorts_url || video.tiktok_url || video.instagram_reels_url);
 
   return (
     <div className={`rounded-xl overflow-hidden ${isClip ? 'ml-8' : ''}`}>
@@ -339,6 +365,25 @@ function VideoCard({
           </span>
         )}
 
+        {/* Deploy button - only for published content */}
+        {isPublished && onDeploy && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDeploy(video.id);
+            }}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+              isDeployed
+                ? 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30'
+                : 'bg-[#843c2d]/20 text-[#b2a491] hover:bg-[#843c2d]/30'
+            }`}
+            title={isDeployed ? 'Deployed - Click to manage' : 'Click to deploy to socials'}
+          >
+            {Icons.rocket}
+            <span>{isDeployed ? 'Deployed' : 'Deploy'}</span>
+          </button>
+        )}
+
         {/* Platform statuses */}
         <div className="flex items-center gap-1">
           <PlatformStatus
@@ -360,6 +405,56 @@ function VideoCard({
             platform="Instagram"
           />
         </div>
+
+        {/* Actions menu */}
+        <div className="relative">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowActions(!showActions);
+            }}
+            className="p-2 rounded-lg bg-white/5 text-[#726d6c] hover:bg-white/10 hover:text-[#ede8df] transition-colors"
+          >
+            {Icons.moreVertical}
+          </button>
+          {showActions && (
+            <>
+              {/* Backdrop to close menu */}
+              <div
+                className="fixed inset-0 z-10"
+                onClick={() => setShowActions(false)}
+              />
+              <div className="absolute right-0 top-full mt-1 z-20 bg-[#1a1816] border border-white/10 rounded-xl shadow-xl overflow-hidden min-w-[140px]">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onStartEdit?.(video.id, video.title || '');
+                    setShowActions(false);
+                  }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[#ede8df] hover:bg-white/5 transition-colors"
+                >
+                  {Icons.edit}
+                  <span>Edit Title</span>
+                </button>
+                {onDelete && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (confirm(`Delete "${video.title}"? This cannot be undone.`)) {
+                        onDelete(video.id);
+                      }
+                      setShowActions(false);
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
+                  >
+                    {Icons.trash}
+                    <span>Delete</span>
+                  </button>
+                )}
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -372,12 +467,14 @@ function LibraryView({
   onRefresh,
   selectedIds,
   onSelect,
+  onStartDeploy,
 }: {
   videos: Video[];
   loading: boolean;
   onRefresh: () => void;
   selectedIds: number[];
   onSelect: (id: number) => void;
+  onStartDeploy: (videoId: number) => void;
 }) {
   const [filter, setFilter] = useState<FilterMode>('all');
   const [expandedIds, setExpandedIds] = useState<number[]>([]);
@@ -399,6 +496,22 @@ function LibraryView({
       console.error('Failed to toggle publish status:', error);
     } finally {
       setTogglingPublishId(null);
+    }
+  };
+
+  // Handle delete
+  const handleDelete = async (videoId: number) => {
+    try {
+      const res = await fetch(`/api/videos/${videoId}`, { method: 'DELETE' });
+      if (res.ok) {
+        onRefresh();
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Failed to delete');
+      }
+    } catch (error) {
+      console.error('Failed to delete video:', error);
+      alert('Failed to delete video');
     }
   };
 
@@ -517,6 +630,8 @@ function LibraryView({
                 onSaveTitle={handleSaveTitle}
                 onTogglePublish={handleTogglePublish}
                 isTogglingPublish={togglingPublishId === video.id}
+                onDelete={handleDelete}
+                onDeploy={onStartDeploy}
               />
               {/* Child clips */}
               {expandedIds.includes(video.id) && childrenByParent[video.id]?.map(child => (
@@ -530,6 +645,8 @@ function LibraryView({
                   onStartEdit={handleStartEdit}
                   onEditChange={setEditTitle}
                   onSaveTitle={handleSaveTitle}
+                  onDelete={handleDelete}
+                  onDeploy={onStartDeploy}
                 />
               ))}
             </div>
@@ -1690,6 +1807,11 @@ export default function ArsenalTab() {
             onRefresh={fetchVideos}
             selectedIds={selectedIds}
             onSelect={handleSelect}
+            onStartDeploy={(videoId) => {
+              // Select the video and switch to deploy view
+              setSelectedIds([videoId]);
+              setView('deploy');
+            }}
           />
         )}
         {view === 'upload' && (
