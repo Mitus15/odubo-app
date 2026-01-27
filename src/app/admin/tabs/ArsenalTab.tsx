@@ -47,7 +47,41 @@ interface DeployMetadata {
   firstComment: string;
   hashtags: string[];
   visibility: 'public' | 'unlisted' | 'private';
+  // Platform-specific settings
+  youtube?: {
+    madeForKids: boolean;
+    category: string;
+    asShort: boolean;
+  };
+  tiktok?: {
+    allowDuet: boolean;
+    allowStitch: boolean;
+    allowComments: boolean;
+  };
+  instagram?: {
+    shareToFeed: boolean;
+  };
+  // Include credits in description
+  includeCredits: boolean;
 }
+
+// YouTube category mapping
+const YOUTUBE_CATEGORIES = [
+  { id: '10', name: 'Music' },
+  { id: '24', name: 'Entertainment' },
+  { id: '22', name: 'People & Blogs' },
+  { id: '23', name: 'Comedy' },
+  { id: '27', name: 'Education' },
+  { id: '26', name: 'Howto & Style' },
+  { id: '1', name: 'Film & Animation' },
+] as const;
+
+// Character limits per platform
+const CHAR_LIMITS = {
+  youtube: { title: 100, description: 5000 },
+  tiktok: { caption: 2200 },
+  instagram: { caption: 2200, firstComment: 2200 },
+} as const;
 
 type ViewMode = 'library' | 'upload' | 'feed-order' | 'deploy' | 'sync';
 type FilterMode = 'all' | 'published' | 'unpublished' | 'videos' | 'clips' | 'deployed' | 'not-deployed';
@@ -680,6 +714,68 @@ function generateHashtags(video: Video): string[] {
   return [...new Set(tags)]; // Dedupe
 }
 
+// Character count indicator
+function CharCount({ current, max, label }: { current: number; max: number; label?: string }) {
+  const percentage = (current / max) * 100;
+  const isOver = current > max;
+  const isNear = percentage > 80;
+
+  return (
+    <span className={`text-xs ${
+      isOver ? 'text-red-400' : isNear ? 'text-yellow-400' : 'text-[#726d6c]'
+    }`}>
+      {label && `${label}: `}{current}/{max}
+    </span>
+  );
+}
+
+// Collapsible platform settings section
+function PlatformSettingsSection({
+  platform,
+  icon,
+  isSelected,
+  isExpanded,
+  onToggle,
+  children,
+}: {
+  platform: string;
+  icon: React.ReactNode;
+  isSelected: boolean;
+  isExpanded: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+}) {
+  if (!isSelected) return null;
+
+  return (
+    <div className="border border-white/10 rounded-xl overflow-hidden">
+      <button
+        onClick={onToggle}
+        className="w-full flex items-center justify-between px-4 py-3 bg-white/5 hover:bg-white/10 transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          {icon}
+          <span className="text-sm font-medium text-[#ede8df]">{platform} Settings</span>
+        </div>
+        <svg
+          className={`w-4 h-4 text-[#726d6c] transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      {isExpanded && (
+        <div className="p-4 space-y-4 bg-white/[0.02]">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Deploy View
 function DeployView({
   videos,
@@ -703,6 +799,25 @@ function DeployView({
   const [hashtags, setHashtags] = useState<string[]>([]);
   const [hashtagInput, setHashtagInput] = useState('');
   const [visibility, setVisibility] = useState<'public' | 'unlisted' | 'private'>('public');
+  const [includeCredits, setIncludeCredits] = useState(true);
+
+  // Platform-specific settings
+  const [youtubeSettings, setYoutubeSettings] = useState({
+    madeForKids: false,
+    category: '10', // Music
+    asShort: false,
+  });
+  const [tiktokSettings, setTiktokSettings] = useState({
+    allowDuet: true,
+    allowStitch: true,
+    allowComments: true,
+  });
+  const [instagramSettings, setInstagramSettings] = useState({
+    shareToFeed: true,
+  });
+
+  // Track which platform sections are expanded
+  const [expandedPlatforms, setExpandedPlatforms] = useState<string[]>([]);
 
   // Woda AI state
   const [wodaLoading, setWodaLoading] = useState(false);
@@ -710,6 +825,13 @@ function DeployView({
 
   const selectedVideos = videos.filter(v => selectedIds.includes(v.id));
   const isClip = selectedVideos.some(v => v.parent_video_id !== null);
+
+  // Toggle platform settings expansion
+  const togglePlatformExpand = (platform: string) => {
+    setExpandedPlatforms(prev =>
+      prev.includes(platform) ? prev.filter(p => p !== platform) : [...prev, platform]
+    );
+  };
 
   // Ask Woda to generate metadata
   const askWoda = async () => {
@@ -755,6 +877,7 @@ function DeployView({
   useEffect(() => {
     if (selectedVideos.length > 0) {
       const firstVideo = selectedVideos[0];
+      const videoIsClip = firstVideo.parent_video_id !== null;
 
       // Use saved social metadata or fall back to video metadata
       setTitle(firstVideo.title || '');
@@ -772,6 +895,12 @@ function DeployView({
       } else {
         setHashtags(generateHashtags(firstVideo));
       }
+
+      // Auto-set YouTube Shorts based on clip status
+      setYoutubeSettings(prev => ({
+        ...prev,
+        asShort: videoIsClip,
+      }));
     }
   }, [selectedIds.join(',')]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -806,6 +935,11 @@ function DeployView({
       firstComment,
       hashtags,
       visibility,
+      includeCredits,
+      // Only include platform settings if that platform is selected
+      ...(platforms.includes('youtube') && { youtube: youtubeSettings }),
+      ...(platforms.includes('tiktok') && { tiktok: tiktokSettings }),
+      ...(platforms.includes('instagram') && { instagram: instagramSettings }),
     };
 
     onDeploy(platforms, scheduleAt, metadata, wodaGenerationId);
@@ -896,7 +1030,12 @@ function DeployView({
 
           {/* Title */}
           <div>
-            <label className="text-xs text-[#726d6c] mb-1 block">Title</label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs text-[#726d6c]">Title</label>
+              {platforms.includes('youtube') && (
+                <CharCount current={title.length} max={CHAR_LIMITS.youtube.title} label="YT" />
+              )}
+            </div>
             <input
               type="text"
               value={title}
@@ -908,7 +1047,21 @@ function DeployView({
 
           {/* Description */}
           <div>
-            <label className="text-xs text-[#726d6c] mb-1 block">Description</label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs text-[#726d6c]">Description / Caption</label>
+              <div className="flex gap-3">
+                {platforms.includes('youtube') && (
+                  <CharCount current={description.length} max={CHAR_LIMITS.youtube.description} label="YT" />
+                )}
+                {(platforms.includes('tiktok') || platforms.includes('instagram')) && (
+                  <CharCount
+                    current={description.length + (hashtags.length > 0 ? ' ' + hashtags.map(t => `#${t}`).join(' ') : '').length}
+                    max={CHAR_LIMITS.tiktok.caption}
+                    label="TT/IG"
+                  />
+                )}
+              </div>
+            </div>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -920,7 +1073,12 @@ function DeployView({
 
           {/* First Comment */}
           <div>
-            <label className="text-xs text-[#726d6c] mb-1 block">First Comment (links, credits)</label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs text-[#726d6c]">First Comment (links, credits)</label>
+              {platforms.includes('instagram') && (
+                <CharCount current={firstComment.length} max={CHAR_LIMITS.instagram.firstComment} label="IG" />
+              )}
+            </div>
             <textarea
               value={firstComment}
               onChange={(e) => setFirstComment(e.target.value)}
@@ -969,25 +1127,190 @@ function DeployView({
             </div>
           )}
 
-          {/* Visibility (YouTube) */}
-          {!isClip && platforms.includes('youtube') && (
+          {/* Include Credits Toggle */}
+          <div className="flex items-center justify-between py-2">
             <div>
-              <label className="text-xs text-[#726d6c] mb-2 block">Visibility (YouTube)</label>
-              <div className="flex gap-3">
-                {(['public', 'unlisted', 'private'] as const).map(v => (
+              <label className="text-sm text-[#ede8df]">Include Credits</label>
+              <p className="text-xs text-[#726d6c]">Append video credits to description</p>
+            </div>
+            <button
+              onClick={() => setIncludeCredits(!includeCredits)}
+              className={`w-12 h-6 rounded-full transition-colors ${
+                includeCredits ? 'bg-[#843c2d]' : 'bg-white/10'
+              }`}
+            >
+              <div className={`w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${
+                includeCredits ? 'translate-x-6' : 'translate-x-0.5'
+              }`} />
+            </button>
+          </div>
+
+          {/* Visibility */}
+          <div>
+            <label className="text-xs text-[#726d6c] mb-2 block">Visibility</label>
+            <div className="flex gap-3">
+              {(['public', 'unlisted', 'private'] as const).map(v => (
+                <button
+                  key={v}
+                  onClick={() => setVisibility(v)}
+                  className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
+                    visibility === v
+                      ? 'bg-[#843c2d]/30 text-[#ede8df]'
+                      : 'bg-white/5 text-[#726d6c] hover:bg-white/10'
+                  }`}
+                >
+                  {v.charAt(0).toUpperCase() + v.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Platform-Specific Settings */}
+          {platforms.length > 0 && (
+            <div className="space-y-3 pt-4 border-t border-white/10">
+              <h4 className="text-xs text-[#726d6c] uppercase tracking-wider">Platform Settings</h4>
+
+              {/* YouTube Settings */}
+              <PlatformSettingsSection
+                platform="YouTube"
+                icon={Icons.youtube}
+                isSelected={platforms.includes('youtube')}
+                isExpanded={expandedPlatforms.includes('youtube')}
+                onToggle={() => togglePlatformExpand('youtube')}
+              >
+                {/* Made for Kids */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="text-sm text-[#ede8df]">Made for Kids</label>
+                    <p className="text-xs text-[#726d6c]">Required by YouTube (COPPA)</p>
+                  </div>
                   <button
-                    key={v}
-                    onClick={() => setVisibility(v)}
-                    className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
-                      visibility === v
-                        ? 'bg-[#843c2d]/30 text-[#ede8df]'
-                        : 'bg-white/5 text-[#726d6c] hover:bg-white/10'
+                    onClick={() => setYoutubeSettings(prev => ({ ...prev, madeForKids: !prev.madeForKids }))}
+                    className={`w-12 h-6 rounded-full transition-colors ${
+                      youtubeSettings.madeForKids ? 'bg-[#843c2d]' : 'bg-white/10'
                     }`}
                   >
-                    {v.charAt(0).toUpperCase() + v.slice(1)}
+                    <div className={`w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${
+                      youtubeSettings.madeForKids ? 'translate-x-6' : 'translate-x-0.5'
+                    }`} />
                   </button>
-                ))}
-              </div>
+                </div>
+
+                {/* Category */}
+                <div>
+                  <label className="text-xs text-[#726d6c] mb-1 block">Category</label>
+                  <select
+                    value={youtubeSettings.category}
+                    onChange={(e) => setYoutubeSettings(prev => ({ ...prev, category: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-[#ede8df] text-sm focus:outline-none focus:border-[#843c2d]/50"
+                  >
+                    {YOUTUBE_CATEGORIES.map(cat => (
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Upload as Short */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="text-sm text-[#ede8df]">Upload as Short</label>
+                    <p className="text-xs text-[#726d6c]">
+                      {isClip ? 'Recommended for clips (≤60s, vertical)' : 'For vertical videos ≤60 seconds'}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setYoutubeSettings(prev => ({ ...prev, asShort: !prev.asShort }))}
+                    className={`w-12 h-6 rounded-full transition-colors ${
+                      youtubeSettings.asShort ? 'bg-[#843c2d]' : 'bg-white/10'
+                    }`}
+                  >
+                    <div className={`w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${
+                      youtubeSettings.asShort ? 'translate-x-6' : 'translate-x-0.5'
+                    }`} />
+                  </button>
+                </div>
+              </PlatformSettingsSection>
+
+              {/* TikTok Settings */}
+              <PlatformSettingsSection
+                platform="TikTok"
+                icon={Icons.tiktok}
+                isSelected={platforms.includes('tiktok')}
+                isExpanded={expandedPlatforms.includes('tiktok')}
+                onToggle={() => togglePlatformExpand('tiktok')}
+              >
+                {/* Allow Duet */}
+                <div className="flex items-center justify-between">
+                  <label className="text-sm text-[#ede8df]">Allow Duet</label>
+                  <button
+                    onClick={() => setTiktokSettings(prev => ({ ...prev, allowDuet: !prev.allowDuet }))}
+                    className={`w-12 h-6 rounded-full transition-colors ${
+                      tiktokSettings.allowDuet ? 'bg-[#843c2d]' : 'bg-white/10'
+                    }`}
+                  >
+                    <div className={`w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${
+                      tiktokSettings.allowDuet ? 'translate-x-6' : 'translate-x-0.5'
+                    }`} />
+                  </button>
+                </div>
+
+                {/* Allow Stitch */}
+                <div className="flex items-center justify-between">
+                  <label className="text-sm text-[#ede8df]">Allow Stitch</label>
+                  <button
+                    onClick={() => setTiktokSettings(prev => ({ ...prev, allowStitch: !prev.allowStitch }))}
+                    className={`w-12 h-6 rounded-full transition-colors ${
+                      tiktokSettings.allowStitch ? 'bg-[#843c2d]' : 'bg-white/10'
+                    }`}
+                  >
+                    <div className={`w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${
+                      tiktokSettings.allowStitch ? 'translate-x-6' : 'translate-x-0.5'
+                    }`} />
+                  </button>
+                </div>
+
+                {/* Allow Comments */}
+                <div className="flex items-center justify-between">
+                  <label className="text-sm text-[#ede8df]">Allow Comments</label>
+                  <button
+                    onClick={() => setTiktokSettings(prev => ({ ...prev, allowComments: !prev.allowComments }))}
+                    className={`w-12 h-6 rounded-full transition-colors ${
+                      tiktokSettings.allowComments ? 'bg-[#843c2d]' : 'bg-white/10'
+                    }`}
+                  >
+                    <div className={`w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${
+                      tiktokSettings.allowComments ? 'translate-x-6' : 'translate-x-0.5'
+                    }`} />
+                  </button>
+                </div>
+              </PlatformSettingsSection>
+
+              {/* Instagram Settings */}
+              <PlatformSettingsSection
+                platform="Instagram"
+                icon={Icons.instagram}
+                isSelected={platforms.includes('instagram')}
+                isExpanded={expandedPlatforms.includes('instagram')}
+                onToggle={() => togglePlatformExpand('instagram')}
+              >
+                {/* Share to Feed */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="text-sm text-[#ede8df]">Share to Feed</label>
+                    <p className="text-xs text-[#726d6c]">Also show Reel in your main feed grid</p>
+                  </div>
+                  <button
+                    onClick={() => setInstagramSettings(prev => ({ ...prev, shareToFeed: !prev.shareToFeed }))}
+                    className={`w-12 h-6 rounded-full transition-colors ${
+                      instagramSettings.shareToFeed ? 'bg-[#843c2d]' : 'bg-white/10'
+                    }`}
+                  >
+                    <div className={`w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${
+                      instagramSettings.shareToFeed ? 'translate-x-6' : 'translate-x-0.5'
+                    }`} />
+                  </button>
+                </div>
+              </PlatformSettingsSection>
             </div>
           )}
         </div>
