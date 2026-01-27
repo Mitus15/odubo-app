@@ -928,12 +928,26 @@ function UploadView({
   const [uploadProgress, setUploadProgress] = useState('');
   const [parentVideoId, setParentVideoId] = useState<number | null>(null);
 
+  // Video metadata fields
+  const [videoTitle, setVideoTitle] = useState('');
+  const [videoDescription, setVideoDescription] = useState('');
+  const [videoCredits, setVideoCredits] = useState('');
+  const [videoArtist, setVideoArtist] = useState('ODUBO');
+  const [videoCategory, setVideoCategory] = useState('');
+  const [videoMood, setVideoMood] = useState('');
+  const [videoType, setVideoType] = useState('music-video');
+
   // Get parent videos (non-clips)
   const parentVideos = videos.filter(v => v.parent_video_id === null);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      setSelectedFiles(Array.from(e.target.files));
+      const files = Array.from(e.target.files);
+      setSelectedFiles(files);
+      // Auto-populate title from first file name for videos
+      if (uploadType === 'video' && files.length === 1) {
+        setVideoTitle(files[0].name.replace(/\.[^/.]+$/, ''));
+      }
     }
   };
 
@@ -953,22 +967,32 @@ function UploadView({
       alert('Please select a parent video for clips');
       return;
     }
+    if (uploadType === 'video' && !videoTitle.trim()) {
+      alert('Please enter a title for the video');
+      return;
+    }
 
     setUploading(true);
     setUploadProgress('Starting upload...');
 
     try {
-      // Get parent video artist for clips
+      // Get parent video metadata for clips
       let parentArtist = '';
+      let parentCategory = '';
+      let parentMood = '';
       if (uploadType === 'clip' && parentVideoId) {
         const parent = parentVideos.find(v => v.id === parentVideoId);
         parentArtist = parent?.artist_name || '';
+        parentCategory = parent?.category || '';
+        parentMood = parent?.mood || '';
       }
 
       for (let i = 0; i < selectedFiles.length; i++) {
         const file = selectedFiles[i];
-        // Use filename without extension as title
-        const title = file.name.replace(/\.[^/.]+$/, '');
+        // For clips: use filename. For videos: use entered title (or filename if multiple)
+        const title = uploadType === 'clip'
+          ? file.name.replace(/\.[^/.]+$/, '')
+          : (selectedFiles.length === 1 ? videoTitle : file.name.replace(/\.[^/.]+$/, ''));
 
         setUploadProgress(`Uploading ${i + 1}/${selectedFiles.length}: ${title}`);
 
@@ -996,6 +1020,10 @@ function UploadView({
         const uid = urlData.uid;
 
         // 3. Create video/clip record
+        // Construct Cloudflare Stream URLs
+        const embedUrl = `https://iframe.videodelivery.net/${uid}`;
+        const posterUrl = `https://videodelivery.net/${uid}/thumbnails/thumbnail.jpg`;
+
         if (uploadType === 'clip') {
           await fetch(`/api/videos/${parentVideoId}/clips`, {
             method: 'POST',
@@ -1003,20 +1031,29 @@ function UploadView({
             body: JSON.stringify({
               uid,
               title,
-              artist_name: parentArtist,
+              url: embedUrl,
+              thumbnail: posterUrl,
               is_public: true,
             })
           });
         } else {
-          // Create parent video
+          // Create parent video with full metadata
           await fetch('/api/videos', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               uid,
               title,
-              type: 'music-video',
+              url: embedUrl,
+              poster_url: posterUrl,
+              description: videoDescription,
+              credits: videoCredits,
+              artist_name: videoArtist,
+              category: videoCategory,
+              mood: videoMood,
+              type: videoType,
               is_public: true,
+              publication_status: 'live',
             })
           });
         }
@@ -1024,6 +1061,10 @@ function UploadView({
 
       setUploadProgress('Upload complete!');
       setSelectedFiles([]);
+      // Reset form
+      setVideoTitle('');
+      setVideoDescription('');
+      setVideoCredits('');
       onUploadComplete();
     } catch (error) {
       console.error('Upload failed:', error);
@@ -1095,7 +1136,7 @@ function UploadView({
       {selectedFiles.length > 0 && (
         <div>
           <h3 className="text-sm font-medium text-[#ede8df] mb-3">
-            Order (drag to reorder)
+            {uploadType === 'clip' ? 'Order (drag to reorder)' : 'Selected File'}
           </h3>
           <div className="space-y-2">
             {selectedFiles.map((file, index) => (
@@ -1108,20 +1149,24 @@ function UploadView({
                   <span className="text-sm text-[#ede8df] truncate">{file.name}</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => moveFile(index, 'up')}
-                    disabled={index === 0}
-                    className="p-2 rounded-lg bg-white/5 text-[#726d6c] hover:text-[#ede8df] disabled:opacity-30"
-                  >
-                    ▲
-                  </button>
-                  <button
-                    onClick={() => moveFile(index, 'down')}
-                    disabled={index === selectedFiles.length - 1}
-                    className="p-2 rounded-lg bg-white/5 text-[#726d6c] hover:text-[#ede8df] disabled:opacity-30"
-                  >
-                    ▼
-                  </button>
+                  {uploadType === 'clip' && (
+                    <>
+                      <button
+                        onClick={() => moveFile(index, 'up')}
+                        disabled={index === 0}
+                        className="p-2 rounded-lg bg-white/5 text-[#726d6c] hover:text-[#ede8df] disabled:opacity-30"
+                      >
+                        ▲
+                      </button>
+                      <button
+                        onClick={() => moveFile(index, 'down')}
+                        disabled={index === selectedFiles.length - 1}
+                        className="p-2 rounded-lg bg-white/5 text-[#726d6c] hover:text-[#ede8df] disabled:opacity-30"
+                      >
+                        ▼
+                      </button>
+                    </>
+                  )}
                   <button
                     onClick={() => setSelectedFiles(files => files.filter((_, i) => i !== index))}
                     className="p-2 rounded-lg bg-white/5 text-red-400 hover:text-red-300"
@@ -1131,6 +1176,122 @@ function UploadView({
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Video metadata fields (for videos only) */}
+      {uploadType === 'video' && selectedFiles.length > 0 && (
+        <div className="space-y-4 pt-4 border-t border-white/10">
+          <h3 className="text-sm font-medium text-[#ede8df]">Video Details</h3>
+
+          {/* Title */}
+          <div>
+            <label className="text-xs text-[#726d6c] mb-1 block">Title *</label>
+            <input
+              type="text"
+              value={videoTitle}
+              onChange={(e) => setVideoTitle(e.target.value)}
+              placeholder="Video title"
+              className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-[#ede8df] text-sm focus:outline-none focus:border-[#843c2d]/50"
+            />
+          </div>
+
+          {/* Description */}
+          <div>
+            <label className="text-xs text-[#726d6c] mb-1 block">Description</label>
+            <textarea
+              value={videoDescription}
+              onChange={(e) => setVideoDescription(e.target.value)}
+              placeholder="Video description for YouTube..."
+              rows={3}
+              className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-[#ede8df] text-sm focus:outline-none focus:border-[#843c2d]/50 resize-none"
+            />
+          </div>
+
+          {/* Credits */}
+          <div>
+            <label className="text-xs text-[#726d6c] mb-1 block">Credits</label>
+            <textarea
+              value={videoCredits}
+              onChange={(e) => setVideoCredits(e.target.value)}
+              placeholder="Director: ...&#10;Producer: ...&#10;Cinematography: ..."
+              rows={4}
+              className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-[#ede8df] text-sm focus:outline-none focus:border-[#843c2d]/50 resize-none"
+            />
+          </div>
+
+          {/* Artist Name */}
+          <div>
+            <label className="text-xs text-[#726d6c] mb-1 block">Artist Name</label>
+            <input
+              type="text"
+              value={videoArtist}
+              onChange={(e) => setVideoArtist(e.target.value)}
+              placeholder="ODUBO"
+              className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-[#ede8df] text-sm focus:outline-none focus:border-[#843c2d]/50"
+            />
+          </div>
+
+          {/* Type, Category, Mood in a row */}
+          <div className="grid grid-cols-3 gap-3">
+            {/* Type */}
+            <div>
+              <label className="text-xs text-[#726d6c] mb-1 block">Type</label>
+              <select
+                value={videoType}
+                onChange={(e) => setVideoType(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-[#ede8df] text-sm focus:outline-none focus:border-[#843c2d]/50"
+              >
+                <option value="music-video">Music Video</option>
+                <option value="performance">Performance</option>
+                <option value="behind-the-scenes">Behind The Scenes</option>
+                <option value="documentary">Documentary</option>
+                <option value="interview">Interview</option>
+                <option value="lyric-video">Lyric Video</option>
+                <option value="visualizer">Visualizer</option>
+                <option value="vlog">Vlog</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+
+            {/* Category */}
+            <div>
+              <label className="text-xs text-[#726d6c] mb-1 block">Category</label>
+              <select
+                value={videoCategory}
+                onChange={(e) => setVideoCategory(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-[#ede8df] text-sm focus:outline-none focus:border-[#843c2d]/50"
+              >
+                <option value="">Select...</option>
+                <option value="music">Music</option>
+                <option value="entertainment">Entertainment</option>
+                <option value="education">Education</option>
+                <option value="howto">How-to & Style</option>
+                <option value="people">People & Blogs</option>
+                <option value="film">Film & Animation</option>
+              </select>
+            </div>
+
+            {/* Mood */}
+            <div>
+              <label className="text-xs text-[#726d6c] mb-1 block">Mood</label>
+              <select
+                value={videoMood}
+                onChange={(e) => setVideoMood(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-[#ede8df] text-sm focus:outline-none focus:border-[#843c2d]/50"
+              >
+                <option value="">Select...</option>
+                <option value="energetic">Energetic</option>
+                <option value="chill">Chill</option>
+                <option value="emotional">Emotional</option>
+                <option value="dark">Dark</option>
+                <option value="uplifting">Uplifting</option>
+                <option value="aggressive">Aggressive</option>
+                <option value="romantic">Romantic</option>
+                <option value="melancholic">Melancholic</option>
+              </select>
+            </div>
           </div>
         </div>
       )}
