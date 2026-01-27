@@ -958,28 +958,17 @@ function UploadView({
     setUploadProgress('Starting upload...');
 
     try {
-      // Get parent video details if uploading clips
-      let parentTitle = '';
+      // Get parent video artist for clips
       let parentArtist = '';
-      let existingClipCount = 0;
-
       if (uploadType === 'clip' && parentVideoId) {
         const parent = parentVideos.find(v => v.id === parentVideoId);
-        parentTitle = parent?.title || '';
         parentArtist = parent?.artist_name || '';
-
-        // Count existing clips under this parent
-        const clipsRes = await fetch(`/api/videos/${parentVideoId}/clips`);
-        const clipsData = await clipsRes.json() as { clips: Array<unknown> };
-        existingClipCount = clipsData.clips?.length || 0;
       }
 
       for (let i = 0; i < selectedFiles.length; i++) {
         const file = selectedFiles[i];
-        const clipNumber = existingClipCount + i + 1;
-        const title = uploadType === 'clip'
-          ? `${parentTitle} ${clipNumber}`
-          : file.name.replace(/\.[^/.]+$/, ''); // Remove file extension
+        // Use filename without extension as title
+        const title = file.name.replace(/\.[^/.]+$/, '');
 
         setUploadProgress(`Uploading ${i + 1}/${selectedFiles.length}: ${title}`);
 
@@ -1085,7 +1074,7 @@ function UploadView({
             ))}
           </select>
           <p className="text-xs text-[#726d6c] mt-2">
-            Clips will be named &quot;[Parent Title] 1&quot;, &quot;[Parent Title] 2&quot;, etc.
+            Clips will use their filename as the title
           </p>
         </div>
       )}
