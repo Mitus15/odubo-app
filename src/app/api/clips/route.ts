@@ -14,8 +14,11 @@ export async function GET(req: NextRequest) {
     // Seed for consistent shuffle within a session (optional, for pagination)
     const seed = searchParams.get('seed') || '';
 
+    // Check if manual ordering is requested
+    const useManualOrder = searchParams.get('order') === 'manual';
+
     // Base query fields (including mp4_url for native playback)
-    const baseFields = `v.id, v.title, v.artist_name, v.description, v.url, v.uid, v.mp4_url, v.duration, v.duration_seconds, v.poster_url, v.thumbnail, v.created_at, v.shopify_product_handle, v.related_projects`;
+    const baseFields = `v.id, v.title, v.artist_name, v.description, v.url, v.uid, v.mp4_url, v.duration, v.duration_seconds, v.poster_url, v.thumbnail, v.created_at, v.shopify_product_handle, v.related_projects, v.feed_position`;
 
     // Engagement fields and scoring
     const engagementFields = withEngagement
@@ -37,7 +40,10 @@ export async function GET(req: NextRequest) {
     // For engagement mode, order by score. Otherwise randomize for variety.
     // Use seeded random for consistent pagination within session
     let orderBy: string;
-    if (withEngagement) {
+    if (useManualOrder) {
+      // Manual ordering: use feed_position (nulls last), then created_at
+      orderBy = 'ORDER BY CASE WHEN v.feed_position IS NULL THEN 1 ELSE 0 END, v.feed_position ASC, v.created_at DESC';
+    } else if (withEngagement) {
       orderBy = 'ORDER BY engagement_score DESC, v.created_at DESC, v.id DESC';
     } else if (seed) {
       // Seeded random: hash(id + seed) for consistent order across pages

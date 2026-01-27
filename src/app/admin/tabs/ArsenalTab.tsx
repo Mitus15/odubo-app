@@ -45,8 +45,20 @@ interface DeployMetadata {
   visibility: 'public' | 'unlisted' | 'private';
 }
 
-type ViewMode = 'library' | 'deploy' | 'sync';
+type ViewMode = 'library' | 'upload' | 'feed-order' | 'deploy' | 'sync';
 type FilterMode = 'all' | 'videos' | 'clips' | 'deployed' | 'not-deployed';
+
+interface FeedClip {
+  id: number;
+  uid: string;
+  title: string;
+  poster_url: string | null;
+  duration: string | null;
+  feed_position: number | null;
+  parent_video_id: number | null;
+  artist_name: string | null;
+  created_at: string;
+}
 
 // Icons
 const Icons = {
@@ -108,6 +120,16 @@ const Icons = {
   drag: (
     <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" d="M8 9h.01M8 15h.01M16 9h.01M16 15h.01" />
+    </svg>
+  ),
+  upload: (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+    </svg>
+  ),
+  feedOrder: (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12" />
     </svg>
   ),
 };
@@ -892,6 +914,415 @@ function SyncView({
   );
 }
 
+// Upload View
+function UploadView({
+  onUploadComplete,
+  videos,
+}: {
+  onUploadComplete: () => void;
+  videos: Video[];
+}) {
+  const [uploadType, setUploadType] = useState<'video' | 'clip'>('clip');
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState('');
+  const [parentVideoId, setParentVideoId] = useState<number | null>(null);
+
+  // Get parent videos (non-clips)
+  const parentVideos = videos.filter(v => v.parent_video_id === null);
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      setSelectedFiles(Array.from(e.target.files));
+    }
+  };
+
+  const moveFile = (index: number, direction: 'up' | 'down') => {
+    const newFiles = [...selectedFiles];
+    if (direction === 'up' && index > 0) {
+      [newFiles[index], newFiles[index - 1]] = [newFiles[index - 1], newFiles[index]];
+    } else if (direction === 'down' && index < newFiles.length - 1) {
+      [newFiles[index], newFiles[index + 1]] = [newFiles[index + 1], newFiles[index]];
+    }
+    setSelectedFiles(newFiles);
+  };
+
+  const handleUpload = async () => {
+    if (selectedFiles.length === 0) return;
+    if (uploadType === 'clip' && !parentVideoId) {
+      alert('Please select a parent video for clips');
+      return;
+    }
+
+    setUploading(true);
+    setUploadProgress('Starting upload...');
+
+    try {
+      // Get parent video details if uploading clips
+      let parentTitle = '';
+      let parentArtist = '';
+      let existingClipCount = 0;
+
+      if (uploadType === 'clip' && parentVideoId) {
+        const parent = parentVideos.find(v => v.id === parentVideoId);
+        parentTitle = parent?.title || '';
+        parentArtist = parent?.artist_name || '';
+
+        // Count existing clips under this parent
+        const clipsRes = await fetch(`/api/videos/${parentVideoId}/clips`);
+        const clipsData = await clipsRes.json() as { clips: Array<unknown> };
+        existingClipCount = clipsData.clips?.length || 0;
+      }
+
+      for (let i = 0; i < selectedFiles.length; i++) {
+        const file = selectedFiles[i];
+        const clipNumber = existingClipCount + i + 1;
+        const title = uploadType === 'clip'
+          ? `${parentTitle} ${clipNumber}`
+          : file.name.replace(/\.[^/.]+$/, ''); // Remove file extension
+
+        setUploadProgress(`Uploading ${i + 1}/${selectedFiles.length}: ${title}`);
+
+        // 1. Get Upload URL
+        const urlRes = await fetch('/api/videos/upload-url', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: title })
+        });
+        const urlData = await urlRes.json() as { uploadURL?: string; uid?: string };
+
+        if (!urlData.uploadURL) throw new Error('Failed to get upload URL');
+
+        // 2. Upload to Cloudflare
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const uploadRes = await fetch(urlData.uploadURL, {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!uploadRes.ok) throw new Error('Upload to Cloudflare failed');
+
+        const uid = urlData.uid;
+
+        // 3. Create video/clip record
+        if (uploadType === 'clip') {
+          await fetch(`/api/videos/${parentVideoId}/clips`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              uid,
+              title,
+              artist_name: parentArtist,
+              is_public: true,
+            })
+          });
+        } else {
+          // Create parent video
+          await fetch('/api/videos', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              uid,
+              title,
+              type: 'music-video',
+              is_public: true,
+            })
+          });
+        }
+      }
+
+      setUploadProgress('Upload complete!');
+      setSelectedFiles([]);
+      onUploadComplete();
+    } catch (error) {
+      console.error('Upload failed:', error);
+      setUploadProgress('Upload failed. See console.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Upload type selector */}
+      <div>
+        <h3 className="text-sm font-medium text-[#ede8df] mb-3">What are you uploading?</h3>
+        <div className="flex gap-3">
+          {[
+            { id: 'clip' as const, label: 'Clips', desc: 'Short clips for the feed' },
+            { id: 'video' as const, label: 'Video', desc: 'Parent/long-form video' },
+          ].map(type => (
+            <button
+              key={type.id}
+              onClick={() => setUploadType(type.id)}
+              className={`flex-1 p-4 rounded-xl text-left transition-colors ${
+                uploadType === type.id
+                  ? 'bg-[#843c2d]/20 border border-[#843c2d]/50'
+                  : 'bg-white/5 border border-transparent hover:bg-white/10'
+              }`}
+            >
+              <div className="text-sm font-medium text-[#ede8df]">{type.label}</div>
+              <div className="text-xs text-[#726d6c] mt-1">{type.desc}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Parent video selector (for clips) */}
+      {uploadType === 'clip' && (
+        <div>
+          <h3 className="text-sm font-medium text-[#ede8df] mb-3">Parent Video</h3>
+          <select
+            value={parentVideoId || ''}
+            onChange={(e) => setParentVideoId(e.target.value ? Number(e.target.value) : null)}
+            className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-[#ede8df] text-sm focus:outline-none focus:border-[#843c2d]/50"
+          >
+            <option value="">Select parent video...</option>
+            {parentVideos.map(v => (
+              <option key={v.id} value={v.id}>{v.title}</option>
+            ))}
+          </select>
+          <p className="text-xs text-[#726d6c] mt-2">
+            Clips will be named &quot;[Parent Title] 1&quot;, &quot;[Parent Title] 2&quot;, etc.
+          </p>
+        </div>
+      )}
+
+      {/* File selector */}
+      <div>
+        <h3 className="text-sm font-medium text-[#ede8df] mb-3">Select Files</h3>
+        <input
+          type="file"
+          multiple
+          accept="video/*"
+          onChange={handleFileSelect}
+          className="block w-full text-sm text-[#726d6c] file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#843c2d]/20 file:text-[#ede8df] hover:file:bg-[#843c2d]/30"
+        />
+      </div>
+
+      {/* Selected files list */}
+      {selectedFiles.length > 0 && (
+        <div>
+          <h3 className="text-sm font-medium text-[#ede8df] mb-3">
+            Order (drag to reorder)
+          </h3>
+          <div className="space-y-2">
+            {selectedFiles.map((file, index) => (
+              <div
+                key={index}
+                className="flex items-center justify-between p-3 rounded-xl bg-white/5"
+              >
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <span className="text-[#726d6c] text-sm w-6">{index + 1}.</span>
+                  <span className="text-sm text-[#ede8df] truncate">{file.name}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => moveFile(index, 'up')}
+                    disabled={index === 0}
+                    className="p-2 rounded-lg bg-white/5 text-[#726d6c] hover:text-[#ede8df] disabled:opacity-30"
+                  >
+                    ▲
+                  </button>
+                  <button
+                    onClick={() => moveFile(index, 'down')}
+                    disabled={index === selectedFiles.length - 1}
+                    className="p-2 rounded-lg bg-white/5 text-[#726d6c] hover:text-[#ede8df] disabled:opacity-30"
+                  >
+                    ▼
+                  </button>
+                  <button
+                    onClick={() => setSelectedFiles(files => files.filter((_, i) => i !== index))}
+                    className="p-2 rounded-lg bg-white/5 text-red-400 hover:text-red-300"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Upload progress */}
+      {uploading && (
+        <div className="p-4 rounded-xl bg-[#843c2d]/10 text-[#ede8df] text-sm">
+          {uploadProgress}
+        </div>
+      )}
+
+      {/* Upload button */}
+      <button
+        onClick={handleUpload}
+        disabled={uploading || selectedFiles.length === 0 || (uploadType === 'clip' && !parentVideoId)}
+        className="w-full py-3 rounded-xl bg-gradient-to-r from-[#843c2d] to-[#6d3224] text-white font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90"
+      >
+        {uploading ? 'Uploading...' : `Upload ${selectedFiles.length} ${uploadType === 'clip' ? 'Clips' : 'Videos'}`}
+      </button>
+    </div>
+  );
+}
+
+// Feed Order View
+function FeedOrderView() {
+  const [clips, setClips] = useState<FeedClip[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [hasChanges, setHasChanges] = useState(false);
+  const dragIndex = { current: null as number | null };
+
+  const fetchClips = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/arsenal/feed-order');
+      const data = await res.json() as { clips: FeedClip[] };
+      setClips(data.clips || []);
+    } catch (error) {
+      console.error('Failed to fetch clips:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchClips();
+  }, []);
+
+  const moveClip = (index: number, direction: 'up' | 'down') => {
+    const newClips = [...clips];
+    if (direction === 'up' && index > 0) {
+      [newClips[index], newClips[index - 1]] = [newClips[index - 1], newClips[index]];
+    } else if (direction === 'down' && index < newClips.length - 1) {
+      [newClips[index], newClips[index + 1]] = [newClips[index + 1], newClips[index]];
+    } else {
+      return;
+    }
+    setClips(newClips);
+    setHasChanges(true);
+  };
+
+  const reorderClips = (from: number, to: number) => {
+    if (from === to) return;
+    const newClips = [...clips];
+    const [moved] = newClips.splice(from, 1);
+    newClips.splice(to, 0, moved);
+    setClips(newClips);
+    setHasChanges(true);
+  };
+
+  const saveOrder = async () => {
+    setSaving(true);
+    try {
+      const payload = clips.map((clip, idx) => ({ id: clip.id, position: idx + 1 }));
+      await fetch('/api/arsenal/feed-order', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clips: payload })
+      });
+      setHasChanges(false);
+    } catch (error) {
+      console.error('Failed to save order:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-sm font-medium text-[#ede8df]">Feed Order</h3>
+          <p className="text-xs text-[#726d6c] mt-1">
+            Drag clips to set their order in the public feed
+          </p>
+        </div>
+        <button
+          onClick={saveOrder}
+          disabled={!hasChanges || saving}
+          className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+            hasChanges
+              ? 'bg-[#843c2d] text-white hover:bg-[#6d3224]'
+              : 'bg-white/5 text-[#726d6c]'
+          } disabled:opacity-50`}
+        >
+          {saving ? 'Saving...' : hasChanges ? 'Save Order' : 'No Changes'}
+        </button>
+      </div>
+
+      {/* Clips list */}
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <div className="w-8 h-8 border-2 border-[#502d26]/30 border-t-[#843c2d] rounded-full animate-spin" />
+        </div>
+      ) : clips.length === 0 ? (
+        <div className="text-center py-12 text-[#726d6c]">
+          No clips found in the feed.
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {clips.map((clip, index) => (
+            <div
+              key={clip.id}
+              draggable
+              onDragStart={() => { dragIndex.current = index; }}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={() => {
+                const from = dragIndex.current;
+                dragIndex.current = null;
+                if (from !== null) reorderClips(from, index);
+              }}
+              className="flex items-center gap-4 p-3 rounded-xl bg-white/5 hover:bg-white/10 cursor-move transition-colors"
+            >
+              {/* Position number */}
+              <div className="w-8 h-8 rounded-lg bg-[#843c2d]/20 flex items-center justify-center text-sm font-medium text-[#ede8df]">
+                {index + 1}
+              </div>
+
+              {/* Thumbnail */}
+              <div className="w-16 h-9 rounded-lg bg-[#0d0c0a] overflow-hidden flex-shrink-0">
+                {clip.poster_url && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={clip.poster_url} alt="" className="w-full h-full object-cover" />
+                )}
+              </div>
+
+              {/* Info */}
+              <div className="flex-1 min-w-0">
+                <div className="text-sm text-[#ede8df] truncate">{clip.title}</div>
+                <div className="text-xs text-[#726d6c]">
+                  {clip.artist_name && `${clip.artist_name} • `}
+                  {clip.duration || 'Processing...'}
+                </div>
+              </div>
+
+              {/* Move buttons */}
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => moveClip(index, 'up')}
+                  disabled={index === 0}
+                  className="p-2 rounded-lg bg-white/5 text-[#726d6c] hover:text-[#ede8df] disabled:opacity-30"
+                >
+                  ▲
+                </button>
+                <button
+                  onClick={() => moveClip(index, 'down')}
+                  disabled={index === clips.length - 1}
+                  className="p-2 rounded-lg bg-white/5 text-[#726d6c] hover:text-[#ede8df] disabled:opacity-30"
+                >
+                  ▼
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Main Arsenal Tab
 export default function ArsenalTab() {
   const [view, setView] = useState<ViewMode>('library');
@@ -998,9 +1429,11 @@ export default function ArsenalTab() {
       </div>
 
       {/* View tabs */}
-      <div className="flex items-center gap-2 mb-6">
+      <div className="flex items-center gap-2 mb-6 overflow-x-auto">
         {[
           { id: 'library' as ViewMode, label: 'Library', icon: Icons.library },
+          { id: 'upload' as ViewMode, label: 'Upload', icon: Icons.upload },
+          { id: 'feed-order' as ViewMode, label: 'Feed Order', icon: Icons.feedOrder },
           { id: 'deploy' as ViewMode, label: 'Deploy', icon: Icons.deploy },
           { id: 'sync' as ViewMode, label: 'Sync', icon: Icons.sync },
         ].map(tab => (
@@ -1034,6 +1467,18 @@ export default function ArsenalTab() {
             selectedIds={selectedIds}
             onSelect={handleSelect}
           />
+        )}
+        {view === 'upload' && (
+          <UploadView
+            videos={videos}
+            onUploadComplete={() => {
+              fetchVideos();
+              setView('library');
+            }}
+          />
+        )}
+        {view === 'feed-order' && (
+          <FeedOrderView />
         )}
         {view === 'deploy' && (
           <DeployView
