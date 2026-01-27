@@ -98,6 +98,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [isLoadingProducts, setIsLoadingProducts] = useState(false);
   const [hasMoreProducts, setHasMoreProducts] = useState(true);
   const endCursorRef = useRef<string | null>(null);
+  const loadingRef = useRef(false); // Ref-based guard to prevent race conditions
 
   // Product detail
   const [currentProduct, setCurrentProduct] = useState<Product | null>(null);
@@ -178,10 +179,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   // ============================================
 
   const loadProducts = useCallback(async (reset: boolean = false) => {
-    if (isLoadingProducts) return;
-    
+    // Use ref-based guard to prevent race conditions between effects
+    // State-based guard (isLoadingProducts) can be stale in effect closures
+    if (loadingRef.current) return;
+    loadingRef.current = true;
+
     setIsLoadingProducts(true);
-    
+
     try {
       const cursor = reset ? null : endCursorRef.current;
       const response = await fetchProducts({
@@ -190,21 +194,27 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         sort,
         filters,
       });
-      
+
       if (reset) {
         setProducts(response.products);
       } else {
-        setProducts(prev => [...prev, ...response.products]);
+        // Deduplicate by product id to prevent duplicates from race conditions
+        setProducts(prev => {
+          const existingIds = new Set(prev.map(p => p.id));
+          const newProducts = response.products.filter(p => !existingIds.has(p.id));
+          return [...prev, ...newProducts];
+        });
       }
-      
+
       endCursorRef.current = response.pageInfo.endCursor;
       setHasMoreProducts(response.pageInfo.hasNextPage);
     } catch (error) {
       console.error('Failed to load products:', error);
     } finally {
+      loadingRef.current = false;
       setIsLoadingProducts(false);
     }
-  }, [isLoadingProducts, sort, filters]);
+  }, [sort, filters]);
 
   const loadMoreProducts = useCallback(async () => {
     if (!hasMoreProducts || isLoadingProducts) return;

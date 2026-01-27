@@ -9,6 +9,7 @@ export const runtime = 'nodejs';
  */
 export async function GET() {
   try {
+    // Fetch ALL videos for Arsenal management (including unpublished)
     const results = await queryDatabase(
       `SELECT
         id,
@@ -25,6 +26,8 @@ export async function GET() {
         mood,
         type,
         artist_name,
+        is_public,
+        publication_status,
         youtube_url,
         youtube_shorts_url,
         tiktok_url,
@@ -37,7 +40,7 @@ export async function GET() {
         social_visibility,
         created_at
       FROM videos
-      WHERE publication_status = 'live' OR status = 'published'
+      WHERE COALESCE(status, 'published') != 'archived'
       ORDER BY
         CASE WHEN parent_video_id IS NULL THEN 0 ELSE 1 END,
         parent_video_id,
