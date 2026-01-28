@@ -200,7 +200,83 @@ const Icons = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
     </svg>
   ),
+  play: (
+    <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+      <path d="M8 5v14l11-7z" />
+    </svg>
+  ),
+  close: (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+    </svg>
+  ),
 };
+
+// Video Preview Modal
+function VideoPreviewModal({
+  video,
+  onClose,
+}: {
+  video: Video;
+  onClose: () => void;
+}) {
+  // Build the video URL - either HLS or iframe embed
+  const videoUrl = video.uid
+    ? `https://customer-tpkm273r1u0s40no.cloudflarestream.com/${video.uid}/manifest/video.m3u8`
+    : null;
+  const iframeUrl = video.uid
+    ? `https://iframe.videodelivery.net/${video.uid}?autoplay=true`
+    : null;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="relative w-full max-w-4xl mx-4"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Close button */}
+        <button
+          onClick={onClose}
+          className="absolute -top-12 right-0 p-2 text-white/70 hover:text-white transition-colors"
+        >
+          {Icons.close}
+        </button>
+
+        {/* Video container */}
+        <div className="relative bg-black rounded-xl overflow-hidden aspect-video">
+          {iframeUrl ? (
+            <iframe
+              src={iframeUrl}
+              className="absolute inset-0 w-full h-full"
+              allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture"
+              allowFullScreen
+            />
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center text-[#726d6c]">
+              No video available
+            </div>
+          )}
+        </div>
+
+        {/* Video info */}
+        <div className="mt-4 p-4 bg-[#1a1816] rounded-xl">
+          <h3 className="text-lg font-medium text-[#ede8df]">{video.title}</h3>
+          {video.description && (
+            <p className="mt-2 text-sm text-[#726d6c] line-clamp-2">{video.description}</p>
+          )}
+          <div className="mt-3 flex items-center gap-4 text-xs text-[#726d6c]">
+            {video.duration && <span>Duration: {video.duration}</span>}
+            {video.type && <span className="capitalize">{video.type}</span>}
+            {video.artist_name && <span>{video.artist_name}</span>}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // Platform status indicator
 function PlatformStatus({
@@ -819,6 +895,9 @@ function DeployView({
   // Track which platform sections are expanded
   const [expandedPlatforms, setExpandedPlatforms] = useState<string[]>([]);
 
+  // Video preview state
+  const [previewVideo, setPreviewVideo] = useState<Video | null>(null);
+
   // Woda AI state
   const [wodaLoading, setWodaLoading] = useState(false);
   const [wodaGenerationId, setWodaGenerationId] = useState<number | null>(null);
@@ -958,19 +1037,46 @@ function DeployView({
             Select content from the Library to deploy
           </div>
         ) : (
-          <div className="space-y-2 max-h-32 overflow-y-auto">
+          <div className="space-y-2 max-h-48 overflow-y-auto">
             {selectedVideos.map(v => (
-              <div key={v.id} className="p-3 rounded-lg bg-white/5 flex items-center gap-3">
-                <div className="w-10 h-6 rounded bg-[#0d0c0a] overflow-hidden">
+              <div key={v.id} className="p-3 rounded-lg bg-white/5 flex items-center gap-3 group">
+                {/* Thumbnail with play overlay */}
+                <button
+                  onClick={() => setPreviewVideo(v)}
+                  className="relative w-16 h-10 rounded bg-[#0d0c0a] overflow-hidden flex-shrink-0 group/thumb"
+                >
                   {v.poster_url && (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={v.poster_url} alt="" className="w-full h-full object-cover" />
                   )}
+                  {/* Play overlay */}
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/thumb:opacity-100 transition-opacity flex items-center justify-center">
+                    <div className="w-6 h-6 rounded-full bg-white/90 flex items-center justify-center">
+                      <svg className="w-3 h-3 text-black ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M8 5v14l11-7z" />
+                      </svg>
+                    </div>
+                  </div>
+                </button>
+                <div className="flex-1 min-w-0">
+                  <span className="text-sm text-[#ede8df] truncate block">{v.title}</span>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    {v.clip_index && (
+                      <span className="text-xs text-[#726d6c]">Clip {v.clip_index}</span>
+                    )}
+                    {v.duration && (
+                      <span className="text-xs text-[#726d6c]">{v.duration}</span>
+                    )}
+                  </div>
                 </div>
-                <span className="text-sm text-[#ede8df] truncate flex-1">{v.title}</span>
-                {v.clip_index && (
-                  <span className="text-xs text-[#726d6c]">Clip {v.clip_index}</span>
-                )}
+                {/* Preview button */}
+                <button
+                  onClick={() => setPreviewVideo(v)}
+                  className="px-2 py-1 text-xs text-[#726d6c] hover:text-[#ede8df] hover:bg-white/10 rounded transition-colors"
+                  title="Preview video"
+                >
+                  Watch
+                </button>
               </div>
             ))}
           </div>
@@ -1353,6 +1459,14 @@ function DeployView({
           `Load Magazine (${selectedVideos.length} items)`
         )}
       </button>
+
+      {/* Video Preview Modal */}
+      {previewVideo && (
+        <VideoPreviewModal
+          video={previewVideo}
+          onClose={() => setPreviewVideo(null)}
+        />
+      )}
     </div>
   );
 }
