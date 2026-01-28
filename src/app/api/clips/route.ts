@@ -14,11 +14,11 @@ export async function GET(req: NextRequest) {
     // Seed for consistent shuffle within a session (optional, for pagination)
     const seed = searchParams.get('seed') || '';
 
-    // Check if manual ordering is requested
-    const useManualOrder = searchParams.get('order') === 'manual';
+    // IMMUTABLE PRINCIPLE: Clips are ALWAYS randomized. No manual ordering.
+    // See /docs/my_thoughts/admin.md for rationale. Do not add manual ordering without owner consultation.
 
     // Base query fields (including mp4_url for native playback)
-    const baseFields = `v.id, v.title, v.artist_name, v.description, v.url, v.uid, v.mp4_url, v.duration, v.duration_seconds, v.poster_url, v.thumbnail, v.created_at, v.shopify_product_handle, v.related_projects, v.feed_position`;
+    const baseFields = `v.id, v.title, v.artist_name, v.description, v.url, v.uid, v.mp4_url, v.duration, v.duration_seconds, v.poster_url, v.thumbnail, v.created_at, v.shopify_product_handle, v.related_projects`;
 
     // Engagement fields and scoring
     const engagementFields = withEngagement

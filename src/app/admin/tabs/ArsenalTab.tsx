@@ -1037,48 +1037,66 @@ function DeployView({
             Select content from the Library to deploy
           </div>
         ) : (
-          <div className="space-y-2 max-h-48 overflow-y-auto">
-            {selectedVideos.map(v => (
-              <div key={v.id} className="p-3 rounded-lg bg-white/5 flex items-center gap-3 group">
-                {/* Thumbnail with play overlay */}
-                <button
-                  onClick={() => setPreviewVideo(v)}
-                  className="relative w-16 h-10 rounded bg-[#0d0c0a] overflow-hidden flex-shrink-0 group/thumb"
-                >
-                  {v.poster_url && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={v.poster_url} alt="" className="w-full h-full object-cover" />
-                  )}
-                  {/* Play overlay */}
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/thumb:opacity-100 transition-opacity flex items-center justify-center">
-                    <div className="w-6 h-6 rounded-full bg-white/90 flex items-center justify-center">
-                      <svg className="w-3 h-3 text-black ml-0.5" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M8 5v14l11-7z" />
-                      </svg>
-                    </div>
-                  </div>
-                </button>
-                <div className="flex-1 min-w-0">
-                  <span className="text-sm text-[#ede8df] truncate block">{v.title}</span>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    {v.clip_index && (
-                      <span className="text-xs text-[#726d6c]">Clip {v.clip_index}</span>
-                    )}
-                    {v.duration && (
-                      <span className="text-xs text-[#726d6c]">{v.duration}</span>
-                    )}
-                  </div>
+          <div className="space-y-2">
+            {/* Collapsible video preview */}
+            {previewVideo && (
+              <div className="rounded-xl bg-[#0d0c0a] overflow-hidden">
+                <div className="aspect-video relative">
+                  <iframe
+                    src={`https://iframe.videodelivery.net/${previewVideo.uid}?autoplay=true`}
+                    className="absolute inset-0 w-full h-full"
+                    allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture"
+                    allowFullScreen
+                  />
                 </div>
-                {/* Preview button */}
-                <button
-                  onClick={() => setPreviewVideo(v)}
-                  className="px-2 py-1 text-xs text-[#726d6c] hover:text-[#ede8df] hover:bg-white/10 rounded transition-colors"
-                  title="Preview video"
-                >
-                  Watch
-                </button>
+                <div className="p-3 flex items-center justify-between bg-white/5">
+                  <span className="text-sm text-[#ede8df] truncate">{previewVideo.title}</span>
+                  <button
+                    onClick={() => setPreviewVideo(null)}
+                    className="text-xs text-[#726d6c] hover:text-[#ede8df] transition-colors"
+                  >
+                    Close
+                  </button>
+                </div>
               </div>
-            ))}
+            )}
+
+            {/* Video list */}
+            <div className={`space-y-1 ${previewVideo ? 'max-h-24' : 'max-h-32'} overflow-y-auto`}>
+              {selectedVideos.map(v => (
+                <button
+                  key={v.id}
+                  onClick={() => setPreviewVideo(previewVideo?.id === v.id ? null : v)}
+                  className={`w-full p-2 rounded-lg flex items-center gap-3 transition-colors ${
+                    previewVideo?.id === v.id
+                      ? 'bg-[#843c2d]/20'
+                      : 'bg-white/5 hover:bg-white/10'
+                  }`}
+                >
+                  <div className="w-10 h-6 rounded bg-[#0d0c0a] overflow-hidden flex-shrink-0">
+                    {v.poster_url && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={v.poster_url} alt="" className="w-full h-full object-cover" />
+                    )}
+                  </div>
+                  <span className="text-sm text-[#ede8df] truncate flex-1 text-left">{v.title}</span>
+                  {v.clip_index && (
+                    <span className="text-xs text-[#726d6c]">#{v.clip_index}</span>
+                  )}
+                  <svg
+                    className={`w-3 h-3 text-[#726d6c] transition-transform ${
+                      previewVideo?.id === v.id ? 'rotate-180' : ''
+                    }`}
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+              ))}
+            </div>
           </div>
         )}
       </div>
@@ -1460,13 +1478,6 @@ function DeployView({
         )}
       </button>
 
-      {/* Video Preview Modal */}
-      {previewVideo && (
-        <VideoPreviewModal
-          video={previewVideo}
-          onClose={() => setPreviewVideo(null)}
-        />
-      )}
     </div>
   );
 }
