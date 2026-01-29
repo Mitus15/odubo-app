@@ -2607,6 +2607,11 @@ export default function ArsenalTab() {
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
   const [syncLog, setSyncLog] = useState<string[]>([]);
 
+  // Homepage mode toggle
+  const [homepageMode, setHomepageMode] = useState<'auto' | 'clips' | 'music'>('auto');
+  const [clipCount, setClipCount] = useState(0);
+  const [homepageModeLoading, setHomepageModeLoading] = useState(false);
+
   // Fetch videos
   const fetchVideos = useCallback(async () => {
     setLoading(true);
@@ -2622,9 +2627,43 @@ export default function ArsenalTab() {
     }
   }, []);
 
+  // Fetch homepage mode
+  const fetchHomepageMode = useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/homepage-mode');
+      if (res.ok) {
+        const data = await res.json() as { mode: string; clipCount: number };
+        setHomepageMode(data.mode as 'auto' | 'clips' | 'music');
+        setClipCount(data.clipCount || 0);
+      }
+    } catch (error) {
+      console.error('Error fetching homepage mode:', error);
+    }
+  }, []);
+
+  // Toggle homepage mode
+  const handleHomepageModeChange = async (newMode: 'auto' | 'clips' | 'music') => {
+    setHomepageModeLoading(true);
+    try {
+      const res = await fetch('/api/admin/homepage-mode', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: newMode }),
+      });
+      if (res.ok) {
+        setHomepageMode(newMode);
+      }
+    } catch (error) {
+      console.error('Error setting homepage mode:', error);
+    } finally {
+      setHomepageModeLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchVideos();
-  }, [fetchVideos]);
+    fetchHomepageMode();
+  }, [fetchVideos, fetchHomepageMode]);
 
   // Toggle selection
   const handleSelect = (id: number) => {
@@ -2695,10 +2734,35 @@ export default function ArsenalTab() {
     <div className="p-6 max-w-6xl mx-auto">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-[#ede8df]">Content Arsenal</h1>
-        <p className="text-sm text-[#726d6c] mt-1">
-          Magazine & Bullets - Your digital kingdom command center
-        </p>
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="text-2xl font-bold text-[#ede8df]">Content Arsenal</h1>
+            <p className="text-sm text-[#726d6c] mt-1">
+              Magazine & Bullets - Your digital kingdom command center
+            </p>
+          </div>
+
+          {/* Homepage Mode Toggle */}
+          <div className="flex items-center gap-3 bg-white/5 rounded-xl px-4 py-2.5 border border-white/10">
+            <span className="text-xs text-[#726d6c] uppercase tracking-wider">Homepage:</span>
+            <div className="flex gap-1">
+              {(['auto', 'clips', 'music'] as const).map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => handleHomepageModeChange(mode)}
+                  disabled={homepageModeLoading}
+                  className={`px-3 py-1 text-xs font-medium rounded-lg transition-colors ${
+                    homepageMode === mode
+                      ? 'bg-[#843c2d] text-white'
+                      : 'bg-white/5 text-[#726d6c] hover:bg-white/10 hover:text-[#ede8df]'
+                  } ${homepageModeLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  {mode === 'auto' ? `Auto (${clipCount > 0 ? 'Clips' : 'Music'})` : mode.charAt(0).toUpperCase() + mode.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* View tabs */}

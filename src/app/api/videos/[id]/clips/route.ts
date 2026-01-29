@@ -102,6 +102,18 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       console.warn('Could not enable MP4 downloads for clip:', uid, mp4Error);
     }
 
+    // Reset homepage mode to 'auto' so clips show up automatically
+    try {
+      await executeQuery(
+        `INSERT INTO site_settings (key, value, updated_at)
+         VALUES ('homepage_mode', 'auto', datetime('now'))
+         ON CONFLICT(key) DO UPDATE SET value = 'auto', updated_at = datetime('now')`,
+        []
+      );
+    } catch {
+      // Non-fatal: table might not exist yet
+    }
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error creating clip:', error);

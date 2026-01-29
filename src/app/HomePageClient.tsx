@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import ClipsFeed from '@/components/clips/ClipsFeed';
 import SingleVideoPlayer from '@/components/clips/SingleVideoPlayer';
+import TracksFeed from '@/components/music/TracksFeed';
 import ClipsErrorBoundary from '@/components/clips/ClipsErrorBoundary';
 import ExpandableLogoMenu from '@/components/clips/ExpandableLogoMenu';
 import FilmGrain from '@/components/ui/FilmGrain';
@@ -15,6 +16,7 @@ import { useUnifiedMedia } from '@/contexts/UnifiedMediaContext';
 import { usePageAnalytics } from '@/hooks/usePageAnalytics';
 import { useAnalyticsSafe } from '@/contexts/AnalyticsContext';
 import type { ClipItem } from '@/types/clips';
+import type { Track, Album } from '@/types/music';
 
 // Modal types that can be opened via URL
 export type DefaultModal = 'store' | 'moments' | 'media' | 'links' | null;
@@ -27,13 +29,20 @@ interface VerseOfTheDay {
 
 interface HomePageClientProps {
   verseOfTheDay: VerseOfTheDay;
+  homepageMode?: 'clips' | 'music';
   initialClipId?: number | null;
   initialClips?: ClipItem[];
   defaultModal?: DefaultModal;
 }
 
-export default function HomePageClient({ verseOfTheDay, initialClipId, initialClips, defaultModal }: HomePageClientProps) {
-  // No header - clips go edge to edge
+export default function HomePageClient({
+  verseOfTheDay,
+  homepageMode = 'clips',
+  initialClipId,
+  initialClips,
+  defaultModal
+}: HomePageClientProps) {
+  // No header - content goes edge to edge
   const HEADER_HEIGHT = 0;
   const INTRO_DURATION = 4000; // Show verse for 4 seconds before collapsing
 
@@ -45,10 +54,12 @@ export default function HomePageClient({ verseOfTheDay, initialClipId, initialCl
   const [phase, setPhase] = useState<'intro' | 'collapsed' | 'expanded'>(defaultModal ? 'collapsed' : 'intro');
   const [hasInteracted, setHasInteracted] = useState(!!defaultModal);
 
-  // Active clip for global menu
+  // Active content for global menu (clips or tracks)
   const [activeClip, setActiveClip] = useState<ClipItem | null>(null);
+  const [activeTrack, setActiveTrack] = useState<Track | null>(null);
+  const [activeAlbum, setActiveAlbum] = useState<Album | null>(null);
 
-  // Clips data for SingleVideoPlayer
+  // Clips data for SingleVideoPlayer (only used in clips mode)
   const [clips, setClips] = useState<ClipItem[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [videoReady, setVideoReady] = useState(false);
@@ -64,13 +75,18 @@ export default function HomePageClient({ verseOfTheDay, initialClipId, initialCl
   const { openStore, view: storeView, closeStore } = useStore();
   const { openHub, modalStack, closeAll: closeMedia } = useUnifiedMedia();
 
-  // Page analytics tracking - tracks page views, scroll depth, time on page
-  usePageAnalytics({ title: defaultModal ? `${defaultModal.charAt(0).toUpperCase() + defaultModal.slice(1)} | Odubo Studio` : 'Clips | Odubo Studio' });
+  // Page analytics tracking
+  const pageTitle = homepageMode === 'clips' ? 'Clips' : 'Music';
+  usePageAnalytics({
+    title: defaultModal
+      ? `${defaultModal.charAt(0).toUpperCase() + defaultModal.slice(1)} | Odubo Studio`
+      : `${pageTitle} | Odubo Studio`
+  });
 
-  // Clip intelligence analytics
+  // Clip intelligence analytics (only for clips mode)
   const analytics = useAnalyticsSafe();
 
-  // Clip milestone callback - track 25%, 50%, 75% watch milestones
+  // Clip milestone callback
   const handleWatchMilestone = useCallback((
     clipId: number,
     milestone: number,
@@ -80,7 +96,7 @@ export default function HomePageClient({ verseOfTheDay, initialClipId, initialCl
     analytics?.trackClipMilestone(clipId, milestone, watchSeconds, durationSeconds);
   }, [analytics]);
 
-  // Clip completion callback - track when video ends naturally
+  // Clip completion callback
   const handleWatchComplete = useCallback((
     clipId: number,
     watchPercent: number,
@@ -94,7 +110,6 @@ export default function HomePageClient({ verseOfTheDay, initialClipId, initialCl
   useEffect(() => {
     if (!defaultModal) return;
 
-    // Small delay to ensure contexts are ready
     const timer = setTimeout(() => {
       switch (defaultModal) {
         case 'store':
@@ -119,19 +134,16 @@ export default function HomePageClient({ verseOfTheDay, initialClipId, initialCl
   useEffect(() => {
     if (!defaultModal) return;
 
-    // Check if all modals are closed
     const storeIsClosed = storeView === 'closed';
     const mediaIsClosed = modalStack.length === 0;
     const linksIsClosed = !linkTreeOpen;
 
-    // If we opened via URL and modal is now closed, navigate home
     if (storeIsClosed && mediaIsClosed && linksIsClosed) {
-      // Use shallow routing to update URL without reload
       router.replace('/', { scroll: false });
     }
   }, [defaultModal, storeView, modalStack.length, linkTreeOpen, router]);
 
-  // Ref to hold ClipsFeed's scrollToNext function (type-safe, no window global)
+  // Ref to hold feed's scrollToNext function
   const scrollToNextRef = useRef<(() => void) | null>(null);
 
   // Handle clips data from ClipsFeed
@@ -140,9 +152,15 @@ export default function HomePageClient({ verseOfTheDay, initialClipId, initialCl
     setActiveIndex(newActiveIndex);
   }, []);
 
-  // Handle auto-advance to next clip (called when video ends while scrolling forward)
+  // Handle auto-advance to next clip
   const handleAdvanceToNext = useCallback(() => {
     scrollToNextRef.current?.();
+  }, []);
+
+  // Handle active track change (music mode)
+  const handleActiveTrackChange = useCallback((track: Track | null, album: Album | null) => {
+    setActiveTrack(track);
+    setActiveAlbum(album);
   }, []);
 
   // Clock update
@@ -213,12 +231,11 @@ export default function HomePageClient({ verseOfTheDay, initialClipId, initialCl
     setPhase(p => p === 'expanded' ? 'collapsed' : 'expanded');
   }, []);
 
-  // Collapse when tapping video area (only if expanded)
+  // Collapse when tapping content area (only if expanded)
   const handleBackdropClick = useCallback(() => {
     if (phase === 'expanded') {
       setPhase('collapsed');
     }
-    // Also collapse intro early on first interaction
     if (phase === 'intro' && !hasInteracted) {
       setHasInteracted(true);
       setPhase('collapsed');
@@ -227,45 +244,68 @@ export default function HomePageClient({ verseOfTheDay, initialClipId, initialCl
 
   const isShowingVerse = phase === 'intro' || phase === 'expanded';
 
+  // Get active content info for menu
+  const menuTitle = homepageMode === 'clips' ? activeClip?.title : activeTrack?.title;
+  const menuArtist = homepageMode === 'clips' ? activeClip?.artist : activeAlbum?.artist_name;
+  const menuProductHandle = homepageMode === 'clips' ? activeClip?.productHandle : undefined;
+
   return (
     <div className="relative bg-black text-[#ede8df]" style={{ minHeight: '100dvh' }}>
       {/* Animated film grain overlay */}
       <FilmGrain opacity={0.03} />
 
-      {/* Clips viewport wrapped in error boundary for graceful degradation */}
+      {/* Content viewport wrapped in error boundary */}
       <ClipsErrorBoundary>
-        {/* SingleVideoPlayer - FIXED position, never scrolls, plays the active video */}
-        {clips.length > 0 && (
-          <SingleVideoPlayer
-            clips={clips}
-            activeIndex={activeIndex}
-            onVideoReady={setVideoReady}
-            scrollDirection={scrollDirection}
-            onAdvanceToNext={handleAdvanceToNext}
-            onWatchMilestone={handleWatchMilestone}
-            onWatchComplete={handleWatchComplete}
-          />
+        {/* CLIPS MODE */}
+        {homepageMode === 'clips' && (
+          <>
+            {/* SingleVideoPlayer - FIXED position, plays the active video */}
+            {clips.length > 0 && (
+              <SingleVideoPlayer
+                clips={clips}
+                activeIndex={activeIndex}
+                onVideoReady={setVideoReady}
+                scrollDirection={scrollDirection}
+                onAdvanceToNext={handleAdvanceToNext}
+                onWatchMilestone={handleWatchMilestone}
+                onWatchComplete={handleWatchComplete}
+              />
+            )}
+
+            {/* Clips scroll layer */}
+            <div
+              className="fixed inset-0 lg:left-20 xl:left-64 bg-transparent z-20"
+              style={{ overscrollBehavior: 'none' }}
+              onClick={handleBackdropClick}
+            >
+              <ClipsFeed
+                navHeight={0}
+                initialClipId={initialClipId}
+                initialClips={initialClips}
+                onActiveClipChange={setActiveClip}
+                onClipsReady={handleClipsReady}
+                onScrollDirectionChange={setScrollDirection}
+                videoReady={videoReady}
+                scrollToNextRef={scrollToNextRef}
+              />
+            </div>
+          </>
         )}
 
-        {/* Clips scroll layer - shows posters, handles scroll detection */}
-        <div
-          className="fixed inset-0 lg:left-20 xl:left-64 bg-transparent z-20"
-          style={{
-            overscrollBehavior: 'none',
-          }}
-          onClick={handleBackdropClick}
-        >
-          <ClipsFeed
-            navHeight={0}
-            initialClipId={initialClipId}
-            initialClips={initialClips}
-            onActiveClipChange={setActiveClip}
-            onClipsReady={handleClipsReady}
-            onScrollDirectionChange={setScrollDirection}
-            videoReady={videoReady}
-            scrollToNextRef={scrollToNextRef}
-          />
-        </div>
+        {/* MUSIC MODE */}
+        {homepageMode === 'music' && (
+          <div
+            className="fixed inset-0 lg:left-20 xl:left-64 bg-black z-20"
+            style={{ overscrollBehavior: 'none' }}
+            onClick={handleBackdropClick}
+          >
+            <TracksFeed
+              navHeight={0}
+              onActiveTrackChange={handleActiveTrackChange}
+              scrollToNextRef={scrollToNextRef}
+            />
+          </div>
+        )}
       </ClipsErrorBoundary>
 
       {/* Mute Button - Top right, always visible */}
@@ -387,14 +427,13 @@ export default function HomePageClient({ verseOfTheDay, initialClipId, initialCl
         )}
       </AnimatePresence>
 
-      {/* Global floating menu - draggable like iPhone Accessibility button */}
-      {/* Hidden on desktop (md breakpoint and above) - mobile only */}
+      {/* Global floating menu - mobile only */}
       <div className="md:hidden">
         <ExpandableLogoMenu
-          clipId={activeClip?.id}
-          clipTitle={activeClip?.title}
-          clipArtist={activeClip?.artist}
-          clipProductHandle={activeClip?.productHandle}
+          clipId={homepageMode === 'clips' ? activeClip?.id : undefined}
+          clipTitle={menuTitle}
+          clipArtist={menuArtist}
+          clipProductHandle={menuProductHandle}
         />
       </div>
 
