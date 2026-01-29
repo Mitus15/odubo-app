@@ -83,7 +83,7 @@ const CHAR_LIMITS = {
   instagram: { caption: 2200, firstComment: 2200 },
 } as const;
 
-type ViewMode = 'library' | 'upload' | 'feed-order' | 'deploy' | 'sync';
+type ViewMode = 'library' | 'upload' | 'pipeline' | 'feed-order' | 'deploy' | 'sync';
 type FilterMode = 'all' | 'published' | 'unpublished' | 'videos' | 'clips' | 'deployed' | 'not-deployed';
 
 interface FeedClip {
@@ -168,6 +168,11 @@ const Icons = {
   feedOrder: (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12" />
+    </svg>
+  ),
+  pipeline: (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 4.5h14.25M3 9h9.75M3 13.5h5.25m5.25-.75L17.25 9m0 0L21 12.75M17.25 9v12" />
     </svg>
   ),
   globe: (
@@ -591,6 +596,9 @@ function LibraryView({
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [togglingPublishId, setTogglingPublishId] = useState<number | null>(null);
+  const [reorderingParentId, setReorderingParentId] = useState<number | null>(null);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
 
   // Handle publish toggle
   const handleTogglePublish = async (videoId: number, currentlyPublished: boolean) => {
@@ -616,12 +624,38 @@ function LibraryView({
       if (res.ok) {
         onRefresh();
       } else {
-        const data = await res.json();
+        const data = await res.json() as { error?: string };
         alert(data.error || 'Failed to delete');
       }
     } catch (error) {
       console.error('Failed to delete video:', error);
       alert('Failed to delete video');
+    }
+  };
+
+  // Handle clip reorder within parent video
+  const handleReorderClip = async (parentId: number, clips: Video[], fromIndex: number, direction: 'up' | 'down') => {
+    const toIndex = direction === 'up' ? fromIndex - 1 : fromIndex + 1;
+    if (toIndex < 0 || toIndex >= clips.length) return;
+
+    setReorderingParentId(parentId);
+
+    // Create new order
+    const newClips = [...clips];
+    [newClips[fromIndex], newClips[toIndex]] = [newClips[toIndex], newClips[fromIndex]];
+    const clipIds = newClips.map(c => c.id);
+
+    try {
+      await fetch('/api/arsenal/reorder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ parentId, clipIds }),
+      });
+      onRefresh();
+    } catch (error) {
+      console.error('Failed to reorder clips:', error);
+    } finally {
+      setReorderingParentId(null);
     }
   };
 
@@ -655,6 +689,7 @@ function LibraryView({
 
   // Organize videos into hierarchy
   const parentVideos = videos.filter(v => !v.parent_video_id);
+  const allClips = videos.filter(v => v.parent_video_id !== null);
   const childrenByParent = videos.reduce((acc, v) => {
     if (v.parent_video_id) {
       if (!acc[v.parent_video_id]) acc[v.parent_video_id] = [];
@@ -668,16 +703,65 @@ function LibraryView({
     children.sort((a, b) => (a.clip_index || 0) - (b.clip_index || 0));
   });
 
-  // Apply filter
-  const filteredVideos = parentVideos.filter(v => {
+  // Apply filter - special handling for 'clips' filter
+  const isClipsFilter = filter === 'clips';
+  const baseVideos = isClipsFilter ? allClips : parentVideos;
+
+  const filteredVideos = baseVideos.filter(v => {
     const isPublished = v.is_public === 1 || v.publication_status === 'live';
-    if (filter === 'videos') return true;
+    if (filter === 'all') return true;
+    if (filter === 'videos') return true; // Already filtered to parents
+    if (filter === 'clips') return true; // Already filtered to clips
     if (filter === 'published') return isPublished;
     if (filter === 'unpublished') return !isPublished;
-    if (filter === 'deployed') return v.youtube_url || v.tiktok_url || v.instagram_reels_url;
-    if (filter === 'not-deployed') return !v.youtube_url && !v.tiktok_url && !v.instagram_reels_url;
+    if (filter === 'deployed') return v.youtube_url || v.youtube_shorts_url || v.tiktok_url || v.instagram_reels_url;
+    if (filter === 'not-deployed') return !v.youtube_url && !v.youtube_shorts_url && !v.tiktok_url && !v.instagram_reels_url;
     return true;
   });
+
+  // Get IDs of all visible items for Select All
+  const visibleIds = filteredVideos.map(v => v.id);
+
+  // Bulk delete handler
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    setBulkDeleting(true);
+    try {
+      const res = await fetch('/api/videos/bulk-delete', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: selectedIds }),
+      });
+      if (res.ok) {
+        // Clear selection after delete
+        selectedIds.forEach(id => onSelect(id)); // Toggle off each selected
+        onRefresh();
+      } else {
+        const data = await res.json() as { error?: string };
+        alert(data.error || 'Failed to delete');
+      }
+    } catch (error) {
+      console.error('Bulk delete failed:', error);
+      alert('Failed to delete videos');
+    } finally {
+      setBulkDeleting(false);
+      setShowBulkDeleteConfirm(false);
+    }
+  };
+
+  // Select all visible items
+  const handleSelectAll = () => {
+    visibleIds.forEach(id => {
+      if (!selectedIds.includes(id)) {
+        onSelect(id);
+      }
+    });
+  };
+
+  // Clear all selections
+  const handleClearSelection = () => {
+    selectedIds.forEach(id => onSelect(id));
+  };
 
   const toggleExpand = (id: number) => {
     setExpandedIds(prev =>
@@ -688,30 +772,97 @@ function LibraryView({
   return (
     <div className="space-y-4">
       {/* Toolbar */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 flex-wrap">
-          {(['all', 'published', 'unpublished', 'deployed', 'not-deployed'] as FilterMode[]).map(f => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
-                filter === f
-                  ? 'bg-[#843c2d]/30 text-[#ede8df]'
-                  : 'bg-white/5 text-[#726d6c] hover:bg-white/10'
-              }`}
-            >
-              {f.charAt(0).toUpperCase() + f.slice(1).replace('-', ' ')}
-            </button>
-          ))}
+      <div className="flex flex-col gap-3">
+        {/* Filters row */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 flex-wrap">
+            {(['all', 'videos', 'clips', 'published', 'unpublished', 'deployed', 'not-deployed'] as FilterMode[]).map(f => (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
+                  filter === f
+                    ? 'bg-[#843c2d]/30 text-[#ede8df]'
+                    : 'bg-white/5 text-[#726d6c] hover:bg-white/10'
+                }`}
+              >
+                {f.charAt(0).toUpperCase() + f.slice(1).replace('-', ' ')}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={onRefresh}
+            disabled={loading}
+            className="px-3 py-1.5 text-xs rounded-lg bg-white/5 text-[#726d6c] hover:bg-white/10 transition-colors disabled:opacity-50"
+          >
+            {loading ? 'Loading...' : 'Refresh'}
+          </button>
         </div>
-        <button
-          onClick={onRefresh}
-          disabled={loading}
-          className="px-3 py-1.5 text-xs rounded-lg bg-white/5 text-[#726d6c] hover:bg-white/10 transition-colors disabled:opacity-50"
-        >
-          {loading ? 'Loading...' : 'Refresh'}
-        </button>
+
+        {/* Selection actions row */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleSelectAll}
+              disabled={visibleIds.length === 0}
+              className="px-3 py-1.5 text-xs rounded-lg bg-white/5 text-[#726d6c] hover:bg-white/10 transition-colors disabled:opacity-50"
+            >
+              Select All ({visibleIds.length})
+            </button>
+            {selectedIds.length > 0 && (
+              <button
+                onClick={handleClearSelection}
+                className="px-3 py-1.5 text-xs rounded-lg bg-white/5 text-[#726d6c] hover:bg-white/10 transition-colors"
+              >
+                Clear
+              </button>
+            )}
+            {selectedIds.length > 0 && (
+              <span className="text-xs text-[#726d6c] ml-2">
+                {selectedIds.length} selected
+              </span>
+            )}
+          </div>
+          {selectedIds.length > 0 && (
+            <button
+              onClick={() => setShowBulkDeleteConfirm(true)}
+              disabled={bulkDeleting}
+              className="px-3 py-1.5 text-xs rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors disabled:opacity-50 flex items-center gap-1.5"
+            >
+              {Icons.trash}
+              Delete Selected ({selectedIds.length})
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* Bulk Delete Confirmation Modal */}
+      {showBulkDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-[#1a1816] rounded-xl p-6 max-w-md w-full mx-4 border border-white/10">
+            <h3 className="text-lg font-medium text-[#ede8df] mb-2">Delete {selectedIds.length} items?</h3>
+            <p className="text-sm text-[#726d6c] mb-6">
+              This will permanently delete the selected {filter === 'clips' ? 'clips' : 'videos'} from your library and Cloudflare Stream. This action cannot be undone.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowBulkDeleteConfirm(false)}
+                disabled={bulkDeleting}
+                className="px-4 py-2 text-sm rounded-lg bg-white/5 text-[#ede8df] hover:bg-white/10 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleBulkDelete}
+                disabled={bulkDeleting}
+                className="px-4 py-2 text-sm rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors disabled:opacity-50"
+              >
+                {bulkDeleting ? 'Deleting...' : `Delete ${selectedIds.length} items`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Video list */}
       <div className="space-y-2">
@@ -728,9 +879,9 @@ function LibraryView({
             <div key={video.id}>
               <VideoCard
                 video={video}
-                children={childrenByParent[video.id]}
-                isExpanded={expandedIds.includes(video.id)}
-                onToggleExpand={() => toggleExpand(video.id)}
+                children={isClipsFilter ? undefined : childrenByParent[video.id]}
+                isExpanded={!isClipsFilter && expandedIds.includes(video.id)}
+                onToggleExpand={isClipsFilter ? undefined : () => toggleExpand(video.id)}
                 onSelect={onSelect}
                 isSelected={selectedIds.includes(video.id)}
                 editingId={editingId}
@@ -743,22 +894,52 @@ function LibraryView({
                 onDelete={handleDelete}
                 onDeploy={onStartDeploy}
               />
-              {/* Child clips */}
-              {expandedIds.includes(video.id) && childrenByParent[video.id]?.map(child => (
-                <VideoCard
-                  key={child.id}
-                  video={child}
-                  onSelect={onSelect}
-                  isSelected={selectedIds.includes(child.id)}
-                  editingId={editingId}
-                  editTitle={editTitle}
-                  onStartEdit={handleStartEdit}
-                  onEditChange={setEditTitle}
-                  onSaveTitle={handleSaveTitle}
-                  onDelete={handleDelete}
-                  onDeploy={onStartDeploy}
-                />
-              ))}
+              {/* Child clips with reorder controls - only show when not in clips filter */}
+              {!isClipsFilter && expandedIds.includes(video.id) && childrenByParent[video.id]?.map((child, index) => {
+                const siblings = childrenByParent[video.id];
+                const isReordering = reorderingParentId === video.id;
+                return (
+                  <div key={child.id} className="flex items-center gap-1">
+                    {/* Reorder buttons */}
+                    <div className="flex flex-col gap-0.5 ml-8">
+                      <button
+                        onClick={() => handleReorderClip(video.id, siblings, index, 'up')}
+                        disabled={index === 0 || isReordering}
+                        className="p-1 rounded bg-white/5 text-[#726d6c] hover:text-[#ede8df] hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                        title="Move clip up"
+                      >
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => handleReorderClip(video.id, siblings, index, 'down')}
+                        disabled={index === siblings.length - 1 || isReordering}
+                        className="p-1 rounded bg-white/5 text-[#726d6c] hover:text-[#ede8df] hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                        title="Move clip down"
+                      >
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </button>
+                    </div>
+                    <div className="flex-1">
+                      <VideoCard
+                        video={child}
+                        onSelect={onSelect}
+                        isSelected={selectedIds.includes(child.id)}
+                        editingId={editingId}
+                        editTitle={editTitle}
+                        onStartEdit={handleStartEdit}
+                        onEditChange={setEditTitle}
+                        onSaveTitle={handleSaveTitle}
+                        onDelete={handleDelete}
+                        onDeploy={onStartDeploy}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           ))
         )}
@@ -1954,6 +2135,309 @@ function UploadView({
   );
 }
 
+// Pipeline Types
+interface PipelineParent {
+  id: number;
+  uid: string;
+  title: string;
+  poster_url: string | null;
+  duration: string | null;
+  release_order: number | null;
+  created_at: string;
+  artist_name: string | null;
+  clip_count: number;
+  deployed_count: number;
+}
+
+interface PipelineClip {
+  id: number;
+  uid: string;
+  title: string;
+  poster_url: string | null;
+  duration: string | null;
+  parent_video_id: number;
+  clip_index: number | null;
+  youtube_url: string | null;
+  youtube_shorts_url: string | null;
+  tiktok_url: string | null;
+  instagram_reels_url: string | null;
+  postforme_status: string | null;
+  created_at: string;
+}
+
+// Pipeline View - Deployment queue with "river" flow
+function PipelineView({ onDeployClip }: { onDeployClip: (clipId: number) => void }) {
+  const [parents, setParents] = useState<PipelineParent[]>([]);
+  const [clipsByParent, setClipsByParent] = useState<Record<number, PipelineClip[]>>({});
+  const [nextToDeployId, setNextToDeployId] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [expandedIds, setExpandedIds] = useState<number[]>([]);
+  const [reordering, setReordering] = useState(false);
+
+  const fetchPipeline = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/arsenal/release-order');
+      const data = await res.json() as {
+        parents: PipelineParent[];
+        clipsByParent: Record<number, PipelineClip[]>;
+        nextToDeployId: number | null;
+      };
+      setParents(data.parents || []);
+      setClipsByParent(data.clipsByParent || {});
+      setNextToDeployId(data.nextToDeployId);
+
+      // Auto-expand parent of next clip
+      if (data.nextToDeployId) {
+        const parentId = Object.entries(data.clipsByParent || {}).find(
+          ([, clips]) => clips.some(c => c.id === data.nextToDeployId)
+        )?.[0];
+        if (parentId) setExpandedIds([parseInt(parentId)]);
+      }
+    } catch (error) {
+      console.error('Failed to fetch pipeline:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchPipeline();
+  }, [fetchPipeline]);
+
+  const moveParent = async (index: number, direction: 'up' | 'down') => {
+    const toIndex = direction === 'up' ? index - 1 : index + 1;
+    if (toIndex < 0 || toIndex >= parents.length) return;
+
+    setReordering(true);
+    const newParents = [...parents];
+    [newParents[index], newParents[toIndex]] = [newParents[toIndex], newParents[index]];
+    setParents(newParents);
+
+    try {
+      await fetch('/api/arsenal/release-order', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          videos: newParents.map((p, i) => ({ id: p.id, order: i + 1 }))
+        }),
+      });
+    } catch (error) {
+      console.error('Failed to reorder:', error);
+      fetchPipeline(); // Revert on error
+    } finally {
+      setReordering(false);
+    }
+  };
+
+  const toggleExpand = (id: number) => {
+    setExpandedIds(prev =>
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  const isClipDeployed = (clip: PipelineClip) =>
+    !!(clip.youtube_url || clip.tiktok_url || clip.instagram_reels_url);
+
+  const getParentStatus = (parent: PipelineParent) => {
+    if (parent.deployed_count === 0) return 'queued';
+    if (parent.deployed_count >= parent.clip_count) return 'complete';
+    return 'in-progress';
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="w-8 h-8 border-2 border-[#502d26]/30 border-t-[#843c2d] rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-sm font-medium text-[#ede8df]">Deployment Pipeline</h3>
+          <p className="text-xs text-[#726d6c] mt-1">
+            Your content release queue. Deploy in order - the river guides you.
+          </p>
+        </div>
+        {nextToDeployId && (
+          <button
+            onClick={() => onDeployClip(nextToDeployId)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-[#843c2d] to-[#6d3224] text-white font-medium transition-all hover:opacity-90"
+          >
+            {Icons.rocket}
+            <span>Deploy Next</span>
+          </button>
+        )}
+      </div>
+
+      {/* Pipeline */}
+      {parents.length === 0 ? (
+        <div className="text-center py-12 text-[#726d6c]">
+          No videos in pipeline. Upload content to get started.
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {parents.map((parent, index) => {
+            const status = getParentStatus(parent);
+            const clips = clipsByParent[parent.id] || [];
+            const isExpanded = expandedIds.includes(parent.id);
+
+            return (
+              <div key={parent.id} className="rounded-xl overflow-hidden border border-white/5">
+                {/* Parent header */}
+                <div
+                  className={`p-4 flex items-center gap-4 cursor-pointer transition-colors ${
+                    status === 'complete'
+                      ? 'bg-green-500/5'
+                      : status === 'in-progress'
+                      ? 'bg-[#843c2d]/10'
+                      : 'bg-[#1a1816]'
+                  } hover:bg-white/5`}
+                  onClick={() => toggleExpand(parent.id)}
+                >
+                  {/* Reorder buttons */}
+                  <div className="flex flex-col gap-0.5" onClick={e => e.stopPropagation()}>
+                    <button
+                      onClick={() => moveParent(index, 'up')}
+                      disabled={index === 0 || reordering}
+                      className="p-1 rounded bg-white/5 text-[#726d6c] hover:text-[#ede8df] hover:bg-white/10 disabled:opacity-30 transition-colors"
+                    >
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => moveParent(index, 'down')}
+                      disabled={index === parents.length - 1 || reordering}
+                      className="p-1 rounded bg-white/5 text-[#726d6c] hover:text-[#ede8df] hover:bg-white/10 disabled:opacity-30 transition-colors"
+                    >
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                  </div>
+
+                  {/* Position number */}
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold ${
+                    status === 'complete'
+                      ? 'bg-green-500/20 text-green-400'
+                      : status === 'in-progress'
+                      ? 'bg-[#843c2d]/30 text-[#ede8df]'
+                      : 'bg-white/10 text-[#726d6c]'
+                  }`}>
+                    {index + 1}
+                  </div>
+
+                  {/* Thumbnail */}
+                  <div className="w-16 h-10 rounded-lg overflow-hidden bg-[#0d0c0a] flex-shrink-0">
+                    {parent.poster_url && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={parent.poster_url} alt="" className="w-full h-full object-cover" />
+                    )}
+                  </div>
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-[#ede8df] truncate">{parent.title}</div>
+                    <div className="text-xs text-[#726d6c]">
+                      {parent.clip_count} clips • {parent.deployed_count} deployed
+                    </div>
+                  </div>
+
+                  {/* Status badge */}
+                  <div className={`px-3 py-1 rounded-full text-xs font-medium ${
+                    status === 'complete'
+                      ? 'bg-green-500/20 text-green-400'
+                      : status === 'in-progress'
+                      ? 'bg-[#843c2d]/30 text-[#b2a491]'
+                      : 'bg-white/10 text-[#726d6c]'
+                  }`}>
+                    {status === 'complete' ? '✓ Complete' : status === 'in-progress' ? `${parent.deployed_count}/${parent.clip_count}` : 'Queued'}
+                  </div>
+
+                  {/* Expand indicator */}
+                  <svg
+                    className={`w-4 h-4 text-[#726d6c] transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                    fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+
+                {/* Clips list */}
+                {isExpanded && clips.length > 0 && (
+                  <div className="border-t border-white/5 bg-black/20 p-4">
+                    <div className="flex flex-wrap gap-2">
+                      {clips.map(clip => {
+                        const deployed = isClipDeployed(clip);
+                        const isNext = clip.id === nextToDeployId;
+
+                        return (
+                          <button
+                            key={clip.id}
+                            onClick={() => !deployed && onDeployClip(clip.id)}
+                            disabled={deployed}
+                            className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all ${
+                              isNext
+                                ? 'bg-gradient-to-r from-[#843c2d] to-[#6d3224] text-white ring-2 ring-[#843c2d]/50'
+                                : deployed
+                                ? 'bg-green-500/10 text-green-400/70 cursor-default'
+                                : 'bg-white/5 text-[#b2a491] hover:bg-white/10'
+                            }`}
+                          >
+                            {/* Clip thumbnail */}
+                            <div className="w-8 h-5 rounded overflow-hidden bg-[#0d0c0a] flex-shrink-0">
+                              {clip.poster_url && (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={clip.poster_url} alt="" className="w-full h-full object-cover" />
+                              )}
+                            </div>
+
+                            {/* Clip info */}
+                            <span className="text-xs font-medium">
+                              {clip.clip_index ? `#${clip.clip_index}` : ''} {clip.title?.slice(0, 20) || 'Untitled'}
+                            </span>
+
+                            {/* Status icon */}
+                            {deployed ? (
+                              <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                              </svg>
+                            ) : isNext ? (
+                              <span className="text-[10px] font-bold bg-white/20 px-1.5 py-0.5 rounded">NEXT</span>
+                            ) : null}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Legend */}
+      <div className="flex items-center gap-6 text-xs text-[#726d6c] pt-4 border-t border-white/5">
+        <span className="flex items-center gap-2">
+          <span className="w-3 h-3 rounded-full bg-green-500/30" /> Deployed
+        </span>
+        <span className="flex items-center gap-2">
+          <span className="w-3 h-3 rounded-full bg-[#843c2d]/50" /> In Progress
+        </span>
+        <span className="flex items-center gap-2">
+          <span className="w-3 h-3 rounded-full bg-white/20" /> Queued
+        </span>
+      </div>
+    </div>
+  );
+}
+
 // Feed Order View
 function FeedOrderView() {
   const [clips, setClips] = useState<FeedClip[]>([]);
@@ -2023,9 +2507,9 @@ function FeedOrderView() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-sm font-medium text-[#ede8df]">Feed Order</h3>
+          <h3 className="text-sm font-medium text-[#ede8df]">Manual Order (Special Use Only)</h3>
           <p className="text-xs text-[#726d6c] mt-1">
-            Drag clips to set their order in the public feed
+            For curated playlists or featured sections. Default public feed is always randomized.
           </p>
         </div>
         <button
@@ -2221,8 +2705,9 @@ export default function ArsenalTab() {
       <div className="flex items-center gap-2 mb-6 overflow-x-auto">
         {[
           { id: 'library' as ViewMode, label: 'Library', icon: Icons.library },
+          { id: 'pipeline' as ViewMode, label: 'Pipeline', icon: Icons.pipeline },
           { id: 'upload' as ViewMode, label: 'Upload', icon: Icons.upload },
-          { id: 'feed-order' as ViewMode, label: 'Feed Order', icon: Icons.feedOrder },
+          { id: 'feed-order' as ViewMode, label: 'Manual Order', icon: Icons.feedOrder },
           { id: 'deploy' as ViewMode, label: 'Deploy', icon: Icons.deploy },
           { id: 'sync' as ViewMode, label: 'Sync', icon: Icons.sync },
         ].map(tab => (
@@ -2258,6 +2743,14 @@ export default function ArsenalTab() {
             onStartDeploy={(videoId) => {
               // Select the video and switch to deploy view
               setSelectedIds([videoId]);
+              setView('deploy');
+            }}
+          />
+        )}
+        {view === 'pipeline' && (
+          <PipelineView
+            onDeployClip={(clipId) => {
+              setSelectedIds([clipId]);
               setView('deploy');
             }}
           />

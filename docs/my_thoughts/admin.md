@@ -17,17 +17,20 @@
 - The feed feels alive, not curated
 
 ### Implementation Requirements
-- Randomize on initial fetch (ORDER BY RANDOM())
+- **Default is ALWAYS random** (ORDER BY RANDOM()) - never change this default
 - When user reaches end of clips, reshuffle the deck and continue seamlessly
-- No database ordering - always random
-- No admin toggle for this behavior
-- Remove feed_position from clips API consideration
-- Remove "Feed Order" view from Arsenal/admin UI
+- Other ordering mechanisms (manual, engagement-based) may exist for specific use cases
+- But the default behavior for the main feed must always be random
+- No admin UI should set a non-random order as the site-wide default
 
-### What Was Removed
-- `/api/arsenal/feed-order` endpoint (archived, not deleted)
-- "Feed Order" view mode in ArsenalTab
-- `order=manual` parameter support in clips API
+### What Should NOT Be in Admin
+- Any toggle that changes the default feed order from random to something else
+- Any "Feed Order" drag-and-drop that affects the default user experience
+
+### What Can Exist
+- Manual ordering for specific contexts (curated playlists, featured sections, etc.)
+- Engagement-based ordering for analytics dashboards
+- These are opt-in via explicit parameters, never the default
 
 ---
 
