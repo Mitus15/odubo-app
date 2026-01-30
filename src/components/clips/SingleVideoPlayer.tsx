@@ -437,7 +437,7 @@ export default function SingleVideoPlayer({
           className={`object-cover pointer-events-none ${
             firstFrame ? 'opacity-0' : 'opacity-100'
           }`}
-          style={{ transition: 'opacity 150ms ease-out' }}
+          style={{ transition: 'opacity 280ms cubic-bezier(0.25, 0.46, 0.45, 0.94)' }}
         />
       )}
 
@@ -445,14 +445,14 @@ export default function SingleVideoPlayer({
       <video
         ref={videoRef}
         className={`absolute inset-0 w-full h-full object-cover pointer-events-none ${
-          firstFrame ? 'opacity-100 scale-100' : 'opacity-0 scale-[0.98]'
+          firstFrame ? 'opacity-100' : 'opacity-0'
         }`}
         onEnded={handleEnded}
         playsInline
         preload="auto"
         style={{
           touchAction: 'pan-y',
-          transition: 'opacity 150ms ease-out, transform 150ms ease-out'
+          transition: 'opacity 280ms cubic-bezier(0.25, 0.46, 0.45, 0.94)'
         }}
       />
 
@@ -469,10 +469,10 @@ export default function SingleVideoPlayer({
       <AnimatePresence>
         {showPlayOverlay && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
+            initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            transition={{ duration: 0.15 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
             className="absolute inset-0 flex items-center justify-center pointer-events-none z-20"
           >
             <button
@@ -495,6 +495,7 @@ export default function SingleVideoPlayer({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
             className="absolute inset-0 flex items-center justify-center pointer-events-none z-10"
           >
             <div className="w-10 h-10 border-2 border-white/20 border-t-white rounded-full animate-spin" />
@@ -506,10 +507,10 @@ export default function SingleVideoPlayer({
       <AnimatePresence>
         {showPauseIcon && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
+            initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            transition={{ duration: 0.12 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.15, ease: [0.25, 0.46, 0.45, 0.94] }}
             className="absolute inset-0 flex items-center justify-center pointer-events-none z-10"
           >
             <div className="p-4 rounded-full bg-black/50 backdrop-blur-sm">

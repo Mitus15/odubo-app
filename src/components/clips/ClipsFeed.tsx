@@ -433,6 +433,7 @@ export default function ClipsFeed({
       className="w-full h-full overflow-y-auto overflow-x-hidden"
       style={{
         scrollSnapType: 'y mandatory',
+        scrollBehavior: 'smooth',
         WebkitOverflowScrolling: 'touch',
         overscrollBehavior: 'none',
         touchAction: 'pan-y',
