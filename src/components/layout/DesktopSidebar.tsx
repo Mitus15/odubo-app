@@ -2,8 +2,9 @@
 
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { useOmniShop } from '@/contexts/OmniShopContext';
+import { useStore } from '@/contexts/StoreContext';
 import { useMemo, useEffect, useState } from 'react';
+import LinkTreeModal from '@/components/linktree/LinkTreeModal';
 
 /**
  * DesktopSidebar - Persistent navigation for desktop (lg+)
@@ -11,15 +12,17 @@ import { useMemo, useEffect, useState } from 'react';
  * Features:
  * - Icon-only at lg breakpoint (w-20)
  * - Icon + label at xl breakpoint (w-64)
- * - Nav items: Home, Store, Moments, Account
+ * - Nav items: Home, Store, Moments, Connect
  * - Cart badge on Store item
  * - Hidden on mobile (< 1024px)
- * - Store/Account hidden when store is disabled
+ * - Store hidden when store is disabled
+ * - Account accessible from within Store (matches mobile)
  */
 export default function DesktopSidebar() {
   const pathname = usePathname();
-  const { openMaison, cartCount, storeAccessible, checkingStoreAccess } = useOmniShop();
+  const { openStore, cartItemCount, isStoreAccessible, isCheckingAccess } = useStore();
   const [isAdminSubdomain, setIsAdminSubdomain] = useState(false);
+  const [linkTreeOpen, setLinkTreeOpen] = useState(false);
 
   // Check if on admin subdomain
   useEffect(() => {
@@ -29,11 +32,11 @@ export default function DesktopSidebar() {
     }
   }, []);
 
-  // Nav items - always show all items, but disable store-dependent ones while checking
+  // Nav items - always show all items, but disable store while checking
   // IMPORTANT: All hooks must be called before any conditional returns
   const navItems = useMemo(() => {
-    // Determine if store items should be enabled
-    const storeEnabled = !checkingStoreAccess && storeAccessible;
+    // Determine if store should be enabled
+    const storeEnabled = !isCheckingAccess && isStoreAccessible;
 
     const items = [
       {
@@ -49,10 +52,10 @@ export default function DesktopSidebar() {
       {
         id: 'store',
         label: 'Store',
-        action: storeEnabled ? openMaison : undefined,
-        badge: storeEnabled ? cartCount : undefined,
-        disabled: checkingStoreAccess,
-        hidden: !checkingStoreAccess && !storeAccessible,
+        action: storeEnabled ? openStore : undefined,
+        badge: storeEnabled ? cartItemCount : undefined,
+        disabled: isCheckingAccess,
+        hidden: !isCheckingAccess && !isStoreAccessible,
         icon: (
           <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
@@ -70,21 +73,19 @@ export default function DesktopSidebar() {
         ),
       },
       {
-        id: 'account',
-        label: 'Account',
-        href: storeEnabled ? 'https://account.odubo.studio' : undefined,
-        disabled: checkingStoreAccess,
-        hidden: !checkingStoreAccess && !storeAccessible,
+        id: 'connect',
+        label: 'Connect',
+        action: () => setLinkTreeOpen(true),
         icon: (
           <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M17.982 18.725A7.488 7.488 0 0012 15.75a7.488 7.488 0 00-5.982 2.975m11.963 0a9 9 0 10-11.963 0m11.963 0A8.966 8.966 0 0112 21a8.966 8.966 0 01-5.982-2.275M15 9.75a3 3 0 11-6 0 3 3 0 016 0z" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
           </svg>
         ),
       },
     ];
     // Filter out hidden items
     return items.filter(item => !item.hidden);
-  }, [checkingStoreAccess, storeAccessible, openMaison, cartCount]);
+  }, [isCheckingAccess, isStoreAccessible, openStore, cartItemCount]);
 
   // Hide on admin/backend pages and admin subdomain (must be after all hooks)
   if (isAdminSubdomain || pathname?.startsWith('/admin') || pathname?.startsWith('/command-center') || pathname?.startsWith('/featured/manage')) {
@@ -176,6 +177,9 @@ export default function DesktopSidebar() {
           </span>
         </div>
       </div>
+
+      {/* LinkTree Modal */}
+      <LinkTreeModal isOpen={linkTreeOpen} onClose={() => setLinkTreeOpen(false)} />
     </aside>
   );
 }

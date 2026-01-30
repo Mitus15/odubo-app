@@ -13,6 +13,7 @@ import LinkTreeModal from '@/components/linktree/LinkTreeModal';
 import { useAudio } from '@/contexts/AudioContext';
 import { useStore } from '@/contexts/StoreContext';
 import { useUnifiedMedia } from '@/contexts/UnifiedMediaContext';
+import { useMusicPlayer } from '@/contexts/MusicPlayerContext';
 import { usePageAnalytics } from '@/hooks/usePageAnalytics';
 import { useAnalyticsSafe } from '@/contexts/AnalyticsContext';
 import type { ClipItem } from '@/types/clips';
@@ -69,7 +70,22 @@ export default function HomePageClient({
   const [linkTreeOpen, setLinkTreeOpen] = useState(false);
 
   // Audio state
-  const { isMuted, toggleMute } = useAudio();
+  const { isMuted, toggleMute: toggleClipsMute } = useAudio();
+
+  // Music player state
+  const { state: musicPlayerState, toggleMute: toggleMusicMute } = useMusicPlayer();
+
+  // Unified mute handler - works for both clips and music modes
+  const handleMuteToggle = useCallback(() => {
+    if (homepageMode === 'music') {
+      toggleMusicMute();
+    } else {
+      toggleClipsMute();
+    }
+  }, [homepageMode, toggleMusicMute, toggleClipsMute]);
+
+  // Get current mute state based on mode
+  const currentMuted = homepageMode === 'music' ? musicPlayerState.isMuted : isMuted;
 
   // Modal contexts
   const { openStore, view: storeView, closeStore } = useStore();
@@ -308,9 +324,9 @@ export default function HomePageClient({
         )}
       </ClipsErrorBoundary>
 
-      {/* Mute Button - Top right, always visible */}
+      {/* Mute Button - Top right, always visible, works for both clips and music */}
       <button
-        onClick={toggleMute}
+        onClick={handleMuteToggle}
         className="fixed z-40 flex items-center justify-center rounded-full bg-black/40 backdrop-blur-xl border border-white/10 text-white shadow-lg active:scale-90 transition-transform right-4 md:right-16"
         style={{
           top: 'max(env(safe-area-inset-top, 12px), 12px)',
@@ -319,9 +335,9 @@ export default function HomePageClient({
           touchAction: 'manipulation',
           WebkitTapHighlightColor: 'transparent',
         }}
-        aria-label={isMuted ? 'Unmute' : 'Mute'}
+        aria-label={currentMuted ? 'Unmute' : 'Mute'}
       >
-        {isMuted ? (
+        {currentMuted ? (
           <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
             <path strokeLinecap="round" strokeLinejoin="round" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />

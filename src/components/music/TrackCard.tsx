@@ -1,8 +1,8 @@
 "use client";
 
-import { memo } from 'react';
+import { memo, useState, useCallback, useEffect } from 'react';
 import Image from 'next/image';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import type { Track, Album } from '@/types/music';
 
 interface TrackCardProps {
@@ -18,10 +18,42 @@ interface TrackCardProps {
  * TrackCard - Full-screen card for album showcase feed
  *
  * Displays album art as background with track info overlay.
- * Tap anywhere to play/pause.
+ * Tap anywhere to play/pause. Shows flash status indicator.
  */
 function TrackCard({ track, album, active, isPlaying, isLoading, onPlay }: TrackCardProps) {
   const coverArt = album?.cover_art_url;
+  const [showStatus, setShowStatus] = useState(false);
+  const [statusIcon, setStatusIcon] = useState<'play' | 'pause' | 'loading'>('play');
+
+  // Handle tap to play/pause with flash indicator
+  const handleTap = useCallback(() => {
+    if (!active) return;
+
+    // Determine what icon to show (opposite of current state since we're toggling)
+    if (isLoading) {
+      setStatusIcon('loading');
+    } else {
+      setStatusIcon(isPlaying ? 'pause' : 'play');
+    }
+
+    setShowStatus(true);
+    onPlay();
+  }, [active, isPlaying, isLoading, onPlay]);
+
+  // Auto-hide status after showing
+  useEffect(() => {
+    if (showStatus) {
+      const timer = setTimeout(() => setShowStatus(false), 800);
+      return () => clearTimeout(timer);
+    }
+  }, [showStatus]);
+
+  // Update status icon when loading state changes
+  useEffect(() => {
+    if (isLoading && showStatus) {
+      setStatusIcon('loading');
+    }
+  }, [isLoading, showStatus]);
 
   return (
     <div
@@ -31,6 +63,7 @@ function TrackCard({ track, album, active, isPlaying, isLoading, onPlay }: Track
         WebkitUserSelect: 'none',
         userSelect: 'none',
       }}
+      onClick={handleTap}
     >
       {/* Album art background */}
       {coverArt && (
@@ -75,31 +108,32 @@ function TrackCard({ track, album, active, isPlaying, isLoading, onPlay }: Track
         }}
       />
 
-      {/* Center play button */}
-      <button
-        onClick={onPlay}
-        className={`absolute inset-0 flex items-center justify-center z-10 transition-opacity duration-300 ${
-          active ? 'opacity-100' : 'opacity-0'
-        }`}
-        aria-label={isPlaying ? 'Pause' : 'Play'}
-      >
-        <motion.div
-          whileTap={{ scale: 0.9 }}
-          className="w-20 h-20 rounded-full bg-white/10 backdrop-blur-xl border border-white/20 flex items-center justify-center shadow-2xl"
-        >
-          {isLoading ? (
-            <div className="w-8 h-8 border-3 border-white/30 border-t-white rounded-full animate-spin" />
-          ) : isPlaying ? (
-            <svg className="w-10 h-10 text-white" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
-            </svg>
-          ) : (
-            <svg className="w-10 h-10 text-white ml-1" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M8 5v14l11-7z" />
-            </svg>
-          )}
-        </motion.div>
-      </button>
+      {/* Flash status indicator - appears on tap then fades */}
+      <AnimatePresence>
+        {showStatus && active && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            transition={{ duration: 0.2 }}
+            className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none"
+          >
+            <div className="w-20 h-20 rounded-full bg-black/40 backdrop-blur-xl border border-white/20 flex items-center justify-center shadow-2xl">
+              {statusIcon === 'loading' ? (
+                <div className="w-8 h-8 border-3 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : statusIcon === 'play' ? (
+                <svg className="w-10 h-10 text-white ml-1" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+              ) : (
+                <svg className="w-10 h-10 text-white" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
+                </svg>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Bottom-left: Track info */}
       <div
