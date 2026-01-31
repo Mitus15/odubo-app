@@ -51,12 +51,21 @@ export default function SingleVideoPlayer({
   const lastActiveIndexRef = useRef(-1);
   // Milestone tracking - which milestones have been reached for current clip
   const milestonesReachedRef = useRef<Set<number>>(new Set());
+  // Track active clip ID for race condition prevention
+  const activeClipIdRef = useRef<number | null>(null);
+  // Track firstFrame state in ref for stable event handlers
+  const firstFrameRef = useRef(false);
+  // Stable ref for onVideoReady callback
+  const onVideoReadyRef = useRef(onVideoReady);
 
   const [showPlayButton, setShowPlayButton] = useState(false);
   const [isBuffering, setIsBuffering] = useState(false);
   const [firstFrame, setFirstFrame] = useState(false);
   const [showPauseIcon, setShowPauseIcon] = useState(false);
   const [isUserPaused, setIsUserPaused] = useState(false);
+
+  // Keep ref in sync with callback prop
+  onVideoReadyRef.current = onVideoReady;
 
   const activeClip = clips[activeIndex];
   const nextClip = clips[activeIndex + 1];
@@ -218,12 +227,15 @@ export default function SingleVideoPlayer({
     // Check if this is a new clip
     if (lastActiveIndexRef.current !== activeIndex) {
       lastActiveIndexRef.current = activeIndex;
+      // Track active clip ID for race condition prevention
+      activeClipIdRef.current = activeClip?.id ?? null;
 
       // Signal video not ready yet
       onVideoReady?.(false);
 
       // Reset state for new clip
       setFirstFrame(false);
+      firstFrameRef.current = false;
       setShowPlayButton(false);
       setIsUserPaused(false);
       userPausedRef.current = false;
@@ -261,22 +273,19 @@ export default function SingleVideoPlayer({
   }, [activeClip, onWatchMilestone]);
 
   // Preload next clip into hidden video element
-  // DEFERRED: Only start after first frame renders (after LCP)
+  // Start immediately with small delay to avoid blocking current clip loading
   useEffect(() => {
-    // Wait until first frame is rendered to avoid blocking LCP
-    if (!firstFrame) return;
-
     const p = preloadRef.current;
     const nextUrl = getVideoUrl(nextClip);
     if (!p || !nextUrl) return;
 
-    // Small delay to ensure LCP is captured before starting preload
+    // Small delay to prioritize current clip, then start preloading
     const timeoutId = setTimeout(() => {
       if (p.src !== nextUrl) {
         p.src = nextUrl;
         p.load(); // Actually buffer the video
       }
-    }, 100);
+    }, 300);
 
     // Cleanup: release resources on unmount
     return () => {
@@ -286,7 +295,7 @@ export default function SingleVideoPlayer({
         p.load(); // Flush any buffered data
       }
     };
-  }, [nextClip, getVideoUrl, firstFrame]);
+  }, [nextClip, getVideoUrl]);
 
   // Sync mute state
   useEffect(() => {
@@ -326,27 +335,61 @@ export default function SingleVideoPlayer({
     };
   }, []);
 
-  // First frame detection for poster fade
+  // First frame detection for poster fade - STABLE listener (no activeIndex dependency)
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
 
-    const mark = () => {
-      setFirstFrame(true);
-      onVideoReady?.(true);
-    };
-
-    const onPlaying = () => {
-      if ('requestVideoFrameCallback' in v) {
-        (v as any).requestVideoFrameCallback(mark);
-      } else {
-        requestAnimationFrame(mark);
+    const markFirstFrame = () => {
+      if (!firstFrameRef.current) {
+        firstFrameRef.current = true;
+        setFirstFrame(true);
+        onVideoReadyRef.current?.(true);
       }
     };
 
-    v.addEventListener('playing', onPlaying, { once: true });
-    return () => v.removeEventListener('playing', onPlaying);
-  }, [activeIndex, onVideoReady]);
+    const handlePlaying = () => {
+      // Capture current clip ID to validate in callback
+      const clipIdAtPlay = activeClipIdRef.current;
+      if (clipIdAtPlay === null) return;
+
+      if ('requestVideoFrameCallback' in v) {
+        (v as any).requestVideoFrameCallback(() => {
+          // Only mark if still on same clip
+          if (activeClipIdRef.current === clipIdAtPlay) {
+            markFirstFrame();
+          }
+        });
+      } else {
+        requestAnimationFrame(() => {
+          if (activeClipIdRef.current === clipIdAtPlay) {
+            markFirstFrame();
+          }
+        });
+      }
+    };
+
+    // Backup: canplay event for slower networks where playing fires late
+    const handleCanPlay = () => {
+      // Only use as backup if video is actually playing
+      if (!firstFrameRef.current && !v.paused && v.readyState >= 3) {
+        const clipIdAtCanPlay = activeClipIdRef.current;
+        requestAnimationFrame(() => {
+          if (activeClipIdRef.current === clipIdAtCanPlay) {
+            markFirstFrame();
+          }
+        });
+      }
+    };
+
+    v.addEventListener('playing', handlePlaying);
+    v.addEventListener('canplay', handleCanPlay);
+
+    return () => {
+      v.removeEventListener('playing', handlePlaying);
+      v.removeEventListener('canplay', handleCanPlay);
+    };
+  }, []); // STABLE - no dependencies, uses refs for all mutable values
 
   // Visibility change: resume when tab becomes visible
   useEffect(() => {
