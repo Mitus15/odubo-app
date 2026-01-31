@@ -17,7 +17,7 @@ interface StoreSettings {
 export default function StoreSettingsTab() {
   const [settings, setSettings] = useState<StoreSettings>({
     storeName: 'Odubo Store',
-    storeEmail: 'store@odubo.com',
+    storeEmail: 'baad@odubo.studio',
     currency: 'USD',
     timezone: 'America/New_York',
     weightUnit: 'lb',

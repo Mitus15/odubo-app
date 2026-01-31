@@ -80,7 +80,7 @@ const legalContent = {
     <p>We may update this Privacy Policy from time to time, including to reflect changes to our practices or for other operational, legal, or regulatory reasons. We will post the revised Privacy Policy on this website and update the "Last updated" date.</p>
 
     <h2 class="text-xl font-semibold mt-8 mb-3 text-[#ede8df]">Contact</h2>
-    <p>Should you have any questions about our privacy practices or this Privacy Policy, or if you would like to exercise any of the rights available to you, please email us at <a href="mailto:maniodubo@gmail.com" class="text-[#843c2d] hover:underline">maniodubo@gmail.com</a> or contact us at:</p>
+    <p>Should you have any questions about our privacy practices or this Privacy Policy, or if you would like to exercise any of the rights available to you, please email us at <a href="mailto:baad@odubo.studio" class="text-[#843c2d] hover:underline">baad@odubo.studio</a> or contact us at:</p>
     <p class="mt-2 ml-4">444 Saint Paul Street<br/>Kamloops, BC, V2C 0L2<br/>Canada</p>
   `,
 
@@ -181,7 +181,7 @@ const legalContent = {
 
     <h2 class="text-xl font-semibold mt-8 mb-3 text-[#ede8df]">16. Contact Information</h2>
     <p>For questions about these Terms, please contact us at:</p>
-    <p class="mt-2 ml-4">B.A.A.D by Odubo<br/>Email: <a href="mailto:maniodubo@gmail.com" class="text-[#843c2d] hover:underline">maniodubo@gmail.com</a><br/>444 Saint Paul Street<br/>Kamloops, BC, V2C 0L2<br/>Canada</p>
+    <p class="mt-2 ml-4">B.A.A.D by Odubo<br/>Email: <a href="mailto:baad@odubo.studio" class="text-[#843c2d] hover:underline">baad@odubo.studio</a><br/>444 Saint Paul Street<br/>Kamloops, BC, V2C 0L2<br/>Canada</p>
   `,
 
   shipping: `
@@ -280,7 +280,7 @@ const legalContent = {
 
     <h2 class="text-xl font-semibold mt-8 mb-3 text-[#ede8df]">Contact Us</h2>
     <p>For questions about shipping, returns, or your order, please contact us:</p>
-    <p class="mt-2 ml-4">Email: <a href="mailto:maniodubo@gmail.com" class="text-[#843c2d] hover:underline">maniodubo@gmail.com</a></p>
+    <p class="mt-2 ml-4">Email: <a href="mailto:baad@odubo.studio" class="text-[#843c2d] hover:underline">baad@odubo.studio</a></p>
     <p class="mt-3">Please include your order number in all correspondence for faster assistance. We typically respond within 1-2 business days.</p>
 
     <div class="bg-[#843c2d]/10 border border-[#843c2d]/30 rounded-xl p-4 mt-8">

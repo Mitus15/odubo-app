@@ -29,7 +29,7 @@ const LegalContent = {
       <p>We implement appropriate security measures to protect your personal information. However, no method of transmission over the internet is 100% secure.</p>
       
       <h2 className="text-lg font-semibold mt-8 mb-3 text-[#ede8df]">Contact Us</h2>
-      <p>If you have any questions about this Privacy Policy, please contact us at <span className="text-[#ede8df]">privacy@odubo.studio</span>.</p>
+      <p>If you have any questions about this Privacy Policy, please contact us at <span className="text-[#ede8df]">baad@odubo.studio</span>.</p>
     </>
   ),
   
@@ -50,7 +50,7 @@ const LegalContent = {
       <p>Odubo Studio shall not be liable for any indirect, incidental, special, consequential, or punitive damages resulting from your use of our services.</p>
       
       <h2 className="text-lg font-semibold mt-8 mb-3 text-[#ede8df]">Contact Information</h2>
-      <p>Questions about the Terms of Service should be sent to us at <span className="text-[#ede8df]">legal@odubo.studio</span>.</p>
+      <p>Questions about the Terms of Service should be sent to us at <span className="text-[#ede8df]">baad@odubo.studio</span>.</p>
     </>
   ),
   

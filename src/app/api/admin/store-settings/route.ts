@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
     // Parse settings with defaults
     const settings: StoreSettings = {
       storeName: allSettings.get('store_name')?.value || 'Odubo Store',
-      storeEmail: allSettings.get('store_email')?.value || 'store@odubo.com',
+      storeEmail: allSettings.get('store_email')?.value || 'baad@odubo.studio',
       currency: allSettings.get('store_currency')?.value || 'USD',
       timezone: allSettings.get('store_timezone')?.value || 'America/New_York',
       weightUnit: allSettings.get('store_weight_unit')?.value || 'lb',

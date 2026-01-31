@@ -233,14 +233,14 @@ export default function ClipsFeed({
     }
   }, [hasMore, fetchPage]);
 
-  // Active clip detection using IntersectionObserver (primary) with scroll fallbacks
-  // IntersectionObserver is more reliable than manual scroll position calculations
+  // Active clip detection using IntersectionObserver
+  // CRITICAL: Only switch active clip AFTER scroll settles to prevent jarring mid-scroll switches
   useEffect(() => {
     const root = rootRef.current;
     if (!root || !displayClips.length) return;
 
     let scrollTimeout: ReturnType<typeof setTimeout> | null = null;
-    let lastScrollTop = root.scrollTop;
+    let isScrolling = false;
 
     // Track the most visible clip via IntersectionObserver
     const visibilityMap = new Map<number, number>(); // clipIndex -> intersectionRatio
@@ -274,8 +274,7 @@ export default function ClipsFeed({
       }
     };
 
-    // IntersectionObserver: primary detection method
-    // CRITICAL: root must be the scroll container, NOT viewport
+    // IntersectionObserver: tracks visibility but doesn't trigger switches during scroll
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -288,11 +287,15 @@ export default function ClipsFeed({
             }
           }
         });
-        updateActiveFromVisibility();
+
+        // Only update immediately if not actively scrolling
+        if (!isScrolling) {
+          updateActiveFromVisibility();
+        }
       },
       {
-        root: root, // CRITICAL: scroll container, NOT viewport
-        threshold: [0.5, 0.7, 0.9], // Multiple thresholds for granular detection
+        root: root,
+        threshold: [0.5, 0.7, 0.9],
       }
     );
 
@@ -300,7 +303,7 @@ export default function ClipsFeed({
     const sections = root.querySelectorAll('[data-clip-index]');
     sections.forEach((section) => observer.observe(section));
 
-    // Scroll direction tracking (still needed for video behavior)
+    // Scroll direction tracking + delayed active switch
     const handleScroll = () => {
       const currentScrollTop = root.scrollTop;
       const newDirection = currentScrollTop > prevScrollTopRef.current ? 'forward' : 'backward';
@@ -309,21 +312,23 @@ export default function ClipsFeed({
       }
       prevScrollTopRef.current = currentScrollTop;
 
-      // Fallback timeout in case IntersectionObserver misses edge cases
-      if (scrollTimeout) clearTimeout(scrollTimeout);
-      scrollTimeout = setTimeout(() => {
-        if (root.scrollTop === lastScrollTop) {
-          updateActiveFromVisibility();
-        }
-        lastScrollTop = root.scrollTop;
-      }, 100); // Increased from 30ms - IO handles most cases now
+      // Mark as scrolling
+      isScrolling = true;
 
-      lastScrollTop = root.scrollTop;
+      // Clear any pending update
+      if (scrollTimeout) clearTimeout(scrollTimeout);
+
+      // Wait for scroll to settle before switching active clip
+      scrollTimeout = setTimeout(() => {
+        isScrolling = false;
+        updateActiveFromVisibility();
+      }, 50); // Quick settle - responsive but not jarring
     };
 
-    // scrollend event as enhancement (when browser supports it)
+    // scrollend event: immediately update when scroll ends (browser native)
     const handleScrollEndEvent = () => {
       if (scrollTimeout) clearTimeout(scrollTimeout);
+      isScrolling = false;
       updateActiveFromVisibility();
     };
 
