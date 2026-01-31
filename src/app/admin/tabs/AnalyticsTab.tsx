@@ -75,6 +75,44 @@ interface InsightsData {
   generatedAt: string;
 }
 
+interface WatchThroughData {
+  overall: {
+    avgWatchThroughPct: number;
+    completionRate: number;
+    totalViews: number;
+    uniqueClips: number;
+  };
+  topClips: Array<{
+    clipId: number;
+    title: string;
+    avgWatchThroughPct: number;
+    viewCount: number;
+    completionRate: number;
+  }>;
+  bottomClips: Array<{
+    clipId: number;
+    title: string;
+    avgWatchThroughPct: number;
+    viewCount: number;
+    completionRate: number;
+  }>;
+  byClipAge: Array<{
+    bucket: string;
+    avgWatchThroughPct: number;
+    viewCount: number;
+  }>;
+  byPopularity: {
+    popular: number;
+    mid: number;
+    low: number;
+  };
+  recommendation: {
+    strategy: 'random' | 'recency' | 'popularity' | 'hybrid';
+    confidence: 'low' | 'medium' | 'high';
+    rationale: string;
+  };
+}
+
 // ============================================
 // Helper Functions
 // ============================================
@@ -103,6 +141,7 @@ interface AnalyticsTabProps {
 export default function AnalyticsTab({ view = 'analytics-overview' }: AnalyticsTabProps) {
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [insightsData, setInsightsData] = useState<InsightsData | null>(null);
+  const [watchThroughData, setWatchThroughData] = useState<WatchThroughData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingInsights, setIsLoadingInsights] = useState(false);
   const [period, setPeriod] = useState<7 | 30 | 90>(7);
@@ -114,10 +153,21 @@ export default function AnalyticsTab({ view = 'analytics-overview' }: AnalyticsT
     setError(null);
 
     try {
-      const res = await fetch(`/api/analytics/dashboard?days=${period}&compare=true`);
-      if (!res.ok) throw new Error('Failed to fetch analytics');
-      const data = await res.json() as DashboardData;
+      // Fetch both dashboard and watch-through data in parallel
+      const [dashboardRes, watchThroughRes] = await Promise.all([
+        fetch(`/api/analytics/dashboard?days=${period}&compare=true`),
+        fetch(`/api/analytics/watch-through?days=${period}`),
+      ]);
+
+      if (!dashboardRes.ok) throw new Error('Failed to fetch analytics');
+      const data = await dashboardRes.json() as DashboardData;
       setDashboardData(data);
+
+      // Watch-through is optional - don't fail if it errors
+      if (watchThroughRes.ok) {
+        const wtData = await watchThroughRes.json() as WatchThroughData;
+        setWatchThroughData(wtData);
+      }
     } catch (err: any) {
       setError(err?.message || 'Failed to load analytics');
       console.error('Analytics fetch error:', err);
@@ -457,6 +507,157 @@ export default function AnalyticsTab({ view = 'analytics-overview' }: AnalyticsT
           )}
         </div>
       </div>
+
+      {/* Watch-Through Analytics */}
+      {watchThroughData && (
+        <div className="space-y-4">
+          <h3 className="text-lg font-bold text-[#ede8df] flex items-center gap-2">
+            <span>📊</span> Watch-Through Analytics
+          </h3>
+
+          {/* Summary Metrics */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <MetricCard
+              label="Avg Watch-Through"
+              value={watchThroughData.overall.avgWatchThroughPct}
+              format="percent"
+              icon={<span>👁️</span>}
+            />
+            <MetricCard
+              label="Completion Rate"
+              value={watchThroughData.overall.completionRate}
+              format="percent"
+              icon={<span>✅</span>}
+              sublabel="views reaching 100%"
+            />
+            <MetricCard
+              label="Total Clip Views"
+              value={watchThroughData.overall.totalViews}
+              icon={<span>🎬</span>}
+            />
+            <MetricCard
+              label="Unique Clips"
+              value={watchThroughData.overall.uniqueClips}
+              icon={<span>🎞️</span>}
+            />
+          </div>
+
+          {/* Charts Row */}
+          <div className="grid lg:grid-cols-2 gap-4">
+            {/* By Clip Age */}
+            <div className="bg-[#302927]/60 border border-[#502d26]/40 rounded-xl sm:rounded-2xl p-4 sm:p-6 backdrop-blur-sm">
+              <h4 className="text-sm font-bold text-[#ede8df] mb-3">Watch-Through by Clip Age</h4>
+              {watchThroughData.byClipAge.length > 0 ? (
+                <BarChart
+                  data={watchThroughData.byClipAge.map(b => ({
+                    name: b.bucket,
+                    value: b.avgWatchThroughPct,
+                  }))}
+                  height={160}
+                  color="#843c2d"
+                />
+              ) : (
+                <div className="text-center py-8 text-[#b2a491] text-sm">No data yet</div>
+              )}
+            </div>
+
+            {/* By Popularity */}
+            <div className="bg-[#302927]/60 border border-[#502d26]/40 rounded-xl sm:rounded-2xl p-4 sm:p-6 backdrop-blur-sm">
+              <h4 className="text-sm font-bold text-[#ede8df] mb-3">Watch-Through by Popularity Tier</h4>
+              <BarChart
+                data={[
+                  { name: 'Popular', value: watchThroughData.byPopularity.popular },
+                  { name: 'Mid-tier', value: watchThroughData.byPopularity.mid },
+                  { name: 'Low-view', value: watchThroughData.byPopularity.low },
+                ]}
+                height={160}
+                color="#a85540"
+              />
+            </div>
+          </div>
+
+          {/* Top & Bottom Clips */}
+          <div className="grid lg:grid-cols-2 gap-4">
+            {/* Top Clips by Watch-Through */}
+            <div className="bg-[#302927]/60 border border-[#502d26]/40 rounded-xl sm:rounded-2xl p-4 sm:p-6 backdrop-blur-sm">
+              <h4 className="text-sm font-bold text-[#ede8df] mb-3">🏆 Top Clips by Watch-Through</h4>
+              {watchThroughData.topClips.length > 0 ? (
+                <div className="space-y-2 max-h-[280px] overflow-y-auto">
+                  {watchThroughData.topClips.map((clip, idx) => (
+                    <div key={clip.clipId} className="flex items-center justify-between p-2 bg-[#171616]/50 rounded-lg">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <span className="text-sm text-[#b2a491] w-5">#{idx + 1}</span>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-[#ede8df] text-sm font-medium truncate">{clip.title}</div>
+                          <div className="text-[10px] text-[#b2a491]">
+                            {clip.viewCount} views · {clip.completionRate}% completion
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-[#ede8df] text-sm font-bold">{clip.avgWatchThroughPct}%</div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-[#b2a491] text-sm">No data yet</div>
+              )}
+            </div>
+
+            {/* Bottom Clips (Optimization Targets) */}
+            <div className="bg-[#302927]/60 border border-[#502d26]/40 rounded-xl sm:rounded-2xl p-4 sm:p-6 backdrop-blur-sm">
+              <h4 className="text-sm font-bold text-[#ede8df] mb-3">⚠️ Optimization Targets</h4>
+              {watchThroughData.bottomClips.length > 0 ? (
+                <div className="space-y-2">
+                  {watchThroughData.bottomClips.map((clip) => (
+                    <div key={clip.clipId} className="flex items-center justify-between p-2 bg-[#171616]/50 rounded-lg border-l-2 border-[#843c2d]/50">
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[#ede8df] text-sm font-medium truncate">{clip.title}</div>
+                        <div className="text-[10px] text-[#b2a491]">
+                          {clip.viewCount} views · {clip.completionRate}% completion
+                        </div>
+                      </div>
+                      <div className="text-[#b2a491] text-sm font-bold">{clip.avgWatchThroughPct}%</div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-[#b2a491] text-sm">No data yet</div>
+              )}
+            </div>
+          </div>
+
+          {/* Recommendation Card */}
+          <div className={`bg-[#302927]/60 border rounded-xl sm:rounded-2xl p-4 sm:p-6 backdrop-blur-sm ${
+            watchThroughData.recommendation.confidence === 'high' ? 'border-green-700/40' :
+            watchThroughData.recommendation.confidence === 'medium' ? 'border-yellow-700/40' :
+            'border-[#502d26]/40'
+          }`}>
+            <div className="flex items-start gap-3">
+              <div className="text-2xl">
+                {watchThroughData.recommendation.strategy === 'random' && '🎲'}
+                {watchThroughData.recommendation.strategy === 'recency' && '🕐'}
+                {watchThroughData.recommendation.strategy === 'popularity' && '🔥'}
+                {watchThroughData.recommendation.strategy === 'hybrid' && '⚡'}
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <h4 className="text-sm font-bold text-[#ede8df]">
+                    Recommended Strategy: <span className="capitalize">{watchThroughData.recommendation.strategy}</span>
+                  </h4>
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wide ${
+                    watchThroughData.recommendation.confidence === 'high' ? 'bg-green-900/50 text-green-300' :
+                    watchThroughData.recommendation.confidence === 'medium' ? 'bg-yellow-900/50 text-yellow-300' :
+                    'bg-gray-900/50 text-gray-300'
+                  }`}>
+                    {watchThroughData.recommendation.confidence} confidence
+                  </span>
+                </div>
+                <p className="text-sm text-[#b2a491]">{watchThroughData.recommendation.rationale}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* AI Insights */}
       <div className="bg-[#302927]/60 border border-[#502d26]/40 rounded-xl sm:rounded-2xl p-4 sm:p-6 backdrop-blur-sm">
