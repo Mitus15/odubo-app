@@ -360,215 +360,226 @@ function VideoCard({
 
   return (
     <div className={`rounded-xl overflow-hidden ${isClip ? 'ml-8' : ''}`}>
-      <div className={`p-4 flex items-center gap-4 ${
+      <div className={`p-3 md:p-4 flex flex-col md:flex-row md:items-center gap-3 md:gap-4 ${
         isSelected ? 'bg-[#843c2d]/20' : 'bg-[#1a1816] hover:bg-[#1f1c1a]'
       } transition-colors`}>
-        {/* Selection checkbox */}
-        {onSelect && (
-          <button
-            onClick={() => onSelect(video.id)}
-            className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${
-              isSelected
-                ? 'bg-[#843c2d] border-[#843c2d] text-white'
-                : 'border-[#502d26]/50 hover:border-[#843c2d]'
-            }`}
-          >
-            {isSelected && Icons.check}
-          </button>
-        )}
-
-        {/* Expand/collapse for parents */}
-        {hasChildren ? (
-          <button
-            onClick={onToggleExpand}
-            className="w-6 h-6 flex items-center justify-center text-[#726d6c] hover:text-[#ede8df] transition-colors"
-          >
-            {isExpanded ? Icons.expand : Icons.collapse}
-          </button>
-        ) : (
-          <div className="w-6" />
-        )}
-
-        {/* Thumbnail */}
-        <div className="w-16 h-10 rounded-lg overflow-hidden bg-[#0d0c0a] flex-shrink-0">
-          {video.poster_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={video.poster_url}
-              alt={video.title}
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-[#502d26]/50">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-                <path strokeLinecap="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z" />
-              </svg>
-            </div>
+        {/* Top row on mobile: checkbox, expand, thumbnail, and info */}
+        <div className="flex items-center gap-3 md:gap-4 flex-1 min-w-0">
+          {/* Selection checkbox */}
+          {onSelect && (
+            <button
+              onClick={() => onSelect(video.id)}
+              className={`w-5 h-5 rounded border flex items-center justify-center transition-colors flex-shrink-0 ${
+                isSelected
+                  ? 'bg-[#843c2d] border-[#843c2d] text-white'
+                  : 'border-[#502d26]/50 hover:border-[#843c2d]'
+              }`}
+            >
+              {isSelected && Icons.check}
+            </button>
           )}
-        </div>
 
-        {/* Info */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            {editingId === video.id ? (
-              <input
-                type="text"
-                value={editTitle || ''}
-                onChange={(e) => onEditChange?.(e.target.value)}
-                onBlur={() => onSaveTitle?.(video.id)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') onSaveTitle?.(video.id);
-                  if (e.key === 'Escape') onSaveTitle?.(video.id);
-                }}
-                autoFocus
-                onClick={(e) => e.stopPropagation()}
-                className="bg-transparent border-b border-[#843c2d] text-sm text-[#ede8df] outline-none w-full max-w-[200px]"
+          {/* Expand/collapse for parents */}
+          {hasChildren ? (
+            <button
+              onClick={onToggleExpand}
+              className="w-6 h-6 flex items-center justify-center text-[#726d6c] hover:text-[#ede8df] transition-colors flex-shrink-0"
+            >
+              {isExpanded ? Icons.expand : Icons.collapse}
+            </button>
+          ) : (
+            <div className="w-6 flex-shrink-0" />
+          )}
+
+          {/* Thumbnail */}
+          <div className="w-12 h-9 md:w-16 md:h-10 rounded-lg overflow-hidden bg-[#0d0c0a] flex-shrink-0">
+            {video.poster_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={video.poster_url}
+                alt={video.title}
+                className="w-full h-full object-cover"
               />
             ) : (
-              <h3
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onStartEdit?.(video.id, video.title || '');
-                }}
-                className="text-sm font-medium text-[#ede8df] truncate cursor-pointer hover:text-[#b2a491] transition-colors"
-                title="Click to edit title"
-              >
-                {video.title || 'Untitled'}
-              </h3>
-            )}
-            {isClip && video.clip_index && video.total_siblings && (
-              <span className="px-2 py-0.5 text-[10px] rounded-full bg-[#502d26]/30 text-[#b2a491]">
-                Clip {video.clip_index} of {video.total_siblings}
-              </span>
+              <div className="w-full h-full flex items-center justify-center text-[#502d26]/50">
+                <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z" />
+                </svg>
+              </div>
             )}
           </div>
-          {video.original_filename && (
-            <p className="text-xs text-[#726d6c] truncate mt-0.5">
-              {video.original_filename}
-            </p>
-          )}
-        </div>
 
-        {/* Publish toggle - only for parent videos */}
-        {!isClip && onTogglePublish && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onTogglePublish(video.id, isPublished);
-            }}
-            disabled={isTogglingPublish}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
-              isPublished
-                ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
-                : 'bg-white/5 text-[#726d6c] hover:bg-white/10 hover:text-[#b2a491]'
-            } ${isTogglingPublish ? 'opacity-50' : ''}`}
-            title={isPublished ? 'Published - Click to unpublish' : 'Unpublished - Click to publish'}
-          >
-            {isPublished ? Icons.globe : Icons.eyeOff}
-            <span>{isPublished ? 'Live' : 'Draft'}</span>
-          </button>
-        )}
-
-        {/* Clip publication status badge (inherits from parent) */}
-        {isClip && (
-          <span className={`px-2 py-1 rounded-lg text-xs ${
-            isPublished
-              ? 'bg-green-500/10 text-green-400/70'
-              : 'bg-white/5 text-[#726d6c]'
-          }`}>
-            {isPublished ? 'Live' : 'Draft'}
-          </span>
-        )}
-
-        {/* Deploy button - only for published content */}
-        {isPublished && onDeploy && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onDeploy(video.id);
-            }}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
-              isDeployed
-                ? 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30'
-                : 'bg-[#843c2d]/20 text-[#b2a491] hover:bg-[#843c2d]/30'
-            }`}
-            title={isDeployed ? 'Deployed - Click to manage' : 'Click to deploy to socials'}
-          >
-            {Icons.rocket}
-            <span>{isDeployed ? 'Deployed' : 'Deploy'}</span>
-          </button>
-        )}
-
-        {/* Platform statuses */}
-        <div className="flex items-center gap-1">
-          <PlatformStatus
-            url={isClip ? video.youtube_shorts_url : video.youtube_url}
-            status={video.postforme_status}
-            icon={Icons.youtube}
-            platform="YouTube"
-          />
-          <PlatformStatus
-            url={video.tiktok_url}
-            status={video.postforme_status}
-            icon={Icons.tiktok}
-            platform="TikTok"
-          />
-          <PlatformStatus
-            url={video.instagram_reels_url}
-            status={video.postforme_status}
-            icon={Icons.instagram}
-            platform="Instagram"
-          />
-        </div>
-
-        {/* Actions menu */}
-        <div className="relative">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowActions(!showActions);
-            }}
-            className="p-2 rounded-lg bg-white/5 text-[#726d6c] hover:bg-white/10 hover:text-[#ede8df] transition-colors"
-          >
-            {Icons.moreVertical}
-          </button>
-          {showActions && (
-            <>
-              {/* Backdrop to close menu */}
-              <div
-                className="fixed inset-0 z-10"
-                onClick={() => setShowActions(false)}
-              />
-              <div className="absolute right-0 top-full mt-1 z-20 bg-[#1a1816] border border-white/10 rounded-xl shadow-xl overflow-hidden min-w-[140px]">
-                <button
+          {/* Info */}
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-2">
+              {editingId === video.id ? (
+                <input
+                  type="text"
+                  value={editTitle || ''}
+                  onChange={(e) => onEditChange?.(e.target.value)}
+                  onBlur={() => onSaveTitle?.(video.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') onSaveTitle?.(video.id);
+                    if (e.key === 'Escape') onSaveTitle?.(video.id);
+                  }}
+                  autoFocus
+                  onClick={(e) => e.stopPropagation()}
+                  className="bg-transparent border-b border-[#843c2d] text-sm text-[#ede8df] outline-none w-full max-w-[200px] md:max-w-none"
+                />
+              ) : (
+                <h3
                   onClick={(e) => {
                     e.stopPropagation();
                     onStartEdit?.(video.id, video.title || '');
-                    setShowActions(false);
                   }}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[#ede8df] hover:bg-white/5 transition-colors"
+                  className="text-sm font-medium text-[#ede8df] truncate cursor-pointer hover:text-[#b2a491] transition-colors"
+                  title="Click to edit title"
                 >
-                  {Icons.edit}
-                  <span>Edit Title</span>
-                </button>
-                {onDelete && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (confirm(`Delete "${video.title}"? This cannot be undone.`)) {
-                        onDelete(video.id);
-                      }
-                      setShowActions(false);
-                    }}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
-                  >
-                    {Icons.trash}
-                    <span>Delete</span>
-                  </button>
-                )}
-              </div>
-            </>
-          )}
+                  {video.title || 'Untitled'}
+                </h3>
+              )}
+              {isClip && video.clip_index && video.total_siblings && (
+                <span className="px-2 py-0.5 text-[10px] rounded-full bg-[#502d26]/30 text-[#b2a491] flex-shrink-0">
+                  Clip {video.clip_index} of {video.total_siblings}
+                </span>
+              )}
+            </div>
+            {video.original_filename && (
+              <p className="text-xs text-[#726d6c] truncate mt-0.5">
+                {video.original_filename}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Bottom row on mobile: actions and status */}
+        <div className="flex items-center justify-between md:justify-end gap-2 md:gap-3">
+          {/* Status indicators - stack vertically on mobile */}
+          <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-2">
+            {/* Publish toggle - only for parent videos */}
+            {!isClip && onTogglePublish && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onTogglePublish(video.id, isPublished);
+                }}
+                disabled={isTogglingPublish}
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                  isPublished
+                    ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
+                    : 'bg-white/5 text-[#726d6c] hover:bg-white/10 hover:text-[#b2a491]'
+                } ${isTogglingPublish ? 'opacity-50' : ''}`}
+                title={isPublished ? 'Published - Click to unpublish' : 'Unpublished - Click to publish'}
+              >
+                {isPublished ? Icons.globe : Icons.eyeOff}
+                <span className="hidden sm:inline">{isPublished ? 'Live' : 'Draft'}</span>
+              </button>
+            )}
+
+            {/* Clip publication status badge (inherits from parent) */}
+            {isClip && (
+              <span className={`px-2 py-1 rounded-lg text-xs ${
+                isPublished
+                  ? 'bg-green-500/10 text-green-400/70'
+                  : 'bg-white/5 text-[#726d6c]'
+              }`}>
+                {isPublished ? 'Live' : 'Draft'}
+              </span>
+            )}
+
+            {/* Deploy button - only for published content */}
+            {isPublished && onDeploy && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDeploy(video.id);
+                }}
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                  isDeployed
+                    ? 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30'
+                    : 'bg-[#843c2d]/20 text-[#b2a491] hover:bg-[#843c2d]/30'
+                }`}
+                title={isDeployed ? 'Deployed - Click to manage' : 'Click to deploy to socials'}
+              >
+                {Icons.rocket}
+                <span className="hidden sm:inline">{isDeployed ? 'Deployed' : 'Deploy'}</span>
+              </button>
+            )}
+          </div>
+
+          {/* Platform statuses and actions */}
+          <div className="flex items-center gap-1 md:gap-1">
+            <div className="flex items-center gap-1">
+              <PlatformStatus
+                url={isClip ? video.youtube_shorts_url : video.youtube_url}
+                status={video.postforme_status}
+                icon={Icons.youtube}
+                platform="YouTube"
+              />
+              <PlatformStatus
+                url={video.tiktok_url}
+                status={video.postforme_status}
+                icon={Icons.tiktok}
+                platform="TikTok"
+              />
+              <PlatformStatus
+                url={video.instagram_reels_url}
+                status={video.postforme_status}
+                icon={Icons.instagram}
+                platform="Instagram"
+              />
+            </div>
+
+            {/* Actions menu */}
+            <div className="relative">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowActions(!showActions);
+                }}
+                className="p-2 rounded-lg bg-white/5 text-[#726d6c] hover:bg-white/10 hover:text-[#ede8df] transition-colors"
+              >
+                {Icons.moreVertical}
+              </button>
+              {showActions && (
+                <>
+                  {/* Backdrop to close menu */}
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setShowActions(false)}
+                  />
+                  <div className="absolute right-0 top-full mt-1 z-50 bg-[#1a1816] border border-white/10 rounded-xl shadow-xl overflow-hidden min-w-[140px]">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onStartEdit?.(video.id, video.title || '');
+                        setShowActions(false);
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[#ede8df] hover:bg-white/5 transition-colors"
+                    >
+                      {Icons.edit}
+                      <span>Edit Title</span>
+                    </button>
+                    {onDelete && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (confirm(`Delete "${video.title}"? This cannot be undone.`)) {
+                            onDelete(video.id);
+                          }
+                          setShowActions(false);
+                        }}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
+                      >
+                        {Icons.trash}
+                        <span>Delete</span>
+                      </button>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -770,17 +781,17 @@ function LibraryView({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 md:space-y-4">
       {/* Toolbar */}
       <div className="flex flex-col gap-3">
-        {/* Filters row */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 flex-wrap">
+        {/* Filters row - stack on mobile */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2">
             {(['all', 'videos', 'clips', 'published', 'unpublished', 'deployed', 'not-deployed'] as FilterMode[]).map(f => (
               <button
                 key={f}
                 onClick={() => setFilter(f)}
-                className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
+                className={`px-2.5 py-1.5 md:px-3 md:py-1.5 text-xs rounded-lg transition-colors ${
                   filter === f
                     ? 'bg-[#843c2d]/30 text-[#ede8df]'
                     : 'bg-white/5 text-[#726d6c] hover:bg-white/10'
@@ -793,26 +804,26 @@ function LibraryView({
           <button
             onClick={onRefresh}
             disabled={loading}
-            className="px-3 py-1.5 text-xs rounded-lg bg-white/5 text-[#726d6c] hover:bg-white/10 transition-colors disabled:opacity-50"
+            className="px-3 py-1.5 text-xs rounded-lg bg-white/5 text-[#726d6c] hover:bg-white/10 transition-colors disabled:opacity-50 self-start sm:self-auto"
           >
             {loading ? 'Loading...' : 'Refresh'}
           </button>
         </div>
 
-        {/* Selection actions row */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+        {/* Selection actions row - stack on mobile */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={handleSelectAll}
               disabled={visibleIds.length === 0}
-              className="px-3 py-1.5 text-xs rounded-lg bg-white/5 text-[#726d6c] hover:bg-white/10 transition-colors disabled:opacity-50"
+              className="px-2.5 py-1.5 md:px-3 md:py-1.5 text-xs rounded-lg bg-white/5 text-[#726d6c] hover:bg-white/10 transition-colors disabled:opacity-50"
             >
               Select All ({visibleIds.length})
             </button>
             {selectedIds.length > 0 && (
               <button
                 onClick={handleClearSelection}
-                className="px-3 py-1.5 text-xs rounded-lg bg-white/5 text-[#726d6c] hover:bg-white/10 transition-colors"
+                className="px-2.5 py-1.5 md:px-3 md:py-1.5 text-xs rounded-lg bg-white/5 text-[#726d6c] hover:bg-white/10 transition-colors"
               >
                 Clear
               </button>
@@ -827,7 +838,7 @@ function LibraryView({
             <button
               onClick={() => setShowBulkDeleteConfirm(true)}
               disabled={bulkDeleting}
-              className="px-3 py-1.5 text-xs rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors disabled:opacity-50 flex items-center gap-1.5"
+              className="px-2.5 py-1.5 md:px-3 md:py-1.5 text-xs rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors disabled:opacity-50 flex items-center gap-1.5 self-start sm:self-auto"
             >
               {Icons.trash}
               Delete Selected ({selectedIds.length})

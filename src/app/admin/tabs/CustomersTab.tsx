@@ -346,17 +346,19 @@ export default function CustomersTab() {
                       {selectedCustomer.orders.map((order) => (
                         <div key={order.id} className="bg-[#201d1c]/50 rounded-xl border border-[#502d26]/20 overflow-hidden">
                           {/* Order Header */}
-                          <div className="flex items-center justify-between px-4 py-3 bg-[#302927]/30">
-                            <div className="flex items-center gap-4">
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-4 py-3 bg-[#302927]/30">
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
                               <span className="font-medium text-[#ede8df]">#{order.orderNumber || order.id.slice(0, 8)}</span>
-                              <span className={`px-2 py-0.5 text-xs rounded border ${getStatusBadge(order.status)}`}>
-                                {order.status}
-                              </span>
-                              <span className={`px-2 py-0.5 text-xs rounded border ${getStatusBadge(order.fulfillmentStatus)}`}>
-                                {order.fulfillmentStatus}
-                              </span>
+                              <div className="flex flex-wrap gap-1">
+                                <span className={`px-2 py-0.5 text-xs rounded border ${getStatusBadge(order.status)}`}>
+                                  {order.status}
+                                </span>
+                                <span className={`px-2 py-0.5 text-xs rounded border ${getStatusBadge(order.fulfillmentStatus)}`}>
+                                  {order.fulfillmentStatus}
+                                </span>
+                              </div>
                             </div>
-                            <div className="text-right">
+                            <div className="text-left sm:text-right">
                               <div className="font-medium text-[#ede8df]">{formatCurrency(order.totalAmount, order.currency)}</div>
                               <div className="text-xs text-[#b2a491]">{formatDate(order.createdAt)}</div>
                             </div>
