@@ -359,7 +359,7 @@ function VideoCard({
   const isDeployed = !!(video.youtube_url || video.youtube_shorts_url || video.tiktok_url || video.instagram_reels_url);
 
   return (
-    <div className={`rounded-xl overflow-hidden ${isClip ? 'ml-8' : ''}`}>
+    <div className={`rounded-xl ${isClip ? 'ml-8' : ''}`}>
       <div className={`p-3 md:p-4 flex flex-col md:flex-row md:items-center gap-3 md:gap-4 ${
         isSelected ? 'bg-[#843c2d]/20' : 'bg-[#1a1816] hover:bg-[#1f1c1a]'
       } transition-colors`}>
@@ -548,7 +548,7 @@ function VideoCard({
                     className="fixed inset-0 z-40"
                     onClick={() => setShowActions(false)}
                   />
-                  <div className="absolute right-0 top-full mt-1 z-50 bg-[#1a1816] border border-white/10 rounded-xl shadow-xl overflow-hidden min-w-[140px]">
+                  <div className="absolute right-0 top-full mt-1 z-[100] bg-[#1a1816] border border-white/10 rounded-xl shadow-xl overflow-hidden min-w-[140px]">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
