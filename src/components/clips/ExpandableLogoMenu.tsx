@@ -463,7 +463,7 @@ export default function ExpandableLogoMenu({
             <img
               src="/brand-logos/baad-logo.png"
               alt=""
-              className="w-7 h-7 object-contain"
+              className="w-8 h-8 object-contain"
               draggable={false}
             />
 
