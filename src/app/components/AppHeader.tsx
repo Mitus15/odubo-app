@@ -18,7 +18,7 @@ export default function AppHeader() {
         <div className="relative z-10">
           <a href="/" aria-label="Home">
             <img 
-              src="/odubo_logo_emboss.webp" 
+              src="/brand-logos/baad-logo.png" 
               alt="Odubo Studio" 
               className="w-8 h-8 object-contain"
             />
