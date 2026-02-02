@@ -6,6 +6,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import * as tus from 'tus-js-client';
 
 // Types
 interface Video {
@@ -1826,51 +1827,63 @@ function UploadView({
 
         setUploadProgress(`Uploading ${i + 1}/${selectedFiles.length}: ${title}`);
 
-        // 1. Get Upload URL from Cloudflare Stream
-        const urlRes = await fetch('/api/videos/upload-url', {
+        // 1. Get TUS endpoint and credentials
+        const tusRes = await fetch('/api/videos/tus-upload', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name: title })
         });
-        const urlData = await urlRes.json() as { uploadURL?: string; uid?: string };
+        const tusData = await tusRes.json() as { 
+          tusEndpoint?: string; 
+          apiToken?: string;
+          metadata?: Record<string, string>;
+        };
 
-        if (!urlData.uploadURL || !urlData.uid) throw new Error('Failed to get upload URL');
+        if (!tusData.tusEndpoint || !tusData.apiToken) {
+          throw new Error('Failed to get TUS credentials');
+        }
 
-        // 2. Upload to Cloudflare Stream using XMLHttpRequest for progress tracking
+        // 2. Upload using TUS protocol with chunking
+        let uploadedUid: string | null = null;
+
         await new Promise<void>((resolve, reject) => {
-          const xhr = new XMLHttpRequest();
-          
-          xhr.upload.addEventListener('progress', (e) => {
-            if (e.lengthComputable) {
-              const percentage = ((e.loaded / e.total) * 100).toFixed(1);
+          const upload = new tus.Upload(file, {
+            endpoint: tusData.tusEndpoint,
+            chunkSize: 50 * 1024 * 1024, // 50MB chunks
+            retryDelays: [0, 1000, 3000, 5000, 10000],
+            metadata: {
+              ...tusData.metadata,
+              name: title,
+              filetype: file.type,
+            },
+            headers: {
+              'Authorization': `Bearer ${tusData.apiToken}`,
+            },
+            onError: (error) => {
+              console.error('Upload failed:', error);
+              reject(new Error(`Upload failed: ${error.message}`));
+            },
+            onProgress: (bytesUploaded, bytesTotal) => {
+              const percentage = ((bytesUploaded / bytesTotal) * 100).toFixed(1);
               setUploadProgress(`Uploading ${i + 1}/${selectedFiles.length}: ${title} (${percentage}%)`);
-            }
-          });
-          
-          xhr.addEventListener('load', () => {
-            if (xhr.status >= 200 && xhr.status < 300) {
+            },
+            onSuccess: () => {
+              console.log('Upload completed successfully');
+              // Extract UID from upload URL
+              const uploadUrl = upload.url;
+              if (uploadUrl) {
+                const uid = uploadUrl.split('/').pop();
+                uploadedUid = uid || null;
+              }
               resolve();
-            } else {
-              reject(new Error(`Upload failed with status ${xhr.status}`));
-            }
+            },
           });
-          
-          xhr.addEventListener('error', () => {
-            reject(new Error('Upload failed due to network error'));
-          });
-          
-          xhr.addEventListener('abort', () => {
-            reject(new Error('Upload was aborted'));
-          });
-          
-          const formData = new FormData();
-          formData.append('file', file);
-          
-          xhr.open('POST', urlData.uploadURL);
-          xhr.send(formData);
+
+          upload.start();
         });
 
-        const uid = urlData.uid;
+        if (!uploadedUid) throw new Error('Failed to get video UID from upload');
+        const uid = uploadedUid;
 
         // 3. Create video/clip record
         // Construct Cloudflare Stream URLs
