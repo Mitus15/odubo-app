@@ -6,6 +6,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import * as tus from 'tus-js-client';
 
 // Types
 interface Video {
@@ -1836,16 +1837,32 @@ function UploadView({
 
         if (!urlData.uploadURL) throw new Error('Failed to get upload URL');
 
-        // 2. Upload to Cloudflare
-        const formData = new FormData();
-        formData.append('file', file);
+        // 2. Upload to Cloudflare using TUS protocol with chunking
+        await new Promise<void>((resolve, reject) => {
+          const upload = new tus.Upload(file, {
+            endpoint: urlData.uploadURL,
+            chunkSize: 50 * 1024 * 1024, // 50MB chunks for stable large file uploads
+            retryDelays: [0, 1000, 3000, 5000, 10000], // Retry strategy
+            metadata: {
+              name: title,
+              filetype: file.type,
+            },
+            onError: (error) => {
+              console.error('Upload failed:', error);
+              reject(new Error(`Upload failed: ${error.message}`));
+            },
+            onProgress: (bytesUploaded, bytesTotal) => {
+              const percentage = ((bytesUploaded / bytesTotal) * 100).toFixed(1);
+              setUploadProgress(`Uploading ${i + 1}/${selectedFiles.length}: ${title} (${percentage}%)`);
+            },
+            onSuccess: () => {
+              console.log('Upload completed successfully');
+              resolve();
+            },
+          });
 
-        const uploadRes = await fetch(urlData.uploadURL, {
-          method: 'POST',
-          body: formData
+          upload.start();
         });
-
-        if (!uploadRes.ok) throw new Error('Upload to Cloudflare failed');
 
         const uid = urlData.uid;
 
