@@ -29,10 +29,16 @@ export function mapClipRow(row: ClipApiRow): ClipItem | null {
   const hls = buildHlsUrl(row);
   if (!hls) return null;
 
-  // Strip trailing numbers (e.g. "Song Name 1" -> "Song Name") for display
-  // This ensures all clips from the same video show the parent title
-  let displayTitle = (row.title || '').trim() || 'Untitled';
-  displayTitle = displayTitle.replace(/\s+\d+$/, '');
+  // Use original filename if available (preserves upload title), otherwise use title
+  // Only strip trailing numbers if this is part of a clip series from the same parent
+  let displayTitle = (row.original_filename || row.title || '').trim() || 'Untitled';
+  
+  // If we have a parent_id, this is a clip series - keep the base title
+  const hasParent = parseParentId(row.related_projects) !== null;
+  if (hasParent && !row.original_filename) {
+    // For clip series without original filename, strip numbers to group them
+    displayTitle = displayTitle.replace(/\s+\d+$/, '');
+  }
 
   return {
     id: row.id,

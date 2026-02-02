@@ -346,15 +346,16 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
       return parts[parts.length - 1] || null;
     };
 
-    // First, find and delete all child clips
+    // First, find and delete all child clips (by parent_video_id)
     console.log(`[DELETE] Looking for child clips of video ${id}`);
     try {
+      // Find child videos by parent_video_id (the actual foreign key column)
       const childClips = await queryDatabase(
-        `SELECT id, url, poster_url, thumbnail, stream_video_id FROM videos WHERE related_projects LIKE ?`,
-        [`%parent_id:${id}%`]
+        `SELECT id, url, poster_url, thumbnail, stream_video_id FROM videos WHERE parent_video_id = ?`,
+        [id]
       );
       
-      console.log(`[DELETE] Found ${childClips?.length || 0} child clips`);
+      console.log(`[DELETE] Found ${childClips?.length || 0} child clips by parent_video_id`);
 
       for (const clip of childClips || []) {
         console.log(`[DELETE] Deleting child clip ${clip.id}`);
@@ -387,7 +388,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
 
       // Delete all child clips from database
       console.log(`[DELETE] Deleting child clip records from database`);
-      await executeQuery('DELETE FROM videos WHERE related_projects LIKE ?', [`%parent_id:${id}%`]);
+      await executeQuery('DELETE FROM videos WHERE parent_video_id = ?', [id]);
       console.log(`[DELETE] Child clip records deleted successfully`);
     } catch (e) {
       console.error('Error deleting child clips:', e);

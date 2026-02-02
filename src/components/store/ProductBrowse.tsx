@@ -53,7 +53,7 @@ function FilterSortBar() {
               initial={{ opacity: 0, y: -8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
-              className="absolute right-0 top-full mt-2 py-2 min-w-[160px] rounded-xl bg-[#252220] border border-white/10 shadow-xl z-10"
+              className="absolute right-0 top-full mt-2 py-2 min-w-[160px] rounded-xl bg-[#252220] border border-white/10 shadow-xl z-50"
             >
               {SORT_OPTIONS.map((option) => (
                 <button

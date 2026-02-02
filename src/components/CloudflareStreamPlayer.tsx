@@ -494,7 +494,7 @@ export default function CloudflareStreamPlayer({
                   </button>
                   
                   {showQualityMenu && (
-                    <div className="absolute bottom-full right-0 mb-2 bg-black/95 backdrop-blur-sm rounded-lg p-1 min-w-[100px] border border-white/10">
+                    <div className="absolute bottom-full right-0 mb-2 bg-black/95 backdrop-blur-sm rounded-lg p-1 min-w-[100px] border border-white/10 z-50">
                       {['Auto', '1080p', '720p', '480p', '360p'].map((q) => (
                         <button
                           key={q}

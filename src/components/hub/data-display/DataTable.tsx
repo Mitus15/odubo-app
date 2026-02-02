@@ -237,10 +237,10 @@ export function DataTable<T extends { id: string | number }>({
                   {actionMenuOpen === row.id && (
                     <>
                       <div
-                        className="fixed inset-0 z-10"
+                        className="fixed inset-0 z-40"
                         onClick={() => setActionMenuOpen(null)}
                       />
-                      <div className="absolute right-0 top-full mt-1 z-20 bg-[var(--hub-bg-secondary)] border border-[var(--hub-border-default)] rounded-lg shadow-lg overflow-hidden min-w-[160px]">
+                      <div className="absolute right-0 top-full mt-1 z-50 bg-[var(--hub-bg-secondary)] border border-[var(--hub-border-default)] rounded-lg shadow-lg overflow-hidden min-w-[160px]">
                         {actions.map((action) => (
                           <button
                             key={action.id}
@@ -380,10 +380,10 @@ export function DataTable<T extends { id: string | number }>({
                       {actionMenuOpen === row.id && (
                         <>
                           <div
-                            className="fixed inset-0 z-10"
+                            className="fixed inset-0 z-40"
                             onClick={() => setActionMenuOpen(null)}
                           />
-                          <div className="absolute right-0 top-full mt-1 z-20 bg-[var(--hub-bg-secondary)] border border-[var(--hub-border-default)] rounded-lg shadow-lg overflow-hidden min-w-[160px]">
+                          <div className="absolute right-0 top-full mt-1 z-50 bg-[var(--hub-bg-secondary)] border border-[var(--hub-border-default)] rounded-lg shadow-lg overflow-hidden min-w-[160px]">
                             {actions.map((action) => (
                               <button
                                 key={action.id}
