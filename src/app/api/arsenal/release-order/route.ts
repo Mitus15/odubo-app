@@ -20,7 +20,7 @@ export async function GET() {
          AND (c.youtube_url IS NOT NULL OR c.tiktok_url IS NOT NULL OR c.instagram_reels_url IS NOT NULL)
         ) as deployed_count
        FROM videos v
-       WHERE v.type = 'video' OR (v.type IS NULL AND v.parent_video_id IS NULL)
+       WHERE v.parent_video_id IS NULL AND (v.type != 'clip' OR v.type IS NULL)
        ORDER BY
          CASE WHEN v.release_order IS NULL THEN 1 ELSE 0 END,
          v.release_order ASC,

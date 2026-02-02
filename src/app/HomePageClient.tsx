@@ -132,7 +132,13 @@ export default function HomePageClient({
           openStore();
           break;
         case 'moments':
-          openHub('moments');
+          // Redirect to moments subdomain instead of opening modal
+          const isProduction = window.location.hostname.includes('odubo.studio');
+          if (isProduction) {
+            window.location.href = 'https://moments.odubo.studio';
+          } else {
+            window.location.href = '/moments';
+          }
           break;
         case 'media':
           openHub('videos');

@@ -289,11 +289,14 @@ export default function ExpandableLogoMenu({
   const handleMoments = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     collapse();
-    // Use requestAnimationFrame to prevent stuttering on production
-    requestAnimationFrame(() => {
-      openHub('moments');
-    });
-  }, [collapse, openHub]);
+    // Redirect to moments subdomain in production, or /moments in dev
+    const isProduction = window.location.hostname.includes('odubo.studio');
+    if (isProduction) {
+      window.location.href = 'https://moments.odubo.studio';
+    } else {
+      window.location.href = '/moments';
+    }
+  }, [collapse]);
 
   const handleShop = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();

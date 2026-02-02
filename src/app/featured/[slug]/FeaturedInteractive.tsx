@@ -76,13 +76,28 @@ export default function FeaturedInteractive({ config }: { config: FeaturedConfig
   async function handleMomentsClick() {
     try {
       setLaunching(true);
+      
+      // Check if we should use subdomain (production) or path (dev)
+      const isProduction = window.location.hostname.includes('odubo.studio');
+      
       if (config.momentsTargetPath) {
-        router.push(config.momentsTargetPath);
+        // If there's a specific target path (like /moments/rsvp/123)
+        if (isProduction) {
+          // Convert /moments/xyz to moments.odubo.studio/xyz
+          const momentsPath = config.momentsTargetPath.replace(/^\/moments/, '');
+          window.location.href = `https://moments.odubo.studio${momentsPath}`;
+        } else {
+          router.push(config.momentsTargetPath);
+        }
         return;
       }
-      // Fallback: use momentsLink if no target was precomputed
-      const raw = config.momentsLink || '/moments';
-      router.push(raw);
+      
+      // Fallback: redirect to moments subdomain root
+      if (isProduction) {
+        window.location.href = 'https://moments.odubo.studio';
+      } else {
+        router.push('/moments');
+      }
     } finally {
       setLaunching(false);
     }

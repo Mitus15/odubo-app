@@ -4,14 +4,17 @@ import type { NextRequest } from 'next/server';
 /**
  * Middleware for subdomain routing
  * - admin.odubo.studio → serves /admin routes at root
+ * - moments.odubo.studio → serves /moments routes at root
  * - odubo.studio/admin → redirects to admin.odubo.studio
+ * - odubo.studio/moments → redirects to moments.odubo.studio
  */
 export function middleware(request: NextRequest) {
   const url = request.nextUrl.clone();
   const hostname = request.headers.get('host') || '';
 
-  // Check if this is the admin subdomain
+  // Check subdomains
   const isAdminSubdomain = hostname.startsWith('admin.');
+  const isMomentsSubdomain = hostname.startsWith('moments.');
 
   // Production domains
   const isProduction = hostname.includes('odubo.studio');
@@ -41,13 +44,46 @@ export function middleware(request: NextRequest) {
     return NextResponse.rewrite(url);
   }
 
-  // On main domain: optionally redirect /admin to admin subdomain
+  if (isMomentsSubdomain) {
+    // On moments subdomain: rewrite root paths to /moments
+    // moments.odubo.studio/ → /moments
+    // moments.odubo.studio/capture → /moments/capture
+
+    // Don't rewrite API routes, static files, or _next
+    if (
+      url.pathname.startsWith('/api/') ||
+      url.pathname.startsWith('/_next/') ||
+      url.pathname.startsWith('/static/') ||
+      url.pathname.includes('.')
+    ) {
+      return NextResponse.next();
+    }
+
+    // If already accessing /moments path, strip it to avoid /moments/moments
+    if (url.pathname.startsWith('/moments')) {
+      return NextResponse.next();
+    }
+
+    // Rewrite to /moments prefix
+    url.pathname = `/moments${url.pathname}`;
+    return NextResponse.rewrite(url);
+  }
+
+  // On main domain: redirect /admin and /moments to their subdomains
   if (isProduction && url.pathname.startsWith('/admin')) {
     // Redirect odubo.studio/admin/* to admin.odubo.studio/*
     const adminPath = url.pathname.replace(/^\/admin/, '') || '/';
     const adminUrl = new URL(adminPath, `https://admin.odubo.studio`);
     adminUrl.search = url.search;
     return NextResponse.redirect(adminUrl);
+  }
+
+  if (isProduction && url.pathname.startsWith('/moments')) {
+    // Redirect odubo.studio/moments/* to moments.odubo.studio/*
+    const momentsPath = url.pathname.replace(/^\/moments/, '') || '/';
+    const momentsUrl = new URL(momentsPath, `https://moments.odubo.studio`);
+    momentsUrl.search = url.search;
+    return NextResponse.redirect(momentsUrl);
   }
 
   return NextResponse.next();

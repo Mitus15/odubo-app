@@ -7,6 +7,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import * as tus from 'tus-js-client';
+import { VideoDetailModal } from './VideoDetailModal';
 
 // Types
 interface Video {
@@ -336,6 +337,7 @@ function VideoCard({
   isTogglingPublish,
   onDelete,
   onDeploy,
+  onOpenModal,
 }: {
   video: Video;
   children?: Video[];
@@ -352,6 +354,7 @@ function VideoCard({
   isTogglingPublish?: boolean;
   onDelete?: (id: number) => void;
   onDeploy?: (id: number) => void;
+  onOpenModal?: () => void;
 }) {
   const [showActions, setShowActions] = useState(false);
   const hasChildren = children && children.length > 0;
@@ -561,6 +564,19 @@ function VideoCard({
                       {Icons.edit}
                       <span>Edit Title</span>
                     </button>
+                    {onOpenModal && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onOpenModal();
+                          setShowActions(false);
+                        }}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[#ede8df] hover:bg-white/5 transition-colors"
+                      >
+                        {Icons.image}
+                        <span>Edit Details & Thumbnail</span>
+                      </button>
+                    )}
                     {onDelete && (
                       <button
                         onClick={(e) => {
@@ -595,6 +611,7 @@ function LibraryView({
   selectedIds,
   onSelect,
   onStartDeploy,
+  onVideoClick,
 }: {
   videos: Video[];
   loading: boolean;
@@ -602,6 +619,7 @@ function LibraryView({
   selectedIds: number[];
   onSelect: (id: number) => void;
   onStartDeploy: (videoId: number) => void;
+  onVideoClick?: (video: Video) => void;
 }) {
   const [filter, setFilter] = useState<FilterMode>('all');
   const [expandedIds, setExpandedIds] = useState<number[]>([]);
@@ -905,6 +923,7 @@ function LibraryView({
                 isTogglingPublish={togglingPublishId === video.id}
                 onDelete={handleDelete}
                 onDeploy={onStartDeploy}
+                onOpenModal={() => onVideoClick?.(video)}
               />
               {/* Child clips with reorder controls - only show when not in clips filter */}
               {!isClipsFilter && expandedIds.includes(video.id) && childrenByParent[video.id]?.map((child, index) => {
@@ -947,6 +966,7 @@ function LibraryView({
                         onSaveTitle={handleSaveTitle}
                         onDelete={handleDelete}
                         onDeploy={onStartDeploy}
+                        onOpenModal={() => onVideoClick?.(child)}
                       />
                     </div>
                   </div>
@@ -2777,6 +2797,7 @@ export default function ArsenalTab() {
   const [syncing, setSyncing] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
   const [syncLog, setSyncLog] = useState<string[]>([]);
+  const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
 
   // Homepage mode toggle
   const [homepageMode, setHomepageMode] = useState<'auto' | 'clips' | 'music'>('auto');
@@ -2980,6 +3001,7 @@ export default function ArsenalTab() {
               setSelectedIds([videoId]);
               setView('deploy');
             }}
+            onVideoClick={(video) => setSelectedVideo(video)}
           />
         )}
         {view === 'pipeline' && (
@@ -3019,6 +3041,15 @@ export default function ArsenalTab() {
           />
         )}
       </div>
+
+      {/* Video Detail Modal */}
+      {selectedVideo && (
+        <VideoDetailModal
+          video={selectedVideo}
+          onClose={() => setSelectedVideo(null)}
+          onUpdate={fetchVideos}
+        />
+      )}
     </div>
   );
 }
