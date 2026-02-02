@@ -233,7 +233,7 @@ export default function ProductBrowse() {
         {/* Brand logo */}
         <div className="flex items-center">
           <img
-            src="/brand-logos/baad.png"
+            src="/brand-logos/baad@odubo.png"
             alt="B.A.A.D"
             className="h-6 w-auto"
             draggable={false}

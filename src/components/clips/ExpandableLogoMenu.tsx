@@ -520,7 +520,7 @@ export default function ExpandableLogoMenu({
                     style={{ touchAction: 'manipulation' }}
                   >
                     <img
-                      src="/brand-logos/baad.png"
+                      src="/brand-logos/baad@odubo.png"
                       alt=""
                       className="w-6 h-6 object-contain"
                       draggable={false}

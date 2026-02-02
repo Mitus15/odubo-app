@@ -274,7 +274,7 @@ export default function ProductDetailModal({ productHandle }: ProductDetailModal
 
         {/* Centered logo - inverts based on background */}
         <img
-          src="/brand-logos/baad.png"
+          src="/brand-logos/baad@odubo.png"
           alt="B.A.A.D Brand Logo"
           className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-6 w-auto transition-all duration-500"
           style={{

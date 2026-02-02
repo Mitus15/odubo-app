@@ -111,7 +111,7 @@ export default function CartModal() {
         </button>
 
         <img
-          src="/brand-logos/baad.png"
+          src="/brand-logos/baad@odubo.png"
           alt="B.A.A.D Brand Logo"
           className="h-6 w-auto"
           draggable={false}

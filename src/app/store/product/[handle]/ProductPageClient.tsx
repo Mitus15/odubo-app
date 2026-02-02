@@ -169,7 +169,7 @@ export default function ProductPageClient({ product }: ProductPageClientProps) {
           {/* Breadcrumb / Back */}
           <div className="mb-4 sm:mb-8 flex items-center justify-between">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/brand-logos/baad.png" alt="B.A.A.D" className="h-8 sm:h-10 w-auto opacity-90" />
+            <img src="/brand-logos/baad@odubo.png" alt="B.A.A.D" className="h-8 sm:h-10 w-auto opacity-90" />
             <a href="/store" className="text-xs uppercase tracking-widest text-[#b2a491] hover:text-[#ede8df] transition-colors">
               Back to Shop
             </a>
