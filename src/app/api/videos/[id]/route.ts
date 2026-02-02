@@ -52,7 +52,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
         created_at,
         COALESCE(updated_at, created_at) as updated_at
       FROM videos WHERE id = ? LIMIT 1`,
-      [id]
+      [parseInt(id, 10)]
     );
     if (!rows.length) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
@@ -126,7 +126,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       });
     }
     // Fetch current row for UID (for poster generation)
-    const existingRows = await queryDatabase('SELECT uid, stream_video_id, url FROM videos WHERE id = ? LIMIT 1', [id]);
+    const existingRows = await queryDatabase('SELECT uid, stream_video_id, url FROM videos WHERE id = ? LIMIT 1', [parseInt(id, 10)]);
     const current = existingRows?.[0] || {};
     
     // Extract UID from URL if not stored directly
@@ -196,7 +196,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
     await executeQuery(
       `UPDATE videos SET ${fields.join(', ')} WHERE id = ?`,
-      [...paramsList, id]
+      [...paramsList, parseInt(id, 10)]
     );
 
     // Propagate visibility/status to clips
@@ -277,7 +277,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     // Update Woda video context for passive learning
     try {
       // Get parent_video_id from the current video
-      const videoRows = await queryDatabase('SELECT parent_video_id FROM videos WHERE id = ? LIMIT 1', [id]);
+      const videoRows = await queryDatabase('SELECT parent_video_id FROM videos WHERE id = ? LIMIT 1', [parseInt(id, 10)]);
       const parentVideoId = videoRows?.[0]?.parent_video_id as number | null;
 
       await executeQuery(
@@ -294,7 +294,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
            parent_video_id = COALESCE(excluded.parent_video_id, woda_video_context.parent_video_id),
            updated_at = datetime('now')`,
         [
-          id,
+          parseInt(id, 10),
           updatable.title || null,
           updatable.description || null,
           updatable.mood || null,
@@ -326,9 +326,10 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     }
 
     const { id } = await params;
-    console.log(`[DELETE] Starting deletion of video ${id}`);
+    const videoId = parseInt(id, 10);
+    console.log(`[DELETE] Starting deletion of video ${id} (parsed as ${videoId})`);
 
-    const rows = await queryDatabase('SELECT url, poster_url, thumbnail, stream_video_id FROM videos WHERE id = ?', [id]);
+    const rows = await queryDatabase('SELECT url, poster_url, thumbnail, stream_video_id FROM videos WHERE id = ?', [videoId]);
     if (!rows.length) {
       console.warn(`[DELETE] Video ${id} not found`);
       return NextResponse.json({ error: 'Video not found' }, { status: 404 });
@@ -347,12 +348,12 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     };
 
     // First, find and delete all child clips (by parent_video_id)
-    console.log(`[DELETE] Looking for child clips of video ${id}`);
+    console.log(`[DELETE] Looking for child clips of video ${videoId}`);
     try {
       // Find child videos by parent_video_id (the actual foreign key column)
       const childClips = await queryDatabase(
         `SELECT id, url, poster_url, thumbnail, stream_video_id FROM videos WHERE parent_video_id = ?`,
-        [id]
+        [videoId]
       );
       
       console.log(`[DELETE] Found ${childClips?.length || 0} child clips by parent_video_id`);
@@ -387,12 +388,12 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
       }
 
       // Delete all child clips from database
-      console.log(`[DELETE] Deleting child clip records from database`);
-      await executeQuery('DELETE FROM videos WHERE parent_video_id = ?', [id]);
-      console.log(`[DELETE] Child clip records deleted successfully`);
+      console.log(`[DELETE] Deleting child clip records from database where parent_video_id = ${videoId}`);
+      const deleteResult = await executeQuery('DELETE FROM videos WHERE parent_video_id = ?', [videoId]);
+      console.log(`[DELETE] Child clip delete result:`, deleteResult);
     } catch (e) {
       console.error('Error deleting child clips:', e);
-      // Continue with parent deletion anyway
+      throw e; // Re-throw to surface the actual error
     }
 
     // Delete parent video resources
@@ -425,8 +426,8 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     }
 
     // Delete from database
-    console.log(`[DELETE] Deleting video ${id} from database`);
-    const result = await executeQuery('DELETE FROM videos WHERE id = ?', [id]);
+    console.log(`[DELETE] Deleting video ${videoId} from database`);
+    const result = await executeQuery('DELETE FROM videos WHERE id = ?', [videoId]);
     console.log(`[DELETE] Database deletion result:`, result);
 
     // Audit - wrap in try-catch to ensure deletion succeeds even if audit fails
