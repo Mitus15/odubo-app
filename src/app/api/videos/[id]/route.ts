@@ -326,12 +326,15 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     }
 
     const { id } = await params;
+    console.log(`[DELETE] Starting deletion of video ${id}`);
 
     const rows = await queryDatabase('SELECT url, poster_url, thumbnail, stream_video_id FROM videos WHERE id = ?', [id]);
     if (!rows.length) {
+      console.warn(`[DELETE] Video ${id} not found`);
       return NextResponse.json({ error: 'Video not found' }, { status: 404 });
     }
     const video = rows[0];
+    console.log(`[DELETE] Found video ${id}, proceeding with deletion`);
 
     const extractKeyFromUrl = (url: string): string | null => {
       if (!url) return null;
@@ -344,13 +347,17 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     };
 
     // First, find and delete all child clips
+    console.log(`[DELETE] Looking for child clips of video ${id}`);
     try {
       const childClips = await queryDatabase(
         `SELECT id, url, poster_url, thumbnail, stream_video_id FROM videos WHERE related_projects LIKE ?`,
         [`%parent_id:${id}%`]
       );
+      
+      console.log(`[DELETE] Found ${childClips?.length || 0} child clips`);
 
       for (const clip of childClips || []) {
+        console.log(`[DELETE] Deleting child clip ${clip.id}`);
         // Delete clip resources from R2 and Stream
         const clipKeys = [clip.url, clip.poster_url, clip.thumbnail]
           .map((u: string) => extractKeyFromUrl(u))
@@ -379,12 +386,16 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
       }
 
       // Delete all child clips from database
+      console.log(`[DELETE] Deleting child clip records from database`);
       await executeQuery('DELETE FROM videos WHERE related_projects LIKE ?', [`%parent_id:${id}%`]);
+      console.log(`[DELETE] Child clip records deleted successfully`);
     } catch (e) {
-      console.warn('Error deleting child clips:', e);
+      console.error('Error deleting child clips:', e);
       // Continue with parent deletion anyway
     }
 
+    // Delete parent video resources
+    console.log(`[DELETE] Deleting parent video ${id} resources from R2`);
     const maybeKeys = [video?.url, video?.poster_url, video?.thumbnail]
       .map((u: string) => extractKeyFromUrl(u))
       .filter(Boolean) as string[];
@@ -399,6 +410,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     }
 
     // Attempt to delete Cloudflare Stream asset if present
+    console.log(`[DELETE] Deleting parent video ${id} from Cloudflare Stream`);
     try {
       const uid = (video as any)?.stream_video_id as string | undefined;
       if (uid) {
@@ -411,13 +423,24 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
       console.warn('Failed to delete Cloudflare Stream video (non-fatal):', e);
     }
 
-    await executeQuery('DELETE FROM videos WHERE id = ?', [id]);
-    // Audit
-    await writeAuditLog(req, user, 'videos.delete', String(id));
+    // Delete from database
+    console.log(`[DELETE] Deleting video ${id} from database`);
+    const result = await executeQuery('DELETE FROM videos WHERE id = ?', [id]);
+    console.log(`[DELETE] Database deletion result:`, result);
+
+    // Audit - wrap in try-catch to ensure deletion succeeds even if audit fails
+    try {
+      await writeAuditLog(req, user, 'videos.delete', String(id));
+    } catch (auditError) {
+      console.error(`[DELETE] Audit log failed (non-fatal):`, auditError);
+      // Don't return error, deletion was successful
+    }
+
+    console.log(`[DELETE] Video ${id} deleted successfully`);
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error deleting video:', error);
-    return NextResponse.json({ error: 'Failed to delete video' }, { status: 500 });
+    return NextResponse.json({ error: `Failed to delete video: ${error instanceof Error ? error.message : 'Unknown error'}` }, { status: 500 });
   }
 }
 
