@@ -101,7 +101,7 @@ export default function SEOOptimizer({
             "@type": "Organization",
             "name": "Odubo Studio",
             "url": "https://odubo.studio",
-            "logo": "https://odubo.studio/logo.png",
+            "logo": "https://odubo.studio/brand-logos/baad-logo.png",
             "description": "Professional music and video content management platform",
             "sameAs": [
               "https://twitter.com/odubostudio",

@@ -13,7 +13,7 @@ export function brandedEmailHTML({
   const accent = '#6b4c3b';
   const bg = '#f6f3ee';
   const site = getSiteUrl();
-  const logoUrl = `${site}/brand-logos/danceman.png`;
+  const logoUrl = `${site}/brand-logos/baad-logo.png`;
   const manageUrl = `${site}/moments/rsvp/${encodeURIComponent(String(galleryId))}?prefillEmail=${encodeURIComponent(email)}`;
   return `
       <div style="background:${bg};padding:24px 0;">

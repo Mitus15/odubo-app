@@ -35,7 +35,7 @@ const BRAND = {
 // Email wrapper template
 function emailWrapper(content: string, preheader?: string): string {
   const site = getSiteUrl();
-  const logoUrl = `${site}/brand-logos/danceman.png`;
+  const logoUrl = `${site}/brand-logos/baad-logo.png`;
 
   return `
 <!DOCTYPE html>

@@ -46,7 +46,7 @@ export default function StructuredData({ type, data }: StructuredDataProps) {
           "@type": "Organization",
           "name": "Odubo Studio",
           "url": "https://odubo.studio",
-          "logo": "https://odubo.studio/logo.png",
+          "logo": "https://odubo.studio/brand-logos/baad-logo.png",
           "description": "Professional music and video content management platform",
           "sameAs": [
             "https://twitter.com/odubostudio",
@@ -116,7 +116,7 @@ export default function StructuredData({ type, data }: StructuredDataProps) {
             "name": "Odubo Studio",
             "logo": {
               "@type": "ImageObject",
-              "url": "https://odubo.studio/logo.png"
+              "url": "https://odubo.studio/brand-logos/baad-logo.png"
             }
           }
         };

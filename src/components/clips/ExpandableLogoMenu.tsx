@@ -461,7 +461,7 @@ export default function ExpandableLogoMenu({
             }}
           >
             <img
-              src="/odubo_logo_emboss.webp"
+              src="/brand-logos/baad-logo.png"
               alt=""
               className="w-7 h-7 object-contain"
               draggable={false}
