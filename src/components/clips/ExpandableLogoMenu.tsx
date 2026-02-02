@@ -466,13 +466,6 @@ export default function ExpandableLogoMenu({
               className="w-8 h-8 object-contain"
               draggable={false}
             />
-
-            {/* Glow effect when expanded - no AnimatePresence overhead */}
-            <motion.div
-              className="absolute inset-0 rounded-full bg-gradient-to-br from-white/20 to-transparent pointer-events-none"
-              animate={{ opacity: isExpanded ? 1 : 0, scale: isExpanded ? 1 : 0.8 }}
-              transition={{ duration: 0.15 }}
-            />
           </motion.button>
         </div>
 
