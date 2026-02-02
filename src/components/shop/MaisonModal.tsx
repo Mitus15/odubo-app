@@ -374,7 +374,7 @@ export default function MaisonModal() {
           </Link>
         </div>
         <p className="text-center text-[9px] text-[#ede8df]/30 tracking-wider">
-          &copy; {new Date().getFullYear()} Odubo Studio. All rights reserved.
+          &copy; {new Date().getFullYear()} B.A.A.D@Odubo. All rights reserved.
         </p>
       </footer>
     </motion.div>
