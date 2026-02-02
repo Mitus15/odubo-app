@@ -473,21 +473,6 @@ export default function ExpandableLogoMenu({
         <AnimatePresence mode="sync">
           {isExpanded && (
             <>
-              {/* Connecting line/gradient indicator */}
-              <motion.div
-                initial="collapsed"
-                animate="expanded"
-                exit="collapsed"
-                variants={connectingLineVariants}
-                className={`absolute ${menuDirection === 'up' ? 'bottom-full' : 'top-full'} w-[2px] pointer-events-none`}
-                style={{
-                  height: '12px',
-                  background: 'linear-gradient(to bottom, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.05))',
-                  transformOrigin: menuDirection === 'up' ? 'bottom' : 'top',
-                  [menuDirection === 'up' ? 'bottom' : 'top']: BUTTON_SIZE / 2,
-                }}
-              />
-              
               <motion.div
                 initial="collapsed"
                 animate="expanded"
