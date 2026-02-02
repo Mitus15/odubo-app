@@ -907,7 +907,7 @@ export default function StorePageClient({ isStoreOpen, isAdmin, initialProducts 
               </button>
             </div>
             <p className="text-[9px] text-[#502d26]/40">
-              © {new Date().getFullYear()} Odubo Studio. All rights reserved.
+              © {new Date().getFullYear()} B.A.A.D@Odubo. All rights reserved.
             </p>
           </div>
         </div>
