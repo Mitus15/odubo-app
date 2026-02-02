@@ -463,7 +463,7 @@ export default function ProductDetailFeed() {
               !selectedVariant?.available
                 ? 'bg-white/10 text-white/40 cursor-not-allowed'
                 : addedFeedback
-                ? 'bg-green-500 text-white shadow-green-500/20'
+                ? 'bg-[#843c2d] text-white shadow-[#843c2d]/20'
                 : variantInCart
                 ? 'bg-white/20 text-white hover:bg-white/30'
                 : 'bg-white text-black hover:bg-white/90 active:bg-white/80 shadow-white/10'
