@@ -23,14 +23,15 @@ export async function POST(req: NextRequest) {
     const stream = new CloudflareStreamAPI();
     // Set maxDurationSeconds to 3600 (1 hour) or allow client to specify if needed.
     // Cloudflare Stream requires this for direct uploads.
+    // Note: allowedOrigins must NOT include protocols (http:// or https://)
     const response = await stream.createUploadUrl(3600, {
       name,
       meta,
       allowedOrigins: [
-        'http://localhost:3000',
-        'https://odubo.studio',
-        'https://www.odubo.studio',
-        'https://admin.odubo.studio'
+        'localhost:3000',
+        'odubo.studio',
+        'www.odubo.studio',
+        'admin.odubo.studio'
       ]
     });
 
