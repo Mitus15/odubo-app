@@ -224,7 +224,7 @@ export default function LegalModal({ isOpen, onClose, initialTab = 'privacy' }: 
                 {/* Footer */}
                 <div className="p-4 sm:p-6 border-t border-white/10 text-center">
                   <p className="text-[10px] uppercase tracking-[0.3em] text-white/30">
-                    © {new Date().getFullYear()} ODUBO
+                    © {new Date().getFullYear()} B.A.A.D@Odubo
                   </p>
                 </div>
               </div>
