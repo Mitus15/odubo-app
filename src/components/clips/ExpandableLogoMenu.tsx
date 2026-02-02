@@ -436,7 +436,7 @@ export default function ExpandableLogoMenu({
         <div
           className={`relative w-14 h-14 flex items-center justify-center rounded-full
                      border border-white/20
-                     shadow-[0_12px_32px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.15),inset_0_-1px_0_rgba(0,0,0,0.4)]
+                     shadow-[0_12px_32px_rgba(0,0,0,0.6)]
                      ${isAnimating ? 'bg-black/40' : 'bg-black/15 backdrop-blur-xl'}`}
           style={{
             width: BUTTON_SIZE,
