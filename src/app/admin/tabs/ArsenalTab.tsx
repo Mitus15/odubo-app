@@ -1827,7 +1827,7 @@ function UploadView({
 
         setUploadProgress(`Uploading ${i + 1}/${selectedFiles.length}: ${title}`);
 
-        // 1. Get Upload URL
+        // 1. Get Upload URL from Cloudflare Stream
         const urlRes = await fetch('/api/videos/upload-url', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1835,12 +1835,14 @@ function UploadView({
         });
         const urlData = await urlRes.json() as { uploadURL?: string; uid?: string };
 
-        if (!urlData.uploadURL) throw new Error('Failed to get upload URL');
+        if (!urlData.uploadURL || !urlData.uid) throw new Error('Failed to get upload URL');
 
         // 2. Upload to Cloudflare using TUS protocol with chunking
+        // The uploadURL from Cloudflare Stream is already a TUS-compatible endpoint
         await new Promise<void>((resolve, reject) => {
           const upload = new tus.Upload(file, {
-            endpoint: urlData.uploadURL,
+            // Use uploadURL directly as the resume URL (skip creation, Cloudflare already created it)
+            uploadUrl: urlData.uploadURL,
             chunkSize: 50 * 1024 * 1024, // 50MB chunks for stable large file uploads
             retryDelays: [0, 1000, 3000, 5000, 10000], // Retry strategy
             metadata: {
