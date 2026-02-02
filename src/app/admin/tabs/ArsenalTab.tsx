@@ -1869,10 +1869,11 @@ function UploadView({
             },
             onSuccess: () => {
               console.log('Upload completed successfully');
-              // Extract UID from upload URL
+              // Extract UID from upload URL (remove query params if present)
               const uploadUrl = upload.url;
               if (uploadUrl) {
-                const uid = uploadUrl.split('/').pop();
+                const urlParts = uploadUrl.split('/').pop();
+                const uid = urlParts?.split('?')[0]; // Remove ?tusv2=true or other query params
                 uploadedUid = uid || null;
               }
               resolve();
