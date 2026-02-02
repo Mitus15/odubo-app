@@ -39,7 +39,11 @@
     "moments:reminders": "tsx scripts/dispatch_moments_reminders.ts",
     "moments:sample-reminder": "tsx --env-file=.env.local scripts/send_sample_reminder.ts",
     "moments:offset-reminder": "tsx --env-file=.env.local scripts/send_specific_offset_reminder.ts",
-    "worker:clips": "tsx --env-file=.env.local scripts/run_clip_worker.ts --watch"
+    "worker:clips": "tsx --env-file=.env.local scripts/run_clip_worker.ts --watch",
+    "sync:videos": "tsx --env-file=.env.local scripts/sync-cloudflare-videos.ts",
+    "process:ai": "tsx --env-file=.env.local scripts/process-ai-descriptions.ts",
+    "sync:all": "tsx --env-file=.env.local scripts/sync-all.ts",
+    "delete:all-videos": "tsx --env-file=.env.local scripts/delete-all-videos.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.858.0",

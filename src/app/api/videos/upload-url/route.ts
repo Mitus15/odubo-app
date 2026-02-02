@@ -25,7 +25,13 @@ export async function POST(req: NextRequest) {
     // Cloudflare Stream requires this for direct uploads.
     const response = await stream.createUploadUrl(3600, {
       name,
-      meta
+      meta,
+      allowedOrigins: [
+        'http://localhost:3000',
+        'https://odubo.studio',
+        'https://www.odubo.studio',
+        'https://admin.odubo.studio'
+      ]
     });
 
     if (!response.success) {

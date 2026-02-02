@@ -2183,7 +2183,9 @@ function PipelineView({ onDeployClip }: { onDeployClip: (clipId: number) => void
   const [nextToDeployId, setNextToDeployId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [expandedIds, setExpandedIds] = useState<number[]>([]);
-  const [reordering, setReordering] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [showCompleted, setShowCompleted] = useState(false);
+  const [selectedClip, setSelectedClip] = useState<PipelineClip | null>(null);
 
   const fetchPipeline = useCallback(async () => {
     setLoading(true);
@@ -2198,7 +2200,7 @@ function PipelineView({ onDeployClip }: { onDeployClip: (clipId: number) => void
       setClipsByParent(data.clipsByParent || {});
       setNextToDeployId(data.nextToDeployId);
 
-      // Auto-expand parent of next clip
+      // Auto-expand parent of next clip (in progress videos only)
       if (data.nextToDeployId) {
         const parentId = Object.entries(data.clipsByParent || {}).find(
           ([, clips]) => clips.some(c => c.id === data.nextToDeployId)
@@ -2220,7 +2222,6 @@ function PipelineView({ onDeployClip }: { onDeployClip: (clipId: number) => void
     const toIndex = direction === 'up' ? index - 1 : index + 1;
     if (toIndex < 0 || toIndex >= parents.length) return;
 
-    setReordering(true);
     const newParents = [...parents];
     [newParents[index], newParents[toIndex]] = [newParents[toIndex], newParents[index]];
     setParents(newParents);
@@ -2236,8 +2237,6 @@ function PipelineView({ onDeployClip }: { onDeployClip: (clipId: number) => void
     } catch (error) {
       console.error('Failed to reorder:', error);
       fetchPipeline(); // Revert on error
-    } finally {
-      setReordering(false);
     }
   };
 
@@ -2256,6 +2255,16 @@ function PipelineView({ onDeployClip }: { onDeployClip: (clipId: number) => void
     return 'in-progress';
   };
 
+  // Get next clip for hero card
+  const nextClip = nextToDeployId ? 
+    Object.values(clipsByParent).flat().find(c => c.id === nextToDeployId) : null;
+  const nextClipParent = nextClip ? 
+    parents.find(p => p.id === nextClip.parent_video_id) : null;
+
+  // Split parents into active and completed
+  const activeParents = parents.filter(p => getParentStatus(p) !== 'complete');
+  const completedParents = parents.filter(p => getParentStatus(p) === 'complete');
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -2271,156 +2280,184 @@ function PipelineView({ onDeployClip }: { onDeployClip: (clipId: number) => void
         <div>
           <h3 className="text-sm font-medium text-[#ede8df]">Deployment Pipeline</h3>
           <p className="text-xs text-[#726d6c] mt-1">
-            Your content release queue. Deploy in order - the river guides you.
+            Deploy clips in order - the river flows from top to bottom
           </p>
         </div>
-        {nextToDeployId && (
-          <button
-            onClick={() => onDeployClip(nextToDeployId)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-[#843c2d] to-[#6d3224] text-white font-medium transition-all hover:opacity-90"
-          >
-            {Icons.rocket}
-            <span>Deploy Next</span>
-          </button>
-        )}
+        <div className="flex items-center gap-3">
+          {activeParents.length > 0 && (
+            <button
+              onClick={() => setEditMode(!editMode)}
+              className="px-3 py-1.5 rounded-lg text-xs font-medium bg-white/5 text-[#b2a491] hover:bg-white/10 transition-all"
+            >
+              {editMode ? 'Done Editing' : 'Reorder'}
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Pipeline */}
-      {parents.length === 0 ? (
+      {/* Next Up Hero Card */}
+      {nextClip && nextClipParent && (
+        <div className="p-6 rounded-xl bg-gradient-to-br from-[#843c2d]/20 to-[#6d3224]/10 border border-[#843c2d]/30">
+          <div className="flex items-center gap-2 mb-3">
+            <svg className="w-4 h-4 text-[#843c2d] animate-pulse" fill="currentColor" viewBox="0 0 20 20">
+              <circle cx="10" cy="10" r="8" />
+            </svg>
+            <span className="text-xs font-bold text-[#843c2d] uppercase tracking-wide">Next Up</span>
+          </div>
+          
+          <div className="flex items-center gap-4">
+            {/* Large thumbnail */}
+            <div className="w-32 h-20 rounded-lg overflow-hidden bg-[#0d0c0a] flex-shrink-0 border border-white/10">
+              {nextClip.poster_url && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={nextClip.poster_url} alt="" className="w-full h-full object-cover" />
+              )}
+            </div>
+
+            <div className="flex-1 min-w-0">
+              <div className="text-xs text-[#726d6c] mb-1">
+                {nextClipParent.title} • Part {nextClip.clip_index}/{nextClipParent.clip_count}
+              </div>
+              <div className="text-lg font-medium text-[#ede8df] truncate mb-2">
+                {nextClip.title}
+              </div>
+              <button
+                onClick={() => onDeployClip(nextClip.id)}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-[#843c2d] to-[#6d3224] text-white font-medium transition-all hover:opacity-90"
+              >
+                {Icons.rocket}
+                <span>Deploy Now</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Active Videos Pipeline */}
+      {activeParents.length === 0 ? (
         <div className="text-center py-12 text-[#726d6c]">
-          No videos in pipeline. Upload content to get started.
+          {completedParents.length > 0 ? 
+            'All videos deployed! 🎉' : 
+            'No videos in pipeline. Upload content to get started.'
+          }
         </div>
       ) : (
         <div className="space-y-3">
-          {parents.map((parent, index) => {
+          {activeParents.map((parent, index) => {
             const status = getParentStatus(parent);
             const clips = clipsByParent[parent.id] || [];
             const isExpanded = expandedIds.includes(parent.id);
+            const progress = parent.clip_count > 0 ? (parent.deployed_count / parent.clip_count) * 100 : 0;
 
             return (
-              <div key={parent.id} className="rounded-xl overflow-hidden border border-white/5">
+              <div key={parent.id} className="rounded-xl overflow-hidden border border-white/5 bg-[#1a1816]">
                 {/* Parent header */}
                 <div
-                  className={`p-4 flex items-center gap-4 cursor-pointer transition-colors ${
-                    status === 'complete'
-                      ? 'bg-green-500/5'
-                      : status === 'in-progress'
-                      ? 'bg-[#843c2d]/10'
-                      : 'bg-[#1a1816]'
-                  } hover:bg-white/5`}
+                  className="p-4 cursor-pointer hover:bg-white/5 transition-colors"
                   onClick={() => toggleExpand(parent.id)}
                 >
-                  {/* Reorder buttons */}
-                  <div className="flex flex-col gap-0.5" onClick={e => e.stopPropagation()}>
-                    <button
-                      onClick={() => moveParent(index, 'up')}
-                      disabled={index === 0 || reordering}
-                      className="p-1 rounded bg-white/5 text-[#726d6c] hover:text-[#ede8df] hover:bg-white/10 disabled:opacity-30 transition-colors"
-                    >
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
-                      </svg>
-                    </button>
-                    <button
-                      onClick={() => moveParent(index, 'down')}
-                      disabled={index === parents.length - 1 || reordering}
-                      className="p-1 rounded bg-white/5 text-[#726d6c] hover:text-[#ede8df] hover:bg-white/10 disabled:opacity-30 transition-colors"
-                    >
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </button>
-                  </div>
-
-                  {/* Position number */}
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold ${
-                    status === 'complete'
-                      ? 'bg-green-500/20 text-green-400'
-                      : status === 'in-progress'
-                      ? 'bg-[#843c2d]/30 text-[#ede8df]'
-                      : 'bg-white/10 text-[#726d6c]'
-                  }`}>
-                    {index + 1}
-                  </div>
-
-                  {/* Thumbnail */}
-                  <div className="w-16 h-10 rounded-lg overflow-hidden bg-[#0d0c0a] flex-shrink-0">
-                    {parent.poster_url && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={parent.poster_url} alt="" className="w-full h-full object-cover" />
+                  <div className="flex items-center gap-4">
+                    {/* Reorder controls (only in edit mode) */}
+                    {editMode && (
+                      <div className="flex flex-col gap-0.5">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); moveParent(index, 'up'); }}
+                          disabled={index === 0}
+                          className="p-1 rounded bg-white/5 text-[#726d6c] hover:text-[#ede8df] hover:bg-white/10 disabled:opacity-30"
+                        >
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
+                          </svg>
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); moveParent(index, 'down'); }}
+                          disabled={index === activeParents.length - 1}
+                          className="p-1 rounded bg-white/5 text-[#726d6c] hover:text-[#ede8df] hover:bg-white/10 disabled:opacity-30"
+                        >
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </button>
+                      </div>
                     )}
-                  </div>
 
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-[#ede8df] truncate">{parent.title}</div>
-                    <div className="text-xs text-[#726d6c]">
-                      {parent.clip_count} clips • {parent.deployed_count} deployed
+                    {/* Position badge */}
+                    <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-sm font-bold text-[#ede8df]">
+                      {index + 1}
                     </div>
-                  </div>
 
-                  {/* Status badge */}
-                  <div className={`px-3 py-1 rounded-full text-xs font-medium ${
-                    status === 'complete'
-                      ? 'bg-green-500/20 text-green-400'
-                      : status === 'in-progress'
-                      ? 'bg-[#843c2d]/30 text-[#b2a491]'
-                      : 'bg-white/10 text-[#726d6c]'
-                  }`}>
-                    {status === 'complete' ? '✓ Complete' : status === 'in-progress' ? `${parent.deployed_count}/${parent.clip_count}` : 'Queued'}
-                  </div>
+                    {/* Thumbnail */}
+                    <div className="w-20 h-12 rounded-lg overflow-hidden bg-[#0d0c0a] flex-shrink-0">
+                      {parent.poster_url && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={parent.poster_url} alt="" className="w-full h-full object-cover" />
+                      )}
+                    </div>
 
-                  {/* Expand indicator */}
-                  <svg
-                    className={`w-4 h-4 text-[#726d6c] transition-transform ${isExpanded ? 'rotate-180' : ''}`}
-                    fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                  </svg>
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-[#ede8df] truncate">{parent.title}</div>
+                      <div className="text-xs text-[#726d6c] mt-1">
+                        {parent.deployed_count} of {parent.clip_count} clips deployed
+                      </div>
+                      {/* Progress bar */}
+                      <div className="w-full h-1.5 bg-white/10 rounded-full mt-2 overflow-hidden">
+                        <div 
+                          className="h-full bg-gradient-to-r from-[#843c2d] to-[#6d3224] transition-all duration-500"
+                          style={{ width: `${progress}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Expand indicator */}
+                    <svg
+                      className={`w-5 h-5 text-[#726d6c] transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                      fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
                 </div>
 
-                {/* Clips list */}
+                {/* Clips progress indicator */}
                 {isExpanded && clips.length > 0 && (
                   <div className="border-t border-white/5 bg-black/20 p-4">
-                    <div className="flex flex-wrap gap-2">
-                      {clips.map(clip => {
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {clips.map((clip, idx) => {
                         const deployed = isClipDeployed(clip);
                         const isNext = clip.id === nextToDeployId;
 
                         return (
                           <button
                             key={clip.id}
-                            onClick={() => !deployed && onDeployClip(clip.id)}
-                            disabled={deployed}
-                            className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all ${
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (isNext || deployed) {
+                                setSelectedClip(clip);
+                              } else {
+                                onDeployClip(clip.id);
+                              }
+                            }}
+                            className={`relative group ${
                               isNext
-                                ? 'bg-gradient-to-r from-[#843c2d] to-[#6d3224] text-white ring-2 ring-[#843c2d]/50'
+                                ? 'w-10 h-10 rounded-full bg-gradient-to-r from-[#843c2d] to-[#6d3224] flex items-center justify-center text-white font-bold text-sm ring-2 ring-[#843c2d]/50 animate-pulse'
                                 : deployed
-                                ? 'bg-green-500/10 text-green-400/70 cursor-default'
-                                : 'bg-white/5 text-[#b2a491] hover:bg-white/10'
+                                ? 'w-8 h-8 rounded-full bg-green-500/30 flex items-center justify-center'
+                                : 'w-8 h-8 rounded-full border-2 border-white/20 flex items-center justify-center text-[#726d6c] hover:border-[#843c2d]/50 hover:text-[#ede8df] transition-all'
                             }`}
                           >
-                            {/* Clip thumbnail */}
-                            <div className="w-8 h-5 rounded overflow-hidden bg-[#0d0c0a] flex-shrink-0">
-                              {clip.poster_url && (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img src={clip.poster_url} alt="" className="w-full h-full object-cover" />
-                              )}
-                            </div>
-
-                            {/* Clip info */}
-                            <span className="text-xs font-medium">
-                              {clip.clip_index ? `#${clip.clip_index}` : ''} {clip.title?.slice(0, 20) || 'Untitled'}
-                            </span>
-
-                            {/* Status icon */}
                             {deployed ? (
                               <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                               </svg>
-                            ) : isNext ? (
-                              <span className="text-[10px] font-bold bg-white/20 px-1.5 py-0.5 rounded">NEXT</span>
-                            ) : null}
+                            ) : (
+                              <span className="text-xs">{idx + 1}</span>
+                            )}
+                            
+                            {/* Tooltip */}
+                            <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 px-2 py-1 bg-[#0d0c0a] text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-10">
+                              {clip.title}
+                            </div>
                           </button>
                         );
                       })}
@@ -2433,18 +2470,104 @@ function PipelineView({ onDeployClip }: { onDeployClip: (clipId: number) => void
         </div>
       )}
 
-      {/* Legend */}
-      <div className="flex items-center gap-6 text-xs text-[#726d6c] pt-4 border-t border-white/5">
-        <span className="flex items-center gap-2">
-          <span className="w-3 h-3 rounded-full bg-green-500/30" /> Deployed
-        </span>
-        <span className="flex items-center gap-2">
-          <span className="w-3 h-3 rounded-full bg-[#843c2d]/50" /> In Progress
-        </span>
-        <span className="flex items-center gap-2">
-          <span className="w-3 h-3 rounded-full bg-white/20" /> Queued
-        </span>
-      </div>
+      {/* Completed Section */}
+      {completedParents.length > 0 && (
+        <div className="pt-4 border-t border-white/5">
+          <button
+            onClick={() => setShowCompleted(!showCompleted)}
+            className="flex items-center gap-2 text-sm text-[#726d6c] hover:text-[#ede8df] transition-colors"
+          >
+            <svg
+              className={`w-4 h-4 transition-transform ${showCompleted ? 'rotate-90' : ''}`}
+              fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+            <span>Completed ({completedParents.length})</span>
+          </button>
+
+          {showCompleted && (
+            <div className="mt-3 space-y-2">
+              {completedParents.map((parent) => (
+                <div key={parent.id} className="p-3 rounded-lg bg-green-500/5 border border-green-500/20 flex items-center gap-3">
+                  <div className="w-6 h-6 rounded-full bg-green-500/30 flex items-center justify-center flex-shrink-0">
+                    <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm text-[#ede8df] truncate">{parent.title}</div>
+                    <div className="text-xs text-green-400/70">{parent.clip_count} clips deployed</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Clip Detail Modal */}
+      {selectedClip && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+          onClick={() => setSelectedClip(null)}
+        >
+          <div 
+            className="bg-[#1a1816] rounded-xl p-6 max-w-md w-full mx-4 border border-white/10"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-medium text-[#ede8df]">Clip Details</h3>
+              <button
+                onClick={() => setSelectedClip(null)}
+                className="text-[#726d6c] hover:text-[#ede8df] transition-colors"
+              >
+                {Icons.close}
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Thumbnail */}
+              <div className="w-full aspect-video rounded-lg overflow-hidden bg-[#0d0c0a]">
+                {selectedClip.poster_url && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={selectedClip.poster_url} alt="" className="w-full h-full object-cover" />
+                )}
+              </div>
+
+              {/* Info */}
+              <div>
+                <div className="text-sm font-medium text-[#ede8df] mb-1">{selectedClip.title}</div>
+                <div className="text-xs text-[#726d6c]">Part {selectedClip.clip_index}</div>
+              </div>
+
+              {/* Deployment status */}
+              {isClipDeployed(selectedClip) && (
+                <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+                  <div className="text-xs font-medium text-green-400 mb-2">Deployed to:</div>
+                  <div className="space-y-1">
+                    {selectedClip.youtube_url && (
+                      <a href={selectedClip.youtube_url} target="_blank" rel="noopener noreferrer" className="block text-xs text-[#b2a491] hover:text-[#ede8df]">
+                        → YouTube
+                      </a>
+                    )}
+                    {selectedClip.tiktok_url && (
+                      <a href={selectedClip.tiktok_url} target="_blank" rel="noopener noreferrer" className="block text-xs text-[#b2a491] hover:text-[#ede8df]">
+                        → TikTok
+                      </a>
+                    )}
+                    {selectedClip.instagram_reels_url && (
+                      <a href={selectedClip.instagram_reels_url} target="_blank" rel="noopener noreferrer" className="block text-xs text-[#b2a491] hover:text-[#ede8df]">
+                        → Instagram
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
