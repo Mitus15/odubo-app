@@ -6,7 +6,6 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import * as tus from 'tus-js-client';
 
 // Types
 interface Video {
@@ -1837,33 +1836,38 @@ function UploadView({
 
         if (!urlData.uploadURL || !urlData.uid) throw new Error('Failed to get upload URL');
 
-        // 2. Upload to Cloudflare using TUS protocol with chunking
-        // The uploadURL from Cloudflare Stream is already a TUS-compatible endpoint
+        // 2. Upload to Cloudflare Stream using XMLHttpRequest for progress tracking
         await new Promise<void>((resolve, reject) => {
-          const upload = new tus.Upload(file, {
-            // Use uploadURL directly as the resume URL (skip creation, Cloudflare already created it)
-            uploadUrl: urlData.uploadURL,
-            chunkSize: 50 * 1024 * 1024, // 50MB chunks for stable large file uploads
-            retryDelays: [0, 1000, 3000, 5000, 10000], // Retry strategy
-            metadata: {
-              name: title,
-              filetype: file.type,
-            },
-            onError: (error) => {
-              console.error('Upload failed:', error);
-              reject(new Error(`Upload failed: ${error.message}`));
-            },
-            onProgress: (bytesUploaded, bytesTotal) => {
-              const percentage = ((bytesUploaded / bytesTotal) * 100).toFixed(1);
+          const xhr = new XMLHttpRequest();
+          
+          xhr.upload.addEventListener('progress', (e) => {
+            if (e.lengthComputable) {
+              const percentage = ((e.loaded / e.total) * 100).toFixed(1);
               setUploadProgress(`Uploading ${i + 1}/${selectedFiles.length}: ${title} (${percentage}%)`);
-            },
-            onSuccess: () => {
-              console.log('Upload completed successfully');
-              resolve();
-            },
+            }
           });
-
-          upload.start();
+          
+          xhr.addEventListener('load', () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              resolve();
+            } else {
+              reject(new Error(`Upload failed with status ${xhr.status}`));
+            }
+          });
+          
+          xhr.addEventListener('error', () => {
+            reject(new Error('Upload failed due to network error'));
+          });
+          
+          xhr.addEventListener('abort', () => {
+            reject(new Error('Upload was aborted'));
+          });
+          
+          const formData = new FormData();
+          formData.append('file', file);
+          
+          xhr.open('POST', urlData.uploadURL);
+          xhr.send(formData);
         });
 
         const uid = urlData.uid;
