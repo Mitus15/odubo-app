@@ -343,6 +343,48 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
       return parts[parts.length - 1] || null;
     };
 
+    // First, find and delete all child clips
+    try {
+      const childClips = await queryDatabase(
+        `SELECT id, url, poster_url, thumbnail, stream_video_id FROM videos WHERE related_projects LIKE ?`,
+        [`%parent_id:${id}%`]
+      );
+
+      for (const clip of childClips || []) {
+        // Delete clip resources from R2 and Stream
+        const clipKeys = [clip.url, clip.poster_url, clip.thumbnail]
+          .map((u: string) => extractKeyFromUrl(u))
+          .filter(Boolean) as string[];
+
+        for (const key of clipKeys) {
+          try {
+            const res = await deleteFile(key);
+            if (!res.success) console.warn('Failed to delete clip from R2:', key, res.error);
+          } catch (e) {
+            console.warn('Delete R2 error for clip', key, e);
+          }
+        }
+
+        // Delete from Cloudflare Stream
+        try {
+          const uid = clip.stream_video_id as string | undefined;
+          if (uid) {
+            const { default: CloudflareStreamAPI } = await import('@/lib/cloudflareStream');
+            const stream = new CloudflareStreamAPI();
+            await stream.deleteVideo(uid);
+          }
+        } catch (e) {
+          console.warn('Failed to delete clip from Cloudflare Stream (non-fatal):', e);
+        }
+      }
+
+      // Delete all child clips from database
+      await executeQuery('DELETE FROM videos WHERE related_projects LIKE ?', [`%parent_id:${id}%`]);
+    } catch (e) {
+      console.warn('Error deleting child clips:', e);
+      // Continue with parent deletion anyway
+    }
+
     const maybeKeys = [video?.url, video?.poster_url, video?.thumbnail]
       .map((u: string) => extractKeyFromUrl(u))
       .filter(Boolean) as string[];
