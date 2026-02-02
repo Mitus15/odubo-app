@@ -1,8 +1,9 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import CloudflareStreamAPI from '@/lib/cloudflareStream';
+import { getUserFromRequest, isAdminUser } from '@/lib/auth';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 interface UploadRequestBody {
   name?: string;
@@ -11,6 +12,11 @@ interface UploadRequestBody {
 
 export async function POST(req: NextRequest) {
   try {
+    const user = getUserFromRequest(req);
+    if (!isAdminUser(user)) {
+      return NextResponse.json({ error: 'Forbidden: Admins only' }, { status: 403 });
+    }
+
     const body = await req.json() as UploadRequestBody;
     const { name, meta } = body;
 
