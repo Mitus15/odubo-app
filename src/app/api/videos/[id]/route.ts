@@ -347,18 +347,20 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
       return parts[parts.length - 1] || null;
     };
 
-    // First, find and delete all child clips (by parent_video_id)
-    console.log(`[DELETE] Looking for child clips of video ${videoId}`);
-    try {
-      // Find child videos by parent_video_id (the actual foreign key column)
+    // Recursive function to delete all descendants
+    async function deleteAllDescendants(parentId: number): Promise<void> {
+      // Find direct children
       const childClips = await queryDatabase(
         `SELECT id, url, poster_url, thumbnail, stream_video_id FROM videos WHERE parent_video_id = ?`,
-        [videoId]
+        [parentId]
       );
       
-      console.log(`[DELETE] Found ${childClips?.length || 0} child clips by parent_video_id`);
+      console.log(`[DELETE] Found ${childClips?.length || 0} child clips where parent_video_id = ${parentId}`);
 
       for (const clip of childClips || []) {
+        // First recursively delete this clip's children (handle multi-level hierarchy)
+        await deleteAllDescendants(clip.id);
+        
         console.log(`[DELETE] Deleting child clip ${clip.id}`);
         // Delete clip resources from R2 and Stream
         const clipKeys = [clip.url, clip.poster_url, clip.thumbnail]
@@ -385,14 +387,19 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
         } catch (e) {
           console.warn('Failed to delete clip from Cloudflare Stream (non-fatal):', e);
         }
-      }
 
-      // Delete all child clips from database
-      console.log(`[DELETE] Deleting child clip records from database where parent_video_id = ${videoId}`);
-      const deleteResult = await executeQuery('DELETE FROM videos WHERE parent_video_id = ?', [videoId]);
-      console.log(`[DELETE] Child clip delete result:`, deleteResult);
+        // Delete this child from database
+        console.log(`[DELETE] Deleting child clip record ${clip.id} from database`);
+        await executeQuery('DELETE FROM videos WHERE id = ?', [clip.id]);
+      }
+    }
+
+    console.log(`[DELETE] Looking for all descendants of video ${videoId}`);
+    try {
+      await deleteAllDescendants(videoId);
+      console.log(`[DELETE] All descendants deleted successfully`);
     } catch (e) {
-      console.error('Error deleting child clips:', e);
+      console.error('Error deleting descendants:', e);
       throw e; // Re-throw to surface the actual error
     }
 
