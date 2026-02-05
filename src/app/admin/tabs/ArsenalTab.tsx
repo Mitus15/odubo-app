@@ -5,7 +5,7 @@
  * "Magazine & Bullets" - Upload → Deploy → Backfeed
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import * as tus from 'tus-js-client';
 import { VideoDetailModal } from './VideoDetailModal';
 
@@ -649,6 +649,8 @@ function LibraryView({
   const [reorderingParentId, setReorderingParentId] = useState<number | null>(null);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [syncMessage, setSyncMessage] = useState<string>('');
 
   // Handle publish toggle
   const handleTogglePublish = async (videoId: number, currentlyPublished: boolean) => {
@@ -680,6 +682,33 @@ function LibraryView({
     } catch (error) {
       console.error('Failed to delete video:', error);
       alert('Failed to delete video');
+    }
+  };
+
+  // Handle sync from Cloudflare Stream
+  const handleSyncFromStream = async () => {
+    setSyncing(true);
+    setSyncMessage('');
+    try {
+      const res = await fetch('/api/arsenal/sync-from-stream', {
+        method: 'POST',
+      });
+      const data = await res.json();
+      if (data.synced > 0) {
+        setSyncMessage(`✓ Synced ${data.synced} video${data.synced !== 1 ? 's' : ''} from Cloudflare Stream`);
+        onRefresh();
+      } else if (data.error) {
+        setSyncMessage(`✗ Error: ${data.error}`);
+      } else {
+        setSyncMessage('✓ All videos already synced');
+      }
+      setTimeout(() => setSyncMessage(''), 5000);
+    } catch (error) {
+      console.error('Failed to sync from Stream:', error);
+      setSyncMessage('✗ Failed to sync. Check console for details.');
+      setTimeout(() => setSyncMessage(''), 5000);
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -813,14 +842,35 @@ function LibraryView({
     selectedIds.forEach(id => onSelect(id));
   };
 
-  const toggleExpand = (id: number) => {
-    setExpandedIds(prev =>
-      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
-    );
-  };
+  const togdiv className="flex items-center gap-2 self-start sm:self-auto">
+            <button
+              onClick={handleSyncFromStream}
+              disabled={syncing || loading}
+              className="px-3 py-1.5 text-xs rounded-lg bg-[#843c2d]/20 text-[#ede8df] hover:bg-[#843c2d]/30 transition-colors disabled:opacity-50"
+              title="Sync videos from Cloudflare Stream"
+            >
+              {syncing ? '⟳ Syncing...' : '⟳ Sync Stream'}
+            </button>
+            <button
+              onClick={onRefresh}
+              disabled={loading}
+              className="px-3 py-1.5 text-xs rounded-lg bg-white/5 text-[#726d6c] hover:bg-white/10 transition-colors disabled:opacity-50"
+            >
+              {loading ? 'Loading...' : 'Refresh'}
+            </button>
+          </div>
+        </div>
 
-  return (
-    <div className="space-y-3 md:space-y-4">
+        {/* Sync Message */}
+        {syncMessage && (
+          <div className={`px-3 py-2 text-xs rounded-lg ${
+            syncMessage.startsWith('✓') 
+              ? 'bg-green-500/10 text-green-400 border border-green-500/20' 
+              : 'bg-red-500/10 text-red-400 border border-red-500/20'
+          }`}>
+            {syncMessage}
+          </div>
+        )}Name="space-y-3 md:space-y-4">
       {/* Toolbar */}
       <div className="flex flex-col gap-3">
         {/* Filters row - stack on mobile */}
@@ -1827,6 +1877,7 @@ function UploadView({
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState('');
   const [parentVideoId, setParentVideoId] = useState<number | null>(null);
+  const dragFileIndex = useRef<number | null>(null);
 
   // Video metadata fields
   const [videoTitle, setVideoTitle] = useState('');
@@ -1925,6 +1976,14 @@ function UploadView({
     } else if (direction === 'down' && index < newFiles.length - 1) {
       [newFiles[index], newFiles[index + 1]] = [newFiles[index + 1], newFiles[index]];
     }
+    setSelectedFiles(newFiles);
+  };
+
+  const reorderFiles = (from: number, to: number) => {
+    if (from === null || to === null || from === to) return;
+    const newFiles = [...selectedFiles];
+    const [moved] = newFiles.splice(from, 1);
+    newFiles.splice(to, 0, moved);
     setSelectedFiles(newFiles);
   };
 
@@ -2179,7 +2238,15 @@ function UploadView({
             {selectedFiles.map((file, index) => (
               <div
                 key={index}
-                className="flex items-center justify-between p-3 rounded-xl bg-white/5"
+                className="flex items-center justify-between p-3 rounded-xl bg-white/5 cursor-grab active:cursor-grabbing"
+                draggable={uploadType === 'clip'}
+                onDragStart={() => { dragFileIndex.current = index; }}
+                onDragOver={(e) => { e.preventDefault(); }}
+                onDrop={() => {
+                  const from = dragFileIndex.current;
+                  dragFileIndex.current = null;
+                  if (from !== null) reorderFiles(from, index);
+                }}
               >
                 <div className="flex items-center gap-3 flex-1 min-w-0">
                   <span className="text-[#726d6c] text-sm w-6">{index + 1}.</span>
