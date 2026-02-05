@@ -205,9 +205,9 @@ export async function POST(req: NextRequest) {
     await executeQuery(
       `INSERT INTO videos (
         title, artist_name, description, short_description, long_description, ai_description, tags,
-        url, uid, poster_url, thumbnail, duration, duration_seconds, category, is_public, type, mood,
+        url, uid, stream_video_id, poster_url, thumbnail, duration, duration_seconds, category, is_public, type, mood,
         credits, related_projects, status, publication_status, thumbnail_timestamp_pct, track_id, album_id, scheduled_for, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
       [
         title,
         artist_name,
@@ -218,6 +218,7 @@ export async function POST(req: NextRequest) {
         tagsJson,
         url,
         uid,
+        uid, // stream_video_id = uid for consistency
         poster_url,
         thumbnail,
         String(duration),

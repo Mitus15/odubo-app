@@ -2098,9 +2098,11 @@ function UploadView({
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               uid,
+              stream_video_id: uid, // Set both for consistency
               title,
               url: embedUrl,
-              thumbnail: posterUrl,
+              poster_url: posterUrl, // Consistent field name
+              thumbnail: posterUrl,  // Legacy field
               thumbnail_timestamp_pct: 0.5, // Random frame at midpoint
               // Include inherited metadata
               description: videoDescription,
@@ -2132,9 +2134,11 @@ function UploadView({
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               uid,
+              stream_video_id: uid, // Set both for consistency
               title,
               url: embedUrl,
               poster_url: posterUrl,
+              thumbnail: posterUrl, // Legacy field
               description: videoDescription,
               credits: videoCredits,
               artist_name: videoArtist,
@@ -2151,7 +2155,7 @@ function UploadView({
         }
       }
 
-      setUploadProgress('Upload complete!');
+      setUploadProgress('✓ Upload complete! Thumbnails will be generated automatically by Cloudflare Stream within 1-2 minutes.');
       setSelectedFiles([]);
       // Reset form
       setVideoTitle('');
@@ -2162,7 +2166,7 @@ function UploadView({
       onUploadComplete();
     } catch (error) {
       console.error('Upload failed:', error);
-      setUploadProgress('Upload failed. See console.');
+      setUploadProgress('✗ Upload failed. See console for details.');
     } finally {
       setUploading(false);
     }

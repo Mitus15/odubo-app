@@ -67,13 +67,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     // They become visible when distributed via Social CMS → PostForMe
     await executeQuery(
       `INSERT INTO videos (
-        title, artist_name, uid, url, poster_url, thumbnail, duration,
+        title, artist_name, uid, stream_video_id, url, poster_url, thumbnail, duration,
         status, type, is_public, publication_status, related_projects,
         parent_video_id, thumbnail_timestamp_pct,
         description, credits, category, mood,
         created_at, updated_at
       ) VALUES (
-        ?, ?, ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?, ?, ?, ?,
         'published', 'clip', 0, 'archived', ?,
         ?, ?,
         ?, ?, ?, ?,
@@ -83,6 +83,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         title,
         parentArtist,
         uid,
+        uid, // stream_video_id = uid
         embedUrl,
         posterUrl,
         posterUrl,
