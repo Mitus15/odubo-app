@@ -76,11 +76,12 @@ export async function POST(req: NextRequest) {
     const duration = seconds > 0 ? `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}` : '';
 
     // Insert video metadata into D1 videos table (consolidated)
+    // NOTE: publication_status defaults to 'archived' - content is hidden until distributed
     const sql = `INSERT INTO videos (
       uid, title, artist_name, description, url, poster_url, thumbnail, duration,
-      category, is_public, type, mood, credits, related_projects, status, stream_video_id,
+      category, is_public, type, mood, credits, related_projects, status, publication_status, stream_video_id,
       original_filename, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'published', ?, ?, datetime('now'), datetime('now'))`;
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'published', 'archived', ?, ?, datetime('now'), datetime('now'))`;
 
     const params = [
       streamVideoId, // use Stream UID as our uid

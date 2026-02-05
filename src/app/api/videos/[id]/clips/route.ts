@@ -45,16 +45,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       description, credits, category, mood
     } = body;
 
-    // Inherit visibility/status/artist from parent video
+    // Inherit artist from parent, but clips are ALWAYS hidden until distributed
     const parent = await queryDatabase(
-      `SELECT is_public, status, publication_status, artist_name AS parent_artist
+      `SELECT artist_name AS parent_artist
        FROM videos WHERE id = ? LIMIT 1`,
       [id]
     );
     const parentRow = Array.isArray(parent) ? parent[0] : null;
-    const parentPublic = parentRow?.is_public === 1 || parentRow?.is_public === true;
-    const parentStatus = parentRow?.status || 'published';
-    const parentPublication = parentRow?.publication_status || 'live';
     // Always use parent's artist_name for clips
     const parentArtist = parentRow?.parent_artist || 'Mani Odubo';
 
@@ -66,6 +63,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const posterUrl = thumbnail || `https://videodelivery.net/${uid}/thumbnails/thumbnail.jpg`;
     const embedUrl = url || `https://iframe.videodelivery.net/${uid}`;
 
+    // NOTE: Clips are created with publication_status = 'archived' (hidden)
+    // They become visible when distributed via Social CMS → PostForMe
     await executeQuery(
       `INSERT INTO videos (
         title, artist_name, uid, url, poster_url, thumbnail, duration,
@@ -75,7 +74,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         created_at, updated_at
       ) VALUES (
         ?, ?, ?, ?, ?, ?, ?,
-        'published', 'clip', ?, 'live', ?,
+        'published', 'clip', 0, 'archived', ?,
         ?, ?,
         ?, ?, ?, ?,
         datetime('now'), datetime('now')
@@ -88,7 +87,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         posterUrl,
         posterUrl,
         duration || 0,
-        (is_public ? 1 : undefined) ?? (parentPublic ? 1 : 0),
         JSON.stringify([`parent_id:${id}`, `style:vertical`]),
         id,  // explicit parent_video_id FK
         thumbnail_timestamp_pct || 0.5,  // Default to 50% if not provided

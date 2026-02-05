@@ -10,6 +10,7 @@ interface SocialContent {
   upload_uid: string | null;
   thumbnail_url: string | null;
   title: string;
+  video_id: number | null;
   caption_instagram: string | null;
   caption_tiktok: string | null;
   caption_youtube: string | null;
@@ -231,12 +232,38 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // CRITICAL: Make source video publicly visible after successful distribution
+    // This wires up: distribute to social → content appears on odubo.studio
+    if (content.video_id) {
+      await executeQuery(
+        `UPDATE videos
+         SET is_public = 1,
+             publication_status = 'live',
+             updated_at = ?
+         WHERE id = ?`,
+        [now, content.video_id]
+      );
+      console.log(`[Social Publish] Made video ${content.video_id} publicly visible`);
+    } else if (content.upload_uid) {
+      // If no video_id but has upload_uid, try to find and update the video by uid
+      await executeQuery(
+        `UPDATE videos
+         SET is_public = 1,
+             publication_status = 'live',
+             updated_at = ?
+         WHERE uid = ?`,
+        [now, content.upload_uid]
+      );
+      console.log(`[Social Publish] Made video with uid ${content.upload_uid} publicly visible`);
+    }
+
     return NextResponse.json({
       success: true,
       status: newStatus,
       postforme_id: postForMePostId,
       postforme_status: postForMeStatus,
       platforms_published: platforms,
+      video_made_public: !!(content.video_id || content.upload_uid),
     });
   } catch (error) {
     console.error('[Social Publish] Error:', error);
