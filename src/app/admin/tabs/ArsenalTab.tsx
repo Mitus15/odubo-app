@@ -2197,7 +2197,9 @@ function UploadView({
           <select
             value={parentVideoId || ''}
             onChange={(e) => setParentVideoId(e.target.value ? Number(e.target.value) : null)}
-            className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-[#ede8df] text-sm focus:outline-none focus:border-[#843c2d]/50"
+            disabled={uploading}
+            className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-[#ede8df] text-sm focus:outline-none focus:border-[#843c2d]/50 disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ pointerEvents: 'auto' }}
           >
             <option value="">Select parent video...</option>
             {parentVideos.map(v => (
@@ -2238,14 +2240,21 @@ function UploadView({
             {selectedFiles.map((file, index) => (
               <div
                 key={index}
-                className="flex items-center justify-between p-3 rounded-xl bg-white/5 cursor-grab active:cursor-grabbing"
+                className={`flex items-center justify-between p-3 rounded-xl bg-white/5 ${uploadType === 'clip' ? 'cursor-grab active:cursor-grabbing' : ''}`}
                 draggable={uploadType === 'clip'}
-                onDragStart={() => { dragFileIndex.current = index; }}
-                onDragOver={(e) => { e.preventDefault(); }}
-                onDrop={() => {
-                  const from = dragFileIndex.current;
-                  dragFileIndex.current = null;
-                  if (from !== null) reorderFiles(from, index);
+                onDragStart={(e) => { 
+                  if (uploadType === 'clip') dragFileIndex.current = index; 
+                }}
+                onDragOver={(e) => { 
+                  if (uploadType === 'clip') e.preventDefault(); 
+                }}
+                onDrop={(e) => {
+                  if (uploadType === 'clip') {
+                    e.preventDefault();
+                    const from = dragFileIndex.current;
+                    dragFileIndex.current = null;
+                    if (from !== null) reorderFiles(from, index);
+                  }
                 }}
               >
                 <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -2297,7 +2306,9 @@ function UploadView({
               value={videoTitle}
               onChange={(e) => setVideoTitle(e.target.value)}
               placeholder="Video title"
-              className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-[#ede8df] text-sm focus:outline-none focus:border-[#843c2d]/50"
+              disabled={uploading}
+              className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-[#ede8df] text-sm focus:outline-none focus:border-[#843c2d]/50 disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ userSelect: 'text', pointerEvents: 'auto' }}
             />
           </div>
 
@@ -2309,7 +2320,9 @@ function UploadView({
               onChange={(e) => setVideoDescription(e.target.value)}
               placeholder="Video description for YouTube..."
               rows={3}
-              className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-[#ede8df] text-sm focus:outline-none focus:border-[#843c2d]/50 resize-none"
+              disabled={uploading}
+              className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-[#ede8df] text-sm focus:outline-none focus:border-[#843c2d]/50 resize-none disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ userSelect: 'text', pointerEvents: 'auto' }}
             />
           </div>
 
@@ -2321,7 +2334,9 @@ function UploadView({
               onChange={(e) => setVideoCredits(e.target.value)}
               placeholder="Director: ...&#10;Producer: ...&#10;Cinematography: ..."
               rows={4}
-              className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-[#ede8df] text-sm focus:outline-none focus:border-[#843c2d]/50 resize-none"
+              disabled={uploading}
+              className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-[#ede8df] text-sm focus:outline-none focus:border-[#843c2d]/50 resize-none disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ userSelect: 'text', pointerEvents: 'auto' }}
             />
           </div>
 
@@ -2333,7 +2348,9 @@ function UploadView({
               value={videoArtist}
               onChange={(e) => setVideoArtist(e.target.value)}
               placeholder="ODUBO"
-              className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-[#ede8df] text-sm focus:outline-none focus:border-[#843c2d]/50"
+              disabled={uploading}
+              className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-[#ede8df] text-sm focus:outline-none focus:border-[#843c2d]/50 disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ userSelect: 'text', pointerEvents: 'auto' }}
             />
           </div>
 
@@ -2345,7 +2362,9 @@ function UploadView({
               <select
                 value={videoType}
                 onChange={(e) => setVideoType(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-[#ede8df] text-sm focus:outline-none focus:border-[#843c2d]/50"
+                disabled={uploading}
+                className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-[#ede8df] text-sm focus:outline-none focus:border-[#843c2d]/50 disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ pointerEvents: 'auto' }}
               >
                 <option value="music-video">Music Video</option>
                 <option value="performance">Performance</option>
@@ -2365,7 +2384,9 @@ function UploadView({
               <select
                 value={videoCategory}
                 onChange={(e) => setVideoCategory(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-[#ede8df] text-sm focus:outline-none focus:border-[#843c2d]/50"
+                disabled={uploading}
+                className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-[#ede8df] text-sm focus:outline-none focus:border-[#843c2d]/50 disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ pointerEvents: 'auto' }}
               >
                 <option value="">Select...</option>
                 <option value="music">Music</option>
@@ -2383,7 +2404,9 @@ function UploadView({
               <select
                 value={videoMood}
                 onChange={(e) => setVideoMood(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-[#ede8df] text-sm focus:outline-none focus:border-[#843c2d]/50"
+                disabled={uploading}
+                className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-[#ede8df] text-sm focus:outline-none focus:border-[#843c2d]/50 disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ pointerEvents: 'auto' }}
               >
                 <option value="">Select...</option>
                 <option value="energetic">Energetic</option>
@@ -2412,7 +2435,9 @@ function UploadView({
                     setLinkedAlbumId(track.album_id);
                   }
                 }}
-                className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-[#ede8df] text-sm focus:outline-none focus:border-[#843c2d]/50"
+                disabled={uploading}
+                className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-[#ede8df] text-sm focus:outline-none focus:border-[#843c2d]/50 disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ pointerEvents: 'auto' }}
               >
                 <option value="">None</option>
                 {availableTracks.map(track => (
@@ -2426,7 +2451,9 @@ function UploadView({
               <select
                 value={linkedAlbumId}
                 onChange={(e) => setLinkedAlbumId(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-[#ede8df] text-sm focus:outline-none focus:border-[#843c2d]/50"
+                disabled={uploading}
+                className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-[#ede8df] text-sm focus:outline-none focus:border-[#843c2d]/50 disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ pointerEvents: 'auto' }}
               >
                 <option value="">None</option>
                 {availableAlbums.map(album => (
@@ -2447,14 +2474,18 @@ function UploadView({
                 type="date"
                 value={uploadScheduleDate}
                 onChange={(e) => setUploadScheduleDate(e.target.value)}
-                className="flex-1 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-[#ede8df] text-sm focus:outline-none focus:border-[#843c2d]/50"
+                disabled={uploading}
+                className="flex-1 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-[#ede8df] text-sm focus:outline-none focus:border-[#843c2d]/50 disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ pointerEvents: 'auto' }}
                 min={new Date().toISOString().split('T')[0]}
               />
               <input
                 type="time"
                 value={uploadScheduleTime}
                 onChange={(e) => setUploadScheduleTime(e.target.value)}
-                className="flex-1 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-[#ede8df] text-sm focus:outline-none focus:border-[#843c2d]/50"
+                disabled={uploading}
+                className="flex-1 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-[#ede8df] text-sm focus:outline-none focus:border-[#843c2d]/50 disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ pointerEvents: 'auto' }}
               />
             </div>
             {uploadScheduleDate && uploadScheduleTime && (
