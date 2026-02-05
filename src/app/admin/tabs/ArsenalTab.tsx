@@ -842,7 +842,34 @@ function LibraryView({
     selectedIds.forEach(id => onSelect(id));
   };
 
-  const togdiv className="flex items-center gap-2 self-start sm:self-auto">
+  const toggleExpand = (id: number) => {
+    setExpandedIds(prev =>
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  return (
+    <div className="space-y-3 md:space-y-4">
+      {/* Toolbar */}
+      <div className="flex flex-col gap-3">
+        {/* Filters row - stack on mobile */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            {(['all', 'videos', 'clips', 'published', 'unpublished', 'deployed', 'not-deployed'] as FilterMode[]).map(f => (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className={`px-2.5 py-1.5 md:px-3 md:py-1.5 text-xs rounded-lg transition-colors ${
+                  filter === f
+                    ? 'bg-[#843c2d]/30 text-[#ede8df]'
+                    : 'bg-white/5 text-[#726d6c] hover:bg-white/10'
+                }`}
+              >
+                {f.charAt(0).toUpperCase() + f.slice(1).replace('-', ' ')}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-2 self-start sm:self-auto">
             <button
               onClick={handleSyncFromStream}
               disabled={syncing || loading}
@@ -870,34 +897,7 @@ function LibraryView({
           }`}>
             {syncMessage}
           </div>
-        )}Name="space-y-3 md:space-y-4">
-      {/* Toolbar */}
-      <div className="flex flex-col gap-3">
-        {/* Filters row - stack on mobile */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-2">
-            {(['all', 'videos', 'clips', 'published', 'unpublished', 'deployed', 'not-deployed'] as FilterMode[]).map(f => (
-              <button
-                key={f}
-                onClick={() => setFilter(f)}
-                className={`px-2.5 py-1.5 md:px-3 md:py-1.5 text-xs rounded-lg transition-colors ${
-                  filter === f
-                    ? 'bg-[#843c2d]/30 text-[#ede8df]'
-                    : 'bg-white/5 text-[#726d6c] hover:bg-white/10'
-                }`}
-              >
-                {f.charAt(0).toUpperCase() + f.slice(1).replace('-', ' ')}
-              </button>
-            ))}
-          </div>
-          <button
-            onClick={onRefresh}
-            disabled={loading}
-            className="px-3 py-1.5 text-xs rounded-lg bg-white/5 text-[#726d6c] hover:bg-white/10 transition-colors disabled:opacity-50 self-start sm:self-auto"
-          >
-            {loading ? 'Loading...' : 'Refresh'}
-          </button>
-        </div>
+        )}
 
         {/* Selection actions row - stack on mobile */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
