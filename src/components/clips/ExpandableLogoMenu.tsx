@@ -308,6 +308,19 @@ export default function ExpandableLogoMenu({
   }, [collapse]);
 
   // ============================================================================
+  // Determine Active Buttons & Single-Button Mode
+  // ============================================================================
+  
+  // Count active buttons in the dropdown
+  const shopButtonActive = !checkingStoreAccess && storeAccessible;
+  const connectButtonActive = true; // Always active
+  
+  const activeButtonCount = (shopButtonActive ? 1 : 0) + (connectButtonActive ? 1 : 0);
+  
+  // If only one button, show it directly instead of dropdown
+  const singleButtonMode = activeButtonCount === 1;
+
+  // ============================================================================
   // Animation Variants (memoized for performance)
   // ============================================================================
 
@@ -404,6 +417,63 @@ export default function ExpandableLogoMenu({
   // Render
   // ============================================================================
 
+  // SINGLE BUTTON MODE: If only one button (Connect), show it directly
+  if (singleButtonMode) {
+    return (
+      <motion.div
+        ref={menuRef}
+        className="fixed z-50"
+        style={{
+          ...positionStyle,
+          touchAction: 'none',
+          x,
+          y,
+          willChange: 'transform',
+          transform: 'translateZ(0)',
+        }}
+        drag
+        dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
+        dragElastic={0.15}
+        dragMomentum={false}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
+        {/* Single Connect button - styled like the master button */}
+        <div
+          className={`relative w-14 h-14 flex items-center justify-center rounded-full
+                     border border-white/20
+                     shadow-[0_12px_32px_rgba(0,0,0,0.6)]
+                     ${isAnimating ? 'bg-black/40' : 'bg-black/15 backdrop-blur-xl'}`}
+          style={{
+            width: BUTTON_SIZE,
+            height: BUTTON_SIZE,
+          }}
+        >
+          <motion.button
+            onClick={handleConnect}
+            className="group relative overflow-hidden w-full h-full flex items-center justify-center rounded-full"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            aria-label="Connect"
+            style={{
+              cursor: isDragging ? 'grabbing' : 'grab',
+              willChange: 'transform',
+              backfaceVisibility: 'hidden',
+            }}
+          >
+            <svg className="w-6 h-6 text-white/90" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
+            </svg>
+          </motion.button>
+        </div>
+
+        {/* LinkTree Modal */}
+        <LinkTreeModal isOpen={linkTreeOpen} onClose={() => setLinkTreeOpen(false)} />
+      </motion.div>
+    );
+  }
+
+  // MULTI-BUTTON MODE: Show master button with dropdown
   return (
     <motion.div
       ref={menuRef}
