@@ -115,6 +115,73 @@ export interface CreatePostInput {
   media?: Array<{ url: string; type?: 'image' | 'video' }>;
   schedule_at?: string; // ISO date string
   first_comment?: string;
+  // Platform-specific overrides (apply to ALL accounts of that platform)
+  platform_configurations?: {
+    youtube?: YouTubePlatformConfig;
+    tiktok?: TikTokPlatformConfig;
+    instagram?: InstagramPlatformConfig;
+    facebook?: FacebookPlatformConfig;
+    x?: XPlatformConfig;
+    [key: string]: any; // Allow other platforms
+  };
+  // Account-specific overrides (apply to ONE specific account)
+  account_configurations?: Array<{
+    social_account_id: string;
+    configuration: {
+      caption?: string;
+      first_comment?: string;
+      // Plus any platform-specific fields
+      [key: string]: any;
+    };
+  }>;
+}
+
+// YouTube-specific configuration
+export interface YouTubePlatformConfig {
+  title?: string;
+  privacy_status?: 'public' | 'unlisted' | 'private';
+  made_for_kids?: boolean;
+  category_id?: string; // YouTube category ID (e.g., "10" = Music)
+  tags?: string[];
+  description?: string;
+  [key: string]: any; // Allow additional YouTube fields
+}
+
+// TikTok-specific configuration
+export interface TikTokPlatformConfig {
+  title?: string;
+  privacy_status?: 'public' | 'private' | 'friends_only' | 'self_only';
+  allow_duet?: boolean;
+  allow_stitch?: boolean;
+  allow_comment?: boolean;
+  description?: string;
+  [key: string]: any;
+}
+
+// Instagram-specific configuration
+export interface InstagramPlatformConfig {
+  placement?: 'REELS' | 'STORIES' | 'FEED';
+  share_to_feed?: boolean; // For Reels - also post to feed grid
+  collaborators?: string[]; // Instagram user IDs to tag
+  location_id?: string;
+  caption?: string;
+  [key: string]: any;
+}
+
+// Facebook-specific configuration
+export interface FacebookPlatformConfig {
+  placement?: 'REELS' | 'TIMELINE';
+  location_id?: string;
+  tags?: string[];
+  caption?: string;
+  [key: string]: any;
+}
+
+// X (Twitter)-specific configuration
+export interface XPlatformConfig {
+  reply_settings?: 'everyone' | 'mentioned_users' | 'followers';
+  quote_tweet_id?: string;
+  [key: string]: any;
 }
 
 interface ApiResponse<T> {
@@ -164,6 +231,19 @@ async function apiRequest<T>(
     });
 
     const data = (await response.json()) as T & { error?: string; message?: string };
+
+    // Log API calls for debugging (especially scheduling)
+    if (endpoint.includes('/social-posts') && options.method === 'POST') {
+      const body = options.body ? JSON.parse(options.body as string) : null;
+      console.log('[PostForMe API]', {
+        endpoint,
+        method: options.method,
+        status: response.status,
+        scheduleAt: body?.schedule_at,
+        success: response.ok,
+        responseData: data,
+      });
+    }
 
     if (!response.ok) {
       return {

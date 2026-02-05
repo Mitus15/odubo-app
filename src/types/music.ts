@@ -49,6 +49,8 @@ export interface Track {
   bass_stem_url?: string;
   other_stem_url?: string;
   processing_status: 'pending' | 'processing' | 'complete' | 'failed';
+  music_video_id?: number; // FK to videos.id - music video for this track
+  video_count?: number; // Total number of videos linked to this track
 }
 
 export interface TrackCredit {

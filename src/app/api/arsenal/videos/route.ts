@@ -11,42 +11,49 @@ export async function GET() {
   try {
     console.log('[Arsenal] Fetching videos...');
     // Fetch ALL videos for Arsenal management (including unpublished)
+    // LEFT JOIN tracks and albums to get music relationship names
     const results = await queryDatabase(
       `SELECT
-        id,
-        uid,
-        title,
-        description,
-        original_filename,
-        poster_url,
-        duration,
-        parent_video_id,
-        clip_index,
-        total_siblings,
-        category,
-        mood,
-        type,
-        artist_name,
-        is_public,
-        publication_status,
-        youtube_url,
-        youtube_shorts_url,
-        tiktok_url,
-        instagram_reels_url,
-        postforme_post_id,
-        postforme_status,
-        social_description,
-        social_hashtags,
-        social_first_comment,
-        social_visibility,
-        created_at
-      FROM videos
-      WHERE COALESCE(status, 'published') != 'archived'
+        v.id,
+        v.uid,
+        v.title,
+        v.description,
+        v.original_filename,
+        v.poster_url,
+        v.duration,
+        v.parent_video_id,
+        v.clip_index,
+        v.total_siblings,
+        v.category,
+        v.mood,
+        v.type,
+        v.artist_name,
+        v.track_id,
+        v.album_id,
+        t.title as track_title,
+        a.title as album_title,
+        v.is_public,
+        v.publication_status,
+        v.youtube_url,
+        v.youtube_shorts_url,
+        v.tiktok_url,
+        v.instagram_reels_url,
+        v.postforme_post_id,
+        v.postforme_status,
+        v.social_description,
+        v.social_hashtags,
+        v.social_first_comment,
+        v.social_visibility,
+        v.created_at
+      FROM videos v
+      LEFT JOIN tracks t ON v.track_id = t.id
+      LEFT JOIN albums a ON v.album_id = a.id
+      WHERE COALESCE(v.status, 'published') != 'archived'
       ORDER BY
-        CASE WHEN parent_video_id IS NULL THEN 0 ELSE 1 END,
-        parent_video_id,
-        clip_index,
-        created_at DESC`,
+        CASE WHEN v.parent_video_id IS NULL THEN 0 ELSE 1 END,
+        v.parent_video_id,
+        v.clip_index,
+        v.created_at DESC`,
       []
     );
 

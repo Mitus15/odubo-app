@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 export const runtime = 'edge';
-import { uploadFile, uploadFileOrganized } from '@/worker/upload';
+import { uploadFile, uploadFileOrganized, uploadWithKey } from '@/worker/upload';
 import { FileOrganizationOptions, validateFileType, FileType } from '@/lib/fileOrganization';
+import { music, toSlug, sanitizeFilename } from '@/lib/storage/pathGenerators';
+
 // Note: Node-specific modules (ffmpeg-static, os, path, fs, child_process)
 // are not available in the Edge runtime. Transcoding is handled by a
 // separate Node-compatible worker/service. This endpoint only uploads.
@@ -14,6 +16,9 @@ export async function POST(req: NextRequest) {
     // Organization options for the new system
     const fileType = formData.get('fileType') as FileType; // 'track', 'album-cover', 'video', etc.
     const albumId = formData.get('albumId') as string; // album ID for tracks/covers
+    const albumTitle = formData.get('albumTitle') as string; // for slug generation
+    const trackTitle = formData.get('trackTitle') as string; // for track slug
+    const trackNumber = formData.get('trackNumber') as string; // for track numbering
     const videoId = formData.get('videoId') as string; // video ID for videos/posters
     const videoType = formData.get('videoType') as string; // for videos only
     
@@ -35,8 +40,25 @@ export async function POST(req: NextRequest) {
 
     let uploadResult;
 
-    // Use new organized system if fileType is provided
-    if (fileType && (albumId || videoId)) {
+    // Handle music files with proper path generation
+    if (fileType === 'album-cover' && albumTitle) {
+      const ext = file.name.split('.').pop() || 'jpg';
+      const albumSlug = toSlug(albumTitle);
+      const key = music.albumCover(albumSlug, ext);
+      
+      uploadResult = await uploadWithKey(uint8Array, file.name, file.type, key);
+      
+    } else if (fileType === 'track' && albumTitle && trackTitle && trackNumber) {
+      const ext = file.name.split('.').pop() || 'mp3';
+      const albumSlug = toSlug(albumTitle);
+      const trackSlug = toSlug(trackTitle);
+      const trackNum = parseInt(trackNumber, 10);
+      const key = music.track(albumSlug, trackNum, trackSlug, ext);
+      
+      uploadResult = await uploadWithKey(uint8Array, file.name, file.type, key);
+      
+    } else if (fileType && (albumId || videoId)) {
+      // Use new organized system (legacy code path)
       // Validate file type
       const isValidFile = validateFileType(file.name, fileType);
       if (!isValidFile) {

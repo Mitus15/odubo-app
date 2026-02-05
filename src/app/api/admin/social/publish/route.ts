@@ -16,6 +16,10 @@ interface SocialContent {
   hashtags_instagram: string | null;
   hashtags_tiktok: string | null;
   hashtags_youtube: string | null;
+  title_youtube: string | null;
+  description_youtube: string | null;
+  is_youtube_short: number;
+  source_type: string;
   status: string;
 }
 
@@ -91,36 +95,75 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Build caption - use the first platform's caption
-    // Post for Me will use this caption for all platforms
-    const primaryPlatform = platforms[0];
-    let caption = '';
-    let hashtags = '';
-
-    if (primaryPlatform === 'instagram') {
-      caption = content.caption_instagram || content.title || '';
-      hashtags = content.hashtags_instagram || '';
-    } else if (primaryPlatform === 'tiktok') {
-      caption = content.caption_tiktok || content.title || '';
-      hashtags = content.hashtags_tiktok || '';
-    } else if (primaryPlatform === 'youtube') {
-      caption = content.caption_youtube || content.title || '';
-      hashtags = content.hashtags_youtube || '';
-    } else {
-      caption = content.title || '';
-    }
-
-    // Combine caption and hashtags
-    const fullCaption = hashtags ? `${caption}\n\n${hashtags}` : caption;
-
     // Video URL - Cloudflare Stream downloadable MP4
     const videoUrl = `https://videodelivery.net/${content.upload_uid}/downloads/default.mp4`;
 
-    // Build Post for Me request
+    // Build Post for Me request with account-specific configurations
     const postForMeAccountIds = accounts.map((acc) => acc.postforme_account_id);
 
+    // Helper to parse hashtags into array for YouTube
+    const parseHashtags = (hashtagString: string | null): string[] => {
+      if (!hashtagString) return [];
+      return hashtagString
+        .split(/[\s,]+/)
+        .filter(tag => tag.startsWith('#'))
+        .map(tag => tag.substring(1));
+    };
+
+    // Build platform-specific configurations
+    const platformConfigurations: Record<string, any> = {};
+    
+    // Check which platforms are being used
+    const platformsSet = new Set(accounts.map(acc => acc.platform.toLowerCase()));
+
+    // Instagram configuration
+    if (platformsSet.has('instagram')) {
+      const igCaption = content.caption_instagram || content.title || '';
+      const igHashtags = content.hashtags_instagram || '';
+      platformConfigurations.instagram = {
+        caption: igHashtags ? `${igCaption}\n\n${igHashtags}` : igCaption,
+        placement: 'REELS',
+        share_to_feed: true,
+      };
+    }
+
+    // TikTok configuration
+    if (platformsSet.has('tiktok')) {
+      const ttCaption = content.caption_tiktok || content.title || '';
+      const ttHashtags = content.hashtags_tiktok || '';
+      platformConfigurations.tiktok = {
+        title: ttCaption,
+        description: ttHashtags,
+        allow_duet: true,
+        allow_stitch: true,
+        allow_comment: true,
+      };
+    }
+
+    // YouTube configuration
+    if (platformsSet.has('youtube')) {
+      const ytTitle = content.title_youtube || content.title || 'Untitled';
+      const ytCaption = content.caption_youtube || content.description_youtube || '';
+      const ytHashtags = content.hashtags_youtube || '';
+      const ytDescription = ytHashtags ? `${ytCaption}\n\n${ytHashtags}` : ytCaption;
+      
+      platformConfigurations.youtube = {
+        title: ytTitle.substring(0, 100), // YouTube title max 100 chars
+        description: ytDescription,
+        tags: parseHashtags(content.hashtags_youtube),
+        privacy_status: 'public',
+        category_id: '10', // Music category
+        made_for_kids: false,
+      };
+
+      // Determine if this should be a Short based on content type or flag
+      const isShort = content.is_youtube_short === 1 || content.source_type === 'clip';
+      if (isShort) {
+        platformConfigurations.youtube.shorts = true;
+      }
+    }
+
     const createPostInput: CreatePostInput = {
-      caption: fullCaption,
       social_accounts: postForMeAccountIds,
       media: [
         {
@@ -128,6 +171,7 @@ export async function POST(request: NextRequest) {
           type: 'video',
         },
       ],
+      platform_configurations: platformConfigurations,
     };
 
     // Add scheduling if not publishing now
@@ -153,6 +197,10 @@ export async function POST(request: NextRequest) {
     const now = new Date().toISOString();
     const platformsJson = JSON.stringify(platforms);
 
+    // Store PostForMe post ID and initial status
+    const postForMePostId = result.data?.id || null;
+    const postForMeStatus = publishNow ? 'publishing' : 'scheduled';
+
     if (publishNow) {
       // Publishing immediately - set posted_at and posted_platforms
       await executeQuery(
@@ -161,9 +209,11 @@ export async function POST(request: NextRequest) {
              posted_at = ?,
              posted_platforms = ?,
              postforme_id = ?,
+             postforme_status = ?,
+             last_status_sync = ?,
              updated_at = ?
          WHERE id = ?`,
-        [newStatus, now, platformsJson, result.data?.id || null, now, contentId]
+        [newStatus, now, platformsJson, postForMePostId, postForMeStatus, now, now, contentId]
       );
     } else {
       // Scheduling - set scheduled_for and scheduled_platforms
@@ -173,16 +223,19 @@ export async function POST(request: NextRequest) {
              scheduled_for = ?,
              scheduled_platforms = ?,
              postforme_id = ?,
+             postforme_status = ?,
+             last_status_sync = ?,
              updated_at = ?
          WHERE id = ?`,
-        [newStatus, scheduleAt, platformsJson, result.data?.id || null, now, contentId]
+        [newStatus, scheduleAt, platformsJson, postForMePostId, postForMeStatus, now, now, contentId]
       );
     }
 
     return NextResponse.json({
       success: true,
       status: newStatus,
-      postforme_id: result.data?.id,
+      postforme_id: postForMePostId,
+      postforme_status: postForMeStatus,
       platforms_published: platforms,
     });
   } catch (error) {

@@ -101,6 +101,7 @@ export default function AlbumCreationWizard() {
         coverArtFormData.append('file', coverArtFile);
         coverArtFormData.append('fileType', 'album-cover');
         coverArtFormData.append('albumId', createdAlbumId);
+        coverArtFormData.append('albumTitle', formData.title); // For slug generation
         const coverUploadRes = await fetch('/api/upload', { method: 'POST', body: coverArtFormData });
         const coverUploadJson = await coverUploadRes.json() as { success: boolean; url?: string; key?: string };
         if (coverUploadJson.success && coverUploadJson.url && coverUploadJson.key) {
@@ -119,6 +120,9 @@ export default function AlbumCreationWizard() {
         trackFormData.append('file', track.file);
         trackFormData.append('fileType', 'track');
         trackFormData.append('albumId', createdAlbumId);
+        trackFormData.append('albumTitle', formData.title); // For slug generation
+        trackFormData.append('trackTitle', track.title); // For track slug
+        trackFormData.append('trackNumber', String(track.track_number)); // For path naming
         const audioUploadResponse = await fetch('/api/upload', { method: 'POST', body: trackFormData });
         const audioUploadResult = await audioUploadResponse.json() as { success: boolean; url?: string };
 

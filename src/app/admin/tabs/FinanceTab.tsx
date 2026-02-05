@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import type { ProductCost, ProductCostInput } from '@/types/bi';
+import { useToast } from '@/contexts/ToastContext';
 
 interface Product {
   id: string;
@@ -30,6 +31,7 @@ function formatPercent(value: number): string {
 }
 
 export default function FinanceTab() {
+  const toast = useToast();
   const [period, setPeriod] = useState<'7d' | '30d' | '90d' | 'ytd'>('30d');
   const [summary, setSummary] = useState<FinancialSummary | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
@@ -169,6 +171,7 @@ export default function FinanceTab() {
 
       const data = await res.json();
       if (data.success) {
+        toast.success(editingCost ? 'Product cost updated' : 'Product cost added');
         setIsModalOpen(false);
         // Refresh costs
         const costsRes = await fetch('/api/bi/product-costs?current=true');
@@ -177,10 +180,11 @@ export default function FinanceTab() {
           setProductCosts(costsData.costs || []);
         }
       } else {
-        alert(data.error || 'Failed to save');
+        toast.error(data.error || 'Failed to save product cost');
       }
     } catch (e) {
       console.error('Failed to save product cost:', e);
+      toast.error('An error occurred while saving');
     }
   };
 

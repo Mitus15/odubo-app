@@ -625,8 +625,8 @@ CREATE TABLE IF NOT EXISTS game_achievements (
 -- =============================================================================
 -- VIDEO STORAGE (Cloudflare R2)
 -- =============================================================================
--- NOTE: The videos table has evolved via migrations (005,006,008,015,021) to include
--- additional metadata, publication gating, and thumbnail selection fields.
+-- NOTE: The videos table has evolved via migrations (005,006,008,015,021,095,096) to include
+-- additional metadata, publication gating, thumbnail selection, and relationship fields.
 -- This base schema definition reflects the CURRENT expected structure for fresh setups.
 CREATE TABLE IF NOT EXISTS videos (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -640,7 +640,7 @@ CREATE TABLE IF NOT EXISTS videos (
   duration TEXT,                        -- Formatted or raw duration string
   category TEXT,
   is_public INTEGER,                    -- 1/0 flag for public visibility
-  type TEXT,                            -- e.g. music-video | short-film | feature
+  type TEXT,                            -- e.g. music-video | short-film | feature | clip
   mood TEXT,                            -- free-text mood classification
   credits TEXT,                         -- JSON array of credit objects
   related_projects TEXT,                -- JSON array of related project IDs
@@ -649,8 +649,26 @@ CREATE TABLE IF NOT EXISTS videos (
   publication_status TEXT NOT NULL DEFAULT 'archived' CHECK (publication_status IN ('live','archived')), -- gating status (migration 015)
   thumbnail_timestamp_pct REAL,         -- Selected thumbnail timestamp percentage (migration 021)
   chosen_candidate_id INTEGER,          -- Chosen candidate (optional; migration 021)
+  
+  -- Music Relationships (migration 095, 096)
+  track_id TEXT,                        -- References tracks.id (for music videos)
+  album_id TEXT,                        -- References albums.id (direct album link)
+  video_type TEXT DEFAULT 'standalone', -- Type of music video content
+  
+  -- Clip Relationships (undocumented prior migrations)
+  parent_video_id INTEGER,              -- References videos.id for parent video (NULL for parents)
+  clip_index INTEGER,                   -- Order/position within parent's clips (1, 2, 3...)
+  total_siblings INTEGER,               -- Total number of clips for this parent
+  
+  -- Scheduling (migration 097)
+  scheduled_for TEXT,                   -- ISO 8601 datetime for scheduled deployment (NULL = no schedule)
+  
   created_at TEXT,                      -- Creation timestamp
-  updated_at TEXT                       -- Last update timestamp (migration 006)
+  updated_at TEXT,                      -- Last update timestamp (migration 006)
+  
+  FOREIGN KEY (track_id) REFERENCES tracks(id) ON DELETE SET NULL,
+  FOREIGN KEY (album_id) REFERENCES albums(id) ON DELETE SET NULL,
+  FOREIGN KEY (parent_video_id) REFERENCES videos(id) ON DELETE CASCADE
 );
 
 -- Helpful indexes consolidated (some created by migration 009 + 015):
@@ -659,6 +677,7 @@ CREATE INDEX IF NOT EXISTS idx_videos_created_at ON videos(created_at);
 CREATE INDEX IF NOT EXISTS idx_videos_category ON videos(category);
 CREATE INDEX IF NOT EXISTS idx_videos_type ON videos(type);
 CREATE INDEX IF NOT EXISTS idx_videos_publication_status ON videos(publication_status);
+CREATE INDEX IF NOT EXISTS idx_videos_scheduled_for ON videos(scheduled_for);
 
 -- =============================================================================
 -- VIDEO UPLOAD SESSIONS (deferred creation until thumbnail selection)

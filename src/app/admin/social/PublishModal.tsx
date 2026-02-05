@@ -8,6 +8,8 @@ interface SocialContent {
   upload_uid: string | null;
   thumbnail_url: string | null;
   title: string;
+  source_type?: 'upload' | 'clip';
+  is_youtube_short?: number;
   caption_instagram: string | null;
   caption_tiktok: string | null;
   caption_youtube: string | null;
@@ -58,9 +60,25 @@ function getDefaultScheduleTime(): string {
   return formatDateTimeLocal(now);
 }
 
+// Get smart platform defaults based on content type
+function getSmartDefaultPlatforms(content: SocialContent): string[] {
+  const sourceType = content.source_type || 'upload';
+  const isShort = content.is_youtube_short === 1;
+  
+  // Clips go to Instagram Reels + TikTok + YouTube Shorts
+  if (sourceType === 'clip' || isShort) {
+    return ['instagram', 'tiktok', 'youtube'];
+  }
+  
+  // Longer content (music videos, films) go to YouTube only
+  return ['youtube'];
+}
+
 export default function PublishModal({ content, onClose, onPublished, preSelectedDate }: PublishModalProps) {
   const [mode, setMode] = useState<PublishMode>('now');
-  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>(['instagram', 'tiktok', 'youtube']);
+  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>(() => 
+    getSmartDefaultPlatforms(content)
+  );
   const [accounts, setAccounts] = useState<Record<string, ConnectedAccount[]>>({});
   const [loadingAccounts, setLoadingAccounts] = useState(true);
   const [isPublishing, setIsPublishing] = useState(false);
@@ -311,7 +329,14 @@ export default function PublishModal({ content, onClose, onPublished, preSelecte
             {/* Platform Selection */}
             <div>
               <div className="flex items-center justify-between mb-3">
-                <label className="text-sm font-medium text-[#b2a491]">Platforms</label>
+                <div>
+                  <label className="text-sm font-medium text-[#b2a491]">Platforms</label>
+                  <p className="text-xs text-[#502d26] mt-1">
+                    {content.source_type === 'clip' || content.is_youtube_short === 1
+                      ? '✓ Auto-selected for short-form content'
+                      : '✓ Auto-selected for long-form content'}
+                  </p>
+                </div>
                 {loadingAccounts && (
                   <div className="w-4 h-4 border-2 border-[#502d26]/30 border-t-[#843c2d] rounded-full animate-spin" />
                 )}

@@ -40,7 +40,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     const { id } = await params;
     const body = await req.json();
-    const { uid, title, duration, thumbnail, url, is_public } = body;
+    const { 
+      uid, title, duration, thumbnail, url, is_public, thumbnail_timestamp_pct,
+      description, credits, category, mood
+    } = body;
 
     // Inherit visibility/status/artist from parent video
     const parent = await queryDatabase(
@@ -67,11 +70,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       `INSERT INTO videos (
         title, artist_name, uid, url, poster_url, thumbnail, duration,
         status, type, is_public, publication_status, related_projects,
-        parent_video_id, created_at, updated_at
+        parent_video_id, thumbnail_timestamp_pct,
+        description, credits, category, mood,
+        created_at, updated_at
       ) VALUES (
         ?, ?, ?, ?, ?, ?, ?,
         'published', 'clip', ?, 'live', ?,
-        ?, datetime('now'), datetime('now')
+        ?, ?,
+        ?, ?, ?, ?,
+        datetime('now'), datetime('now')
       )`,
       [
         title,
@@ -83,7 +90,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         duration || 0,
         (is_public ? 1 : undefined) ?? (parentPublic ? 1 : 0),
         JSON.stringify([`parent_id:${id}`, `style:vertical`]),
-        id  // explicit parent_video_id FK
+        id,  // explicit parent_video_id FK
+        thumbnail_timestamp_pct || 0.5,  // Default to 50% if not provided
+        description || null,
+        credits || null,
+        category || null,
+        mood || null,
       ]
     );
 

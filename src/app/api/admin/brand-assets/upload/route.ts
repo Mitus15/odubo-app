@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export const runtime = 'nodejs';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getUserFromRequest, isAdminUser } from '@/lib/auth';
+import { brandAssets } from '@/lib/storage/pathGenerators';
 import { v4 as uuidv4 } from 'uuid';
 
 const s3 = new S3Client({
@@ -77,11 +78,10 @@ export async function POST(req: NextRequest) {
     const uuid = uuidv4();
     const fileSize = file.size;
 
-    // Generate storage keys
-    const basePath = `brand-assets/${categorySlug}/${albumSlug}`;
-    const r2Key = `${basePath}/originals/${uuid}.${ext}`;
-    const r2KeyThumb = `${basePath}/thumbs/${uuid}.webp`;
-    const r2KeyWeb = `${basePath}/web/${uuid}.webp`;
+    // Generate storage keys using pathGenerators
+    const r2Key = brandAssets.original(categorySlug, albumSlug, uuid, ext);
+    const r2KeyThumb = brandAssets.thumbnail(categorySlug, albumSlug, uuid, 'webp');
+    const r2KeyWeb = brandAssets.web(categorySlug, albumSlug, uuid, 'webp');
 
     // Upload original file
     const buf = Buffer.from(await file.arrayBuffer());

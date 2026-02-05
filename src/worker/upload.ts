@@ -18,6 +18,45 @@ export interface UploadResult {
   error?: string;
 }
 
+/**
+ * Upload file with explicit key path (for organized music/galleries)
+ */
+export async function uploadWithKey(
+  fileData: Uint8Array,
+  fileName: string,
+  contentType: string,
+  key: string
+): Promise<UploadResult> {
+  try {
+    const finalContentType = getMimeType(fileName) || contentType;
+    
+    console.log(`Uploading ${fileName} to ${key} with content type: ${finalContentType}`);
+    
+    const command = new PutObjectCommand({
+      Bucket: process.env.CLOUDFLARE_R2_BUCKET_NAME,
+      Key: key,
+      Body: fileData,
+      ContentType: finalContentType,
+    });
+
+    await s3Client.send(command);
+    
+    const url = `${process.env.CLOUDFLARE_R2_PUBLIC_URL}/${key}`;
+    
+    return {
+      success: true,
+      url,
+      key,
+    };
+  } catch (error) {
+    console.error('Upload error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Upload failed',
+    };
+  }
+}
+
 export async function uploadFileOrganized(
   fileData: Uint8Array,
   fileName: string,

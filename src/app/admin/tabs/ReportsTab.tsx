@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import type { ReportType, ReportData, BiReport } from '@/types/bi';
+import { useToast } from '@/contexts/ToastContext';
 
 function formatCurrency(cents: number): string {
   return `$${(cents / 100).toLocaleString('en-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -36,6 +37,7 @@ function getWeekDates(): { start: string; end: string } {
 }
 
 export default function ReportsTab() {
+  const toast = useToast();
   const [reportType, setReportType] = useState<ReportType>('weekly');
   const [periodStart, setPeriodStart] = useState('');
   const [periodEnd, setPeriodEnd] = useState('');
@@ -64,7 +66,7 @@ export default function ReportsTab() {
 
   const handleGenerate = async () => {
     if (!periodStart || !periodEnd) {
-      alert('Please select a date range');
+      toast.warning('Please select a date range');
       return;
     }
 
@@ -82,6 +84,7 @@ export default function ReportsTab() {
       const data = await res.json();
       if (data.success) {
         setCurrentReport(data.report);
+        toast.success('Report generated successfully');
         // Refresh past reports
         const listRes = await fetch('/api/bi/reports?limit=10');
         const listData = await listRes.json();
@@ -89,11 +92,11 @@ export default function ReportsTab() {
           setPastReports(listData.reports || []);
         }
       } else {
-        alert(data.error || 'Failed to generate report');
+        toast.error(data.error || 'Failed to generate report');
       }
     } catch (e) {
       console.error('Failed to generate report:', e);
-      alert('Failed to generate report');
+      toast.error('An error occurred while generating report');
     } finally {
       setGenerating(false);
     }

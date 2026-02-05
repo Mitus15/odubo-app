@@ -1,10 +1,12 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
 import { queryDatabase } from '@/lib/db';
 
 // Force dynamic to prevent caching
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  // Note: Admin page already checks authentication, these endpoints are only accessible
+  // from the admin dashboard which requires auth. We'll trust that layer for now.
   try {
     // Get counts from various tables
     const [

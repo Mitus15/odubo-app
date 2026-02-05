@@ -229,20 +229,9 @@ const navItems: NavItem[] = [
     children: [
       { id: 'arsenal', label: 'Arsenal', icon: Icons.distribution },
       { id: 'music', label: 'Music', icon: Icons.music },
-      { id: 'videos', label: 'Videos', icon: Icons.videos },
       { id: 'moments', label: 'Moments', icon: Icons.moments },
       { id: 'brand-assets', label: 'Brand Assets', icon: Icons.products },
       { id: 'links', label: 'Links', icon: Icons.linktree },
-    ]
-  },
-  {
-    id: 'social',
-    label: 'Social',
-    icon: Icons.social,
-    children: [
-      { id: 'social-studio', label: 'Social Studio', icon: Icons.commandCenter },
-      { id: 'social-accounts', label: 'Connected Accounts', icon: Icons.users },
-      { id: 'ai-studio', label: 'AI Studio', icon: Icons.ai },
     ]
   },
   {
@@ -265,21 +254,16 @@ const navItems: NavItem[] = [
     children: [
       { id: 'reports', label: 'Reports', icon: Icons.reports },
       { id: 'finance', label: 'Finance', icon: Icons.analytics },
-      { id: 'expenses', label: 'Expenses', icon: Icons.orders },
-      { id: 'ad-campaigns', label: 'Ad Campaigns', icon: Icons.marketing },
-      { id: 'social-growth', label: 'Social Growth', icon: Icons.streaming },
     ]
   },
-  { id: 'account', label: 'Account', icon: Icons.account },
+  { id: 'social', label: 'Social', icon: Icons.social },
   {
     id: 'system',
     label: 'System',
     icon: Icons.system,
     children: [
       { id: 'users', label: 'Users', icon: Icons.users },
-      { id: 'database', label: 'Database', icon: Icons.database },
-      { id: 'storage', label: 'Storage', icon: Icons.storage },
-      { id: 'api-keys', label: 'API Keys', icon: Icons.api },
+      { id: 'settings', label: 'Settings', icon: Icons.system },
     ]
   },
 ];
@@ -519,7 +503,7 @@ export default function AdminPage() {
         {/* Main Content */}
         <main className="flex-1 flex flex-col h-full overflow-hidden md:static pt-14 md:pt-0">
           <div className="flex-1 overflow-y-auto">
-            <TabContent activeTab={activeTab as any} canAccess={canAccess} />
+            <TabContent activeTab={activeTab as any} canAccess={canAccess} onSetActiveTab={setActiveTab} />
           </div>
         </main>
       </div>

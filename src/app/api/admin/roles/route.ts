@@ -1,5 +1,6 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
 import { queryDatabase } from '@/lib/db';
+import { getUserFromRequest, isAdminUser } from '@/lib/auth';
 
 export const runtime = 'edge';
 
@@ -18,7 +19,12 @@ interface AdminRole {
  * GET /api/admin/roles
  * List all available admin roles
  */
-export async function GET() {
+export async function GET(req: NextRequest) {
+  // Require authentication - only admins can view roles
+  const user = getUserFromRequest(req);
+  if (!isAdminUser(user)) {
+    return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
+  }
   try {
     const results = await queryDatabase<AdminRole>(
       'SELECT * FROM admin_roles ORDER BY is_system DESC, display_name ASC'

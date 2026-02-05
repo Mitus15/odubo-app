@@ -10,6 +10,20 @@ interface DeployMetadata {
   firstComment?: string;
   hashtags?: string[];
   visibility?: 'public' | 'unlisted' | 'private';
+  // Platform-specific settings
+  youtube?: {
+    madeForKids: boolean;
+    category: string; // YouTube category ID
+    asShort: boolean;
+  };
+  tiktok?: {
+    allowDuet: boolean;
+    allowStitch: boolean;
+    allowComments: boolean;
+  };
+  instagram?: {
+    shareToFeed: boolean;
+  };
 }
 
 interface DeployRequest {
@@ -172,6 +186,49 @@ export async function POST(request: NextRequest) {
       // Format caption based on video type
       const caption = formatCaption(video, metadata, isClip);
 
+      // Build platform-specific configurations
+      const platform_configurations: any = {};
+
+      // YouTube configuration
+      if (platforms.includes('youtube') && metadata?.youtube) {
+        platform_configurations.youtube = {
+          title: metadata.title || video.title,
+          privacy_status: metadata.visibility || 'public',
+          made_for_kids: metadata.youtube.madeForKids,
+          category_id: metadata.youtube.category,
+          description: metadata.description,
+        };
+      }
+
+      // TikTok configuration
+      if (platforms.includes('tiktok') && metadata?.tiktok) {
+        platform_configurations.tiktok = {
+          title: metadata.title || video.title,
+          privacy_status: metadata.visibility === 'private' ? 'self_only' : 'public',
+          allow_duet: metadata.tiktok.allowDuet,
+          allow_stitch: metadata.tiktok.allowStitch,
+          allow_comment: metadata.tiktok.allowComments,
+          description: metadata.description,
+        };
+      }
+
+      // Instagram configuration
+      if (platforms.includes('instagram') && metadata?.instagram) {
+        platform_configurations.instagram = {
+          placement: isClip ? 'REELS' : 'FEED',
+          share_to_feed: metadata.instagram.shareToFeed,
+        };
+      }
+
+      console.log('[Arsenal Deploy]', {
+        videoId: video.id,
+        platforms: selectedAccountIds.length,
+        scheduleAt,
+        hasSchedule: !!scheduleAt,
+        scheduleDate: scheduleAt ? new Date(scheduleAt).toISOString() : 'immediate',
+        platformConfigs: Object.keys(platform_configurations),
+      });
+
       // Create post via Post for Me
       const postResponse = await createPost({
         caption,
@@ -179,10 +236,22 @@ export async function POST(request: NextRequest) {
         media,
         schedule_at: scheduleAt,
         first_comment: metadata?.firstComment || undefined,
+        platform_configurations: Object.keys(platform_configurations).length > 0
+          ? platform_configurations
+          : undefined,
+      });
+
+      console.log('[Arsenal Deploy] PostForMe response:', {
+        success: postResponse.success,
+        postId: postResponse.data?.id,
+        status: postResponse.data?.status,
+        scheduledAt: postResponse.data?.scheduled_at,
+        error: postResponse.error,
       });
 
       if (postResponse.success && postResponse.data) {
         const postId = postResponse.data.id;
+        const postStatus = postResponse.data.status || (scheduleAt ? 'scheduled' : 'published');
 
         // Update video with Post for Me tracking info
         await executeQuery(
@@ -190,7 +259,7 @@ export async function POST(request: NextRequest) {
            SET postforme_post_id = ?,
                postforme_status = ?
            WHERE id = ?`,
-          [postId, scheduleAt ? 'scheduled' : 'published', video.id]
+          [postId, postStatus, video.id]
         );
 
         results.push({

@@ -9,34 +9,26 @@ const ProductsTab = dynamic(() => import('./tabs/ProductsTab'));
 const OrdersTab = dynamic(() => import('./tabs/OrdersTab'));
 const CustomersTab = dynamic(() => import('./tabs/CustomersTab'));
 const DiscountsTab = dynamic(() => import('./tabs/DiscountsTab'));
-const ApiKeysTab = dynamic(() => import('./tabs/ApiKeysTab'));
 const MomentsTab = dynamic(() => import('./tabs/MomentsTab'));
 const AnalyticsTab = dynamic(() => import('./tabs/AnalyticsTab'));
 const StoreSettingsTab = dynamic(() => import('./tabs/StoreSettingsTab'));
 
-// === NEW TAB WRAPPERS (from page content) ===
-const SocialCMSTab = dynamic(() => import('./tabs/SocialCMSTab'));
-const SocialAccountsTab = dynamic(() => import('./tabs/SocialAccountsTab'));
-const SocialStudioTab = dynamic(() => import('./tabs/SocialStudioTab'));
-const VideosTab = dynamic(() => import('./tabs/VideosTab'));
+// === NEW CONSOLIDATED TABS ===
+const SocialTab = dynamic(() => import('./tabs/SocialTab'));
+const SettingsTab = dynamic(() => import('./tabs/SettingsTab'));
+
+// === CONTENT TABS ===
 const MusicTab = dynamic(() => import('./tabs/MusicTab'));
 const BrandAssetsTab = dynamic(() => import('./tabs/BrandAssetsTab'));
 const LinksTab = dynamic(() => import('./tabs/LinksTab'));
-const AIStudioTab = dynamic(() => import('./tabs/AIStudioTab'));
-const StorageTab = dynamic(() => import('./tabs/StorageTab'));
-const DatabaseTab = dynamic(() => import('./tabs/DatabaseTab'));
-const UsersTab = dynamic(() => import('./tabs/UsersTab'));
 const ArsenalTab = dynamic(() => import('./tabs/ArsenalTab'));
 
 // === BUSINESS / BI TABS ===
 const ReportsTab = dynamic(() => import('./tabs/ReportsTab'));
 const FinanceTab = dynamic(() => import('./tabs/FinanceTab'));
-const ExpensesTab = dynamic(() => import('./tabs/ExpensesTab'));
-const AdCampaignsTab = dynamic(() => import('./tabs/AdCampaignsTab'));
-const SocialGrowthTab = dynamic(() => import('./tabs/SocialGrowthTab'));
 
-// === ACCOUNT TAB ===
-const AccountTab = dynamic(() => import('./tabs/AccountTab'));
+// === SYSTEM TABS ===
+const UsersTab = dynamic(() => import('./tabs/UsersTab'));
 
 // Loading fallback component
 function LoadingFallback({ title }: { title: string }) {
@@ -74,27 +66,26 @@ type AdminTab =
   // Dashboard
   | 'overview'
   // Content
-  | 'arsenal' | 'music' | 'videos' | 'moments' | 'brand-assets' | 'links'
-  // Social
-  | 'social-cms' | 'social-accounts' | 'social-studio' | 'ai-studio'
+  | 'arsenal' | 'music' | 'moments' | 'brand-assets' | 'links'
+  // Social (consolidated)
+  | 'social'
   // Commerce
   | 'products' | 'orders' | 'customers' | 'discounts' | 'store-settings'
   // Analytics
   | 'analytics'
   // Business / BI
-  | 'reports' | 'finance' | 'expenses' | 'ad-campaigns' | 'social-growth'
-  // Account
-  | 'account'
+  | 'reports' | 'finance'
   // System
-  | 'users' | 'database' | 'storage' | 'api-keys'
+  | 'users' | 'settings'
   | string; // Allow any string for flexibility
 
 interface TabContentProps {
   activeTab: AdminTab;
   canAccess?: (sectionId: string) => boolean;
+  onSetActiveTab?: (tabId: string) => void;
 }
 
-export default function TabContent({ activeTab, canAccess }: TabContentProps) {
+export default function TabContent({ activeTab, canAccess, onSetActiveTab }: TabContentProps) {
   // Check permission before rendering content
   if (canAccess && !canAccess(activeTab)) {
     return <AccessDenied />;
@@ -105,7 +96,7 @@ export default function TabContent({ activeTab, canAccess }: TabContentProps) {
     case 'overview':
       return (
         <Suspense fallback={<LoadingFallback title="Dashboard" />}>
-          <OverviewTab />
+          <OverviewTab onSetActiveTab={onSetActiveTab} />
         </Suspense>
       );
 
@@ -120,12 +111,6 @@ export default function TabContent({ activeTab, canAccess }: TabContentProps) {
       return (
         <Suspense fallback={<LoadingFallback title="Music" />}>
           <MusicTab />
-        </Suspense>
-      );
-    case 'videos':
-      return (
-        <Suspense fallback={<LoadingFallback title="Videos" />}>
-          <VideosTab />
         </Suspense>
       );
     case 'moments':
@@ -147,29 +132,11 @@ export default function TabContent({ activeTab, canAccess }: TabContentProps) {
         </Suspense>
       );
 
-    // === SOCIAL ===
-    case 'social-cms':
+    // === SOCIAL (Consolidated) ===
+    case 'social':
       return (
-        <Suspense fallback={<LoadingFallback title="Social CMS" />}>
-          <SocialCMSTab />
-        </Suspense>
-      );
-    case 'social-studio':
-      return (
-        <Suspense fallback={<LoadingFallback title="Social Studio" />}>
-          <SocialStudioTab />
-        </Suspense>
-      );
-    case 'social-accounts':
-      return (
-        <Suspense fallback={<LoadingFallback title="Connected Accounts" />}>
-          <SocialAccountsTab />
-        </Suspense>
-      );
-    case 'ai-studio':
-      return (
-        <Suspense fallback={<LoadingFallback title="AI Studio" />}>
-          <AIStudioTab />
+        <Suspense fallback={<LoadingFallback title="Social" />}>
+          <SocialTab />
         </Suspense>
       );
 
@@ -226,32 +193,6 @@ export default function TabContent({ activeTab, canAccess }: TabContentProps) {
           <FinanceTab />
         </Suspense>
       );
-    case 'expenses':
-      return (
-        <Suspense fallback={<LoadingFallback title="Expenses" />}>
-          <ExpensesTab />
-        </Suspense>
-      );
-    case 'ad-campaigns':
-      return (
-        <Suspense fallback={<LoadingFallback title="Ad Campaigns" />}>
-          <AdCampaignsTab />
-        </Suspense>
-      );
-    case 'social-growth':
-      return (
-        <Suspense fallback={<LoadingFallback title="Social Growth" />}>
-          <SocialGrowthTab />
-        </Suspense>
-      );
-
-    // === ACCOUNT ===
-    case 'account':
-      return (
-        <Suspense fallback={<LoadingFallback title="Account" />}>
-          <AccountTab />
-        </Suspense>
-      );
 
     // === SYSTEM ===
     case 'users':
@@ -260,22 +201,10 @@ export default function TabContent({ activeTab, canAccess }: TabContentProps) {
           <UsersTab />
         </Suspense>
       );
-    case 'database':
+    case 'settings':
       return (
-        <Suspense fallback={<LoadingFallback title="Database" />}>
-          <DatabaseTab />
-        </Suspense>
-      );
-    case 'storage':
-      return (
-        <Suspense fallback={<LoadingFallback title="Storage" />}>
-          <StorageTab />
-        </Suspense>
-      );
-    case 'api-keys':
-      return (
-        <Suspense fallback={<LoadingFallback title="API Keys" />}>
-          <ApiKeysTab />
+        <Suspense fallback={<LoadingFallback title="Settings" />}>
+          <SettingsTab />
         </Suspense>
       );
 

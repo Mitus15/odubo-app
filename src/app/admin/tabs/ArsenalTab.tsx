@@ -25,6 +25,11 @@ interface Video {
   mood: string | null;
   type: string | null;
   artist_name: string | null;
+  // Music relationships
+  track_id: string | null;
+  album_id: string | null;
+  track_title: string | null; // Joined from tracks table
+  album_title: string | null; // Joined from albums table
   // Publication status
   is_public: number | null; // 1 = published, 0 = unpublished
   publication_status: string | null; // 'live' or 'archived'
@@ -279,6 +284,21 @@ function VideoPreviewModal({
             {video.type && <span className="capitalize">{video.type}</span>}
             {video.artist_name && <span>{video.artist_name}</span>}
           </div>
+          {/* Linked music */}
+          {(video.track_title || video.album_title) && (
+            <div className="mt-2 flex items-center gap-2 text-xs">
+              <span className="text-[#726d6c]">🎵</span>
+              {video.track_title && (
+                <span className="text-[#ede8df]">{video.track_title}</span>
+              )}
+              {video.track_title && video.album_title && (
+                <span className="text-[#726d6c]">•</span>
+              )}
+              {video.album_title && (
+                <span className="text-[#726d6c]">{video.album_title}</span>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -1217,9 +1237,33 @@ function DeployView({
   };
 
   const handleDeploy = () => {
-    const scheduleAt = scheduleDate && scheduleTime
-      ? new Date(`${scheduleDate}T${scheduleTime}`).toISOString()
-      : undefined;
+    // Convert schedule date/time to ISO string (browser local timezone)
+    let scheduleAt: string | undefined = undefined;
+    if (scheduleDate && scheduleTime) {
+      // Construct ISO datetime string from local date/time inputs
+      const localDateTime = `${scheduleDate}T${scheduleTime}:00`;
+      const dateObj = new Date(localDateTime);
+      
+      // Validate that the date is valid and in the future
+      if (isNaN(dateObj.getTime())) {
+        console.error('[Arsenal] Invalid schedule date/time:', scheduleDate, scheduleTime);
+        alert('Invalid schedule date or time. Please check your input.');
+        return;
+      }
+      
+      const now = new Date();
+      if (dateObj <= now) {
+        console.warn('[Arsenal] Schedule date is in the past, will post immediately');
+        // Allow it, but log warning
+      }
+      
+      scheduleAt = dateObj.toISOString();
+      console.log('[Arsenal] Schedule:', {
+        localInput: localDateTime,
+        isoString: scheduleAt,
+        browserTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      });
+    }
 
     const metadata: DeployMetadata = {
       title,
@@ -1662,6 +1706,7 @@ function DeployView({
             value={scheduleDate}
             onChange={(e) => setScheduleDate(e.target.value)}
             className="px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-[#ede8df] text-sm focus:outline-none focus:border-[#843c2d]/50"
+            min={new Date().toISOString().split('T')[0]}
           />
           <input
             type="time"
@@ -1671,7 +1716,11 @@ function DeployView({
           />
         </div>
         <p className="text-xs text-[#726d6c] mt-2">
-          Leave empty to queue for immediate posting via Post for Me
+          {scheduleDate && scheduleTime ? (
+            <>Scheduled for {new Date(`${scheduleDate}T${scheduleTime}`).toLocaleString()} ({Intl.DateTimeFormat().resolvedOptions().timeZone})</>
+          ) : (
+            <>Leave empty to queue for immediate posting via Post for Me</>
+          )}
         </p>
       </div>
 
@@ -1787,9 +1836,76 @@ function UploadView({
   const [videoCategory, setVideoCategory] = useState('');
   const [videoMood, setVideoMood] = useState('');
   const [videoType, setVideoType] = useState('music-video');
+  
+  // Scheduling fields (optional)
+  const [uploadScheduleDate, setUploadScheduleDate] = useState('');
+  const [uploadScheduleTime, setUploadScheduleTime] = useState('');
+  
+  // Music linking
+  const [linkedTrackId, setLinkedTrackId] = useState<string>('');
+  const [linkedAlbumId, setLinkedAlbumId] = useState<string>('');
+  const [availableTracks, setAvailableTracks] = useState<Array<{ id: string; title: string; album_id: string }>>([]);
+  const [availableAlbums, setAvailableAlbums] = useState<Array<{ id: string; title: string }>>([]);
 
   // Get parent videos (non-clips)
   const parentVideos = videos.filter(v => v.parent_video_id === null);
+  
+  // When parent video is selected for clips, fetch and inherit metadata
+  useEffect(() => {
+    if (uploadType === 'clip' && parentVideoId) {
+      const parent = parentVideos.find(v => v.id === parentVideoId);
+      if (parent) {
+        // Inherit parent metadata
+        setVideoTitle(parent.title || '');
+        setVideoDescription(parent.description || '');
+        setVideoCredits(parent.credits || '');
+        setVideoArtist(parent.artist_name || 'ODUBO');
+        setVideoCategory(parent.category || '');
+        setVideoMood(parent.mood || '');
+        setLinkedTrackId(parent.track_id?.toString() || '');
+        setLinkedAlbumId(parent.album_id?.toString() || '');
+        
+        console.log('[Arsenal] Inherited metadata from parent video:', {
+          parentId: parent.id,
+          title: parent.title,
+          description: parent.description,
+          trackId: parent.track_id,
+          albumId: parent.album_id,
+        });
+      }
+    } else if (uploadType === 'video') {
+      // Reset metadata when switching to video mode
+      setVideoTitle('');
+      setVideoDescription('');
+      setVideoCredits('');
+      setLinkedTrackId('');
+      setLinkedAlbumId('');
+    }
+  }, [uploadType, parentVideoId, parentVideos]);
+  
+  // Fetch tracks and albums for linking
+  useEffect(() => {
+    const fetchMusicData = async () => {
+      try {
+        // Fetch albums
+        const albumsRes = await fetch('/api/music/albums');
+        if (albumsRes.ok) {
+          const albumsData = await albumsRes.json();
+          setAvailableAlbums(albumsData.albums || []);
+        }
+        
+        // Fetch tracks
+        const tracksRes = await fetch('/api/music/tracks');
+        if (tracksRes.ok) {
+          const tracksData = await tracksRes.json();
+          setAvailableTracks(tracksData.tracks || []);
+        }
+      } catch (error) {
+        console.error('Failed to fetch music data:', error);
+      }
+    };
+    fetchMusicData();
+  }, []);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -1912,7 +2028,8 @@ function UploadView({
         const posterUrl = `https://videodelivery.net/${uid}/thumbnails/thumbnail.jpg`;
 
         if (uploadType === 'clip') {
-          // Clips inherit publication status from parent
+          // Clips inherit publication status and metadata from parent
+          // Use random frame at 50% timestamp (skip AI)
           await fetch(`/api/videos/${parentVideoId}/clips`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1921,11 +2038,32 @@ function UploadView({
               title,
               url: embedUrl,
               thumbnail: posterUrl,
+              thumbnail_timestamp_pct: 0.5, // Random frame at midpoint
+              // Include inherited metadata
+              description: videoDescription,
+              credits: videoCredits,
+              category: videoCategory,
+              mood: videoMood,
             })
           });
         } else {
           // Create parent video as unpublished (draft) by default
           // User will explicitly publish when ready
+          
+          // Build scheduled_for if date/time provided
+          let scheduled_for: string | null = null;
+          if (uploadScheduleDate && uploadScheduleTime) {
+            const localDateTime = `${uploadScheduleDate}T${uploadScheduleTime}:00`;
+            const dateObj = new Date(localDateTime);
+            if (!isNaN(dateObj.getTime())) {
+              scheduled_for = dateObj.toISOString();
+              console.log('[Arsenal Upload] Schedule set:', {
+                localInput: localDateTime,
+                isoString: scheduled_for,
+              });
+            }
+          }
+          
           await fetch('/api/videos', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1940,6 +2078,9 @@ function UploadView({
               category: videoCategory,
               mood: videoMood,
               type: videoType,
+              track_id: linkedTrackId || null,
+              album_id: linkedAlbumId || null,
+              scheduled_for,
               is_public: false,
               publication_status: 'archived',
             })
@@ -1953,6 +2094,8 @@ function UploadView({
       setVideoTitle('');
       setVideoDescription('');
       setVideoCredits('');
+      setLinkedTrackId('');
+      setLinkedAlbumId('');
       onUploadComplete();
     } catch (error) {
       console.error('Upload failed:', error);
@@ -2002,9 +2145,15 @@ function UploadView({
               <option key={v.id} value={v.id}>{v.title}</option>
             ))}
           </select>
-          <p className="text-xs text-[#726d6c] mt-2">
-            Clips will use their filename as the title
-          </p>
+          {parentVideoId ? (
+            <p className="text-xs text-[#9ba89e] mt-2">
+              ✅ Metadata inherited from parent. Edit below if needed.
+            </p>
+          ) : (
+            <p className="text-xs text-[#726d6c] mt-2">
+              Clips will use their filename as the title
+            </p>
+          )}
         </div>
       )}
 
@@ -2180,6 +2329,72 @@ function UploadView({
                 <option value="melancholic">Melancholic</option>
               </select>
             </div>
+          </div>
+
+          {/* Music Linking (Track & Album) */}
+          <div className="grid grid-cols-2 gap-3 pt-4 border-t border-white/10">
+            <div>
+              <label className="text-xs text-[#726d6c] mb-1 block">Link to Track (Optional)</label>
+              <select
+                value={linkedTrackId}
+                onChange={(e) => {
+                  setLinkedTrackId(e.target.value);
+                  // Auto-populate album if track selected
+                  const track = availableTracks.find(t => t.id === e.target.value);
+                  if (track?.album_id) {
+                    setLinkedAlbumId(track.album_id);
+                  }
+                }}
+                className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-[#ede8df] text-sm focus:outline-none focus:border-[#843c2d]/50"
+              >
+                <option value="">None</option>
+                {availableTracks.map(track => (
+                  <option key={track.id} value={track.id}>{track.title}</option>
+                ))}
+              </select>
+            </div>
+            
+            <div>
+              <label className="text-xs text-[#726d6c] mb-1 block">Link to Album (Optional)</label>
+              <select
+                value={linkedAlbumId}
+                onChange={(e) => setLinkedAlbumId(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-[#ede8df] text-sm focus:outline-none focus:border-[#843c2d]/50"
+              >
+                <option value="">None</option>
+                {availableAlbums.map(album => (
+                  <option key={album.id} value={album.id}>{album.title}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          
+          {/* Schedule for Deployment (Optional) */}
+          <div className="pt-4 border-t border-white/10">
+            <h3 className="text-sm font-medium text-[#ede8df] mb-2">Schedule Deployment (Optional)</h3>
+            <p className="text-xs text-[#726d6c] mb-3">
+              Set when this video should be deployed to platforms. You can also set/change this later in the Deploy view.
+            </p>
+            <div className="flex gap-3">
+              <input
+                type="date"
+                value={uploadScheduleDate}
+                onChange={(e) => setUploadScheduleDate(e.target.value)}
+                className="flex-1 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-[#ede8df] text-sm focus:outline-none focus:border-[#843c2d]/50"
+                min={new Date().toISOString().split('T')[0]}
+              />
+              <input
+                type="time"
+                value={uploadScheduleTime}
+                onChange={(e) => setUploadScheduleTime(e.target.value)}
+                className="flex-1 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-[#ede8df] text-sm focus:outline-none focus:border-[#843c2d]/50"
+              />
+            </div>
+            {uploadScheduleDate && uploadScheduleTime && (
+              <p className="text-xs text-[#9ba89e] mt-2">
+                📅 Scheduled for {new Date(`${uploadScheduleDate}T${uploadScheduleTime}`).toLocaleString()} ({Intl.DateTimeFormat().resolvedOptions().timeZone})
+              </p>
+            )}
           </div>
         </div>
       )}

@@ -1,12 +1,13 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
 import { randomBytes } from 'crypto';
+import { getUserFromRequest, isAdminUser } from '@/lib/auth';
 
 // Mock API keys data
 const mockApiKeys = [
   {
     id: '1',
     name: 'Production API',
-    key: 'odubo_live_4f8a2b9c3e1d7f6a5b4c3d2e1f0a9b8c',
+    key: 'odubo_live_••••••••••••••••••••••••••••••••', // Masked for security
     scopes: ['read:products', 'read:orders', 'read:content'],
     status: 'active' as const,
     createdAt: '2025-01-15T10:00:00Z',
@@ -16,7 +17,7 @@ const mockApiKeys = [
   {
     id: '2',
     name: 'Mobile App',
-    key: 'odubo_live_7e9f1a2b3c4d5e6f7a8b9c0d1e2f3a4b',
+    key: 'odubo_live_••••••••••••••••••••••••••••••••', // Masked for security
     scopes: ['read:content', 'write:content', 'read:customers'],
     status: 'active' as const,
     createdAt: '2025-06-01T10:00:00Z',
@@ -25,7 +26,12 @@ const mockApiKeys = [
   },
 ];
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  // Require authentication - API keys are highly sensitive
+  const user = getUserFromRequest(req);
+  if (!isAdminUser(user)) {
+    return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
+  }
   try {
     // TODO: Fetch API keys from database
     return NextResponse.json({ success: true, keys: mockApiKeys });
@@ -38,7 +44,12 @@ export async function GET() {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  // Require authentication - only admins can create API keys
+  const user = getUserFromRequest(request);
+  if (!isAdminUser(user)) {
+    return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
+  }
   try {
     const body = await request.json() as { name: string; scopes: string[] };
     const { name, scopes } = body;

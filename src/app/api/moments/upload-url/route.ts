@@ -1,10 +1,23 @@
 import { NextResponse } from 'next/server';
 import { getUserFromRequest, isAdminUser } from '@/lib/auth';
-import { generateFilePath, getMimeType } from '@/lib/fileOrganization';
+import { gallery } from '@/lib/storage/pathGenerators';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { queryDatabase } from '@/lib/db';
 import { rateLimit } from '@/lib/rateLimit';
+
+// MIME type helper (extracted from fileOrganization.ts)
+function getMimeType(fileName: string | undefined) {
+  if (!fileName) return undefined;
+  const ext = fileName.split('.').pop()?.toLowerCase();
+  const map: Record<string, string> = {
+    jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', gif: 'image/gif',
+    mp4: 'video/mp4', webm: 'video/webm', mov: 'video/quicktime', m4v: 'video/x-m4v',
+    avi: 'video/x-msvideo', mkv: 'video/x-matroska', mp3: 'audio/mpeg', m4a: 'audio/mp4',
+    wav: 'audio/wav', ogg: 'audio/ogg', flac: 'audio/flac'
+  };
+  return ext ? (map[ext] || 'application/octet-stream') : undefined;
+}
 
 export async function POST(req: Request) {
   try {
@@ -63,13 +76,11 @@ export async function POST(req: Request) {
     const rl = await rateLimit({ key: `moments:upload-url:${ip}:g:${id}`, limit: 120, windowMs: 60_000 });
     if (!rl.allowed) return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
 
-    // Generate R2 key with a clear prefix for organization
-    const key = generateFilePath({
-      fileType: body.mediaType === 'video' ? 'gallery-video' : 'gallery-photo',
-      galleryId: galleryId ? String(galleryId) : undefined,
-      galleryName: title || undefined,
-      fileName: originalName,
-    });
+    // Generate R2 key using pathGenerators (consistent with rest of system)
+    const gallerySlug = title || gCode || String(id);
+    const key = body.mediaType === 'video' 
+      ? gallery.video(gallerySlug, originalName)
+      : gallery.photo(gallerySlug, originalName);
 
     const publicBase = process.env.CLOUDFLARE_R2_PUBLIC_URL;
     const publicUrl = publicBase ? `${publicBase}/${key}` : null;

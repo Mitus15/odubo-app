@@ -1,3 +1,5 @@
+import { ToastProvider } from '@/contexts/ToastContext';
+
 /**
  * Admin Layout - Minimal wrapper for admin pages
  *
@@ -12,5 +14,9 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <>{children}</>;
+  return (
+    <ToastProvider>
+      {children}
+    </ToastProvider>
+  );
 }

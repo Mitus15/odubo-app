@@ -348,7 +348,17 @@ export default function AlbumEditClient({ album, tracks }: AlbumEditClientProps)
 
                       {/* Track Info */}
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-semibold text-[#ede8df] mb-1 truncate">{track.title}</h4>
+                        <div className="flex items-center gap-2 mb-1">
+                          <h4 className="font-semibold text-[#ede8df] truncate">{track.title}</h4>
+                          {track.video_count && track.video_count > 0 && (
+                            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#843c2d]/20 text-[#e8a592] text-xs">
+                              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
+                              </svg>
+                              {track.video_count}
+                            </span>
+                          )}
+                        </div>
                         <div className="flex flex-wrap items-center gap-3 text-sm text-[#b2a491]">
                           <span>{formatDuration(track.duration)}</span>
                           
@@ -525,7 +535,17 @@ export default function AlbumEditClient({ album, tracks }: AlbumEditClientProps)
 
                       {/* Track Info */}
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-semibold text-[#ede8df] mb-1 truncate">{track.title}</h4>
+                        <div className="flex items-center gap-2 mb-1">
+                          <h4 className="font-semibold text-[#ede8df] truncate">{track.title}</h4>
+                          {track.video_count && track.video_count > 0 && (
+                            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#843c2d]/20 text-[#e8a592] text-xs">
+                              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
+                              </svg>
+                              {track.video_count}
+                            </span>
+                          )}
+                        </div>
                         <div className="flex flex-wrap items-center gap-3 text-sm text-[#b2a491]">
                           <span>{formatDuration(track.duration)}</span>
                           

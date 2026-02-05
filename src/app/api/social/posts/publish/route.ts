@@ -4,6 +4,13 @@ import { createPost, CreatePostInput } from '@/lib/postforme';
 
 export const runtime = 'edge';
 
+/**
+ * ⚠️ DEPRECATED: Use /api/arsenal/deploy instead
+ * 
+ * This endpoint is kept for backwards compatibility with legacy social-studio.
+ * New deployments should use Arsenal's unified deployment system.
+ */
+
 interface SocialPost {
   id: string;
   status: string;

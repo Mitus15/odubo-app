@@ -9,15 +9,22 @@ export async function GET(req: NextRequest) {
     const url = new URL(req.url);
     const albumId = url.searchParams.get('album_id');
     
-    let query = 'SELECT * FROM tracks';
+    // SELECT tracks with video count (how many videos are linked to this track)
+    let query = `
+      SELECT 
+        t.*,
+        COUNT(v.id) as video_count
+      FROM tracks t
+      LEFT JOIN videos v ON v.track_id = t.id
+    `;
     const params: any[] = [];
     
     if (albumId) {
-      query += ' WHERE album_id = ?';
+      query += ' WHERE t.album_id = ?';
       params.push(albumId);
     }
     
-    query += ' ORDER BY track_number ASC';
+    query += ' GROUP BY t.id ORDER BY t.track_number ASC';
     
     const tracks = await queryDatabase(query, params);
     const res = NextResponse.json({ success: true, tracks });

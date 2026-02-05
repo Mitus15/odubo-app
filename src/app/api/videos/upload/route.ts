@@ -5,6 +5,7 @@ import CloudflareStreamAPI from "@/lib/cloudflareStream";
 import { rateLimit } from "@/lib/rateLimit";
 import { executeQuery, queryDatabase } from "@/lib/db";
 import { writeAuditLog } from "@/lib/audit";
+import { generateStreamUploadOptions, parseContentTypeFromLegacy } from "@/lib/storage";
 
 // Configure larger request size limit for video uploads
 export const maxDuration = 300; // 5 minutes timeout (adjusted for Vercel hobby limits)
@@ -41,27 +42,27 @@ export async function POST(req: NextRequest) {
     const credits = (formData.get("credits") as string) || "";
     const related_projects = (formData.get("related_projects") as string) || "";
 
-    // Upload directly to Cloudflare Stream
+    // Upload directly to Cloudflare Stream with organized metadata
     const streamAPI = new CloudflareStreamAPI();
     const siteOrigin = process.env.NEXT_PUBLIC_SITE_URL ? [process.env.NEXT_PUBLIC_SITE_URL] : undefined;
 
+    // Generate organized Stream metadata
+    const streamOptions = generateStreamUploadOptions({
+      contentType: parseContentTypeFromLegacy(type),
+      title: title || videoFile.name,
+      artistName: artist_name,
+      description,
+      category,
+      mood,
+      credits,
+      relatedProjects: related_projects,
+      uploadedBy: authUser?.email,
+    });
+
     const uploadResult = await streamAPI.uploadVideo(videoFile, {
-      name: title || videoFile.name,
+      ...streamOptions,
       requireSignedURLs: !(is_public === 1),
       allowedOrigins: siteOrigin,
-      meta: {
-        title: title || videoFile.name,
-        creator: artist_name || '',
-        artist_name,
-        description,
-        category,
-        type,
-        mood,
-        credits,
-        related_projects,
-        tags: [category, type, mood].filter(Boolean).join(','),
-        uploadedAt: new Date().toISOString(),
-      },
     });
 
     const streamVideoId = uploadResult.result.uid;

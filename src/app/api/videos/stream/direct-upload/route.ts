@@ -4,6 +4,7 @@ import { getUserFromRequest, isAdminUser } from '@/lib/auth';
 import CloudflareStreamAPI from '@/lib/cloudflareStream';
 import { rateLimit } from '@/lib/rateLimit';
 import { writeAuditLog } from '@/lib/audit';
+import { generateStreamUploadOptions, parseContentTypeFromLegacy } from '@/lib/storage';
 
 function computeAllowedOriginsFromReq(req: NextRequest) {
   const headerOrigin = (req.headers.get('origin') || '').replace(/\/$/, '');
@@ -104,25 +105,25 @@ export async function POST(req: NextRequest) {
     // Configure CORS for Cloudflare Stream direct upload using computed origins
     const { allowedOrigins } = computeAllowedOriginsFromReq(req);
 
+    // Generate organized Stream metadata
+    const streamOptions = generateStreamUploadOptions({
+      contentType: parseContentTypeFromLegacy(type),
+      title: title || `upload-${Date.now()}`,
+      artistName: artist_name,
+      description,
+      category,
+      mood,
+      credits: typeof credits === 'string' ? credits : credits,
+      relatedProjects: typeof related_projects === 'string' ? related_projects : related_projects,
+      uploadedBy: user?.email,
+    });
+
     let res;
     try {
       res = await stream.createUploadUrl(3600, {
-        name: title || `upload-${Date.now()}`,
+        ...streamOptions,
         requireSignedURLs: !(is_public === 1),
         allowedOrigins,
-        meta: {
-          title: title,
-          creator: artist_name || '',
-          artist_name,
-          description,
-          category,
-          type,
-          mood,
-          credits: typeof credits === 'string' ? credits : JSON.stringify(credits),
-          related_projects: typeof related_projects === 'string' ? related_projects : JSON.stringify(related_projects),
-          tags: [category, type, mood].filter(Boolean).join(','),
-          uploadedAt: new Date().toISOString(),
-        },
       });
     } catch (e: any) {
       console.error('Stream direct upload URL API error:', e?.message || e);

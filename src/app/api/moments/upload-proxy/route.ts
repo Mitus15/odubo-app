@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export const runtime = 'nodejs';
 
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-import { generateFilePath } from '@/lib/fileOrganization';
+import { gallery } from '@/lib/storage/pathGenerators';
 import { queryDatabase } from '@/lib/db';
 import { getUserFromRequest, isAdminUser } from '@/lib/auth';
 import { rateLimit } from '@/lib/rateLimit';
@@ -100,12 +100,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Too many requests for this gallery from your network' }, { status: 429 });
     }
 
-    const key = generateFilePath({
-      fileType: mediaType === 'video' ? 'gallery-video' : 'gallery-photo',
-      galleryId: String(g.id),
-      galleryName: g.title || undefined,
-      fileName: originalFilename,
-    });
+    // Generate R2 key using pathGenerators (consistent with rest of system)
+    const gallerySlug = g.title || String(g.id);
+    const key = mediaType === 'video'
+      ? gallery.video(gallerySlug, originalFilename)
+      : gallery.photo(gallerySlug, originalFilename);
 
     const buf = Buffer.from(await file.arrayBuffer());
     await s3.send(new PutObjectCommand({

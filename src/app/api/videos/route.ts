@@ -148,6 +148,9 @@ const videoCreateSchema = z.object({
   status: z.string().optional().default('published'),
   publication_status: z.enum(['live','archived']).optional().default('live'),
   thumbnail_timestamp_pct: z.union([z.number(), z.string()]).optional().nullable(),
+  track_id: z.string().optional().nullable(),
+  album_id: z.string().optional().nullable(),
+  scheduled_for: z.string().optional().nullable(), // NEW: Scheduled deployment datetime
 });
 
 export async function POST(req: NextRequest) {
@@ -188,6 +191,9 @@ export async function POST(req: NextRequest) {
     const status = 'published';
     const publication_status: 'live' | 'archived' = 'live';
     const thumbnail_timestamp_pct = (body.thumbnail_timestamp_pct === '' ? null : (body.thumbnail_timestamp_pct as any));
+    const track_id = body.track_id || null;
+    const album_id = body.album_id || null;
+    const scheduled_for = body.scheduled_for || null; // NEW
 
     if (!title || !url) {
       return NextResponse.json(
@@ -200,8 +206,8 @@ export async function POST(req: NextRequest) {
       `INSERT INTO videos (
         title, artist_name, description, short_description, long_description, ai_description, tags,
         url, uid, poster_url, thumbnail, duration, duration_seconds, category, is_public, type, mood,
-        credits, related_projects, status, publication_status, thumbnail_timestamp_pct, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
+        credits, related_projects, status, publication_status, thumbnail_timestamp_pct, track_id, album_id, scheduled_for, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
       [
         title,
         artist_name,
@@ -224,7 +230,10 @@ export async function POST(req: NextRequest) {
         related_projects,
         status,
         publication_status,
-        thumbnail_timestamp_pct
+        thumbnail_timestamp_pct,
+        track_id,
+        album_id,
+        scheduled_for  // NEW
       ]
     );
     // Resolve inserted ID by UID (safer across runtimes)

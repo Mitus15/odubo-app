@@ -162,6 +162,83 @@ export async function GET() {
       ? `${(apiCallsLimit / 1000000).toFixed(0)}M`
       : `${(apiCallsLimit / 1000).toFixed(0)}K`;
 
+    // Check Shopify API health
+    let shopifyStatus = { status: 'unknown', responseTime: 0 };
+    try {
+      const shopifyStartTime = Date.now();
+      const shopifyUrl = process.env.NEXT_PUBLIC_SHOPIFY_STORE_URL;
+      const shopifyToken = process.env.SHOPIFY_STOREFRONT_ACCESS_TOKEN;
+      
+      if (shopifyUrl && shopifyToken) {
+        const shopifyRes = await fetch(`https://${shopifyUrl}/api/2024-07/graphql.json`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Shopify-Storefront-Access-Token': shopifyToken,
+          },
+          body: JSON.stringify({
+            query: `{ shop { name } }`
+          })
+        });
+        
+        const responseTime = Date.now() - shopifyStartTime;
+        
+        if (shopifyRes.ok) {
+          shopifyStatus = {
+            status: 'online',
+            responseTime
+          };
+        } else {
+          shopifyStatus = {
+            status: 'error',
+            responseTime
+          };
+        }
+      }
+    } catch (e) {
+      console.error('Failed to check Shopify health:', e);
+      shopifyStatus = { status: 'offline', responseTime: 0 };
+    }
+
+    // Check Cloudflare Stream health
+    let streamStatus = { status: 'unknown', videoCount: 0, storageUsed: '0 GB' };
+    try {
+      const streamToken = process.env.CLOUDFLARE_STREAM_API_TOKEN || apiToken;
+      const streamRes = await fetch(
+        `https://api.cloudflare.com/client/v4/accounts/${accountId}/stream`,
+        {
+          headers: {
+            'Authorization': `Bearer ${streamToken}`,
+            'Content-Type': 'application/json',
+          }
+        }
+      );
+
+      if (streamRes.ok) {
+        const streamData = await streamRes.json() as any;
+        const videos = streamData.result || [];
+        const videoCount = videos.length;
+        
+        // Calculate total storage used by videos
+        let totalBytes = 0;
+        for (const video of videos) {
+          totalBytes += video.size || 0;
+        }
+        const storageGB = (totalBytes / (1024 * 1024 * 1024)).toFixed(2);
+        
+        streamStatus = {
+          status: 'active',
+          videoCount,
+          storageUsed: `${storageGB} GB`
+        };
+      } else {
+        streamStatus = { status: 'error', videoCount: 0, storageUsed: '0 GB' };
+      }
+    } catch (e) {
+      console.error('Failed to check Stream health:', e);
+      streamStatus = { status: 'offline', videoCount: 0, storageUsed: '0 GB' };
+    }
+
     const metrics = {
       database: databaseStatus,
       storage: {
@@ -177,7 +254,9 @@ export async function GET() {
       apiCalls: {
         usedFormatted: apiCallsFormatted,
         totalFormatted: apiCallsLimitFormatted
-      }
+      },
+      shopify: shopifyStatus,
+      stream: streamStatus
     };
 
     return NextResponse.json({ success: true, metrics });
@@ -193,7 +272,9 @@ export async function GET() {
         storage: { status: 'online', usedFormatted: '3.2 GB', totalFormatted: '10 TB' },
         cdn: { status: 'active', requests: 15678, cacheHitRate: 0.85 },
         bandwidth: { usedFormatted: '12.5 GB', totalFormatted: '100 GB' },
-        apiCalls: { usedFormatted: '1.5K', totalFormatted: '1M' }
+        apiCalls: { usedFormatted: '1.5K', totalFormatted: '1M' },
+        shopify: { status: 'unknown', responseTime: 0 },
+        stream: { status: 'unknown', videoCount: 0, storageUsed: '0 GB' }
       },
       fallback: true,
       error: errorMessage

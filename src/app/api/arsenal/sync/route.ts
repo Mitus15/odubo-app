@@ -57,8 +57,21 @@ export async function POST() {
 
         const post = postResponse.data;
 
+        console.log('[Arsenal Sync]', {
+          videoId: video.id,
+          postId: video.postforme_post_id,
+          status: post.status,
+          platform: post.platform,
+          hasUrl: !!post.external_url,
+          scheduledAt: post.scheduled_at,
+          publishedAt: post.published_at,
+        });
+
         // Only update if the post is published and has an external URL
         if (post.status !== 'published' || !post.external_url) {
+          if (post.status === 'scheduled') {
+            console.log(`[Arsenal Sync] Video ${video.id} still scheduled for:`, post.scheduled_at);
+          }
           continue;
         }
 

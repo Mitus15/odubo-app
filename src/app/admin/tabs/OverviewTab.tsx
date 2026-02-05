@@ -24,7 +24,10 @@ interface SystemMetrics {
   cdn: { status: string; requests?: number; cacheHitRate?: number };
   bandwidth: { usedFormatted: string; totalFormatted: string };
   apiCalls: { usedFormatted: string; totalFormatted: string };
+  shopify: { status: string; responseTime?: number };
+  stream: { status: string; videoCount?: number; storageUsed?: string };
 }
+
 
 interface AdminStats {
   content: {
@@ -102,17 +105,26 @@ const fetchQuickStats = async (): Promise<QuickStat[]> => {
   }
 };
 
+
 const fetchRecentActivity = async (): Promise<Activity[]> => {
-  // TODO: Implement real activity tracking
-  return Promise.resolve([
-    { action: 'New video uploaded', item: 'Recent content', time: '2 hours ago', icon: '🎬' },
-    { action: 'Gallery created', item: 'Moments', time: '5 hours ago', icon: '📸' },
-    { action: 'Order received', item: 'E-commerce', time: '1 day ago', icon: '📦' }
-  ]);
+  try {
+    const res = await fetch('/api/admin/recent-activity');
+    if (!res.ok) {
+      throw new Error('Failed to fetch recent activity');
+    }
+    const data = await res.json() as { success: boolean; activities: Activity[] };
+    if (!data.success) {
+      throw new Error('API returned error');
+    }
+    return data.activities;
+  } catch (error) {
+    console.error('Failed to fetch recent activity:', error);
+    return [];
+  }
 };
 
 
-export default function OverviewTab() {
+export default function OverviewTab({ onSetActiveTab }: { onSetActiveTab?: (tabId: string) => void }) {
   const [quickStats, setQuickStats] = useState<QuickStat[]>([]);
   const [recentActivity, setRecentActivity] = useState<Activity[]>([]);
   const [systemMetrics, setSystemMetrics] = useState<SystemMetrics | null>(null);
@@ -162,14 +174,44 @@ export default function OverviewTab() {
       <div className="bg-[#302927]/60 border border-[#502d26]/40 rounded-xl sm:rounded-2xl p-4 sm:p-6 backdrop-blur-sm mb-6">
         <h3 className="text-base sm:text-lg font-bold text-[#ede8df] mb-3 sm:mb-4">Quick Actions</h3>
         <div className="flex flex-wrap gap-3">
-          <a
-            href="/social-ops"
+          <button
+            onClick={() => onSetActiveTab?.('arsenal')}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#ede8df] text-[#171616] font-semibold hover:bg-white/90 transition"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.933-2.185 2.25 2.25 0 00-3.933 2.185z" />
+              <path strokeLinecap="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M12 18.75H4.5a2.25 2.25 0 01-2.25-2.25V9m13.5 9.75h3a2.25 2.25 0 002.25-2.25V9m0 0a2.25 2.25 0 00-2.25-2.25H6.75A2.25 2.25 0 004.5 9m13.5 0a2.25 2.25 0 00-2.25-2.25h-3a2.25 2.25 0 00-2.25 2.25" />
             </svg>
-            <span>Social Ops</span>
+            <span>Upload Clip</span>
+          </button>
+          <button
+            onClick={() => onSetActiveTab?.('moments')}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#ede8df] text-[#171616] font-semibold hover:bg-white/90 transition"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
+            </svg>
+            <span>Create Gallery</span>
+          </button>
+          <button
+            onClick={() => onSetActiveTab?.('analytics')}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#ede8df] text-[#171616] font-semibold hover:bg-white/90 transition"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+            </svg>
+            <span>View Analytics</span>
+          </button>
+          <a
+            href={process.env.NEXT_PUBLIC_SHOPIFY_STORE_URL ? `https://${process.env.NEXT_PUBLIC_SHOPIFY_STORE_URL}/admin` : '/admin/store'}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#ede8df] text-[#171616] font-semibold hover:bg-white/90 transition"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 21v-7.5a.75.75 0 01.75-.75h3a.75.75 0 01.75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349m-16.5 11.65V9.35m0 0a3.001 3.001 0 003.75-.615A2.993 2.993 0 009.75 9.75c.896 0 1.7-.393 2.25-1.016a2.993 2.993 0 002.25 1.016c.896 0 1.7-.393 2.25-1.016a3.001 3.001 0 003.75.614m-16.5 0a3.004 3.004 0 01-.621-4.72L4.318 3.44A1.5 1.5 0 015.378 3h13.243a1.5 1.5 0 011.06.44l1.19 1.189a3 3 0 01-.621 4.72m-13.5 8.65h3.75a.75.75 0 00.75-.75V13.5a.75.75 0 00-.75-.75H6.75a.75.75 0 00-.75.75v3.75c0 .415.336.75.75.75z" />
+            </svg>
+            <span>Manage Store</span>
           </a>
         </div>
       </div>
@@ -177,18 +219,24 @@ export default function OverviewTab() {
       {/* Recent Activity */}
       <div className="bg-[#302927]/60 border border-[#502d26]/40 rounded-xl sm:rounded-2xl p-4 sm:p-6 backdrop-blur-sm mb-6">
         <h3 className="text-base sm:text-lg font-bold text-[#ede8df] mb-3 sm:mb-4">Recent Activity</h3>
-        <div className="space-y-2 sm:space-y-3">
-          {recentActivity.map((activity, index) => (
-            <div key={index} className="flex items-center space-x-2 sm:space-x-3 p-2 sm:p-3 bg-[#171616]/50 rounded-lg sm:rounded-xl">
-              <span className="text-base sm:text-xl flex-shrink-0">{activity.icon}</span>
-              <div className="flex-1 min-w-0">
-                <div className="text-[#ede8df] text-xs sm:text-sm">{activity.action}</div>
-                <div className="text-[#b2a491] text-[10px] sm:text-xs truncate">{activity.item}</div>
+        {recentActivity.length > 0 ? (
+          <div className="space-y-2 sm:space-y-3">
+            {recentActivity.map((activity, index) => (
+              <div key={index} className="flex items-center space-x-2 sm:space-x-3 p-2 sm:p-3 bg-[#171616]/50 rounded-lg sm:rounded-xl">
+                <span className="text-base sm:text-xl flex-shrink-0">{activity.icon}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[#ede8df] text-xs sm:text-sm">{activity.action}</div>
+                  <div className="text-[#b2a491] text-[10px] sm:text-xs truncate">{activity.item}</div>
+                </div>
+                <div className="text-[#726d6c] text-[10px] sm:text-xs flex-shrink-0">{activity.time}</div>
               </div>
-              <div className="text-[#726d6c] text-[10px] sm:text-xs flex-shrink-0">{activity.time}</div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <div className="flex items-center justify-center py-8">
+            <div className="w-6 h-6 border-2 border-[#502d26]/30 border-t-[#843c2d] rounded-full animate-spin" />
+          </div>
+        )}
       </div>
 
       {/* System Status */}
@@ -236,6 +284,36 @@ export default function OverviewTab() {
                   </span>
                 </div>
               </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[#b2a491] text-sm">Shopify API</span>
+                <div className="flex items-center space-x-2">
+                  <div className={`w-2 h-2 rounded-full ${
+                    systemMetrics.shopify.status === 'online' ? 'bg-emerald-500' : 
+                    systemMetrics.shopify.status === 'error' ? 'bg-amber-500' : 'bg-gray-500'
+                  }`}></div>
+                  <span className={`text-xs ${
+                    systemMetrics.shopify.status === 'online' ? 'text-emerald-400' : 
+                    systemMetrics.shopify.status === 'error' ? 'text-amber-400' : 'text-gray-400'
+                  }`}>
+                    {systemMetrics.shopify.status.charAt(0).toUpperCase() + systemMetrics.shopify.status.slice(1)}
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[#b2a491] text-sm">Stream</span>
+                <div className="flex items-center space-x-2">
+                  <div className={`w-2 h-2 rounded-full ${
+                    systemMetrics.stream.status === 'active' ? 'bg-emerald-500' : 
+                    systemMetrics.stream.status === 'error' ? 'bg-amber-500' : 'bg-gray-500'
+                  }`}></div>
+                  <span className={`text-xs ${
+                    systemMetrics.stream.status === 'active' ? 'text-emerald-400' : 
+                    systemMetrics.stream.status === 'error' ? 'text-amber-400' : 'text-gray-400'
+                  }`}>
+                    {systemMetrics.stream.status.charAt(0).toUpperCase() + systemMetrics.stream.status.slice(1)}
+                  </span>
+                </div>
+              </div>
             </div>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
@@ -256,6 +334,22 @@ export default function OverviewTab() {
                   {systemMetrics.apiCalls.usedFormatted} / {systemMetrics.apiCalls.totalFormatted}
                 </span>
               </div>
+              {systemMetrics.stream.videoCount !== undefined && (
+                <div className="flex items-center justify-between">
+                  <span className="text-[#b2a491] text-sm">Stream Videos</span>
+                  <span className="text-[#ede8df] text-sm">
+                    {systemMetrics.stream.videoCount} videos
+                  </span>
+                </div>
+              )}
+              {systemMetrics.stream.storageUsed && (
+                <div className="flex items-center justify-between">
+                  <span className="text-[#b2a491] text-sm">Stream Storage</span>
+                  <span className="text-[#ede8df] text-sm">
+                    {systemMetrics.stream.storageUsed}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         ) : (
