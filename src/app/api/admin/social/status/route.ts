@@ -38,11 +38,13 @@ export async function GET(request: NextRequest) {
 
     // Get the content and its postforme_id
     const contentResult = await queryDatabase(
-      'SELECT id, postforme_id, postforme_status, platform_post_ids, platform_urls FROM social_content WHERE id = ?',
+      'SELECT id, video_id, upload_uid, postforme_id, postforme_status, platform_post_ids, platform_urls FROM social_content WHERE id = ?',
       [contentId]
     );
     const content = contentResult?.[0] as { 
       id: number; 
+      video_id: number | null;
+      upload_uid: string | null;
       postforme_id: string | null;
       postforme_status: string | null;
       platform_post_ids: string | null;
@@ -113,6 +115,65 @@ export async function GET(request: NextRequest) {
       ]
     );
 
+    // VISIBILITY: When PostForMe confirms status is 'published', make content visible
+    let videoMadePublic = false;
+    let clipsMadePublic = 0;
+
+    if (post.status === 'published') {
+      // Find the source video
+      let sourceVideoId = content.video_id;
+      
+      if (!sourceVideoId && content.upload_uid) {
+        // Try to find video by uid
+        const videoResult = await queryDatabase(
+          'SELECT id, type FROM videos WHERE uid = ? LIMIT 1',
+          [content.upload_uid]
+        );
+        const video = videoResult?.[0] as { id: number; type: string } | undefined;
+        sourceVideoId = video?.id || null;
+      }
+
+      if (sourceVideoId) {
+        // Get the video type to check if it's a parent or clip
+        const videoResult = await queryDatabase(
+          'SELECT id, type, parent_video_id FROM videos WHERE id = ? LIMIT 1',
+          [sourceVideoId]
+        );
+        const video = videoResult?.[0] as { id: number; type: string; parent_video_id: number | null } | undefined;
+
+        if (video) {
+          // Make this video visible
+          await executeQuery(
+            `UPDATE videos
+             SET is_public = 1,
+                 publication_status = 'live',
+                 updated_at = ?
+             WHERE id = ?`,
+            [now, sourceVideoId]
+          );
+          videoMadePublic = true;
+          console.log(`[Social Status] Made video ${sourceVideoId} publicly visible (PostForMe status: published)`);
+
+          // If this is a PARENT video (not a clip), also make all its clips visible
+          if (video.type !== 'clip') {
+            const clipResult = await executeQuery(
+              `UPDATE videos
+               SET is_public = 1,
+                   publication_status = 'live',
+                   updated_at = ?
+               WHERE parent_video_id = ? AND type = 'clip'`,
+              [now, sourceVideoId]
+            );
+            // D1 returns { changes } for UPDATE
+            clipsMadePublic = (clipResult as { changes?: number })?.changes || 0;
+            if (clipsMadePublic > 0) {
+              console.log(`[Social Status] Made ${clipsMadePublic} clips of video ${sourceVideoId} publicly visible`);
+            }
+          }
+        }
+      }
+    }
+
     return NextResponse.json({
       success: true,
       status: post.status,
@@ -123,6 +184,8 @@ export async function GET(request: NextRequest) {
       platform_urls: platformUrls,
       source: 'postforme',
       synced_at: now,
+      visibility_updated: videoMadePublic,
+      clips_made_public: clipsMadePublic,
     });
   } catch (error) {
     console.error('[Social Status] Error:', error);
@@ -154,7 +217,7 @@ export async function POST(request: NextRequest) {
     // Get all content with PostForMe IDs
     const placeholders = contentIds.map(() => '?').join(', ');
     const contentResult = await queryDatabase(
-      `SELECT id, postforme_id FROM social_content WHERE id IN (${placeholders}) AND postforme_id IS NOT NULL`,
+      `SELECT id, video_id, upload_uid, postforme_id FROM social_content WHERE id IN (${placeholders}) AND postforme_id IS NOT NULL`,
       contentIds
     );
 
@@ -168,8 +231,10 @@ export async function POST(request: NextRequest) {
 
     const updates = [];
     const errors = [];
+    let totalVideosPublished = 0;
+    let totalClipsPublished = 0;
 
-    for (const content of contentResult as Array<{ id: number; postforme_id: string }>) {
+    for (const content of contentResult as Array<{ id: number; video_id: number | null; upload_uid: string | null; postforme_id: string }>) {
       try {
         const result = await getPost(content.postforme_id);
 
@@ -203,6 +268,44 @@ export async function POST(request: NextRequest) {
             ]
           );
 
+          // VISIBILITY: When PostForMe confirms status is 'published', make content visible
+          if (post.status === 'published') {
+            let sourceVideoId = content.video_id;
+            
+            if (!sourceVideoId && content.upload_uid) {
+              const videoResult = await queryDatabase(
+                'SELECT id FROM videos WHERE uid = ? LIMIT 1',
+                [content.upload_uid]
+              );
+              sourceVideoId = (videoResult?.[0] as { id: number } | undefined)?.id || null;
+            }
+
+            if (sourceVideoId) {
+              // Get video type
+              const videoResult = await queryDatabase(
+                'SELECT type FROM videos WHERE id = ? LIMIT 1',
+                [sourceVideoId]
+              );
+              const videoType = (videoResult?.[0] as { type: string } | undefined)?.type;
+
+              // Make video visible
+              await executeQuery(
+                `UPDATE videos SET is_public = 1, publication_status = 'live', updated_at = ? WHERE id = ?`,
+                [now, sourceVideoId]
+              );
+              totalVideosPublished++;
+
+              // If parent video, make clips visible too
+              if (videoType && videoType !== 'clip') {
+                const clipResult = await executeQuery(
+                  `UPDATE videos SET is_public = 1, publication_status = 'live', updated_at = ? WHERE parent_video_id = ? AND type = 'clip'`,
+                  [now, sourceVideoId]
+                );
+                totalClipsPublished += (clipResult as { changes?: number })?.changes || 0;
+              }
+            }
+          }
+
           updates.push({ content_id: content.id, status: post.status });
         }
       } catch (err) {
@@ -214,6 +317,8 @@ export async function POST(request: NextRequest) {
       success: true,
       synced: updates.length,
       failed: errors.length,
+      videos_made_public: totalVideosPublished,
+      clips_made_public: totalClipsPublished,
       updates,
       errors,
     });

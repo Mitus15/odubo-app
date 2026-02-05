@@ -232,30 +232,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // CRITICAL: Make source video publicly visible after successful distribution
-    // This wires up: distribute to social → content appears on odubo.studio
-    if (content.video_id) {
-      await executeQuery(
-        `UPDATE videos
-         SET is_public = 1,
-             publication_status = 'live',
-             updated_at = ?
-         WHERE id = ?`,
-        [now, content.video_id]
-      );
-      console.log(`[Social Publish] Made video ${content.video_id} publicly visible`);
-    } else if (content.upload_uid) {
-      // If no video_id but has upload_uid, try to find and update the video by uid
-      await executeQuery(
-        `UPDATE videos
-         SET is_public = 1,
-             publication_status = 'live',
-             updated_at = ?
-         WHERE uid = ?`,
-        [now, content.upload_uid]
-      );
-      console.log(`[Social Publish] Made video with uid ${content.upload_uid} publicly visible`);
-    }
+    // NOTE: We do NOT make content visible here.
+    // Visibility is only updated when PostForMe confirms the post is PUBLISHED (not scheduled).
+    // This happens in /api/admin/social/status when we sync and see status = 'published'.
+    // The status sync route will:
+    // 1. Make the video visible (publication_status = 'live')
+    // 2. If it's a parent video (not a clip), make all its clips visible too
 
     return NextResponse.json({
       success: true,
