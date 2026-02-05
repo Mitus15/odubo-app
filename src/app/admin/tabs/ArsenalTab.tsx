@@ -1878,6 +1878,7 @@ function UploadView({
   const [uploadProgress, setUploadProgress] = useState('');
   const [parentVideoId, setParentVideoId] = useState<number | null>(null);
   const dragFileIndex = useRef<number | null>(null);
+  const previousUploadTypeRef = useRef<'video' | 'clip'>('clip');
 
   // Video metadata fields
   const [videoTitle, setVideoTitle] = useState('');
@@ -1924,15 +1925,18 @@ function UploadView({
           albumId: parent.album_id,
         });
       }
-    } else if (uploadType === 'video') {
-      // Reset metadata when switching to video mode
+    } else if (uploadType === 'video' && previousUploadTypeRef.current !== 'video') {
+      // Reset metadata ONLY when switching from clip to video mode (not on every render)
       setVideoTitle('');
       setVideoDescription('');
       setVideoCredits('');
       setLinkedTrackId('');
       setLinkedAlbumId('');
     }
-  }, [uploadType, parentVideoId, parentVideos]);
+    
+    // Update the ref to track current upload type
+    previousUploadTypeRef.current = uploadType;
+  }, [uploadType, parentVideoId, videos]);
   
   // Fetch tracks and albums for linking
   useEffect(() => {
@@ -1962,8 +1966,8 @@ function UploadView({
     if (e.target.files) {
       const files = Array.from(e.target.files);
       setSelectedFiles(files);
-      // Auto-populate title from first file name for videos
-      if (uploadType === 'video' && files.length === 1) {
+      // Auto-populate title from first file name for videos (only if title is empty)
+      if (uploadType === 'video' && files.length === 1 && !videoTitle) {
         setVideoTitle(files[0].name.replace(/\.[^/.]+$/, ''));
       }
     }
