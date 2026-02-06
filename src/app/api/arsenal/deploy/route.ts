@@ -213,16 +213,15 @@ export async function POST(request: NextRequest) {
 
       const isClip = video.parent_video_id !== null;
 
-      // Build media array - video first, then thumbnail if available
-      const media: Array<{ url: string; type: 'image' | 'video' }> = [
-        { url: videoUrl, type: 'video' },
-      ];
-
-      // Add thumbnail (prefer custom thumbnail over poster)
+      // Build media array with thumbnail as property on the video item
       const thumbnailUrl = video.thumbnail || video.poster_url;
-      if (thumbnailUrl) {
-        media.push({ url: thumbnailUrl, type: 'image' });
-      }
+      const media: Array<{ url: string; type: 'image' | 'video'; thumbnail_url?: string }> = [
+        {
+          url: videoUrl,
+          type: 'video',
+          ...(thumbnailUrl && { thumbnail_url: thumbnailUrl }),
+        },
+      ];
 
       // Format caption based on video type
       const caption = formatCaption(video, metadata, isClip);
@@ -230,13 +229,14 @@ export async function POST(request: NextRequest) {
       // Build ALL platform-specific configurations in one object
       const platform_configurations: Record<string, any> = {};
 
-      if (deployedPlatforms.includes('youtube') && metadata?.youtube) {
+      if (deployedPlatforms.includes('youtube')) {
         platform_configurations.youtube = {
-          title: metadata.title || video.title,
-          privacy_status: metadata.visibility || 'public',
-          made_for_kids: metadata.youtube.madeForKids,
-          category_id: metadata.youtube.category,
-          description: metadata.description,
+          title: metadata?.title || video.title,
+          privacy_status: metadata?.visibility || 'public',
+          made_for_kids: metadata?.youtube?.madeForKids ?? false,
+          category_id: metadata?.youtube?.category,
+          description: metadata?.description,
+          ...(isClip || metadata?.youtube?.asShort) && { shorts: true },
         };
       }
 

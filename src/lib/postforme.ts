@@ -121,7 +121,7 @@ export interface FeedItem {
 export interface CreatePostInput {
   caption?: string;
   social_accounts: string[]; // Account IDs
-  media?: Array<{ url: string; type?: 'image' | 'video' }>;
+  media?: Array<{ url: string; type?: 'image' | 'video'; thumbnail_url?: string }>;
   schedule_at?: string; // ISO date string
   first_comment?: string;
   // Platform-specific overrides (apply to ALL accounts of that platform)

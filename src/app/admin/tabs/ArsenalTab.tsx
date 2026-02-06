@@ -3451,6 +3451,7 @@ export default function ArsenalTab() {
     try {
       const res = await fetch('/api/arsenal/sync', {
         method: 'POST',
+        credentials: 'include',
       });
 
       const data = await res.json() as { updated: number; errors: string[] };
