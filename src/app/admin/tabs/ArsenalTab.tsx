@@ -2065,28 +2065,32 @@ function UploadView({
 
         // 2. Upload to Stream using TUS protocol (handles large files, has CORS)
         await new Promise<void>((resolve, reject) => {
-          const xhr = new XMLHttpRequest();
+          // Dynamic import for tus-js-client (browser-only library)
+          import('tus-js-client').then(({ default: tus }) => {
+            const upload = new tus.Upload(file, {
+              endpoint: uploadURL,
+              chunkSize: 50 * 1024 * 1024, // 50MB chunks for large video files
+              retryDelays: [0, 1000, 3000, 5000], // Retry on network errors
+              metadata: {
+                filename: file.name,
+                filetype: file.type,
+              },
+              onProgress: (bytesUploaded, bytesTotal) => {
+                const percentage = ((bytesUploaded / bytesTotal) * 100).toFixed(1);
+                setUploadProgress(`Uploading ${i + 1}/${selectedFiles.length}: ${title} (${percentage}%)`);
+              },
+              onSuccess: () => {
+                console.log('TUS upload completed successfully');
+                resolve();
+              },
+              onError: (error) => {
+                console.error('TUS upload error:', error);
+                reject(new Error(`Upload failed: ${error.message}`));
+              },
+            });
 
-          xhr.upload.addEventListener('progress', (e) => {
-            if (e.lengthComputable) {
-              const percentage = ((e.loaded / e.total) * 100).toFixed(1);
-              setUploadProgress(`Uploading ${i + 1}/${selectedFiles.length}: ${title} (${percentage}%)`);
-            }
-          });
-
-          xhr.addEventListener('load', () => {
-            if (xhr.status >= 200 && xhr.status < 300) {
-              resolve();
-            } else {
-              reject(new Error(`Upload failed with status ${xhr.status}`));
-            }
-          });
-
-          xhr.addEventListener('error', () => reject(new Error('Upload failed')));
-          xhr.addEventListener('abort', () => reject(new Error('Upload aborted')));
-
-          xhr.open('POST', uploadURL);
-          xhr.send(file);
+            upload.start();
+          }).catch(reject);
         });
 
         setUploadProgress(`Processing ${i + 1}/${selectedFiles.length}: ${title} - copying to R2...`);
