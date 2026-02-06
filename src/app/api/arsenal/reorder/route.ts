@@ -15,6 +15,15 @@ interface ReorderRequest {
  */
 export async function POST(request: NextRequest) {
   try {
+    // Check authentication
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     const body = (await request.json()) as ReorderRequest;
     const { parentId, clipIds } = body;
 

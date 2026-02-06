@@ -14,9 +14,19 @@ interface VideoWithPostForMe {
  * POST /api/arsenal/sync
  * Sync platform URLs from Post for Me after publishing
  * Fetches external_url for published posts and updates local database
+ * Requires authentication
  */
-export async function POST() {
+export async function POST(request: Request) {
   try {
+    // Check authentication
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     // Get all videos with Post for Me IDs that need syncing
     // (have a postforme_post_id but missing some platform URLs)
     const videos = await queryDatabase(

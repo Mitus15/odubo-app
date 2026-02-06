@@ -117,6 +117,11 @@ class CloudflareStreamAPI {
       throw new Error(`Stream API error: ${response.status} - ${JSON.stringify(errorData)}`);
     }
 
+    // Handle 204 No Content responses (e.g., DELETE requests)
+    if (response.status === 204) {
+      return {} as T;
+    }
+
     return response.json() as T;
   }
 
@@ -286,6 +291,9 @@ class CloudflareStreamAPI {
     asc?: boolean;
     status?: 'pendingupload' | 'downloading' | 'queued' | 'inprogress' | 'ready' | 'error';
     type?: 'live' | 'on-demand';
+    after?: string; // Pagination cursor
+    before?: string; // Pagination cursor
+    limit?: number; // Max results per page (default 1000)
   } = {}) {
     const params = new URLSearchParams();
     
@@ -297,6 +305,45 @@ class CloudflareStreamAPI {
 
     const query = params.toString();
     return this.makeRequest(`${query ? `?${query}` : ''}`);
+  }
+
+  /**
+   * Fetch all videos with automatic pagination
+   * Returns all videos by following pagination cursors
+   */
+  async listAllVideos(options: {
+    search?: string;
+    creator?: string;
+    start?: string;
+    end?: string;
+    asc?: boolean;
+    status?: 'pendingupload' | 'downloading' | 'queued' | 'inprogress' | 'ready' | 'error';
+    type?: 'live' | 'on-demand';
+  } = {}): Promise<any[]> {
+    const allVideos: any[] = [];
+    let after: string | undefined = undefined;
+    
+    // Fetch pages until no more results
+    while (true) {
+      const response = await this.listVideos({
+        ...options,
+        after,
+        limit: 1000, // Max per page
+      }) as { result?: any[]; result_info?: { cursors?: { after?: string } } };
+
+      const videos = response.result || [];
+      allVideos.push(...videos);
+
+      // Check if there's a next page
+      const nextCursor = response.result_info?.cursors?.after;
+      if (!nextCursor || videos.length === 0) {
+        break;
+      }
+
+      after = nextCursor;
+    }
+
+    return allVideos;
   }
 
   /**

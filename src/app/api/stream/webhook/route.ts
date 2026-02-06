@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { executeQuery, queryDatabase } from '@/lib/db';
+import { generateClipThumbnail, generateAIThumbnailCandidates } from '@/lib/thumbnailService';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs'; // Changed from 'edge' to support thumbnail generation with sharp/S3
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
@@ -9,21 +10,29 @@ export async function POST(req: NextRequest) {
     const signature = req.headers.get('cf-webhook-signature') || '';
     const secret = process.env.CLOUDFLARE_STREAM_WEBHOOK_SECRET;
 
-    // If a secret is configured, verify HMAC of the raw body
-    if (secret) {
-      const raw = await req.text();
-      const encoder = new TextEncoder();
-      const key = await crypto.subtle.importKey('raw', encoder.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-      const sig = await crypto.subtle.sign('HMAC', key, encoder.encode(raw));
-      const computed = Buffer.from(new Uint8Array(sig)).toString('hex');
-      if (computed !== signature) {
-        return new NextResponse('Invalid signature', { status: 401 });
-      }
-      const payload = JSON.parse(raw);
-      return await handlePayload(payload);
+    // Always require webhook secret for security
+    if (!secret) {
+      console.error('[Stream Webhook] CLOUDFLARE_STREAM_WEBHOOK_SECRET not configured — rejecting unauthenticated request');
+      return new NextResponse('Webhook secret not configured', { status: 401 });
     }
 
-    const payload = await req.json();
+    // Verify HMAC signature
+    const raw = await req.text();
+    const encoder = new TextEncoder();
+    const key = await crypto.subtle.importKey('raw', encoder.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+    const sig = await crypto.subtle.sign('HMAC', key, encoder.encode(raw));
+    
+    // Convert to hex without using Buffer (edge runtime compatible)
+    const computed = Array.from(new Uint8Array(sig))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+    
+    if (computed !== signature) {
+      console.warn('[Stream Webhook] Invalid signature');
+      return new NextResponse('Invalid signature', { status: 401 });
+    }
+    
+    const payload = JSON.parse(raw);
     return await handlePayload(payload);
   } catch (error) {
     console.error('Stream webhook error:', error);
@@ -71,6 +80,49 @@ async function handlePayload(payload: any): Promise<NextResponse> {
   params.push(uid, uid);
 
   await executeQuery(`UPDATE videos SET ${fields.join(', ')} WHERE uid = ? OR stream_video_id = ?`, params);
+  
+  // Trigger automatic thumbnail generation when video becomes ready
+  if (readyToStream === true && statusState === 'ready' && duration && duration > 0) {
+    // Run thumbnail generation asynchronously (don't block webhook response)
+    (async () => {
+      try {
+        // Fetch video details to determine type
+        const videoRows = await queryDatabase(
+          'SELECT id, parent_video_id, type, title, category, mood FROM videos WHERE uid = ? LIMIT 1',
+          [uid]
+        );
+        
+        if (videoRows && videoRows.length > 0) {
+          const video = videoRows[0];
+          const videoId = video.id as number;
+          const isClip = video.parent_video_id !== null;
+          
+          if (isClip) {
+            // Clip: random frame extraction → R2
+            console.log(`[Stream Webhook] Generating clip thumbnail for video ${videoId}`);
+            const result = await generateClipThumbnail(uid, Math.floor(duration), videoId);
+            if (!result.success) {
+              console.error(`[Stream Webhook] Clip thumbnail generation failed:`, result.error);
+            }
+          } else {
+            // Parent video: AI-powered thumbnail selection
+            console.log(`[Stream Webhook] Generating AI thumbnails for video ${videoId}`);
+            const result = await generateAIThumbnailCandidates(uid, videoId, {
+              title: video.title as string,
+              category: video.category as string,
+              mood: video.mood as string
+            });
+            if (!result.success) {
+              console.error(`[Stream Webhook] AI thumbnail generation failed:`, result.error);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('[Stream Webhook] Thumbnail generation error:', error);
+        // Non-fatal: don't throw, just log
+      }
+    })();
+  }
   
   console.log('[Stream Webhook] Updated video:', {
     uid,

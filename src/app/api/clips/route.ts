@@ -57,14 +57,15 @@ export async function GET(req: NextRequest) {
     }
 
     // Include public clips, treating legacy/null status values as published/live
+    // CRITICAL: Parentheses added to fix operator precedence bug
     const rows = await queryDatabase(
       `SELECT ${baseFields}${engagementFields}
        FROM videos v
        ${engagementJoin}
        WHERE v.type = 'clip'
-         AND (v.is_public = 1 OR v.is_public IS NULL)
-         AND COALESCE(v.status, 'published') != 'archived'
-         AND COALESCE(v.publication_status, 'live') = 'live'
+         AND ((v.is_public = 1 OR v.is_public IS NULL)
+              AND COALESCE(v.status, 'published') != 'archived'
+              AND COALESCE(v.publication_status, 'live') = 'live')
        ${orderBy}
        LIMIT ? OFFSET ?`,
       [limit, offset]

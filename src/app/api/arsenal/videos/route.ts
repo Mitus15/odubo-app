@@ -6,9 +6,19 @@ export const runtime = 'nodejs';
 /**
  * GET /api/arsenal/videos
  * Fetch all videos with Arsenal-related fields for the content library
+ * Requires authentication
  */
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    // Check authentication
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     console.log('[Arsenal] Fetching videos...');
     // Fetch ALL videos for Arsenal management (including unpublished)
     // LEFT JOIN tracks and albums to get music relationship names

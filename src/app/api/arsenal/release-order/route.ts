@@ -6,9 +6,19 @@ export const runtime = 'nodejs';
 /**
  * GET /api/arsenal/release-order
  * Get parent videos ordered by release priority with deployment status
+ * Requires authentication
  */
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    // Check authentication
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     // Get parent videos with their clips and deployment status
     const parents = await queryDatabase(
       `SELECT
@@ -94,7 +104,14 @@ export async function GET() {
  * Update release order for parent videos
  */
 export async function PUT(request: NextRequest) {
-  try {
+  try {    // Check authentication
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
     const body = await request.json() as { videos: Array<{ id: number; order: number }> };
     const { videos } = body;
 

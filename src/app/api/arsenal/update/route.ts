@@ -12,9 +12,19 @@ interface UpdateRequest {
 /**
  * POST /api/arsenal/update
  * Update video metadata (title, etc.)
+ * Requires authentication
  */
 export async function POST(request: NextRequest) {
   try {
+    // Check authentication
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     const body = (await request.json()) as UpdateRequest;
     const { videoId, title } = body;
 

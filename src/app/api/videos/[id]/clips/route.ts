@@ -98,11 +98,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       ]
     );
 
-    // Ensure status/publication match parent for gating
-    await executeQuery(
-      `UPDATE videos SET status = ?, publication_status = ?, updated_at = datetime('now') WHERE uid = ?`,
-      [parentStatus, parentPublication, uid]
-    );
+    // Clips are created with publication_status = 'archived' by default (as per INSERT above).
+    // Visibility is controlled by parent cascade at query level (feed checks parent status).
+    // No need to sync status to parent — this was causing crashes with undefined variables.
 
     // Enable MP4 downloads for the clip (non-blocking)
     try {
