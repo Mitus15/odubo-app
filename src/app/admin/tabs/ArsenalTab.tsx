@@ -2041,14 +2041,29 @@ function UploadView({
 
         setUploadProgress(`Uploading ${i + 1}/${selectedFiles.length}: ${title}`);
 
-        // 1. Upload via server proxy (avoids CORS issues, gets R2 mp4_url)
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('filename', file.name);
+        // 1. Get Cloudflare Stream TUS upload URL
+        const uploadUrlRes = await fetch('/api/videos/stream/direct-upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title,
+            type: uploadType === 'clip' ? 'clip' : 'long_form',
+            is_public: 0,
+          }),
+        });
 
-        let uid!: string;
-        let mp4_url!: string;
+        if (!uploadUrlRes.ok) {
+          const error = await uploadUrlRes.json();
+          throw new Error(`Failed to get upload URL: ${error.error || 'Unknown error'}`);
+        }
 
+        const { uploadURL, uid } = await uploadUrlRes.json();
+
+        if (!uid || !uploadURL) {
+          throw new Error('Failed to get upload URL from Cloudflare Stream');
+        }
+
+        // 2. Upload to Stream using TUS protocol (handles large files, has CORS)
         await new Promise<void>((resolve, reject) => {
           const xhr = new XMLHttpRequest();
 
@@ -2059,20 +2074,9 @@ function UploadView({
             }
           });
 
-          xhr.addEventListener('load', async () => {
+          xhr.addEventListener('load', () => {
             if (xhr.status >= 200 && xhr.status < 300) {
-              try {
-                const response = JSON.parse(xhr.responseText);
-                if (!response.success || !response.uid || !response.mp4_url) {
-                  reject(new Error('Invalid response from upload endpoint'));
-                  return;
-                }
-                uid = response.uid;
-                mp4_url = response.mp4_url;
-                resolve();
-              } catch (e) {
-                reject(new Error('Failed to parse upload response'));
-              }
+              resolve();
             } else {
               reject(new Error(`Upload failed with status ${xhr.status}`));
             }
@@ -2081,11 +2085,29 @@ function UploadView({
           xhr.addEventListener('error', () => reject(new Error('Upload failed')));
           xhr.addEventListener('abort', () => reject(new Error('Upload aborted')));
 
-          xhr.open('POST', '/api/arsenal/upload');
-          xhr.send(formData);
+          xhr.open('POST', uploadURL);
+          xhr.send(file);
         });
 
-        setUploadProgress(`Processing ${i + 1}/${selectedFiles.length}: ${title} - copied to Cloudflare Stream`);
+        setUploadProgress(`Processing ${i + 1}/${selectedFiles.length}: ${title} - copying to R2...`);
+
+        // 3. Copy from Stream to R2 to get mp4_url for PostForMe
+        const r2CopyRes = await fetch('/api/arsenal/stream-to-r2', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ uid, filename: file.name }),
+        });
+
+        if (!r2CopyRes.ok) {
+          const error = await r2CopyRes.json();
+          throw new Error(`Failed to copy to R2: ${error.error || 'Unknown error'}`);
+        }
+
+        const { mp4_url } = await r2CopyRes.json();
+
+        if (!mp4_url) {
+          throw new Error('Failed to get mp4_url from R2');
+        }
 
         // Track UID for thumbnail generation
         uploadedUids.push(uid);
