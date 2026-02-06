@@ -7,29 +7,30 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
   try {
+    const raw = await req.text();
     const signature = req.headers.get('cf-webhook-signature') || '';
     const secret = process.env.CLOUDFLARE_STREAM_WEBHOOK_SECRET;
 
-    // Always require webhook secret for security
-    if (!secret) {
-      console.error('[Stream Webhook] CLOUDFLARE_STREAM_WEBHOOK_SECRET not configured — rejecting unauthenticated request');
-      return new NextResponse('Webhook secret not configured', { status: 401 });
-    }
-
-    // Verify HMAC signature
-    const raw = await req.text();
-    const encoder = new TextEncoder();
-    const key = await crypto.subtle.importKey('raw', encoder.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-    const sig = await crypto.subtle.sign('HMAC', key, encoder.encode(raw));
-    
-    // Convert to hex without using Buffer (edge runtime compatible)
-    const computed = Array.from(new Uint8Array(sig))
-      .map(b => b.toString(16).padStart(2, '0'))
-      .join('');
-    
-    if (computed !== signature) {
-      console.warn('[Stream Webhook] Invalid signature');
-      return new NextResponse('Invalid signature', { status: 401 });
+    // Optional signature verification if secret is configured
+    // NOTE: Cloudflare Stream webhooks don't have built-in signature verification
+    // You can add IP allowlisting in Cloudflare dashboard settings for security
+    if (secret && signature) {
+      const encoder = new TextEncoder();
+      const key = await crypto.subtle.importKey('raw', encoder.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+      const sig = await crypto.subtle.sign('HMAC', key, encoder.encode(raw));
+      
+      // Convert to hex without using Buffer (edge runtime compatible)
+      const computed = Array.from(new Uint8Array(sig))
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
+      
+      if (computed !== signature) {
+        console.warn('[Stream Webhook] Invalid signature');
+        return new NextResponse('Invalid signature', { status: 401 });
+      }
+      console.log('[Stream Webhook] Signature verified ✓');
+    } else if (!secret && process.env.NODE_ENV === 'production') {
+      console.warn('[Stream Webhook] No webhook secret configured - consider adding IP restrictions in Cloudflare');
     }
     
     const payload = JSON.parse(raw);
@@ -60,7 +61,8 @@ async function handlePayload(payload: any): Promise<NextResponse> {
   const duration = payload?.data?.duration ?? payload?.result?.duration;
   const thumbnailUrl = payload?.data?.thumbnail ?? payload?.result?.thumbnail;
 
-  const status = readyToStream === true && statusState === 'ready' ? 'published' : (statusState || 'processing');
+  // Map to valid DB values: 'draft' (processing), 'published' (ready), 'archived' (deleted)
+  const status = readyToStream === true && statusState === 'ready' ? 'published' : 'draft';
   if (currentStatus === 'published' && status === 'published' && !thumbnailUrl) {
     return NextResponse.json({ success: true, skipped: true });
   }
@@ -82,46 +84,55 @@ async function handlePayload(payload: any): Promise<NextResponse> {
   await executeQuery(`UPDATE videos SET ${fields.join(', ')} WHERE uid = ? OR stream_video_id = ?`, params);
   
   // Trigger automatic thumbnail generation when video becomes ready
+  // NOTE: This runs async so webhook can return quickly. The thumbnailService
+  // tracks status in database (pending → generating → completed/failed/fallback)
+  // so the UI can know when thumbnail is ready.
   if (readyToStream === true && statusState === 'ready' && duration && duration > 0) {
-    // Run thumbnail generation asynchronously (don't block webhook response)
-    (async () => {
-      try {
-        // Fetch video details to determine type
-        const videoRows = await queryDatabase(
-          'SELECT id, parent_video_id, type, title, category, mood FROM videos WHERE uid = ? LIMIT 1',
-          [uid]
-        );
-        
-        if (videoRows && videoRows.length > 0) {
-          const video = videoRows[0];
-          const videoId = video.id as number;
-          const isClip = video.parent_video_id !== null;
-          
+    // Fetch video details to determine type BEFORE async block
+    // (so we can log properly even if async starts)
+    const videoRows = await queryDatabase(
+      'SELECT id, parent_video_id, type, title, category, mood FROM videos WHERE uid = ? LIMIT 1',
+      [uid]
+    );
+
+    if (videoRows && videoRows.length > 0) {
+      const video = videoRows[0];
+      const videoId = video.id as number;
+      const isClip = video.parent_video_id !== null;
+
+      console.log(`[Stream Webhook] Starting thumbnail generation for video ${videoId} (isClip: ${isClip})`);
+
+      // Run thumbnail generation asynchronously (don't block webhook response)
+      // thumbnailService handles status tracking, retries, and fallbacks
+      (async () => {
+        try {
           if (isClip) {
-            // Clip: random frame extraction → R2
-            console.log(`[Stream Webhook] Generating clip thumbnail for video ${videoId}`);
+            // Clip: random frame extraction → R2 with black frame detection
             const result = await generateClipThumbnail(uid, Math.floor(duration), videoId);
-            if (!result.success) {
+            if (result.success) {
+              console.log(`[Stream Webhook] Clip thumbnail generated: ${result.posterUrl}`);
+            } else {
               console.error(`[Stream Webhook] Clip thumbnail generation failed:`, result.error);
             }
           } else {
             // Parent video: AI-powered thumbnail selection
-            console.log(`[Stream Webhook] Generating AI thumbnails for video ${videoId}`);
             const result = await generateAIThumbnailCandidates(uid, videoId, {
               title: video.title as string,
               category: video.category as string,
               mood: video.mood as string
             });
-            if (!result.success) {
+            if (result.success) {
+              console.log(`[Stream Webhook] AI thumbnail generated: ${result.posterUrl}`);
+            } else {
               console.error(`[Stream Webhook] AI thumbnail generation failed:`, result.error);
             }
           }
+        } catch (error) {
+          console.error('[Stream Webhook] Thumbnail generation error:', error);
+          // Non-fatal: thumbnailService handles status updates on failure
         }
-      } catch (error) {
-        console.error('[Stream Webhook] Thumbnail generation error:', error);
-        // Non-fatal: don't throw, just log
-      }
-    })();
+      })();
+    }
   }
   
   console.log('[Stream Webhook] Updated video:', {

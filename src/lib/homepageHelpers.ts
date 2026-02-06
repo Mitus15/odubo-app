@@ -52,6 +52,7 @@ export async function getHomepageMode(): Promise<'clips' | 'music'> {
     const countResult = await queryDatabase(
       `SELECT COUNT(*) as count FROM videos
        WHERE type = 'clip'
+         AND (is_public = 1 OR is_public IS NULL)
          AND COALESCE(publication_status, 'live') = 'live'
          AND COALESCE(status, 'published') != 'archived'`,
       []

@@ -11,6 +11,7 @@ interface DeployMetadata {
   firstComment?: string;
   hashtags?: string[];
   visibility?: 'public' | 'unlisted' | 'private';
+  includeCredits?: boolean;
   // Platform-specific settings
   youtube?: {
     madeForKids: boolean;
@@ -47,6 +48,7 @@ interface Video {
   mood?: string;
   category?: string;
   type?: string;
+  credits?: string;
 }
 
 /**
@@ -59,20 +61,20 @@ function formatCaption(
 ): string {
   const title = metadata?.title || video.title || 'New video';
   const description = metadata?.description || '';
+  const credits = (metadata?.includeCredits !== false && video.credits) ? video.credits : '';
+
+  const parts = [title];
+  if (description) parts.push(description);
+  if (credits) parts.push(credits);
 
   if (isClip && metadata?.hashtags?.length) {
-    // Clips: Short caption + hashtags for TikTok/Reels/Shorts
     const hashtags = metadata.hashtags
       .map(h => (h.startsWith('#') ? h : `#${h}`))
       .join(' ');
-
-    return description
-      ? `${title}\n\n${description}\n\n${hashtags}`
-      : `${title}\n\n${hashtags}`;
+    parts.push(hashtags);
   }
 
-  // Long video: Title + description
-  return description ? `${title}\n\n${description}` : title;
+  return parts.join('\n\n');
 }
 
 /**
@@ -105,7 +107,7 @@ export async function POST(request: NextRequest) {
     // Get videos to deploy with proper columns (not flat social columns)
     const placeholders = videoIds.map(() => '?').join(',');
     const videos = await queryDatabase(
-      `SELECT id, uid, title, url, mp4_url, poster_url, thumbnail, parent_video_id, mood, category, type
+      `SELECT id, uid, title, url, mp4_url, poster_url, thumbnail, parent_video_id, mood, category, type, credits
        FROM videos
        WHERE id IN (${placeholders})`,
       videoIds
