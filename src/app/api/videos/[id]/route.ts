@@ -329,7 +329,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     const videoId = parseInt(id, 10);
     console.log(`[DELETE] Starting deletion of video ${id} (parsed as ${videoId})`);
 
-    const rows = await queryDatabase('SELECT url, poster_url, thumbnail, stream_video_id FROM videos WHERE id = ?', [videoId]);
+    const rows = await queryDatabase('SELECT url, mp4_url, poster_url, thumbnail, stream_video_id FROM videos WHERE id = ?', [videoId]);
     if (!rows.length) {
       console.warn(`[DELETE] Video ${id} not found`);
       return NextResponse.json({ error: 'Video not found' }, { status: 404 });
@@ -337,21 +337,38 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     const video = rows[0];
     console.log(`[DELETE] Found video ${id}, proceeding with deletion`);
 
+    // FIXED: Handles nested R2 paths like thumbnails/clips/123/456.jpg
     const extractKeyFromUrl = (url: string): string | null => {
       if (!url) return null;
+
+      // R2 URLs from our CDN - preserve full path after domain
       if (url.startsWith('https://media.odubo.studio/')) {
         return url.replace('https://media.odubo.studio/', '');
       }
+
+      // Cloudflare videodelivery URLs - not R2 keys
+      if (url.includes('videodelivery.net')) {
+        return null; // These are handled separately via Cloudflare Stream API
+      }
+
+      // If already a key (no protocol), use as-is
       if (!url.startsWith('http')) return url;
-      const parts = url.split('/');
-      return parts[parts.length - 1] || null;
+
+      // Other URLs - try to extract path after domain
+      try {
+        const parsed = new URL(url);
+        const path = parsed.pathname.slice(1); // Remove leading slash
+        return path || null;
+      } catch {
+        return null;
+      }
     };
 
     // Recursive function to delete all descendants
     async function deleteAllDescendants(parentId: number): Promise<void> {
       // Find direct children
       const childClips = await queryDatabase(
-        `SELECT id, url, poster_url, thumbnail, stream_video_id FROM videos WHERE parent_video_id = ?`,
+        `SELECT id, url, mp4_url, poster_url, thumbnail, stream_video_id FROM videos WHERE parent_video_id = ?`,
         [parentId]
       );
       
@@ -363,7 +380,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
         
         console.log(`[DELETE] Deleting child clip ${clip.id}`);
         // Delete clip resources from R2 and Stream
-        const clipKeys = [clip.url, clip.poster_url, clip.thumbnail]
+        const clipKeys = [clip.url, clip.mp4_url, clip.poster_url, clip.thumbnail]
           .map((u: string) => extractKeyFromUrl(u))
           .filter(Boolean) as string[];
 
@@ -378,11 +395,25 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
 
         // Delete from Cloudflare Stream
         try {
-          const uid = clip.stream_video_id as string | undefined;
-          if (uid) {
+          // Try to get UID from stream_video_id field or extract from URL
+          let uid = clip.stream_video_id as string | undefined;
+          if (!uid || uid === '') {
+            // Try to extract from video URL
+            const videoUrl = clip.url as string;
+            const match = videoUrl?.match(/(?:iframe\.)?videodelivery\.net\/([a-f0-9]{32})/i);
+            if (match) {
+              uid = match[1];
+              console.log(`[DELETE] Extracted UID from URL for clip ${clip.id}: ${uid}`);
+            }
+          }
+
+          if (uid && uid.length === 32) {
             const { default: CloudflareStreamAPI } = await import('@/lib/cloudflareStream');
             const stream = new CloudflareStreamAPI();
             await stream.deleteVideo(uid);
+            console.log(`[DELETE] Deleted clip ${clip.id} from Cloudflare Stream (UID: ${uid})`);
+          } else {
+            console.warn(`[DELETE] Skipping Cloudflare Stream deletion for clip ${clip.id}: no valid UID found (stream_video_id: ${clip.stream_video_id}, url: ${clip.url})`);
           }
         } catch (e) {
           console.warn('Failed to delete clip from Cloudflare Stream (non-fatal):', e);
@@ -395,6 +426,8 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
           await executeQuery('DELETE FROM social_content WHERE video_id = ?', [clip.id]);
           await executeQuery('DELETE FROM ai_training_examples WHERE video_id = ?', [clip.id]);
           await executeQuery('DELETE FROM woda_video_context WHERE video_id = ?', [clip.id]);
+          // FIXED: Also delete from video_deployments to prevent orphaned deployment records
+          await executeQuery('DELETE FROM video_deployments WHERE video_id = ?', [clip.id]);
         } catch (e) {
           console.warn('Failed to delete dependent records for clip', clip.id, e);
         }
@@ -421,13 +454,15 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
       await executeQuery('DELETE FROM social_content WHERE video_id = ?', [videoId]);
       await executeQuery('DELETE FROM ai_training_examples WHERE video_id = ?', [videoId]);
       await executeQuery('DELETE FROM woda_video_context WHERE video_id = ?', [videoId]);
+      // FIXED: Also delete from video_deployments to prevent orphaned deployment records
+      await executeQuery('DELETE FROM video_deployments WHERE video_id = ?', [videoId]);
     } catch (e) {
       console.warn('Failed to delete dependent records for parent video', videoId, e);
     }
 
     // Delete parent video resources
     console.log(`[DELETE] Deleting parent video ${id} resources from R2`);
-    const maybeKeys = [video?.url, video?.poster_url, video?.thumbnail]
+    const maybeKeys = [video?.url, video?.mp4_url, video?.poster_url, video?.thumbnail]
       .map((u: string) => extractKeyFromUrl(u))
       .filter(Boolean) as string[];
 
@@ -443,12 +478,26 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     // Attempt to delete Cloudflare Stream asset if present
     console.log(`[DELETE] Deleting parent video ${id} from Cloudflare Stream`);
     try {
-      const uid = (video as any)?.stream_video_id as string | undefined;
-      if (uid) {
+      // Try to get UID from stream_video_id field or extract from URL
+      let uid = (video as any)?.stream_video_id as string | undefined;
+      if (!uid || uid === '') {
+        // Try to extract from video URL
+        const videoUrl = (video as any)?.url as string;
+        const match = videoUrl?.match(/(?:iframe\.)?videodelivery\.net\/([a-f0-9]{32})/i);
+        if (match) {
+          uid = match[1];
+          console.log(`[DELETE] Extracted UID from URL for video ${id}: ${uid}`);
+        }
+      }
+
+      if (uid && uid.length === 32) {
         // Lazy import to avoid throwing if not configured
         const { default: CloudflareStreamAPI } = await import('@/lib/cloudflareStream');
         const stream = new CloudflareStreamAPI();
         await stream.deleteVideo(uid);
+        console.log(`[DELETE] Deleted video ${id} from Cloudflare Stream (UID: ${uid})`);
+      } else {
+        console.warn(`[DELETE] Skipping Cloudflare Stream deletion for video ${id}: no valid UID found (stream_video_id: ${(video as any)?.stream_video_id}, url: ${(video as any)?.url})`);
       }
     } catch (e) {
       console.warn('Failed to delete Cloudflare Stream video (non-fatal):', e);

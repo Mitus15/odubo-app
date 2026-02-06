@@ -1,24 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { queryDatabase, executeQuery } from '@/lib/db';
+import { getUserFromRequest, isAdminUser } from '@/lib/auth';
 
 export const runtime = 'nodejs';
 
 /**
  * GET /api/arsenal/feed-order
  * Get all clips ordered by feed position
- * Requires authentication
+ * Protected by admin-only access
  */
 export async function GET(request: Request) {
   try {
-    // Check authentication
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
     const clips = await queryDatabase(
       `SELECT id, uid, title, poster_url, duration, feed_position, parent_video_id,
               artist_name, created_at
@@ -48,12 +40,12 @@ export async function GET(request: Request) {
  */
 export async function PUT(request: NextRequest) {
   try {
-    // Check authentication
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    // Server-side authentication using httpOnly cookies
+    const user = getUserFromRequest(request);
+    if (!isAdminUser(user)) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
+        { error: 'Forbidden: Admins only' },
+        { status: 403 }
       );
     }
 

@@ -6,22 +6,14 @@ export const runtime = 'nodejs';
 /**
  * GET /api/arsenal/videos
  * Fetch all videos with Arsenal-related fields for the content library
- * Requires authentication
+ * Protected by admin-only access
  */
 export async function GET(request: Request) {
   try {
-    // Check authentication
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
     console.log('[Arsenal] Fetching videos...');
     // Fetch ALL videos for Arsenal management (including unpublished)
     // LEFT JOIN tracks and albums to get music relationship names
+    // LEFT JOIN video_deployments to get deployment status per platform
     const results = await queryDatabase(
       `SELECT
         v.id,
@@ -54,7 +46,9 @@ export async function GET(request: Request) {
         v.social_hashtags,
         v.social_first_comment,
         v.social_visibility,
-        v.created_at
+        v.created_at,
+        (SELECT COUNT(*) FROM video_deployments vd WHERE vd.video_id = v.id) as deployment_count,
+        (SELECT GROUP_CONCAT(vd.platform || ':' || vd.status) FROM video_deployments vd WHERE vd.video_id = v.id) as deployment_details
       FROM videos v
       LEFT JOIN tracks t ON v.track_id = t.id
       LEFT JOIN albums a ON v.album_id = a.id

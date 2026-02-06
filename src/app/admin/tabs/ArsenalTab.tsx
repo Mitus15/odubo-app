@@ -46,6 +46,9 @@ interface Video {
   social_first_comment: string | null;
   social_visibility: string | null;
   created_at: string;
+  // Deployment tracking (from video_deployments table)
+  deployment_count: number | null;
+  deployment_details: string | null; // e.g., "youtube:published,tiktok:pending"
 }
 
 interface DeployMetadata {
@@ -380,7 +383,9 @@ function VideoCard({
   const hasChildren = children && children.length > 0;
   const isClip = video.parent_video_id !== null;
   const isPublished = video.is_public === 1 || video.publication_status === 'live';
-  const isDeployed = !!(video.youtube_url || video.youtube_shorts_url || video.tiktok_url || video.instagram_reels_url);
+  // Use deployment_count from video_deployments table, fall back to old flat columns
+  const isDeployed = (video.deployment_count && video.deployment_count > 0) ||
+    !!(video.youtube_url || video.youtube_shorts_url || video.tiktok_url || video.instagram_reels_url);
 
   return (
     <div className={`rounded-xl ${isClip ? 'ml-8' : ''}`}>
@@ -389,15 +394,19 @@ function VideoCard({
       } transition-colors`}>
         {/* Top row on mobile: checkbox, expand, thumbnail, and info */}
         <div className="flex items-center gap-3 md:gap-4 flex-1 min-w-0">
-          {/* Selection checkbox */}
+          {/* Selection checkbox - disabled for already-deployed videos */}
           {onSelect && (
             <button
-              onClick={() => onSelect(video.id)}
+              onClick={() => !isDeployed && onSelect(video.id)}
+              disabled={isDeployed}
               className={`w-5 h-5 rounded border flex items-center justify-center transition-colors flex-shrink-0 ${
-                isSelected
-                  ? 'bg-[#843c2d] border-[#843c2d] text-white'
-                  : 'border-[#502d26]/50 hover:border-[#843c2d]'
+                isDeployed
+                  ? 'opacity-40 cursor-not-allowed border-[#502d26]/30'
+                  : isSelected
+                    ? 'bg-[#843c2d] border-[#843c2d] text-white'
+                    : 'border-[#502d26]/50 hover:border-[#843c2d]'
               }`}
+              title={isDeployed ? 'Already deployed - cannot select' : undefined}
             >
               {isSelected && Icons.check}
             </button>
@@ -1876,6 +1885,8 @@ function UploadView({
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState('');
+  const [uploadFailed, setUploadFailed] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [parentVideoId, setParentVideoId] = useState<number | null>(null);
   const dragFileIndex = useRef<number | null>(null);
   const previousUploadTypeRef = useRef<'video' | 'clip'>('clip');
@@ -1943,14 +1954,14 @@ function UploadView({
     const fetchMusicData = async () => {
       try {
         // Fetch albums
-        const albumsRes = await fetch('/api/music/albums');
+        const albumsRes = await fetch('/api/albums');
         if (albumsRes.ok) {
           const albumsData = await albumsRes.json();
           setAvailableAlbums(albumsData.albums || []);
         }
         
         // Fetch tracks
-        const tracksRes = await fetch('/api/music/tracks');
+        const tracksRes = await fetch('/api/tracks');
         if (tracksRes.ok) {
           const tracksData = await tracksRes.json();
           setAvailableTracks(tracksData.tracks || []);
@@ -2004,6 +2015,7 @@ function UploadView({
 
     setUploading(true);
     setUploadProgress('Starting upload...');
+    setUploadFailed(false);
 
     try {
       // Get parent video metadata for clips
@@ -2017,6 +2029,9 @@ function UploadView({
         parentMood = parent?.mood || '';
       }
 
+      // Track uploaded UIDs for thumbnail generation
+      const uploadedUids: string[] = [];
+
       for (let i = 0; i < selectedFiles.length; i++) {
         const file = selectedFiles[i];
         // For clips: use filename. For videos: use entered title (or filename if multiple)
@@ -2026,74 +2041,93 @@ function UploadView({
 
         setUploadProgress(`Uploading ${i + 1}/${selectedFiles.length}: ${title}`);
 
-        // 1. Get TUS endpoint and credentials
-        const tusRes = await fetch('/api/videos/tus-upload', {
+        // 1. Upload to R2 and copy to Cloudflare Stream
+        // Step 1: Get presigned R2 URL
+        const presignedRes = await fetch('/api/videos/r2-upload', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: title })
+          body: JSON.stringify({
+            filename: file.name,
+            contentType: file.type,
+          }),
         });
-        const tusData = await tusRes.json() as { 
-          tusEndpoint?: string; 
-          apiToken?: string;
-          metadata?: Record<string, string>;
-        };
 
-        if (!tusData.tusEndpoint || !tusData.apiToken) {
-          throw new Error('Failed to get TUS credentials');
+        if (!presignedRes.ok) {
+          const error = await presignedRes.json();
+          throw new Error(`Failed to get upload URL: ${error.error}`);
         }
 
-        // 2. Upload using TUS protocol with chunking
-        let uploadedUid: string | null = null;
+        const { uploadUrl, publicUrl } = await presignedRes.json();
 
+        // Step 2: Upload file directly to R2
         await new Promise<void>((resolve, reject) => {
-          const upload = new tus.Upload(file, {
-            endpoint: tusData.tusEndpoint,
-            chunkSize: 50 * 1024 * 1024, // 50MB chunks
-            retryDelays: [0, 1000, 3000, 5000, 10000],
+          const xhr = new XMLHttpRequest();
+
+          xhr.upload.addEventListener('progress', (e) => {
+            if (e.lengthComputable) {
+              const percentage = ((e.loaded / e.total) * 100).toFixed(1);
+              setUploadProgress(`Uploading ${i + 1}/${selectedFiles.length}: ${title} (${percentage}%)`);
+            }
+          });
+
+          xhr.addEventListener('load', () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              resolve();
+            } else {
+              reject(new Error(`Upload failed with status ${xhr.status}`));
+            }
+          });
+
+          xhr.addEventListener('error', () => reject(new Error('Upload failed')));
+          xhr.addEventListener('abort', () => reject(new Error('Upload aborted')));
+
+          xhr.open('PUT', uploadUrl);
+          xhr.setRequestHeader('Content-Type', file.type);
+          xhr.send(file);
+        });
+
+        setUploadProgress(`Processing ${i + 1}/${selectedFiles.length}: ${title} - sending to Cloudflare Stream...`);
+
+        // Step 3: Send R2 URL to Cloudflare Stream for processing
+        const streamRes = await fetch('/api/videos/r2-upload', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            r2Url: publicUrl,
             metadata: {
-              ...tusData.metadata,
               name: title,
               filetype: file.type,
             },
-            headers: {
-              'Authorization': `Bearer ${tusData.apiToken}`,
-            },
-            onError: (error) => {
-              console.error('Upload failed:', error);
-              reject(new Error(`Upload failed: ${error.message}`));
-            },
-            onProgress: (bytesUploaded, bytesTotal) => {
-              const percentage = ((bytesUploaded / bytesTotal) * 100).toFixed(1);
-              setUploadProgress(`Uploading ${i + 1}/${selectedFiles.length}: ${title} (${percentage}%)`);
-            },
-            onSuccess: () => {
-              console.log('Upload completed successfully');
-              // Extract UID from upload URL (remove query params if present)
-              const uploadUrl = upload.url;
-              if (uploadUrl) {
-                const urlParts = uploadUrl.split('/').pop();
-                const uid = urlParts?.split('?')[0]; // Remove ?tusv2=true or other query params
-                uploadedUid = uid || null;
-              }
-              resolve();
-            },
-          });
-
-          upload.start();
+          }),
         });
 
-        if (!uploadedUid) throw new Error('Failed to get video UID from upload');
-        const uid = uploadedUid;
+        if (!streamRes.ok) {
+          const error = await streamRes.json();
+          throw new Error(`Failed to copy to Stream: ${error.error}`);
+        }
 
-        // 3. Create video/clip record
-        // Construct Cloudflare Stream URLs
+        const { uid } = await streamRes.json();
+
+        if (!uid) {
+          throw new Error('Failed to get video UID from Cloudflare Stream');
+        }
+
+        // Track UID for thumbnail generation
+        uploadedUids.push(uid);
+
+        // 2. Create video/clip record
+        // Construct Cloudflare Stream embed URL
         const embedUrl = `https://iframe.videodelivery.net/${uid}`;
-        const posterUrl = `https://videodelivery.net/${uid}/thumbnails/thumbnail.jpg`;
+        
+        // NOTE: Don't set poster_url/thumbnail - let API auto-generate from UID
+        // Custom thumbnails will be generated later via polling:
+        // - Clips: Random frame extraction (10-90% of duration) → uploaded to R2
+        // - Parent videos: AI-powered frame analysis → best shot selected
 
         if (uploadType === 'clip') {
           // Clips inherit publication status and metadata from parent
-          // Use random frame at 50% timestamp (skip AI)
-          await fetch(`/api/videos/${parentVideoId}/clips`, {
+          // Thumbnail will be auto-generated when video is ready
+          const clipRes = await fetch(`/api/videos/${parentVideoId}/clips`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -2101,9 +2135,8 @@ function UploadView({
               stream_video_id: uid, // Set both for consistency
               title,
               url: embedUrl,
-              poster_url: posterUrl, // Consistent field name
-              thumbnail: posterUrl,  // Legacy field
-              thumbnail_timestamp_pct: 0.5, // Random frame at midpoint
+              mp4_url: publicUrl, // R2 URL for deployment
+              // Omit poster_url/thumbnail - API will auto-generate from UID
               // Include inherited metadata
               description: videoDescription,
               credits: videoCredits,
@@ -2111,9 +2144,16 @@ function UploadView({
               mood: videoMood,
             })
           });
+          
+          if (!clipRes.ok) {
+            const errorText = await clipRes.text();
+            console.error('[Arsenal Upload] Clip creation failed:', errorText);
+            throw new Error(`Failed to create clip: ${errorText}`);
+          }
         } else {
           // Create parent video as unpublished (draft) by default
           // User will explicitly publish when ready
+          // Thumbnail will be auto-generated by webhook using AI frame analysis
           
           // Build scheduled_for if date/time provided
           let scheduled_for: string | null = null;
@@ -2129,7 +2169,7 @@ function UploadView({
             }
           }
           
-          await fetch('/api/videos', {
+          const createRes = await fetch('/api/videos', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -2137,13 +2177,13 @@ function UploadView({
               stream_video_id: uid, // Set both for consistency
               title,
               url: embedUrl,
-              poster_url: posterUrl,
-              thumbnail: posterUrl, // Legacy field
+              mp4_url: publicUrl, // R2 URL for deployment
+              // Omit poster_url/thumbnail - API will auto-generate from UID
               description: videoDescription,
               credits: videoCredits,
               artist_name: videoArtist,
-              category: videoCategory,
-              mood: videoMood,
+              category: videoCategory, // Required for AI thumbnail context
+              mood: videoMood,         // Required for AI thumbnail context
               type: videoType,
               track_id: linkedTrackId || null,
               album_id: linkedAlbumId || null,
@@ -2152,10 +2192,76 @@ function UploadView({
               publication_status: 'archived',
             })
           });
+          
+          if (!createRes.ok) {
+            const errorText = await createRes.text();
+            console.error('[Arsenal Upload] Video creation failed:', errorText);
+            throw new Error(`Failed to create video: ${errorText}`);
+          }
         }
       }
 
-      setUploadProgress('✓ Upload complete! Thumbnails will be generated automatically by Cloudflare Stream within 1-2 minutes.');
+      setUploadProgress('✓ Upload complete! Checking video processing status...');
+      
+      // Trigger automatic thumbnail generation after upload
+      // Poll for video readiness and generate thumbnail when ready
+      if (uploadedUids.length > 0) {
+        const lastUid = uploadedUids[uploadedUids.length - 1];
+        
+        setTimeout(async () => {
+          try {
+            let attempts = 0;
+            const maxAttempts = 12; // 12 attempts × 10s = 2 minutes max
+            
+            const pollForReadiness = async () => {
+              attempts++;
+              console.log(`[Arsenal Upload] Polling video ${lastUid} readiness (attempt ${attempts}/${maxAttempts})...`);
+              
+              const pollRes = await fetch('/api/videos/poll-ready', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ uid: lastUid })
+              });
+            
+            if (!pollRes.ok) {
+              console.error('[Arsenal Upload] Poll failed:', await pollRes.text());
+              if (attempts < maxAttempts) {
+                setTimeout(pollForReadiness, 10000);
+              } else {
+                setUploadProgress('✓ Upload complete! (Video still processing - refresh Arsenal to retry thumbnail)');
+              }
+              return;
+            }
+            
+            const pollData = await pollRes.json();
+            
+            if (pollData.ready && pollData.thumbnailGenerated) {
+              console.log(`[Arsenal Upload] Thumbnail generated successfully for ${lastUid}`);
+              setUploadProgress('✓ Upload complete! Custom thumbnail generated successfully.');
+              // Refresh video list to show new thumbnail
+              setTimeout(() => onUploadComplete(), 2000);
+            } else if (pollData.ready && !pollData.thumbnailGenerated) {
+              console.warn(`[Arsenal Upload] Video ready but thumbnail failed:`, pollData.error);
+              setUploadProgress('✓ Upload complete! (Thumbnail generation failed - you can regenerate from Arsenal)');
+            } else if (attempts < maxAttempts) {
+              // Not ready yet, poll again
+              setTimeout(pollForReadiness, 10000);
+            } else {
+              console.warn(`[Arsenal Upload] Video ${lastUid} not ready after ${maxAttempts} attempts`);
+              setUploadProgress('✓ Upload complete! (Video still processing - thumbnail will appear shortly)');
+            }
+          };
+          
+          // Start polling after 30 seconds (give Cloudflare a head start)
+          setTimeout(pollForReadiness, 30000);
+          
+        } catch (pollError) {
+          console.error('[Arsenal Upload] Error in thumbnail polling:', pollError);
+          setUploadProgress('✓ Upload complete! (Thumbnail generation pending - refresh Arsenal)');
+        }
+      }, 1000);
+      }
+      
       setSelectedFiles([]);
       // Reset form
       setVideoTitle('');
@@ -2166,9 +2272,83 @@ function UploadView({
       onUploadComplete();
     } catch (error) {
       console.error('Upload failed:', error);
-      setUploadProgress('✗ Upload failed. See console for details.');
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      setUploadFailed(true);
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleSyncFromStream = async () => {
+    setSyncing(true);
+    setUploadProgress('Syncing from Cloudflare Stream...');
+    
+    try {
+      const token = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('token='))
+        ?.split('=')[1];
+      
+      const res = await fetch('/api/arsenal/sync-from-stream', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!res.ok) {
+        throw new Error(`Sync failed: ${res.status}`);
+      }
+      
+      const data = await res.json();
+      setUploadProgress(`✓ Sync complete! Found ${data.synced || 0} videos in Stream. Refreshing...`);
+      setUploadFailed(false);
+      
+      // Refresh video list
+      setTimeout(() => {
+        onUploadComplete();
+        setUploadProgress('');
+      }, 2000);
+      
+    } catch (error) {
+      console.error('Sync failed:', error);
+      setUploadProgress(`✗ Sync failed: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const handleClearStream = async () => {
+    if (!confirm('⚠️ Delete ALL videos from Cloudflare Stream? This cannot be undone!')) {
+      return;
+    }
+
+    setSyncing(true);
+    setUploadProgress('Deleting all videos from Cloudflare Stream...');
+    
+    try {
+      const res = await fetch('/api/admin/stream/clear-all', {
+        method: 'DELETE'
+      });
+      
+      if (!res.ok) {
+        throw new Error(`Clear failed: ${res.status}`);
+      }
+      
+      const data = await res.json();
+      setUploadProgress(`✓ Cleared! Deleted ${data.successful || 0} videos from Stream.`);
+      setUploadFailed(false);
+      
+      setTimeout(() => {
+        setUploadProgress('');
+      }, 3000);
+      
+    } catch (error) {
+      console.error('Clear failed:', error);
+      setUploadProgress(`✗ Clear failed: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -2469,10 +2649,41 @@ function UploadView({
                 ))}
               </select>
             </div>
-          </div>
-          
-          {/* Schedule for Deployment (Optional) */}
-          <div className="pt-4 border-t border-white/10">
+
+            {/* Upload Progress & Recovery UI */}
+            {(uploading || uploadProgress) && (
+              <div className="space-y-3">
+                <div className="p-4 rounded-xl bg-[#843c2d]/10 text-[#ede8df] text-sm">
+                  {uploadProgress}
+                </div>
+                
+                {/* Recovery button if upload failed */}
+                {uploadFailed && !uploading && (
+                  <div className="p-4 rounded-xl bg-[#6d3224]/20 border border-[#843c2d]/30 space-y-3">
+                    <p className="text-xs text-[#ede8df]/70">
+                      💡 <strong>Upload failed - video may be orphaned in Cloudflare Stream</strong>
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleSyncFromStream}
+                        disabled={syncing}
+                        className="flex-1 py-2.5 rounded-lg bg-[#843c2d] hover:bg-[#9b4633] text-white text-xs font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {syncing ? 'Syncing...' : '🔄 Sync & Recover'}
+                      </button>
+                      <button
+                        onClick={handleClearStream}
+                        disabled={syncing}
+                        className="flex-1 py-2.5 rounded-lg bg-red-900/50 hover:bg-red-900/70 text-white text-xs font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {syncing ? 'Clearing...' : '🗑️ Clear Stream & Retry'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             <h3 className="text-sm font-medium text-[#ede8df] mb-2">Schedule Deployment (Optional)</h3>
             <p className="text-xs text-[#726d6c] mb-3">
               Set when this video should be deployed to platforms. You can also set/change this later in the Deploy view.
@@ -3191,7 +3402,9 @@ export default function ArsenalTab() {
     try {
       const res = await fetch('/api/arsenal/deploy', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
           videoIds: selectedIds,
           platforms,
@@ -3199,16 +3412,31 @@ export default function ArsenalTab() {
           metadata,
           wodaGenerationId,
         }),
+        credentials: 'include', // Important: send httpOnly cookies
       });
 
-      if (!res.ok) throw new Error('Deploy failed');
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Deploy failed');
+      }
+
+      const data = await res.json();
+      const successCount = data.results?.filter((r: any) => r.success).length || 0;
+      const failCount = data.results?.filter((r: any) => !r.success).length || 0;
+
+      // Show success message
+      const message = failCount > 0
+        ? `Deployed ${successCount} video(s) successfully. ${failCount} failed.`
+        : `Successfully deployed ${successCount} video(s) to ${platforms.join(', ')}`;
+      alert(message);
 
       // Clear selection and refresh
       setSelectedIds([]);
-      fetchVideos();
+      await fetchVideos();
       setView('library');
     } catch (error) {
       console.error('Deploy error:', error);
+      alert(`Deploy failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setDeploying(false);
     }

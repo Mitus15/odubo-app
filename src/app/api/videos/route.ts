@@ -135,6 +135,9 @@ const videoCreateSchema = z.object({
   ai_description: z.string().optional().nullable(),
   tags: z.union([z.string(), z.array(z.string())]).optional().default('[]'),
   url: z.string().min(1),
+  uid: z.string().optional().default(''), // Cloudflare Stream UID
+  stream_video_id: z.string().optional().default(''), // Cloudflare Stream video ID
+  mp4_url: z.string().optional().default(''), // R2 MP4 URL for deployment
   poster_url: z.string().optional().default(''),
   thumbnail: z.string().optional().default(''),
   duration: z.union([z.string(), z.number()]).optional().default(''),
@@ -173,10 +176,19 @@ export async function POST(req: NextRequest) {
   const long_description = body.long_description ?? null;
   const ai_description = body.ai_description ?? null;
   const tagsJson = Array.isArray(body.tags) ? JSON.stringify(body.tags) : (typeof body.tags === 'string' ? body.tags : '[]');
-    const url = (body as any).url || (body as any).video_url || '';
-    const uid = (body as any).uid || '';
+    const url = body.url;
+    const uid = body.uid || body.stream_video_id || '';
+    const mp4_url = body.mp4_url || '';
+
+    console.log('[Videos POST] Creating video:', {
+      title,
+      uid,
+      url,
+      mp4_url,
+      has_uid: !!uid
+    });
     // Auto-generate poster_url from uid if not provided
-    const poster_url = (body as any).poster_url || (body as any).thumbnail_url ||
+    const poster_url = body.poster_url ||
       (uid ? `https://videodelivery.net/${uid}/thumbnails/thumbnail.jpg` : '');
     const thumbnail = body.thumbnail || poster_url;
     const duration = body.duration ?? '';
@@ -205,9 +217,9 @@ export async function POST(req: NextRequest) {
     await executeQuery(
       `INSERT INTO videos (
         title, artist_name, description, short_description, long_description, ai_description, tags,
-        url, uid, stream_video_id, poster_url, thumbnail, duration, duration_seconds, category, is_public, type, mood,
+        url, uid, stream_video_id, mp4_url, poster_url, thumbnail, duration, duration_seconds, category, is_public, type, mood,
         credits, related_projects, status, publication_status, thumbnail_timestamp_pct, track_id, album_id, scheduled_for, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
       [
         title,
         artist_name,
@@ -219,6 +231,7 @@ export async function POST(req: NextRequest) {
         url,
         uid,
         uid, // stream_video_id = uid for consistency
+        mp4_url, // R2 MP4 URL for deployment
         poster_url,
         thumbnail,
         String(duration),
@@ -234,7 +247,7 @@ export async function POST(req: NextRequest) {
         thumbnail_timestamp_pct,
         track_id,
         album_id,
-        scheduled_for  // NEW
+        scheduled_for
       ]
     );
     // Resolve inserted ID by UID (safer across runtimes)

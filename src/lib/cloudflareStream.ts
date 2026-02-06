@@ -122,7 +122,25 @@ class CloudflareStreamAPI {
       return {} as T;
     }
 
-    return response.json() as T;
+    // Check if response has content before parsing JSON
+    const contentLength = response.headers.get('content-length');
+    const contentType = response.headers.get('content-type');
+
+    // If no content or empty body, return empty object
+    if (contentLength === '0' || (contentLength === null && !contentType?.includes('application/json'))) {
+      return { success: true } as T;
+    }
+
+    // Try to parse JSON, fallback to empty object if fails
+    try {
+      return await response.json() as T;
+    } catch (e) {
+      // Empty or invalid JSON response - treat as success for DELETE operations
+      if (options.method === 'DELETE') {
+        return { success: true } as T;
+      }
+      throw e;
+    }
   }
 
   /**

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { queryDatabase, executeQuery } from '@/lib/db';
 import { createPost, getAccounts } from '@/lib/postforme';
+import { getUserFromRequest, isAdminUser } from '@/lib/auth';
 
 export const runtime = 'nodejs';
 
@@ -82,16 +83,14 @@ function formatCaption(
  */
 export async function POST(request: NextRequest) {
   try {
-    // Check authentication
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    // Server-side authentication using httpOnly cookies
+    const user = getUserFromRequest(request);
+    if (!isAdminUser(user)) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
+        { error: 'Forbidden: Admins only' },
+        { status: 403 }
       );
     }
-
-    // TODO: Verify JWT token here when auth is fully implemented
 
     const body = (await request.json()) as DeployRequest;
     const { videoIds, platforms, scheduleAt, metadata, wodaGenerationId } = body;
@@ -163,7 +162,20 @@ export async function POST(request: NextRequest) {
     }> = [];
 
     for (const video of videos) {
-      const videoUrl = video.mp4_url || video.url;
+      // Construct proper video URL for PostForMe
+      // PostForMe needs a direct video URL (not iframe embed)
+      let videoUrl = video.mp4_url;
+
+      // If no mp4_url, construct from uid
+      if (!videoUrl && video.uid) {
+        // Try HLS manifest URL (most compatible with PostForMe)
+        videoUrl = `https://videodelivery.net/${video.uid}/manifest/video.m3u8`;
+      }
+
+      // Last resort: use the url field (though it may be an iframe URL)
+      if (!videoUrl) {
+        videoUrl = video.url;
+      }
 
       if (!videoUrl) {
         for (const platform of platforms) {
@@ -345,8 +357,6 @@ export async function POST(request: NextRequest) {
     // Only if user wrote this themselves (no wodaGenerationId)
     if (metadata && !wodaGenerationId && successCount > 0) {
       try {
-        for (const video of videos) {
-          const isClip = video.parent_video_id !== null;
         for (const video of videos) {
           const isClip = video.parent_video_id !== null;
           const caption = formatCaption(video, metadata, isClip);

@@ -13,15 +13,14 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     }
 
     const { id } = await params;
-    
-    // Find clips where related_projects contains "parent_id:ID"
-    // Since related_projects is a JSON array string, we use LIKE
+
+    // FIXED: Use parent_video_id FK instead of fragile related_projects LIKE
+    // Order by clip_index for proper sequencing, fall back to position then created_at
     const clips = await queryDatabase(
-      `SELECT * FROM videos 
-       WHERE type = 'clip' 
-       AND related_projects LIKE ? 
-       ORDER BY position ASC, created_at ASC`,
-      [`%parent_id:${id}%`]
+      `SELECT * FROM videos
+       WHERE parent_video_id = ?
+       ORDER BY clip_index ASC, position ASC, created_at ASC`,
+      [id]
     );
 
     return NextResponse.json({ success: true, clips });
@@ -40,9 +39,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     const { id } = await params;
     const body = await req.json();
-    const { 
+    const {
       uid, title, duration, thumbnail, url, is_public, thumbnail_timestamp_pct,
-      description, credits, category, mood
+      description, credits, category, mood, mp4_url
     } = body;
 
     // Inherit artist from parent, but clips are ALWAYS hidden until distributed
@@ -67,13 +66,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     // They become visible when distributed via Social CMS → PostForMe
     await executeQuery(
       `INSERT INTO videos (
-        title, artist_name, uid, stream_video_id, url, poster_url, thumbnail, duration,
+        title, artist_name, uid, stream_video_id, url, mp4_url, poster_url, thumbnail, duration,
         status, type, is_public, publication_status, related_projects,
         parent_video_id, thumbnail_timestamp_pct,
         description, credits, category, mood,
         created_at, updated_at
       ) VALUES (
-        ?, ?, ?, ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?, ?, ?, ?, ?,
         'published', 'clip', 0, 'archived', ?,
         ?, ?,
         ?, ?, ?, ?,
@@ -85,6 +84,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         uid,
         uid, // stream_video_id = uid
         embedUrl,
+        mp4_url || '', // R2 MP4 URL for deployment
         posterUrl,
         posterUrl,
         duration || 0,
@@ -97,6 +97,42 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         mood || null,
       ]
     );
+
+    // FIXED: Auto-assign clip_index and update total_siblings for all clips
+    // This was previously missing, causing clips to have NULL clip_index values
+    try {
+      // Get the max clip_index for this parent (to assign next index)
+      const maxResult = await queryDatabase(
+        'SELECT MAX(clip_index) as max_index FROM videos WHERE parent_video_id = ?',
+        [id]
+      ) as Array<{ max_index: number | null }>;
+      const currentMax = maxResult[0]?.max_index || 0;
+      const newIndex = currentMax + 1;
+
+      // Update the newly inserted clip with its index (identified by uid)
+      await executeQuery(
+        'UPDATE videos SET clip_index = ? WHERE uid = ?',
+        [newIndex, uid]
+      );
+
+      // Get total count of clips under this parent
+      const countResult = await queryDatabase(
+        'SELECT COUNT(*) as total FROM videos WHERE parent_video_id = ?',
+        [id]
+      ) as Array<{ total: number }>;
+      const totalSiblings = countResult[0]?.total || newIndex;
+
+      // Update total_siblings for ALL clips under this parent (including the new one)
+      await executeQuery(
+        'UPDATE videos SET total_siblings = ? WHERE parent_video_id = ?',
+        [totalSiblings, id]
+      );
+
+      console.log(`[Clips] Assigned clip_index=${newIndex}, total_siblings=${totalSiblings} for parent ${id}`);
+    } catch (indexError) {
+      // Non-fatal: clip was created, just without index
+      console.warn('[Clips] Failed to assign clip_index:', indexError);
+    }
 
     // Clips are created with publication_status = 'archived' by default (as per INSERT above).
     // Visibility is controlled by parent cascade at query level (feed checks parent status).
@@ -168,6 +204,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
+    const { id: parentId } = await params;
     const body = await req.json();
     const { clipId } = body;
 
@@ -177,11 +214,11 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
 
     // Get the clip UID for Cloudflare Stream deletion
     const clips = await queryDatabase(
-      'SELECT uid FROM videos WHERE id = ? AND type = ?',
+      'SELECT uid, parent_video_id FROM videos WHERE id = ? AND type = ?',
       [clipId, 'clip']
-    );
+    ) as Array<{ uid?: string; parent_video_id?: number }>;
 
-    const clip = clips[0] as { uid?: string } | undefined;
+    const clip = clips[0];
 
     // Delete from Cloudflare Stream if UID exists
     if (clip?.uid) {
@@ -196,6 +233,27 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
 
     // Delete from database
     await executeQuery('DELETE FROM videos WHERE id = ? AND type = ?', [clipId, 'clip']);
+
+    // FIXED: Update total_siblings for remaining clips after deletion
+    const effectiveParentId = clip?.parent_video_id || parentId;
+    if (effectiveParentId) {
+      try {
+        const countResult = await queryDatabase(
+          'SELECT COUNT(*) as total FROM videos WHERE parent_video_id = ?',
+          [effectiveParentId]
+        ) as Array<{ total: number }>;
+        const newTotal = countResult[0]?.total || 0;
+
+        await executeQuery(
+          'UPDATE videos SET total_siblings = ? WHERE parent_video_id = ?',
+          [newTotal, effectiveParentId]
+        );
+
+        console.log(`[Clips] Updated total_siblings=${newTotal} after deleting clip from parent ${effectiveParentId}`);
+      } catch (e) {
+        console.warn('[Clips] Failed to update total_siblings after delete:', e);
+      }
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {
