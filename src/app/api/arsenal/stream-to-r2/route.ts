@@ -57,8 +57,11 @@ export async function POST(req: NextRequest) {
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const timestamp = Date.now();
-    const sanitized = (filename || uid).replace(/[^a-zA-Z0-9.-]/g, '_');
-    const key = `videos/source/${year}/${month}/${timestamp}-${sanitized}.mp4`;
+
+    // Force .mp4 extension for compatibility
+    const baseFilename = (filename || uid).replace(/\.[^/.]+$/, '').replace(/[^a-zA-Z0-9.-]/g, '_');
+    const sanitized = `${baseFilename}.mp4`;
+    const key = `videos/source/${year}/${month}/${timestamp}-${sanitized}`;
 
     // Upload to R2
     const putCommand = new PutObjectCommand({

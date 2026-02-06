@@ -78,14 +78,19 @@ async function handleStart(body: { filename: string; contentType: string }) {
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, '0');
   const timestamp = Date.now();
-  const sanitized = filename.replace(/[^a-zA-Z0-9.-]/g, '_');
+
+  // Force .mp4 extension for compatibility with PostForMe
+  // Remove original extension and sanitize
+  const baseFilename = filename.replace(/\.[^/.]+$/, '').replace(/[^a-zA-Z0-9.-]/g, '_');
+  const sanitized = `${baseFilename}.mp4`;
   const key = `videos/source/${year}/${month}/${timestamp}-${sanitized}`;
 
   // Initiate multipart upload
+  // Always use video/mp4 content-type regardless of input format
   const command = new CreateMultipartUploadCommand({
     Bucket: R2_BUCKET,
     Key: key,
-    ContentType: contentType || 'video/mp4',
+    ContentType: 'video/mp4',
   });
 
   const response = await s3.send(command);

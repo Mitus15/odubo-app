@@ -51,7 +51,10 @@ export async function POST(req: NextRequest) {
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const timestamp = Date.now();
-    const sanitized = (filename || file.name).replace(/[^a-zA-Z0-9.-]/g, '_');
+
+    // Force .mp4 extension for compatibility
+    const baseFilename = (filename || file.name).replace(/\.[^/.]+$/, '').replace(/[^a-zA-Z0-9.-]/g, '_');
+    const sanitized = `${baseFilename}.mp4`;
     const key = `videos/source/${year}/${month}/${timestamp}-${sanitized}`;
 
     // Convert File to Buffer for R2 upload
@@ -63,7 +66,7 @@ export async function POST(req: NextRequest) {
       Bucket: R2_BUCKET,
       Key: key,
       Body: buffer,
-      ContentType: file.type || 'video/mp4',
+      ContentType: 'video/mp4',
     });
 
     await s3.send(putCommand);
