@@ -2041,25 +2041,34 @@ function UploadView({
 
         setUploadProgress(`Uploading ${i + 1}/${selectedFiles.length}: ${title}`);
 
-        // 1. Upload to R2 and copy to Cloudflare Stream
-        // Step 1: Get presigned R2 URL
-        const presignedRes = await fetch('/api/videos/r2-upload', {
+        // 1. Get Cloudflare Stream direct upload URL
+        const uploadUrlRes = await fetch('/api/videos/stream/direct-upload', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            filename: file.name,
-            contentType: file.type,
+            title,
+            type: isClip ? 'clip' : 'long_form',
+            is_public: 0, // Arsenal uploads start private until deployed
+            description: videoDescription,
+            credits: videoCredits,
+            artist_name: videoArtist,
+            category: videoCategory,
+            mood: videoMood,
           }),
         });
 
-        if (!presignedRes.ok) {
-          const error = await presignedRes.json();
-          throw new Error(`Failed to get upload URL: ${error.error}`);
+        if (!uploadUrlRes.ok) {
+          const error = await uploadUrlRes.json();
+          throw new Error(`Failed to get upload URL: ${error.error || 'Unknown error'}`);
         }
 
-        const { uploadUrl, publicUrl } = await presignedRes.json();
+        const { uploadURL, uid } = await uploadUrlRes.json();
 
-        // Step 2: Upload file directly to R2
+        if (!uid || !uploadURL) {
+          throw new Error('Failed to get upload URL from Cloudflare Stream');
+        }
+
+        // 2. Upload file directly to Cloudflare Stream (has CORS)
         await new Promise<void>((resolve, reject) => {
           const xhr = new XMLHttpRequest();
 
@@ -2081,36 +2090,11 @@ function UploadView({
           xhr.addEventListener('error', () => reject(new Error('Upload failed')));
           xhr.addEventListener('abort', () => reject(new Error('Upload aborted')));
 
-          xhr.open('PUT', uploadUrl);
-          xhr.setRequestHeader('Content-Type', file.type);
+          xhr.open('POST', uploadURL);
           xhr.send(file);
         });
 
-        setUploadProgress(`Processing ${i + 1}/${selectedFiles.length}: ${title} - sending to Cloudflare Stream...`);
-
-        // Step 3: Send R2 URL to Cloudflare Stream for processing
-        const streamRes = await fetch('/api/videos/r2-upload', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            r2Url: publicUrl,
-            metadata: {
-              name: title,
-              filetype: file.type,
-            },
-          }),
-        });
-
-        if (!streamRes.ok) {
-          const error = await streamRes.json();
-          throw new Error(`Failed to copy to Stream: ${error.error}`);
-        }
-
-        const { uid } = await streamRes.json();
-
-        if (!uid) {
-          throw new Error('Failed to get video UID from Cloudflare Stream');
-        }
+        setUploadProgress(`Processing ${i + 1}/${selectedFiles.length}: ${title} - video uploaded to Stream`);
 
         // Track UID for thumbnail generation
         uploadedUids.push(uid);
@@ -2135,7 +2119,7 @@ function UploadView({
               stream_video_id: uid, // Set both for consistency
               title,
               url: embedUrl,
-              mp4_url: publicUrl, // R2 URL for deployment
+              // mp4_url omitted - deploy will use Stream HLS URL
               // Omit poster_url/thumbnail - API will auto-generate from UID
               // Include inherited metadata
               description: videoDescription,
@@ -2177,7 +2161,7 @@ function UploadView({
               stream_video_id: uid, // Set both for consistency
               title,
               url: embedUrl,
-              mp4_url: publicUrl, // R2 URL for deployment
+              // mp4_url omitted - deploy will use Stream HLS URL
               // Omit poster_url/thumbnail - API will auto-generate from UID
               description: videoDescription,
               credits: videoCredits,
