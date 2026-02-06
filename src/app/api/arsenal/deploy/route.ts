@@ -77,8 +77,8 @@ function formatCaption(
 
 /**
  * POST /api/arsenal/deploy
- * Deploy videos to social platforms via Post for Me
- * Each platform gets deployed separately for proper tracking
+ * Deploy videos to social platforms via PostForMe
+ * One PostForMe post per video covering all selected platforms
  * Requires authentication
  */
 export async function POST(request: NextRequest) {
@@ -151,13 +151,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Deploy each video to each platform separately
+    // Deploy each video — one PostForMe API call per video with ALL platforms
     const results: Array<{
       videoId: number;
-      platform: string;
+      platforms: string[];
       success: boolean;
       postId?: string;
-      externalUrl?: string;
       error?: string;
     }> = [];
 
@@ -178,14 +177,37 @@ export async function POST(request: NextRequest) {
       }
 
       if (!videoUrl) {
-        for (const platform of platforms) {
-          results.push({
-            videoId: video.id,
-            platform,
-            success: false,
-            error: 'No video URL available',
-          });
+        results.push({
+          videoId: video.id,
+          platforms,
+          success: false,
+          error: 'No video URL available',
+        });
+        continue;
+      }
+
+      // Collect account IDs for all selected platforms
+      const accountIds: string[] = [];
+      const deployedPlatforms: string[] = [];
+      const missingPlatforms: string[] = [];
+
+      for (const platform of platforms) {
+        const accountId = platformToAccountMap[platform];
+        if (accountId) {
+          accountIds.push(accountId);
+          deployedPlatforms.push(platform);
+        } else {
+          missingPlatforms.push(platform);
         }
+      }
+
+      if (accountIds.length === 0) {
+        results.push({
+          videoId: video.id,
+          platforms,
+          success: false,
+          error: 'No connected accounts found for any selected platform',
+        });
         continue;
       }
 
@@ -205,88 +227,86 @@ export async function POST(request: NextRequest) {
       // Format caption based on video type
       const caption = formatCaption(video, metadata, isClip);
 
-      // Deploy to each platform individually
-      for (const platform of platforms) {
-        const accountId = platformToAccountMap[platform];
+      // Build ALL platform-specific configurations in one object
+      const platform_configurations: Record<string, any> = {};
 
-        if (!accountId) {
-          results.push({
-            videoId: video.id,
-            platform,
-            success: false,
-            error: `No connected ${platform} account found`,
-          });
-          continue;
+      if (deployedPlatforms.includes('youtube') && metadata?.youtube) {
+        platform_configurations.youtube = {
+          title: metadata.title || video.title,
+          privacy_status: metadata.visibility || 'public',
+          made_for_kids: metadata.youtube.madeForKids,
+          category_id: metadata.youtube.category,
+          description: metadata.description,
+        };
+      }
+
+      if (deployedPlatforms.includes('tiktok') && metadata?.tiktok) {
+        platform_configurations.tiktok = {
+          title: metadata.title || video.title,
+          privacy_status: metadata.visibility === 'private' ? 'self_only' : 'public',
+          allow_duet: metadata.tiktok.allowDuet,
+          allow_stitch: metadata.tiktok.allowStitch,
+          allow_comment: metadata.tiktok.allowComments,
+          description: metadata.description,
+        };
+      }
+
+      if (deployedPlatforms.includes('instagram') && metadata?.instagram) {
+        platform_configurations.instagram = {
+          placement: isClip ? 'REELS' : 'FEED',
+          share_to_feed: metadata.instagram.shareToFeed,
+        };
+      }
+
+      console.log('[Arsenal Deploy]', {
+        videoId: video.id,
+        platforms: deployedPlatforms,
+        accountIds,
+        scheduleAt,
+        hasSchedule: !!scheduleAt,
+      });
+
+      // Create ONE post via PostForMe with ALL platform accounts
+      const postResponse = await createPost({
+        caption,
+        social_accounts: accountIds,
+        media,
+        schedule_at: scheduleAt,
+        first_comment: metadata?.firstComment || undefined,
+        platform_configurations: Object.keys(platform_configurations).length > 0
+          ? platform_configurations
+          : undefined,
+      });
+
+      console.log('[Arsenal Deploy] PostForMe response:', {
+        success: postResponse.success,
+        platforms: deployedPlatforms,
+        postId: postResponse.data?.id,
+        status: postResponse.data?.status,
+        platformsData: postResponse.data?.platforms,
+        error: postResponse.error,
+      });
+
+      if (postResponse.success && postResponse.data) {
+        const postId = postResponse.data.id;
+        const postStatus = postResponse.data.status || (scheduleAt ? 'scheduled' : 'published');
+        const now = new Date().toISOString();
+
+        // Build per-platform data from PostForMe response (if available)
+        const platformData = new Map<string, { url?: string; externalId?: string }>();
+        if (postResponse.data.platforms) {
+          for (const p of postResponse.data.platforms) {
+            platformData.set(p.platform.toLowerCase(), {
+              url: p.url,
+              externalId: p.external_id,
+            });
+          }
         }
 
-        // Build platform-specific configuration
-        const platform_configurations: any = {};
-
-        if (platform === 'youtube' && metadata?.youtube) {
-          platform_configurations.youtube = {
-            title: metadata.title || video.title,
-            privacy_status: metadata.visibility || 'public',
-            made_for_kids: metadata.youtube.madeForKids,
-            category_id: metadata.youtube.category,
-            description: metadata.description,
-          };
-        }
-
-        if (platform === 'tiktok' && metadata?.tiktok) {
-          platform_configurations.tiktok = {
-            title: metadata.title || video.title,
-            privacy_status: metadata.visibility === 'private' ? 'self_only' : 'public',
-            allow_duet: metadata.tiktok.allowDuet,
-            allow_stitch: metadata.tiktok.allowStitch,
-            allow_comment: metadata.tiktok.allowComments,
-            description: metadata.description,
-          };
-        }
-
-        if (platform === 'instagram' && metadata?.instagram) {
-          platform_configurations.instagram = {
-            placement: isClip ? 'REELS' : 'FEED',
-            share_to_feed: metadata.instagram.shareToFeed,
-          };
-        }
-
-        console.log('[Arsenal Deploy]', {
-          videoId: video.id,
-          platform,
-          accountId,
-          scheduleAt,
-          hasSchedule: !!scheduleAt,
-        });
-
-        // Create post via Post for Me (one platform at a time)
-        const postResponse = await createPost({
-          caption,
-          social_accounts: [accountId], // Single account
-          media,
-          schedule_at: scheduleAt,
-          first_comment: metadata?.firstComment || undefined,
-          platform_configurations: Object.keys(platform_configurations).length > 0
-            ? platform_configurations
-            : undefined,
-        });
-
-        console.log('[Arsenal Deploy] PostForMe response:', {
-          success: postResponse.success,
-          platform,
-          postId: postResponse.data?.id,
-          status: postResponse.data?.status,
-          externalUrl: postResponse.data?.external_url,
-          scheduledAt: postResponse.data?.scheduled_at,
-          error: postResponse.error,
-        });
-
-        if (postResponse.success && postResponse.data) {
-          const postId = postResponse.data.id;
-          const postStatus = postResponse.data.status || (scheduleAt ? 'scheduled' : 'published');
-          const externalUrl = postResponse.data.external_url || null;
-          const externalId = postResponse.data.external_id || null;
-
-          // Create video_deployments record
+        // Insert one video_deployments row per platform, all sharing the same postforme_post_id
+        let allDbSuccess = true;
+        for (const platform of deployedPlatforms) {
+          const pData = platformData.get(platform);
           try {
             await executeQuery(
               `INSERT INTO video_deployments (
@@ -302,42 +322,45 @@ export async function POST(request: NextRequest) {
                 video.id,
                 platform,
                 postId,
-                externalUrl,
-                externalId,
+                pData?.url || null,
+                pData?.externalId || null,
                 postStatus,
-                new Date().toISOString(),
+                now,
               ]
             );
-
-            results.push({
-              videoId: video.id,
-              platform,
-              success: true,
-              postId,
-              externalUrl: externalUrl || undefined,
-            });
           } catch (dbError) {
-            console.error('[Arsenal] Failed to create deployment record:', dbError);
-            results.push({
-              videoId: video.id,
-              platform,
-              success: false,
-              error: 'Deployment succeeded but failed to save record',
-            });
+            console.error(`[Arsenal] Failed to create deployment record for ${platform}:`, dbError);
+            allDbSuccess = false;
           }
-        } else {
-          results.push({
-            videoId: video.id,
-            platform,
-            success: false,
-            error: postResponse.error || 'Unknown error',
-          });
         }
+
+        results.push({
+          videoId: video.id,
+          platforms: deployedPlatforms,
+          success: true,
+          postId,
+          ...(missingPlatforms.length > 0 && {
+            error: `Missing accounts for: ${missingPlatforms.join(', ')}`,
+          }),
+          ...(!allDbSuccess && {
+            error: 'Post created but some deployment records failed to save',
+          }),
+        });
+      } else {
+        results.push({
+          videoId: video.id,
+          platforms: deployedPlatforms,
+          success: false,
+          error: postResponse.error || 'Unknown error',
+        });
       }
     }
 
     const successCount = results.filter((r) => r.success).length;
     const failCount = results.filter((r) => !r.success).length;
+    const totalPlatformsDeploy = results
+      .filter((r) => r.success)
+      .reduce((sum, r) => sum + r.platforms.length, 0);
 
     // Record positive feedback for Woda-generated content that was deployed
     if (wodaGenerationId && successCount > 0) {
@@ -389,16 +412,13 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({
-      message: `Deployed ${successCount} times${failCount > 0 ? `, ${failCount} failed` : ''}`,
+      message: `Deployed ${successCount} video(s) to ${totalPlatformsDeploy} platform(s)${failCount > 0 ? `, ${failCount} failed` : ''}`,
       results,
       summary: {
         total: results.length,
         successful: successCount,
         failed: failCount,
-        byPlatform: platforms.reduce((acc: Record<string, number>, platform) => {
-          acc[platform] = results.filter(r => r.platform === platform && r.success).length;
-          return acc;
-        }, {}),
+        platformsDeployed: totalPlatformsDeploy,
       },
     });
   } catch (error) {

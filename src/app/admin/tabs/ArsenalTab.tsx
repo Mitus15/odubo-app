@@ -3421,12 +3421,13 @@ export default function ArsenalTab() {
       }
 
       const data = await res.json();
-      const successCount = data.results?.filter((r: any) => r.success).length || 0;
-      const failCount = data.results?.filter((r: any) => !r.success).length || 0;
+      const successCount = data.summary?.successful || data.results?.filter((r: any) => r.success).length || 0;
+      const failCount = data.summary?.failed || data.results?.filter((r: any) => !r.success).length || 0;
+      const platformCount = data.summary?.platformsDeployed || platforms.length;
 
       // Show success message
       const message = failCount > 0
-        ? `Deployed ${successCount} video(s) successfully. ${failCount} failed.`
+        ? `Deployed ${successCount} video(s) to ${platformCount} platform(s). ${failCount} failed.`
         : `Successfully deployed ${successCount} video(s) to ${platforms.join(', ')}`;
       alert(message);
 

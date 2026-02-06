@@ -51,6 +51,15 @@ export interface SocialPost {
   scheduled_at?: string;
   published_at?: string;
   created_at: string;
+  error_message?: string;
+  // Multi-platform posts return per-platform status/URLs
+  platforms?: Array<{
+    platform: string;
+    status: string;
+    url?: string;
+    external_id?: string;
+    error?: string;
+  }>;
 }
 
 export interface PostAnalytics {

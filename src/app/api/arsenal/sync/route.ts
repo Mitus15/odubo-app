@@ -31,12 +31,11 @@ function getLegacyColumnForPlatform(platform: string, isClip: boolean): string {
 
 /**
  * POST /api/arsenal/sync
- * Sync platform URLs from Post for Me after publishing
+ * Sync platform URLs from PostForMe after publishing
  *
- * FIXED: Now queries video_deployments table (where deploy writes)
- * instead of videos.postforme_post_id (which was never populated)
- *
- * Also makes videos public after successful sync.
+ * Groups deployments by postforme_post_id to avoid redundant API calls,
+ * since one PostForMe post can cover multiple platforms.
+ * Parses the per-platform status/URL data from PostForMe's platforms array.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -74,105 +73,147 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Group deployments by postforme_post_id to avoid redundant API calls
+    // One PostForMe post can cover multiple platforms
+    const byPostId = new Map<string, Deployment[]>();
+    for (const d of deployments) {
+      const group = byPostId.get(d.postforme_post_id) || [];
+      group.push(d);
+      byPostId.set(d.postforme_post_id, group);
+    }
+
     let updated = 0;
     let madePublic = 0;
     const errors: string[] = [];
 
-    for (const deployment of deployments) {
+    for (const [postformePostId, group] of byPostId) {
       try {
-        // Fetch post status from Post for Me
-        const postResponse = await getPost(deployment.postforme_post_id);
+        // One API call per unique PostForMe post ID
+        const postResponse = await getPost(postformePostId);
 
         if (!postResponse.success || !postResponse.data) {
-          errors.push(`Deployment ${deployment.id}: Failed to fetch post ${deployment.postforme_post_id}`);
+          errors.push(`Post ${postformePostId}: Failed to fetch from PostForMe`);
           continue;
         }
 
         const post = postResponse.data;
 
         console.log('[Arsenal Sync]', {
-          deploymentId: deployment.id,
-          videoId: deployment.video_id,
-          postId: deployment.postforme_post_id,
+          postId: postformePostId,
+          deploymentCount: group.length,
+          platforms: group.map(d => d.platform),
           status: post.status,
-          platform: post.platform,
-          hasUrl: !!post.external_url,
-          scheduledAt: post.scheduled_at,
-          publishedAt: post.published_at,
+          hasPlatformsArray: !!post.platforms?.length,
         });
 
-        // Only update if the post is published and has an external URL
-        if (post.status !== 'published' || !post.external_url) {
-          if (post.status === 'scheduled') {
-            console.log(`[Arsenal Sync] Deployment ${deployment.id} still scheduled for:`, post.scheduled_at);
-          } else if (post.status === 'failed') {
-            // Mark as failed in video_deployments
+        // Build per-platform data from PostForMe response
+        const platformData = new Map<string, { url?: string; externalId?: string; status: string; error?: string }>();
+
+        if (post.platforms && Array.isArray(post.platforms)) {
+          // Multi-platform post — use per-platform data
+          for (const p of post.platforms) {
+            const normalizedPlatform = mapPlatform(p.platform);
+            platformData.set(normalizedPlatform, {
+              url: p.url,
+              externalId: p.external_id,
+              status: p.status,
+              error: p.error,
+            });
+          }
+        } else {
+          // Single-platform post — use top-level fields
+          const normalizedPlatform = mapPlatform(post.platform);
+          platformData.set(normalizedPlatform, {
+            url: post.external_url,
+            externalId: post.external_id,
+            status: post.status,
+          });
+        }
+
+        // Update each deployment row with its platform-specific data
+        for (const deployment of group) {
+          const pData = platformData.get(deployment.platform);
+
+          // If no data for this platform, check the overall post status
+          const effectiveStatus = pData?.status || post.status;
+          const effectiveUrl = pData?.url || (group.length === 1 ? post.external_url : undefined);
+          const effectiveExternalId = pData?.externalId || (group.length === 1 ? post.external_id : undefined);
+
+          if (effectiveStatus === 'failed') {
             await executeQuery(
               `UPDATE video_deployments
                SET status = 'failed', error_message = ?
                WHERE id = ?`,
-              [post.error_message || 'Post failed on platform', deployment.id]
+              [pData?.error || post.error_message || 'Post failed on platform', deployment.id]
+            );
+            continue;
+          }
+
+          if (effectiveStatus === 'scheduled') {
+            console.log(`[Arsenal Sync] Deployment ${deployment.id} (${deployment.platform}) still scheduled`);
+            continue;
+          }
+
+          // Only update if published and has URL
+          if (effectiveStatus !== 'published' || !effectiveUrl) {
+            continue;
+          }
+
+          // Update video_deployments with external URL
+          await executeQuery(
+            `UPDATE video_deployments
+             SET external_url = ?,
+                 external_id = ?,
+                 status = 'synced',
+                 synced_at = datetime('now')
+             WHERE id = ?`,
+            [effectiveUrl, effectiveExternalId || null, deployment.id]
+          );
+
+          // Also update legacy columns on videos table for backward compatibility
+          const isClip = deployment.parent_video_id !== null;
+          const legacyColumn = getLegacyColumnForPlatform(deployment.platform, isClip);
+
+          if (legacyColumn) {
+            await executeQuery(
+              `UPDATE videos
+               SET ${legacyColumn} = ?,
+                   postforme_post_id = ?,
+                   postforme_status = 'published'
+               WHERE id = ?`,
+              [effectiveUrl, postformePostId, deployment.video_id]
             );
           }
-          continue;
-        }
 
-        // Update video_deployments with external URL
-        await executeQuery(
-          `UPDATE video_deployments
-           SET external_url = ?,
-               external_id = ?,
-               status = 'synced',
-               synced_at = datetime('now')
-           WHERE id = ?`,
-          [post.external_url, post.external_id || null, deployment.id]
-        );
-
-        // Also update legacy columns on videos table for backward compatibility
-        const platform = mapPlatform(post.platform);
-        const isClip = deployment.parent_video_id !== null;
-        const legacyColumn = getLegacyColumnForPlatform(platform, isClip);
-
-        if (legacyColumn) {
-          // Update the legacy URL column AND the postforme fields
-          await executeQuery(
+          // Make the video public after successful sync
+          const publicResult = await executeQuery(
             `UPDATE videos
-             SET ${legacyColumn} = ?,
-                 postforme_post_id = ?,
-                 postforme_status = 'published'
-             WHERE id = ?`,
-            [post.external_url, deployment.postforme_post_id, deployment.video_id]
+             SET is_public = 1,
+                 publication_status = 'live',
+                 updated_at = datetime('now')
+             WHERE id = ? AND (is_public IS NULL OR is_public = 0)`,
+            [deployment.video_id]
           );
+
+          if (publicResult && typeof publicResult === 'object' && 'changes' in publicResult && (publicResult as any).changes > 0) {
+            madePublic++;
+            console.log(`[Arsenal Sync] Made video ${deployment.video_id} public`);
+          }
+
+          updated++;
         }
-
-        // Make the video public after successful sync
-        const publicResult = await executeQuery(
-          `UPDATE videos
-           SET is_public = 1,
-               publication_status = 'live',
-               updated_at = datetime('now')
-           WHERE id = ? AND (is_public IS NULL OR is_public = 0)`,
-          [deployment.video_id]
-        );
-
-        // Check if we actually made the video public
-        if (publicResult && typeof publicResult === 'object' && 'changes' in publicResult && (publicResult as any).changes > 0) {
-          madePublic++;
-          console.log(`[Arsenal Sync] Made video ${deployment.video_id} public`);
-        }
-
-        updated++;
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Unknown error';
-        errors.push(`Deployment ${deployment.id}: ${message}`);
+        errors.push(`Post ${postformePostId}: ${message}`);
       }
     }
 
     return NextResponse.json({
-      message: `Synced ${updated} of ${deployments.length} deployments${madePublic > 0 ? `, ${madePublic} made public` : ''}`,
+      message: `Synced ${updated} of ${deployments.length} deployments (${byPostId.size} API calls)${madePublic > 0 ? `, ${madePublic} made public` : ''}`,
       updated,
       madePublic,
       total: deployments.length,
+      postsFetched: byPostId.size,
       errors,
     });
   } catch (error) {
