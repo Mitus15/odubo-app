@@ -14,8 +14,8 @@ CREATE TABLE products (
   handle TEXT UNIQUE NOT NULL,
   description TEXT,
   status TEXT DEFAULT 'draft', -- active, draft, archived
-  price DECIMAL(10,2), -- Base price (can be overridden by variants)
-  compare_at_price DECIMAL(10,2),
+  price REAL, -- Base price (can be overridden by variants)
+  compare_at_price REAL,
   images TEXT, -- JSON array of image URLs
   options TEXT, -- JSON array of options e.g. [{"name": "Size", "values": ["S", "M"]}, {"name": "Color", "values": ["Black"]}]
   seo_title TEXT,
@@ -30,8 +30,8 @@ CREATE TABLE product_variants (
   product_id TEXT NOT NULL,
   title TEXT NOT NULL, -- e.g. "S / Black"
   sku TEXT,
-  price DECIMAL(10,2) NOT NULL,
-  compare_at_price DECIMAL(10,2),
+  price REAL NOT NULL,
+  compare_at_price REAL,
   inventory_quantity INTEGER DEFAULT 0,
   inventory_policy TEXT DEFAULT 'deny', -- 'deny' (stop selling), 'continue' (allow backorder)
   option1 TEXT, -- Value for option 1
@@ -52,10 +52,10 @@ CREATE TABLE orders (
   customer_name TEXT,
   shipping_address TEXT, -- JSON
   billing_address TEXT, -- JSON
-  total_amount DECIMAL(10,2) NOT NULL,
-  subtotal_amount DECIMAL(10,2) NOT NULL,
-  tax_amount DECIMAL(10,2) DEFAULT 0,
-  shipping_amount DECIMAL(10,2) DEFAULT 0,
+  total_amount REAL NOT NULL,
+  subtotal_amount REAL NOT NULL,
+  tax_amount REAL DEFAULT 0,
+  shipping_amount REAL DEFAULT 0,
   currency TEXT DEFAULT 'CAD',
   status TEXT DEFAULT 'pending', -- pending, paid, fulfilled, cancelled, refunded
   payment_intent_id TEXT, -- Stripe PaymentIntent ID
@@ -76,8 +76,8 @@ CREATE TABLE order_items (
   variant_title TEXT,
   sku TEXT,
   quantity INTEGER NOT NULL,
-  price DECIMAL(10,2) NOT NULL,
-  total_price DECIMAL(10,2) NOT NULL,
+  price REAL NOT NULL,
+  total_price REAL NOT NULL,
   image_url TEXT,
   FOREIGN KEY (order_id) REFERENCES orders (id) ON DELETE CASCADE
 );
@@ -89,7 +89,7 @@ CREATE TABLE customers (
   first_name TEXT,
   last_name TEXT,
   phone TEXT,
-  total_spent DECIMAL(10,2) DEFAULT 0,
+  total_spent REAL DEFAULT 0,
   orders_count INTEGER DEFAULT 0,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP

@@ -15,8 +15,8 @@ CREATE TABLE IF NOT EXISTS woda_video_context (
   artist_name TEXT,
   is_clip INTEGER DEFAULT 0,
   parent_video_id INTEGER,
-  captured_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  captured_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS idx_woda_video_context_parent ON woda_video_context(parent_video_id);
@@ -39,8 +39,8 @@ CREATE TABLE IF NOT EXISTS woda_insights (
   insight_value TEXT NOT NULL, -- JSON or text value
   confidence REAL DEFAULT 0.5, -- 0-1 how confident in this insight
   sample_count INTEGER DEFAULT 0, -- how many examples this is based on
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS idx_woda_insights_type ON woda_insights(profile_id, insight_type);

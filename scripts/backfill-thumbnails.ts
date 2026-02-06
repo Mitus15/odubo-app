@@ -106,7 +106,8 @@ async function backfillThumbnails() {
         } else {
           console.log(`${progress} Generating thumbnail for clip: ${video.title}`);
           
-          await generateClipThumbnail(video.uid, video.id);
+          const duration = video.duration ? parseInt(video.duration, 10) : 30; // Default 30s if missing
+          await generateClipThumbnail(video.uid, duration, video.id);
           
           succeeded++;
           console.log(`  ✅ Success\n`);

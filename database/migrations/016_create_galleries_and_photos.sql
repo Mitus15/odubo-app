@@ -9,8 +9,8 @@ CREATE TABLE IF NOT EXISTS galleries (
   starts_at TEXT,
   ends_at TEXT,
   config TEXT,
-  created_at TEXT DEFAULT (CURRENT_TIMESTAMP),
-  updated_at TEXT DEFAULT (CURRENT_TIMESTAMP)
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS idx_galleries_code ON galleries(code);
@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS gallery_photos (
   original_filename TEXT,
   user_name TEXT,
   moderated INTEGER DEFAULT 0,
-  created_at TEXT DEFAULT (CURRENT_TIMESTAMP),
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (gallery_id) REFERENCES galleries(id) ON DELETE CASCADE
 );
 

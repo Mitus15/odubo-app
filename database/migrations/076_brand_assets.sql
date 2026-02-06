@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS asset_categories (
   description TEXT,
   icon TEXT,
   sort_order INTEGER DEFAULT 0,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Default categories
@@ -29,8 +29,8 @@ CREATE TABLE IF NOT EXISTS asset_albums (
   cover_asset_id INTEGER,
   status TEXT DEFAULT 'draft',
   sort_order INTEGER DEFAULT 0,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
   UNIQUE(category_id, slug)
 );
 
@@ -75,8 +75,8 @@ CREATE TABLE IF NOT EXISTS assets (
   moments_photo_id INTEGER,
 
   -- Timestamps
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Indexes for common queries

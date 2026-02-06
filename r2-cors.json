@@ -1,0 +1,25 @@
+{
+  "rules": [
+    {
+      "allowed": {
+        "origins": [
+          "https://admin.odubo.studio",
+          "https://odubo.studio",
+          "http://localhost:3000"
+        ],
+        "methods": ["GET", "PUT", "POST", "DELETE", "HEAD"],
+        "headers": [
+          "content-type",
+          "content-length",
+          "x-amz-content-sha256",
+          "x-amz-date",
+          "authorization",
+          "x-amz-user-agent",
+          "x-amz-security-token"
+        ]
+      },
+      "exposeHeaders": ["ETag"],
+      "maxAgeSeconds": 3600
+    }
+  ]
+}

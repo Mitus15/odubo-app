@@ -23,8 +23,8 @@ CREATE TABLE IF NOT EXISTS ai_voice_profiles (
   max_hashtags INTEGER DEFAULT 7,
   prefer_lowercase INTEGER DEFAULT 1,
 
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Training examples - captions marked as perfect/good/avoid
@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS ai_training_examples (
   rating TEXT DEFAULT 'perfect',   -- perfect, good, avoid
   source TEXT,                     -- user_written, ai_generated, inspiration
   notes TEXT,                      -- Why this is good/bad
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Voice samples for speech pattern analysis
@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS ai_voice_samples (
   transcript TEXT,                 -- AI-generated transcript
   analysis TEXT,                   -- AI analysis of speech patterns
   duration INTEGER,                -- Duration in seconds
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Visual mood board references
@@ -58,7 +58,7 @@ CREATE TABLE IF NOT EXISTS ai_visual_references (
   external_url TEXT,               -- Or external URL
   description TEXT,
   tags TEXT,                       -- JSON array
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Feedback on AI-generated content for learning
@@ -70,7 +70,7 @@ CREATE TABLE IF NOT EXISTS ai_generation_feedback (
   platform TEXT,
   rating INTEGER,                  -- 1-5 stars or thumbs up/down (1 or 0)
   feedback_notes TEXT,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Indexes for performance

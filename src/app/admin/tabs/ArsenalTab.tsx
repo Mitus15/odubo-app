@@ -2041,76 +2041,123 @@ function UploadView({
 
         setUploadProgress(`Uploading ${i + 1}/${selectedFiles.length}: ${title}`);
 
-        // 1. Get Cloudflare Stream TUS upload URL
-        const uploadUrlRes = await fetch('/api/videos/stream/direct-upload', {
+        // 1. Start multipart upload to R2
+        const startRes = await fetch('/api/arsenal/multipart-upload', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            title,
-            type: uploadType === 'clip' ? 'clip' : 'long_form',
-            is_public: 0,
+            action: 'start',
+            filename: file.name,
+            contentType: file.type,
           }),
         });
 
-        if (!uploadUrlRes.ok) {
-          const error = await uploadUrlRes.json();
-          throw new Error(`Failed to get upload URL: ${error.error || 'Unknown error'}`);
+        if (!startRes.ok) {
+          const error = await startRes.json();
+          throw new Error(`Failed to start upload: ${error.error || 'Unknown error'}`);
         }
 
-        const { uploadURL, uid } = await uploadUrlRes.json();
+        const { uploadId, key } = await startRes.json();
 
-        if (!uid || !uploadURL) {
-          throw new Error('Failed to get upload URL from Cloudflare Stream');
+        // 2. Chunk file into 50MB parts
+        const CHUNK_SIZE = 50 * 1024 * 1024; // 50MB
+        const totalParts = Math.ceil(file.size / CHUNK_SIZE);
+        const chunks: Blob[] = [];
+
+        for (let partNum = 0; partNum < totalParts; partNum++) {
+          const start = partNum * CHUNK_SIZE;
+          const end = Math.min(start + CHUNK_SIZE, file.size);
+          chunks.push(file.slice(start, end));
         }
 
-        // 2. Upload to Stream using TUS protocol (handles large files, has CORS)
-        await new Promise<void>((resolve, reject) => {
-          // Dynamic import for tus-js-client (browser-only library)
-          import('tus-js-client').then((tus) => {
-            const upload = new tus.Upload(file, {
-              endpoint: uploadURL,
-              chunkSize: 50 * 1024 * 1024, // 50MB chunks for large video files
-              retryDelays: [0, 1000, 3000, 5000], // Retry on network errors
-              metadata: {
-                filename: file.name,
-                filetype: file.type,
-              },
-              onProgress: (bytesUploaded, bytesTotal) => {
-                const percentage = ((bytesUploaded / bytesTotal) * 100).toFixed(1);
-                setUploadProgress(`Uploading ${i + 1}/${selectedFiles.length}: ${title} (${percentage}%)`);
-              },
-              onSuccess: () => {
-                console.log('TUS upload completed successfully');
-                resolve();
-              },
-              onError: (error) => {
-                console.error('TUS upload error:', error);
-                reject(new Error(`Upload failed: ${error.message}`));
-              },
-            });
+        // 3. Get presigned URLs for all parts
+        setUploadProgress(`Preparing ${i + 1}/${selectedFiles.length}: ${title} (${totalParts} parts)`);
 
-            upload.start();
-          }).catch(reject);
-        });
-
-        setUploadProgress(`Processing ${i + 1}/${selectedFiles.length}: ${title} - copying to R2...`);
-
-        // 3. Copy from Stream to R2 to get mp4_url for PostForMe
-        const r2CopyRes = await fetch('/api/arsenal/stream-to-r2', {
+        const urlsRes = await fetch('/api/arsenal/multipart-upload', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ uid, filename: file.name }),
+          body: JSON.stringify({
+            action: 'get-urls',
+            uploadId,
+            key,
+            parts: totalParts,
+          }),
         });
 
-        if (!r2CopyRes.ok) {
-          const error = await r2CopyRes.json();
-          throw new Error(`Failed to copy to R2: ${error.error || 'Unknown error'}`);
+        if (!urlsRes.ok) {
+          const error = await urlsRes.json();
+          throw new Error(`Failed to get upload URLs: ${error.error || 'Unknown error'}`);
         }
 
-        const { mp4_url } = await r2CopyRes.json();
+        const { urls } = await urlsRes.json();
 
-        if (!mp4_url) {
-          throw new Error('Failed to get mp4_url from R2');
+        // 4. Upload all parts in parallel with progress tracking
+        let completedParts = 0;
+        const uploadedParts: Array<{ PartNumber: number; ETag: string }> = [];
+
+        const uploadPromises = chunks.map(async (chunk, index) => {
+          const partNumber = index + 1;
+          const url = urls[index];
+
+          const response = await fetch(url, {
+            method: 'PUT',
+            body: chunk,
+            headers: {
+              'Content-Type': file.type,
+            },
+          });
+
+          if (!response.ok) {
+            throw new Error(`Failed to upload part ${partNumber}`);
+          }
+
+          const etag = response.headers.get('ETag');
+          if (!etag) {
+            throw new Error(`No ETag returned for part ${partNumber}`);
+          }
+
+          uploadedParts[index] = {
+            PartNumber: partNumber,
+            ETag: etag.replace(/"/g, ''), // Remove quotes from ETag
+          };
+
+          completedParts++;
+          const percentage = ((completedParts / totalParts) * 100).toFixed(1);
+          setUploadProgress(`Uploading ${i + 1}/${selectedFiles.length}: ${title} (${percentage}%)`);
+        });
+
+        await Promise.all(uploadPromises);
+
+        // 5. Complete multipart upload (also copies to Stream)
+        setUploadProgress(`Processing ${i + 1}/${selectedFiles.length}: ${title} - finalizing...`);
+
+        const completeRes = await fetch('/api/arsenal/multipart-upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'complete',
+            uploadId,
+            key,
+            parts: uploadedParts,
+            filename: file.name,
+          }),
+        });
+
+        if (!completeRes.ok) {
+          const error = await completeRes.json();
+          // Abort multipart upload on failure
+          await fetch('/api/arsenal/multipart-upload', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'abort', uploadId, key }),
+          }).catch(console.error);
+          throw new Error(`Failed to complete upload: ${error.error || 'Unknown error'}`);
+        }
+
+        const { uid, mp4_url } = await completeRes.json();
+
+        if (!uid || !mp4_url) {
+          throw new Error('Failed to get uid and mp4_url from upload');
         }
 
         // Track UID for thumbnail generation

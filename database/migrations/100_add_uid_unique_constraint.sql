@@ -12,4 +12,4 @@ WHERE id NOT IN (
 );
 
 -- Create unique index on uid (only for non-NULL values)
-CREATE UNIQUE INDEX IF NOT EXISTS idx_videos_uid_unique ON videos(uid) WHERE uid IS NOT NULL;
+CREATE UNIQUE INDEX idx_videos_uid_unique ON videos(uid) WHERE uid IS NOT NULL;
