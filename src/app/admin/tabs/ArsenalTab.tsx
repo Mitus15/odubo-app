@@ -308,35 +308,53 @@ function VideoPreviewModal({
   );
 }
 
+// Helper to parse deployment details from video
+function parseDeploymentDetails(deploymentDetails: string | null): Map<string, string> {
+  const map = new Map<string, string>();
+  if (!deploymentDetails) return map;
+
+  const entries = deploymentDetails.split(',');
+  for (const entry of entries) {
+    const [platform, status] = entry.split(':');
+    if (platform && status) {
+      map.set(platform.toLowerCase(), status);
+    }
+  }
+  return map;
+}
+
 // Platform status indicator
 function PlatformStatus({
-  url,
-  status,
-  icon,
-  platform
+  platform,
+  deploymentStatus,
+  platformUrl,
+  icon
 }: {
-  url: string | null;
-  status: string | null;
-  icon: React.ReactNode;
   platform: string;
+  deploymentStatus?: string;
+  platformUrl?: string | null;
+  icon: React.ReactNode;
 }) {
-  const isLive = !!url;
-  const isPending = status === 'scheduled';
+  const isPublished = deploymentStatus === 'published' && !!platformUrl;
+  const isPending = deploymentStatus === 'pending' || deploymentStatus === 'scheduled';
+  const isFailed = deploymentStatus === 'failed';
 
   return (
     <a
-      href={url || undefined}
+      href={platformUrl || undefined}
       target="_blank"
       rel="noopener noreferrer"
       className={`flex items-center justify-center w-8 h-8 rounded-lg transition-colors ${
-        isLive
-          ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
+        isPublished
+          ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30 ring-2 ring-green-500/50'
           : isPending
           ? 'bg-yellow-500/20 text-yellow-400'
+          : isFailed
+          ? 'bg-red-500/20 text-red-400'
           : 'bg-white/5 text-[#726d6c]'
       }`}
-      title={`${platform}: ${isLive ? 'Live' : isPending ? 'Scheduled' : 'Not posted'}`}
-      onClick={(e) => !url && e.preventDefault()}
+      title={`${platform}: ${isPublished ? 'Published' : isPending ? 'Pending' : isFailed ? 'Failed' : 'Not posted'}`}
+      onClick={(e) => !platformUrl && e.preventDefault()}
     >
       {icon}
     </a>
@@ -434,10 +452,13 @@ function VideoCard({
                 className="w-full h-full object-cover"
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-[#502d26]/50">
-                <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+              <div className="relative w-full h-full flex items-center justify-center bg-gradient-to-br from-[#502d26]/30 via-[#502d26]/10 to-[#0d0c0a] border border-[#502d26]/20">
+                <svg className="w-5 h-5 md:w-6 md:h-6 text-[#502d26]" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
                   <path strokeLinecap="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z" />
                 </svg>
+                <div className="absolute bottom-0.5 right-0.5 text-[8px] md:text-[9px] text-[#726d6c] leading-none">
+                  ...
+                </div>
               </div>
             )}
           </div>
@@ -543,24 +564,31 @@ function VideoCard({
           {/* Platform statuses and actions */}
           <div className="flex items-center gap-1 md:gap-1">
             <div className="flex items-center gap-1">
-              <PlatformStatus
-                url={isClip ? video.youtube_shorts_url : video.youtube_url}
-                status={video.postforme_status}
-                icon={Icons.youtube}
-                platform="YouTube"
-              />
-              <PlatformStatus
-                url={video.tiktok_url}
-                status={video.postforme_status}
-                icon={Icons.tiktok}
-                platform="TikTok"
-              />
-              <PlatformStatus
-                url={video.instagram_reels_url}
-                status={video.postforme_status}
-                icon={Icons.instagram}
-                platform="Instagram"
-              />
+              {(() => {
+                const deployments = parseDeploymentDetails(video.deployment_details || null);
+                return (
+                  <>
+                    <PlatformStatus
+                      platform="YouTube"
+                      deploymentStatus={deployments.get('youtube')}
+                      platformUrl={isClip ? video.youtube_shorts_url : video.youtube_url}
+                      icon={Icons.youtube}
+                    />
+                    <PlatformStatus
+                      platform="TikTok"
+                      deploymentStatus={deployments.get('tiktok')}
+                      platformUrl={video.tiktok_url}
+                      icon={Icons.tiktok}
+                    />
+                    <PlatformStatus
+                      platform="Instagram"
+                      deploymentStatus={deployments.get('instagram')}
+                      platformUrl={video.instagram_reels_url}
+                      icon={Icons.instagram}
+                    />
+                  </>
+                );
+              })()}
             </div>
 
             {/* Actions menu */}
@@ -2287,16 +2315,19 @@ function UploadView({
               console.log(`[Arsenal Upload] Thumbnail generated successfully for ${lastUid}`);
               setUploadProgress('✓ Upload complete! Custom thumbnail generated successfully.');
               // Refresh video list to show new thumbnail
+              await fetchVideos(); // Refresh library immediately
               setTimeout(() => onUploadComplete(), 2000);
             } else if (pollData.ready && !pollData.thumbnailGenerated) {
               console.warn(`[Arsenal Upload] Video ready but thumbnail failed:`, pollData.error);
               setUploadProgress('✓ Upload complete! (Thumbnail generation failed - you can regenerate from Arsenal)');
+              await fetchVideos(); // Refresh to show video even without thumbnail
             } else if (attempts < maxAttempts) {
               // Not ready yet, poll again
               setTimeout(pollForReadiness, 10000);
             } else {
               console.warn(`[Arsenal Upload] Video ${lastUid} not ready after ${maxAttempts} attempts`);
               setUploadProgress('✓ Upload complete! (Video still processing - thumbnail will appear shortly)');
+              await fetchVideos(); // Refresh library anyway
             }
           };
           
