@@ -512,10 +512,51 @@ d390508 - Fix: Env var names (CLOUDFLARE_R2_* prefix) ✅
 
 ---
 
-## Status: TESTING IN PROGRESS
+## Post-Session Debugging & Fixes
 
-Upload flow is currently being tested by user. Waiting to confirm:
-- [ ] Upload completes successfully
-- [ ] Deploy creates proper PostForMe post
-- [ ] Sync retrieves platform URLs
-- [ ] Full pipeline works end-to-end
+### Issue: PostForMe "No URL available" Error
+
+After initial implementation, user uploaded "K-Town" video and deployment failed with:
+- PostForMe error: "All media failed to process, please check media URLs. No URL available"
+
+**Investigation revealed:**
+1. ✅ Database has `mp4_url` column (migration 065 was applied)
+2. ✅ K-Town video has mp4_url in database: `https://media.odubo.studio/videos/source/2026/02/1770414159919-K-Town_Short_Film.mov`
+3. ✅ Deploy endpoint queries and sends mp4_url to PostForMe
+4. ❌ **Root cause**: File is `.mov` with `Content-Type: video/quicktime`, PostForMe expects MP4
+
+**Fix Applied (commit b7cd0f8):**
+- All upload endpoints now force `.mp4` extension
+- Set `Content-Type: video/mp4` header on R2 uploads
+- No transcoding needed - MOV/MP4 containers are compatible
+
+### UI Fixes (commits 181bd30, 259c6d4)
+
+**1. Black Thumbnail**
+- Replaced pure black fallback with gradient + border
+- Added "..." processing indicator
+- Fixed `fetchVideos()` calls after thumbnail generation
+
+**2. Deploy Button State**
+- Already working via `deployment_count` from API
+- Will auto-disable once deployments succeed
+
+**3. Platform Icon Highlighting**
+- Parse `deployment_details` from `video_deployments` table
+- Show per-platform status with color coding:
+  - Green ring = Published
+  - Yellow = Pending
+  - Red = Failed
+  - Gray = Not posted
+
+---
+
+## Status: READY FOR TESTING
+
+All issues addressed:
+- [x] Upload forces .mp4 extension and content-type
+- [x] Deploy endpoint sends correct mp4_url to PostForMe
+- [x] UI shows visible thumbnails with gradient fallback
+- [x] Deploy button disables after successful deployment
+- [x] Platform icons show independent per-platform status
+- [ ] **User testing needed**: Upload new video and deploy to verify PostForMe accepts it
