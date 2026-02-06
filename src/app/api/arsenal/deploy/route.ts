@@ -260,10 +260,14 @@ export async function POST(request: NextRequest) {
         };
       }
 
-      console.log('[Arsenal Deploy]', {
+      console.log('[Arsenal Deploy] Sending to PostForMe:', {
         videoId: video.id,
+        videoTitle: video.title,
+        videoUrl,
+        mp4_url: video.mp4_url,
         platforms: deployedPlatforms,
         accountIds,
+        media,
         scheduleAt,
         hasSchedule: !!scheduleAt,
       });

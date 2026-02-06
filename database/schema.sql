@@ -635,6 +635,7 @@ CREATE TABLE IF NOT EXISTS videos (
   artist_name TEXT,                     -- Added for parity with music assets (migration 006)
   description TEXT,
   url TEXT,                             -- Cloudflare Stream embed URL (or direct fallback)
+  mp4_url TEXT,                         -- R2 MP4 URL for deployment (migration 065)
   poster_url TEXT,                      -- Poster/thumbnail image URL (R2 or Stream generated)
   thumbnail TEXT,                       -- Alias/fallback (legacy)
   duration TEXT,                        -- Formatted or raw duration string
