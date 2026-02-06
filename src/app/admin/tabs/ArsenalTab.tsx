@@ -2066,7 +2066,7 @@ function UploadView({
         // 2. Upload to Stream using TUS protocol (handles large files, has CORS)
         await new Promise<void>((resolve, reject) => {
           // Dynamic import for tus-js-client (browser-only library)
-          import('tus-js-client').then(({ default: tus }) => {
+          import('tus-js-client').then((tus) => {
             const upload = new tus.Upload(file, {
               endpoint: uploadURL,
               chunkSize: 50 * 1024 * 1024, // 50MB chunks for large video files
