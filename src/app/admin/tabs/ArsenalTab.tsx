@@ -2041,34 +2041,14 @@ function UploadView({
 
         setUploadProgress(`Uploading ${i + 1}/${selectedFiles.length}: ${title}`);
 
-        // 1. Get Cloudflare Stream direct upload URL
-        const uploadUrlRes = await fetch('/api/videos/stream/direct-upload', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            title,
-            type: isClip ? 'clip' : 'long_form',
-            is_public: 0, // Arsenal uploads start private until deployed
-            description: videoDescription,
-            credits: videoCredits,
-            artist_name: videoArtist,
-            category: videoCategory,
-            mood: videoMood,
-          }),
-        });
+        // 1. Upload via server proxy (avoids CORS issues, gets R2 mp4_url)
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('filename', file.name);
 
-        if (!uploadUrlRes.ok) {
-          const error = await uploadUrlRes.json();
-          throw new Error(`Failed to get upload URL: ${error.error || 'Unknown error'}`);
-        }
+        let uid!: string;
+        let mp4_url!: string;
 
-        const { uploadURL, uid } = await uploadUrlRes.json();
-
-        if (!uid || !uploadURL) {
-          throw new Error('Failed to get upload URL from Cloudflare Stream');
-        }
-
-        // 2. Upload file directly to Cloudflare Stream (has CORS)
         await new Promise<void>((resolve, reject) => {
           const xhr = new XMLHttpRequest();
 
@@ -2079,9 +2059,20 @@ function UploadView({
             }
           });
 
-          xhr.addEventListener('load', () => {
+          xhr.addEventListener('load', async () => {
             if (xhr.status >= 200 && xhr.status < 300) {
-              resolve();
+              try {
+                const response = JSON.parse(xhr.responseText);
+                if (!response.success || !response.uid || !response.mp4_url) {
+                  reject(new Error('Invalid response from upload endpoint'));
+                  return;
+                }
+                uid = response.uid;
+                mp4_url = response.mp4_url;
+                resolve();
+              } catch (e) {
+                reject(new Error('Failed to parse upload response'));
+              }
             } else {
               reject(new Error(`Upload failed with status ${xhr.status}`));
             }
@@ -2090,11 +2081,11 @@ function UploadView({
           xhr.addEventListener('error', () => reject(new Error('Upload failed')));
           xhr.addEventListener('abort', () => reject(new Error('Upload aborted')));
 
-          xhr.open('POST', uploadURL);
-          xhr.send(file);
+          xhr.open('POST', '/api/arsenal/upload');
+          xhr.send(formData);
         });
 
-        setUploadProgress(`Processing ${i + 1}/${selectedFiles.length}: ${title} - video uploaded to Stream`);
+        setUploadProgress(`Processing ${i + 1}/${selectedFiles.length}: ${title} - copied to Cloudflare Stream`);
 
         // Track UID for thumbnail generation
         uploadedUids.push(uid);
@@ -2119,7 +2110,7 @@ function UploadView({
               stream_video_id: uid, // Set both for consistency
               title,
               url: embedUrl,
-              // mp4_url omitted - deploy will use Stream HLS URL
+              mp4_url, // R2 public URL for PostForMe deployment
               // Omit poster_url/thumbnail - API will auto-generate from UID
               // Include inherited metadata
               description: videoDescription,
@@ -2161,7 +2152,7 @@ function UploadView({
               stream_video_id: uid, // Set both for consistency
               title,
               url: embedUrl,
-              // mp4_url omitted - deploy will use Stream HLS URL
+              mp4_url, // R2 public URL for PostForMe deployment
               // Omit poster_url/thumbnail - API will auto-generate from UID
               description: videoDescription,
               credits: videoCredits,
