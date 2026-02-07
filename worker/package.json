@@ -1,0 +1,25 @@
+{
+  "name": "odubo-transcode-worker",
+  "version": "1.0.0",
+  "description": "Background worker for video transcoding with FFmpeg",
+  "main": "transcode-worker.ts",
+  "scripts": {
+    "start": "tsx transcode-worker.ts",
+    "dev": "tsx watch transcode-worker.ts",
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.540.0",
+    "@ffmpeg-installer/ffmpeg": "^1.1.0",
+    "fluent-ffmpeg": "^2.1.3",
+    "tsx": "^4.7.1",
+    "typescript": "^5.3.3"
+  },
+  "devDependencies": {
+    "@types/fluent-ffmpeg": "^2.1.24",
+    "@types/node": "^20.11.19"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
