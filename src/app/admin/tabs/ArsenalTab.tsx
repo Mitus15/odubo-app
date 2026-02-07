@@ -8,6 +8,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import * as tus from 'tus-js-client';
 import { VideoDetailModal } from './VideoDetailModal';
+import TranscodingProgress from '@/components/admin/TranscodingProgress';
 
 // Types
 interface Video {
@@ -48,6 +49,8 @@ interface Video {
   created_at: string;
   // Deployment tracking (from video_deployments table)
   deployment_count: number | null;
+  // Transcoding tracking
+  transcoding_job_id: number | null;
   deployment_details: string | null; // e.g., "youtube:published,tiktok:pending"
 }
 
@@ -688,6 +691,8 @@ function LibraryView({
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState<string>('');
+  // Transcoding state - Map of video_id -> job_id for active transcoding jobs
+  const [transcodingJobs, setTranscodingJobs] = useState<Map<number, number>>(new Map());
 
   // Handle publish toggle
   const handleTogglePublish = async (videoId: number, currentlyPublished: boolean) => {
@@ -1032,6 +1037,17 @@ function LibraryView({
                 onDeploy={onStartDeploy}
                 onOpenModal={() => onVideoClick?.(video)}
               />
+              {/* Transcoding Progress - Show if video has active transcoding job */}
+              {transcodingJobs.has(video.id) && (
+                <div className="ml-8 mt-2">
+                  <TranscodingProgress
+                    jobId={transcodingJobs.get(video.id)!}
+                    videoId={video.id}
+                    onComplete={(outputUrl) => handleTranscodingComplete(video.id, outputUrl)}
+                    onError={(error) => handleTranscodingError(video.id, error)}
+                  />
+                </div>
+              )}
               {/* Child clips with reorder controls - only show when not in clips filter */}
               {!isClipsFilter && expandedIds.includes(video.id) && childrenByParent[video.id]?.map((child, index) => {
                 const siblings = childrenByParent[video.id];
@@ -2226,6 +2242,17 @@ function UploadView({
             console.error('[Arsenal Upload] Clip creation failed:', errorText);
             throw new Error(`Failed to create clip: ${errorText}`);
           }
+
+          // Capture clip ID and trigger transcoding
+          const createdClip = await clipRes.json();
+          console.log('[Arsenal Upload] Clip created:', createdClip);
+
+          if (createdClip.id) {
+            // Trigger transcoding to convert MOV/any format to proper MP4
+            console.log('[Arsenal Upload] Triggering transcoding for clip:', createdClip.id);
+            setUploadProgress('✓ Upload complete! Starting video transcoding...');
+            await triggerTranscoding(createdClip.id);
+          }
         } else {
           // Create parent video as unpublished (draft) by default
           // User will explicitly publish when ready
@@ -2274,10 +2301,21 @@ function UploadView({
             console.error('[Arsenal Upload] Video creation failed:', errorText);
             throw new Error(`Failed to create video: ${errorText}`);
           }
+
+          // Capture video ID and trigger transcoding
+          const createdVideo = await createRes.json();
+          console.log('[Arsenal Upload] Video created:', createdVideo);
+
+          if (createdVideo.id) {
+            // Trigger transcoding to convert MOV/any format to proper MP4
+            console.log('[Arsenal Upload] Triggering transcoding for video:', createdVideo.id);
+            setUploadProgress('✓ Upload complete! Starting video transcoding...');
+            await triggerTranscoding(createdVideo.id);
+          }
         }
       }
 
-      setUploadProgress('✓ Upload complete! Checking video processing status...');
+      setUploadProgress('✓ Upload complete! Video transcoding in progress...');
       
       // Trigger automatic thumbnail generation after upload
       // Poll for video readiness and generate thumbnail when ready
@@ -3520,6 +3558,73 @@ export default function ArsenalTab() {
     } finally {
       setDeploying(false);
     }
+  };
+
+  // Trigger video transcoding
+  const triggerTranscoding = async (videoId: number) => {
+    try {
+      const token = localStorage.getItem('adminToken');
+      if (!token) {
+        console.error('[Transcode] No auth token');
+        return;
+      }
+
+      console.log(`[Transcode] Starting transcoding for video ${videoId}`);
+
+      const res = await fetch('/api/arsenal/transcode', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ video_id: videoId }),
+      });
+
+      if (!res.ok) {
+        const error = await res.text();
+        console.error('[Transcode] Failed to start:', error);
+        return;
+      }
+
+      const data = await res.json();
+      console.log('[Transcode] Job started:', data);
+
+      // Track the job
+      setTranscodingJobs((prev) => {
+        const newMap = new Map(prev);
+        newMap.set(videoId, data.job_id);
+        return newMap;
+      });
+    } catch (error: any) {
+      console.error('[Transcode] Error:', error);
+    }
+  };
+
+  // Handle transcoding complete
+  const handleTranscodingComplete = (videoId: number, outputUrl: string) => {
+    console.log(`[Transcode] Complete for video ${videoId}:`, outputUrl);
+
+    // Remove from active jobs
+    setTranscodingJobs((prev) => {
+      const newMap = new Map(prev);
+      newMap.delete(videoId);
+      return newMap;
+    });
+
+    // Refresh video list to show updated mp4_url
+    fetchVideos();
+  };
+
+  // Handle transcoding error
+  const handleTranscodingError = (videoId: number, error: string) => {
+    console.error(`[Transcode] Error for video ${videoId}:`, error);
+
+    // Remove from active jobs
+    setTranscodingJobs((prev) => {
+      const newMap = new Map(prev);
+      newMap.delete(videoId);
+      return newMap;
+    });
   };
 
   // Sync
