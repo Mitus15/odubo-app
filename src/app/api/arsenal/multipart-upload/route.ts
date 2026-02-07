@@ -151,8 +151,9 @@ async function handleComplete(body: {
   key: string;
   parts: Array<{ PartNumber: number; ETag: string }>;
   filename: string;
+  source_format?: string;
 }) {
-  const { uploadId, key, parts, filename } = body;
+  const { uploadId, key, parts, filename, source_format } = body;
 
   if (!uploadId || !key || !parts || !parts.length) {
     return NextResponse.json(
@@ -211,11 +212,55 @@ async function handleComplete(body: {
     throw new Error('No UID returned from Cloudflare Stream');
   }
 
+  // Enable MP4 downloads on Stream for PostForMe compatibility
+  let streamMp4Url = mp4_url; // Fallback to R2 URL
+  try {
+    // Enable downloads
+    const enableDownloadsResponse = await fetch(
+      `https://api.cloudflare.com/client/v4/accounts/${accountId}/stream/${uid}/downloads`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ id: 'default' }),
+      }
+    );
+
+    if (enableDownloadsResponse.ok) {
+      // Poll for download URL (wait up to 30 seconds)
+      for (let i = 0; i < 6; i++) {
+        await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5s
+
+        const downloadResponse = await fetch(
+          `https://api.cloudflare.com/client/v4/accounts/${accountId}/stream/${uid}/downloads`,
+          {
+            headers: { 'Authorization': `Bearer ${apiToken}` }
+          }
+        );
+
+        if (downloadResponse.ok) {
+          const downloadData = await downloadResponse.json();
+          if (downloadData.result?.default?.status === 'ready' && downloadData.result?.default?.url) {
+            streamMp4Url = downloadData.result.default.url;
+            console.log('[Arsenal Upload] Stream MP4 download ready:', streamMp4Url);
+            break;
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.error('[Arsenal Upload] Failed to enable Stream downloads:', error);
+    // Continue with R2 URL as fallback
+  }
+
   return NextResponse.json({
     success: true,
     uid,
-    mp4_url,
+    mp4_url: streamMp4Url, // Use Stream MP4 URL if available, otherwise R2 URL
     key,
+    source_format,
   });
 }
 
