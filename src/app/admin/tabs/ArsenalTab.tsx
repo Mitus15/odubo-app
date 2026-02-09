@@ -2352,19 +2352,19 @@ function UploadView({
               console.log(`[Arsenal Upload] Thumbnail generated successfully for ${lastUid}`);
               setUploadProgress('✓ Upload complete! Custom thumbnail generated successfully.');
               // Refresh video list to show new thumbnail
-              await fetchVideos(); // Refresh library immediately
+              // Refresh will happen via onUploadComplete
               setTimeout(() => onUploadComplete(), 2000);
             } else if (pollData.ready && !pollData.thumbnailGenerated) {
               console.warn(`[Arsenal Upload] Video ready but thumbnail failed:`, pollData.error);
               setUploadProgress('✓ Upload complete! (Thumbnail generation failed - you can regenerate from Arsenal)');
-              await fetchVideos(); // Refresh to show video even without thumbnail
+              onUploadComplete(); // Refresh to show video even without thumbnail
             } else if (attempts < maxAttempts) {
               // Not ready yet, poll again
               setTimeout(pollForReadiness, 10000);
             } else {
               console.warn(`[Arsenal Upload] Video ${lastUid} not ready after ${maxAttempts} attempts`);
               setUploadProgress('✓ Upload complete! (Video still processing - thumbnail will appear shortly)');
-              await fetchVideos(); // Refresh library anyway
+              onUploadComplete(); // Refresh library anyway
             }
           };
           
