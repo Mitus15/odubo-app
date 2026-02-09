@@ -11,6 +11,7 @@ export type ClipApiRow = {
   created_at?: string | null;
   shopify_product_handle?: string | null;
   related_projects?: string | null;
+  parent_title?: string | null; // Parent video title for clips
   // Clip identity fields
   original_filename?: string | null;
   clip_index?: number | null;
@@ -39,6 +40,7 @@ export type ClipItem = {
   createdAt: string | null;
   productHandle?: string | null;
   parentId?: number | null;
+  parentTitle?: string | null; // Parent video title for clips
   uid?: string; // Cloudflare Stream UID for URL generation
   // Clip identity (Magazine & Bullets)
   originalFilename?: string | null;   // e.g., "BAAD_Teaser_v3_final.mp4"

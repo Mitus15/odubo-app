@@ -80,7 +80,7 @@ function PosterCard({ clip, active, videoReady = false }: PosterCardProps) {
 
         <div className="max-w-[240px]">
           <h3 className="text-sm font-semibold text-white truncate drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
-            {clip.title}
+            {clip.parentTitle || clip.title}
           </h3>
         </div>
       </div>

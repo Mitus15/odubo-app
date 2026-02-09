@@ -74,10 +74,11 @@ export async function getHomepageMode(): Promise<'clips' | 'music'> {
  */
 export async function getInitialClips(limit = 12): Promise<ClipItem[]> {
   try {
-    const baseFields = `v.id, v.title, v.artist_name, v.description, v.url, v.uid, v.mp4_url, v.duration, v.duration_seconds, v.poster_url, v.thumbnail, v.created_at, v.shopify_product_handle, v.related_projects`;
+    const baseFields = `v.id, v.title, v.artist_name, v.description, v.url, v.uid, v.mp4_url, v.duration, v.duration_seconds, v.poster_url, v.thumbnail, v.created_at, v.shopify_product_handle, v.related_projects, parent.title as parent_title`;
     const rows = await queryDatabase(
       `SELECT ${baseFields}
        FROM videos v
+       LEFT JOIN videos parent ON v.parent_video_id = parent.id
        WHERE v.type = 'clip'
          AND (v.is_public = 1 OR v.is_public IS NULL)
          AND COALESCE(v.status, 'published') != 'archived'

@@ -21,7 +21,8 @@ export async function GET(req: NextRequest) {
     const useManualOrder = searchParams.get('order') === 'manual';
 
     // Base query fields (including mp4_url for native playback)
-    const baseFields = `v.id, v.title, v.artist_name, v.description, v.url, v.uid, v.mp4_url, v.duration, v.duration_seconds, v.poster_url, v.thumbnail, v.created_at, v.shopify_product_handle, v.related_projects, v.feed_position`;
+    // Join with parent video to get parent title
+    const baseFields = `v.id, v.title, v.artist_name, v.description, v.url, v.uid, v.mp4_url, v.duration, v.duration_seconds, v.poster_url, v.thumbnail, v.created_at, v.shopify_product_handle, v.related_projects, v.feed_position, parent.title as parent_title`;
 
     // Engagement fields and scoring
     const engagementFields = withEngagement
@@ -61,6 +62,7 @@ export async function GET(req: NextRequest) {
     const rows = await queryDatabase(
       `SELECT ${baseFields}${engagementFields}
        FROM videos v
+       LEFT JOIN videos parent ON v.parent_video_id = parent.id
        ${engagementJoin}
        WHERE v.type = 'clip'
          AND ((v.is_public = 1 OR v.is_public IS NULL)

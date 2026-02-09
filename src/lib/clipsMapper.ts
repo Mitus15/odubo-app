@@ -51,6 +51,7 @@ export function mapClipRow(row: ClipApiRow): ClipItem | null {
     createdAt: row.created_at ?? null,
     productHandle: row.shopify_product_handle || null,
     parentId: parseParentId(row.related_projects),
+    parentTitle: row.parent_title ?? null,
     uid: row.uid, // Include UID for MP4 URL generation
     // Clip identity (Magazine & Bullets)
     originalFilename: row.original_filename ?? null,
