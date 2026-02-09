@@ -229,8 +229,8 @@ async function handleComplete(body: {
     );
 
     if (enableDownloadsResponse.ok) {
-      // Poll for download URL (wait up to 30 seconds)
-      for (let i = 0; i < 6; i++) {
+      // Poll for download URL (wait up to 3 minutes for large files)
+      for (let i = 0; i < 36; i++) {
         await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5s
 
         const downloadResponse = await fetch(
