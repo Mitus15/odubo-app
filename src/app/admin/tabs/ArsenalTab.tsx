@@ -2238,8 +2238,8 @@ function UploadView({
               stream_video_id: uid, // Set both for consistency
               title,
               url: embedUrl,
-              mp4_url, // R2 public URL for PostForMe deployment
-              source_format, // Original video format for transcoding decision
+              mp4_url, // Stream MP4 download URL for PostForMe deployment
+              source_format, // Original video format (tracked for reference)
               // Omit poster_url/thumbnail - API will auto-generate from UID
               // Include inherited metadata
               description: videoDescription,
@@ -2285,8 +2285,8 @@ function UploadView({
               stream_video_id: uid, // Set both for consistency
               title,
               url: embedUrl,
-              mp4_url, // R2 public URL for PostForMe deployment
-              source_format, // Original video format for transcoding decision
+              mp4_url, // Stream MP4 download URL for PostForMe deployment
+              source_format, // Original video format (tracked for reference)
               // Omit poster_url/thumbnail - API will auto-generate from UID
               description: videoDescription,
               credits: videoCredits,
