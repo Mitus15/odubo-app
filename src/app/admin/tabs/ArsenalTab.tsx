@@ -1939,7 +1939,7 @@ function UploadView({
   const [videoTitle, setVideoTitle] = useState('');
   const [videoDescription, setVideoDescription] = useState('');
   const [videoCredits, setVideoCredits] = useState('');
-  const [videoArtist, setVideoArtist] = useState('ODUBO');
+  const [videoArtist, setVideoArtist] = useState('Mani Odubo');
   const [videoCategory, setVideoCategory] = useState('');
   const [videoMood, setVideoMood] = useState('');
   const [videoType, setVideoType] = useState('music-video');
