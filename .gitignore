@@ -45,3 +45,4 @@ next-env.d.ts
 
 certificates
 .env*.local
+worker/node_modules/
