@@ -9,6 +9,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import * as tus from 'tus-js-client';
 import { VideoDetailModal } from './VideoDetailModal';
 import TranscodingProgress from '@/components/admin/TranscodingProgress';
+import { detectVideoFormat } from '@/lib/videoFormat';
 
 // Types
 interface Video {
@@ -26,6 +27,7 @@ interface Video {
   mood: string | null;
   type: string | null;
   artist_name: string | null;
+  source_format: string | null;
   // Music relationships
   track_id: string | null;
   album_id: string | null;
@@ -544,6 +546,20 @@ function VideoCard({
               </span>
             )}
 
+            {/* Format badge - show video source format */}
+            {video.source_format === 'mp4' ? (
+              <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-green-500/20 border border-green-500/30">
+                <svg className="w-3 h-3 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                <span className="text-[10px] md:text-xs text-green-400 font-medium">Native MP4</span>
+              </div>
+            ) : video.source_format ? (
+              <div className="px-2 py-1 rounded-lg bg-yellow-500/20 border border-yellow-500/30">
+                <span className="text-[10px] md:text-xs text-yellow-400 font-medium">{video.source_format.toUpperCase()}</span>
+              </div>
+            ) : null}
+
             {/* Deploy button - only for published content */}
             {isPublished && onDeploy && (
               <button
@@ -1037,8 +1053,8 @@ function LibraryView({
                 onDeploy={onStartDeploy}
                 onOpenModal={() => onVideoClick?.(video)}
               />
-              {/* Transcoding Progress - Show if video has active transcoding job */}
-              {transcodingJobs.has(video.id) && (
+              {/* Transcoding Progress - Show if video has active transcoding job and format needs it */}
+              {transcodingJobs.has(video.id) && video.source_format !== 'mp4' && (
                 <div className="ml-8 mt-2">
                   <TranscodingProgress
                     jobId={transcodingJobs.get(video.id)!}
@@ -2078,6 +2094,16 @@ function UploadView({
 
       for (let i = 0; i < selectedFiles.length; i++) {
         const file = selectedFiles[i];
+
+        // Detect video format
+        const formatInfo = detectVideoFormat(file);
+        console.log('[Arsenal Upload] File format detected:', {
+          filename: file.name,
+          format: formatInfo.format,
+          isMP4: formatInfo.isMP4,
+          requiresTranscoding: formatInfo.requiresTranscoding,
+        });
+
         // For clips: use filename. For videos: use entered title (or filename if multiple)
         const title = uploadType === 'clip'
           ? file.name.replace(/\.[^/.]+$/, '')
@@ -2184,6 +2210,7 @@ function UploadView({
             key,
             parts: uploadedParts,
             filename: file.name,
+            source_format: formatInfo.format,
           }),
         });
 
@@ -2198,7 +2225,7 @@ function UploadView({
           throw new Error(`Failed to complete upload: ${error.error || 'Unknown error'}`);
         }
 
-        const { uid, mp4_url } = await completeRes.json();
+        const { uid, mp4_url, source_format } = await completeRes.json();
 
         if (!uid || !mp4_url) {
           throw new Error('Failed to get uid and mp4_url from upload');
@@ -2228,6 +2255,7 @@ function UploadView({
               title,
               url: embedUrl,
               mp4_url, // R2 public URL for PostForMe deployment
+              source_format, // Original video format for transcoding decision
               // Omit poster_url/thumbnail - API will auto-generate from UID
               // Include inherited metadata
               description: videoDescription,
@@ -2243,15 +2271,20 @@ function UploadView({
             throw new Error(`Failed to create clip: ${errorText}`);
           }
 
-          // Capture clip ID and trigger transcoding
+          // Capture clip ID and conditionally trigger transcoding
           const createdClip = await clipRes.json();
           console.log('[Arsenal Upload] Clip created:', createdClip);
 
           if (createdClip.id) {
-            // Trigger transcoding to convert MOV/any format to proper MP4
-            console.log('[Arsenal Upload] Triggering transcoding for clip:', createdClip.id);
-            setUploadProgress('✓ Upload complete! Starting video transcoding...');
-            await triggerTranscoding(createdClip.id);
+            if (formatInfo.requiresTranscoding) {
+              // Trigger transcoding to convert MOV/any format to proper MP4
+              console.log(`[Arsenal Upload] Triggering transcoding for ${formatInfo.format} clip:`, createdClip.id);
+              setUploadProgress('✓ Upload complete! Starting video transcoding...');
+              await triggerTranscoding(createdClip.id);
+            } else {
+              console.log(`[Arsenal Upload] Native MP4 - skipping transcoding for clip:`, createdClip.id);
+              setUploadProgress('✓ Upload complete! Native MP4 - no transcoding needed.');
+            }
           }
         } else {
           // Create parent video as unpublished (draft) by default
@@ -2281,6 +2314,7 @@ function UploadView({
               title,
               url: embedUrl,
               mp4_url, // R2 public URL for PostForMe deployment
+              source_format, // Original video format for transcoding decision
               // Omit poster_url/thumbnail - API will auto-generate from UID
               description: videoDescription,
               credits: videoCredits,
@@ -2302,15 +2336,20 @@ function UploadView({
             throw new Error(`Failed to create video: ${errorText}`);
           }
 
-          // Capture video ID and trigger transcoding
+          // Capture video ID and conditionally trigger transcoding
           const createdVideo = await createRes.json();
           console.log('[Arsenal Upload] Video created:', createdVideo);
 
           if (createdVideo.id) {
-            // Trigger transcoding to convert MOV/any format to proper MP4
-            console.log('[Arsenal Upload] Triggering transcoding for video:', createdVideo.id);
-            setUploadProgress('✓ Upload complete! Starting video transcoding...');
-            await triggerTranscoding(createdVideo.id);
+            if (formatInfo.requiresTranscoding) {
+              // Trigger transcoding to convert MOV/any format to proper MP4
+              console.log(`[Arsenal Upload] Triggering transcoding for ${formatInfo.format} video:`, createdVideo.id);
+              setUploadProgress('✓ Upload complete! Starting video transcoding...');
+              await triggerTranscoding(createdVideo.id);
+            } else {
+              console.log(`[Arsenal Upload] Native MP4 - skipping transcoding for video:`, createdVideo.id);
+              setUploadProgress('✓ Upload complete! Native MP4 - no transcoding needed.');
+            }
           }
         }
       }

@@ -138,6 +138,7 @@ const videoCreateSchema = z.object({
   uid: z.string().optional().default(''), // Cloudflare Stream UID
   stream_video_id: z.string().optional().default(''), // Cloudflare Stream video ID
   mp4_url: z.string().optional().default(''), // R2 MP4 URL for deployment
+  source_format: z.string().optional().nullable(), // Original video format (mp4, mov, avi, etc.)
   poster_url: z.string().optional().default(''),
   thumbnail: z.string().optional().default(''),
   duration: z.union([z.string(), z.number()]).optional().default(''),
@@ -179,6 +180,7 @@ export async function POST(req: NextRequest) {
     const url = body.url;
     const uid = body.uid || body.stream_video_id || '';
     const mp4_url = body.mp4_url || '';
+    const source_format = body.source_format || null;
 
     console.log('[Videos POST] Creating video:', {
       title,
@@ -217,9 +219,9 @@ export async function POST(req: NextRequest) {
     await executeQuery(
       `INSERT INTO videos (
         title, artist_name, description, short_description, long_description, ai_description, tags,
-        url, uid, stream_video_id, mp4_url, poster_url, thumbnail, duration, duration_seconds, category, is_public, type, mood,
+        url, uid, stream_video_id, mp4_url, source_format, poster_url, thumbnail, duration, duration_seconds, category, is_public, type, mood,
         credits, related_projects, status, publication_status, thumbnail_timestamp_pct, track_id, album_id, scheduled_for, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
       [
         title,
         artist_name,
@@ -232,6 +234,7 @@ export async function POST(req: NextRequest) {
         uid,
         uid, // stream_video_id = uid for consistency
         mp4_url, // R2 MP4 URL for deployment
+        source_format, // Original video format for transcoding decision
         poster_url,
         thumbnail,
         String(duration),

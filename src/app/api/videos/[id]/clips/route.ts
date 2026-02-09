@@ -41,7 +41,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const body = await req.json();
     const {
       uid, title, duration, thumbnail, url, is_public, thumbnail_timestamp_pct,
-      description, credits, category, mood, mp4_url
+      description, credits, category, mood, mp4_url, source_format
     } = body;
 
     // Inherit artist from parent, but clips are ALWAYS hidden until distributed
@@ -66,13 +66,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     // They become visible when distributed via Social CMS → PostForMe
     await executeQuery(
       `INSERT INTO videos (
-        title, artist_name, uid, stream_video_id, url, mp4_url, poster_url, thumbnail, duration,
+        title, artist_name, uid, stream_video_id, url, mp4_url, source_format, poster_url, thumbnail, duration,
         status, type, is_public, publication_status, related_projects,
         parent_video_id, thumbnail_timestamp_pct,
         description, credits, category, mood,
         created_at, updated_at
       ) VALUES (
-        ?, ?, ?, ?, ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
         'published', 'clip', 0, 'archived', ?,
         ?, ?,
         ?, ?, ?, ?,
@@ -85,6 +85,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         uid, // stream_video_id = uid
         embedUrl,
         mp4_url || '', // R2 MP4 URL for deployment
+        source_format || null, // Original video format
         posterUrl,
         posterUrl,
         duration || 0,
