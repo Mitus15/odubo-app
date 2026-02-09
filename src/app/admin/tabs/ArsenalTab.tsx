@@ -2062,6 +2062,46 @@ function UploadView({
     setSelectedFiles(newFiles);
   };
 
+  // Trigger video transcoding
+  const triggerTranscoding = async (videoId: number) => {
+    try {
+      const token = localStorage.getItem('adminToken');
+      if (!token) {
+        console.error('[Transcode] No auth token');
+        return;
+      }
+
+      console.log(`[Transcode] Starting transcoding for video ${videoId}`);
+
+      const res = await fetch('/api/arsenal/transcode', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ video_id: videoId }),
+      });
+
+      if (!res.ok) {
+        const error = await res.text();
+        console.error('[Transcode] Failed to start:', error);
+        return;
+      }
+
+      const data = await res.json();
+      console.log('[Transcode] Job started:', data);
+
+      // Track the job
+      setTranscodingJobs((prev) => {
+        const newMap = new Map(prev);
+        newMap.set(videoId, data.job_id);
+        return newMap;
+      });
+    } catch (error: any) {
+      console.error('[Transcode] Error:', error);
+    }
+  };
+
   const handleUpload = async () => {
     if (selectedFiles.length === 0) return;
     if (uploadType === 'clip' && !parentVideoId) {
@@ -3596,46 +3636,6 @@ export default function ArsenalTab() {
       alert(`Deploy failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setDeploying(false);
-    }
-  };
-
-  // Trigger video transcoding
-  const triggerTranscoding = async (videoId: number) => {
-    try {
-      const token = localStorage.getItem('adminToken');
-      if (!token) {
-        console.error('[Transcode] No auth token');
-        return;
-      }
-
-      console.log(`[Transcode] Starting transcoding for video ${videoId}`);
-
-      const res = await fetch('/api/arsenal/transcode', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ video_id: videoId }),
-      });
-
-      if (!res.ok) {
-        const error = await res.text();
-        console.error('[Transcode] Failed to start:', error);
-        return;
-      }
-
-      const data = await res.json();
-      console.log('[Transcode] Job started:', data);
-
-      // Track the job
-      setTranscodingJobs((prev) => {
-        const newMap = new Map(prev);
-        newMap.set(videoId, data.job_id);
-        return newMap;
-      });
-    } catch (error: any) {
-      console.error('[Transcode] Error:', error);
     }
   };
 
