@@ -51,7 +51,11 @@ async function backfillStreamMp4Urls() {
 
   // Only process videos that need fixing (unless force)
   if (!force) {
-    conditions.push("(mp4_url IS NULL OR source_format IS NULL OR source_format != 'mp4')");
+    // Target videos with:
+    // 1. Missing mp4_url
+    // 2. R2 URLs (wrong format)
+    // 3. Any non-Stream download URL
+    conditions.push("(mp4_url IS NULL OR mp4_url LIKE '%media.odubo.studio/videos/source/%' OR mp4_url NOT LIKE '%cloudflarestream.com%downloads%')");
   }
 
   // Clip/video filter
@@ -131,24 +135,28 @@ async function backfillStreamMp4Urls() {
       // Wait a moment for Stream to process
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      // Step 2: Poll for the MP4 download URL (wait up to 60 seconds)
+      // Step 2: Poll for the MP4 download URL (wait up to 5 minutes for large files)
       console.log(`  Waiting for download to be ready...`);
       let downloadUrl = null;
       let attempts = 0;
-      const maxAttempts = 12; // 60 seconds total (12 * 5s)
+      const maxAttempts = 60; // 5 minutes total (60 * 5s)
 
       while (!downloadUrl && attempts < maxAttempts) {
         downloadUrl = await stream.getDownloadUrl(video.uid);
         if (!downloadUrl) {
           attempts++;
           if (attempts < maxAttempts) {
+            // Show progress every 10 attempts (50 seconds)
+            if (attempts % 10 === 0) {
+              console.log(`  ⏳ Still waiting... (${attempts * 5}s / ${maxAttempts * 5}s)`);
+            }
             await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
           }
         }
       }
 
       if (!downloadUrl) {
-        console.log(`  ⚠️  Download not ready after ${maxAttempts * 5}s, skipping\n`);
+        console.log(`  ❌ Download not ready after ${maxAttempts * 5}s, skipping\n`);
         skipped++;
         continue;
       }

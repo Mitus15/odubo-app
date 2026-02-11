@@ -212,48 +212,78 @@ async function handleComplete(body: {
     throw new Error('No UID returned from Cloudflare Stream');
   }
 
-  // Enable MP4 downloads on Stream for PostForMe compatibility
-  let streamMp4Url = mp4_url; // Fallback to R2 URL
+  // Try to enable downloads quickly - if Stream is already ready, this will work fast
+  // If not ready yet, background job will handle it
+  console.log('[Arsenal Upload] Checking if Stream video is ready for downloads...');
+
+  let streamMp4Url = mp4_url; // Start with R2 URL as fallback
+
   try {
-    // Enable downloads
-    const enableDownloadsResponse = await fetch(
-      `https://api.cloudflare.com/client/v4/accounts/${accountId}/stream/${uid}/downloads`,
+    // Check Stream video status first
+    const statusResponse = await fetch(
+      `https://api.cloudflare.com/client/v4/accounts/${accountId}/stream/${uid}`,
       {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ id: 'default' }),
+        headers: { 'Authorization': `Bearer ${apiToken}` }
       }
     );
 
-    if (enableDownloadsResponse.ok) {
-      // Poll for download URL (wait up to 3 minutes for large files)
-      for (let i = 0; i < 36; i++) {
-        await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5s
+    if (statusResponse.ok) {
+      const statusData = await statusResponse.json();
+      const streamState = statusData.result?.status?.state;
 
-        const downloadResponse = await fetch(
+      if (streamState === 'ready') {
+        // Video is already transcoded! Try to enable downloads immediately
+        console.log('[Arsenal Upload] Stream video ready, enabling downloads...');
+
+        await fetch(
           `https://api.cloudflare.com/client/v4/accounts/${accountId}/stream/${uid}/downloads`,
           {
-            headers: { 'Authorization': `Bearer ${apiToken}` }
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${apiToken}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ id: 'default' }),
           }
         );
 
-        if (downloadResponse.ok) {
-          const downloadData = await downloadResponse.json();
-          if (downloadData.result?.default?.status === 'ready' && downloadData.result?.default?.url) {
-            streamMp4Url = downloadData.result.default.url;
-            console.log('[Arsenal Upload] Stream MP4 download ready:', streamMp4Url);
-            break;
+        // Quick poll - max 30 seconds
+        for (let i = 0; i < 6; i++) {
+          await new Promise(resolve => setTimeout(resolve, 5000));
+
+          const downloadResponse = await fetch(
+            `https://api.cloudflare.com/client/v4/accounts/${accountId}/stream/${uid}/downloads`,
+            { headers: { 'Authorization': `Bearer ${apiToken}` } }
+          );
+
+          if (downloadResponse.ok) {
+            const downloadData = await downloadResponse.json();
+            if (downloadData.result?.default?.status === 'ready' && downloadData.result?.default?.url) {
+              streamMp4Url = downloadData.result.default.url;
+              console.log('[Arsenal Upload] ✅ Stream MP4 ready immediately:', streamMp4Url);
+              break;
+            }
           }
         }
+      } else {
+        console.log(`[Arsenal Upload] Stream video still transcoding (state: ${streamState}). Background job will update later.`);
       }
     }
   } catch (error) {
-    console.error('[Arsenal Upload] Failed to enable Stream downloads:', error);
-    // Continue with R2 URL as fallback
+    // Don't fail upload if download generation fails - background job will retry
+    console.log('[Arsenal Upload] Could not enable downloads immediately, background job will handle it:', error);
   }
+
+  // Trigger background processing job (fire and forget)
+  fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/arsenal/process-stream-downloads`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Cookie': req.headers.get('cookie') || '', // Forward auth
+    },
+  }).catch(() => {
+    // Ignore errors - job runs on schedule anyway
+  });
 
   return NextResponse.json({
     success: true,

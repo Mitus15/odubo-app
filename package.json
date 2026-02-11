@@ -45,7 +45,9 @@
     "sync:all": "tsx --env-file=.env.local scripts/sync-all.ts",
     "delete:all-videos": "tsx --env-file=.env.local scripts/delete-all-videos.ts",
     "transcode:backfill": "tsx --env-file=.env.local scripts/backfill-transcode.ts",
-    "mp4:backfill": "tsx --env-file=.env.local scripts/backfill-stream-mp4-urls.ts"
+    "mp4:backfill": "tsx --env-file=.env.local scripts/backfill-stream-mp4-urls.ts",
+    "mp4:monitor": "tsx --env-file=.env.local scripts/monitor-mp4-processing.ts",
+    "mp4:reset-stuck": "tsx --env-file=.env.local scripts/reset-stuck-videos.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.858.0",

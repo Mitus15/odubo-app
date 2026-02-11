@@ -1,0 +1,15 @@
+# Cloudflare Worker for triggering MP4 processing
+name = "odubo-mp4-processor-cron"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+
+# Cron trigger - runs every 5 minutes
+[triggers]
+crons = ["*/5 * * * *"]
+
+[vars]
+API_URL = "https://odubo.studio/api/arsenal/process-stream-downloads"
+
+# Add this secret via: wrangler secret put CRON_SECRET
+# [secrets]
+# CRON_SECRET = "..." (set via CLI, not in file)
