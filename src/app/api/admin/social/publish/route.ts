@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
     const contentId = (body as { content_id?: number }).content_id;
     const platforms = (body as { platforms?: string[] }).platforms || [];
     const publishNow = (body as { publish_now?: boolean }).publish_now ?? true;
-    const scheduleAt = (body as { schedule_at?: string }).schedule_at;
+    const scheduleAt = (body as { scheduled_at?: string }).scheduled_at;
 
     if (!contentId) {
       return NextResponse.json({ error: 'content_id is required' }, { status: 400 });
@@ -177,7 +177,7 @@ export async function POST(request: NextRequest) {
 
     // Add scheduling if not publishing now
     if (!publishNow && scheduleAt) {
-      createPostInput.schedule_at = scheduleAt;
+      createPostInput.scheduled_at = scheduleAt;
     }
 
     // Call Post for Me API

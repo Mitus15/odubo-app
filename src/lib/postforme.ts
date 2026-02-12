@@ -122,7 +122,7 @@ export interface CreatePostInput {
   caption?: string;
   social_accounts: string[]; // Account IDs
   media?: Array<{ url: string; type?: 'image' | 'video'; thumbnail_url?: string }>;
-  schedule_at?: string; // ISO date string
+  scheduled_at?: string; // ISO date string
   first_comment?: string;
   // Platform-specific overrides (apply to ALL accounts of that platform)
   platform_configurations?: {
@@ -248,7 +248,7 @@ async function apiRequest<T>(
         endpoint,
         method: options.method,
         status: response.status,
-        scheduleAt: body?.schedule_at,
+        scheduledAt: body?.scheduled_at,
         success: response.ok,
         responseData: data,
       });

@@ -277,7 +277,7 @@ export async function POST(request: NextRequest) {
         caption,
         social_accounts: accountIds,
         media,
-        schedule_at: scheduleAt,
+        scheduled_at: scheduleAt,
         first_comment: metadata?.firstComment || undefined,
         platform_configurations: Object.keys(platform_configurations).length > 0
           ? platform_configurations
