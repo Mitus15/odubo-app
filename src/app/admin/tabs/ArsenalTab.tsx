@@ -2075,9 +2075,11 @@ function UploadView({
 
       // Track uploaded UIDs for thumbnail generation
       const uploadedUids: string[] = [];
+      const uploadedFileSizes: number[] = [];
 
       for (let i = 0; i < selectedFiles.length; i++) {
         const file = selectedFiles[i];
+        uploadedFileSizes.push(file.size);
 
         // Detect video format
         const formatInfo = detectVideoFormat(file);
@@ -2314,68 +2316,83 @@ function UploadView({
         }
       }
 
-      setUploadProgress('✓ Upload complete! Stream is processing your video...');
-      
-      // Trigger automatic thumbnail generation after upload
-      // Poll for video readiness and generate thumbnail when ready
-      if (uploadedUids.length > 0) {
-        const lastUid = uploadedUids[uploadedUids.length - 1];
-        
-        setTimeout(async () => {
-          try {
-            let attempts = 0;
-            const maxAttempts = 12; // 12 attempts × 10s = 2 minutes max
-            
-            const pollForReadiness = async () => {
-              attempts++;
-              console.log(`[Arsenal Upload] Polling video ${lastUid} readiness (attempt ${attempts}/${maxAttempts})...`);
-              
-              const pollRes = await fetch('/api/videos/poll-ready', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ uid: lastUid })
-              });
-            
-            if (!pollRes.ok) {
-              console.error('[Arsenal Upload] Poll failed:', await pollRes.text());
-              if (attempts < maxAttempts) {
+      // Check if we uploaded a large file (>5GB)
+      const LARGE_FILE_THRESHOLD = 5 * 1024 * 1024 * 1024; // 5GB
+      const hasLargeFile = uploadedFileSizes.some(size => size > LARGE_FILE_THRESHOLD);
+
+      if (hasLargeFile) {
+        // For large files, skip immediate polling and let background job handle it
+        const largeFileSizeGB = (Math.max(...uploadedFileSizes) / 1024 / 1024 / 1024).toFixed(1);
+        setUploadProgress(`✓ Upload complete! Large file (${largeFileSizeGB}GB) processing in background. You can close this and continue working - video will appear in Arsenal when ready (may take 30+ minutes).`);
+        console.log('[Arsenal Upload] Large file detected, skipping immediate thumbnail polling');
+
+        // Refresh Arsenal after a short delay to show the video in "processing" state
+        setTimeout(() => {
+          onUploadComplete();
+        }, 3000);
+      } else {
+        // For smaller files, use the existing thumbnail polling logic
+        setUploadProgress('✓ Upload complete! Stream is processing your video...');
+
+        if (uploadedUids.length > 0) {
+          const lastUid = uploadedUids[uploadedUids.length - 1];
+
+          setTimeout(async () => {
+            try {
+              let attempts = 0;
+              const maxAttempts = 12; // 12 attempts × 10s = 2 minutes max
+
+              const pollForReadiness = async () => {
+                attempts++;
+                console.log(`[Arsenal Upload] Polling video ${lastUid} readiness (attempt ${attempts}/${maxAttempts})...`);
+
+                const pollRes = await fetch('/api/videos/poll-ready', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ uid: lastUid })
+                });
+
+              if (!pollRes.ok) {
+                console.error('[Arsenal Upload] Poll failed:', await pollRes.text());
+                if (attempts < maxAttempts) {
+                  setTimeout(pollForReadiness, 10000);
+                } else {
+                  setUploadProgress('✓ Upload complete! (Video still processing - refresh Arsenal to retry thumbnail)');
+                }
+                return;
+              }
+
+              const pollData = await pollRes.json();
+
+              if (pollData.ready && pollData.thumbnailGenerated) {
+                console.log(`[Arsenal Upload] Thumbnail generated successfully for ${lastUid}`);
+                setUploadProgress('✓ Upload complete! Custom thumbnail generated successfully.');
+                // Refresh video list to show new thumbnail
+                // Refresh will happen via onUploadComplete
+                setTimeout(() => onUploadComplete(), 2000);
+              } else if (pollData.ready && !pollData.thumbnailGenerated) {
+                console.warn(`[Arsenal Upload] Video ready but thumbnail failed:`, pollData.error);
+                setUploadProgress('✓ Upload complete! (Thumbnail generation failed - you can regenerate from Arsenal)');
+                onUploadComplete(); // Refresh to show video even without thumbnail
+              } else if (attempts < maxAttempts) {
+                // Not ready yet, poll again
                 setTimeout(pollForReadiness, 10000);
               } else {
-                setUploadProgress('✓ Upload complete! (Video still processing - refresh Arsenal to retry thumbnail)');
+                console.warn(`[Arsenal Upload] Video ${lastUid} not ready after ${maxAttempts} attempts`);
+                setUploadProgress('✓ Upload complete! (Video still processing - thumbnail will appear shortly)');
+                onUploadComplete(); // Refresh library anyway
               }
-              return;
-            }
-            
-            const pollData = await pollRes.json();
-            
-            if (pollData.ready && pollData.thumbnailGenerated) {
-              console.log(`[Arsenal Upload] Thumbnail generated successfully for ${lastUid}`);
-              setUploadProgress('✓ Upload complete! Custom thumbnail generated successfully.');
-              // Refresh video list to show new thumbnail
-              // Refresh will happen via onUploadComplete
-              setTimeout(() => onUploadComplete(), 2000);
-            } else if (pollData.ready && !pollData.thumbnailGenerated) {
-              console.warn(`[Arsenal Upload] Video ready but thumbnail failed:`, pollData.error);
-              setUploadProgress('✓ Upload complete! (Thumbnail generation failed - you can regenerate from Arsenal)');
-              onUploadComplete(); // Refresh to show video even without thumbnail
-            } else if (attempts < maxAttempts) {
-              // Not ready yet, poll again
-              setTimeout(pollForReadiness, 10000);
-            } else {
-              console.warn(`[Arsenal Upload] Video ${lastUid} not ready after ${maxAttempts} attempts`);
-              setUploadProgress('✓ Upload complete! (Video still processing - thumbnail will appear shortly)');
-              onUploadComplete(); // Refresh library anyway
-            }
-          };
-          
-          // Start polling after 30 seconds (give Cloudflare a head start)
-          setTimeout(pollForReadiness, 30000);
-          
-        } catch (pollError) {
-          console.error('[Arsenal Upload] Error in thumbnail polling:', pollError);
-          setUploadProgress('✓ Upload complete! (Thumbnail generation pending - refresh Arsenal)');
+            };
+
+            // Start polling after 30 seconds (give Cloudflare a head start)
+            setTimeout(pollForReadiness, 30000);
+
+          } catch (pollError) {
+            console.error('[Arsenal Upload] Error in thumbnail polling:', pollError);
+            setUploadProgress('✓ Upload complete! (Thumbnail generation pending - refresh Arsenal)');
+          }
+        }, 1000);
         }
-      }, 1000);
       }
       
       setSelectedFiles([]);
