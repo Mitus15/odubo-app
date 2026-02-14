@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import ExportModal, { ExportOptions } from '../components/ExportModal';
+import { MobileCard } from '@/components/admin/MobileCard';
 
 interface Product {
   id: string;
@@ -74,28 +75,28 @@ export default function ProductsTab() {
   });
 
   return (
-    <div className="p-6 max-w-[1600px] mx-auto space-y-6">
+    <div className="p-3 sm:p-4 md:p-6 max-w-full md:max-w-[1600px] mx-auto space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-[#ede8df]">Products</h2>
-        <div className="flex gap-3">
-          <button 
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
+        <h2 className="text-xl md:text-2xl font-bold text-[#ede8df]">Products</h2>
+        <div className="flex flex-wrap gap-2 sm:gap-3 w-full sm:w-auto">
+          <button
             onClick={() => setIsExportModalOpen(true)}
-            className="px-3 py-1.5 text-sm text-[#ede8df] bg-[#302927] hover:bg-[#403633] rounded-lg transition-colors"
+            className="px-3 py-2 sm:py-1.5 text-xs sm:text-sm text-[#ede8df] bg-[#302927] hover:bg-[#403633] rounded-lg transition-colors min-h-[44px] sm:min-h-0"
           >
             Export
           </button>
-          <button className="px-3 py-1.5 text-sm text-[#ede8df] bg-[#302927] hover:bg-[#403633] rounded-lg transition-colors">
+          <button className="px-3 py-2 sm:py-1.5 text-xs sm:text-sm text-[#ede8df] bg-[#302927] hover:bg-[#403633] rounded-lg transition-colors min-h-[44px] sm:min-h-0">
             Import
           </button>
-          <button className="px-3 py-1.5 text-sm text-[#ede8df] bg-[#302927] hover:bg-[#403633] rounded-lg transition-colors">
+          <button className="px-3 py-2 sm:py-1.5 text-xs sm:text-sm text-[#ede8df] bg-[#302927] hover:bg-[#403633] rounded-lg transition-colors min-h-[44px] sm:min-h-0">
             More actions ▼
           </button>
           <a
             href="https://admin.shopify.com"
             target="_blank"
             rel="noopener noreferrer"
-            className="px-3 py-1.5 text-sm font-medium bg-[#ede8df] text-[#171616] rounded-lg hover:bg-white transition-colors flex items-center gap-2"
+            className="px-3 py-2 sm:py-1.5 text-xs sm:text-sm font-medium bg-[#ede8df] text-[#171616] rounded-lg hover:bg-white transition-colors flex items-center gap-2 min-h-[44px] sm:min-h-0"
           >
             Manage in Shopify ↗
           </a>
@@ -121,13 +122,13 @@ export default function ProductsTab() {
       {/* Main Content Area */}
       <div className="bg-[#1c1a19] rounded-xl border border-[#502d26]/30 overflow-hidden">
         {/* Filter Bar */}
-        <div className="border-b border-[#502d26]/30 p-2 flex items-center justify-between bg-[#302927]/20">
-          <div className="flex gap-1">
+        <div className="border-b border-[#502d26]/30 p-2 sm:p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 bg-[#302927]/20">
+          <div className="flex flex-wrap gap-1.5 sm:gap-1">
             {['all', 'active', 'draft', 'archived'].map((filter) => (
               <button
                 key={filter}
                 onClick={() => setActiveFilter(filter)}
-                className={`px-3 py-1.5 text-sm rounded-lg capitalize transition-colors ${
+                className={`px-3 py-2 sm:py-1.5 text-xs sm:text-sm rounded-lg capitalize transition-colors min-h-[44px] sm:min-h-0 ${
                   activeFilter === filter
                     ? 'bg-[#302927] text-[#ede8df] font-medium'
                     : 'text-[#b2a491] hover:bg-[#302927]/50 hover:text-[#ede8df]'
@@ -136,95 +137,145 @@ export default function ProductsTab() {
                 {filter}
               </button>
             ))}
-            <button className="px-3 py-1.5 text-sm text-[#b2a491] hover:text-[#ede8df]">+</button>
+            <button className="px-3 py-2 sm:py-1.5 text-xs sm:text-sm text-[#b2a491] hover:text-[#ede8df] min-h-[44px] sm:min-h-0">+</button>
           </div>
           <div className="flex gap-2">
-            <button className="p-1.5 text-[#b2a491] hover:text-[#ede8df]">🔍</button>
-            <button className="p-1.5 text-[#b2a491] hover:text-[#ede8df]">≡</button>
-            <button className="p-1.5 text-[#b2a491] hover:text-[#ede8df]">⇅</button>
+            <button className="p-2 sm:p-1.5 text-[#b2a491] hover:text-[#ede8df] min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0">🔍</button>
+            <button className="p-2 sm:p-1.5 text-[#b2a491] hover:text-[#ede8df] min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0">≡</button>
+            <button className="p-2 sm:p-1.5 text-[#b2a491] hover:text-[#ede8df] min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0">⇅</button>
           </div>
         </div>
 
-        {/* Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-[#302927]/40 text-[#b2a491] border-b border-[#502d26]/30">
-              <tr>
-                <th className="p-4 w-10">
+        {/* Loading & Empty States */}
+        {loading ? (
+          <div className="p-8 text-center text-[#b2a491]">Loading products...</div>
+        ) : filteredProducts.length === 0 ? (
+          <div className="p-8 text-center text-[#b2a491]">No products found</div>
+        ) : (
+          <>
+            {/* Mobile: Card view */}
+            <div className="md:hidden space-y-3 p-3">
+              {filteredProducts.map((product) => (
+                <div key={product.id} className="relative">
                   <input
                     type="checkbox"
-                    checked={selectedProducts.size === products.length && products.length > 0}
-                    onChange={toggleSelectAll}
-                    className="rounded border-[#502d26]/50 bg-[#171616] checked:bg-[#843c2d]"
+                    checked={selectedProducts.has(product.id)}
+                    onChange={() => toggleSelect(product.id)}
+                    className="absolute top-3 right-3 rounded border-[#502d26]/50 bg-[#171616] checked:bg-[#843c2d] z-10"
                   />
-                </th>
-                <th className="p-4 font-medium">Product</th>
-                <th className="p-4 font-medium">Status</th>
-                <th className="p-4 font-medium">Inventory</th>
-                <th className="p-4 font-medium">Category</th>
-                <th className="p-4 font-medium text-right">Channels</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#502d26]/30">
-              {loading ? (
-                <tr>
-                  <td colSpan={6} className="p-8 text-center text-[#b2a491]">Loading products...</td>
-                </tr>
-              ) : filteredProducts.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="p-8 text-center text-[#b2a491]">No products found</td>
-                </tr>
-              ) : (
-                filteredProducts.map((product) => (
-                  <tr key={product.id} className="hover:bg-[#302927]/20 transition-colors group">
-                    <td className="p-4">
+                  <MobileCard
+                    title={product.title}
+                    fields={[
+                      {
+                        label: 'Status',
+                        value: (
+                          <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium capitalize ${
+                            product.status === 'active'
+                              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                              : 'bg-[#302927] text-[#726d6c] border border-[#502d26]/20'
+                          }`}>
+                            {product.status}
+                          </span>
+                        ),
+                      },
+                      {
+                        label: 'Inventory',
+                        value: product.inventory ?? 'Not tracked',
+                      },
+                      {
+                        label: 'Category',
+                        value: product.category ?? 'Uncategorized',
+                      },
+                      {
+                        label: 'Channels',
+                        value: '3',
+                      },
+                    ]}
+                    actions={
+                      product.images?.[0] && (
+                        <div className="w-12 h-12 bg-[#302927] rounded-lg overflow-hidden flex-shrink-0 border border-[#502d26]/30">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={product.images[0]} alt="" className="w-full h-full object-cover" />
+                        </div>
+                      )
+                    }
+                  />
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop: Table */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-[#302927]/40 text-[#b2a491] border-b border-[#502d26]/30">
+                  <tr>
+                    <th className="p-4 w-10">
                       <input
                         type="checkbox"
-                        checked={selectedProducts.has(product.id)}
-                        onChange={() => toggleSelect(product.id)}
+                        checked={selectedProducts.size === products.length && products.length > 0}
+                        onChange={toggleSelectAll}
                         className="rounded border-[#502d26]/50 bg-[#171616] checked:bg-[#843c2d]"
                       />
-                    </td>
-                    <td className="p-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-[#302927] rounded-lg overflow-hidden flex-shrink-0 border border-[#502d26]/30">
-                          {product.images?.[0] ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={product.images[0]} alt="" className="w-full h-full object-cover" />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-[#b2a491] text-xs">IMG</div>
-                          )}
-                        </div>
-                        <span className="font-medium text-[#ede8df]">{product.title}</span>
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium capitalize ${
-                        product.status === 'active'
-                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                          : 'bg-[#302927] text-[#726d6c] border border-[#502d26]/20'
-                      }`}>
-                        {product.status}
-                      </span>
-                    </td>
-                    <td className="p-4 text-[#b2a491]">
-                      {product.inventory ?? 'Inventory not tracked'}
-                    </td>
-                    <td className="p-4 text-[#b2a491]">
-                      {product.category ?? 'Uncategorized'}
-                    </td>
-                    <td className="p-4 text-right text-[#b2a491]">
-                      3
-                    </td>
+                    </th>
+                    <th className="p-4 font-medium">Product</th>
+                    <th className="p-4 font-medium">Status</th>
+                    <th className="p-4 font-medium">Inventory</th>
+                    <th className="p-4 font-medium">Category</th>
+                    <th className="p-4 font-medium text-right">Channels</th>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-        
+                </thead>
+                <tbody className="divide-y divide-[#502d26]/30">
+                  {filteredProducts.map((product) => (
+                    <tr key={product.id} className="hover:bg-[#302927]/20 transition-colors group">
+                      <td className="p-4">
+                        <input
+                          type="checkbox"
+                          checked={selectedProducts.has(product.id)}
+                          onChange={() => toggleSelect(product.id)}
+                          className="rounded border-[#502d26]/50 bg-[#171616] checked:bg-[#843c2d]"
+                        />
+                      </td>
+                      <td className="p-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-[#302927] rounded-lg overflow-hidden flex-shrink-0 border border-[#502d26]/30">
+                            {product.images?.[0] ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={product.images[0]} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-[#b2a491] text-xs">IMG</div>
+                            )}
+                          </div>
+                          <span className="font-medium text-[#ede8df]">{product.title}</span>
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium capitalize ${
+                          product.status === 'active'
+                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                            : 'bg-[#302927] text-[#726d6c] border border-[#502d26]/20'
+                        }`}>
+                          {product.status}
+                        </span>
+                      </td>
+                      <td className="p-4 text-[#b2a491]">
+                        {product.inventory ?? 'Inventory not tracked'}
+                      </td>
+                      <td className="p-4 text-[#b2a491]">
+                        {product.category ?? 'Uncategorized'}
+                      </td>
+                      <td className="p-4 text-right text-[#b2a491]">
+                        3
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+
         {/* Footer / Pagination */}
-        <div className="p-4 border-t border-[#502d26]/30 text-center text-sm text-[#b2a491]">
+        <div className="p-3 sm:p-4 border-t border-[#502d26]/30 text-center text-xs sm:text-sm text-[#b2a491]">
           Learn more about products
         </div>
       </div>
