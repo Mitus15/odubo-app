@@ -247,11 +247,11 @@ function VideoPreviewModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-4xl mx-4"
+        className="relative w-full max-w-full sm:max-w-4xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close button */}
@@ -279,10 +279,10 @@ function VideoPreviewModal({
         </div>
 
         {/* Video info */}
-        <div className="mt-4 p-4 bg-[#1a1816] rounded-xl">
-          <h3 className="text-lg font-medium text-[#ede8df]">{video.title}</h3>
+        <div className="mt-4 p-3 sm:p-4 bg-[#1a1816] rounded-xl">
+          <h3 className="text-base sm:text-lg font-medium text-[#ede8df]">{video.title}</h3>
           {video.description && (
-            <p className="mt-2 text-sm text-[#726d6c] line-clamp-2">{video.description}</p>
+            <p className="mt-2 text-xs sm:text-sm text-[#726d6c] line-clamp-2">{video.description}</p>
           )}
           <div className="mt-3 flex items-center gap-4 text-xs text-[#726d6c]">
             {video.duration && <span>Duration: {video.duration}</span>}
@@ -991,8 +991,8 @@ function LibraryView({
 
       {/* Bulk Delete Confirmation Modal */}
       {showBulkDeleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="bg-[#1a1816] rounded-xl p-6 max-w-md w-full mx-4 border border-white/10">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-[#1a1816] rounded-xl p-4 sm:p-6 w-full sm:max-w-md border border-white/10">
             <h3 className="text-lg font-medium text-[#ede8df] mb-2">Delete {selectedIds.length} items?</h3>
             <p className="text-sm text-[#726d6c] mb-6">
               This will permanently delete the selected {filter === 'clips' ? 'clips' : 'videos'} from your library and Cloudflare Stream. This action cannot be undone.
@@ -2676,7 +2676,7 @@ function UploadView({
           </div>
 
           {/* Type, Category, Mood in a row */}
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
             {/* Type */}
             <div>
               <label className="text-xs text-[#726d6c] mb-1 block">Type</label>
@@ -2743,7 +2743,7 @@ function UploadView({
           </div>
 
           {/* Music Linking (Track & Album) */}
-          <div className="grid grid-cols-2 gap-3 pt-4 border-t border-white/10">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-4 border-t border-white/10">
             <div>
               <label className="text-xs text-[#726d6c] mb-1 block">Link to Track (Optional)</label>
               <select
@@ -3230,12 +3230,12 @@ function PipelineView({ onDeployClip }: { onDeployClip: (clipId: number) => void
 
       {/* Clip Detail Modal */}
       {selectedClip && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
           onClick={() => setSelectedClip(null)}
         >
-          <div 
-            className="bg-[#1a1816] rounded-xl p-6 max-w-md w-full mx-4 border border-white/10"
+          <div
+            className="bg-[#1a1816] rounded-xl p-4 sm:p-6 w-full sm:max-w-md border border-white/10"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
@@ -3607,27 +3607,27 @@ export default function ArsenalTab() {
   };
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="p-3 sm:p-4 md:p-6 max-w-full md:max-w-6xl mx-auto">
       {/* Header */}
-      <div className="mb-8">
+      <div className="mb-6 md:mb-8">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
-            <h1 className="text-2xl font-bold text-[#ede8df]">Content Arsenal</h1>
-            <p className="text-sm text-[#726d6c] mt-1">
+            <h1 className="text-xl md:text-2xl font-bold text-[#ede8df]">Content Arsenal</h1>
+            <p className="text-xs md:text-sm text-[#726d6c] mt-1">
               Magazine & Bullets - Your digital kingdom command center
             </p>
           </div>
 
           {/* Homepage Mode Toggle */}
-          <div className="flex items-center gap-3 bg-white/5 rounded-xl px-4 py-2.5 border border-white/10">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 bg-white/5 rounded-xl p-3 sm:px-4 sm:py-2.5 border border-white/10">
             <span className="text-xs text-[#726d6c] uppercase tracking-wider">Homepage:</span>
-            <div className="flex gap-1">
+            <div className="flex flex-wrap gap-1.5 sm:gap-1">
               {(['auto', 'clips', 'music'] as const).map((mode) => (
                 <button
                   key={mode}
                   onClick={() => handleHomepageModeChange(mode)}
                   disabled={homepageModeLoading}
-                  className={`px-3 py-1 text-xs font-medium rounded-lg transition-colors ${
+                  className={`px-3 py-1.5 sm:py-1 text-xs font-medium rounded-lg transition-colors min-h-[44px] sm:min-h-0 ${
                     homepageMode === mode
                       ? 'bg-[#843c2d] text-white'
                       : 'bg-white/5 text-[#726d6c] hover:bg-white/10 hover:text-[#ede8df]'
@@ -3642,7 +3642,7 @@ export default function ArsenalTab() {
       </div>
 
       {/* View tabs */}
-      <div className="flex items-center gap-2 mb-6 overflow-x-auto">
+      <div className="flex items-center gap-2 mb-4 sm:mb-6 overflow-x-auto pb-2 sm:pb-0">
         {[
           { id: 'library' as ViewMode, label: 'Library', icon: Icons.library },
           { id: 'pipeline' as ViewMode, label: 'Pipeline', icon: Icons.pipeline },
@@ -3654,14 +3654,14 @@ export default function ArsenalTab() {
           <button
             key={tab.id}
             onClick={() => setView(tab.id)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-colors ${
+            className={`flex items-center gap-2 px-3 sm:px-4 py-2.5 sm:py-2 rounded-xl transition-colors whitespace-nowrap ${
               view === tab.id
                 ? 'bg-[#843c2d]/20 text-[#ede8df]'
                 : 'bg-white/5 text-[#726d6c] hover:bg-white/10'
             }`}
           >
             {tab.icon}
-            <span className="text-sm font-medium">{tab.label}</span>
+            <span className="text-xs sm:text-sm font-medium">{tab.label}</span>
             {tab.id === 'deploy' && selectedIds.length > 0 && (
               <span className="px-1.5 py-0.5 text-[10px] rounded-full bg-[#843c2d] text-white">
                 {selectedIds.length}
@@ -3672,7 +3672,7 @@ export default function ArsenalTab() {
       </div>
 
       {/* Content */}
-      <div className="bg-[#1a1816] rounded-2xl p-6 border border-white/5">
+      <div className="bg-[#1a1816] rounded-2xl p-3 sm:p-4 md:p-6 border border-white/5">
         {view === 'library' && (
           <LibraryView
             videos={videos}

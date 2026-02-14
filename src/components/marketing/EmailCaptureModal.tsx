@@ -2,9 +2,11 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useRouter } from 'next/navigation';
 import { useEmailCapture } from '@/contexts/EmailCaptureContext';
 
 export default function EmailCaptureModal() {
+  const router = useRouter();
   const {
     isOpen,
     closeModal,
@@ -123,10 +125,10 @@ export default function EmailCaptureModal() {
               <div className="p-8 text-center">
                 <div className="text-5xl mb-4">✨</div>
                 <h2 className="text-2xl font-semibold text-[#ede8df] mb-2">
-                  You&apos;re In
+                  Check Your Email
                 </h2>
                 <p className="text-stone-300 mb-6">
-                  Welcome to the inner circle. Check your inbox for something special.
+                  Your code is waiting.
                 </p>
 
                 {discountCode && (
@@ -136,27 +138,24 @@ export default function EmailCaptureModal() {
                       {discountCode}
                     </p>
                     <p className="text-xs text-stone-500 mt-2">
-                      Use at checkout for 10% off your first order
+                      10% off. First order.
                     </p>
                   </div>
                 )}
 
                 <button
-                  onClick={closeModal}
+                  onClick={() => {
+                    router.push('/store');
+                    closeModal();
+                  }}
                   className="w-full px-6 py-3 bg-[#843c2d] text-white rounded-xl hover:bg-[#6f2f23] transition-colors font-medium"
                 >
-                  Start Shopping
+                  Visit Shop
                 </button>
               </div>
             ) : (
               // Form state
               <div className="p-8">
-                <div className="text-center mb-6">
-                  <h2 className="text-2xl font-semibold text-[#ede8df]">
-                    Welcome
-                  </h2>
-                </div>
-
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div>
                     <input

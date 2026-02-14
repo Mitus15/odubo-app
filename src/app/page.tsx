@@ -6,7 +6,7 @@ import type { Metadata } from 'next';
 // SEO Metadata
 export const metadata: Metadata = generateSeoMetadata({
   title: 'Home',
-  description: 'Listen to the latest music, watch exclusive clips, and shop the latest drops from Odubo Studio.',
+  description: 'Music, clips, shop.',
   path: '/',
 });
 
