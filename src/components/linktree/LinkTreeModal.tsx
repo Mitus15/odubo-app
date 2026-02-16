@@ -8,6 +8,8 @@ import type { LinkTreeItem } from '@/types/linktree';
 import { useOmniShop } from '@/contexts/OmniShopContext';
 import { useStore } from '@/contexts/StoreContext';
 import { useEmailCapture } from '@/contexts/EmailCaptureContext';
+import ContactModal from '@/components/store/ContactModal';
+import LegalModal from '@/components/store/LegalModal';
 
 interface LinkTreeModalProps {
   isOpen: boolean;
@@ -22,6 +24,10 @@ export default function LinkTreeModal({ isOpen, onClose }: LinkTreeModalProps) {
   const { storeAccessible: legacyStoreAccessible, checkingStoreAccess: legacyCheckingAccess, closeAll: closeAllShopModals } = useOmniShop();
   const { openStore, isStoreAccessible, isCheckingAccess } = useStore();
   const { hasSubscribed, subscribe, isSubmitting, discountCode } = useEmailCapture();
+
+  // Footer modal state
+  const [contactOpen, setContactOpen] = useState(false);
+  const [legalOpen, setLegalOpen] = useState(false);
 
   // Email capture form state
   const [email, setEmail] = useState('');
@@ -284,20 +290,24 @@ export default function LinkTreeModal({ isOpen, onClose }: LinkTreeModalProps) {
             animate={{ opacity: 1 }}
             transition={{ delay: 0.4, duration: 0.3 }}
           >
-            <a
-              href="mailto:contact@odubo.studio"
+            <button
+              onClick={() => setContactOpen(true)}
               className="text-[11px] text-[#ede8df]/30 hover:text-[#ede8df]/60 transition-colors tracking-wide"
             >
               Contact Us
-            </a>
+            </button>
             <span className="text-[#ede8df]/15">|</span>
-            <a
-              href="/privacy"
+            <button
+              onClick={() => setLegalOpen(true)}
               className="text-[11px] text-[#ede8df]/30 hover:text-[#ede8df]/60 transition-colors tracking-wide"
             >
               Privacy Policy
-            </a>
+            </button>
           </motion.div>
+
+          {/* Contact & Legal modals */}
+          <ContactModal isOpen={contactOpen} onClose={() => setContactOpen(false)} />
+          <LegalModal isOpen={legalOpen} onClose={() => setLegalOpen(false)} initialTab="privacy" />
         </motion.div>
       )}
     </AnimatePresence>,
