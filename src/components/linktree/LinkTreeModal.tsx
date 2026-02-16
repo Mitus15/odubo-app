@@ -154,25 +154,16 @@ export default function LinkTreeModal({ isOpen, onClose }: LinkTreeModalProps) {
             backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
           }} />
 
-          {/* Header */}
+          {/* Close button — top right */}
           <motion.div
-            className="relative flex items-center justify-between px-4 h-16"
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
+            className="relative flex items-center justify-end px-5 pt-3"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
             transition={{ delay: 0.15, duration: 0.25 }}
           >
-            <div className="flex items-center gap-3">
-              <img
-                src="/odubo_logo_emboss.webp"
-                alt="Odubo"
-                className="w-8 h-8 object-contain opacity-60"
-                draggable={false}
-              />
-              <h1 className="text-[#ede8df] text-lg font-medium tracking-wide">Connect</h1>
-            </div>
             <button
               onClick={onClose}
-              className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 backdrop-blur-sm border border-white/10 text-[#ede8df]/70 hover:text-[#ede8df] hover:bg-white/10 transition-all active:scale-95"
+              className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 border border-white/10 text-[#ede8df]/60 hover:text-[#ede8df] hover:bg-white/10 transition-all active:scale-95"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -180,78 +171,64 @@ export default function LinkTreeModal({ isOpen, onClose }: LinkTreeModalProps) {
             </button>
           </motion.div>
 
-          {/* Content */}
-          <motion.div
-            className="flex-1 overflow-y-auto px-4 py-6"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.2, duration: 0.3 }}
-          >
+          {/* Content — centered vertically */}
+          <div className="flex-1 flex flex-col items-center justify-center px-6">
+            {/* Brand mark */}
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1, duration: 0.3 }}
+              className="mb-10"
+            >
+              <img
+                src="/odubo_logo_emboss.webp"
+                alt="Odubo"
+                className="w-14 h-14 object-contain opacity-50"
+                draggable={false}
+              />
+            </motion.div>
+
+            {/* Icon grid — 2 columns */}
             {loading ? (
               <div className="flex justify-center py-12">
-                <div className="w-10 h-10 border-2 border-[#843c2d]/30 border-t-[#843c2d] rounded-full animate-spin" />
+                <div className="w-8 h-8 border-2 border-[#843c2d]/30 border-t-[#843c2d] rounded-full animate-spin" />
               </div>
-            ) : visibleLinks.length === 0 ? (
-              <p className="text-center text-[#ede8df]/40 py-12">No links available</p>
             ) : (
-              <div className="grid gap-3 max-w-lg mx-auto">
+              <motion.div
+                className="grid grid-cols-2 gap-4 w-full max-w-[280px]"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.15, duration: 0.3 }}
+              >
                 {visibleLinks.map((link, index) => (
                   <motion.button
                     key={link.id}
-                    initial={{ opacity: 0, y: 12 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2 + index * 0.05, duration: 0.3 }}
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.15 + index * 0.04, type: 'spring', stiffness: 500, damping: 30 }}
                     onClick={() => handleLinkClick(link)}
-                    className="group w-full flex items-center gap-4 p-4 rounded-2xl text-left transition-all duration-300 active:scale-[0.98]"
+                    className="group flex flex-col items-center justify-center aspect-square rounded-2xl transition-all duration-200 active:scale-95"
                     style={{
-                      background: 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%)',
-                      backdropFilter: 'blur(12px)',
-                      WebkitBackdropFilter: 'blur(12px)',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                      boxShadow: '0 4px 24px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)',
+                      background: 'rgba(255,255,255,0.04)',
+                      border: '1px solid rgba(255,255,255,0.08)',
                     }}
+                    title={link.title}
                   >
-                    {/* Icon container with glass effect */}
-                    <div
-                      className="w-12 h-12 flex items-center justify-center rounded-xl flex-shrink-0 transition-transform duration-300 group-hover:scale-110"
-                      style={{
-                        background: 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.03) 100%)',
-                        border: '1px solid rgba(255,255,255,0.08)',
-                        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.1)',
-                      }}
-                    >
+                    <div className="w-8 h-8 flex items-center justify-center transition-transform duration-200 group-hover:scale-110">
                       <PlatformIcon platform={link.platform ?? null} />
-                    </div>
-
-                    {/* Title */}
-                    <span className="flex-1 font-medium text-[#ede8df] text-base group-hover:text-white transition-colors">
-                      {link.title}
-                    </span>
-
-                    {/* Arrow with hover animation */}
-                    <div className="w-8 h-8 flex items-center justify-center rounded-full bg-white/5 group-hover:bg-[#843c2d]/30 transition-all duration-300">
-                      <svg
-                        className="w-4 h-4 text-[#ede8df]/40 group-hover:text-[#ede8df] transition-all duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth={2}
-                        viewBox="0 0 24 24"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 19.5l15-15m0 0H8.25m11.25 0v11.25" />
-                      </svg>
                     </div>
                   </motion.button>
                 ))}
-              </div>
+              </motion.div>
             )}
 
-            {/* Email Capture */}
+            {/* Email Capture — centered below icons */}
             {!loading && (
               <motion.div
-                className="mt-8 max-w-lg mx-auto"
-                initial={{ opacity: 0, y: 12 }}
+                className="mt-10 w-full max-w-[280px]"
+                initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4, duration: 0.3 }}
+                transition={{ delay: 0.35, duration: 0.3 }}
               >
                 {emailSuccess ? (
                   <div className="text-center space-y-3">
@@ -266,14 +243,10 @@ export default function LinkTreeModal({ isOpen, onClose }: LinkTreeModalProps) {
                         {discountCode}
                       </div>
                     )}
-                    <p className="text-[#ede8df]/50 text-xs">Check your email. 10% off, first order.</p>
+                    <p className="text-[#ede8df]/40 text-xs">Check your email. 10% off, first order.</p>
                     <button
                       onClick={handleVisitShop}
-                      className="mt-2 px-6 py-2.5 rounded-full text-sm font-medium text-[#ede8df] transition-all active:scale-95"
-                      style={{
-                        background: 'linear-gradient(135deg, rgba(132,60,45,0.5) 0%, rgba(132,60,45,0.25) 100%)',
-                        border: '1px solid rgba(132,60,45,0.4)',
-                      }}
+                      className="mt-1 px-5 py-2 rounded-full text-xs font-medium text-[#ede8df]/80 transition-all active:scale-95 bg-white/5 border border-white/10 hover:bg-white/10"
                     >
                       Visit Shop
                     </button>
@@ -286,31 +259,44 @@ export default function LinkTreeModal({ isOpen, onClose }: LinkTreeModalProps) {
                       onChange={(e) => { setEmail(e.target.value); setEmailError(null); }}
                       placeholder="Your email"
                       required
-                      className="flex-1 px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-[#ede8df] text-sm placeholder:text-[#ede8df]/30 outline-none focus:border-[#843c2d]/50 transition-colors"
+                      className="flex-1 min-w-0 px-4 py-2.5 rounded-xl bg-white/5 border border-white/8 text-[#ede8df] text-sm placeholder:text-[#ede8df]/25 outline-none focus:border-[#843c2d]/40 transition-colors"
                     />
                     <button
                       type="submit"
                       disabled={isSubmitting}
-                      className="px-5 py-3 rounded-xl text-sm font-medium text-[#ede8df] transition-all active:scale-95 disabled:opacity-50"
-                      style={{
-                        background: 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.03) 100%)',
-                        border: '1px solid rgba(255,255,255,0.1)',
-                      }}
+                      className="px-4 py-2.5 rounded-xl text-sm font-medium text-[#ede8df]/80 transition-all active:scale-95 disabled:opacity-50 bg-white/5 border border-white/8 hover:bg-white/10"
                     >
                       {isSubmitting ? '...' : 'Join'}
                     </button>
                   </form>
                 )}
                 {emailError && (
-                  <p className="mt-2 text-xs text-red-400/80 text-center">{emailError}</p>
+                  <p className="mt-2 text-xs text-red-400/70 text-center">{emailError}</p>
                 )}
               </motion.div>
             )}
+          </div>
 
-            {/* Footer */}
-            <div className="mt-8 text-center">
-              <p className="text-[10px] text-[#726d6c]/60 uppercase tracking-[0.2em]">Odubo Studio</p>
-            </div>
+          {/* Footer — Contact Us + Privacy Policy */}
+          <motion.div
+            className="px-6 pb-4 pt-2 flex items-center justify-center gap-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.4, duration: 0.3 }}
+          >
+            <a
+              href="mailto:contact@odubo.studio"
+              className="text-[11px] text-[#ede8df]/30 hover:text-[#ede8df]/60 transition-colors tracking-wide"
+            >
+              Contact Us
+            </a>
+            <span className="text-[#ede8df]/15">|</span>
+            <a
+              href="/privacy"
+              className="text-[11px] text-[#ede8df]/30 hover:text-[#ede8df]/60 transition-colors tracking-wide"
+            >
+              Privacy Policy
+            </a>
           </motion.div>
         </motion.div>
       )}
@@ -320,7 +306,7 @@ export default function LinkTreeModal({ isOpen, onClose }: LinkTreeModalProps) {
 }
 
 function PlatformIcon({ platform }: { platform: string | null }) {
-  const iconClass = "w-6 h-6";
+  const iconClass = "w-7 h-7";
 
   switch (platform) {
     case 'spotify':
@@ -359,8 +345,8 @@ function PlatformIcon({ platform }: { platform: string | null }) {
         <Image
           src="/brand-logos/baad-white.png"
           alt="BAAD"
-          width={24}
-          height={24}
+          width={28}
+          height={28}
           className={iconClass}
         />
       );
