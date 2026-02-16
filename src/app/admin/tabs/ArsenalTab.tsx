@@ -95,7 +95,7 @@ const CHAR_LIMITS = {
   instagram: { caption: 2200, firstComment: 2200 },
 } as const;
 
-type ViewMode = 'library' | 'upload' | 'pipeline' | 'feed-order' | 'deploy' | 'sync';
+type ViewMode = 'library' | 'upload' | 'pipeline' | 'feed-order' | 'deploy' | 'sync' | 'posters';
 type FilterMode = 'all' | 'published' | 'unpublished' | 'videos' | 'clips' | 'deployed' | 'not-deployed';
 
 interface FeedClip {
@@ -225,6 +225,11 @@ const Icons = {
   close: (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+    </svg>
+  ),
+  poster: (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z" />
     </svg>
   ),
 };
@@ -1848,6 +1853,152 @@ function DeployView({
 }
 
 // Sync View
+// Poster Upload View
+function PostersView({ videos }: { videos: Video[] }) {
+  const [uploading, setUploading] = useState<number | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const targetVideoRef = useRef<number | null>(null);
+
+  // Parent videos only
+  const parentVideos = videos
+    .filter(v => v.parent_video_id === null)
+    .sort((a, b) => a.id - b.id);
+
+  const handleUpload = async (videoId: number) => {
+    targetVideoRef.current = videoId;
+    fileInputRef.current?.click();
+  };
+
+  const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    const videoId = targetVideoRef.current;
+    if (!file || !videoId) return;
+
+    // Reset input
+    e.target.value = '';
+
+    setUploading(videoId);
+    setMessage(null);
+
+    try {
+      // Step 1: Get presigned URL
+      const urlRes = await fetch('/api/arsenal/upload-poster', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ videoId, fileName: file.name }),
+      });
+
+      if (!urlRes.ok) {
+        const err = await urlRes.json() as { error?: string };
+        throw new Error(err.error || 'Failed to get upload URL');
+      }
+
+      const { uploadUrl, publicUrl } = await urlRes.json() as { uploadUrl: string; publicUrl: string };
+
+      // Step 2: Upload file to R2
+      const putRes = await fetch(uploadUrl, {
+        method: 'PUT',
+        body: file,
+        headers: { 'Content-Type': file.type || 'image/jpeg' },
+      });
+
+      if (!putRes.ok) {
+        throw new Error(`Upload failed: ${putRes.status}`);
+      }
+
+      // Step 3: Confirm upload
+      const confirmRes = await fetch('/api/arsenal/upload-poster', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ videoId, publicUrl, confirm: true }),
+      });
+
+      if (!confirmRes.ok) {
+        throw new Error('Failed to save poster URL');
+      }
+
+      setMessage(`Poster uploaded for video ${videoId}`);
+
+      // Update local video data
+      const video = parentVideos.find(v => v.id === videoId);
+      if (video) video.poster_url = publicUrl;
+    } catch (err: any) {
+      setMessage(`Error: ${err.message}`);
+    } finally {
+      setUploading(null);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleFileSelected}
+      />
+
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-sm font-medium text-[#ede8df]">Poster Images</h3>
+        <span className="text-xs text-[#726d6c]">
+          {parentVideos.filter(v => v.poster_url).length}/{parentVideos.length} uploaded
+        </span>
+      </div>
+
+      {message && (
+        <div className={`px-3 py-2 rounded-lg text-xs ${
+          message.startsWith('Error') ? 'bg-red-500/10 text-red-400' : 'bg-green-500/10 text-green-400'
+        }`}>
+          {message}
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+        {parentVideos.map(video => (
+          <div
+            key={video.id}
+            className="rounded-xl border border-white/5 bg-white/[0.02] overflow-hidden"
+          >
+            {/* Poster preview */}
+            <div className="aspect-[2/3] bg-black/30 relative">
+              {video.poster_url ? (
+                <img
+                  src={video.poster_url}
+                  alt={video.title}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-[#726d6c]">
+                  <span className="text-xs">No poster</span>
+                </div>
+              )}
+            </div>
+
+            {/* Info + upload button */}
+            <div className="p-3 flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-xs font-medium text-[#ede8df] truncate">{video.title}</p>
+                <p className="text-[10px] text-[#726d6c]">
+                  ID {video.id} {video.poster_url ? '(has poster)' : ''}
+                </p>
+              </div>
+              <button
+                onClick={() => handleUpload(video.id)}
+                disabled={uploading === video.id}
+                className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors bg-white/5 text-[#b2a491] hover:bg-white/10 disabled:opacity-50"
+              >
+                {uploading === video.id ? 'Uploading...' : video.poster_url ? 'Replace' : 'Upload'}
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function SyncView({
   onSync,
   syncing,
@@ -3649,6 +3800,7 @@ export default function ArsenalTab() {
           { id: 'upload' as ViewMode, label: 'Upload', icon: Icons.upload },
           { id: 'feed-order' as ViewMode, label: 'Manual Order', icon: Icons.feedOrder },
           { id: 'deploy' as ViewMode, label: 'Deploy', icon: Icons.deploy },
+          { id: 'posters' as ViewMode, label: 'Posters', icon: Icons.poster },
           { id: 'sync' as ViewMode, label: 'Sync', icon: Icons.sync },
         ].map(tab => (
           <button
@@ -3715,6 +3867,9 @@ export default function ArsenalTab() {
             onDeploy={handleDeploy}
             deploying={deploying}
           />
+        )}
+        {view === 'posters' && (
+          <PostersView videos={videos} />
         )}
         {view === 'sync' && (
           <SyncView

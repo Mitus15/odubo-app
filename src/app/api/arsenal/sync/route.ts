@@ -1,6 +1,6 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { queryDatabase, executeQuery } from '@/lib/db';
-import { getPost, mapPlatform } from '@/lib/postforme';
+import { getPost, getAccountFeed, getAccounts, createPost, mapPlatform } from '@/lib/postforme';
 import { getUserFromRequest, isAdminUser } from '@/lib/auth';
 
 export const runtime = 'nodejs';
@@ -8,219 +8,401 @@ export const runtime = 'nodejs';
 interface Deployment {
   id: number;
   video_id: number;
+  title: string;
   platform: string;
   postforme_post_id: string;
   parent_video_id: number | null;
+  status: string;
+}
+
+function getLegacyColumnForPlatform(platform: string, isClip: boolean): string {
+  switch (platform) {
+    case 'youtube': return isClip ? 'youtube_shorts_url' : 'youtube_url';
+    case 'tiktok': return 'tiktok_url';
+    case 'instagram': return 'instagram_reels_url';
+    default: return '';
+  }
+}
+
+function normalizeTitle(title: string): string {
+  return title.toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
 /**
- * Get the legacy column name for a platform
+ * Retry wrapper for API calls that may intermittently fail (e.g. YouTube feed 500s)
  */
-function getLegacyColumnForPlatform(platform: string, isClip: boolean): string {
-  switch (platform) {
-    case 'youtube':
-      return isClip ? 'youtube_shorts_url' : 'youtube_url';
-    case 'tiktok':
-      return 'tiktok_url';
-    case 'instagram':
-      return 'instagram_reels_url';
-    default:
-      return '';
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  { attempts = 3, delayMs = 1000, label = '' } = {}
+): Promise<T> {
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await fn();
+    } catch (err) {
+      if (i === attempts - 1) throw err;
+      console.log(`[Arsenal Sync] Retry ${i + 1}/${attempts} for ${label}: ${err instanceof Error ? err.message : 'Unknown'}`);
+      await new Promise(r => setTimeout(r, delayMs * (i + 1)));
+    }
+  }
+  throw new Error('Unreachable');
+}
+
+async function markDeploymentPublished(
+  deployment: Deployment,
+  url: string,
+  externalId: string | null,
+): Promise<{ updated: boolean; madePublic: boolean }> {
+  await executeQuery(
+    `UPDATE video_deployments
+     SET external_url = ?, external_id = ?, status = 'published', synced_at = datetime('now')
+     WHERE id = ?`,
+    [url, externalId, deployment.id]
+  );
+
+  const isClip = deployment.parent_video_id !== null;
+  const legacyColumn = getLegacyColumnForPlatform(deployment.platform, isClip);
+
+  if (legacyColumn) {
+    await executeQuery(
+      `UPDATE videos
+       SET ${legacyColumn} = ?, postforme_post_id = ?, postforme_status = 'published'
+       WHERE id = ?`,
+      [url, deployment.postforme_post_id, deployment.video_id]
+    );
+  }
+
+  const publicResult = await executeQuery(
+    `UPDATE videos
+     SET is_public = 1, publication_status = 'live', updated_at = datetime('now')
+     WHERE id = ? AND (is_public IS NULL OR is_public = 0)`,
+    [deployment.video_id]
+  );
+
+  const madePublic = publicResult && typeof publicResult === 'object' &&
+    'changes' in publicResult && (publicResult as any).changes > 0;
+
+  return { updated: true, madePublic: !!madePublic };
+}
+
+/**
+ * Get the next midnight Pacific time as UTC ISO string.
+ */
+function getNextMidnightPacificUtc(): string {
+  const now = new Date();
+  // Get current Pacific date
+  const pacificNow = new Date(now.toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }));
+  // Next day at midnight
+  const nextDay = new Date(pacificNow.getFullYear(), pacificNow.getMonth(), pacificNow.getDate() + 1, 0, 0, 0);
+
+  // Determine offset: check if next day is PST or PDT
+  const refDate = new Date(Date.UTC(nextDay.getFullYear(), nextDay.getMonth(), nextDay.getDate(), 20, 0, 0));
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Los_Angeles',
+    hour: 'numeric',
+    hour12: false,
+  });
+  const pacificHourAtRef = parseInt(formatter.format(refDate));
+  const offset = 20 - pacificHourAtRef; // 8 for PST, 7 for PDT
+
+  const utcDate = new Date(Date.UTC(nextDay.getFullYear(), nextDay.getMonth(), nextDay.getDate(), offset, 0, 0));
+  return utcDate.toISOString().replace('.000Z', '+00:00');
+}
+
+/**
+ * Auto-poster: After sync, check if all clips for a parent are published.
+ * If so and poster_url exists with no poster deployment, schedule poster.
+ */
+async function checkAutoPoster(
+  updatedParentIds: Set<number>,
+  errors: string[]
+): Promise<{ postersScheduled: number }> {
+  let postersScheduled = 0;
+
+  for (const parentId of updatedParentIds) {
+    try {
+      // Count total vs published clip deployments for this parent
+      const stats = await queryDatabase(
+        `SELECT
+           COUNT(*) as total,
+           SUM(CASE WHEN vd.status = 'published' THEN 1 ELSE 0 END) as published
+         FROM video_deployments vd
+         JOIN videos v ON v.id = vd.video_id
+         WHERE v.parent_video_id = ?`,
+        [parentId]
+      ) as any[];
+
+      if (!stats?.[0] || stats[0].total === 0) continue;
+      if (stats[0].total !== stats[0].published) continue;
+
+      // All clips published — check if poster exists and hasn't been deployed
+      const parent = await queryDatabase(
+        'SELECT id, title, poster_url FROM videos WHERE id = ?',
+        [parentId]
+      ) as any[];
+
+      if (!parent?.[0]?.poster_url) continue;
+
+      // Check if poster deployment already exists
+      const existingPoster = await queryDatabase(
+        `SELECT id FROM video_deployments
+         WHERE video_id = ? AND platform = 'instagram'
+         AND metadata_json LIKE '%poster%'`,
+        [parentId]
+      ) as any[];
+
+      if (existingPoster && existingPoster.length > 0) continue;
+
+      // Schedule poster via PostForMe
+      const accountsRes = await getAccounts();
+      if (!accountsRes.success || !accountsRes.data) continue;
+
+      const instagramAccount = accountsRes.data.find(
+        a => mapPlatform(a.platform) === 'instagram' && a.status === 'connected'
+      );
+      if (!instagramAccount) continue;
+
+      const scheduledAt = getNextMidnightPacificUtc();
+      const caption = [
+        `${parent[0].title} - Vid\u00e9o Officielle`,
+        'Sort Maintenant!',
+        'Directeur par Mani Odubo',
+        'odubo.studio',
+      ].join('\n');
+
+      const response = await createPost({
+        caption,
+        social_accounts: [instagramAccount.id],
+        media: [{ url: parent[0].poster_url, type: 'image' }],
+        scheduled_at: scheduledAt,
+        platform_configurations: {
+          instagram: { placement: 'FEED' },
+        },
+      });
+
+      if (response.success && response.data) {
+        await executeQuery(
+          `INSERT INTO video_deployments (video_id, platform, postforme_post_id, status, deployed_at, metadata_json)
+           VALUES (?, 'instagram', ?, 'scheduled', datetime('now'), '{"type":"poster"}')`,
+          [parentId, response.data.id]
+        );
+        console.log(`[Arsenal Sync] Auto-poster scheduled for ${parent[0].title} at ${scheduledAt}`);
+        postersScheduled++;
+      }
+    } catch (err) {
+      errors.push(`Auto-poster for parent ${parentId}: ${err instanceof Error ? err.message : 'Unknown'}`);
+    }
+  }
+
+  return { postersScheduled };
+}
+
+/**
+ * Core sync logic — used by both POST (admin) and GET (cron) handlers.
+ *
+ * Three-phase sync:
+ * 1. Check PostForMe post status directly
+ * 2. Fall back to platform feed matching (with retry for flaky APIs)
+ * 3. Auto-poster: schedule poster when all clips for a video are published
+ */
+async function runSync() {
+  const deployments = await queryDatabase(
+    `SELECT
+      vd.id, vd.video_id, v.title, vd.platform, vd.postforme_post_id,
+      vd.status, v.parent_video_id
+     FROM video_deployments vd
+     JOIN videos v ON v.id = vd.video_id
+     WHERE vd.postforme_post_id IS NOT NULL
+       AND (vd.external_url IS NULL OR vd.external_url = '')
+       AND vd.status IN ('pending', 'published', 'scheduled')`,
+    []
+  ) as Deployment[];
+
+  if (!deployments || deployments.length === 0) {
+    return { message: 'No deployments to sync', updated: 0, madePublic: 0, postersScheduled: 0, total: 0, errors: [] };
+  }
+
+  let updated = 0;
+  let madePublic = 0;
+  const errors: string[] = [];
+  const remaining: Deployment[] = [];
+  const updatedParentIds = new Set<number>();
+
+  // Phase 1: Check PostForMe post status
+  const byPostId = new Map<string, Deployment[]>();
+  for (const d of deployments) {
+    const group = byPostId.get(d.postforme_post_id) || [];
+    group.push(d);
+    byPostId.set(d.postforme_post_id, group);
+  }
+
+  for (const [postformePostId, group] of byPostId) {
+    try {
+      const postResponse = await getPost(postformePostId);
+
+      if (!postResponse.success || !postResponse.data) {
+        remaining.push(...group);
+        continue;
+      }
+
+      const post = postResponse.data as any;
+      const platformData = new Map<string, { url?: string; externalId?: string; status: string }>();
+
+      if (post.platforms && Array.isArray(post.platforms) && post.platforms.length > 0) {
+        for (const p of post.platforms) {
+          if (!p.platform) continue;
+          platformData.set(mapPlatform(p.platform), {
+            url: p.url, externalId: p.external_id, status: p.status,
+          });
+        }
+      }
+
+      for (const deployment of group) {
+        const pData = platformData.get(deployment.platform);
+        const effectiveStatus = pData?.status || post.status;
+        const effectiveUrl = pData?.url || post.external_url;
+
+        if (effectiveStatus === 'published' && effectiveUrl) {
+          const result = await markDeploymentPublished(
+            deployment, effectiveUrl, pData?.externalId || post.external_id || null,
+          );
+          if (result.updated) updated++;
+          if (result.madePublic) madePublic++;
+          if (deployment.parent_video_id) updatedParentIds.add(deployment.parent_video_id);
+        } else if (effectiveStatus === 'failed') {
+          await executeQuery(
+            `UPDATE video_deployments SET status = 'failed', error_message = ? WHERE id = ?`,
+            [post.error_message || 'Post failed on platform', deployment.id]
+          );
+        } else {
+          remaining.push(deployment);
+        }
+      }
+    } catch (err) {
+      errors.push(`Post ${postformePostId}: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      remaining.push(...group);
+    }
+  }
+
+  // Phase 2: Feed-based matching for unresolved deployments (with retry)
+  if (remaining.length > 0) {
+    console.log(`[Arsenal Sync] Phase 2: ${remaining.length} deployments need feed-based matching`);
+
+    const accountsResponse = await getAccounts();
+    if (!accountsResponse.success || !accountsResponse.data) {
+      errors.push('Failed to fetch PostForMe accounts for feed matching');
+    } else {
+      const platformAccountMap = new Map<string, string>();
+      for (const acct of accountsResponse.data) {
+        if (acct.status !== 'connected') continue;
+        platformAccountMap.set(mapPlatform(acct.platform), acct.id);
+      }
+
+      const remainingByPlatform = new Map<string, Deployment[]>();
+      for (const d of remaining) {
+        const group = remainingByPlatform.get(d.platform) || [];
+        group.push(d);
+        remainingByPlatform.set(d.platform, group);
+      }
+
+      for (const [platform, platformDeployments] of remainingByPlatform) {
+        const accountId = platformAccountMap.get(platform);
+        if (!accountId) continue;
+
+        try {
+          // Retry up to 3 times for flaky feed APIs (YouTube returns 500 intermittently)
+          const feedResponse = await withRetry(
+            () => getAccountFeed(accountId, { limit: 50, expand: true }),
+            { attempts: 3, delayMs: 2000, label: `${platform} feed` }
+          );
+
+          if (!feedResponse.success || !feedResponse.data) {
+            errors.push(`Feed fetch failed for ${platform} after retries`);
+            continue;
+          }
+
+          const feedItems = feedResponse.data;
+          const usedFeedIds = new Set<string>();
+
+          for (const deployment of platformDeployments) {
+            const normalizedTitle = normalizeTitle(deployment.title);
+            const match = feedItems.find(item => {
+              if (usedFeedIds.has(item.platform_post_id)) return false;
+              return normalizeTitle(item.caption || '').startsWith(normalizedTitle);
+            });
+
+            if (match && match.platform_url) {
+              usedFeedIds.add(match.platform_post_id);
+              console.log(`[Arsenal Sync] Feed match: "${deployment.title}" / ${platform} -> ${match.platform_url}`);
+              const result = await markDeploymentPublished(
+                deployment, match.platform_url, match.platform_post_id || null,
+              );
+              if (result.updated) updated++;
+              if (result.madePublic) madePublic++;
+              if (deployment.parent_video_id) updatedParentIds.add(deployment.parent_video_id);
+            }
+          }
+        } catch (err) {
+          errors.push(`Feed matching for ${platform}: ${err instanceof Error ? err.message : 'Unknown error'}`);
+        }
+      }
+    }
+  }
+
+  // Phase 3: Auto-poster check for completed video batches
+  let postersScheduled = 0;
+  if (updatedParentIds.size > 0) {
+    const posterResult = await checkAutoPoster(updatedParentIds, errors);
+    postersScheduled = posterResult.postersScheduled;
+  }
+
+  return {
+    message: `Synced ${updated} of ${deployments.length} deployments${madePublic > 0 ? `, ${madePublic} made public` : ''}${postersScheduled > 0 ? `, ${postersScheduled} poster(s) scheduled` : ''}`,
+    updated,
+    madePublic,
+    postersScheduled,
+    total: deployments.length,
+    errors,
+  };
+}
+
+/**
+ * GET /api/arsenal/sync — Cron-triggered sync (uses CRON_SECRET)
+ */
+export async function GET(request: NextRequest) {
+  try {
+    const authHeader = request.headers.get('authorization');
+    const cronSecret = process.env.CRON_SECRET;
+
+    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const result = await runSync();
+    console.log('[Arsenal Sync Cron]', result);
+    return NextResponse.json(result);
+  } catch (error) {
+    console.error('[Arsenal Sync Cron] Error:', error);
+    return NextResponse.json(
+      { error: 'Sync failed', details: error instanceof Error ? error.message : 'Unknown' },
+      { status: 500 }
+    );
   }
 }
 
 /**
- * POST /api/arsenal/sync
- * Sync platform URLs from PostForMe after publishing
- *
- * Groups deployments by postforme_post_id to avoid redundant API calls,
- * since one PostForMe post can cover multiple platforms.
- * Parses the per-platform status/URL data from PostForMe's platforms array.
+ * POST /api/arsenal/sync — Admin-triggered sync (uses cookie auth)
  */
 export async function POST(request: NextRequest) {
   try {
-    // Server-side authentication using httpOnly cookies
     const user = getUserFromRequest(request);
     if (!isAdminUser(user)) {
-      return NextResponse.json(
-        { error: 'Forbidden: Admins only' },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: 'Forbidden: Admins only' }, { status: 403 });
     }
 
-    // Get all deployments that need syncing from video_deployments table
-    // (have a postforme_post_id but no external_url)
-    const deployments = await queryDatabase(
-      `SELECT
-        vd.id,
-        vd.video_id,
-        vd.platform,
-        vd.postforme_post_id,
-        v.parent_video_id
-       FROM video_deployments vd
-       JOIN videos v ON v.id = vd.video_id
-       WHERE vd.postforme_post_id IS NOT NULL
-         AND (vd.external_url IS NULL OR vd.external_url = '')
-         AND vd.status IN ('pending', 'published', 'scheduled')`,
-      []
-    ) as Deployment[];
-
-    if (!deployments || deployments.length === 0) {
-      return NextResponse.json({
-        message: 'No deployments to sync',
-        updated: 0,
-        errors: [],
-      });
-    }
-
-    // Group deployments by postforme_post_id to avoid redundant API calls
-    // One PostForMe post can cover multiple platforms
-    const byPostId = new Map<string, Deployment[]>();
-    for (const d of deployments) {
-      const group = byPostId.get(d.postforme_post_id) || [];
-      group.push(d);
-      byPostId.set(d.postforme_post_id, group);
-    }
-
-    let updated = 0;
-    let madePublic = 0;
-    const errors: string[] = [];
-
-    for (const [postformePostId, group] of byPostId) {
-      try {
-        // One API call per unique PostForMe post ID
-        const postResponse = await getPost(postformePostId);
-
-        if (!postResponse.success || !postResponse.data) {
-          errors.push(`Post ${postformePostId}: Failed to fetch from PostForMe`);
-          continue;
-        }
-
-        const post = postResponse.data;
-
-        console.log('[Arsenal Sync]', {
-          postId: postformePostId,
-          deploymentCount: group.length,
-          platforms: group.map(d => d.platform),
-          status: post.status,
-          hasPlatformsArray: !!post.platforms?.length,
-        });
-
-        // Build per-platform data from PostForMe response
-        const platformData = new Map<string, { url?: string; externalId?: string; status: string; error?: string }>();
-
-        if (post.platforms && Array.isArray(post.platforms)) {
-          // Multi-platform post — use per-platform data
-          for (const p of post.platforms) {
-            const normalizedPlatform = mapPlatform(p.platform);
-            platformData.set(normalizedPlatform, {
-              url: p.url,
-              externalId: p.external_id,
-              status: p.status,
-              error: p.error,
-            });
-          }
-        } else {
-          // Single-platform post — use top-level fields
-          const normalizedPlatform = mapPlatform(post.platform);
-          platformData.set(normalizedPlatform, {
-            url: post.external_url,
-            externalId: post.external_id,
-            status: post.status,
-          });
-        }
-
-        // Update each deployment row with its platform-specific data
-        for (const deployment of group) {
-          const pData = platformData.get(deployment.platform);
-
-          // If no data for this platform, check the overall post status
-          const effectiveStatus = pData?.status || post.status;
-          const effectiveUrl = pData?.url || (group.length === 1 ? post.external_url : undefined);
-          const effectiveExternalId = pData?.externalId || (group.length === 1 ? post.external_id : undefined);
-
-          if (effectiveStatus === 'failed') {
-            await executeQuery(
-              `UPDATE video_deployments
-               SET status = 'failed', error_message = ?
-               WHERE id = ?`,
-              [pData?.error || post.error_message || 'Post failed on platform', deployment.id]
-            );
-            continue;
-          }
-
-          if (effectiveStatus === 'scheduled') {
-            console.log(`[Arsenal Sync] Deployment ${deployment.id} (${deployment.platform}) still scheduled`);
-            continue;
-          }
-
-          // Only update if published and has URL
-          if (effectiveStatus !== 'published' || !effectiveUrl) {
-            continue;
-          }
-
-          // Update video_deployments with external URL
-          await executeQuery(
-            `UPDATE video_deployments
-             SET external_url = ?,
-                 external_id = ?,
-                 status = 'synced',
-                 synced_at = datetime('now')
-             WHERE id = ?`,
-            [effectiveUrl, effectiveExternalId || null, deployment.id]
-          );
-
-          // Also update legacy columns on videos table for backward compatibility
-          const isClip = deployment.parent_video_id !== null;
-          const legacyColumn = getLegacyColumnForPlatform(deployment.platform, isClip);
-
-          if (legacyColumn) {
-            await executeQuery(
-              `UPDATE videos
-               SET ${legacyColumn} = ?,
-                   postforme_post_id = ?,
-                   postforme_status = 'published'
-               WHERE id = ?`,
-              [effectiveUrl, postformePostId, deployment.video_id]
-            );
-          }
-
-          // Make the video public after successful sync
-          const publicResult = await executeQuery(
-            `UPDATE videos
-             SET is_public = 1,
-                 publication_status = 'live',
-                 updated_at = datetime('now')
-             WHERE id = ? AND (is_public IS NULL OR is_public = 0)`,
-            [deployment.video_id]
-          );
-
-          if (publicResult && typeof publicResult === 'object' && 'changes' in publicResult && (publicResult as any).changes > 0) {
-            madePublic++;
-            console.log(`[Arsenal Sync] Made video ${deployment.video_id} public`);
-          }
-
-          updated++;
-        }
-      } catch (err) {
-        const message = err instanceof Error ? err.message : 'Unknown error';
-        errors.push(`Post ${postformePostId}: ${message}`);
-      }
-    }
-
-    return NextResponse.json({
-      message: `Synced ${updated} of ${deployments.length} deployments (${byPostId.size} API calls)${madePublic > 0 ? `, ${madePublic} made public` : ''}`,
-      updated,
-      madePublic,
-      total: deployments.length,
-      postsFetched: byPostId.size,
-      errors,
-    });
+    const result = await runSync();
+    return NextResponse.json(result);
   } catch (error) {
     console.error('[Arsenal] Sync error:', error);
-    return NextResponse.json(
-      { error: 'Failed to sync deployments' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to sync deployments' }, { status: 500 });
   }
 }

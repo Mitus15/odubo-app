@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+
 import { queryDatabase, executeQuery } from '@/lib/db';
 import { createPost, getAccounts } from '@/lib/postforme';
 import { getUserFromRequest, isAdminUser } from '@/lib/auth';
@@ -211,6 +212,38 @@ export async function POST(request: NextRequest) {
           error: 'No connected accounts found for any selected platform',
         });
         continue;
+      }
+
+      // Duplicate deployment protection
+      const existingDeployments = await queryDatabase(
+        `SELECT platform FROM video_deployments
+         WHERE video_id = ? AND platform IN (${deployedPlatforms.map(() => '?').join(',')})
+         AND postforme_post_id IS NOT NULL`,
+        [video.id, ...deployedPlatforms]
+      ) as any[];
+
+      if (existingDeployments && existingDeployments.length > 0) {
+        const existingPlatforms = existingDeployments.map((d: any) => d.platform);
+        const newPlatforms = deployedPlatforms.filter(p => !existingPlatforms.includes(p));
+        if (newPlatforms.length === 0) {
+          results.push({
+            videoId: video.id,
+            platforms: deployedPlatforms,
+            success: false,
+            error: `Already deployed to ${existingPlatforms.join(', ')}`,
+          });
+          continue;
+        }
+        // Remove already-deployed platforms from this run
+        for (const ep of existingPlatforms) {
+          const idx = deployedPlatforms.indexOf(ep);
+          if (idx !== -1) {
+            deployedPlatforms.splice(idx, 1);
+            const accIdx = accountIds.indexOf(platformToAccountMap[ep]);
+            if (accIdx !== -1) accountIds.splice(accIdx, 1);
+          }
+        }
+        console.log(`[Arsenal Deploy] Skipping already-deployed platforms: ${existingPlatforms.join(', ')}`);
       }
 
       const isClip = video.parent_video_id !== null;
@@ -429,6 +462,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('[Arsenal] Deploy error:', error);
+
     return NextResponse.json(
       { error: 'Failed to deploy videos' },
       { status: 500 }
