@@ -291,7 +291,7 @@ export default function HomePageClient({
   const isShowingVerse = phase === 'intro' || phase === 'expanded';
 
   // Hide fixed buttons (mute, verse, master, connect) when any full-screen overlay is open
-  const anyOverlayOpen = storeView !== 'closed' || modalStack.length > 0 || linkTreeOpen;
+  const anyOverlayOpen = isShowingVerse || storeView !== 'closed' || modalStack.length > 0 || linkTreeOpen;
 
   return (
     <div className="relative bg-black text-[#ede8df]" style={{ minHeight: '100dvh' }}>
