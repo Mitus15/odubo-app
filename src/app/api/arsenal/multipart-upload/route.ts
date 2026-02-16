@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+
 import { getUserFromRequest, isAdminUser } from '@/lib/auth';
 import {
   S3Client,
@@ -56,6 +57,7 @@ export async function POST(req: NextRequest) {
     }
   } catch (error: any) {
     console.error('Multipart upload error:', error);
+
     return NextResponse.json(
       { error: error.message || 'Upload failed' },
       { status: 500 }
@@ -271,7 +273,8 @@ async function handleComplete(body: {
     }
   } catch (error) {
     // Don't fail upload if download generation fails - background job will retry
-    console.log('[Arsenal Upload] Could not enable downloads immediately, background job will handle it:', error);
+    console.warn('[Arsenal Upload] Could not enable downloads immediately, background job will handle it:', error);
+
   }
 
   // Trigger background processing job (fire and forget)

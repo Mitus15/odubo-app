@@ -1,11 +1,13 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import type { LinkTreeItem } from '@/types/linktree';
 import { useOmniShop } from '@/contexts/OmniShopContext';
 import { useStore } from '@/contexts/StoreContext';
+import { useEmailCapture } from '@/contexts/EmailCaptureContext';
 
 interface LinkTreeModalProps {
   isOpen: boolean;
@@ -19,6 +21,36 @@ export default function LinkTreeModal({ isOpen, onClose }: LinkTreeModalProps) {
 
   const { storeAccessible: legacyStoreAccessible, checkingStoreAccess: legacyCheckingAccess, closeAll: closeAllShopModals } = useOmniShop();
   const { openStore, isStoreAccessible, isCheckingAccess } = useStore();
+  const { hasSubscribed, subscribe, isSubmitting, discountCode } = useEmailCapture();
+
+  // Email capture form state
+  const [email, setEmail] = useState('');
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [emailSuccess, setEmailSuccess] = useState(false);
+
+  // Sync success state with context (e.g., already subscribed from previous session)
+  useEffect(() => {
+    if (hasSubscribed) setEmailSuccess(true);
+  }, [hasSubscribed]);
+
+  const handleEmailSubmit = useCallback(async (e: React.FormEvent) => {
+    e.preventDefault();
+    setEmailError(null);
+    if (!email.trim()) return;
+
+    const result = await subscribe(email.trim());
+    if (result.success) {
+      setEmailSuccess(true);
+    } else {
+      setEmailError(result.error || 'Something went wrong');
+    }
+  }, [email, subscribe]);
+
+  const handleVisitShop = useCallback(() => {
+    onClose();
+    closeAllShopModals();
+    openStore();
+  }, [onClose, closeAllShopModals, openStore]);
 
   // Use new store values with fallback to legacy
   const storeAccessible = isStoreAccessible || legacyStoreAccessible;
@@ -34,7 +66,7 @@ export default function LinkTreeModal({ isOpen, onClose }: LinkTreeModalProps) {
       setLoading(true);
       fetch('/api/linktree')
         .then(res => res.json())
-        .then(data => setLinks(data.links || []))
+        .then(data => setLinks((data as { links?: LinkTreeItem[] }).links || []))
         .catch(() => setLinks([]))
         .finally(() => setLoading(false));
     }
@@ -63,7 +95,7 @@ export default function LinkTreeModal({ isOpen, onClose }: LinkTreeModalProps) {
     });
   }, [links, storeAccessible, checkingStoreAccess]);
 
-  if (!isOpen || !mounted) return null;
+  if (!mounted) return null;
 
   const handleLinkClick = (link: LinkTreeItem) => {
     fetch(`/api/linktree/${link.id}/click`, { method: 'POST' }).catch(() => {});
@@ -79,111 +111,212 @@ export default function LinkTreeModal({ isOpen, onClose }: LinkTreeModalProps) {
     window.open(link.url, '_blank', 'noopener,noreferrer');
   };
 
-  const modalContent = (
-    <div
-      className="fixed inset-0 z-[200] flex flex-col"
-      style={{
-        background: 'linear-gradient(145deg, #1a1714 0%, #0d0c0a 50%, #1a1714 100%)',
-        paddingTop: 'env(safe-area-inset-top)',
-        paddingBottom: 'env(safe-area-inset-bottom)',
-        paddingLeft: 'env(safe-area-inset-left)',
-        paddingRight: 'env(safe-area-inset-right)',
-      }}
-    >
-      {/* Subtle noise texture overlay */}
-      <div className="absolute inset-0 opacity-[0.015] pointer-events-none" style={{
-        backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
-      }} />
-
-      {/* Header */}
-      <div className="relative flex items-center justify-between px-4 h-16">
-        <div className="flex items-center gap-3">
-          <img
-            src="/odubo_logo_emboss.webp"
-            alt="Odubo"
-            className="w-8 h-8 object-contain opacity-60"
-            draggable={false}
-          />
-          <h1 className="text-[#ede8df] text-lg font-medium tracking-wide">Connect</h1>
-        </div>
-        <button
-          onClick={onClose}
-          className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 backdrop-blur-sm border border-white/10 text-[#ede8df]/70 hover:text-[#ede8df] hover:bg-white/10 transition-all active:scale-95"
+  // Use portal with AnimatePresence for enter/exit animation
+  return createPortal(
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          className="fixed inset-0 z-[200] flex flex-col"
+          initial={{
+            opacity: 0,
+            scale: 0.3,
+            borderRadius: '24px',
+            transformOrigin: 'bottom left',
+          }}
+          animate={{
+            opacity: 1,
+            scale: 1,
+            borderRadius: '0px',
+            transformOrigin: 'bottom left',
+          }}
+          exit={{
+            opacity: 0,
+            scale: 0.3,
+            borderRadius: '24px',
+            transformOrigin: 'bottom left',
+          }}
+          transition={{
+            type: 'spring',
+            stiffness: 400,
+            damping: 35,
+            mass: 0.8,
+          }}
+          style={{
+            background: 'linear-gradient(145deg, #1a1714 0%, #0d0c0a 50%, #1a1714 100%)',
+            paddingTop: 'env(safe-area-inset-top)',
+            paddingBottom: 'env(safe-area-inset-bottom)',
+            paddingLeft: 'env(safe-area-inset-left)',
+            paddingRight: 'env(safe-area-inset-right)',
+          }}
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-      </div>
+          {/* Subtle noise texture overlay */}
+          <div className="absolute inset-0 opacity-[0.015] pointer-events-none" style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
+          }} />
 
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto px-4 py-6">
-        {loading ? (
-          <div className="flex justify-center py-12">
-            <div className="w-10 h-10 border-2 border-[#843c2d]/30 border-t-[#843c2d] rounded-full animate-spin" />
-          </div>
-        ) : visibleLinks.length === 0 ? (
-          <p className="text-center text-[#ede8df]/40 py-12">No links available</p>
-        ) : (
-          <div className="grid gap-3 max-w-lg mx-auto">
-            {visibleLinks.map((link, index) => (
-              <button
-                key={link.id}
-                onClick={() => handleLinkClick(link)}
-                className="group w-full flex items-center gap-4 p-4 rounded-2xl text-left transition-all duration-300 active:scale-[0.98]"
-                style={{
-                  background: 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%)',
-                  backdropFilter: 'blur(12px)',
-                  WebkitBackdropFilter: 'blur(12px)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  boxShadow: '0 4px 24px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)',
-                  animationDelay: `${index * 50}ms`,
-                }}
-              >
-                {/* Icon container with glass effect */}
-                <div
-                  className="w-12 h-12 flex items-center justify-center rounded-xl flex-shrink-0 transition-transform duration-300 group-hover:scale-110"
-                  style={{
-                    background: 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.03) 100%)',
-                    border: '1px solid rgba(255,255,255,0.08)',
-                    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.1)',
-                  }}
-                >
-                  <PlatformIcon platform={link.platform} />
-                </div>
+          {/* Header */}
+          <motion.div
+            className="relative flex items-center justify-between px-4 h-16"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15, duration: 0.25 }}
+          >
+            <div className="flex items-center gap-3">
+              <img
+                src="/odubo_logo_emboss.webp"
+                alt="Odubo"
+                className="w-8 h-8 object-contain opacity-60"
+                draggable={false}
+              />
+              <h1 className="text-[#ede8df] text-lg font-medium tracking-wide">Connect</h1>
+            </div>
+            <button
+              onClick={onClose}
+              className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 backdrop-blur-sm border border-white/10 text-[#ede8df]/70 hover:text-[#ede8df] hover:bg-white/10 transition-all active:scale-95"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </motion.div>
 
-                {/* Title */}
-                <span className="flex-1 font-medium text-[#ede8df] text-base group-hover:text-white transition-colors">
-                  {link.title}
-                </span>
-
-                {/* Arrow with hover animation */}
-                <div className="w-8 h-8 flex items-center justify-center rounded-full bg-white/5 group-hover:bg-[#843c2d]/30 transition-all duration-300">
-                  <svg
-                    className="w-4 h-4 text-[#ede8df]/40 group-hover:text-[#ede8df] transition-all duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                    viewBox="0 0 24 24"
+          {/* Content */}
+          <motion.div
+            className="flex-1 overflow-y-auto px-4 py-6"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2, duration: 0.3 }}
+          >
+            {loading ? (
+              <div className="flex justify-center py-12">
+                <div className="w-10 h-10 border-2 border-[#843c2d]/30 border-t-[#843c2d] rounded-full animate-spin" />
+              </div>
+            ) : visibleLinks.length === 0 ? (
+              <p className="text-center text-[#ede8df]/40 py-12">No links available</p>
+            ) : (
+              <div className="grid gap-3 max-w-lg mx-auto">
+                {visibleLinks.map((link, index) => (
+                  <motion.button
+                    key={link.id}
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 + index * 0.05, duration: 0.3 }}
+                    onClick={() => handleLinkClick(link)}
+                    className="group w-full flex items-center gap-4 p-4 rounded-2xl text-left transition-all duration-300 active:scale-[0.98]"
+                    style={{
+                      background: 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%)',
+                      backdropFilter: 'blur(12px)',
+                      WebkitBackdropFilter: 'blur(12px)',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      boxShadow: '0 4px 24px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)',
+                    }}
                   >
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 19.5l15-15m0 0H8.25m11.25 0v11.25" />
-                  </svg>
-                </div>
-              </button>
-            ))}
-          </div>
-        )}
+                    {/* Icon container with glass effect */}
+                    <div
+                      className="w-12 h-12 flex items-center justify-center rounded-xl flex-shrink-0 transition-transform duration-300 group-hover:scale-110"
+                      style={{
+                        background: 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.03) 100%)',
+                        border: '1px solid rgba(255,255,255,0.08)',
+                        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.1)',
+                      }}
+                    >
+                      <PlatformIcon platform={link.platform ?? null} />
+                    </div>
 
-        {/* Footer */}
-        <div className="mt-8 text-center">
-          <p className="text-[10px] text-[#726d6c]/60 uppercase tracking-[0.2em]">Odubo Studio</p>
-        </div>
-      </div>
-    </div>
+                    {/* Title */}
+                    <span className="flex-1 font-medium text-[#ede8df] text-base group-hover:text-white transition-colors">
+                      {link.title}
+                    </span>
+
+                    {/* Arrow with hover animation */}
+                    <div className="w-8 h-8 flex items-center justify-center rounded-full bg-white/5 group-hover:bg-[#843c2d]/30 transition-all duration-300">
+                      <svg
+                        className="w-4 h-4 text-[#ede8df]/40 group-hover:text-[#ede8df] transition-all duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 19.5l15-15m0 0H8.25m11.25 0v11.25" />
+                      </svg>
+                    </div>
+                  </motion.button>
+                ))}
+              </div>
+            )}
+
+            {/* Email Capture */}
+            {!loading && (
+              <motion.div
+                className="mt-8 max-w-lg mx-auto"
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4, duration: 0.3 }}
+              >
+                {emailSuccess ? (
+                  <div className="text-center space-y-3">
+                    {discountCode && (
+                      <div
+                        className="inline-block px-5 py-2 rounded-xl text-sm font-mono tracking-widest text-[#ede8df]"
+                        style={{
+                          background: 'linear-gradient(135deg, rgba(132,60,45,0.3) 0%, rgba(132,60,45,0.1) 100%)',
+                          border: '1px solid rgba(132,60,45,0.3)',
+                        }}
+                      >
+                        {discountCode}
+                      </div>
+                    )}
+                    <p className="text-[#ede8df]/50 text-xs">Check your email. 10% off, first order.</p>
+                    <button
+                      onClick={handleVisitShop}
+                      className="mt-2 px-6 py-2.5 rounded-full text-sm font-medium text-[#ede8df] transition-all active:scale-95"
+                      style={{
+                        background: 'linear-gradient(135deg, rgba(132,60,45,0.5) 0%, rgba(132,60,45,0.25) 100%)',
+                        border: '1px solid rgba(132,60,45,0.4)',
+                      }}
+                    >
+                      Visit Shop
+                    </button>
+                  </div>
+                ) : (
+                  <form onSubmit={handleEmailSubmit} className="flex gap-2">
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => { setEmail(e.target.value); setEmailError(null); }}
+                      placeholder="Your email"
+                      required
+                      className="flex-1 px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-[#ede8df] text-sm placeholder:text-[#ede8df]/30 outline-none focus:border-[#843c2d]/50 transition-colors"
+                    />
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="px-5 py-3 rounded-xl text-sm font-medium text-[#ede8df] transition-all active:scale-95 disabled:opacity-50"
+                      style={{
+                        background: 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.03) 100%)',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                      }}
+                    >
+                      {isSubmitting ? '...' : 'Join'}
+                    </button>
+                  </form>
+                )}
+                {emailError && (
+                  <p className="mt-2 text-xs text-red-400/80 text-center">{emailError}</p>
+                )}
+              </motion.div>
+            )}
+
+            {/* Footer */}
+            <div className="mt-8 text-center">
+              <p className="text-[10px] text-[#726d6c]/60 uppercase tracking-[0.2em]">Odubo Studio</p>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>,
+    document.body,
   );
-
-  // Use portal to render at document body level
-  return createPortal(modalContent, document.body);
 }
 
 function PlatformIcon({ platform }: { platform: string | null }) {

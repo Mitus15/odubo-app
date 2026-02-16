@@ -22,7 +22,7 @@ export function getEmailEnv(): EmailEnv {
   const fromEmail =
     process.env.RESEND_FROM_EMAIL ||
     process.env.EMAIL_FROM ||
-    'noreply@odubo.studio';
+    'B.A.A.D @ Odubo Studio <baad@odubo.studio>';
   return { resendKey, fromEmail };
 }
 
@@ -35,7 +35,9 @@ export function validateEmailEnv(): { ok: boolean; warnings: string[]; values: E
   if (!resendKey) {
     warnings.push('RESEND_API_KEY is missing; email sending will be skipped.');
   }
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fromEmail)) {
+  // Resend accepts "Display Name <email>" or plain email format
+  const emailPart = fromEmail.includes('<') ? fromEmail.match(/<([^>]+)>/)?.[1] || '' : fromEmail;
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailPart)) {
     warnings.push(`RESEND_FROM_EMAIL/EMAIL_FROM seems invalid: ${fromEmail}`);
   }
   if (!process.env.NEXT_PUBLIC_SITE_URL && !process.env.NEXT_PUBLIC_APP_URL && !process.env.VERCEL_URL) {
@@ -45,8 +47,21 @@ export function validateEmailEnv(): { ok: boolean; warnings: string[]; values: E
   return { ok: warnings.length === 0, warnings, values: { resendKey, fromEmail, siteUrl } };
 }
 
+// Discount-related env vars for welcome flow
+type DiscountEnv = {
+  discountCode: string;
+  discountLabel: string;
+};
+
+export function getDiscountEnv(): DiscountEnv {
+  const discountCode = process.env.WELCOME_DISCOUNT_CODE || 'WELCOME5';
+  const discountLabel = process.env.WELCOME_DISCOUNT_LABEL || 'a gift for your first piece';
+  return { discountCode, discountLabel };
+}
+
 export default {
   getSiteUrl,
   getEmailEnv,
   validateEmailEnv,
+  getDiscountEnv,
 };

@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { executeQuery, queryDatabase } from '@/lib/db';
 import { sendWelcomeEmail } from '@/lib/email';
-
-// Discount code for new subscribers (can be configured via env)
-const WELCOME_DISCOUNT_CODE = process.env.WELCOME_DISCOUNT_CODE || 'WELCOME5';
+import { rateLimit } from '@/lib/rateLimit';
+import { getDiscountEnv } from '@/lib/env';
 
 interface SubscribeBody {
   email?: string;
@@ -12,6 +11,17 @@ interface SubscribeBody {
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limit: 5 requests per minute per IP
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+    const rateLimitResult = await rateLimit({ key: `subscribe:${ip}`, limit: 5, windowMs: 60_000 });
+    if (!rateLimitResult.allowed) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        { status: 429 }
+      );
+    }
+
+    const { discountCode: WELCOME_DISCOUNT_CODE } = getDiscountEnv();
     const body = (await request.json()) as SubscribeBody;
     const { email, name } = body;
 

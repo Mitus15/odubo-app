@@ -1,11 +1,12 @@
 /**
- * Cloudflare Worker: Triggers MP4 processing every 5 minutes
- * Free tier: Up to 100,000 requests/day
+ * Cloudflare Worker: Scheduled jobs for Odubo
+ *
+ * Every 6 hours: Arsenal sync (match published content from platform feeds)
  */
 
 interface Env {
   CRON_SECRET: string;
-  API_URL: string;
+  ARSENAL_SYNC_URL: string;
 }
 
 export default {
@@ -14,25 +15,24 @@ export default {
     env: Env,
     ctx: ExecutionContext
   ): Promise<void> {
-    console.log('Triggering MP4 processing job...');
+    console.log('[Arsenal Sync] Triggering...');
 
     try {
-      const response = await fetch(env.API_URL, {
-        method: 'POST',
+      const response = await fetch(env.ARSENAL_SYNC_URL, {
+        method: 'GET',
         headers: {
-          'Content-Type': 'application/json',
-          'x-cron-secret': env.CRON_SECRET,
+          'Authorization': `Bearer ${env.CRON_SECRET}`,
         },
       });
 
       if (!response.ok) {
-        console.error('Job failed:', response.status, await response.text());
+        console.error('[Arsenal Sync] Failed:', response.status, await response.text());
       } else {
         const result = await response.json();
-        console.log('Job completed:', result);
+        console.log('[Arsenal Sync] Completed:', result);
       }
     } catch (error) {
-      console.error('Error triggering job:', error);
+      console.error('[Arsenal Sync] Error:', error);
     }
   },
 };

@@ -84,6 +84,7 @@ function PosterCard({ clip, active, videoReady = false }: PosterCardProps) {
           </h3>
         </div>
       </div>
+
     </div>
   );
 }

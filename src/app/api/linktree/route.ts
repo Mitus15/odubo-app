@@ -8,15 +8,35 @@ import type { LinkTreeItem } from '@/types/linktree';
  */
 export async function GET() {
   try {
-    const links = await queryDatabase(`
-      SELECT * FROM linktree
-      WHERE is_active = 1
-      ORDER BY 
-        is_featured DESC,
-        category ASC,
-        display_order ASC,
-        title ASC
-    `) as LinkTreeItem[];
+    const [links, latestYoutube] = await Promise.all([
+      queryDatabase(`
+        SELECT * FROM linktree
+        WHERE is_active = 1
+        ORDER BY
+          is_featured DESC,
+          category ASC,
+          display_order ASC,
+          title ASC
+      `) as Promise<LinkTreeItem[]>,
+      // Fetch the most recently deployed YouTube video URL
+      queryDatabase(`
+        SELECT external_url FROM video_deployments
+        WHERE platform = 'youtube' AND status = 'published' AND external_url IS NOT NULL
+        ORDER BY deployed_at DESC
+        LIMIT 1
+      `) as Promise<{ external_url: string }[]>,
+    ]);
+
+    // Override YouTube link with the latest deployed video URL
+    if (latestYoutube.length > 0 && latestYoutube[0].external_url) {
+      const dynamicUrl = latestYoutube[0].external_url;
+      for (const link of links) {
+        if (link.platform === 'youtube') {
+          link.url = dynamicUrl;
+          break;
+        }
+      }
+    }
 
     return NextResponse.json({ links });
   } catch (error) {

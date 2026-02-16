@@ -27,7 +27,7 @@ const EmailCaptureContext = createContext<EmailCaptureContextValue | null>(null)
 
 const STORAGE_KEY = 'email-capture-status';
 const MODAL_DELAY_MS = 15000; // Show modal after 15 seconds on site
-const DISMISS_COOLDOWN_DAYS = 7; // Don't show again for 7 days after dismiss
+const DISMISS_COOLDOWN_DAYS = 3; // Don't show again for 3 days after dismiss
 
 interface StorageData {
   subscribed: boolean;

@@ -82,10 +82,16 @@ type AdminTab =
 interface TabContentProps {
   activeTab: AdminTab;
   canAccess?: (sectionId: string) => boolean;
+  permissionsLoading?: boolean;
   onSetActiveTab?: (tabId: string) => void;
 }
 
-export default function TabContent({ activeTab, canAccess, onSetActiveTab }: TabContentProps) {
+export default function TabContent({ activeTab, canAccess, permissionsLoading, onSetActiveTab }: TabContentProps) {
+  // Show loading while permissions are being fetched (prevents false "Access Denied")
+  if (permissionsLoading) {
+    return <LoadingFallback title="permissions" />;
+  }
+
   // Check permission before rendering content
   if (canAccess && !canAccess(activeTab)) {
     return <AccessDenied />;

@@ -1,10 +1,10 @@
 /**
  * Central Email Service
- * Wraps Resend for transactional emails with templates
+ * Wraps Resend for transactional emails with B.A.A.D @ Odubo Studio branding
  */
 
 import { Resend } from 'resend';
-import { getEmailEnv, getSiteUrl } from '@/lib/env';
+import { getEmailEnv, getSiteUrl, getDiscountEnv } from '@/lib/env';
 
 // Lazy-loaded Resend client
 let resendClient: Resend | null = null;
@@ -20,19 +20,22 @@ function getResend(): Resend | null {
   return resendClient;
 }
 
-// Brand styling constants
+// B.A.A.D @ Odubo Studio brand system
 const BRAND = {
-  serif: "'Baskerville', 'Times New Roman', Times, serif",
+  serif: "'Baskerville', 'Times New Roman', Times, Georgia, serif",
   sans: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
   primary: '#171616',
   text: '#1a1716',
-  accent: '#6b4c3b',
+  accent: '#843c2d',       // Terracotta
+  accentLight: '#9a4a38',
+  muted: '#6d6459',
   bg: '#f6f3ee',
   cardBg: '#ffffff',
   border: '#ece7df',
+  warmBg: '#f9f7f4',
 };
 
-// Email wrapper template
+// Email wrapper — shared chrome for all emails
 function emailWrapper(content: string, preheader?: string): string {
   const site = getSiteUrl();
   const logoUrl = `${site}/brand-logos/baad-logo.png`;
@@ -49,18 +52,27 @@ function emailWrapper(content: string, preheader?: string): string {
   <div style="background:${BRAND.bg};padding:24px 16px;">
     <div style="max-width:560px;margin:0 auto;background:${BRAND.cardBg};border-radius:16px;border:1px solid ${BRAND.border};overflow:hidden">
       <div style="padding:20px 22px 0 22px;text-align:center;border-bottom:1px solid #f0ebe3">
-        <img src="${logoUrl}" alt="Odubo" style="height:40px;width:auto;margin:8px auto 14px;display:block" />
+        <img src="${logoUrl}" alt="B.A.A.D" style="height:40px;width:auto;margin:8px auto 14px;display:block" />
       </div>
       <div style="padding:22px;color:${BRAND.text};font-family:${BRAND.serif};">
         ${content}
       </div>
-      <div style="padding:14px 22px 20px;border-top:1px solid #f0ebe3;color:#6d6459;font-size:12px;font-family:${BRAND.serif};text-align:center;">
-        <p style="margin:0">&copy; ${new Date().getFullYear()} Odubo Studio. All rights reserved.</p>
+      <div style="padding:14px 22px 20px;border-top:1px solid #f0ebe3;color:${BRAND.muted};font-size:12px;font-family:${BRAND.serif};text-align:center;">
+        <p style="margin:0 0 4px;">B.A.A.D @ Odubo Studio</p>
+        <p style="margin:0;color:${BRAND.muted};">&copy; ${new Date().getFullYear()} Bold Authentic Aesthetic Dreams. All rights reserved.</p>
       </div>
     </div>
   </div>
 </body>
 </html>`;
+}
+
+// CTA button helper
+function ctaButton(href: string, label: string, variant: 'primary' | 'outline' = 'primary'): string {
+  if (variant === 'outline') {
+    return `<a href="${href}" style="display:inline-block;padding:14px 28px;background:transparent;color:${BRAND.accent};border:2px solid ${BRAND.accent};border-radius:999px;text-decoration:none;font-weight:600;font-family:${BRAND.serif};letter-spacing:0.02em;">${label}</a>`;
+  }
+  return `<a href="${href}" style="display:inline-block;padding:14px 28px;background:${BRAND.accent};color:#fff;border-radius:999px;text-decoration:none;font-weight:600;font-family:${BRAND.serif};letter-spacing:0.02em;">${label}</a>`;
 }
 
 // ============================================================================
@@ -100,7 +112,7 @@ function orderConfirmationHTML(data: OrderConfirmationData): string {
           ${item.image ? `<img src="${item.image}" alt="${item.title}" style="width:60px;height:60px;object-fit:cover;border-radius:8px;" />` : ''}
           <div>
             <p style="margin:0;font-weight:600;">${item.title}</p>
-            <p style="margin:4px 0 0;color:#6d6459;font-size:14px;">Qty: ${item.quantity}</p>
+            <p style="margin:4px 0 0;color:${BRAND.muted};font-size:14px;">Qty: ${item.quantity}</p>
           </div>
         </div>
       </td>
@@ -111,9 +123,9 @@ function orderConfirmationHTML(data: OrderConfirmationData): string {
   `).join('');
 
   const addressHtml = data.shippingAddress ? `
-    <div style="margin-top:20px;padding:16px;background:#f9f7f4;border-radius:12px;">
+    <div style="margin-top:20px;padding:16px;background:${BRAND.warmBg};border-radius:12px;">
       <p style="margin:0 0 8px;font-weight:600;font-size:14px;">Shipping to:</p>
-      <p style="margin:0;font-size:14px;color:#6d6459;">
+      <p style="margin:0;font-size:14px;color:${BRAND.muted};">
         ${data.shippingAddress.line1}<br>
         ${data.shippingAddress.line2 ? data.shippingAddress.line2 + '<br>' : ''}
         ${data.shippingAddress.city}, ${data.shippingAddress.state} ${data.shippingAddress.zip}<br>
@@ -123,13 +135,13 @@ function orderConfirmationHTML(data: OrderConfirmationData): string {
   ` : '';
 
   const content = `
-    <h1 style="margin:0 0 8px;font-size:24px;color:${BRAND.primary}">Thank you for your order!</h1>
+    <h1 style="margin:0 0 8px;font-size:24px;color:${BRAND.primary}">Your B.A.A.D piece is on its way.</h1>
     <p style="margin:0 0 20px;font-size:16px;color:${BRAND.text}">
-      Hi ${data.customerName}, we've received your order and are getting it ready.
+      Hi ${data.customerName}, we&rsquo;ve received your order and are preparing it with care.
     </p>
 
-    <div style="padding:16px;background:#f9f7f4;border-radius:12px;margin-bottom:20px;">
-      <p style="margin:0;font-size:14px;color:#6d6459;">Order number</p>
+    <div style="padding:16px;background:${BRAND.warmBg};border-radius:12px;margin-bottom:20px;">
+      <p style="margin:0;font-size:14px;color:${BRAND.muted};">Order number</p>
       <p style="margin:4px 0 0;font-size:18px;font-weight:600;color:${BRAND.primary}">${data.orderNumber}</p>
     </div>
 
@@ -156,13 +168,11 @@ function orderConfirmationHTML(data: OrderConfirmationData): string {
     ${addressHtml}
 
     <div style="margin-top:24px;text-align:center;">
-      <a href="${site}/store" style="display:inline-block;padding:14px 28px;background:${BRAND.primary};color:#fff;border-radius:999px;text-decoration:none;font-weight:600;font-family:${BRAND.sans};">
-        Continue Shopping
-      </a>
+      ${ctaButton(`${site}/store`, 'Browse More Pieces', 'outline')}
     </div>
   `;
 
-  return emailWrapper(content, `Order ${data.orderNumber} confirmed - Thank you for your purchase!`);
+  return emailWrapper(content, `Order ${data.orderNumber} confirmed \u2014 your B.A.A.D piece is on its way.`);
 }
 
 export interface WelcomeEmailData {
@@ -173,88 +183,87 @@ export interface WelcomeEmailData {
 
 function welcomeEmailHTML(data: WelcomeEmailData): string {
   const site = getSiteUrl();
-  const discountCode = data.discountCode || 'WELCOME5';
+  const { discountCode: defaultCode, discountLabel } = getDiscountEnv();
+  const discountCode = data.discountCode || defaultCode;
 
   const content = `
-    <h1 style="margin:0 0 8px;font-size:24px;color:${BRAND.primary}">Welcome to the Inner Circle</h1>
-    <p style="margin:0 0 20px;font-size:16px;color:${BRAND.text}">
-      Hey ${data.name || 'there'}, thanks for joining the community.
+    <h1 style="margin:0 0 8px;font-size:24px;color:${BRAND.primary}">Welcome to B.A.A.D</h1>
+    <p style="margin:0 0 4px;font-size:13px;color:${BRAND.muted};letter-spacing:0.08em;">BOLD AUTHENTIC AESTHETIC DREAMS</p>
+    <p style="margin:12px 0 20px;font-size:16px;color:${BRAND.text}">
+      Hey ${data.name || 'there'}, you&rsquo;re now part of something being built with intention.
     </p>
 
     <p style="margin:0 0 16px;font-size:16px;color:${BRAND.text};">
-      You now have access to exclusive drops, behind-the-scenes content, and first looks at new releases.
+      B.A.A.D is a collection born at Odubo Studio &mdash; where music, fashion, and art converge. Every piece is designed to be worn with conviction.
     </p>
 
-    <div style="margin:24px 0;padding:20px;background:#f9f7f4;border-radius:12px;text-align:center;">
-      <p style="margin:0 0 8px;font-size:14px;color:#6d6459;">Your exclusive welcome gift</p>
-      <p style="margin:0;font-size:28px;font-weight:700;color:${BRAND.primary};font-family:${BRAND.sans};letter-spacing:2px;">${discountCode}</p>
-      <p style="margin:8px 0 0;font-size:14px;color:#6d6459;">5% off your first order</p>
+    <div style="margin:24px 0;padding:20px;background:${BRAND.warmBg};border-radius:12px;text-align:center;border:1px solid ${BRAND.border};">
+      <p style="margin:0 0 8px;font-size:14px;color:${BRAND.muted};">${discountLabel.charAt(0).toUpperCase() + discountLabel.slice(1)}</p>
+      <p style="margin:0;font-size:28px;font-weight:700;color:${BRAND.accent};font-family:${BRAND.serif};letter-spacing:3px;">${discountCode}</p>
+      <p style="margin:8px 0 0;font-size:13px;color:${BRAND.muted};">Apply at checkout</p>
     </div>
 
     <div style="margin:24px 0;text-align:center;">
-      <a href="${site}/store" style="display:inline-block;padding:14px 28px;background:${BRAND.primary};color:#fff;border-radius:999px;text-decoration:none;font-weight:600;font-family:${BRAND.sans};">
-        Shop Now
-      </a>
+      ${ctaButton(`${site}/store`, 'Browse the Collection')}
     </div>
 
-    <p style="margin:24px 0 0;font-size:14px;color:#6d6459;text-align:center;">
-      Follow us for daily updates and exclusive content.
+    <p style="margin:24px 0 0;font-size:14px;color:${BRAND.muted};text-align:center;">
+      Visit the studio anytime at <a href="${site}" style="color:${BRAND.accent};text-decoration:none;">odubo.studio</a>
     </p>
   `;
 
-  return emailWrapper(content, `Welcome to Odubo - Here's 5% off your first order!`);
+  return emailWrapper(content, `Welcome to B.A.A.D \u2014 here\u2019s a gift for your first piece.`);
 }
 
-// Day 3 Email - Best clips + most loved products
+// Day 3 Email — what's been happening at the studio
 export interface Day3EmailData {
   name: string;
   email: string;
+  discountCode?: string;
 }
 
 function day3EmailHTML(data: Day3EmailData): string {
   const site = getSiteUrl();
+  const { discountCode: defaultCode } = getDiscountEnv();
+  const discountCode = data.discountCode || defaultCode;
 
   const content = `
-    <h1 style="margin:0 0 8px;font-size:24px;color:${BRAND.primary}">What You've Been Missing</h1>
+    <h1 style="margin:0 0 8px;font-size:24px;color:${BRAND.primary}">What&rsquo;s New at the Studio</h1>
     <p style="margin:0 0 20px;font-size:16px;color:${BRAND.text}">
-      Hey ${data.name || 'there'}, here's what the community's been loving this week.
+      Hey ${data.name || 'there'}, here&rsquo;s what&rsquo;s been happening at B.A.A.D @ Odubo Studio.
     </p>
 
-    <div style="margin:24px 0;padding:20px;background:#f9f7f4;border-radius:12px;">
-      <p style="margin:0 0 12px;font-size:14px;font-weight:600;color:${BRAND.primary};">🎬 Trending Clips</p>
+    <div style="margin:24px 0;padding:20px;background:${BRAND.warmBg};border-radius:12px;">
+      <p style="margin:0 0 12px;font-size:14px;font-weight:600;color:${BRAND.primary};">From the Studio</p>
       <p style="margin:0;font-size:14px;color:${BRAND.text};">
-        Check out the latest drops on the feed. New clips added daily.
+        New clips dropping daily &mdash; music, behind-the-scenes, the creative process unfiltered.
       </p>
     </div>
 
     <div style="margin:24px 0;text-align:center;">
-      <a href="${site}" style="display:inline-block;padding:14px 28px;background:${BRAND.primary};color:#fff;border-radius:999px;text-decoration:none;font-weight:600;font-family:${BRAND.sans};">
-        Watch Now
-      </a>
+      ${ctaButton(site, 'Enter the Studio')}
     </div>
 
-    <div style="margin:24px 0;padding:20px;background:#f9f7f4;border-radius:12px;">
-      <p style="margin:0 0 12px;font-size:14px;font-weight:600;color:${BRAND.primary};">🛍️ Fan Favorites</p>
+    <div style="margin:24px 0;padding:20px;background:${BRAND.warmBg};border-radius:12px;">
+      <p style="margin:0 0 12px;font-size:14px;font-weight:600;color:${BRAND.primary};">From the Collection</p>
       <p style="margin:0;font-size:14px;color:${BRAND.text};">
-        See what everyone's wearing. Limited pieces, once they're gone, they're gone.
+        Pieces designed to be worn with conviction. Limited runs &mdash; once they&rsquo;re gone, they&rsquo;re gone.
       </p>
     </div>
 
     <div style="margin:24px 0;text-align:center;">
-      <a href="${site}/store" style="display:inline-block;padding:14px 28px;background:transparent;color:${BRAND.primary};border:2px solid ${BRAND.primary};border-radius:999px;text-decoration:none;font-weight:600;font-family:${BRAND.sans};">
-        Browse the Collection
-      </a>
+      ${ctaButton(`${site}/store`, 'Browse the Collection', 'outline')}
     </div>
 
-    <p style="margin:24px 0 0;font-size:13px;color:#6d6459;text-align:center;">
-      Remember, your welcome code WELCOME5 is still active.
+    <p style="margin:24px 0 0;font-size:13px;color:${BRAND.muted};text-align:center;">
+      Your welcome code <strong style="color:${BRAND.accent};letter-spacing:1px;">${discountCode}</strong> is still active.
     </p>
   `;
 
-  return emailWrapper(content, `See what's trending at Odubo`);
+  return emailWrapper(content, `New at B.A.A.D @ Odubo Studio \u2014 clips, collection, and more.`);
 }
 
-// Day 7 Email - Limited time urgency
+// Day 7 Email — urgency, discount expiring
 export interface Day7EmailData {
   name: string;
   email: string;
@@ -263,86 +272,31 @@ export interface Day7EmailData {
 
 function day7EmailHTML(data: Day7EmailData): string {
   const site = getSiteUrl();
-  const discountCode = data.discountCode || 'WELCOME5';
+  const { discountCode: defaultCode } = getDiscountEnv();
+  const discountCode = data.discountCode || defaultCode;
 
   const content = `
-    <h1 style="margin:0 0 8px;font-size:24px;color:${BRAND.primary}">Your 5% Off Expires Soon</h1>
+    <h1 style="margin:0 0 8px;font-size:24px;color:${BRAND.primary}">Your Welcome Discount Expires Soon</h1>
     <p style="margin:0 0 20px;font-size:16px;color:${BRAND.text}">
-      Hey ${data.name || 'there'}, just a heads up — your welcome discount is about to expire.
+      Hey ${data.name || 'there'}, your welcome gift is about to expire.
     </p>
 
-    <div style="margin:24px 0;padding:20px;background:#f9f7f4;border-radius:12px;text-align:center;border:2px dashed ${BRAND.accent};">
-      <p style="margin:0 0 8px;font-size:14px;color:#6d6459;">Use code before it's gone</p>
-      <p style="margin:0;font-size:28px;font-weight:700;color:${BRAND.primary};font-family:${BRAND.sans};letter-spacing:2px;">${discountCode}</p>
+    <div style="margin:24px 0;padding:20px;background:${BRAND.warmBg};border-radius:12px;text-align:center;border:2px dashed ${BRAND.accent};">
+      <p style="margin:0 0 8px;font-size:14px;color:${BRAND.muted};">Use code before it&rsquo;s gone</p>
+      <p style="margin:0;font-size:28px;font-weight:700;color:${BRAND.accent};font-family:${BRAND.serif};letter-spacing:3px;">${discountCode}</p>
       <p style="margin:8px 0 0;font-size:14px;color:#d97706;font-weight:600;">Expires in 3 days</p>
     </div>
 
     <div style="margin:24px 0;text-align:center;">
-      <a href="${site}/store" style="display:inline-block;padding:14px 28px;background:${BRAND.primary};color:#fff;border-radius:999px;text-decoration:none;font-weight:600;font-family:${BRAND.sans};">
-        Claim Your 5% Off
-      </a>
+      ${ctaButton(`${site}/store`, 'Claim Your Discount')}
     </div>
 
-    <p style="margin:24px 0 0;font-size:14px;color:#6d6459;text-align:center;">
-      Don't miss out — this is the only reminder.
+    <p style="margin:24px 0 0;font-size:14px;color:${BRAND.muted};text-align:center;">
+      This is your last reminder. After this, the code is gone.
     </p>
   `;
 
-  return emailWrapper(content, `Your 5% off expires soon - don't miss out!`);
-}
-
-export async function sendDay3Email(data: Day3EmailData): Promise<SendResult> {
-  const resend = getResend();
-  if (!resend) {
-    return { success: false, error: 'Email service not configured' };
-  }
-
-  const { fromEmail } = getEmailEnv();
-
-  try {
-    const result = await resend.emails.send({
-      from: fromEmail,
-      to: data.email,
-      subject: 'What you\'ve been missing at Odubo',
-      html: day3EmailHTML(data),
-    });
-
-    if (result.error) {
-      return { success: false, error: result.error.message };
-    }
-
-    return { success: true, id: result.data?.id || 'sent' };
-  } catch (err: any) {
-    console.error('[EMAIL] Failed to send Day 3 email:', err);
-    return { success: false, error: err.message || 'Unknown error' };
-  }
-}
-
-export async function sendDay7Email(data: Day7EmailData): Promise<SendResult> {
-  const resend = getResend();
-  if (!resend) {
-    return { success: false, error: 'Email service not configured' };
-  }
-
-  const { fromEmail } = getEmailEnv();
-
-  try {
-    const result = await resend.emails.send({
-      from: fromEmail,
-      to: data.email,
-      subject: 'Your 5% off expires soon',
-      html: day7EmailHTML(data),
-    });
-
-    if (result.error) {
-      return { success: false, error: result.error.message };
-    }
-
-    return { success: true, id: result.data?.id || 'sent' };
-  } catch (err: any) {
-    console.error('[EMAIL] Failed to send Day 7 email:', err);
-    return { success: false, error: err.message || 'Unknown error' };
-  }
+  return emailWrapper(content, `Your B.A.A.D welcome discount expires soon \u2014 don\u2019t miss out.`);
 }
 
 // ============================================================================
@@ -363,7 +317,7 @@ export async function sendOrderConfirmation(data: OrderConfirmationData): Promis
     const result = await resend.emails.send({
       from: fromEmail,
       to: data.customerEmail,
-      subject: `Order Confirmed - ${data.orderNumber}`,
+      subject: `Order Confirmed \u2014 ${data.orderNumber}`,
       html: orderConfirmationHTML(data),
     });
 
@@ -390,7 +344,7 @@ export async function sendWelcomeEmail(data: WelcomeEmailData): Promise<SendResu
     const result = await resend.emails.send({
       from: fromEmail,
       to: data.email,
-      subject: 'Welcome to Odubo',
+      subject: 'Welcome to B.A.A.D',
       html: welcomeEmailHTML(data),
     });
 
@@ -401,6 +355,60 @@ export async function sendWelcomeEmail(data: WelcomeEmailData): Promise<SendResu
     return { success: true, id: result.data?.id || 'sent' };
   } catch (err: any) {
     console.error('[EMAIL] Failed to send welcome email:', err);
+    return { success: false, error: err.message || 'Unknown error' };
+  }
+}
+
+export async function sendDay3Email(data: Day3EmailData): Promise<SendResult> {
+  const resend = getResend();
+  if (!resend) {
+    return { success: false, error: 'Email service not configured' };
+  }
+
+  const { fromEmail } = getEmailEnv();
+
+  try {
+    const result = await resend.emails.send({
+      from: fromEmail,
+      to: data.email,
+      subject: 'New at B.A.A.D @ Odubo Studio',
+      html: day3EmailHTML(data),
+    });
+
+    if (result.error) {
+      return { success: false, error: result.error.message };
+    }
+
+    return { success: true, id: result.data?.id || 'sent' };
+  } catch (err: any) {
+    console.error('[EMAIL] Failed to send Day 3 email:', err);
+    return { success: false, error: err.message || 'Unknown error' };
+  }
+}
+
+export async function sendDay7Email(data: Day7EmailData): Promise<SendResult> {
+  const resend = getResend();
+  if (!resend) {
+    return { success: false, error: 'Email service not configured' };
+  }
+
+  const { fromEmail } = getEmailEnv();
+
+  try {
+    const result = await resend.emails.send({
+      from: fromEmail,
+      to: data.email,
+      subject: 'Your B.A.A.D welcome discount expires soon',
+      html: day7EmailHTML(data),
+    });
+
+    if (result.error) {
+      return { success: false, error: result.error.message };
+    }
+
+    return { success: true, id: result.data?.id || 'sent' };
+  } catch (err: any) {
+    console.error('[EMAIL] Failed to send Day 7 email:', err);
     return { success: false, error: err.message || 'Unknown error' };
   }
 }

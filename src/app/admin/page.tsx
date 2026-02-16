@@ -503,7 +503,7 @@ export default function AdminPage() {
         {/* Main Content */}
         <main className="flex-1 flex flex-col h-full overflow-hidden md:static pt-14 md:pt-0">
           <div className="flex-1 overflow-y-auto">
-            <TabContent activeTab={activeTab as any} canAccess={canAccess} onSetActiveTab={setActiveTab} />
+            <TabContent activeTab={activeTab as any} canAccess={canAccess} permissionsLoading={permissionsLoading} onSetActiveTab={setActiveTab} />
           </div>
         </main>
       </div>

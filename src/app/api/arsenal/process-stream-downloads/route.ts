@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+
 import { getUserFromRequest, isAdminUser } from '@/lib/auth';
 import { queryDatabase, executeQuery } from '@/lib/db';
 
@@ -256,6 +257,7 @@ export async function POST(req: NextRequest) {
 
   } catch (error: any) {
     console.error('[Process Stream Downloads] Job failed:', error);
+
     return NextResponse.json(
       { error: error.message || 'Job failed' },
       { status: 500 }

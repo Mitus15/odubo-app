@@ -8,8 +8,9 @@ import SingleVideoPlayer from '@/components/clips/SingleVideoPlayer';
 import TracksFeed from '@/components/music/TracksFeed';
 import ClipsErrorBoundary from '@/components/clips/ClipsErrorBoundary';
 import ExpandableLogoMenu from '@/components/clips/ExpandableLogoMenu';
+import ConnectButton from '@/components/navigation/ConnectButton';
 import FilmGrain from '@/components/ui/FilmGrain';
-import LinkTreeModal from '@/components/linktree/LinkTreeModal';
+import Image from 'next/image';
 import { useAudio } from '@/contexts/AudioContext';
 import { useStore } from '@/contexts/StoreContext';
 import { useUnifiedMedia } from '@/contexts/UnifiedMediaContext';
@@ -45,11 +46,33 @@ export default function HomePageClient({
 }: HomePageClientProps) {
   // No header - content goes edge to edge
   const HEADER_HEIGHT = 0;
-  const INTRO_DURATION = 4000; // Show verse for 4 seconds before collapsing
+  // Intro stays until user dismisses (no auto-collapse timer)
 
   const router = useRouter();
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
   const [navHeight, setNavHeight] = useState<number>(HEADER_HEIGHT);
+
+  // First visit detection for B.A.A.D brand entrance
+  const [isFirstVisit, setIsFirstVisit] = useState(false);
+  useEffect(() => {
+    try {
+      if (!localStorage.getItem('baad_welcomed')) {
+        setIsFirstVisit(true);
+      }
+    } catch {
+      // localStorage not available
+    }
+  }, []);
+
+  // Mark first visit complete (must be defined before effects that use it)
+  const markWelcomed = useCallback(() => {
+    try {
+      localStorage.setItem('baad_welcomed', 'true');
+      setIsFirstVisit(false);
+    } catch {
+      // localStorage not available
+    }
+  }, []);
 
   // Verse overlay states - skip intro if opening a modal
   const [phase, setPhase] = useState<'intro' | 'collapsed' | 'expanded'>(defaultModal ? 'collapsed' : 'intro');
@@ -192,15 +215,7 @@ export default function HomePageClient({
     return () => clearInterval(interval);
   }, []);
 
-  // Auto-collapse after intro
-  useEffect(() => {
-    if (phase === 'intro') {
-      const timer = setTimeout(() => {
-        setPhase('collapsed');
-      }, INTRO_DURATION);
-      return () => clearTimeout(timer);
-    }
-  }, [phase]);
+  // Intro stays until user dismisses (tap backdrop or "Enter the Studio" button)
 
   const formatTime = (date: Date | null) => {
     if (!date) return '';
@@ -253,6 +268,14 @@ export default function HomePageClient({
     setPhase(p => p === 'expanded' ? 'collapsed' : 'expanded');
   }, []);
 
+  // "Enter the Studio" button handler (first visit only)
+  const handleEnterStudio = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    setHasInteracted(true);
+    setPhase('collapsed');
+    markWelcomed();
+  }, [markWelcomed]);
+
   // Collapse when tapping content area (only if expanded)
   const handleBackdropClick = useCallback(() => {
     if (phase === 'expanded') {
@@ -261,15 +284,11 @@ export default function HomePageClient({
     if (phase === 'intro' && !hasInteracted) {
       setHasInteracted(true);
       setPhase('collapsed');
+      if (isFirstVisit) markWelcomed();
     }
-  }, [phase, hasInteracted]);
+  }, [phase, hasInteracted, isFirstVisit, markWelcomed]);
 
   const isShowingVerse = phase === 'intro' || phase === 'expanded';
-
-  // Get active content info for menu
-  const menuTitle = homepageMode === 'clips' ? activeClip?.title : activeTrack?.title;
-  const menuArtist = homepageMode === 'clips' ? activeClip?.artist : activeAlbum?.artist_name;
-  const menuProductHandle = homepageMode === 'clips' ? activeClip?.productHandle : undefined;
 
   return (
     <div className="relative bg-black text-[#ede8df]" style={{ minHeight: '100dvh' }}>
@@ -408,27 +427,103 @@ export default function HomePageClient({
               transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
               onClick={(e) => e.stopPropagation()}
             >
+              {/* B.A.A.D Brand Entrance (first visit only, intro phase only) */}
+              {isFirstVisit && phase === 'intro' && (
+                <>
+                  {/* Brand lockup */}
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 1, ease: [0.25, 0.46, 0.45, 0.94] }}
+                  >
+                    <Image
+                      src="/brand-logos/baad@odubo.png"
+                      alt="B.A.A.D @ Odubo.Studio"
+                      width={180}
+                      height={180}
+                      className="mx-auto drop-shadow-[0_4px_30px_rgba(0,0,0,0.6)]"
+                      priority
+                    />
+                  </motion.div>
+
+                  {/* Tagline */}
+                  <motion.p
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 1, duration: 0.5 }}
+                    className="text-[0.7rem] md:text-xs uppercase text-[#ede8df]/70 font-light"
+                    style={{ letterSpacing: '0.2em' }}
+                  >
+                    Bold Authentic Aesthetic Dreams
+                  </motion.p>
+
+                  {/* Terracotta divider */}
+                  <motion.div
+                    initial={{ scaleX: 0 }}
+                    animate={{ scaleX: 1 }}
+                    transition={{ delay: 1.5, duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
+                    className="w-16 h-px bg-[#843c2d]/60"
+                    style={{ originX: 0.5 }}
+                  />
+                </>
+              )}
+
               {/* Verse text */}
-              <blockquote className="text-[1.15rem] md:text-[1.4rem] leading-[1.7] font-light text-white drop-shadow-[0_4px_20px_rgba(0,0,0,0.8)]">
-                "{verseOfTheDay.text}"
-              </blockquote>
+              <motion.blockquote
+                className="text-[1.15rem] md:text-[1.4rem] leading-[1.7] font-light text-white drop-shadow-[0_4px_20px_rgba(0,0,0,0.8)]"
+                {...(isFirstVisit && phase === 'intro' ? {
+                  initial: { opacity: 0 },
+                  animate: { opacity: 1 },
+                  transition: { delay: 1.5, duration: 0.5 }
+                } : {})}
+              >
+                &ldquo;{verseOfTheDay.text}&rdquo;
+              </motion.blockquote>
 
               {/* Reference */}
               {verseOfTheDay.reference && (
-                <p className="text-xs font-medium uppercase tracking-[0.15em] text-white/60">
+                <motion.p
+                  className="text-xs font-medium uppercase tracking-[0.15em] text-white/60"
+                  {...(isFirstVisit && phase === 'intro' ? {
+                    initial: { opacity: 0 },
+                    animate: { opacity: 1 },
+                    transition: { delay: 2, duration: 0.4 }
+                  } : {})}
+                >
                   — {verseOfTheDay.reference}
-                </p>
+                </motion.p>
               )}
 
               {/* Clock */}
-              <div className="rounded-lg px-3 py-1.5 bg-white/5 backdrop-blur-sm border border-white/10 text-white/50 font-mono text-[0.5rem] md:text-[0.55rem]">
+              <motion.div
+                className="rounded-lg px-3 py-1.5 bg-white/5 backdrop-blur-sm border border-white/10 text-white/50 font-mono text-[0.5rem] md:text-[0.55rem]"
+                {...(isFirstVisit && phase === 'intro' ? {
+                  initial: { opacity: 0 },
+                  animate: { opacity: 1 },
+                  transition: { delay: 2, duration: 0.4 }
+                } : {})}
+              >
                 <span style={{ letterSpacing: '0.08em' }}>
                   {currentTime ? formatTime(currentTime) : '— — : — — : — — . — — —'}
                 </span>
-              </div>
+              </motion.div>
 
-              {/* Tap hint during intro */}
-              {phase === 'intro' && (
+              {/* First visit: "Enter the Studio" button */}
+              {isFirstVisit && phase === 'intro' && (
+                <motion.button
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 2.5, duration: 0.4 }}
+                  onClick={handleEnterStudio}
+                  className="mt-2 px-8 py-3 rounded-full bg-[#843c2d]/80 backdrop-blur-sm border border-[#843c2d]/40 text-[#ede8df] text-sm uppercase tracking-[0.15em] hover:bg-[#843c2d] active:scale-95 transition-all"
+                  style={{ fontFamily: 'Baskerville, "Times New Roman", Times, Georgia, serif' }}
+                >
+                  Enter the Studio
+                </motion.button>
+              )}
+
+              {/* Return visit: Tap hint during intro */}
+              {!isFirstVisit && phase === 'intro' && (
                 <motion.p
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -436,6 +531,19 @@ export default function HomePageClient({
                   className="text-[10px] text-white/40 uppercase tracking-widest"
                 >
                   Tap anywhere to browse
+                </motion.p>
+              )}
+
+              {/* First visit: subtle hint below button */}
+              {isFirstVisit && phase === 'intro' && (
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 3.5, duration: 0.5 }}
+                  className="text-[0.6rem] text-[#b2a491]/50 uppercase"
+                  style={{ letterSpacing: '0.15em' }}
+                >
+                  Music · Fashion · Moments
                 </motion.p>
               )}
 
@@ -449,18 +557,19 @@ export default function HomePageClient({
         )}
       </AnimatePresence>
 
-      {/* Global floating menu - mobile only */}
+      {/* Master button - store direct, hidden when store closed */}
       <div className="md:hidden">
         <ExpandableLogoMenu
           clipId={homepageMode === 'clips' ? activeClip?.id : undefined}
-          clipTitle={menuTitle}
-          clipArtist={menuArtist}
-          clipProductHandle={menuProductHandle}
         />
       </div>
 
-      {/* LinkTree Modal - for /links route */}
-      <LinkTreeModal isOpen={linkTreeOpen} onClose={() => setLinkTreeOpen(false)} />
+      {/* Connect button - top-right, under mute button. Auto-trigger waits for welcome dismissal. */}
+      <ConnectButton
+        externalOpen={linkTreeOpen}
+        onExternalOpenHandled={() => setLinkTreeOpen(false)}
+        suppressAutoTrigger={phase === 'intro'}
+      />
     </div>
   );
 }

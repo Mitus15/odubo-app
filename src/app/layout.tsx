@@ -25,7 +25,7 @@ import OfflineIndicator from "../components/OfflineIndicator";
 import { PWAProvider } from "../components/PWAProvider";
 // PWAInstallBanner removed - unnecessary friction
 import { EmailCaptureProvider } from "@/contexts/EmailCaptureContext";
-import EmailCaptureModal from "@/components/marketing/EmailCaptureModal";
+// Email capture lives inside the Connect page (LinkTreeModal)
 import GoogleAnalytics from "@/components/analytics/GoogleAnalytics";
 import { QuickShopProvider } from "@/contexts/QuickShopContext";
 import QuickShopModal from "@/components/shop/QuickShopModal";
@@ -99,9 +99,11 @@ export default function RootLayout({
                       {/* <ClientCapabilities /> */}
                       <ServiceWorkerRegistration />
                       <OfflineIndicator />
+
+                      {/* Email capture provider - wraps sidebar + children for context access */}
+                      <EmailCaptureProvider>
                       {/* Desktop sidebar - persistent navigation on lg+ */}
                       <DesktopSidebar />
-
                       {/* Main content wrapper - conditionally applies sidebar margin */}
                       <MainContentWrapper>
                         {/* Main content - full height, accounts for mini-bar dynamically */}
@@ -116,9 +118,7 @@ export default function RootLayout({
                       <StoreOrchestrator />
                       <OmniShopOrchestrator />
                       <OmniMediaOrchestrator />
-                      {/* Email capture for conversions */}
-                      <EmailCaptureProvider>
-                        <EmailCaptureModal />
+                      {/* Email capture moved to Connect page */}
                       </EmailCaptureProvider>
                       {/* Quick shop modal for clip-to-purchase */}
                       <QuickShopModal />

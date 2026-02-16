@@ -27,6 +27,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const discountCode = process.env.WELCOME_DISCOUNT_CODE || 'WELCOME5';
+
     const results = {
       day3: { sent: 0, failed: 0, skipped: 0 },
       day7: { sent: 0, failed: 0, skipped: 0 },
@@ -39,6 +41,7 @@ export async function GET(request: NextRequest) {
         const emailResult = await sendDay3Email({
           email: subscriber.email,
           name: subscriber.display_name || '',
+          discountCode,
         });
 
         if (emailResult.success) {
@@ -61,6 +64,7 @@ export async function GET(request: NextRequest) {
         const emailResult = await sendDay7Email({
           email: subscriber.email,
           name: subscriber.display_name || '',
+          discountCode,
         });
 
         if (emailResult.success) {

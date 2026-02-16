@@ -1,7 +1,7 @@
 {
-  "name": "Odubo Studio",
-  "short_name": "Odubo",
-  "description": "Professional music and video content management & e-commerce platform",
+  "name": "B.A.A.D @ Odubo Studio",
+  "short_name": "B.A.A.D",
+  "description": "Bold Authentic Aesthetic Dreams — Art, fashion, and culture",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#302927",
@@ -9,7 +9,7 @@
   "orientation": "portrait-primary",
   "scope": "/",
   "lang": "en",
-  "categories": ["music", "video", "entertainment", "productivity"],
+  "categories": ["music", "video", "entertainment", "shopping"],
   "icons": [
     {
       "src": "/favicon-192x192.png",
@@ -37,52 +37,6 @@
       "src": "/favicon-180x180.png",
       "sizes": "180x180",
       "type": "image/png"
-    }
-  ],
-  "screenshots": [
-    {
-      "src": "/screenshot-narrow.png",
-      "sizes": "750x1334",
-      "type": "image/png",
-      "form_factor": "narrow"
-    }
-  ],
-  "shortcuts": [
-    {
-      "name": "Music Library",
-      "short_name": "Music",
-      "description": "Access your music library",
-      "url": "/music",
-      "icons": [
-        {
-          "src": "/icon-music.png",
-          "sizes": "96x96"
-        }
-      ]
-    },
-    {
-      "name": "Video Library",
-      "short_name": "Videos",
-      "description": "Access your video library",
-      "url": "/media",
-      "icons": [
-        {
-          "src": "/icon-video.png",
-          "sizes": "96x96"
-        }
-      ]
-    },
-    {
-      "name": "Store",
-      "short_name": "Shop",
-      "description": "Browse the store",
-      "url": "/store",
-      "icons": [
-        {
-          "src": "/icon-store.png",
-          "sizes": "96x96"
-        }
-      ]
     }
   ],
   "related_applications": [],
