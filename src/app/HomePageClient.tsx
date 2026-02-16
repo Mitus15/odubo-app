@@ -290,6 +290,9 @@ export default function HomePageClient({
 
   const isShowingVerse = phase === 'intro' || phase === 'expanded';
 
+  // Hide fixed buttons (mute, verse, master, connect) when any full-screen overlay is open
+  const anyOverlayOpen = storeView !== 'closed' || modalStack.length > 0 || linkTreeOpen;
+
   return (
     <div className="relative bg-black text-[#ede8df]" style={{ minHeight: '100dvh' }}>
       {/* Animated film grain overlay */}
@@ -349,8 +352,8 @@ export default function HomePageClient({
         )}
       </ClipsErrorBoundary>
 
-      {/* Mute Button - Top right, always visible, works for both clips and music */}
-      <button
+      {/* Mute Button - Top right, hidden when overlays are open */}
+      {!anyOverlayOpen && <button
         onClick={handleMuteToggle}
         className="fixed z-40 flex items-center justify-center rounded-full bg-black/40 backdrop-blur-xl border border-white/10 text-white shadow-lg active:scale-90 transition-transform right-4 md:right-16"
         style={{
@@ -372,11 +375,11 @@ export default function HomePageClient({
             <path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
           </svg>
         )}
-      </button>
+      </button>}
 
-      {/* Word Button - Single transforming button */}
+      {/* Word Button - Single transforming button, hidden when overlays are open */}
       <AnimatePresence mode="wait">
-        {phase !== 'intro' && (
+        {phase !== 'intro' && !anyOverlayOpen && (
           <motion.button
             key={phase}
             initial={{ opacity: 0, scale: 0.8 }}
@@ -557,12 +560,14 @@ export default function HomePageClient({
         )}
       </AnimatePresence>
 
-      {/* Master button - store direct, hidden when store closed */}
-      <div className="md:hidden">
-        <ExpandableLogoMenu
-          clipId={homepageMode === 'clips' ? activeClip?.id : undefined}
-        />
-      </div>
+      {/* Master button - hidden when any overlay is open */}
+      {!anyOverlayOpen && (
+        <div className="md:hidden">
+          <ExpandableLogoMenu
+            clipId={homepageMode === 'clips' ? activeClip?.id : undefined}
+          />
+        </div>
+      )}
 
       {/* Connect button - top-right, under mute button. Auto-trigger waits for welcome dismissal. */}
       <ConnectButton

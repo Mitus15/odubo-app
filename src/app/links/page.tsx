@@ -1,5 +1,4 @@
-import HomePageClient from '@/app/HomePageClient';
-import { getVerse, getHomepageMode, getInitialClips } from '@/lib/homepageHelpers';
+import LinksPageClient from './LinksPageClient';
 import { generateSeoMetadata } from '@/lib/seo';
 import type { Metadata } from 'next';
 
@@ -9,21 +8,6 @@ export const metadata: Metadata = generateSeoMetadata({
   path: '/links',
 });
 
-export const dynamic = 'force-dynamic';
-
-export default async function LinksPage() {
-  const [verseOfTheDay, homepageMode, initialClips] = await Promise.all([
-    getVerse(),
-    getHomepageMode(),
-    getInitialClips()
-  ]);
-
-  return (
-    <HomePageClient
-      verseOfTheDay={verseOfTheDay}
-      homepageMode={homepageMode}
-      initialClips={homepageMode === 'clips' ? initialClips : undefined}
-      defaultModal="links"
-    />
-  );
+export default function LinksPage() {
+  return <LinksPageClient />;
 }
