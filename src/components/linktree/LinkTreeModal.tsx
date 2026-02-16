@@ -181,9 +181,9 @@ export default function LinkTreeModal({ isOpen, onClose }: LinkTreeModalProps) {
               className="mb-10"
             >
               <img
-                src="/odubo_logo_emboss.webp"
-                alt="Odubo"
-                className="w-14 h-14 object-contain opacity-50"
+                src="/brand-logos/baad@odubo.png"
+                alt="B.A.A.D @ Odubo.Studio"
+                className="w-20 h-20 object-contain opacity-40"
                 draggable={false}
               />
             </motion.div>
