@@ -569,12 +569,14 @@ export default function HomePageClient({
         </div>
       )}
 
-      {/* Connect button - top-right, under mute button. Auto-trigger waits for welcome dismissal. */}
-      <ConnectButton
-        externalOpen={linkTreeOpen}
-        onExternalOpenHandled={() => setLinkTreeOpen(false)}
-        suppressAutoTrigger={phase === 'intro'}
-      />
+      {/* Connect button - hidden when any overlay is open */}
+      {!anyOverlayOpen && (
+        <ConnectButton
+          externalOpen={linkTreeOpen}
+          onExternalOpenHandled={() => setLinkTreeOpen(false)}
+          suppressAutoTrigger={phase === 'intro'}
+        />
+      )}
     </div>
   );
 }
