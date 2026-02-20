@@ -105,22 +105,6 @@ export default function ContactModal({ isOpen, onClose }: ContactModalProps) {
             onClick={onClose}
           />
 
-          {/* Close button */}
-          <motion.button
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
-            aria-label="Close"
-            onClick={onClose}
-            className="absolute right-4 z-[101] p-2 text-stone-400 hover:text-white transition-colors"
-            style={{ top: 'calc(1rem + env(safe-area-inset-top, 0px))' }}
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </motion.button>
-
           {/* Modal content */}
           <motion.div
             initial={{ opacity: 0, y: 40, scale: 0.95 }}
@@ -129,14 +113,25 @@ export default function ContactModal({ isOpen, onClose }: ContactModalProps) {
             transition={{ type: 'spring', stiffness: 400, damping: 35 }}
             className="absolute inset-0 flex items-center justify-center overflow-y-auto"
             style={{
-              paddingTop: 'calc(60px + env(safe-area-inset-top, 0px))',
+              paddingTop: 'calc(40px + env(safe-area-inset-top, 0px))',
               paddingBottom: 'calc(40px + env(safe-area-inset-bottom, 0px))',
               paddingLeft: 'max(1rem, env(safe-area-inset-left, 16px))',
               paddingRight: 'max(1rem, env(safe-area-inset-right, 16px))',
             }}
           >
             <div className="w-full max-w-lg" onClick={(e) => e.stopPropagation()}>
-              <div className="rounded-2xl sm:rounded-3xl glass-surface border border-white/10 bg-[#0f0b0b]/95 shadow-[0_30px_120px_rgba(0,0,0,0.45)] overflow-hidden">
+              <div className="relative rounded-2xl sm:rounded-3xl glass-surface border border-white/10 bg-[#0f0b0b]/95 shadow-[0_30px_120px_rgba(0,0,0,0.45)] overflow-hidden">
+                {/* Close button — inside card, top right */}
+                <button
+                  aria-label="Close"
+                  onClick={onClose}
+                  className="absolute top-4 right-4 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-white/5 text-[#ede8df]/50 hover:text-[#ede8df] hover:bg-white/10 transition-all"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+
                 <div className="p-5 sm:p-6 text-[#ede8df]">
                   {/* Header */}
                   <div className="text-center mb-6">

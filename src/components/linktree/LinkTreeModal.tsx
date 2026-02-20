@@ -177,14 +177,14 @@ export default function LinkTreeModal({ isOpen, onClose }: LinkTreeModalProps) {
             </button>
           </motion.div>
 
-          {/* Content — centered vertically */}
-          <div className="flex-1 flex flex-col items-center justify-center px-6">
+          {/* Content — shifted up from center */}
+          <div className="flex-1 flex flex-col items-center justify-center px-6" style={{ paddingBottom: '4vh' }}>
             {/* Brand mark */}
             <motion.div
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1, duration: 0.3 }}
-              className="mb-10"
+              className="mb-7"
             >
               <img
                 src="/brand-logos/baad@odubo.png"
@@ -201,7 +201,7 @@ export default function LinkTreeModal({ isOpen, onClose }: LinkTreeModalProps) {
               </div>
             ) : (
               <motion.div
-                className="grid grid-cols-2 gap-4 w-full max-w-[280px]"
+                className="grid grid-cols-2 gap-3 w-full max-w-[220px]"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.15, duration: 0.3 }}
@@ -213,14 +213,14 @@ export default function LinkTreeModal({ isOpen, onClose }: LinkTreeModalProps) {
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: 0.15 + index * 0.04, type: 'spring', stiffness: 500, damping: 30 }}
                     onClick={() => handleLinkClick(link)}
-                    className="group flex flex-col items-center justify-center aspect-square rounded-2xl transition-all duration-200 active:scale-95"
+                    className="group flex flex-col items-center justify-center aspect-square rounded-xl transition-all duration-200 active:scale-95"
                     style={{
                       background: 'rgba(255,255,255,0.04)',
                       border: '1px solid rgba(255,255,255,0.08)',
                     }}
                     title={link.title}
                   >
-                    <div className="w-8 h-8 flex items-center justify-center transition-transform duration-200 group-hover:scale-110">
+                    <div className="w-6 h-6 flex items-center justify-center transition-transform duration-200 group-hover:scale-110">
                       <PlatformIcon platform={link.platform ?? null} />
                     </div>
                   </motion.button>
@@ -231,7 +231,7 @@ export default function LinkTreeModal({ isOpen, onClose }: LinkTreeModalProps) {
             {/* Email Capture — centered below icons */}
             {!loading && (
               <motion.div
-                className="mt-10 w-full max-w-[280px]"
+                className="mt-7 w-full max-w-[220px]"
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.35, duration: 0.3 }}
@@ -316,7 +316,7 @@ export default function LinkTreeModal({ isOpen, onClose }: LinkTreeModalProps) {
 }
 
 function PlatformIcon({ platform }: { platform: string | null }) {
-  const iconClass = "w-7 h-7";
+  const iconClass = "w-5 h-5";
 
   switch (platform) {
     case 'spotify':
