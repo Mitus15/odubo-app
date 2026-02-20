@@ -46,3 +46,6 @@ next-env.d.ts
 certificates
 .env*.local
 worker/node_modules/
+
+# Blender assets
+assets/blender/
