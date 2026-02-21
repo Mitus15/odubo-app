@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
       case 'get-urls':
         return await handleGetUrls(body);
       case 'complete':
-        return await handleComplete(body);
+        return await handleComplete(body, req);
       case 'abort':
         return await handleAbort(body);
       default:
@@ -154,7 +154,7 @@ async function handleComplete(body: {
   parts: Array<{ PartNumber: number; ETag: string }>;
   filename: string;
   source_format?: string;
-}) {
+}, req: NextRequest) {
   const { uploadId, key, parts, filename, source_format } = body;
 
   if (!uploadId || !key || !parts || !parts.length) {
