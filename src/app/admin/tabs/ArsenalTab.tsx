@@ -2298,42 +2298,63 @@ function UploadView({
 
         const { urls } = await urlsRes.json();
 
-        // 4. Upload all parts in parallel with progress tracking
+        // 4. Upload parts with concurrency limit and retry logic
         let completedParts = 0;
         const uploadedParts: Array<{ PartNumber: number; ETag: string }> = [];
+        const CONCURRENCY = 5; // Max simultaneous chunk uploads
+        const MAX_RETRIES = 3;
 
-        const uploadPromises = chunks.map(async (chunk, index) => {
+        const uploadChunk = async (chunk: Blob, index: number): Promise<void> => {
           const partNumber = index + 1;
           const url = urls[index];
 
-          const response = await fetch(url, {
-            method: 'PUT',
-            body: chunk,
-            headers: {
-              'Content-Type': file.type,
-            },
+          for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+            const response = await fetch(url, {
+              method: 'PUT',
+              body: chunk,
+              headers: { 'Content-Type': file.type },
+            });
+
+            if (!response.ok) {
+              if (attempt === MAX_RETRIES) {
+                throw new Error(`Failed to upload part ${partNumber} after ${MAX_RETRIES} attempts`);
+              }
+              await new Promise(r => setTimeout(r, 1000 * attempt)); // backoff: 1s, 2s, 3s
+              continue;
+            }
+
+            const etag = response.headers.get('ETag');
+            if (!etag) {
+              throw new Error(`No ETag returned for part ${partNumber}`);
+            }
+
+            uploadedParts[index] = {
+              PartNumber: partNumber,
+              ETag: etag.replace(/"/g, ''),
+            };
+
+            completedParts++;
+            const percentage = ((completedParts / totalParts) * 100).toFixed(1);
+            const uploadedMB = ((completedParts * CHUNK_SIZE) / (1024 * 1024)).toFixed(0);
+            const totalMB = (file.size / (1024 * 1024)).toFixed(0);
+            setUploadProgress(`Uploading ${i + 1}/${selectedFiles.length}: ${title} (${percentage}% — ${uploadedMB}/${totalMB} MB)`);
+            return;
+          }
+        };
+
+        // Run uploads with bounded concurrency
+        const queue = chunks.map((chunk, index) => () => uploadChunk(chunk, index));
+        const runQueue = async () => {
+          let cursor = 0;
+          const workers = Array.from({ length: Math.min(CONCURRENCY, queue.length) }, async () => {
+            while (cursor < queue.length) {
+              const task = queue[cursor++];
+              await task();
+            }
           });
-
-          if (!response.ok) {
-            throw new Error(`Failed to upload part ${partNumber}`);
-          }
-
-          const etag = response.headers.get('ETag');
-          if (!etag) {
-            throw new Error(`No ETag returned for part ${partNumber}`);
-          }
-
-          uploadedParts[index] = {
-            PartNumber: partNumber,
-            ETag: etag.replace(/"/g, ''), // Remove quotes from ETag
-          };
-
-          completedParts++;
-          const percentage = ((completedParts / totalParts) * 100).toFixed(1);
-          setUploadProgress(`Uploading ${i + 1}/${selectedFiles.length}: ${title} (${percentage}%)`);
-        });
-
-        await Promise.all(uploadPromises);
+          await Promise.all(workers);
+        };
+        await runQueue();
 
         // 5. Complete multipart upload (also copies to Stream)
         setUploadProgress(`Processing ${i + 1}/${selectedFiles.length}: ${title} - finalizing...`);

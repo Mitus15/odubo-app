@@ -11,10 +11,10 @@ const CLOUDFLARE_ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID;
 const CLOUDFLARE_STREAM_API_TOKEN = process.env.CLOUDFLARE_STREAM_API_TOKEN || process.env.CLOUDFLARE_API_TOKEN;
 const CUSTOMER_SUBDOMAIN = 'customer-tpkm273r1u0s40no';
 
-// Alert if video stuck processing for more than 30 minutes
-const MAX_PROCESSING_TIME_MS = 30 * 60 * 1000;
-// Give up after 2 hours and mark as failed
-const ABSOLUTE_TIMEOUT_MS = 2 * 60 * 60 * 1000;
+// Alert if video stuck processing for more than 60 minutes
+const MAX_PROCESSING_TIME_MS = 60 * 60 * 1000;
+// Give up after 8 hours and mark as failed (large films can take 2-3+ hours on Stream)
+const ABSOLUTE_TIMEOUT_MS = 8 * 60 * 60 * 1000;
 
 interface Video {
   id: number;
