@@ -2981,7 +2981,7 @@ function UploadView({
                         disabled={syncing}
                         className="flex-1 py-2.5 rounded-lg bg-red-900/50 hover:bg-red-900/70 text-white text-xs font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {syncing ? 'Clearing...' : '🗑️ Clear Stream & Retry'}
+                        {syncing ? 'Clearing...' : '⚠️ Nuke All Stream Videos'}
                       </button>
                     </div>
                   </div>
