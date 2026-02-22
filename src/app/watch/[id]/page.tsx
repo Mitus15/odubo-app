@@ -55,6 +55,7 @@ async function getMoreVideos(excludeId: number): Promise<WatchVideo[]> {
        FROM videos
        WHERE id != ?
          AND publication_status = 'live'
+         AND (type IS NULL OR type != 'clip')
        ORDER BY created_at DESC
        LIMIT 6`,
       [excludeId]
