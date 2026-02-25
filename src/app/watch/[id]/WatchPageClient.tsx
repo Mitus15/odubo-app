@@ -25,6 +25,8 @@ interface WatchPageClientProps {
 }
 
 export default function WatchPageClient({ video, moreVideos, socialLinks }: WatchPageClientProps) {
+  const [showMusicModal, setShowMusicModal] = useState(false);
+
   const posterParam = video.poster_url
     ? `&poster=${encodeURIComponent(video.poster_url)}`
     : '';
@@ -34,6 +36,9 @@ export default function WatchPageClient({ video, moreVideos, socialLinks }: Watc
 
   return (
     <div className="min-h-screen bg-[#0d0c0a] text-[#ede8df]">
+
+      {/* Music platforms modal */}
+      <MusicModal open={showMusicModal} onClose={() => setShowMusicModal(false)} socialLinks={socialLinks} />
 
       {/* Ambient background glow from poster */}
       {video.poster_url && (
@@ -54,14 +59,20 @@ export default function WatchPageClient({ video, moreVideos, socialLinks }: Watc
       <header className="px-6 sm:px-10 py-5 flex items-center justify-between">
         <Link
           href="/"
-          className="text-xs tracking-[0.2em] uppercase text-[#b2a491]/40 hover:text-[#b2a491]/70 transition-colors font-light"
+          className="text-[#b2a491]/40 hover:text-[#b2a491]/70 transition-colors"
+          aria-label="Home"
         >
-          Odubo Studio
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
+          </svg>
         </Link>
         {(video.category || video.type) && (
-          <span className="text-[10px] tracking-[0.15em] uppercase text-[#843c2d]/80 bg-[#843c2d]/8 border border-[#843c2d]/20 px-3 py-1 rounded-full">
+          <button
+            onClick={() => setShowMusicModal(true)}
+            className="text-[10px] tracking-[0.15em] uppercase text-[#843c2d]/80 bg-[#843c2d]/8 border border-[#843c2d]/20 px-3 py-1 rounded-full hover:bg-[#843c2d]/15 hover:border-[#843c2d]/35 transition-all duration-300 active:scale-95"
+          >
             {video.category || video.type}
-          </span>
+          </button>
         )}
       </header>
 
@@ -127,14 +138,14 @@ export default function WatchPageClient({ video, moreVideos, socialLinks }: Watc
       {/* More work */}
       {moreVideos.length > 0 && (
         <div className="max-w-3xl mx-auto px-6 sm:px-10 pb-16">
-          <div className="border-t border-white/5 pt-10">
+          <div className="border-t border-white/[0.04] pt-10">
             <p className="text-[10px] uppercase tracking-[0.2em] text-[#b2a491]/30 mb-6">
               More Work
             </p>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-5">
               {moreVideos.map((v) => (
                 <Link key={v.id} href={`/watch/${v.id}`} className="group block">
-                  <div className="aspect-video rounded-md overflow-hidden relative bg-[#171616]">
+                  <div className="aspect-[3/4] rounded-md overflow-hidden relative bg-[#171616]">
                     {v.poster_url ? (
                       <Image
                         src={v.poster_url}
@@ -167,7 +178,69 @@ export default function WatchPageClient({ video, moreVideos, socialLinks }: Watc
   );
 }
 
-/* ─── Join the Cool ────────────────────────────────────────────────────────── */
+/* ─── Music Modal ──────────────────────────────────────────────────────────── */
+
+const MUSIC_PLATFORMS = ['spotify', 'apple_music', 'youtube'];
+
+function MusicModal({ open, onClose, socialLinks }: { open: boolean; onClose: () => void; socialLinks: SocialLink[] }) {
+  const musicLinks = socialLinks
+    .filter(l => MUSIC_PLATFORMS.includes(l.platform))
+    .sort((a, b) => MUSIC_PLATFORMS.indexOf(a.platform) - MUSIC_PLATFORMS.indexOf(b.platform));
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div
+        className="absolute inset-0 bg-black/70 backdrop-blur-md animate-[fadeIn_0.3s_ease-out]"
+        onClick={onClose}
+      />
+      <div className="relative w-full max-w-xs mx-4 bg-[#141312]/95 border border-white/[0.06] rounded-2xl px-8 py-9 animate-[slideUp_0.4s_ease-out]">
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-[#b2a491]/30 hover:text-[#b2a491]/60 transition-colors"
+          aria-label="Close"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+
+        <p className="text-[10px] uppercase tracking-[0.3em] text-[#ede8df]/20 mb-7 text-center">
+          Listen
+        </p>
+
+        <div className="flex items-center justify-center gap-4">
+          {musicLinks.map((link) => (
+            <a
+              key={link.id}
+              href={link.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group w-[60px] h-[60px] flex items-center justify-center rounded-2xl bg-white/[0.03] border border-white/[0.06] backdrop-blur-sm hover:bg-white/[0.07] hover:border-white/[0.12] transition-all duration-300 active:scale-95"
+              aria-label={link.title}
+            >
+              <PlatformIcon platform={link.platform} />
+            </a>
+          ))}
+        </div>
+      </div>
+
+      <style jsx>{`
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes slideUp {
+          from { opacity: 0; transform: translateY(20px) scale(0.97); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+/* ─── Join the Cool (inline section) ──────────────────────────────────────── */
 
 const PLATFORM_ORDER = ['spotify', 'apple_music', 'youtube', 'instagram', 'tiktok', 'shopify'];
 
@@ -281,13 +354,16 @@ function JoinTheCool({ socialLinks }: { socialLinks: SocialLink[] }) {
           )}
         </div>
 
-        {/* Enter the Studio */}
-        <div className="mt-14 text-center">
+        {/* Home */}
+        <div className="mt-14 flex justify-center">
           <Link
             href="/"
-            className="text-[10px] tracking-[0.15em] uppercase text-[#b2a491]/25 hover:text-[#b2a491]/50 transition-colors duration-300"
+            className="text-[#b2a491]/20 hover:text-[#b2a491]/50 transition-colors duration-300"
+            aria-label="Home"
           >
-            Enter the Studio &rarr;
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
+            </svg>
           </Link>
         </div>
       </div>

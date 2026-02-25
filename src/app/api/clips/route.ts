@@ -13,6 +13,10 @@ export async function GET(req: NextRequest) {
     const withEngagement = searchParams.get('withEngagement') === 'true';
     // Seed for consistent shuffle within a session (optional, for pagination)
     const seed = searchParams.get('seed') || '';
+    // Filter by parent video
+    const parentId = searchParams.get('parentId') ? Number(searchParams.get('parentId')) : null;
+    // Sort mode: shuffle (default), newest, popular
+    const sort = searchParams.get('sort') || '';
 
     // IMMUTABLE PRINCIPLE: Default is ALWAYS randomized. Other ordering can exist for specific use cases.
     // See /docs/my_thoughts/admin.md for rationale. Never change the DEFAULT from random without owner consultation.
@@ -41,36 +45,66 @@ export async function GET(req: NextRequest) {
       ? 'LEFT JOIN clip_engagement e ON v.id = e.clip_id'
       : '';
 
+    // Popular sort needs engagement data
+    const isPopularSort = sort === 'popular';
+    const needsEngagement = withEngagement || isPopularSort;
+
+    const engagementFieldsFinal = needsEngagement
+      ? `,
+        COALESCE(e.view_count, 0) as view_count,
+        COALESCE(e.completion_count, 0) as completion_count,
+        COALESCE(e.share_count, 0) as share_count,
+        COALESCE(e.shop_click_count, 0) as shop_click_count,
+        (COALESCE(e.view_count, 0) * 1 +
+         COALESCE(e.completion_count, 0) * 3 +
+         COALESCE(e.share_count, 0) * 5 +
+         COALESCE(e.shop_click_count, 0) * 4) as engagement_score`
+      : engagementFields;
+
+    const engagementJoinFinal = needsEngagement
+      ? `LEFT JOIN clip_engagement e ON v.id = e.clip_id`
+      : engagementJoin;
+
     // For engagement mode, order by score. Otherwise randomize for variety.
     // Use seeded random for consistent pagination within session
     let orderBy: string;
     if (useManualOrder) {
-      // Manual ordering: use feed_position (nulls last), then created_at
       orderBy = 'ORDER BY CASE WHEN v.feed_position IS NULL THEN 1 ELSE 0 END, v.feed_position ASC, v.created_at DESC';
+    } else if (sort === 'newest') {
+      orderBy = 'ORDER BY v.created_at DESC, v.id DESC';
+    } else if (sort === 'oldest') {
+      orderBy = 'ORDER BY v.created_at ASC, v.id ASC';
+    } else if (isPopularSort) {
+      orderBy = 'ORDER BY engagement_score DESC, v.created_at DESC, v.id DESC';
     } else if (withEngagement) {
       orderBy = 'ORDER BY engagement_score DESC, v.created_at DESC, v.id DESC';
     } else if (seed) {
-      // Seeded random: hash(id + seed) for consistent order across pages
       orderBy = `ORDER BY (v.id * 2654435761 + ${hashSeed(seed)}) % 2147483647`;
     } else {
-      // True random shuffle on first load
       orderBy = 'ORDER BY RANDOM()';
     }
+
+    // Parent filter
+    const parentFilter = parentId ? 'AND v.parent_video_id = ?' : '';
+    const params: (number | string)[] = [];
+    if (parentId) params.push(parentId);
+    params.push(limit, offset);
 
     // Include public clips, treating legacy/null status values as published/live
     // CRITICAL: Parentheses added to fix operator precedence bug
     const rows = await queryDatabase(
-      `SELECT ${baseFields}${engagementFields}
+      `SELECT ${baseFields}${engagementFieldsFinal}
        FROM videos v
        LEFT JOIN videos parent ON v.parent_video_id = parent.id
-       ${engagementJoin}
+       ${engagementJoinFinal}
        WHERE v.type = 'clip'
          AND ((v.is_public = 1 OR v.is_public IS NULL)
               AND COALESCE(v.status, 'published') != 'archived'
               AND COALESCE(v.publication_status, 'live') = 'live')
+       ${parentFilter}
        ${orderBy}
        LIMIT ? OFFSET ?`,
-      [limit, offset]
+      params
     );
 
     const response = NextResponse.json({

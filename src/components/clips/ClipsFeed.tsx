@@ -6,6 +6,7 @@ import { mapClipRows } from '@/lib/clipsMapper';
 import { useAudio } from '@/contexts/AudioContext';
 import { useAnalyticsSafe } from '@/contexts/AnalyticsContext';
 import PosterCard from '@/components/clips/PosterCard';
+import ClipFeedMenu, { type SortMode } from '@/components/clips/ClipFeedMenu';
 
 const PAGE_SIZE = 12; // Larger pages for better infinite scroll
 
@@ -54,6 +55,12 @@ export default function ClipsFeed({
   const [hasMore, setHasMore] = useState(true);
   const [scrollDirection, setScrollDirection] = useState<'forward' | 'backward' | null>(null);
 
+  // Feed menu state
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [filterParentId, setFilterParentId] = useState<number | null>(null);
+  const [sortMode, setSortMode] = useState<SortMode>('shuffle');
+  const [parentVideos, setParentVideos] = useState<Array<{ id: number; title: string }>>([]);
+
   const rootRef = useRef<HTMLDivElement>(null);
   const inflightRef = useRef(0);
   const abortRef = useRef<AbortController | null>(null);
@@ -88,7 +95,15 @@ export default function ClipsFeed({
       url.searchParams.set('limit', String(PAGE_SIZE));
       url.searchParams.set('offset', String(p * PAGE_SIZE));
       // Use session seed for consistent random order across pages
-      url.searchParams.set('seed', sessionSeedRef.current);
+      if (sortMode === 'shuffle') {
+        url.searchParams.set('seed', sessionSeedRef.current);
+      }
+      if (sortMode !== 'shuffle') {
+        url.searchParams.set('sort', sortMode);
+      }
+      if (filterParentId) {
+        url.searchParams.set('parentId', String(filterParentId));
+      }
 
       const res = await fetch(url.toString(), {
         headers: { 'Accept': 'application/json' },
@@ -150,7 +165,7 @@ export default function ClipsFeed({
       inflightRef.current--;
       setLoading(false);
     }
-  }, []);
+  }, [sortMode, filterParentId]);
 
   // Initial setup: use SSR clips if available, otherwise fetch
   useEffect(() => {
@@ -182,6 +197,34 @@ export default function ClipsFeed({
       abortRef.current?.abort();
     };
   }, [fetchPage, initialClips]);
+
+  // Fetch parent video list for filter menu
+  useEffect(() => {
+    fetch('/api/clips/parents')
+      .then(res => res.json())
+      .then((data: { parents?: Array<{ id: number; title: string }> }) => {
+        if (data.parents) setParentVideos(data.parents);
+      })
+      .catch(() => {});
+  }, []);
+
+  // Re-fetch when filter or sort changes (skip initial mount — handled by initialClips)
+  const filterSortInitRef = useRef(false);
+  useEffect(() => {
+    if (!filterSortInitRef.current) {
+      filterSortInitRef.current = true;
+      return;
+    }
+    // Reset state and re-fetch
+    sessionSeedRef.current = Math.random().toString(36).substring(2, 12);
+    keyCounterRef.current = 0;
+    pageRef.current = 0;
+    apiExhaustedRef.current = false;
+    baseClipsRef.current = [];
+    setDisplayClips([]);
+    setHasMore(true);
+    fetchPage(0);
+  }, [sortMode, filterParentId, fetchPage]);
 
   // Maximum number of clip instances to keep in memory (prevents infinite growth)
   // With virtualization, only ~5 are rendered at once anyway
@@ -485,6 +528,7 @@ export default function ClipsFeed({
               clip={clip}
               active={activeId === clip.id}
               videoReady={activeId === clip.id && videoReady}
+              onTitleTap={activeId === clip.id ? () => setMenuOpen(prev => !prev) : undefined}
             />
           </section>
         );
@@ -505,6 +549,17 @@ export default function ClipsFeed({
           </button>
         </div>
       )}
+
+      {/* Feed filter/sort menu */}
+      <ClipFeedMenu
+        open={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        parents={parentVideos}
+        activeParentId={filterParentId}
+        onFilterParent={(id) => { setFilterParentId(id); setMenuOpen(false); }}
+        sortMode={sortMode}
+        onSortChange={(mode) => { setSortMode(mode); setMenuOpen(false); }}
+      />
     </div>
   );
 }
