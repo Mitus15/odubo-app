@@ -17,12 +17,12 @@ import { queryDatabase, executeQuery } from '../src/lib/db';
 
 // ─── Configuration ───────────────────────────────────────────────────────────
 
-// Videos already on YouTube — post every 2 calendar days starting Feb 24
-const CATCH_UP: Array<{ id: number; date: string }> = [
-  { id: 424, date: '2026-02-24' }, // K-Town
-  { id: 438, date: '2026-02-25' }, // Pinocchio is in K-Town
-  { id: 439, date: '2026-02-26' }, // David In The City
-  { id: 440, date: '2026-02-27' }, // Alone
+// Videos already on YouTube — 2 today (Feb 25) + 2 tomorrow (Feb 26), staggered PST
+const CATCH_UP: Array<{ id: number; date: string; hour: number }> = [
+  { id: 424, date: '2026-02-25', hour: 14 }, // K-Town — today 2pm PST
+  { id: 438, date: '2026-02-25', hour: 19 }, // Pinocchio is in K-Town — today 7pm PST
+  { id: 439, date: '2026-02-26', hour: 13 }, // David In The City — tomorrow 1pm PST
+  { id: 440, date: '2026-02-26', hour: 19 }, // Alone — tomorrow 7pm PST
 ];
 
 // Videos not yet on YouTube — poster goes out on their YouTube release day
@@ -81,12 +81,7 @@ function nextPostingDay(dateStr: string): string {
 }
 
 function posterCaption(title: string): string {
-  return [
-    `${title} - Vid\u00e9o Officielle`,
-    'Sort Maintenant!',
-    'Directeur par Mani Odubo',
-    'odubo.studio',
-  ].join('\n');
+  return `${title} — Official Video\n\nLink in bio.`;
 }
 
 // ─── Calculate future YouTube release dates ───────────────────────────────────
@@ -163,11 +158,12 @@ async function main() {
   const futureReleaseDates = await calcFutureReleaseDates();
 
   // Build full poster schedule: catch-up + future
-  const allPosters: Array<{ id: number; date: string; label: string }> = [
+  const allPosters: Array<{ id: number; date: string; hour: number; label: string }> = [
     ...CATCH_UP.map(c => ({ ...c, label: 'catch-up' })),
     ...FUTURE_IDS.map(id => ({
       id,
       date: FUTURE_DATE_OVERRIDES[id] ?? (futureReleaseDates.get(id) || ''),
+      hour: POSTER_HOUR,
       label: 'future',
     })).filter(p => p.date !== ''),
   ];
@@ -204,8 +200,9 @@ async function main() {
     const isDupe = alreadyScheduled.has(poster.id);
     const status = isDupe ? 'SKIP (already scheduled)' : !hasUrl ? 'SKIP (no poster_url)' : '';
     const storyLink = `odubo.studio/watch/${poster.id}`;
+    const timeStr = `${poster.hour > 12 ? poster.hour - 12 : poster.hour}:00 ${poster.hour >= 12 ? 'PM' : 'AM'}`;
     console.log(
-      `${poster.date.padEnd(13)} ${'1:00 PM'.padEnd(8)} ${poster.label.padEnd(9)} ${title.substring(0, 28).padEnd(28)} ${storyLink.padEnd(32)} ${status}`
+      `${poster.date.padEnd(13)} ${timeStr.padEnd(8)} ${poster.label.padEnd(9)} ${title.substring(0, 28).padEnd(28)} ${storyLink.padEnd(32)} ${status}`
     );
   }
 
@@ -247,7 +244,7 @@ async function main() {
       continue;
     }
 
-    const scheduledAt = pacificToUtcIso(poster.date, POSTER_HOUR);
+    const scheduledAt = pacificToUtcIso(poster.date, poster.hour);
 
     try {
       const response = await createPost({
@@ -273,8 +270,9 @@ async function main() {
           [String(poster.id)]
         );
 
+        const okTime = `${poster.hour > 12 ? poster.hour - 12 : poster.hour}:00 ${poster.hour >= 12 ? 'PM' : 'AM'}`;
         console.log(
-          `  [OK] ${video.title.padEnd(30)} → ${poster.date} 1:00 PM Pacific (${response.data.id})`
+          `  [OK] ${video.title.padEnd(30)} → ${poster.date} ${okTime} Pacific (${response.data.id})`
         );
         console.log(`       Story → odubo.studio/watch/${poster.id}`);
         scheduled++;
