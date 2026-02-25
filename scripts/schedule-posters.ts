@@ -1,32 +1,48 @@
 /**
- * Schedule Posters — Post poster images to Instagram for each video batch.
+ * Schedule Poster Posts — Announce YouTube availability on Instagram.
  *
- * Calculates the poster time as the midnight closest to each batch's last clip,
- * based on existing video_deployments data.
+ * Two phases:
+ *  1. Catch-up: K-Town, Pinocchio, David In The City, Alone — already on YouTube.
+ *     Post every 2 calendar days at 1 PM Pacific, starting Feb 24.
+ *  2. Future: Pour Salem → Take That — post at 1 PM Pacific on each video's
+ *     YouTube release day (same day their first clip drops).
  *
  * Usage:
  *   npx tsx --env-file=.env.local scripts/schedule-posters.ts              # dry-run
- *   npx tsx --env-file=.env.local scripts/schedule-posters.ts --live       # actually schedule
+ *   npx tsx --env-file=.env.local scripts/schedule-posters.ts --live       # schedule
  */
 
 import { createPost, getAccounts, mapPlatform } from '../src/lib/postforme';
 import { queryDatabase, executeQuery } from '../src/lib/db';
 
-const VIDEO_ORDER = [439, 440, 441, 442, 443, 444, 445, 446, 447];
+// ─── Configuration ───────────────────────────────────────────────────────────
 
-function posterCaption(title: string): string {
-  return [
-    `${title} - Vid\u00e9o Officielle`,
-    'Sort Maintenant!',
-    'Directeur par Mani Odubo',
-    'odubo.studio',
-  ].join('\n');
-}
+// Videos already on YouTube — post every 2 calendar days starting Feb 24
+const CATCH_UP: Array<{ id: number; date: string }> = [
+  { id: 424, date: '2026-02-24' }, // K-Town
+  { id: 438, date: '2026-02-25' }, // Pinocchio is in K-Town
+  { id: 439, date: '2026-02-26' }, // David In The City
+  { id: 440, date: '2026-02-27' }, // Alone
+];
 
-/**
- * Convert Pacific date + hour to UTC ISO for PostForMe.
- * Handles PST/PDT automatically.
- */
+// Videos not yet on YouTube — poster goes out on their YouTube release day
+const FUTURE_IDS = [441, 442, 443, 444, 445, 446, 447];
+
+// Manual date overrides for future videos (when calculated date needs adjustment)
+const FUTURE_DATE_OVERRIDES: Record<number, string> = {
+  441: '2026-02-28', // Pour Salem — shifted +1 day to avoid overlap with Alone catch-up
+};
+
+// Full VIDEO_ORDER from schedule-all.ts — used to walk the clip schedule
+const ALL_VIDEO_ORDER = [439, 440, 441, 442, 443, 444, 445, 446, 447];
+
+const POSTER_HOUR = 13; // 1 PM Pacific
+const POSTING_SLOTS = 3; // 3 clips/day
+const SKIP_DAYS = [0]; // Sunday
+const START_DATE = '2026-02-18'; // First clip posting day (schedule-all start)
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
 function pacificToUtcIso(dateStr: string, hour: number): string {
   const [year, month, day] = dateStr.split('-').map(Number);
   const refDate = new Date(Date.UTC(year, month - 1, day, 20, 0, 0));
@@ -41,32 +57,96 @@ function pacificToUtcIso(dateStr: string, hour: number): string {
   return utcDate.toISOString().replace('.000Z', '+00:00');
 }
 
+function getDayOfWeek(dateStr: string): number {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return new Date(y, m - 1, d).getDay();
+}
+
 function addDays(dateStr: string, days: number): string {
   const [y, m, d] = dateStr.split('-').map(Number);
   const date = new Date(y, m - 1, d + days);
-  const yy = date.getFullYear();
-  const mm = String(date.getMonth() + 1).padStart(2, '0');
-  const dd = String(date.getDate()).padStart(2, '0');
-  return `${yy}-${mm}-${dd}`;
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, '0'),
+    String(date.getDate()).padStart(2, '0'),
+  ].join('-');
 }
 
-function formatHour(hour: number): string {
-  if (hour === 0) return '12:00 AM';
-  if (hour < 12) return `${hour}:00 AM`;
-  if (hour === 12) return '12:00 PM';
-  return `${hour - 12}:00 PM`;
+function nextPostingDay(dateStr: string): string {
+  let current = dateStr;
+  while (SKIP_DAYS.includes(getDayOfWeek(current))) {
+    current = addDays(current, 1);
+  }
+  return current;
 }
+
+function posterCaption(title: string): string {
+  return [
+    `${title} - Vid\u00e9o Officielle`,
+    'Sort Maintenant!',
+    'Directeur par Mani Odubo',
+    'odubo.studio',
+  ].join('\n');
+}
+
+// ─── Calculate future YouTube release dates ───────────────────────────────────
+
+/**
+ * Walk the schedule-all clip deployment pattern to find the YouTube release date
+ * (= first clip day) for each future video. Mirrors schedule-all.ts date logic exactly.
+ */
+async function calcFutureReleaseDates(): Promise<Map<number, string>> {
+  const releaseDates = new Map<number, string>();
+  let currentDate = START_DATE;
+
+  for (const parentId of ALL_VIDEO_ORDER) {
+    currentDate = nextPostingDay(currentDate);
+
+    // If this is a future video, its YouTube release date = start of its batch
+    if (FUTURE_IDS.includes(parentId)) {
+      releaseDates.set(parentId, currentDate);
+    }
+
+    // Query published clip count for this video
+    const rows = await queryDatabase(
+      `SELECT COUNT(*) as count FROM videos WHERE parent_video_id = ? AND status = 'published'`,
+      [parentId]
+    ) as any[];
+    const clipCount = rows?.[0]?.count || 0;
+
+    if (clipCount === 0) continue;
+
+    // Advance date the same way schedule-all.ts does
+    let slotIndex = 0;
+    for (let i = 0; i < clipCount; i++) {
+      slotIndex++;
+      if (slotIndex >= POSTING_SLOTS) {
+        slotIndex = 0;
+        currentDate = nextPostingDay(addDays(currentDate, 1));
+      }
+    }
+
+    // Batch boundary: next video starts the day after if mid-day
+    if (slotIndex > 0) {
+      currentDate = addDays(currentDate, 1);
+    }
+  }
+
+  return releaseDates;
+}
+
+// ─── Main ─────────────────────────────────────────────────────────────────────
 
 async function main() {
   const isLive = process.argv.includes('--live');
-  console.log(`\n${'='.repeat(60)}`);
-  console.log(`  SCHEDULE POSTERS — ${isLive ? 'LIVE MODE' : 'DRY RUN'}`);
-  console.log(`${'='.repeat(60)}\n`);
+  console.log(`\n${'='.repeat(70)}`);
+  console.log(`  SCHEDULE POSTER POSTS — ${isLive ? 'LIVE MODE' : 'DRY RUN'}`);
+  console.log(`${'='.repeat(70)}\n`);
 
-  // Get Instagram account
+  // Fetch PostForMe Instagram account
   const accountsRes = await getAccounts();
   if (!accountsRes.success || !accountsRes.data) {
-    console.error('Failed to fetch PostForMe accounts');
+    console.error('Failed to fetch PostForMe accounts:', accountsRes.error);
     process.exit(1);
   }
 
@@ -77,185 +157,104 @@ async function main() {
     console.error('No connected Instagram account found');
     process.exit(1);
   }
-  console.log(`Instagram: ${instagramAccount.id}\n`);
+  console.log(`Instagram account: ${instagramAccount.id}\n`);
+
+  // Calculate future release dates
+  const futureReleaseDates = await calcFutureReleaseDates();
+
+  // Build full poster schedule: catch-up + future
+  const allPosters: Array<{ id: number; date: string; label: string }> = [
+    ...CATCH_UP.map(c => ({ ...c, label: 'catch-up' })),
+    ...FUTURE_IDS.map(id => ({
+      id,
+      date: FUTURE_DATE_OVERRIDES[id] ?? (futureReleaseDates.get(id) || ''),
+      label: 'future',
+    })).filter(p => p.date !== ''),
+  ];
+
+  // Fetch video data for all posters
+  const videoIds = allPosters.map(p => p.id);
+  const placeholders = videoIds.map(() => '?').join(',');
+  const videos = await queryDatabase(
+    `SELECT id, title, poster_url FROM videos WHERE id IN (${placeholders})`,
+    videoIds
+  ) as any[];
+  const videoMap = new Map(videos.map((v: any) => [v.id, v]));
+
+  // Check existing poster deployments
+  const existingRows = await queryDatabase(
+    `SELECT video_id FROM video_deployments
+     WHERE video_id IN (${placeholders}) AND platform = 'instagram'
+     AND metadata_json LIKE '%poster%'`,
+    videoIds
+  ) as any[];
+  const alreadyScheduled = new Set(existingRows.map((r: any) => r.video_id));
+
+  // Print schedule table
+  console.log('POSTER SCHEDULE:\n');
+  console.log(
+    `${'Date'.padEnd(13)} ${'Time'.padEnd(8)} ${'Type'.padEnd(9)} ${'Video Title'.padEnd(28)} ${'Story Link'.padEnd(32)} Status`
+  );
+  console.log('-'.repeat(100));
+
+  for (const poster of allPosters) {
+    const video = videoMap.get(poster.id);
+    const title = video?.title || `[ID ${poster.id}]`;
+    const hasUrl = !!video?.poster_url;
+    const isDupe = alreadyScheduled.has(poster.id);
+    const status = isDupe ? 'SKIP (already scheduled)' : !hasUrl ? 'SKIP (no poster_url)' : '';
+    const storyLink = `odubo.studio/watch/${poster.id}`;
+    console.log(
+      `${poster.date.padEnd(13)} ${'1:00 PM'.padEnd(8)} ${poster.label.padEnd(9)} ${title.substring(0, 28).padEnd(28)} ${storyLink.padEnd(32)} ${status}`
+    );
+  }
+
+  console.log();
+  const toPost = allPosters.filter(p => {
+    const video = videoMap.get(p.id);
+    return video?.poster_url && !alreadyScheduled.has(p.id) && p.date;
+  });
+  console.log(`✅ To schedule: ${toPost.length}/${allPosters.length}`);
+
+  if (!isLive) {
+    console.log('\nDRY RUN. Use --live to schedule.\n');
+    return;
+  }
+
+  // ── Live: schedule each poster ───────────────────────────────────────────
+
+  console.log('\nSCHEDULING...\n');
 
   let scheduled = 0;
   let skipped = 0;
   let errors = 0;
 
-  for (const parentId of VIDEO_ORDER) {
-    // Get parent video
-    const parents = await queryDatabase(
-      'SELECT id, title, poster_url FROM videos WHERE id = ?',
-      [parentId]
-    ) as any[];
-
-    if (!parents?.[0]) {
-      console.log(`[SKIP] Parent ${parentId} not found`);
+  for (const poster of allPosters) {
+    const video = videoMap.get(poster.id);
+    if (!video?.poster_url) {
+      console.log(`  [SKIP] ID ${poster.id} — no poster_url`);
+      skipped++;
       continue;
     }
-
-    const parent = parents[0];
-
-    if (!parent.poster_url) {
-      console.log(`[SKIP] ${parent.title} — no poster_url`);
+    if (alreadyScheduled.has(poster.id)) {
+      console.log(`  [SKIP] ${video.title} — already scheduled`);
+      skipped++;
+      continue;
+    }
+    if (!poster.date) {
+      console.log(`  [SKIP] ${video.title} — no date calculated`);
       skipped++;
       continue;
     }
 
-    // Check if poster already scheduled
-    const existing = await queryDatabase(
-      `SELECT id FROM video_deployments
-       WHERE video_id = ? AND platform = 'instagram'
-       AND (metadata_json LIKE '%poster%' OR metadata_json LIKE '%image%')`,
-      [parentId]
-    ) as any[];
+    const scheduledAt = pacificToUtcIso(poster.date, POSTER_HOUR);
 
-    if (existing && existing.length > 0) {
-      console.log(`[SKIP] ${parent.title} — poster already scheduled`);
-      skipped++;
-      continue;
-    }
-
-    // Find the last clip deployment for this parent to determine timing
-    const lastClip = await queryDatabase(
-      `SELECT vd.deployed_at, vd.postforme_post_id
-       FROM video_deployments vd
-       JOIN videos v ON v.id = vd.video_id
-       WHERE v.parent_video_id = ?
-       ORDER BY vd.deployed_at DESC
-       LIMIT 1`,
-      [parentId]
-    ) as any[];
-
-    if (!lastClip?.[0]?.deployed_at) {
-      console.log(`[SKIP] ${parent.title} — no clip deployments found`);
-      skipped++;
-      continue;
-    }
-
-    // Parse the last clip's scheduled time to find closest midnight
-    // We need to check what PostForMe has for this post's scheduled_at
-    // But since we scheduled them, we can derive from the deployment pattern:
-    // Look at ALL clip deployments to find the latest scheduled time
-    const allClipDeployments = await queryDatabase(
-      `SELECT vd.postforme_post_id, vd.deployed_at
-       FROM video_deployments vd
-       JOIN videos v ON v.id = vd.video_id
-       WHERE v.parent_video_id = ? AND vd.platform = 'youtube'
-       ORDER BY vd.deployed_at DESC`,
-      [parentId]
-    ) as any[];
-
-    // Get the last deployment date and figure out the posting hour
-    // The deployed_at is when WE created the record, but the actual schedule
-    // is in PostForMe. We need to look at the schedule pattern.
-    // Since clips are 3/day at 7AM/1PM/7PM, count clips to find last slot.
-    const clipCount = await queryDatabase(
-      `SELECT COUNT(*) as count FROM videos
-       WHERE parent_video_id = ? AND status = 'published'`,
-      [parentId]
-    ) as any[];
-
-    const numClips = clipCount?.[0]?.count || 0;
-    const POSTING_HOURS = [7, 13, 19];
-    const lastSlotIndex = (numClips - 1) % 3;
-    const lastClipHour = POSTING_HOURS[lastSlotIndex];
-
-    // Calculate how many full days of clips (0-indexed)
-    const fullDays = Math.floor((numClips - 1) / 3);
-
-    // Find the start date for this parent from deployments
-    // Use the first deployment's date as reference
-    const firstDeploy = await queryDatabase(
-      `SELECT MIN(vd.deployed_at) as first_at
-       FROM video_deployments vd
-       JOIN videos v ON v.id = vd.video_id
-       WHERE v.parent_video_id = ?`,
-      [parentId]
-    ) as any[];
-
-    // Simpler approach: just use the clip count + posting hours to determine
-    // if the closest midnight is before or after the last clip
-    // 7 AM → midnight same day (before), 1 PM or 7 PM → midnight next day (after)
-    const posterAfterLastClip = lastClipHour > 12;
-
-    // We need the actual last clip date. Let's compute it from the schedule.
-    // Since schedule-all already ran, look at the latest scheduled deployment
-    // and parse its PostForMe scheduled_at via the API... but that's slow.
-    //
-    // Instead, count days forward from the start, skipping Sundays:
-    const SKIP_DAYS = [0]; // Sunday
-    function advanceDays(startDate: string, days: number): string {
-      let current = startDate;
-      let advanced = 0;
-      while (advanced < days) {
-        current = addDays(current, 1);
-        if (!SKIP_DAYS.includes(new Date(current).getDay())) {
-          advanced++;
-        }
-      }
-      return current;
-    }
-
-    // Get the batch start date from the first clip deployment's scheduled time
-    // Since we don't store scheduled_at locally, we'll compute from the known schedule
-    // The start dates are deterministic from schedule-all.ts
-    const START_DATE = '2026-02-18';
-    let batchStart = START_DATE;
-
-    // Walk through previous batches to find this batch's start
-    for (const prevId of VIDEO_ORDER) {
-      if (prevId === parentId) break;
-
-      const prevClipCount = await queryDatabase(
-        `SELECT COUNT(*) as count FROM videos
-         WHERE parent_video_id = ? AND status = 'published'`,
-        [prevId]
-      ) as any[];
-
-      const prevClips = prevClipCount?.[0]?.count || 0;
-      if (prevClips === 0) continue;
-
-      const prevFullDays = Math.floor((prevClips - 1) / 3);
-      const prevLastSlot = (prevClips - 1) % 3;
-
-      // Advance through this batch's posting days
-      batchStart = advanceDays(batchStart, prevFullDays);
-
-      // Batch boundary: next video starts the next posting day
-      if (prevLastSlot > 0 || prevFullDays >= 0) {
-        batchStart = addDays(batchStart, 1);
-        // Skip Sundays
-        while (SKIP_DAYS.includes(new Date(batchStart).getDay())) {
-          batchStart = addDays(batchStart, 1);
-        }
-      }
-    }
-
-    // Now batchStart is the first posting day for this parent
-    // Last clip date = batchStart + fullDays (skipping Sundays)
-    const lastClipDate = advanceDays(batchStart, fullDays);
-    const posterDate = posterAfterLastClip ? addDays(lastClipDate, 1) : lastClipDate;
-    const posterUtc = pacificToUtcIso(posterDate, 0);
-
-    console.log(`  ${parent.title}`);
-    console.log(`    Clips: ${numClips}, Last slot: ${formatHour(lastClipHour)} on ${lastClipDate}`);
-    console.log(`    Poster: ${posterDate} 12:00 AM Pacific (${posterUtc})`);
-    console.log(`    Image: ${parent.poster_url.substring(0, 60)}...`);
-
-    if (!isLive) {
-      scheduled++;
-      continue;
-    }
-
-    // Schedule via PostForMe
     try {
       const response = await createPost({
-        caption: posterCaption(parent.title),
+        caption: posterCaption(video.title),
         social_accounts: [instagramAccount.id],
-        media: [{ url: parent.poster_url, type: 'image' }],
-        scheduled_at: posterUtc,
+        media: [{ url: video.poster_url, type: 'image' }],
+        scheduled_at: scheduledAt,
         platform_configurations: {
           instagram: { placement: 'FEED' },
         },
@@ -265,32 +264,38 @@ async function main() {
         await executeQuery(
           `INSERT INTO video_deployments (video_id, platform, postforme_post_id, status, deployed_at, metadata_json)
            VALUES (?, 'instagram', ?, 'scheduled', datetime('now'), '{"type":"poster"}')`,
-          [parentId, response.data.id]
+          [poster.id, response.data.id]
         );
-        console.log(`    -> Scheduled: ${response.data.id}`);
+
+        // Update bio link to point to this video
+        await executeQuery(
+          `INSERT OR REPLACE INTO app_config (key, value, updated_at) VALUES ('featured_video_id', ?, datetime('now'))`,
+          [String(poster.id)]
+        );
+
+        console.log(
+          `  [OK] ${video.title.padEnd(30)} → ${poster.date} 1:00 PM Pacific (${response.data.id})`
+        );
+        console.log(`       Story → odubo.studio/watch/${poster.id}`);
         scheduled++;
       } else {
-        console.log(`    -> FAILED: ${response.error}`);
+        console.log(`  [FAIL] ${video.title}: ${response.error}`);
         errors++;
       }
 
       await new Promise(r => setTimeout(r, 250));
     } catch (err: any) {
-      console.log(`    -> ERROR: ${err.message}`);
+      console.log(`  [FAIL] ${video.title}: ${err.message}`);
       errors++;
     }
   }
 
-  console.log(`\n${'='.repeat(60)}`);
-  console.log(`  ${isLive ? 'SCHEDULED' : 'WOULD SCHEDULE'}: ${scheduled} | Skipped: ${skipped} | Errors: ${errors}`);
-  console.log(`${'='.repeat(60)}\n`);
-
-  if (!isLive) {
-    console.log('DRY RUN. Use --live to schedule.\n');
-  }
+  console.log(`\n${'='.repeat(70)}`);
+  console.log(`  Scheduled: ${scheduled} | Skipped: ${skipped} | Errors: ${errors}`);
+  console.log(`${'='.repeat(70)}\n`);
 }
 
 main().catch(err => {
-  console.error('Fatal:', err);
+  console.error('\nFatal:', err);
   process.exit(1);
 });

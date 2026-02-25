@@ -100,12 +100,39 @@ export async function generateMetadata({ params }: WatchPageProps): Promise<Meta
   };
 }
 
+export interface SocialLink {
+  id: number;
+  title: string;
+  url: string;
+  platform: string;
+}
+
+async function getSocialLinks(): Promise<SocialLink[]> {
+  try {
+    const rows = await queryDatabase(
+      `SELECT id, title, url, platform FROM linktree WHERE is_active = 1 ORDER BY display_order ASC`,
+      []
+    );
+    return rows.map((r: any) => ({
+      id: r.id,
+      title: r.title || '',
+      url: r.url || '',
+      platform: r.platform || '',
+    }));
+  } catch {
+    return [];
+  }
+}
+
 export default async function WatchPage({ params }: WatchPageProps) {
   const { id } = await params;
   const video = await getVideo(id);
   if (!video) notFound();
 
-  const moreVideos = await getMoreVideos(video.id);
+  const [moreVideos, socialLinks] = await Promise.all([
+    getMoreVideos(video.id),
+    getSocialLinks(),
+  ]);
 
-  return <WatchPageClient video={video} moreVideos={moreVideos} />;
+  return <WatchPageClient video={video} moreVideos={moreVideos} socialLinks={socialLinks} />;
 }
