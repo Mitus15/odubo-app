@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useAnalyticsSafe } from '@/contexts/AnalyticsContext';
 import type { SocialLink } from './page';
 
 interface WatchVideo {
@@ -26,6 +27,13 @@ interface WatchPageClientProps {
 
 export default function WatchPageClient({ video, moreVideos, socialLinks }: WatchPageClientProps) {
   const [showMusicModal, setShowMusicModal] = useState(false);
+  const analytics = useAnalyticsSafe();
+
+  // Track video view on mount
+  useEffect(() => {
+    analytics?.trackVideoOpen(video.id, video.title);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [video.id]);
 
   const posterParam = video.poster_url
     ? `&poster=${encodeURIComponent(video.poster_url)}`

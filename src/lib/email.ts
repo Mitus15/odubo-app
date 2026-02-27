@@ -183,36 +183,27 @@ export interface WelcomeEmailData {
 
 function welcomeEmailHTML(data: WelcomeEmailData): string {
   const site = getSiteUrl();
-  const { discountCode: defaultCode, discountLabel } = getDiscountEnv();
-  const discountCode = data.discountCode || defaultCode;
 
   const content = `
-    <h1 style="margin:0 0 8px;font-size:24px;color:${BRAND.primary}">Welcome to B.A.A.D</h1>
-    <p style="margin:0 0 4px;font-size:13px;color:${BRAND.muted};letter-spacing:0.08em;">BOLD AUTHENTIC AESTHETIC DREAMS</p>
+    <h1 style="margin:0 0 8px;font-size:24px;color:${BRAND.primary}">Welcome to Odubo Studio</h1>
     <p style="margin:12px 0 20px;font-size:16px;color:${BRAND.text}">
-      Hey ${data.name || 'there'}, you&rsquo;re now part of something being built with intention.
+      Hey ${data.name || 'there'}, thanks for joining. You&rsquo;re now part of something being built with intention.
     </p>
 
     <p style="margin:0 0 16px;font-size:16px;color:${BRAND.text};">
-      B.A.A.D is a collection born at Odubo Studio &mdash; where music, fashion, and art converge. Every piece is designed to be worn with conviction.
+      Odubo Studio is where music, film, and art converge &mdash; new work dropping regularly.
     </p>
 
-    <div style="margin:24px 0;padding:20px;background:${BRAND.warmBg};border-radius:12px;text-align:center;border:1px solid ${BRAND.border};">
-      <p style="margin:0 0 8px;font-size:14px;color:${BRAND.muted};">${discountLabel.charAt(0).toUpperCase() + discountLabel.slice(1)}</p>
-      <p style="margin:0;font-size:28px;font-weight:700;color:${BRAND.accent};font-family:${BRAND.serif};letter-spacing:3px;">${discountCode}</p>
-      <p style="margin:8px 0 0;font-size:13px;color:${BRAND.muted};">Apply at checkout</p>
-    </div>
-
     <div style="margin:24px 0;text-align:center;">
-      ${ctaButton(`${site}/store`, 'Browse the Collection')}
+      ${ctaButton(site, 'Visit the Studio')}
     </div>
 
     <p style="margin:24px 0 0;font-size:14px;color:${BRAND.muted};text-align:center;">
-      Visit the studio anytime at <a href="${site}" style="color:${BRAND.accent};text-decoration:none;">odubo.studio</a>
+      <a href="${site}" style="color:${BRAND.accent};text-decoration:none;">odubo.studio</a>
     </p>
   `;
 
-  return emailWrapper(content, `Welcome to B.A.A.D \u2014 here\u2019s a gift for your first piece.`);
+  return emailWrapper(content, `Welcome to Odubo Studio \u2014 thanks for joining.`);
 }
 
 // Day 3 Email — what's been happening at the studio

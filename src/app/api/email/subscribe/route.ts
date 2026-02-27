@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { executeQuery, queryDatabase } from '@/lib/db';
 import { sendWelcomeEmail } from '@/lib/email';
 import { rateLimit } from '@/lib/rateLimit';
-import { getDiscountEnv } from '@/lib/env';
 
 interface SubscribeBody {
   email?: string;
@@ -21,7 +20,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { discountCode: WELCOME_DISCOUNT_CODE } = getDiscountEnv();
     const body = (await request.json()) as SubscribeBody;
     const { email, name } = body;
 
@@ -60,7 +58,6 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
           success: true,
           alreadySubscribed: true,
-          discountCode: WELCOME_DISCOUNT_CODE,
         });
       }
 
@@ -84,7 +81,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: true,
         alreadySubscribed: false,
-        discountCode: WELCOME_DISCOUNT_CODE,
       });
     }
 
@@ -104,11 +100,10 @@ export async function POST(request: NextRequest) {
     // Log the newsletter signup activity
     await logNewsletterSignup(newId, emailLower);
 
-    // Send welcome email with discount code
+    // Send welcome email
     const emailResult = await sendWelcomeEmail({
       email: emailLower,
       name: name || '',
-      discountCode: WELCOME_DISCOUNT_CODE,
     });
 
     if (emailResult.success) {
@@ -122,7 +117,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       alreadySubscribed: false,
-      discountCode: WELCOME_DISCOUNT_CODE,
     });
 
   } catch (error: any) {
