@@ -228,6 +228,8 @@ async function runSync() {
   const updatedParentIds = new Set<number>();
 
   // Phase 1: Check PostForMe post status
+  // PostForMe uses: scheduled → processed (never "published", never returns platform URLs)
+  // "processed" means the content was sent to the platform successfully
   const byPostId = new Map<string, Deployment[]>();
   for (const d of deployments) {
     const group = byPostId.get(d.postforme_post_id) || [];
@@ -245,41 +247,47 @@ async function runSync() {
       }
 
       const post = postResponse.data as any;
-      const platformData = new Map<string, { url?: string; externalId?: string; status: string }>();
+      const postStatus = post.status;
 
-      if (post.platforms && Array.isArray(post.platforms) && post.platforms.length > 0) {
-        for (const p of post.platforms) {
-          if (!p.platform) continue;
-          platformData.set(mapPlatform(p.platform), {
-            url: p.url, externalId: p.external_id, status: p.status,
-          });
+      // PostForMe "processed" = sent to platform. URLs come from feed matching (Phase 2).
+      // PostForMe "published" also possible but rare. Either way, no platform URLs in the response.
+      if (postStatus === 'processed' || postStatus === 'published') {
+        // Check if PostForMe happens to have URLs (unlikely but handle it)
+        const platformData = new Map<string, { url?: string; externalId?: string }>();
+        if (post.platforms && Array.isArray(post.platforms)) {
+          for (const p of post.platforms) {
+            if (p.platform && p.url) {
+              platformData.set(mapPlatform(p.platform), { url: p.url, externalId: p.external_id });
+            }
+          }
         }
-      }
 
-      for (const deployment of group) {
-        const pData = platformData.get(deployment.platform);
-        const effectiveStatus = pData?.status || post.status;
-        const effectiveUrl = pData?.url || post.external_url;
+        for (const deployment of group) {
+          const pData = platformData.get(deployment.platform);
+          const effectiveUrl = pData?.url || post.external_url;
 
-        if (effectiveStatus === 'published' && effectiveUrl) {
-          const result = await markDeploymentPublished(
-            deployment, effectiveUrl, pData?.externalId || post.external_id || null,
-          );
-          if (result.updated) updated++;
-          if (result.madePublic) madePublic++;
-          if (deployment.parent_video_id) updatedParentIds.add(deployment.parent_video_id);
-        } else if (effectiveStatus === 'published' && !effectiveUrl) {
-          // Published but no URL yet — keep in remaining for feed-based matching
-          console.log(`[Arsenal Sync] ${deployment.title} / ${deployment.platform}: published but no URL yet, will retry via feed`);
-          remaining.push(deployment);
-        } else if (effectiveStatus === 'failed') {
+          if (effectiveUrl) {
+            const result = await markDeploymentPublished(
+              deployment, effectiveUrl, pData?.externalId || post.external_id || null,
+            );
+            if (result.updated) updated++;
+            if (result.madePublic) madePublic++;
+            if (deployment.parent_video_id) updatedParentIds.add(deployment.parent_video_id);
+          } else {
+            // Processed but no URL — need feed matching
+            remaining.push(deployment);
+          }
+        }
+      } else if (postStatus === 'failed') {
+        for (const deployment of group) {
           await executeQuery(
             `UPDATE video_deployments SET status = 'failed', error_message = ? WHERE id = ?`,
             [post.error_message || 'Post failed on platform', deployment.id]
           );
-        } else {
-          remaining.push(deployment);
         }
+      } else {
+        // Still scheduled or unknown status — keep for next sync
+        remaining.push(...group);
       }
     } catch (err) {
       errors.push(`Post ${postformePostId}: ${err instanceof Error ? err.message : 'Unknown error'}`);
