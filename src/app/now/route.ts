@@ -10,11 +10,14 @@ export const runtime = 'edge';
 export async function GET() {
   try {
     const rows = await queryDatabase(
-      "SELECT value FROM app_config WHERE key = 'featured_video_id'",
+      `SELECT video_id FROM featured_schedule
+       WHERE starts_at <= datetime('now')
+       ORDER BY starts_at DESC
+       LIMIT 1`,
       []
     ) as any[];
 
-    const id = rows?.[0]?.value;
+    const id = rows?.[0]?.video_id;
     if (id) {
       return NextResponse.redirect(new URL(`/watch/${id}`, 'https://odubo.studio'), 302);
     }

@@ -264,10 +264,13 @@ async function main() {
           [poster.id, response.data.id]
         );
 
-        // Update bio link to point to this video
+        // Insert into featured_schedule so /now auto-advances
+        // Convert ISO to SQLite format: "2026-02-27T03:00:00+00:00" → "2026-02-27 03:00:00"
+        const sqliteTime = scheduledAt.replace('T', ' ').replace('+00:00', '');
         await executeQuery(
-          `INSERT OR REPLACE INTO app_config (key, value, updated_at) VALUES ('featured_video_id', ?, datetime('now'))`,
-          [String(poster.id)]
+          `INSERT OR IGNORE INTO featured_schedule (video_id, starts_at, label)
+           VALUES (?, ?, ?)`,
+          [poster.id, sqliteTime, video.title]
         );
 
         const okTime = `${poster.hour > 12 ? poster.hour - 12 : poster.hour}:00 ${poster.hour >= 12 ? 'PM' : 'AM'}`;
