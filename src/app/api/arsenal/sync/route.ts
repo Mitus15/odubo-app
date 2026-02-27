@@ -268,6 +268,10 @@ async function runSync() {
           if (result.updated) updated++;
           if (result.madePublic) madePublic++;
           if (deployment.parent_video_id) updatedParentIds.add(deployment.parent_video_id);
+        } else if (effectiveStatus === 'published' && !effectiveUrl) {
+          // Published but no URL yet — keep in remaining for feed-based matching
+          console.log(`[Arsenal Sync] ${deployment.title} / ${deployment.platform}: published but no URL yet, will retry via feed`);
+          remaining.push(deployment);
         } else if (effectiveStatus === 'failed') {
           await executeQuery(
             `UPDATE video_deployments SET status = 'failed', error_message = ? WHERE id = ?`,

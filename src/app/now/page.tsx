@@ -39,12 +39,16 @@ export interface SocialLink {
 async function getShowcaseVideos(featuredId: number | null): Promise<ShowcaseVideo[]> {
   try {
     const rows = await queryDatabase(
-      `SELECT id, title, poster_url, youtube_url, category, type
-       FROM videos
-       WHERE parent_video_id IS NULL
-         AND publication_status = 'live'
-         AND poster_url IS NOT NULL
-       ORDER BY created_at DESC`,
+      `SELECT v.id, v.title, v.poster_url, v.youtube_url, v.category, v.type,
+              vd.external_url as deployment_youtube_url
+       FROM videos v
+       LEFT JOIN video_deployments vd
+         ON vd.video_id = v.id AND vd.platform = 'youtube' AND vd.external_url IS NOT NULL
+       WHERE v.parent_video_id IS NULL
+         AND v.publication_status = 'live'
+         AND v.poster_url IS NOT NULL
+       GROUP BY v.id
+       ORDER BY v.created_at DESC`,
       []
     ) as any[];
 
@@ -52,7 +56,7 @@ async function getShowcaseVideos(featuredId: number | null): Promise<ShowcaseVid
       id: v.id,
       title: v.title || '',
       poster_url: v.poster_url,
-      youtube_url: v.youtube_url || null,
+      youtube_url: v.youtube_url || v.deployment_youtube_url || null,
       category: v.category || null,
       type: v.type || null,
     }));

@@ -164,27 +164,16 @@ export async function POST(request: NextRequest) {
     }> = [];
 
     for (const video of videos) {
-      // Construct proper video URL for PostForMe
-      // PostForMe needs a direct video URL (not iframe embed)
-      let videoUrl = video.mp4_url;
-
-      // If no mp4_url, construct from uid
-      if (!videoUrl && video.uid) {
-        // Try HLS manifest URL (most compatible with PostForMe)
-        videoUrl = `https://videodelivery.net/${video.uid}/manifest/video.m3u8`;
-      }
-
-      // Last resort: use the url field (though it may be an iframe URL)
-      if (!videoUrl) {
-        videoUrl = video.url;
-      }
+      // PostForMe requires a direct MP4 URL — never fall back to HLS or iframe URLs
+      // (see 2026-02-11 video URL crisis: silent fallbacks caused 112 broken deployments)
+      const videoUrl = video.mp4_url;
 
       if (!videoUrl) {
         results.push({
           videoId: video.id,
           platforms,
           success: false,
-          error: 'No video URL available',
+          error: 'No mp4_url — run npm run mp4:backfill first',
         });
         continue;
       }

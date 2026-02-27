@@ -18,6 +18,7 @@ export default function NowPageClient({ videos, stats, socialLinks }: NowPageCli
   const scrollRef = useRef<HTMLDivElement>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [mounted, setMounted] = useState(false);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -39,11 +40,33 @@ export default function NowPageClient({ videos, stats, socialLinks }: NowPageCli
     el.scrollTo({ left: cardWidth * idx, behavior: 'smooth' });
   }, [videos.length]);
 
-  const handlePosterTap = useCallback((video: ShowcaseVideo) => {
+  // Touch tracking to distinguish tap from swipe
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+  }, []);
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent, video: ShowcaseVideo) => {
+    const start = touchStartRef.current;
+    if (!start) return;
+    const touch = e.changedTouches[0];
+    const dx = Math.abs(touch.clientX - start.x);
+    const dy = Math.abs(touch.clientY - start.y);
+    // Only fire tap if finger moved < 10px (not a swipe)
+    if (dx < 10 && dy < 10) {
+      openVideo(video);
+    }
+    touchStartRef.current = null;
+  }, []);
+
+  const openVideo = useCallback((video: ShowcaseVideo) => {
     if (video.youtube_url) {
       window.open(video.youtube_url, '_blank', 'noopener');
+    } else {
+      // Fallback: open on the watch page
+      router.push(`/watch/${video.id}`);
     }
-  }, []);
+  }, [router]);
 
   const handleClose = useCallback(() => {
     router.push('/');
@@ -103,7 +126,9 @@ export default function NowPageClient({ videos, stats, socialLinks }: NowPageCli
                   className="flex-shrink-0 w-full snap-center px-2"
                 >
                   <button
-                    onClick={() => handlePosterTap(video)}
+                    onClick={() => openVideo(video)}
+                    onTouchStart={handleTouchStart}
+                    onTouchEnd={(e) => { e.preventDefault(); handleTouchEnd(e, video); }}
                     className="group relative w-full aspect-[3/4] rounded-xl overflow-hidden bg-[#171616] active:scale-[0.98] transition-transform duration-200"
                     aria-label={`Watch ${video.title} on YouTube`}
                   >
@@ -131,13 +156,11 @@ export default function NowPageClient({ videos, stats, socialLinks }: NowPageCli
                     </div>
 
                     {/* Play icon */}
-                    {video.youtube_url && (
-                      <div className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-white/10 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                        <svg className="w-3.5 h-3.5 text-white/80 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M8 5v14l11-7z" />
-                        </svg>
-                      </div>
-                    )}
+                    <div className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-white/10 backdrop-blur-sm opacity-60 group-hover:opacity-100 transition-opacity duration-300">
+                      <svg className="w-3.5 h-3.5 text-white/80 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M8 5v14l11-7z" />
+                      </svg>
+                    </div>
                   </button>
                 </div>
               ))}
