@@ -13,6 +13,7 @@ interface Deployment {
   postforme_post_id: string;
   parent_video_id: number | null;
   status: string;
+  metadata_json: string | null;
 }
 
 function getLegacyColumnForPlatform(platform: string, isClip: boolean): string {
@@ -71,17 +72,10 @@ async function markDeploymentPublished(
     );
   }
 
-  const publicResult = await executeQuery(
-    `UPDATE videos
-     SET is_public = 1, publication_status = 'live', updated_at = datetime('now')
-     WHERE id = ? AND (is_public IS NULL OR is_public = 0)`,
-    [deployment.video_id]
-  );
+  // Publication status is NOT set here — it's gated on the poster being published to Instagram.
+  // See goLiveOnPosterPublished() which triggers when the poster deployment syncs.
 
-  const madePublic = publicResult && typeof publicResult === 'object' &&
-    'changes' in publicResult && (publicResult as any).changes > 0;
-
-  return { updated: true, madePublic: !!madePublic };
+  return { updated: true, madePublic: false };
 }
 
 /**
@@ -208,7 +202,7 @@ async function runSync() {
   const deployments = await queryDatabase(
     `SELECT
       vd.id, vd.video_id, v.title, vd.platform, vd.postforme_post_id,
-      vd.status, v.parent_video_id
+      vd.status, v.parent_video_id, vd.metadata_json
      FROM video_deployments vd
      JOIN videos v ON v.id = vd.video_id
      WHERE vd.postforme_post_id IS NOT NULL
@@ -226,6 +220,7 @@ async function runSync() {
   const errors: string[] = [];
   const remaining: Deployment[] = [];
   const updatedParentIds = new Set<number>();
+  const publishedPosterVideoIds = new Set<number>(); // Parent videos whose poster just synced
 
   // Phase 1: Check PostForMe post status
   // PostForMe uses: scheduled → processed (never "published", never returns platform URLs)
@@ -273,6 +268,10 @@ async function runSync() {
             if (result.updated) updated++;
             if (result.madePublic) madePublic++;
             if (deployment.parent_video_id) updatedParentIds.add(deployment.parent_video_id);
+            // Track poster deployments — triggers go-live for parent + clips
+            if (deployment.metadata_json?.includes('poster')) {
+              publishedPosterVideoIds.add(deployment.video_id);
+            }
           } else {
             // Processed but no URL — need feed matching
             remaining.push(deployment);
@@ -351,6 +350,9 @@ async function runSync() {
               if (result.updated) updated++;
               if (result.madePublic) madePublic++;
               if (deployment.parent_video_id) updatedParentIds.add(deployment.parent_video_id);
+              if (deployment.metadata_json?.includes('poster')) {
+                publishedPosterVideoIds.add(deployment.video_id);
+              }
             }
           }
         } catch (err) {
@@ -365,6 +367,69 @@ async function runSync() {
   if (updatedParentIds.size > 0) {
     const posterResult = await checkAutoPoster(updatedParentIds, errors);
     postersScheduled = posterResult.postersScheduled;
+  }
+
+  // Phase 4: Go live — when a poster is confirmed published on Instagram,
+  // set the parent video + all its clips to publication_status = 'live'
+  if (publishedPosterVideoIds.size > 0) {
+    for (const parentId of publishedPosterVideoIds) {
+      try {
+        // Set parent video live
+        const parentResult = await executeQuery(
+          `UPDATE videos SET is_public = 1, publication_status = 'live', updated_at = datetime('now')
+           WHERE id = ? AND (publication_status IS NULL OR publication_status != 'live')`,
+          [parentId]
+        );
+        // Set all clips live
+        const clipsResult = await executeQuery(
+          `UPDATE videos SET is_public = 1, publication_status = 'live', updated_at = datetime('now')
+           WHERE parent_video_id = ? AND (publication_status IS NULL OR publication_status != 'live')`,
+          [parentId]
+        );
+
+        const parentChanged = parentResult && typeof parentResult === 'object' &&
+          'changes' in parentResult && (parentResult as any).changes > 0;
+        const clipsChanged = clipsResult && typeof clipsResult === 'object' &&
+          'changes' in clipsResult ? (clipsResult as any).changes : 0;
+
+        if (parentChanged || clipsChanged > 0) {
+          madePublic += (parentChanged ? 1 : 0) + clipsChanged;
+          console.log(`[Arsenal Sync] Go live: video ${parentId} + ${clipsChanged} clips now public (poster confirmed on Instagram)`);
+        }
+      } catch (err) {
+        errors.push(`Go live for ${parentId}: ${err instanceof Error ? err.message : 'Unknown'}`);
+      }
+    }
+  }
+
+  // Phase 5: Check for already-confirmed posters that haven't triggered go-live yet
+  // (handles posters that were synced in a previous run but videos are still archived)
+  try {
+    const archivedWithPoster = await queryDatabase(
+      `SELECT DISTINCT v.id
+       FROM videos v
+       JOIN video_deployments vd ON vd.video_id = v.id
+       WHERE vd.platform = 'instagram'
+         AND vd.metadata_json LIKE '%poster%'
+         AND vd.status = 'published'
+         AND v.parent_video_id IS NULL
+         AND (v.publication_status IS NULL OR v.publication_status != 'live')`,
+      []
+    ) as any[];
+
+    if (archivedWithPoster && archivedWithPoster.length > 0) {
+      for (const row of archivedWithPoster) {
+        await executeQuery(
+          `UPDATE videos SET is_public = 1, publication_status = 'live', updated_at = datetime('now')
+           WHERE id = ? OR parent_video_id = ?`,
+          [row.id, row.id]
+        );
+        console.log(`[Arsenal Sync] Catch-up go-live: video ${row.id} (poster was already published)`);
+        madePublic++;
+      }
+    }
+  } catch (err) {
+    errors.push(`Catch-up go-live: ${err instanceof Error ? err.message : 'Unknown'}`);
   }
 
   return {
