@@ -103,100 +103,82 @@ function getNextMidnightPacificUtc(): string {
 }
 
 /**
- * Auto-poster: After sync, check if all clips for a parent are published.
- * If so and poster_url exists with no poster deployment, schedule poster.
+ * Schedule poster for a parent video on Instagram.
+ * Triggered when the parent video's YouTube deployment is confirmed.
+ * Returns true if a poster was scheduled.
  */
-async function checkAutoPoster(
-  updatedParentIds: Set<number>,
+async function schedulePosterForParent(
+  parentId: number,
   errors: string[]
-): Promise<{ postersScheduled: number }> {
-  let postersScheduled = 0;
+): Promise<boolean> {
+  try {
+    const parent = await queryDatabase(
+      'SELECT id, title, poster_url FROM videos WHERE id = ?',
+      [parentId]
+    ) as any[];
 
-  for (const parentId of updatedParentIds) {
-    try {
-      // Count total vs published clip deployments for this parent
-      const stats = await queryDatabase(
-        `SELECT
-           COUNT(*) as total,
-           SUM(CASE WHEN vd.status = 'published' THEN 1 ELSE 0 END) as published
-         FROM video_deployments vd
-         JOIN videos v ON v.id = vd.video_id
-         WHERE v.parent_video_id = ?`,
-        [parentId]
-      ) as any[];
+    if (!parent?.[0]?.poster_url) return false;
 
-      if (!stats?.[0] || stats[0].total === 0) continue;
-      if (stats[0].total !== stats[0].published) continue;
+    // Check if poster deployment already exists
+    const existingPoster = await queryDatabase(
+      `SELECT id FROM video_deployments
+       WHERE video_id = ? AND platform = 'instagram'
+       AND metadata_json LIKE '%poster%'`,
+      [parentId]
+    ) as any[];
 
-      // All clips published — check if poster exists and hasn't been deployed
-      const parent = await queryDatabase(
-        'SELECT id, title, poster_url FROM videos WHERE id = ?',
-        [parentId]
-      ) as any[];
+    if (existingPoster && existingPoster.length > 0) return false;
 
-      if (!parent?.[0]?.poster_url) continue;
+    // Schedule poster via PostForMe
+    const accountsRes = await getAccounts();
+    if (!accountsRes.success || !accountsRes.data) return false;
 
-      // Check if poster deployment already exists
-      const existingPoster = await queryDatabase(
-        `SELECT id FROM video_deployments
-         WHERE video_id = ? AND platform = 'instagram'
-         AND metadata_json LIKE '%poster%'`,
-        [parentId]
-      ) as any[];
+    const instagramAccount = accountsRes.data.find(
+      a => mapPlatform(a.platform) === 'instagram' && a.status === 'connected'
+    );
+    if (!instagramAccount) return false;
 
-      if (existingPoster && existingPoster.length > 0) continue;
+    const scheduledAt = getNextMidnightPacificUtc();
+    const caption = [
+      `${parent[0].title} \u2014 Official Video`,
+      'Link in Bio',
+      'Directed by Mani Odubo',
+      'odubo.studio',
+    ].join('\n');
 
-      // Schedule poster via PostForMe
-      const accountsRes = await getAccounts();
-      if (!accountsRes.success || !accountsRes.data) continue;
+    const response = await createPost({
+      caption,
+      social_accounts: [instagramAccount.id],
+      media: [{ url: parent[0].poster_url, type: 'image' }],
+      scheduled_at: scheduledAt,
+      platform_configurations: {
+        instagram: { placement: 'FEED' },
+      },
+    });
 
-      const instagramAccount = accountsRes.data.find(
-        a => mapPlatform(a.platform) === 'instagram' && a.status === 'connected'
+    if (response.success && response.data) {
+      await executeQuery(
+        `INSERT INTO video_deployments (video_id, platform, postforme_post_id, status, deployed_at, metadata_json)
+         VALUES (?, 'instagram', ?, 'scheduled', datetime('now'), '{"type":"poster"}')`,
+        [parentId, response.data.id]
       );
-      if (!instagramAccount) continue;
-
-      const scheduledAt = getNextMidnightPacificUtc();
-      const caption = [
-        `${parent[0].title} - Vid\u00e9o Officielle`,
-        'Sort Maintenant!',
-        'Directeur par Mani Odubo',
-        'odubo.studio',
-      ].join('\n');
-
-      const response = await createPost({
-        caption,
-        social_accounts: [instagramAccount.id],
-        media: [{ url: parent[0].poster_url, type: 'image' }],
-        scheduled_at: scheduledAt,
-        platform_configurations: {
-          instagram: { placement: 'FEED' },
-        },
-      });
-
-      if (response.success && response.data) {
-        await executeQuery(
-          `INSERT INTO video_deployments (video_id, platform, postforme_post_id, status, deployed_at, metadata_json)
-           VALUES (?, 'instagram', ?, 'scheduled', datetime('now'), '{"type":"poster"}')`,
-          [parentId, response.data.id]
-        );
-        console.log(`[Arsenal Sync] Auto-poster scheduled for ${parent[0].title} at ${scheduledAt}`);
-        postersScheduled++;
-      }
-    } catch (err) {
-      errors.push(`Auto-poster for parent ${parentId}: ${err instanceof Error ? err.message : 'Unknown'}`);
+      console.log(`[Arsenal Sync] Poster scheduled for ${parent[0].title} at ${scheduledAt}`);
+      return true;
     }
+  } catch (err) {
+    errors.push(`Poster for parent ${parentId}: ${err instanceof Error ? err.message : 'Unknown'}`);
   }
-
-  return { postersScheduled };
+  return false;
 }
 
 /**
  * Core sync logic — used by both POST (admin) and GET (cron) handlers.
  *
- * Three-phase sync:
- * 1. Check PostForMe post status directly
- * 2. Fall back to platform feed matching (with retry for flaky APIs)
- * 3. Auto-poster: schedule poster when all clips for a video are published
+ * Five-phase sync:
+ * 1. Check PostForMe post status (processed = sent to platform)
+ * 2. Fall back to platform feed matching for URLs (with retry)
+ * 3. Go live: when parent video confirmed on YouTube → set parent + clips to live + schedule poster
+ * 4. Catch-up: find parent videos already on YouTube but still not live
  */
 async function runSync() {
   const deployments = await queryDatabase(
@@ -220,7 +202,7 @@ async function runSync() {
   const errors: string[] = [];
   const remaining: Deployment[] = [];
   const updatedParentIds = new Set<number>();
-  const publishedPosterVideoIds = new Set<number>(); // Parent videos whose poster just synced
+  const confirmedParentVideoIds = new Set<number>(); // Parent videos whose YouTube deployment just confirmed
 
   // Phase 1: Check PostForMe post status
   // PostForMe uses: scheduled → processed (never "published", never returns platform URLs)
@@ -268,9 +250,9 @@ async function runSync() {
             if (result.updated) updated++;
             if (result.madePublic) madePublic++;
             if (deployment.parent_video_id) updatedParentIds.add(deployment.parent_video_id);
-            // Track poster deployments — triggers go-live for parent + clips
-            if (deployment.metadata_json?.includes('poster')) {
-              publishedPosterVideoIds.add(deployment.video_id);
+            // Track parent video YouTube confirmations — triggers go-live + poster
+            if (!deployment.parent_video_id && deployment.platform === 'youtube') {
+              confirmedParentVideoIds.add(deployment.video_id);
             }
           } else {
             // Processed but no URL — need feed matching
@@ -350,8 +332,8 @@ async function runSync() {
               if (result.updated) updated++;
               if (result.madePublic) madePublic++;
               if (deployment.parent_video_id) updatedParentIds.add(deployment.parent_video_id);
-              if (deployment.metadata_json?.includes('poster')) {
-                publishedPosterVideoIds.add(deployment.video_id);
+              if (!deployment.parent_video_id && deployment.platform === 'youtube') {
+                confirmedParentVideoIds.add(deployment.video_id);
               }
             }
           }
@@ -362,17 +344,12 @@ async function runSync() {
     }
   }
 
-  // Phase 3: Auto-poster check for completed video batches
   let postersScheduled = 0;
-  if (updatedParentIds.size > 0) {
-    const posterResult = await checkAutoPoster(updatedParentIds, errors);
-    postersScheduled = posterResult.postersScheduled;
-  }
 
-  // Phase 4: Go live — when a poster is confirmed published on Instagram,
-  // set the parent video + all its clips to publication_status = 'live'
-  if (publishedPosterVideoIds.size > 0) {
-    for (const parentId of publishedPosterVideoIds) {
+  // Phase 4: Go live + schedule poster — when a parent video's YouTube deployment
+  // is confirmed, set parent + clips to live and schedule the Instagram poster
+  if (confirmedParentVideoIds.size > 0) {
+    for (const parentId of confirmedParentVideoIds) {
       try {
         // Set parent video live
         const parentResult = await executeQuery(
@@ -394,38 +371,43 @@ async function runSync() {
 
         if (parentChanged || clipsChanged > 0) {
           madePublic += (parentChanged ? 1 : 0) + clipsChanged;
-          console.log(`[Arsenal Sync] Go live: video ${parentId} + ${clipsChanged} clips now public (poster confirmed on Instagram)`);
+          console.log(`[Arsenal Sync] Go live: video ${parentId} + ${clipsChanged} clips (parent confirmed on YouTube)`);
         }
+
+        // Schedule poster if not already scheduled
+        const posterResult = await schedulePosterForParent(parentId, errors);
+        if (posterResult) postersScheduled++;
       } catch (err) {
         errors.push(`Go live for ${parentId}: ${err instanceof Error ? err.message : 'Unknown'}`);
       }
     }
   }
 
-  // Phase 5: Check for already-confirmed posters that haven't triggered go-live yet
-  // (handles posters that were synced in a previous run but videos are still archived)
+  // Phase 5: Catch-up — find parent videos confirmed on YouTube but still not live
   try {
-    const archivedWithPoster = await queryDatabase(
+    const archivedWithYoutube = await queryDatabase(
       `SELECT DISTINCT v.id
        FROM videos v
        JOIN video_deployments vd ON vd.video_id = v.id
-       WHERE vd.platform = 'instagram'
-         AND vd.metadata_json LIKE '%poster%'
+       WHERE vd.platform = 'youtube'
          AND vd.status = 'published'
          AND v.parent_video_id IS NULL
          AND (v.publication_status IS NULL OR v.publication_status != 'live')`,
       []
     ) as any[];
 
-    if (archivedWithPoster && archivedWithPoster.length > 0) {
-      for (const row of archivedWithPoster) {
+    if (archivedWithYoutube && archivedWithYoutube.length > 0) {
+      for (const row of archivedWithYoutube) {
         await executeQuery(
           `UPDATE videos SET is_public = 1, publication_status = 'live', updated_at = datetime('now')
            WHERE id = ? OR parent_video_id = ?`,
           [row.id, row.id]
         );
-        console.log(`[Arsenal Sync] Catch-up go-live: video ${row.id} (poster was already published)`);
+        console.log(`[Arsenal Sync] Catch-up go-live: video ${row.id} (YouTube already confirmed)`);
         madePublic++;
+
+        const posterResult = await schedulePosterForParent(row.id, errors);
+        if (posterResult) postersScheduled++;
       }
     }
   } catch (err) {
