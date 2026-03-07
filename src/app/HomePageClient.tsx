@@ -111,7 +111,7 @@ export default function HomePageClient({
   const currentMuted = homepageMode === 'music' ? musicPlayerState.isMuted : isMuted;
 
   // Modal contexts
-  const { openStore, view: storeView, closeStore } = useStore();
+  const { openStore, view: storeView, closeStore, isStoreAccessible, isCheckingAccess } = useStore();
   const { openHub, modalStack, closeAll: closeMedia } = useUnifiedMedia();
 
   // Page analytics tracking
@@ -175,6 +175,22 @@ export default function HomePageClient({
     return () => clearTimeout(timer);
   }, [defaultModal, openStore, openHub]);
 
+  // Auto-open store after verse dismissal (when store is published/active)
+  useEffect(() => {
+    if (!hasInteracted) return;
+    if (storeAutoOpenedRef.current) return;
+    if (defaultModal) return;
+    if (!isStoreAccessible || isCheckingAccess) return;
+
+    storeAutoOpenedRef.current = true;
+
+    const timer = setTimeout(() => {
+      openStore();
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [hasInteracted, defaultModal, isStoreAccessible, isCheckingAccess, openStore]);
+
   // Navigate back to / when modal closes (only if opened via URL)
   useEffect(() => {
     if (!defaultModal) return;
@@ -187,6 +203,9 @@ export default function HomePageClient({
       router.replace('/', { scroll: false });
     }
   }, [defaultModal, storeView, modalStack.length, linkTreeOpen, router]);
+
+  // Track whether store was auto-opened this session (prevents re-open after user closes)
+  const storeAutoOpenedRef = useRef(false);
 
   // Ref to hold feed's scrollToNext function
   const scrollToNextRef = useRef<(() => void) | null>(null);
