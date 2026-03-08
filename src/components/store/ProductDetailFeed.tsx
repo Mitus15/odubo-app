@@ -103,11 +103,40 @@ interface DetailsModalProps {
   isOpen: boolean;
   onClose: () => void;
   description: string;
-  vendor: string;
-  productType: string;
 }
 
-function DetailsModal({ isOpen, onClose, description, vendor, productType }: DetailsModalProps) {
+// Parse description into sections (care instructions, size chart, etc.)
+function parseDescription(text: string): { careInstructions: string[]; sizeChart: string[]; general: string[] } {
+  const lines = text.split(/\n+/).map(l => l.trim()).filter(Boolean);
+  const careInstructions: string[] = [];
+  const sizeChart: string[] = [];
+  const general: string[] = [];
+
+  let currentSection: 'general' | 'care' | 'size' = 'general';
+
+  for (const line of lines) {
+    const lower = line.toLowerCase();
+    if (lower.includes('care') && (lower.includes('instruction') || lower.includes(':')) || lower === 'care') {
+      currentSection = 'care';
+      continue;
+    }
+    if (lower.includes('size') && (lower.includes('chart') || lower.includes('guide') || lower.includes(':'))) {
+      currentSection = 'size';
+      continue;
+    }
+
+    if (currentSection === 'care') careInstructions.push(line);
+    else if (currentSection === 'size') sizeChart.push(line);
+    else general.push(line);
+  }
+
+  return { careInstructions, sizeChart, general };
+}
+
+function DetailsModal({ isOpen, onClose, description }: DetailsModalProps) {
+  const sections = description ? parseDescription(description) : null;
+  const hasContent = sections && (sections.general.length > 0 || sections.careInstructions.length > 0 || sections.sizeChart.length > 0);
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -130,7 +159,7 @@ function DetailsModal({ isOpen, onClose, description, vendor, productType }: Det
           >
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
-              <h3 className="text-lg font-semibold text-white">Product Details</h3>
+              <h3 className="text-lg font-semibold text-white">Details</h3>
               <button
                 onClick={onClose}
                 className="w-8 h-8 flex items-center justify-center text-white/60 hover:text-white transition-colors rounded-full hover:bg-white/5"
@@ -142,27 +171,54 @@ function DetailsModal({ isOpen, onClose, description, vendor, productType }: Det
             </div>
 
             {/* Content */}
-            <div className="px-6 py-4 max-h-96 overflow-y-auto">
-              {description && (
-                <div className="mb-4">
-                  <h4 className="text-sm font-medium text-white/80 mb-2">Description</h4>
-                  <p className="text-sm text-white/60 leading-relaxed whitespace-pre-wrap">
-                    {description}
+            <div className="px-6 py-5 max-h-96 overflow-y-auto space-y-5">
+              {!hasContent && (
+                <p className="text-sm text-white/40">No details available.</p>
+              )}
+
+              {sections && sections.general.length > 0 && (
+                <div>
+                  <p className="text-sm text-white/70 leading-relaxed">
+                    {sections.general.join(' ')}
                   </p>
                 </div>
               )}
-              
-              {vendor && (
-                <div className="mb-4">
-                  <h4 className="text-sm font-medium text-white/80 mb-1">Vendor</h4>
-                  <p className="text-sm text-white/60">{vendor}</p>
+
+              {sections && sections.careInstructions.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <svg className="w-4 h-4 text-white/50" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714a2.25 2.25 0 00.659 1.591L19 14.5M14.25 3.104c.251.023.501.05.75.082M19 14.5l-2.47 2.47a2.25 2.25 0 01-1.59.659H9.06a2.25 2.25 0 01-1.591-.659L5 14.5m14 0V6.836a2.25 2.25 0 00-.659-1.591L15 2" />
+                    </svg>
+                    <h4 className="text-xs uppercase tracking-widest text-white/50 font-medium">Care Instructions</h4>
+                  </div>
+                  <ul className="space-y-1.5">
+                    {sections.careInstructions.map((line, i) => (
+                      <li key={i} className="text-sm text-white/60 leading-relaxed flex items-start gap-2">
+                        <span className="text-white/20 mt-1.5 shrink-0 w-1 h-1 rounded-full bg-white/30" />
+                        {line}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               )}
-              
-              {productType && (
+
+              {sections && sections.sizeChart.length > 0 && (
                 <div>
-                  <h4 className="text-sm font-medium text-white/80 mb-1">Type</h4>
-                  <p className="text-sm text-white/60">{productType}</p>
+                  <div className="flex items-center gap-2 mb-3">
+                    <svg className="w-4 h-4 text-white/50" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0118 16.5h-2.25m-7.5 0h7.5m-7.5 0l-1 3m8.5-3l1 3m0 0l.5 1.5m-.5-1.5h-9.5m0 0l-.5 1.5" />
+                    </svg>
+                    <h4 className="text-xs uppercase tracking-widest text-white/50 font-medium">Size Guide</h4>
+                  </div>
+                  <ul className="space-y-1.5">
+                    {sections.sizeChart.map((line, i) => (
+                      <li key={i} className="text-sm text-white/60 leading-relaxed flex items-start gap-2">
+                        <span className="text-white/20 mt-1.5 shrink-0 w-1 h-1 rounded-full bg-white/30" />
+                        {line}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               )}
             </div>
@@ -489,8 +545,6 @@ export default function ProductDetailFeed() {
         isOpen={showDetails}
         onClose={() => setShowDetails(false)}
         description={currentProduct.description}
-        vendor={currentProduct.vendor}
-        productType={currentProduct.productType}
       />
     </motion.div>
   );
