@@ -24,7 +24,6 @@ async function main() {
   const welcome = await sendWelcomeEmail({
     name: 'Emmanuel',
     email: TO,
-    discountCode: process.env.WELCOME_DISCOUNT_CODE || 'WELCOME5',
   });
   console.log(welcome.success ? '  ✓ Sent' : `  ✗ ${welcome.error}`);
   await sleep(1200);
@@ -34,7 +33,6 @@ async function main() {
   const day3 = await sendDay3Email({
     name: 'Emmanuel',
     email: TO,
-    discountCode: process.env.WELCOME_DISCOUNT_CODE || 'WELCOME5',
   });
   console.log(day3.success ? '  ✓ Sent' : `  ✗ ${day3.error}`);
   await sleep(1200);
@@ -44,7 +42,6 @@ async function main() {
   const day7 = await sendDay7Email({
     name: 'Emmanuel',
     email: TO,
-    discountCode: process.env.WELCOME_DISCOUNT_CODE || 'WELCOME5',
   });
   console.log(day7.success ? '  ✓ Sent' : `  ✗ ${day7.error}`);
   await sleep(1200);

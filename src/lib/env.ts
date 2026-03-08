@@ -47,21 +47,8 @@ export function validateEmailEnv(): { ok: boolean; warnings: string[]; values: E
   return { ok: warnings.length === 0, warnings, values: { resendKey, fromEmail, siteUrl } };
 }
 
-// Discount-related env vars for welcome flow
-type DiscountEnv = {
-  discountCode: string;
-  discountLabel: string;
-};
-
-export function getDiscountEnv(): DiscountEnv {
-  const discountCode = process.env.WELCOME_DISCOUNT_CODE || 'WELCOME5';
-  const discountLabel = process.env.WELCOME_DISCOUNT_LABEL || 'a gift for your first piece';
-  return { discountCode, discountLabel };
-}
-
 export default {
   getSiteUrl,
   getEmailEnv,
   validateEmailEnv,
-  getDiscountEnv,
 };

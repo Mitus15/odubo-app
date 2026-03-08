@@ -4,7 +4,7 @@
  */
 
 import { Resend } from 'resend';
-import { getEmailEnv, getSiteUrl, getDiscountEnv } from '@/lib/env';
+import { getEmailEnv, getSiteUrl } from '@/lib/env';
 
 // Lazy-loaded Resend client
 let resendClient: Resend | null = null;
@@ -178,7 +178,6 @@ function orderConfirmationHTML(data: OrderConfirmationData): string {
 export interface WelcomeEmailData {
   name: string;
   email: string;
-  discountCode?: string;
 }
 
 function welcomeEmailHTML(data: WelcomeEmailData): string {
@@ -210,13 +209,10 @@ function welcomeEmailHTML(data: WelcomeEmailData): string {
 export interface Day3EmailData {
   name: string;
   email: string;
-  discountCode?: string;
 }
 
 function day3EmailHTML(data: Day3EmailData): string {
   const site = getSiteUrl();
-  const { discountCode: defaultCode } = getDiscountEnv();
-  const discountCode = data.discountCode || defaultCode;
 
   const content = `
     <h1 style="margin:0 0 8px;font-size:24px;color:${BRAND.primary}">What&rsquo;s New at the Studio</h1>
@@ -245,49 +241,39 @@ function day3EmailHTML(data: Day3EmailData): string {
     <div style="margin:24px 0;text-align:center;">
       ${ctaButton(`${site}/store`, 'Browse the Collection', 'outline')}
     </div>
-
-    <p style="margin:24px 0 0;font-size:13px;color:${BRAND.muted};text-align:center;">
-      Your welcome code <strong style="color:${BRAND.accent};letter-spacing:1px;">${discountCode}</strong> is still active.
-    </p>
   `;
 
   return emailWrapper(content, `New at B.A.A.D @ Odubo Studio \u2014 clips, collection, and more.`);
 }
 
-// Day 7 Email — urgency, discount expiring
+// Day 7 Email — check back in, nudge to explore
 export interface Day7EmailData {
   name: string;
   email: string;
-  discountCode?: string;
 }
 
 function day7EmailHTML(data: Day7EmailData): string {
   const site = getSiteUrl();
-  const { discountCode: defaultCode } = getDiscountEnv();
-  const discountCode = data.discountCode || defaultCode;
 
   const content = `
-    <h1 style="margin:0 0 8px;font-size:24px;color:${BRAND.primary}">Your Welcome Discount Expires Soon</h1>
+    <h1 style="margin:0 0 8px;font-size:24px;color:${BRAND.primary}">Still Building</h1>
     <p style="margin:0 0 20px;font-size:16px;color:${BRAND.text}">
-      Hey ${data.name || 'there'}, your welcome gift is about to expire.
+      Hey ${data.name || 'there'}, just a reminder &mdash; new work is always dropping at the Studio.
     </p>
 
-    <div style="margin:24px 0;padding:20px;background:${BRAND.warmBg};border-radius:12px;text-align:center;border:2px dashed ${BRAND.accent};">
-      <p style="margin:0 0 8px;font-size:14px;color:${BRAND.muted};">Use code before it&rsquo;s gone</p>
-      <p style="margin:0;font-size:28px;font-weight:700;color:${BRAND.accent};font-family:${BRAND.serif};letter-spacing:3px;">${discountCode}</p>
-      <p style="margin:8px 0 0;font-size:14px;color:#d97706;font-weight:600;">Expires in 3 days</p>
+    <div style="margin:24px 0;padding:20px;background:${BRAND.warmBg};border-radius:12px;">
+      <p style="margin:0 0 12px;font-size:14px;font-weight:600;color:${BRAND.primary};">Don&rsquo;t Miss Out</p>
+      <p style="margin:0;font-size:14px;color:${BRAND.text};">
+        Fresh clips, new pieces in the collection, and moments you won&rsquo;t find anywhere else.
+      </p>
     </div>
 
     <div style="margin:24px 0;text-align:center;">
-      ${ctaButton(`${site}/store`, 'Claim Your Discount')}
+      ${ctaButton(site, 'Visit the Studio')}
     </div>
-
-    <p style="margin:24px 0 0;font-size:14px;color:${BRAND.muted};text-align:center;">
-      This is your last reminder. After this, the code is gone.
-    </p>
   `;
 
-  return emailWrapper(content, `Your B.A.A.D welcome discount expires soon \u2014 don\u2019t miss out.`);
+  return emailWrapper(content, `New work dropping at B.A.A.D @ Odubo Studio.`);
 }
 
 // ============================================================================
@@ -389,7 +375,7 @@ export async function sendDay7Email(data: Day7EmailData): Promise<SendResult> {
     const result = await resend.emails.send({
       from: fromEmail,
       to: data.email,
-      subject: 'Your B.A.A.D welcome discount expires soon',
+      subject: 'Still Building \u2014 B.A.A.D @ Odubo Studio',
       html: day7EmailHTML(data),
     });
 

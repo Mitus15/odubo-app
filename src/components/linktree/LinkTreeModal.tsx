@@ -23,7 +23,7 @@ export default function LinkTreeModal({ isOpen, onClose }: LinkTreeModalProps) {
 
   const { storeAccessible: legacyStoreAccessible, checkingStoreAccess: legacyCheckingAccess, closeAll: closeAllShopModals } = useOmniShop();
   const { openStore, isStoreAccessible, isCheckingAccess } = useStore();
-  const { hasSubscribed, subscribe, isSubmitting, discountCode } = useEmailCapture();
+  const { hasSubscribed, subscribe, isSubmitting } = useEmailCapture();
 
   // Footer modal state
   const [contactOpen, setContactOpen] = useState(false);
@@ -238,18 +238,7 @@ export default function LinkTreeModal({ isOpen, onClose }: LinkTreeModalProps) {
               >
                 {emailSuccess ? (
                   <div className="text-center space-y-3">
-                    {discountCode && (
-                      <div
-                        className="inline-block px-5 py-2 rounded-xl text-sm font-mono tracking-widest text-[#ede8df]"
-                        style={{
-                          background: 'linear-gradient(135deg, rgba(132,60,45,0.3) 0%, rgba(132,60,45,0.1) 100%)',
-                          border: '1px solid rgba(132,60,45,0.3)',
-                        }}
-                      >
-                        {discountCode}
-                      </div>
-                    )}
-                    <p className="text-[#ede8df]/40 text-xs">Check your email. 10% off, first order.</p>
+                    <p className="text-[#ede8df]/40 text-xs">You&rsquo;re in. Check your email.</p>
                     <button
                       onClick={handleVisitShop}
                       className="mt-1 px-5 py-2 rounded-full text-xs font-medium text-[#ede8df]/80 transition-all active:scale-95 bg-white/5 border border-white/10 hover:bg-white/10"

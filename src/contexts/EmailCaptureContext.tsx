@@ -19,8 +19,6 @@ interface EmailCaptureContextValue {
   subscribe: (email: string, name?: string) => Promise<{ success: boolean; error?: string }>;
   isSubmitting: boolean;
 
-  // Incentive tracking
-  discountCode: string | null;
 }
 
 const EmailCaptureContext = createContext<EmailCaptureContextValue | null>(null);
@@ -32,7 +30,6 @@ const DISMISS_COOLDOWN_DAYS = 3; // Don't show again for 3 days after dismiss
 interface StorageData {
   subscribed: boolean;
   email: string | null;
-  discountCode: string | null;
   dismissedAt: number | null;
 }
 
@@ -40,7 +37,6 @@ export function EmailCaptureProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
   const [hasSubscribed, setHasSubscribed] = useState(false);
   const [subscribedEmail, setSubscribedEmail] = useState<string | null>(null);
-  const [discountCode, setDiscountCode] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasShownAuto, setHasShownAuto] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -62,7 +58,6 @@ export function EmailCaptureProvider({ children }: { children: ReactNode }) {
         const data: StorageData = JSON.parse(raw);
         setHasSubscribed(data.subscribed);
         setSubscribedEmail(data.email);
-        setDiscountCode(data.discountCode);
       }
     } catch {
       // Ignore parse errors
@@ -114,7 +109,6 @@ export function EmailCaptureProvider({ children }: { children: ReactNode }) {
         const data: StorageData = raw ? JSON.parse(raw) : {
           subscribed: false,
           email: null,
-          discountCode: null,
           dismissedAt: null,
         };
         data.dismissedAt = Date.now();
@@ -131,7 +125,6 @@ export function EmailCaptureProvider({ children }: { children: ReactNode }) {
     interface SubscribeResponse {
       success?: boolean;
       error?: string;
-      discountCode?: string;
       alreadySubscribed?: boolean;
     }
 
@@ -151,7 +144,6 @@ export function EmailCaptureProvider({ children }: { children: ReactNode }) {
       // Update state
       setHasSubscribed(true);
       setSubscribedEmail(email);
-      setDiscountCode(data.discountCode || null);
 
       // Track in GA4
       ecommerce.signUp('email_popup');
@@ -165,7 +157,6 @@ export function EmailCaptureProvider({ children }: { children: ReactNode }) {
       const storageData: StorageData = {
         subscribed: true,
         email,
-        discountCode: data.discountCode || null,
         dismissedAt: null,
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(storageData));
@@ -188,7 +179,6 @@ export function EmailCaptureProvider({ children }: { children: ReactNode }) {
         subscribedEmail,
         subscribe,
         isSubmitting,
-        discountCode,
       }}
     >
       {children}
