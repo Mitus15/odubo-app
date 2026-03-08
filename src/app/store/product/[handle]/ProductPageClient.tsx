@@ -5,6 +5,7 @@ import ScreenLayout from '@/components/ui/ScreenLayout';
 import ScrollContainer from '@/components/ui/ScrollContainer';
 import { usePageAnalytics } from '@/hooks/usePageAnalytics';
 import { useAnalyticsSafe } from '@/contexts/AnalyticsContext';
+import { isPreorderActive, PREORDER_CTA, PREORDER_FEEDBACK, PREORDER_SHIP_TEXT } from '@/config/preorder';
 
 // Define the shape of the product data
 interface ShopifyProduct {
@@ -275,7 +276,7 @@ export default function ProductPageClient({ product }: ProductPageClientProps) {
                         : 'bg-gradient-to-r from-[#843c2d] to-[#b26a4a] text-[#ede8df] shadow-[0_10px_30px_#843c2d40] hover:shadow-[0_12px_36px_#843c2d55]'
                   }`}
                 >
-                  {justAdded ? 'Added to Cart' : (!selectedVariant?.available ? 'Sold Out' : 'Add to Cart')}
+                  {justAdded ? (isPreorderActive() ? PREORDER_FEEDBACK : 'Added to Cart') : (!selectedVariant?.available ? 'Sold Out' : (isPreorderActive() ? PREORDER_CTA : 'Add to Cart'))}
                 </button>
                 
                 {hasCartItems && (
@@ -290,6 +291,7 @@ export default function ProductPageClient({ product }: ProductPageClientProps) {
 
               {/* Shipping Info */}
               <div className="mt-12 pt-8 border-t border-[#502d26]/20 text-xs text-[#b2a491] uppercase tracking-widest space-y-2">
+                {isPreorderActive() && <p>{PREORDER_SHIP_TEXT}</p>}
                 <p>Free shipping on orders over $150</p>
                 <p>Ships from Canada</p>
               </div>

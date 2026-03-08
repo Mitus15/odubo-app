@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useQuickShop } from '@/contexts/QuickShopContext';
 import { useAnalyticsSafe } from '@/contexts/AnalyticsContext';
 import Link from 'next/link';
+import { isPreorderActive, PREORDER_CTA, PREORDER_FEEDBACK, PREORDER_SHIP_TEXT } from '@/config/preorder';
 
 interface ProductDetail {
   id: string;
@@ -289,6 +290,9 @@ export default function QuickShopModal() {
                         ${selectedVariant.price.toFixed(2)}
                       </p>
                     )}
+                    {isPreorderActive() && selectedVariant?.available !== false && (
+                      <p className="text-xs text-[#b2a491]">{PREORDER_SHIP_TEXT}</p>
+                    )}
                     {selectedVariant?.available === false && (
                       <p className="text-xs text-red-200/80">Currently unavailable</p>
                     )}
@@ -350,7 +354,9 @@ export default function QuickShopModal() {
                             : 'bg-white/5 text-[#c7b8a8] border-white/10 cursor-not-allowed'
                         }`}
                       >
-                        {addFeedback || (selectedVariant?.available === false ? 'Unavailable' : 'Add to Bag')}
+                        {addFeedback
+                          ? (isPreorderActive() ? PREORDER_FEEDBACK : addFeedback)
+                          : (selectedVariant?.available === false ? 'Unavailable' : (isPreorderActive() ? PREORDER_CTA : 'Add to Bag'))}
                       </button>
 
                       <Link

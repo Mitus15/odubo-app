@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useOmniShop, type ProductDetail } from '@/contexts/OmniShopContext';
 import { extractColorsFromImage, type ExtractedColors } from '@/lib/colorExtraction';
 import { useAnalyticsSafe } from '@/contexts/AnalyticsContext';
+import { isPreorderActive, PREORDER_CTA, PREORDER_SHIP_TEXT } from '@/config/preorder';
 
 interface ProductDetailModalProps {
   productHandle: string;
@@ -382,6 +383,11 @@ export default function ProductDetailModal({ productHandle }: ProductDetailModal
                   Currently unavailable
                 </p>
               )}
+              {isPreorderActive() && selectedVariant?.available !== false && (
+                <p className="text-xs uppercase tracking-[0.15em]" style={{ color: dynamicStyles.textSecondary }}>
+                  {PREORDER_SHIP_TEXT}
+                </p>
+              )}
 
               {/* Options - dynamic buttons */}
               {product.options?.length > 0 && (
@@ -455,7 +461,7 @@ export default function ProductDetailModal({ productHandle }: ProductDetailModal
                     cursor: selectedVariant?.available === false ? 'not-allowed' : 'pointer',
                   }}
                 >
-                  {addFeedback || (selectedVariant?.available === false ? 'Sold Out' : 'Add to Bag')}
+                  {addFeedback || (selectedVariant?.available === false ? 'Sold Out' : (isPreorderActive() ? PREORDER_CTA : 'Add to Bag'))}
                 </button>
               </div>
             </div>

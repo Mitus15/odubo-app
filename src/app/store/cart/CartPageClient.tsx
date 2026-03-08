@@ -9,6 +9,7 @@ import { useAnalyticsSafe } from '@/contexts/AnalyticsContext';
 import { createCheckout, type CheckoutAttribution } from '@/lib/store/api';
 import { getAttribution as getStoredAttribution, getSessionId } from '@/lib/attribution';
 import { getVisitorId } from '@/lib/visitorId';
+import { isPreorderActive, PREORDER_CHECKOUT_CTA, PREORDER_DISCLAIMER } from '@/config/preorder';
 
 export default function CartPage() {
   type CartItem = { variantId: string; qty: number; title: string; price: number; image?: string };
@@ -228,12 +229,18 @@ export default function CartPage() {
                     </div>
                   )}
 
+                  {isPreorderActive() && (
+                    <div className="mb-4 p-3 border border-[#843c2d]/20 bg-[#843c2d]/5">
+                      <p className="text-[11px] text-[#b2a491] leading-relaxed">{PREORDER_DISCLAIMER}</p>
+                    </div>
+                  )}
+
                   <button
                     onClick={handleCheckout}
                     disabled={isRedirecting || isChecking}
                     className="w-full py-4 bg-[#843c2d] text-[#ede8df] text-sm uppercase tracking-[0.2em] hover:bg-[#a0472f] transition-colors disabled:opacity-50 disabled:cursor-wait"
                   >
-                    {isChecking ? 'Checking...' : isRedirecting ? 'Redirecting...' : 'Checkout'}
+                    {isChecking ? 'Checking...' : isRedirecting ? 'Redirecting...' : (isPreorderActive() ? PREORDER_CHECKOUT_CTA : 'Checkout')}
                   </button>
                   
                   <p className="mt-4 text-center text-[10px] text-[#502d26] uppercase tracking-widest">

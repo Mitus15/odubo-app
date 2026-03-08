@@ -6,6 +6,7 @@ import { useStore } from '@/contexts/StoreContext';
 import { useCartOverlay } from './StoreOrchestrator';
 import { useAnalyticsSafe } from '@/contexts/AnalyticsContext';
 import type { Product, ProductVariant } from '@/lib/store/types';
+import { isPreorderActive, PREORDER_CTA, PREORDER_CTA_ANOTHER, PREORDER_FEEDBACK, PREORDER_SHIP_TEXT } from '@/config/preorder';
 
 // Helper to extract image filename for comparison
 // Shopify URLs can differ between list and detail views even for same image
@@ -415,6 +416,9 @@ export default function ProductDetailFeed() {
                 {!selectedVariant.available && (
                   <p className="text-red-400/80 text-sm mt-2">This option is currently unavailable</p>
                 )}
+                {isPreorderActive() && selectedVariant.available && (
+                  <p className="text-[#b2a491] text-sm mt-2">{PREORDER_SHIP_TEXT}</p>
+                )}
               </>
             )}
           </div>
@@ -472,9 +476,9 @@ export default function ProductDetailFeed() {
             {!selectedVariant?.available ? (
               'Sold Out'
             ) : addedFeedback ? (
-              <>✓ Added to Bag</>
+              <>✓ {isPreorderActive() ? PREORDER_FEEDBACK : 'Added to Bag'}</>
             ) : (
-              <span>{variantInCart ? 'Add Another' : 'Add to Bag'}</span>
+              <span>{variantInCart ? (isPreorderActive() ? PREORDER_CTA_ANOTHER : 'Add Another') : (isPreorderActive() ? PREORDER_CTA : 'Add to Bag')}</span>
             )}
           </motion.button>
         </div>

@@ -6,6 +6,7 @@ import ScrollContainer from '@/components/ui/ScrollContainer';
 import VinylMiniPlayer from '@/components/player/VinylMiniPlayer';
 import ContactModal from '@/components/store/ContactModal';
 import Link from 'next/link';
+import { isPreorderActive, DROP_DATE, PREORDER_CTA, PREORDER_FEEDBACK } from '@/config/preorder';
 
 interface ProductCard {
   id: string;
@@ -245,7 +246,7 @@ function ProductFeedModal({
                       disabled={!selectedVariant || selectedVariant.available === false}
                       className={`px-4 py-2.5 rounded-lg text-sm font-semibold transition-all border ${selectedVariant?.available !== false ? 'bg-gradient-to-r from-[#843c2d] via-[#a44e3a] to-[#52241d] text-[#f8f2ea] border-[#c58a70]/50 shadow-[0_12px_30px_rgba(0,0,0,0.35)] hover:scale-[1.02]' : 'bg-white/5 text-[#c7b8a8] border-white/10 cursor-not-allowed'}`}
                     >
-                      {addFeedback || (selectedVariant?.available === false ? 'Unavailable' : 'Add to Bag')}
+                      {addFeedback || (selectedVariant?.available === false ? 'Unavailable' : (isPreorderActive() ? PREORDER_CTA : 'Add to Bag'))}
                     </button>
 
                     <Link
@@ -408,7 +409,7 @@ export default function StorePageClient({ isStoreOpen, isAdmin, initialProducts 
   };
 
   useEffect(() => {
-    const targetDate = new Date('2026-03-14T00:00:00').getTime();
+    const targetDate = new Date(DROP_DATE).getTime();
     
     const updateCountdown = () => {
       const now = new Date().getTime();
@@ -592,14 +593,14 @@ export default function StorePageClient({ isStoreOpen, isAdmin, initialProducts 
         : [...cart, base];
       localStorage.setItem('cart', JSON.stringify(nextCart));
       window.dispatchEvent(new Event('cartUpdated'));
-      setAddFeedback('✓ Added to bag');
+      setAddFeedback(isPreorderActive() ? `✓ ${PREORDER_FEEDBACK}` : '✓ Added to bag');
       setTimeout(() => setAddFeedback(null), 1800);
     } catch (e) {
       console.error('Add to cart failed', e);
     }
   };
 
-  if (!isStoreOpen && !isUnlocked) {
+  if (!isStoreOpen && !isUnlocked && !isPreorderActive()) {
     return (
       <ScreenLayout>
         <div className="fixed inset-0 -z-10 bg-gradient-to-br from-stone-950 via-stone-900 to-red-950" />
@@ -610,12 +611,12 @@ export default function StorePageClient({ isStoreOpen, isAdmin, initialProducts 
               {isAdmin && (
                 <div className="mb-6 inline-block px-4 py-2 bg-[#843c2d]/20 border border-[#843c2d]/40 rounded-full">
                   <span className="text-xs uppercase tracking-widest text-[#ede8df]">
-                    👑 Admin Preview - Store Unpublished
+                    Admin Preview - Store Unpublished
                   </span>
                 </div>
               )}
               <h1 className="text-3xl sm:text-4xl font-bold text-[#ede8df] mb-8 tracking-tight">Store Opening Soon</h1>
-              
+
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-8">
                 {Object.entries(timeLeft).map(([unit, value]) => (
                   <div key={unit} className="glass-surface rounded-2xl border border-[#502d26]/20 p-4 bg-[#302927]/20">
@@ -624,7 +625,7 @@ export default function StorePageClient({ isStoreOpen, isAdmin, initialProducts 
                   </div>
                 ))}
               </div>
-              
+
               <div className="flex flex-col sm:flex-row gap-3 justify-center mb-8">
                 <Link href="/" className="px-6 py-3 rounded-xl bg-[#302927] text-[#b2a491] hover:bg-[#502d26]/60 hover:text-[#ede8df] transition-all duration-300">
                   Return Home
@@ -720,6 +721,30 @@ export default function StorePageClient({ isStoreOpen, isAdmin, initialProducts 
           </div>
         )}
 
+        {/* Pre-order hero banner */}
+        {isPreorderActive() && (
+          <div className="mx-3 mt-3 rounded-2xl border border-[#843c2d]/20 bg-gradient-to-r from-[#843c2d]/10 via-[#a85540]/10 to-[#843c2d]/10 p-5 text-center">
+            <h2 className="text-lg sm:text-xl font-semibold text-[#ede8df] tracking-wide mb-1">
+              YOU&apos;RE EARLY
+            </h2>
+            <p className="text-xs text-[#b2a491] uppercase tracking-[0.15em] mb-3">
+              Exclusive pre-order pricing. Official open July 15.
+            </p>
+            <div className="flex justify-center gap-3">
+              {[
+                { value: timeLeft.days, label: 'days' },
+                { value: timeLeft.hours, label: 'hrs' },
+                { value: timeLeft.minutes, label: 'min' },
+              ].map(({ value, label }) => (
+                <div key={label} className="rounded-xl border border-[#502d26]/20 px-3 py-2 bg-[#0b0b0b]/40 min-w-[52px]">
+                  <div className="text-lg font-bold text-[#ede8df] tabular-nums">{value}</div>
+                  <div className="text-[9px] text-[#b2a491] uppercase tracking-wider">{label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Content area with consistent spacing */}
         <div
           className="pt-4"
@@ -775,6 +800,13 @@ export default function StorePageClient({ isStoreOpen, isAdmin, initialProducts 
                         </div>
                       )}
                     </button>
+
+                    {/* Pre-Order Badge */}
+                    {isPreorderActive() && p.available && (
+                      <div className="absolute top-2 left-2 z-10 px-2 py-0.5 rounded-full bg-[#0d0b0a]/70 backdrop-blur-sm border border-[#843c2d]/30">
+                        <span className="text-[9px] uppercase tracking-widest text-[#ede8df]">Pre-Order</span>
+                      </div>
+                    )}
 
                     {/* Sold Out Overlay */}
                     {!p.available && (

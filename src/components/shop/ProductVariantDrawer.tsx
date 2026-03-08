@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOmniShop, type ProductDetail } from '@/contexts/OmniShopContext';
+import { isPreorderActive, PREORDER_CTA } from '@/config/preorder';
 
 interface ProductVariantDrawerProps {
   productHandle: string;
@@ -293,7 +294,7 @@ export default function ProductVariantDrawer({ productHandle, isOpen, onClose }:
                   }`}
                   style={{ touchAction: 'manipulation' }}
                 >
-                  {addFeedback || 'Add to Bag'}
+                  {addFeedback || (isPreorderActive() ? PREORDER_CTA : 'Add to Bag')}
                 </button>
               </div>
             )}

@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '@/contexts/StoreContext';
+import { isPreorderActive, PREORDER_CHECKOUT_CTA, PREORDER_DISCLAIMER } from '@/config/preorder';
 
 // ============================================
 // Cart Item Component
@@ -203,6 +203,13 @@ export default function CartOverlay({ isOpen, onClose }: CartOverlayProps) {
                   </span>
                 </div>
 
+                {/* Pre-order disclaimer */}
+                {isPreorderActive() && (
+                  <div className="mb-4 p-3 rounded-xl border border-[#843c2d]/20 bg-[#843c2d]/5">
+                    <p className="text-[11px] text-white/50 leading-relaxed">{PREORDER_DISCLAIMER}</p>
+                  </div>
+                )}
+
                 {/* Checkout button */}
                 <motion.button
                   onClick={handleCheckout}
@@ -223,7 +230,7 @@ export default function CartOverlay({ isOpen, onClose }: CartOverlayProps) {
                       Redirecting to Checkout...
                     </span>
                   ) : (
-                    'Checkout'
+                    isPreorderActive() ? PREORDER_CHECKOUT_CTA : 'Checkout'
                   )}
                 </motion.button>
 
