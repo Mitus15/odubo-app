@@ -105,60 +105,67 @@ interface DetailsModalProps {
   descriptionHtml: string;
 }
 
-// Strip HTML tags and return plain text
-function stripHtml(html: string): string {
-  return html.replace(/<[^>]*>/g, '').trim();
-}
+// Parse Shopify descriptionHtml into care instructions + size table HTML
+function parseDescriptionHtml(html: string): {
+  careInstructions: string[];
+  sizeTableHtml: string | null;
+  general: string[];
+} {
+  // Remove hidden item-id divs
+  let cleaned = html.replace(/<div[^>]*display:\s*none[^>]*>.*?<\/div>/gi, '');
 
-// Parse Shopify descriptionHtml into structured sections
-// Shopify descriptions typically have sections separated by empty <p> tags or <br> tags
-function parseDescriptionHtml(html: string): { careInstructions: string[]; sizeChart: string[]; general: string[] } {
+  // Extract the size chart table HTML before stripping
+  let sizeTableHtml: string | null = null;
+  const tableMatch = cleaned.match(/<table[\s\S]*?<\/table>/i);
+  if (tableMatch) {
+    sizeTableHtml = tableMatch[0];
+    // Remove everything from "Size Chart" header through end of table wrapper
+    cleaned = cleaned.replace(/<span[^>]*>Size Chart<\/span>/i, '');
+    cleaned = cleaned.replace(/<div[^>]*>[\s]*<table[\s\S]*?<\/table>[\s]*<\/div>/i, '');
+    cleaned = cleaned.replace(/<table[\s\S]*?<\/table>/i, '');
+  }
+
+  // Now parse the remaining text for care instructions
   const careInstructions: string[] = [];
-  const sizeChart: string[] = [];
   const general: string[] = [];
 
-  // Split on paragraph/block boundaries
-  const blocks = html
+  // Strip remaining HTML tags to get text blocks
+  const blocks = cleaned
     .replace(/<br\s*\/?>/gi, '\n')
-    .split(/<\/?(?:p|div|h[1-6])[^>]*>/gi)
-    .map(b => stripHtml(b).trim())
+    .split(/<\/?(?:p|div|span|h[1-6])[^>]*>/gi)
+    .map(b => b.replace(/<[^>]*>/g, '').trim())
     .filter(Boolean);
 
-  let currentSection: 'general' | 'care' | 'size' = 'general';
+  let inCare = false;
 
   for (const block of blocks) {
     const lower = block.toLowerCase();
 
-    // Detect section headers
-    if (/^care\b/i.test(block) || lower.includes('care instruction') || lower.includes('care:')) {
-      currentSection = 'care';
-      // If the header line has content after "Care Instructions:" keep it
-      const afterColon = block.split(/:\s*/)[1];
-      if (afterColon) careInstructions.push(afterColon);
-      continue;
-    }
-    if (/^size\b/i.test(block) || lower.includes('size chart') || lower.includes('size guide') || lower.includes('sizing')) {
-      currentSection = 'size';
-      const afterColon = block.split(/:\s*/)[1];
-      if (afterColon) sizeChart.push(afterColon);
+    // Detect "Care Instructions:" header
+    if (/care\s*instruction/i.test(block) || /^care:/i.test(block)) {
+      inCare = true;
+      // Content after the colon (e.g. "Care Instructions:Machine wash...")
+      const afterColon = block.replace(/^[^:]*:\s*/, '');
+      if (afterColon && afterColon !== block) {
+        // Split on semicolons — Shopify uses ";" to separate care items
+        afterColon.split(/;\s*/).map(s => s.trim()).filter(Boolean).forEach(s => careInstructions.push(s));
+      }
       continue;
     }
 
-    // Split multi-line blocks into individual lines
-    const lines = block.split('\n').map(l => l.trim()).filter(Boolean);
-    for (const line of lines) {
-      if (currentSection === 'care') careInstructions.push(line);
-      else if (currentSection === 'size') sizeChart.push(line);
-      else general.push(line);
+    if (inCare) {
+      block.split(/;\s*/).map(s => s.trim()).filter(Boolean).forEach(s => careInstructions.push(s));
+    } else if (block.length > 1) {
+      general.push(block);
     }
   }
 
-  return { careInstructions, sizeChart, general };
+  return { careInstructions, sizeTableHtml, general };
 }
 
 function DetailsModal({ isOpen, onClose, descriptionHtml }: DetailsModalProps) {
   const sections = descriptionHtml ? parseDescriptionHtml(descriptionHtml) : null;
-  const hasContent = sections && (sections.general.length > 0 || sections.careInstructions.length > 0 || sections.sizeChart.length > 0);
+  const hasContent = sections && (sections.general.length > 0 || sections.careInstructions.length > 0 || sections.sizeTableHtml);
 
   return (
     <AnimatePresence>
@@ -194,7 +201,7 @@ function DetailsModal({ isOpen, onClose, descriptionHtml }: DetailsModalProps) {
             </div>
 
             {/* Content */}
-            <div className="px-6 py-5 max-h-96 overflow-y-auto space-y-5">
+            <div className="px-6 py-5 max-h-[70vh] overflow-y-auto space-y-5">
               {!hasContent && (
                 <p className="text-sm text-white/40">No details available.</p>
               )}
@@ -226,7 +233,7 @@ function DetailsModal({ isOpen, onClose, descriptionHtml }: DetailsModalProps) {
                 </div>
               )}
 
-              {sections && sections.sizeChart.length > 0 && (
+              {sections && sections.sizeTableHtml && (
                 <div>
                   <div className="flex items-center gap-2 mb-3">
                     <svg className="w-4 h-4 text-white/50" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
@@ -234,14 +241,15 @@ function DetailsModal({ isOpen, onClose, descriptionHtml }: DetailsModalProps) {
                     </svg>
                     <h4 className="text-xs uppercase tracking-widest text-white/50 font-medium">Size Guide</h4>
                   </div>
-                  <ul className="space-y-1.5">
-                    {sections.sizeChart.map((line, i) => (
-                      <li key={i} className="text-sm text-white/60 leading-relaxed flex items-start gap-2">
-                        <span className="mt-1.5 shrink-0 w-1 h-1 rounded-full bg-white/30" />
-                        {line}
-                      </li>
-                    ))}
-                  </ul>
+                  <div
+                    className="overflow-x-auto rounded-lg [&_table]:w-full [&_table]:text-xs [&_table]:border-collapse [&_td]:px-2 [&_td]:py-1.5 [&_td]:border [&_td]:border-white/10 [&_td]:text-white/60 [&_td]:text-center [&_tr:first-child_td]:text-white/80 [&_tr:first-child_td]:font-medium [&_tr:nth-child(2)_td]:text-white/40 [&_tr:nth-child(2)_td]:text-[10px] [&_td:first-child]:text-left [&_td:first-child]:text-white/70 [&_td:first-child]:font-medium"
+                    dangerouslySetInnerHTML={{
+                      __html: sections.sizeTableHtml
+                        .replace(/style="[^"]*"/gi, '')
+                        .replace(/width="[^"]*"/gi, '')
+                        .replace(/colspan/gi, 'colSpan'),
+                    }}
+                  />
                 </div>
               )}
             </div>
