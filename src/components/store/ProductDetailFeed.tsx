@@ -102,39 +102,62 @@ function ProductImage({ imageUrl, altText }: ProductImageProps) {
 interface DetailsModalProps {
   isOpen: boolean;
   onClose: () => void;
-  description: string;
+  descriptionHtml: string;
 }
 
-// Parse description into sections (care instructions, size chart, etc.)
-function parseDescription(text: string): { careInstructions: string[]; sizeChart: string[]; general: string[] } {
-  const lines = text.split(/\n+/).map(l => l.trim()).filter(Boolean);
+// Strip HTML tags and return plain text
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]*>/g, '').trim();
+}
+
+// Parse Shopify descriptionHtml into structured sections
+// Shopify descriptions typically have sections separated by empty <p> tags or <br> tags
+function parseDescriptionHtml(html: string): { careInstructions: string[]; sizeChart: string[]; general: string[] } {
   const careInstructions: string[] = [];
   const sizeChart: string[] = [];
   const general: string[] = [];
 
+  // Split on paragraph/block boundaries
+  const blocks = html
+    .replace(/<br\s*\/?>/gi, '\n')
+    .split(/<\/?(?:p|div|h[1-6])[^>]*>/gi)
+    .map(b => stripHtml(b).trim())
+    .filter(Boolean);
+
   let currentSection: 'general' | 'care' | 'size' = 'general';
 
-  for (const line of lines) {
-    const lower = line.toLowerCase();
-    if (lower.includes('care') && (lower.includes('instruction') || lower.includes(':')) || lower === 'care') {
+  for (const block of blocks) {
+    const lower = block.toLowerCase();
+
+    // Detect section headers
+    if (/^care\b/i.test(block) || lower.includes('care instruction') || lower.includes('care:')) {
       currentSection = 'care';
+      // If the header line has content after "Care Instructions:" keep it
+      const afterColon = block.split(/:\s*/)[1];
+      if (afterColon) careInstructions.push(afterColon);
       continue;
     }
-    if (lower.includes('size') && (lower.includes('chart') || lower.includes('guide') || lower.includes(':'))) {
+    if (/^size\b/i.test(block) || lower.includes('size chart') || lower.includes('size guide') || lower.includes('sizing')) {
       currentSection = 'size';
+      const afterColon = block.split(/:\s*/)[1];
+      if (afterColon) sizeChart.push(afterColon);
       continue;
     }
 
-    if (currentSection === 'care') careInstructions.push(line);
-    else if (currentSection === 'size') sizeChart.push(line);
-    else general.push(line);
+    // Split multi-line blocks into individual lines
+    const lines = block.split('\n').map(l => l.trim()).filter(Boolean);
+    for (const line of lines) {
+      if (currentSection === 'care') careInstructions.push(line);
+      else if (currentSection === 'size') sizeChart.push(line);
+      else general.push(line);
+    }
   }
 
   return { careInstructions, sizeChart, general };
 }
 
-function DetailsModal({ isOpen, onClose, description }: DetailsModalProps) {
-  const sections = description ? parseDescription(description) : null;
+function DetailsModal({ isOpen, onClose, descriptionHtml }: DetailsModalProps) {
+  const sections = descriptionHtml ? parseDescriptionHtml(descriptionHtml) : null;
   const hasContent = sections && (sections.general.length > 0 || sections.careInstructions.length > 0 || sections.sizeChart.length > 0);
 
   return (
@@ -195,7 +218,7 @@ function DetailsModal({ isOpen, onClose, description }: DetailsModalProps) {
                   <ul className="space-y-1.5">
                     {sections.careInstructions.map((line, i) => (
                       <li key={i} className="text-sm text-white/60 leading-relaxed flex items-start gap-2">
-                        <span className="text-white/20 mt-1.5 shrink-0 w-1 h-1 rounded-full bg-white/30" />
+                        <span className="mt-1.5 shrink-0 w-1 h-1 rounded-full bg-white/30" />
                         {line}
                       </li>
                     ))}
@@ -214,7 +237,7 @@ function DetailsModal({ isOpen, onClose, description }: DetailsModalProps) {
                   <ul className="space-y-1.5">
                     {sections.sizeChart.map((line, i) => (
                       <li key={i} className="text-sm text-white/60 leading-relaxed flex items-start gap-2">
-                        <span className="text-white/20 mt-1.5 shrink-0 w-1 h-1 rounded-full bg-white/30" />
+                        <span className="mt-1.5 shrink-0 w-1 h-1 rounded-full bg-white/30" />
                         {line}
                       </li>
                     ))}
@@ -544,7 +567,7 @@ export default function ProductDetailFeed() {
       <DetailsModal
         isOpen={showDetails}
         onClose={() => setShowDetails(false)}
-        description={currentProduct.description}
+        descriptionHtml={currentProduct.descriptionHtml}
       />
     </motion.div>
   );

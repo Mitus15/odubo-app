@@ -89,6 +89,7 @@ const PRODUCT_DETAIL_QUERY = `#graphql
       handle
       title
       description
+      descriptionHtml
       vendor
       productType
       tags
@@ -313,6 +314,7 @@ export async function fetchProduct(handle: string): Promise<Product | null> {
       handle: p.handle,
       title: p.title,
       description: p.description || '',
+      descriptionHtml: p.descriptionHtml || '',
       vendor: p.vendor || '',
       productType: p.productType || '',
       tags: p.tags || [],

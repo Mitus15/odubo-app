@@ -48,6 +48,7 @@ export interface Product {
   handle: string;
   title: string;
   description: string;
+  descriptionHtml: string;
   vendor: string;
   productType: string;
   tags: string[];
