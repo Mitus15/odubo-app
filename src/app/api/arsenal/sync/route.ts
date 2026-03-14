@@ -318,10 +318,18 @@ async function runSync() {
 
           for (const deployment of platformDeployments) {
             const normalizedTitle = normalizeTitle(deployment.title);
-            const match = feedItems.find(item => {
+            // Prefer exact caption match (first line) over prefix match
+            // This prevents "The Sky Chorus 3" from stealing the match for "The Sky"
+            const exactMatch = feedItems.find(item => {
+              if (usedFeedIds.has(item.platform_post_id)) return false;
+              const captionFirstLine = (item.caption || '').split('\n')[0].trim();
+              return normalizeTitle(captionFirstLine) === normalizedTitle;
+            });
+            const prefixMatch = !exactMatch ? feedItems.find(item => {
               if (usedFeedIds.has(item.platform_post_id)) return false;
               return normalizeTitle(item.caption || '').startsWith(normalizedTitle);
-            });
+            }) : null;
+            const match = exactMatch || prefixMatch;
 
             if (match && match.platform_url) {
               usedFeedIds.add(match.platform_post_id);

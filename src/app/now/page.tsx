@@ -46,8 +46,15 @@ async function getShowcaseVideos(featuredId: number | null): Promise<ShowcaseVid
        LEFT JOIN video_deployments vd
          ON vd.video_id = v.id AND vd.platform = 'youtube' AND vd.external_url IS NOT NULL
        WHERE v.parent_video_id IS NULL
-         AND v.publication_status = 'live'
          AND v.poster_url IS NOT NULL
+         AND (
+           v.publication_status = 'live'
+           OR EXISTS (
+             SELECT 1 FROM video_deployments vd2
+             WHERE vd2.video_id = v.id AND vd2.platform = 'youtube'
+               AND vd2.postforme_post_id IS NOT NULL
+           )
+         )
        GROUP BY v.id
        ORDER BY v.created_at DESC`,
       []
