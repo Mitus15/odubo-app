@@ -685,7 +685,7 @@ export default function StorePageClient({ isStoreOpen, isAdmin, initialProducts 
           <div className="flex items-center justify-between px-1 sm:px-2 lg:px-4">
             <div className="flex items-center">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/brand-logos/baad@odubo.png" alt="B.A.A.D" className="h-8 sm:h-10 w-auto" />
+              <img src="/brand-logos/baad@odubo.png" alt="B.A.A.D" className="h-8 sm:h-10 lg:h-16 w-auto" />
             </div>
             <Link
               href="/store/cart"

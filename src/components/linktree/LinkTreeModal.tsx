@@ -184,12 +184,12 @@ export default function LinkTreeModal({ isOpen, onClose }: LinkTreeModalProps) {
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1, duration: 0.3 }}
-              className="mb-7"
+              className="mb-7 lg:mb-10"
             >
               <img
                 src="/brand-logos/baad@odubo.png"
                 alt="B.A.A.D @ Odubo.Studio"
-                className="w-20 h-20 object-contain opacity-40"
+                className="w-20 h-20 lg:w-36 lg:h-36 object-contain opacity-40"
                 draggable={false}
               />
             </motion.div>
@@ -201,7 +201,7 @@ export default function LinkTreeModal({ isOpen, onClose }: LinkTreeModalProps) {
               </div>
             ) : (
               <motion.div
-                className="grid grid-cols-2 gap-3 w-full max-w-[220px]"
+                className="grid grid-cols-2 gap-3 lg:gap-5 w-full max-w-[220px] lg:max-w-[360px]"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.15, duration: 0.3 }}
@@ -220,7 +220,7 @@ export default function LinkTreeModal({ isOpen, onClose }: LinkTreeModalProps) {
                     }}
                     title={link.title}
                   >
-                    <div className="w-6 h-6 flex items-center justify-center transition-transform duration-200 group-hover:scale-110">
+                    <div className="w-6 h-6 lg:w-10 lg:h-10 flex items-center justify-center transition-transform duration-200 group-hover:scale-110">
                       <PlatformIcon platform={link.platform ?? null} />
                     </div>
                   </motion.button>
@@ -231,7 +231,7 @@ export default function LinkTreeModal({ isOpen, onClose }: LinkTreeModalProps) {
             {/* Email Capture — centered below icons */}
             {!loading && (
               <motion.div
-                className="mt-7 w-full max-w-[220px]"
+                className="mt-7 lg:mt-10 w-full max-w-[220px] lg:max-w-[360px]"
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.35, duration: 0.3 }}
@@ -305,7 +305,7 @@ export default function LinkTreeModal({ isOpen, onClose }: LinkTreeModalProps) {
 }
 
 function PlatformIcon({ platform }: { platform: string | null }) {
-  const iconClass = "w-5 h-5";
+  const iconClass = "w-5 h-5 lg:w-8 lg:h-8";
 
   switch (platform) {
     case 'spotify':

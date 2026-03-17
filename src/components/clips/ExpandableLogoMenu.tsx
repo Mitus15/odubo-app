@@ -55,6 +55,7 @@ export default function ExpandableLogoMenu({
   const [isDragging, setIsDragging] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false); // For backdrop-blur optimization
   const [isOpeningStore, setIsOpeningStore] = useState(false); // Track store opening to prevent badge flash
+  const [introShake, setIntroShake] = useState(true); // Shake on load, stops after a few cycles
 
   const menuRef = useRef<HTMLDivElement>(null);
   const dragStartPos = useRef<{ x: number; y: number } | null>(null);
@@ -77,6 +78,12 @@ export default function ExpandableLogoMenu({
   // ============================================================================
   // Position Management
   // ============================================================================
+
+  // Intro shake: runs for ~10s after mount, then stops
+  useEffect(() => {
+    const timer = setTimeout(() => setIntroShake(false), 10000);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Load position from localStorage
   useEffect(() => {
@@ -464,7 +471,7 @@ export default function ExpandableLogoMenu({
           <motion.button
             onClick={handleTap}
             className={`group relative overflow-hidden w-full h-full flex items-center justify-center rounded-full
-                       ${hasProduct && !isExpanded && storeAccessible ? 'animate-subtle-shake' : ''}`}
+                       ${(introShake || hasProduct) && !isExpanded && storeAccessible ? 'animate-subtle-shake' : ''}`}
             initial="collapsed"
             animate={isExpanded ? 'expanded' : 'collapsed'}
             variants={logoVariants}

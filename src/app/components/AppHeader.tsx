@@ -29,7 +29,6 @@ export default function AppHeader() {
         <nav className="hidden md:flex items-center gap-6 relative z-10">
           {/* ARCHIVED: Media page - UI hidden, use master button for Moments */}
           {/* <a href="/media" className="text-[#ede8df] hover:text-[#b2a491] transition-colors">Media</a> */}
-          <a href="/moments" className="text-[#ede8df] hover:text-[#b2a491] transition-colors">Moments</a>
           <a href="/store" className="text-[#ede8df] hover:text-[#b2a491] transition-colors">Maison</a>
           <a href="/login" className="text-[#b2a491]/60 hover:text-[#b2a491] transition-colors text-xs">sign in</a>
         </nav>
