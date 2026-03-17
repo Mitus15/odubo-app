@@ -243,7 +243,7 @@ export default function ProductBrowse() {
           <img
             src="/brand-logos/baad@odubo.png"
             alt="B.A.A.D"
-            className="h-6 w-auto"
+            className="h-6 lg:h-12 w-auto"
             draggable={false}
           />
         </div>
