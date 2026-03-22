@@ -66,7 +66,7 @@ export default function LoginPage() {
                 type="email"
                 required
                 className="w-full px-4 py-3 rounded-xl bg-[#1a1817]/50 border border-[#502d26]/30 text-[#ede8df] placeholder-[#502d26] focus:outline-none focus:border-[#843c2d]/50 transition-colors"
-                placeholder="admin@odubo.studio"
+                placeholder="info@odubo.studio"
               />
             </div>
 

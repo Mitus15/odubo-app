@@ -278,8 +278,8 @@ export default function ContactModal({ isOpen, onClose }: ContactModalProps) {
                       {/* Email fallback */}
                       <p className="text-center text-[10px] text-[#726d6c] pt-2">
                         Or email us at{' '}
-                        <a href="mailto:baad@odubo.studio" className="text-[#b2a491] hover:text-[#ede8df] transition-colors">
-                          baad@odubo.studio
+                        <a href="mailto:info@odubo.studio" className="text-[#b2a491] hover:text-[#ede8df] transition-colors">
+                          info@odubo.studio
                         </a>
                       </p>
                     </form>

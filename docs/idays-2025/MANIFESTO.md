@@ -1,4 +1,4 @@
-# BAAD @ IDAYS.TRU
+# odubo studio @ IDAYS.TRU
 
 ## A Manifesto for International Days 2025
 
@@ -20,9 +20,9 @@ This is art as ministry. Commerce as mission. Performance as praise.
 
 ## Brand Context
 
-### BAAD - Bold Authentic Aesthetic Dreams
+### odubo studio - Bold Authentic Aesthetic Dreams
 
-BAAD is a clothing brand, but it is more than clothing. It is a statement of identity:
+odubo studio is a clothing brand, but it is more than clothing. It is a statement of identity:
 - **Bold** - Unafraid to stand out, to take creative risks, to be different
 - **Authentic** - True to self, true to vision, uncompromising in integrity
 - **Aesthetic** - Committed to beauty, to craft, to the visual expression of values
@@ -32,16 +32,16 @@ BAAD is a clothing brand, but it is more than clothing. It is a statement of ide
 
 Odubo is the personal brand - the name, the artist, the person. It holds the intellectual property. It is the creative engine.
 
-BAAD is what Odubo wears. BAAD is the uniform of the movement.
+odubo studio is what Odubo wears. odubo studio is the uniform of the movement.
 
 ### The Relationship
 
-When BAAD operates in context, it takes the form: **BAAD @ [location]**
+When odubo studio operates in context, it takes the form: **odubo studio @ [location]**
 
-- BAAD @ odubo.studio (the home base)
-- BAAD @ IDAYS.TRU (this event)
+- odubo studio @ odubo.studio (the home base)
+- odubo studio @ IDAYS.TRU (this event)
 
-This creates a sense of BAAD as a traveling entity - a brand that shows up, makes an impact, and leaves its mark.
+This creates a sense of odubo studio as a traveling entity - a brand that shows up, makes an impact, and leaves its mark.
 
 ---
 
@@ -137,11 +137,11 @@ The band reassembles on stage. Different artists - people we want to highlight -
 
 After the opening set, the host is introduced. They take over the evening's formal program - the scheduled IDAYS performances, presentations, and showcases.
 
-Everyone who participated - musicians, choir, crew - is wearing BAAD. Not uniformly dressed, but each person wearing something from the collection. Different pieces. Different styles. All part of the same movement.
+Everyone who participated - musicians, choir, crew - is wearing odubo studio. Not uniformly dressed, but each person wearing something from the collection. Different pieces. Different styles. All part of the same movement.
 
 **The Fashion Show**
 
-The fashion show is integrated into the program. Models walk wearing BAAD pieces. Photographers capture every look. Videographers document the full show.
+The fashion show is integrated into the program. Models walk wearing odubo studio pieces. Photographers capture every look. Videographers document the full show.
 
 This is not separate from the event - it IS the event. The fashion show is content. The content becomes social media. The social media becomes reach. The reach becomes influence.
 
@@ -241,7 +241,7 @@ This is the Gospel of John approach: start with the beautiful, the interesting, 
 |-------------|-------------|
 | **Fashion Show Photos** | Full runway coverage, every look |
 | **Performance Photos** | Band, choir, Ximena, finale |
-| **Portrait Series** | Individual shots of key participants in BAAD |
+| **Portrait Series** | Individual shots of key participants in odubo studio |
 | **Event Documentation** | Crowd, venue, atmosphere |
 
 ### Audio Content
@@ -264,15 +264,15 @@ This is the Gospel of John approach: start with the beautiful, the interesting, 
 ### Short-Term Success (1-4 Weeks Post-Event)
 - [ ] Main film edited and ready for release
 - [ ] Social media content posted and performing
-- [ ] BAAD brand visibility increased
+- [ ] odubo studio brand visibility increased
 - [ ] Relationships formed with TRU World for future collaboration
 - [ ] Team members satisfied and willing to work together again
 
 ### Long-Term Success (3-12 Months)
 - [ ] Content continues to generate engagement
-- [ ] BAAD brand recognition in Kamloops community
+- [ ] odubo studio brand recognition in Kamloops community
 - [ ] Foundation laid for future events of this scale
-- [ ] Model established that can be replicated: "BAAD @ [Next Event]"
+- [ ] Model established that can be replicated: "odubo studio @ [Next Event]"
 
 ---
 

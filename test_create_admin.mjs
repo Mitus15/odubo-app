@@ -5,7 +5,7 @@ async function createAdminUser() {
   console.log('Creating admin user for testing...');
   
   const adminData = {
-    email: 'admin@odubo.studio',
+    email: 'info@odubo.studio',
     username: 'admin',
     password: await bcrypt.hash('admin123', 10),
     first_name: 'Admin',

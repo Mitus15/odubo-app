@@ -4,8 +4,8 @@ import { rateLimit } from '@/lib/rateLimit';
 
 // Initialize Resend client
 const resendApiKey = process.env.RESEND_API_KEY;
-const fromEmail = process.env.RESEND_FROM_EMAIL || process.env.EMAIL_FROM || 'B.A.A.D @ Odubo Studio <baad@odubo.studio>';
-const supportEmail = process.env.SUPPORT_EMAIL || 'baad@odubo.studio';
+const fromEmail = process.env.RESEND_FROM_EMAIL || process.env.EMAIL_FROM || 'Odubo Studio <info@odubo.studio>';
+const supportEmail = process.env.SUPPORT_EMAIL || 'info@odubo.studio';
 
 interface ContactFormData {
   name: string;
@@ -134,7 +134,7 @@ Reply directly to this email to respond to the customer.
       await resend.emails.send({
         from: fromEmail,
         to: email,
-        subject: `We received your message \u2014 B.A.A.D @ Odubo Studio`,
+        subject: `We received your message \u2014 Odubo Studio`,
         html: `
           <!DOCTYPE html>
           <html>
@@ -146,7 +146,7 @@ Reply directly to this email to respond to the customer.
               <div style="background:#f6f3ee;padding:24px 16px;">
                 <div style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:16px;border:1px solid #ece7df;overflow:hidden">
                   <div style="padding:20px 22px 0 22px;text-align:center;border-bottom:1px solid #f0ebe3">
-                    <img src="https://odubo.studio/brand-logos/baad-logo.png" alt="B.A.A.D" style="height:40px;width:auto;margin:8px auto 14px;display:block" />
+                    <img src="https://odubo.studio/brand-logos/odubo-logo.png" alt="Odubo" style="height:40px;width:auto;margin:8px auto 14px;display:block" />
                   </div>
                   <div style="padding:22px;font-family:'Baskerville','Times New Roman',Times,Georgia,serif;color:#1a1716;">
                     <h2 style="margin:0 0 12px;font-size:22px;color:#171616;">Thanks for reaching out.</h2>
@@ -156,11 +156,11 @@ Reply directly to this email to respond to the customer.
                       <li style="margin-bottom:8px;"><a href="https://account.odubo.studio" style="color:#843c2d;text-decoration:none;">Check your order status</a></li>
                       <li><a href="https://odubo.studio/store" style="color:#843c2d;text-decoration:none;">Browse the collection</a></li>
                     </ul>
-                    <p style="margin:20px 0 0;font-size:15px;color:#6d6459;">&mdash; B.A.A.D @ Odubo Studio</p>
+                    <p style="margin:20px 0 0;font-size:15px;color:#6d6459;">&mdash; Odubo Studio</p>
                   </div>
                   <div style="padding:14px 22px 20px;border-top:1px solid #f0ebe3;color:#6d6459;font-size:12px;font-family:'Baskerville','Times New Roman',Times,Georgia,serif;text-align:center;">
-                    <p style="margin:0 0 4px;">B.A.A.D @ Odubo Studio</p>
-                    <p style="margin:0;">&copy; ${new Date().getFullYear()} Bold Authentic Aesthetic Dreams. All rights reserved.</p>
+                    <p style="margin:0 0 4px;">Odubo Studio</p>
+                    <p style="margin:0;">&copy; ${new Date().getFullYear()} Odubo. All rights reserved.</p>
                   </div>
                 </div>
               </div>
@@ -176,7 +176,7 @@ In the meantime:
 - Check your order status: https://account.odubo.studio
 - Browse the collection: https://odubo.studio/store
 
-\u2014 B.A.A.D @ Odubo Studio
+\u2014 Odubo Studio
         `.trim(),
       });
     } else {

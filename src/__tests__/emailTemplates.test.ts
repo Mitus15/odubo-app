@@ -11,7 +11,7 @@ describe('brandedEmailHTML', () => {
     });
 
     expect(html).toContain('display:none'); // preheader block
-    expect(html).toContain('/brand-logos/baad-logo.png'); // logo path
+    expect(html).toContain('/brand-logos/odubo-logo.png'); // logo path
     expect(html).toContain('Manage reminders or unsubscribe'); // footer copy
     expect(html).toContain('/moments/rsvp/');
     expect(html).toContain('prefillEmail=user%40example.com');

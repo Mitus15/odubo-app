@@ -487,7 +487,7 @@ The owner is a musician, not a developer/designer. Think through details and mak
 - **Smart menu direction** — Opens toward available space
 
 ### Menu Order
-Main Logo → Store (BAAD) → Media → Share → Account
+Main Logo → Store (odubo studio) → Media → Share → Account
 
 ### Media Priority
 - Single audio source at a time

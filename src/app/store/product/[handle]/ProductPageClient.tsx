@@ -159,7 +159,7 @@ export default function ProductPageClient({ product }: ProductPageClientProps) {
 
   return (
     <ScreenLayout>
-      {/* BAAD by Odubo product background with soft lights */}
+      {/* odubo studio product background with soft lights */}
       <div className="fixed inset-0 -z-10 bg-gradient-to-br from-[#0b0b0b] via-[#111111] to-[#0b0b0b]" />
       <div className="pointer-events-none fixed inset-0 -z-10">
         <div className="absolute -top-20 left-1/2 -translate-x-1/2 h-64 w-[36rem] rounded-[999px] bg-gradient-to-tr from-[#843c2d22] via-transparent to-[#ede8df11] blur-3xl" />
@@ -170,7 +170,7 @@ export default function ProductPageClient({ product }: ProductPageClientProps) {
           {/* Breadcrumb / Back */}
           <div className="mb-4 sm:mb-8 flex items-center justify-between">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/brand-logos/baad@odubo.png" alt="B.A.A.D" className="h-8 sm:h-10 w-auto opacity-90" />
+            <img src="/brand-logos/odubo-logos/odubo-vin-type.png" alt="Odubo" className="h-8 sm:h-10 w-auto opacity-90" />
             <a href="/store" className="text-xs uppercase tracking-widest text-[#b2a491] hover:text-[#ede8df] transition-colors">
               Back to Shop
             </a>
@@ -209,7 +209,7 @@ export default function ProductPageClient({ product }: ProductPageClientProps) {
             {/* Details */}
             <div className="flex flex-col justify-center">
               <h1 className="text-3xl sm:text-4xl font-medium text-[#ede8df] mb-2 tracking-wide drop-shadow-[0_2px_12px_rgba(132,60,45,0.35)]">{product?.title || 'Product'}</h1>
-              <p className="text-[10px] uppercase tracking-[0.22em] text-[#b2a491] mb-4">B.A.A.D by Odubo · Fashion</p>
+              <p className="text-[10px] uppercase tracking-[0.22em] text-[#b2a491] mb-4">Odubo Studio · Fashion</p>
               
               {selectedVariant && (
                 <div className="text-xl text-[#b2a491] font-light tracking-widest mb-8">

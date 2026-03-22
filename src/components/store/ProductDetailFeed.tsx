@@ -429,8 +429,8 @@ export default function ProductDetailFeed() {
 
         {/* Brand logo */}
         <img
-          src="/brand-logos/baad@odubo.png"
-          alt="B.A.A.D"
+          src="/brand-logos/odubo-logos/odubo-vin-type.png"
+          alt="Odubo"
           className="h-6 w-auto"
           draggable={false}
         />

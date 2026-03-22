@@ -136,7 +136,7 @@ This document outlines a comprehensive optimization strategy for Odubo Studio ac
      - Items purchased (images, names, quantities)
      - Order total and payment confirmation
      - Shipping address and estimated delivery
-   - Brand voice messaging ("Your BAAD order is confirmed")
+   - Brand voice messaging ("Your odubo studio order is confirmed")
    - Visual design matching site aesthetic (glass effects, typography)
 
 2. **Post-Purchase Engagement**
@@ -616,7 +616,7 @@ This document outlines a comprehensive optimization strategy for Odubo Studio ac
      "name": "Product name",
      "image": "https://...",
      "description": "Product description",
-     "brand": { "@type": "Brand", "name": "BAAD" },
+     "brand": { "@type": "Brand", "name": "Odubo" },
      "offers": {
        "@type": "Offer",
        "price": "29.99",
@@ -647,7 +647,7 @@ This document outlines a comprehensive optimization strategy for Odubo Studio ac
      "@type": "Organization",
      "name": "Odubo Studio",
      "url": "https://odubo.studio",
-     "logo": "https://odubo.studio/brand-logos/baad-logo.png",
+     "logo": "https://odubo.studio/brand-logos/odubo-logo.png",
      "sameAs": [
        "https://instagram.com/odubostudio",
        "https://tiktok.com/@odubostudio",

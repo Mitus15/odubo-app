@@ -286,8 +286,8 @@ function JoinTheCool({ socialLinks }: { socialLinks: SocialLink[] }) {
   });
 
   // Shop link gets special handling (internal route)
-  const externalLinks = sortedLinks.filter(l => l.platform !== 'shopify' && l.platform !== 'baad');
-  const hasShop = sortedLinks.some(l => l.platform === 'shopify' || l.platform === 'baad');
+  const externalLinks = sortedLinks.filter(l => l.platform !== 'shopify' && l.platform !== 'odubo-studio');
+  const hasShop = sortedLinks.some(l => l.platform === 'shopify' || l.platform === 'odubo-studio');
 
   return (
     <div className="border-t border-white/[0.04]">
@@ -319,8 +319,8 @@ function JoinTheCool({ socialLinks }: { socialLinks: SocialLink[] }) {
               aria-label="Shop"
             >
               <Image
-                src="/brand-logos/baad-white.png"
-                alt="BAAD"
+                src="/brand-logos/odubo-logos/odubo-vin-type.png"
+                alt="odubo studio"
                 width={24}
                 height={24}
                 className="w-6 h-6 object-contain opacity-50 group-hover:opacity-80 transition-opacity duration-300"

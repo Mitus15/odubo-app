@@ -3,9 +3,7 @@ import LegalClient from "./LegalClient";
 // Static content that can be served from the server
 const legalContent = {
   privacy: `
-    <p class="text-sm text-[#b2a491]/70 mb-6">Last updated: December 25, 2025</p>
-
-    <p>B.A.A.D by Odubo operates this store and website, including all related information, content, features, tools, products and services, in order to provide you, the customer, with a curated shopping experience (the "Services"). B.A.A.D by Odubo is powered by Shopify, which enables us to provide the Services to you. This Privacy Policy describes how we collect, use, and disclose your personal information when you visit, use, or make a purchase or other transaction using the Services or otherwise communicate with us. If there is a conflict between our Terms of Service and this Privacy Policy, this Privacy Policy controls with respect to the collection, processing, and disclosure of your personal information.</p>
+    <p>Odubo Studio operates this store and website, including all related information, content, features, tools, products and services, in order to provide you, the customer, with a curated shopping experience (the "Services"). Odubo Studio is powered by Shopify, which enables us to provide the Services to you. This Privacy Policy describes how we collect, use, and disclose your personal information when you visit, use, or make a purchase or other transaction using the Services or otherwise communicate with us. If there is a conflict between our Terms of Service and this Privacy Policy, this Privacy Policy controls with respect to the collection, processing, and disclosure of your personal information.</p>
 
     <p class="mt-4">Please read this Privacy Policy carefully. By using and accessing any of the Services, you acknowledge that you have read this Privacy Policy and understand the collection, use, and disclosure of your information as described in this Privacy Policy.</p>
 
@@ -80,14 +78,14 @@ const legalContent = {
     <p>We may update this Privacy Policy from time to time, including to reflect changes to our practices or for other operational, legal, or regulatory reasons. We will post the revised Privacy Policy on this website and update the "Last updated" date.</p>
 
     <h2 class="text-xl font-semibold mt-8 mb-3 text-[#ede8df]">Contact</h2>
-    <p>Should you have any questions about our privacy practices or this Privacy Policy, or if you would like to exercise any of the rights available to you, please email us at <a href="mailto:baad@odubo.studio" class="text-[#843c2d] hover:underline">baad@odubo.studio</a> or contact us at:</p>
+    <p>Should you have any questions about our privacy practices or this Privacy Policy, or if you would like to exercise any of the rights available to you, please email us at <a href="mailto:info@odubo.studio" class="text-[#843c2d] hover:underline">info@odubo.studio</a> or contact us at:</p>
     <p class="mt-2 ml-4">444 Saint Paul Street<br/>Kamloops, BC, V2C 0L2<br/>Canada</p>
   `,
 
   terms: `
     <p class="text-sm text-[#b2a491]/70 mb-6">Last updated: December 25, 2025</p>
 
-    <p>Welcome to B.A.A.D by Odubo. These Terms of Service ("Terms") constitute a legally binding agreement between you and B.A.A.D by Odubo ("we," "us," or "our") governing your access to and use of the odubo.studio website, mobile applications, and all related services, content, and products (collectively, the "Services").</p>
+    <p>Welcome to Odubo Studio. These Terms of Service ("Terms") constitute a legally binding agreement between you and Odubo Studio ("we," "us," or "our") governing your access to and use of the odubo.studio website, mobile applications, and all related services, content, and products (collectively, the "Services").</p>
 
     <p class="mt-4 font-semibold text-[#ede8df]">PLEASE READ THESE TERMS CAREFULLY BEFORE USING THE SERVICES. BY ACCESSING OR USING ANY PART OF THE SERVICES, YOU AGREE TO BE BOUND BY THESE TERMS. IF YOU DO NOT AGREE TO ALL THE TERMS, DO NOT ACCESS OR USE THE SERVICES.</p>
 
@@ -123,7 +121,7 @@ const legalContent = {
     <p class="mt-3">You are responsible for any applicable taxes, duties, or fees associated with your purchase.</p>
 
     <h2 class="text-xl font-semibold mt-8 mb-3 text-[#ede8df]">6. Intellectual Property Rights</h2>
-    <p>The Services and all content, features, and functionality (including but not limited to all information, software, text, displays, images, video, audio, music, designs, and the design, selection, and arrangement thereof) are owned by B.A.A.D by Odubo, its licensors, or other providers of such material and are protected by copyright, trademark, patent, trade secret, and other intellectual property or proprietary rights laws.</p>
+    <p>The Services and all content, features, and functionality (including but not limited to all information, software, text, displays, images, video, audio, music, designs, and the design, selection, and arrangement thereof) are owned by Odubo Studio, its licensors, or other providers of such material and are protected by copyright, trademark, patent, trade secret, and other intellectual property or proprietary rights laws.</p>
     <p class="mt-3">You are granted a limited, non-exclusive, non-transferable, revocable license to access and use the Services for personal, non-commercial purposes only. You may not:</p>
     <ul class="list-disc list-inside mt-3 space-y-2 ml-4">
       <li>Copy, modify, distribute, sell, or lease any part of the Services;</li>
@@ -158,7 +156,7 @@ const legalContent = {
     <p class="mt-3">We do not warrant that the Services will be uninterrupted, secure, or error-free, that defects will be corrected, or that the Services or the servers that make the Services available are free of viruses or other harmful components.</p>
 
     <h2 class="text-xl font-semibold mt-8 mb-3 text-[#ede8df]">11. Limitation of Liability</h2>
-    <p class="font-semibold">TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, IN NO EVENT SHALL B.A.A.D BY ODUBO, ITS AFFILIATES, DIRECTORS, EMPLOYEES, AGENTS, OR LICENSORS BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING WITHOUT LIMITATION, LOSS OF PROFITS, DATA, USE, GOODWILL, OR OTHER INTANGIBLE LOSSES, RESULTING FROM:</p>
+    <p class="font-semibold">TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, IN NO EVENT SHALL ODUBO STUDIO, ITS AFFILIATES, DIRECTORS, EMPLOYEES, AGENTS, OR LICENSORS BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING WITHOUT LIMITATION, LOSS OF PROFITS, DATA, USE, GOODWILL, OR OTHER INTANGIBLE LOSSES, RESULTING FROM:</p>
     <ul class="list-disc list-inside mt-3 space-y-2 ml-4">
       <li>Your access to or use of or inability to access or use the Services;</li>
       <li>Any conduct or content of any third party on the Services;</li>
@@ -168,7 +166,7 @@ const legalContent = {
     <p class="mt-3">Our total liability to you for all claims arising out of or relating to these Terms or your use of the Services shall not exceed the amount paid by you to us in the twelve (12) months preceding the claim.</p>
 
     <h2 class="text-xl font-semibold mt-8 mb-3 text-[#ede8df]">12. Indemnification</h2>
-    <p>You agree to defend, indemnify, and hold harmless B.A.A.D by Odubo and its affiliates, licensors, and service providers from and against any claims, liabilities, damages, judgments, awards, losses, costs, expenses, or fees (including reasonable attorneys' fees) arising out of or relating to your violation of these Terms or your use of the Services.</p>
+    <p>You agree to defend, indemnify, and hold harmless Odubo Studio and its affiliates, licensors, and service providers from and against any claims, liabilities, damages, judgments, awards, losses, costs, expenses, or fees (including reasonable attorneys' fees) arising out of or relating to your violation of these Terms or your use of the Services.</p>
 
     <h2 class="text-xl font-semibold mt-8 mb-3 text-[#ede8df]">13. Governing Law and Dispute Resolution</h2>
     <p>These Terms shall be governed by and construed in accordance with the laws of British Columbia, Canada, without regard to its conflict of law provisions. Any dispute arising out of or relating to these Terms or the Services shall be resolved exclusively in the courts located in Kamloops, British Columbia, Canada, and you consent to the personal jurisdiction of such courts.</p>
@@ -177,17 +175,17 @@ const legalContent = {
     <p>If any provision of these Terms is held to be invalid, illegal, or unenforceable, the remaining provisions shall continue in full force and effect.</p>
 
     <h2 class="text-xl font-semibold mt-8 mb-3 text-[#ede8df]">15. Entire Agreement</h2>
-    <p>These Terms, together with our Privacy Policy and Shipping & Returns Policy, constitute the entire agreement between you and B.A.A.D by Odubo regarding the Services and supersede all prior agreements and understandings.</p>
+    <p>These Terms, together with our Privacy Policy and Shipping & Returns Policy, constitute the entire agreement between you and Odubo Studio regarding the Services and supersede all prior agreements and understandings.</p>
 
     <h2 class="text-xl font-semibold mt-8 mb-3 text-[#ede8df]">16. Contact Information</h2>
     <p>For questions about these Terms, please contact us at:</p>
-    <p class="mt-2 ml-4">B.A.A.D by Odubo<br/>Email: <a href="mailto:baad@odubo.studio" class="text-[#843c2d] hover:underline">baad@odubo.studio</a><br/>444 Saint Paul Street<br/>Kamloops, BC, V2C 0L2<br/>Canada</p>
+    <p class="mt-2 ml-4">Odubo Studio<br/>Email: <a href="mailto:info@odubo.studio" class="text-[#843c2d] hover:underline">info@odubo.studio</a><br/>444 Saint Paul Street<br/>Kamloops, BC, V2C 0L2<br/>Canada</p>
   `,
 
   shipping: `
     <p class="text-sm text-[#b2a491]/70 mb-6">Last updated: December 25, 2025</p>
 
-    <p>Thank you for shopping with B.A.A.D by Odubo. Please read our Shipping and Returns Policy carefully before making a purchase. By placing an order, you acknowledge and agree to these policies.</p>
+    <p>Thank you for shopping with Odubo Studio. Please read our Shipping and Returns Policy carefully before making a purchase. By placing an order, you acknowledge and agree to these policies.</p>
 
     <div class="bg-[#843c2d]/10 border border-[#843c2d]/30 rounded-xl p-4 mt-6 mb-6">
       <p class="font-semibold text-[#ede8df]">⚠️ Important Notice</p>
@@ -280,11 +278,11 @@ const legalContent = {
 
     <h2 class="text-xl font-semibold mt-8 mb-3 text-[#ede8df]">Contact Us</h2>
     <p>For questions about shipping, returns, or your order, please contact us:</p>
-    <p class="mt-2 ml-4">Email: <a href="mailto:baad@odubo.studio" class="text-[#843c2d] hover:underline">baad@odubo.studio</a></p>
+    <p class="mt-2 ml-4">Email: <a href="mailto:info@odubo.studio" class="text-[#843c2d] hover:underline">info@odubo.studio</a></p>
     <p class="mt-3">Please include your order number in all correspondence for faster assistance. We typically respond within 1-2 business days.</p>
 
     <div class="bg-[#843c2d]/10 border border-[#843c2d]/30 rounded-xl p-4 mt-8">
-      <p class="text-sm text-[#c7b8a8]">By placing an order with B.A.A.D by Odubo, you acknowledge that you have read, understood, and agree to this Shipping and Returns Policy.</p>
+      <p class="text-sm text-[#c7b8a8]">By placing an order with Odubo Studio, you acknowledge that you have read, understood, and agree to this Shipping and Returns Policy.</p>
     </div>
   `
 };

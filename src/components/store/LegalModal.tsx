@@ -69,7 +69,7 @@ export default function LegalModal({ isOpen, onClose, initialTab = 'privacy' }: 
               
               <div>
                 <h2 className="text-lg font-semibold mt-6 mb-3 text-[#ede8df]">Contact Us</h2>
-                <p>If you have any questions about this Privacy Policy, please contact us at <span className="text-[#ede8df]">privacy@odubo.studio</span>.</p>
+                <p>If you have any questions about this Privacy Policy, please contact us at <span className="text-[#ede8df]">info@odubo.studio</span>.</p>
               </div>
             </div>
           </div>
@@ -104,7 +104,7 @@ export default function LegalModal({ isOpen, onClose, initialTab = 'privacy' }: 
               
               <div>
                 <h2 className="text-lg font-semibold mt-6 mb-3 text-[#ede8df]">Contact Information</h2>
-                <p>Questions about the Terms of Service should be sent to us at <span className="text-[#ede8df]">legal@odubo.studio</span>.</p>
+                <p>Questions about the Terms of Service should be sent to us at <span className="text-[#ede8df]">info@odubo.studio</span>.</p>
               </div>
             </div>
           </div>
@@ -144,7 +144,7 @@ export default function LegalModal({ isOpen, onClose, initialTab = 'privacy' }: 
               
               <div>
                 <h2 className="text-lg font-semibold mt-6 mb-3 text-[#ede8df]">Questions?</h2>
-                <p>Contact our support team at <span className="text-[#ede8df]">baad@odubo.studio</span> for any shipping or returns questions.</p>
+                <p>Contact our support team at <span className="text-[#ede8df]">info@odubo.studio</span> for any shipping or returns questions.</p>
               </div>
             </div>
           </div>
@@ -224,7 +224,7 @@ export default function LegalModal({ isOpen, onClose, initialTab = 'privacy' }: 
                 {/* Footer */}
                 <div className="p-4 sm:p-6 border-t border-white/10 text-center">
                   <p className="text-[10px] uppercase tracking-[0.3em] text-white/30">
-                    © {new Date().getFullYear()} B.A.A.D@Odubo
+                    © {new Date().getFullYear()} Odubo Studio
                   </p>
                 </div>
               </div>

@@ -112,7 +112,7 @@ export default function StoreOrchestrator() {
                   </button>
                 </div>
                 <div className="text-white/30">
-                  © {new Date().getFullYear()} B.A.A.D@Odubo
+                  © {new Date().getFullYear()} Odubo Studio
                 </div>
               </div>
             </div>

@@ -5,11 +5,11 @@ export default function NotFound() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#302927] via-[#171616] to-[#302927] px-4">
       <div className="max-w-md w-full text-center">
-        {/* B.A.A.D Logo Mark */}
+        {/* odubo studio Logo Mark */}
         <div className="mb-8">
           <Image
-            src="/brand-logos/baad-icon.svg"
-            alt="B.A.A.D"
+            src="/brand-logos/odubo-logos/odubo-vin-type.png"
+            alt="odubo studio"
             width={48}
             height={48}
             className="mx-auto opacity-40"

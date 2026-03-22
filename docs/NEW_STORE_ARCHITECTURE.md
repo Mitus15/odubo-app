@@ -262,7 +262,7 @@ File: `src/components/clips/ExpandableLogoMenu.tsx`
 const { openStore, isStoreAccessible, cartItemCount } = useStore();
 
 <button onClick={openStore}>
-  <img src="/brand-logos/baad.png" alt="Shop" />
+  <img src="/brand-logos/odubo-logos/odubo-vin-type.png" alt="Shop" />
   {cartItemCount > 0 && <Badge>{cartItemCount}</Badge>}
 </button>
 ```

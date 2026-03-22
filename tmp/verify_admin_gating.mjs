@@ -44,7 +44,7 @@ async function getHealth(token) {
 }
 
 (async () => {
-  const email = 'admin-gating@odubo.studio';
+  const email = 'info@odubo.studio';
   const username = 'admin-gating';
   const password = 'Admin123!x';
 

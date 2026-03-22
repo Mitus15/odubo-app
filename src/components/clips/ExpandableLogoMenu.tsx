@@ -486,7 +486,7 @@ export default function ExpandableLogoMenu({
             }}
           >
             <img
-              src="/brand-logos/baad-logo.png"
+              src="/brand-logos/odubo-logo.png"
               alt=""
               className="w-8 h-8 object-contain"
               draggable={false}
@@ -510,7 +510,7 @@ export default function ExpandableLogoMenu({
                   flexDirection: menuDirection === 'up' ? 'column-reverse' : 'column',
                 }}
               >
-              {/* Shop button with BAAD logo - conditionally rendered */}
+              {/* Shop button with odubo studio logo - conditionally rendered */}
               {!checkingStoreAccess && storeAccessible && (
                 <motion.div
                   variants={itemVariants}
@@ -523,7 +523,7 @@ export default function ExpandableLogoMenu({
                     style={{ touchAction: 'manipulation' }}
                   >
                     <img
-                      src="/brand-logos/baad.png"
+                      src="/brand-logos/odubo.png"
                       alt=""
                       className="w-6 h-6 object-contain"
                       draggable={false}

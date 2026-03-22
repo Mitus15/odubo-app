@@ -101,7 +101,7 @@ export default function SEOOptimizer({
             "@type": "Organization",
             "name": "Odubo Studio",
             "url": "https://odubo.studio",
-            "logo": "https://odubo.studio/brand-logos/baad-logo.png",
+            "logo": "https://odubo.studio/brand-logos/odubo-logo.png",
             "description": "Professional music and video content management platform",
             "sameAs": [
               "https://twitter.com/odubostudio",
@@ -111,7 +111,7 @@ export default function SEOOptimizer({
             "contactPoint": {
               "@type": "ContactPoint",
               "contactType": "customer service",
-              "email": "baad@odubo.studio"
+              "email": "info@odubo.studio"
             },
             "address": {
               "@type": "PostalAddress",

@@ -32,7 +32,7 @@ async function createAdminUser() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        email: 'admin@odubo.studio',
+        email: 'info@odubo.studio',
         username: 'admin',
         password: 'admin123',
         first_name: 'Admin',
@@ -68,7 +68,7 @@ async function loginAdmin() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         action: 'login',
-        email: 'admin@odubo.studio',
+        email: 'info@odubo.studio',
         password: 'admin123'
       })
     });
@@ -200,7 +200,7 @@ async function main() {
     console.log(colors.green('✅ All tests passed! Your video upload system is working correctly.\n'));
     console.log(colors.blue('🚀 You can now:'));
     console.log('   • Visit http://localhost:3001/admin/videos');
-    console.log('   • Login with admin@odubo.studio / admin123');
+    console.log('   • Login with info@odubo.studio / admin123');
     console.log('   • Upload videos through the UI\n');
   } else {
     console.log(colors.red('❌ Some tests failed. Check the output above for details.\n'));

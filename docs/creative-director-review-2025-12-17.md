@@ -96,7 +96,7 @@ ClipsFeed
 **Innovation:** Single access point for all app navigation.
 
 **Design Decisions:**
-- BAAD logo for store (brand hierarchy)
+- odubo studio logo for store (brand hierarchy)
 - Odubo logo as main trigger (45deg rotation when open)
 - Staggered spring animations (50ms delay, bottom-to-top)
 - Click-outside-to-close with 100ms debounce
@@ -287,7 +287,7 @@ export const metadata: Metadata = {
 
 1. **Header space removal** — HEADER_HEIGHT set to 0
 2. **Button conflict resolution** — Share moved into ExpandableLogoMenu
-3. **BAAD logo integration** — Store button uses brand logo
+3. **odubo studio logo integration** — Store button uses brand logo
 4. **Legal footers** — All shop modals have policy links
 5. **Vinyl mini player** — Created and integrated
 6. **Album detail UI** — Full track list with queue management
@@ -324,7 +324,7 @@ export const metadata: Metadata = {
 
 ### Modified
 - `/src/app/HomePageClient.tsx` — HEADER_HEIGHT=0, verse positioning
-- `/src/components/clips/ExpandableLogoMenu.tsx` — Integrated Share, BAAD logo
+odubo studio logo
 - `/src/components/clips/ClipCard.tsx` — VinylMiniPlayer integration
 - `/src/components/media/OmniMediaOrchestrator.tsx` — AlbumDetailView rendering
 - `/src/components/media/MediaHubModal.tsx` — Navigate to album detail

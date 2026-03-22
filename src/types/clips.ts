@@ -43,7 +43,7 @@ export type ClipItem = {
   parentTitle?: string | null; // Parent video title for clips
   uid?: string; // Cloudflare Stream UID for URL generation
   // Clip identity (Magazine & Bullets)
-  originalFilename?: string | null;   // e.g., "BAAD_Teaser_v3_final.mp4"
+  originalFilename?: string | null;   // e.g., "odubo_Teaser_v3_final.mp4"
   clipIndex?: number | null;          // Position within parent (1-based)
   totalSiblings?: number | null;      // Total clips in magazine → "Clip 3 of 7"
   // Platform URL backfeed

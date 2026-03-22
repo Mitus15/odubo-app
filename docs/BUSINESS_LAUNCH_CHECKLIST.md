@@ -99,7 +99,7 @@ Pre-launch requirements for Odubo Studio (Kamloops, BC, Canada)
 
 ## Future Considerations (Not Required for Launch)
 
-- [ ] **Trademark Registration** - Protect "Odubo" and "BAAD" names ($350+ each)
+- [ ] **Trademark Registration** - Protect "Odubo" and "odubo studio" names ($350+ each)
 - [ ] **Incorporation** - Consider if revenue grows significantly
 - [ ] **Business Insurance** - Liability protection
 - [ ] **Accountant** - Recommended once revenue is consistent
@@ -117,7 +117,7 @@ Pre-launch requirements for Odubo Studio (Kamloops, BC, Canada)
 
 ## Notes
 
-- BAAD and Odubo can operate under one "Odubo Studio" registration
+- odubo studio operates under "Odubo Studio" registration
 - Keep all receipts - even coffee during business meetings
 - Fiscal year end: December 31 for sole proprietors
 - File T2125 (Business Income) with personal tax return

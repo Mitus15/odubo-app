@@ -49,12 +49,12 @@ async function main() {
   // 4. Order Confirmation
   console.log('4/6 Order confirmation...');
   const order = await sendOrderConfirmation({
-    orderNumber: 'BAAD-2026-0001',
+    orderNumber: 'ODUBO-2026-0001',
     customerName: 'Emmanuel',
     customerEmail: TO,
     items: [
-      { title: 'B.A.A.D Essential Tee — Black', quantity: 1, price: '$45.00' },
-      { title: 'B.A.A.D Studio Cap — Terracotta', quantity: 1, price: '$35.00' },
+      { title: 'Odubo Essential Tee — Black', quantity: 1, price: '$45.00' },
+      { title: 'Odubo Studio Cap — Terracotta', quantity: 1, price: '$35.00' },
     ],
     subtotal: '$80.00',
     shipping: 'Free',
@@ -83,7 +83,7 @@ async function main() {
     const contactResult = await resend.emails.send({
       from: fromEmail,
       to: TO,
-      subject: 'We received your message \u2014 B.A.A.D @ Odubo Studio',
+      subject: 'We received your message \u2014 Odubo Studio',
       html: `
         <!DOCTYPE html>
         <html>
@@ -92,7 +92,7 @@ async function main() {
             <div style="background:#f6f3ee;padding:24px 16px;">
               <div style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:16px;border:1px solid #ece7df;overflow:hidden">
                 <div style="padding:20px 22px 0 22px;text-align:center;border-bottom:1px solid #f0ebe3">
-                  <img src="${site}/brand-logos/baad-logo.png" alt="B.A.A.D" style="height:40px;width:auto;margin:8px auto 14px;display:block" />
+                  <img src="${site}/brand-logos/odubo-logo.png" alt="Odubo" style="height:40px;width:auto;margin:8px auto 14px;display:block" />
                 </div>
                 <div style="padding:22px;font-family:'Baskerville','Times New Roman',Times,Georgia,serif;color:#1a1716;">
                   <h2 style="margin:0 0 12px;font-size:22px;color:#171616;">Thanks for reaching out.</h2>
@@ -102,11 +102,11 @@ async function main() {
                     <li style="margin-bottom:8px;"><a href="https://account.odubo.studio" style="color:#843c2d;text-decoration:none;">Check your order status</a></li>
                     <li><a href="${site}/store" style="color:#843c2d;text-decoration:none;">Browse the collection</a></li>
                   </ul>
-                  <p style="margin:20px 0 0;font-size:15px;color:#6d6459;">&mdash; B.A.A.D @ Odubo Studio</p>
+                  <p style="margin:20px 0 0;font-size:15px;color:#6d6459;">&mdash; Odubo Studio</p>
                 </div>
                 <div style="padding:14px 22px 20px;border-top:1px solid #f0ebe3;color:#6d6459;font-size:12px;font-family:'Baskerville','Times New Roman',Times,Georgia,serif;text-align:center;">
-                  <p style="margin:0 0 4px;">B.A.A.D @ Odubo Studio</p>
-                  <p style="margin:0;">&copy; ${new Date().getFullYear()} Bold Authentic Aesthetic Dreams. All rights reserved.</p>
+                  <p style="margin:0 0 4px;">Odubo Studio</p>
+                  <p style="margin:0;">&copy; ${new Date().getFullYear()} Odubo. All rights reserved.</p>
                 </div>
               </div>
             </div>
@@ -127,7 +127,7 @@ async function main() {
     const fromEmail = process.env.RESEND_FROM_EMAIL || process.env.EMAIL_FROM || 'noreply@odubo.studio';
 
     const reminderHtml = brandedEmailHTML({
-      title: 'B.A.A.D Pop-Up at Odubo Studio',
+      title: 'Odubo Studio Pop-Up',
       minutes: 30,
       startsAt: 'Saturday, February 15 at 7:00 PM EST',
       galleryId: 1,
@@ -137,7 +137,7 @@ async function main() {
     const reminderResult = await resend.emails.send({
       from: fromEmail,
       to: TO,
-      subject: 'B.A.A.D Pop-Up at Odubo Studio is starting soon',
+      subject: 'Odubo Studio Pop-Up is starting soon',
       html: reminderHtml,
     });
     console.log(reminderResult.data ? '  ✓ Sent' : `  ✗ ${reminderResult.error?.message}`);

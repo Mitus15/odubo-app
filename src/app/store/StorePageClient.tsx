@@ -672,30 +672,25 @@ export default function StorePageClient({ isStoreOpen, isAdmin, initialProducts 
         </div>
       )}
 
-      {/* BAAD by Odubo background: soft gradients and glow lights */}
+      {/* odubo studio background: soft gradients and glow lights */}
       <div className="fixed inset-0 -z-10 bg-gradient-to-br from-[#0b0b0b] via-[#111111] to-[#0b0b0b]" />
       <div className="pointer-events-none fixed inset-0 -z-10">
         <div className="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-gradient-to-br from-[#843c2d33] via-[#ff8a4a22] to-transparent blur-3xl" />
         <div className="absolute top-1/3 right-0 h-80 w-80 rounded-full bg-gradient-to-br from-[#b2a49122] via-[#ede8df1a] to-transparent blur-3xl" />
         <div className="absolute bottom-0 left-1/2 -translate-x-1/2 h-96 w-[36rem] rounded-[999px] bg-gradient-to-tr from-[#843c2d22] via-transparent to-[#ede8df11] blur-3xl" />
       </div>
-      {/* Fixed Header - BAAD logo + Bag button - positioned below main AppHeader (56px / h-14) */}
-      <header className="fixed left-0 right-0 z-30 bg-[#0b0b0b] top-14">
-        <div className="max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8 py-3">
-          <div className="flex items-center justify-between px-1 sm:px-2 lg:px-4">
-            <div className="flex items-center">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/brand-logos/baad@odubo.png" alt="B.A.A.D" className="h-8 sm:h-10 lg:h-16 w-auto" />
-            </div>
-            <Link
-              href="/store/cart"
-              className="text-[10px] sm:text-xs uppercase tracking-widest text-[#ede8df]/80 hover:text-[#ede8df] transition-colors"
-            >
-              Bag
-            </Link>
-          </div>
-        </div>
+      {/* Fixed Header - odubo studio logo - positioned below main AppHeader (56px / h-14) */}
+      <header className="fixed left-0 right-0 z-30 bg-[#0b0b0b] top-14 flex items-center justify-center h-12 sm:h-14 lg:h-16">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/brand-logos/odubo-logos/odubo-vin-type.png" alt="Odubo" className="h-10 sm:h-12 lg:h-20 w-auto ml-auto mr-4 sm:mx-auto" />
       </header>
+      {/* Bag button - separate from header to avoid flex interference */}
+      <Link
+        href="/store/cart"
+        className="fixed top-14 z-40 right-4 sm:right-6 lg:right-8 flex items-center h-12 sm:h-14 lg:h-16 text-[10px] sm:text-xs uppercase tracking-widest text-[#ede8df]/80 hover:text-[#ede8df] transition-colors"
+      >
+        Bag
+      </Link>
 
       <ScrollContainer className="mt-16">
         {/* Category Filter Pills */}
@@ -916,7 +911,7 @@ export default function StorePageClient({ isStoreOpen, isAdmin, initialProducts 
         <div className="pointer-events-auto max-w-7xl mx-auto px-4 sm:px-6">
           <div className="rounded-t-2xl border border-[#502d26]/25 bg-[#0b0b0b]/95 backdrop-blur-xl px-4 sm:px-6 py-4 text-center space-y-3">
             <p className="text-[10px] sm:text-xs uppercase tracking-[0.3em] text-[#b2a491]/70">
-              B.A.A.D by Odubo
+              Odubo Studio
             </p>
             <div className="flex items-center justify-center gap-6 text-[10px] sm:text-xs text-[#b2a491]/60">
               <Link href="/legal" className="hover:text-[#ede8df] transition-colors">
@@ -939,7 +934,7 @@ export default function StorePageClient({ isStoreOpen, isAdmin, initialProducts 
               </button>
             </div>
             <p className="text-[9px] text-[#502d26]/40">
-              © {new Date().getFullYear()} B.A.A.D@Odubo. All rights reserved.
+              © {new Date().getFullYear()} Odubo Studio. All rights reserved.
             </p>
           </div>
         </div>

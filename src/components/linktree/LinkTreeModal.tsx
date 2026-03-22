@@ -84,13 +84,13 @@ export default function LinkTreeModal({ isOpen, onClose }: LinkTreeModalProps) {
 
     // Filter out store links when store is not accessible
     if (!checkingStoreAccess && !storeAccessible) {
-      filtered = links.filter(link => link.platform !== 'shopify' && link.platform !== 'baad');
+      filtered = links.filter(link => link.platform !== 'shopify' && link.platform !== 'odubo');
     }
 
     // Custom sort: Store first, YouTube second, then rest in original order
     const platformPriority: Record<string, number> = {
       'shopify': 0,
-      'baad': 0,
+      'odubo': 0,
       'youtube': 1,
     };
 
@@ -106,8 +106,8 @@ export default function LinkTreeModal({ isOpen, onClose }: LinkTreeModalProps) {
   const handleLinkClick = (link: LinkTreeItem) => {
     fetch(`/api/linktree/${link.id}/click`, { method: 'POST' }).catch(() => {});
 
-    // Special handling for shopify/baad store link - close this modal and open new Store
-    if (link.platform === 'shopify' || link.platform === 'baad') {
+    // Special handling for shopify/odubo store link - close this modal and open new Store
+    if (link.platform === 'shopify' || link.platform === 'odubo') {
       onClose();
       closeAllShopModals();
       openStore();
@@ -187,8 +187,8 @@ export default function LinkTreeModal({ isOpen, onClose }: LinkTreeModalProps) {
               className="mb-7 lg:mb-10"
             >
               <img
-                src="/brand-logos/baad@odubo.png"
-                alt="B.A.A.D @ Odubo.Studio"
+                src="/brand-logos/odubo-logos/odubo-vin-type.png"
+                alt="Odubo Studio"
                 className="w-20 h-20 lg:w-36 lg:h-36 object-contain opacity-40"
                 draggable={false}
               />
@@ -339,11 +339,11 @@ function PlatformIcon({ platform }: { platform: string | null }) {
         </svg>
       );
     case 'shopify':
-    case 'baad':
+    case 'odubo':
       return (
         <Image
-          src="/brand-logos/baad-white.png"
-          alt="BAAD"
+          src="/brand-logos/odubo-logo.png"
+          alt="Odubo"
           width={28}
           height={28}
           className={iconClass}

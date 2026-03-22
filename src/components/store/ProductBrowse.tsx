@@ -224,7 +224,7 @@ export default function ProductBrowse() {
     >
       {/* Header */}
       <header
-        className="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-[#0d0c0b]/95 backdrop-blur-sm"
+        className="relative flex items-center justify-between px-4 py-3 border-b border-white/10 bg-[#0d0c0b]/95 backdrop-blur-sm"
         style={{ paddingTop: 'max(12px, env(safe-area-inset-top, 0px))' }}
       >
         {/* Close button */}
@@ -238,12 +238,12 @@ export default function ProductBrowse() {
           </svg>
         </button>
 
-        {/* Brand logo */}
-        <div className="flex items-center">
+        {/* Brand logo - centered on all sizes */}
+        <div className="absolute left-1/2 -translate-x-1/2">
           <img
-            src="/brand-logos/baad@odubo.png"
-            alt="B.A.A.D"
-            className="h-6 lg:h-12 w-auto"
+            src="/brand-logos/odubo-logos/odubo-vin-type.png"
+            alt="Odubo"
+            className="h-10 sm:h-14 lg:h-20 w-auto"
             draggable={false}
           />
         </div>

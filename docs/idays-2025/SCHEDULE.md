@@ -1,6 +1,6 @@
 # Project Schedule
 
-## BAAD @ IDAYS.TRU
+## odubo studio @ IDAYS.TRU
 
 **Timeline:** February 1 - March 20, 2025
 **Event Date:** March 13, 2025

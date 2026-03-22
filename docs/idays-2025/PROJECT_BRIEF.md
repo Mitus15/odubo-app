@@ -1,4 +1,4 @@
-# BAAD @ IDAYS.TRU
+# odubo studio @ IDAYS.TRU
 
 ## Project Brief | Team Recruitment
 
@@ -29,7 +29,7 @@ This isn't a typical campus event. It's a multi-location performance that starts
 
 **3. Old Gym (Main Event)**
 - Opening musical performances
-- Fashion show featuring BAAD clothing
+- Fashion show featuring odubo studio clothing
 - Finale: choreographed dance + full choir performance
 
 Everything will be documented by professional videographers and photographers to create lasting content.
@@ -86,7 +86,7 @@ Everything will be documented by professional videographers and photographers to
 
 ### For Everyone
 - **Professional Content** - High-quality photos and video of you performing/modeling
-- **BAAD Merchandise** - Clothing from the collection to wear at the event (and keep)
+- **odubo studio Merchandise** - Clothing from the collection to wear at the event (and keep)
 - **Portfolio Material** - Documented work for your own creative portfolio
 - **Experience** - Part of something unique and memorable
 
@@ -131,9 +131,9 @@ No prior professional experience required - just talent and commitment.
 
 ---
 
-## About BAAD
+## About odubo studio
 
-**BAAD** (Bold Authentic Aesthetic Dreams) is a clothing brand focused on distinctive, purposeful design. This event is part of a larger vision to create meaningful cultural moments through fashion, music, and community.
+**odubo studio** (Bold Authentic Aesthetic Dreams) is a clothing brand focused on distinctive, purposeful design. This event is part of a larger vision to create meaningful cultural moments through fashion, music, and community.
 
 Learn more: **odubo.studio**
 
@@ -164,7 +164,7 @@ Learn more: **odubo.studio**
 
 *This is your chance to be part of something different. Not just another campus event - a cinematic experience that will be documented and shared. Bring your talent. Let's build something memorable.*
 
-**BAAD @ IDAYS.TRU**
+**odubo studio @ IDAYS.TRU**
 March 13, 2025
 
 ---

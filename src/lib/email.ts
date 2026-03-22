@@ -38,7 +38,7 @@ const BRAND = {
 // Email wrapper — shared chrome for all emails
 function emailWrapper(content: string, preheader?: string): string {
   const site = getSiteUrl();
-  const logoUrl = `${site}/brand-logos/baad-logo.png`;
+  const logoUrl = `${site}/brand-logos/odubo-logo.png`;
 
   return `
 <!DOCTYPE html>
@@ -52,14 +52,14 @@ function emailWrapper(content: string, preheader?: string): string {
   <div style="background:${BRAND.bg};padding:24px 16px;">
     <div style="max-width:560px;margin:0 auto;background:${BRAND.cardBg};border-radius:16px;border:1px solid ${BRAND.border};overflow:hidden">
       <div style="padding:20px 22px 0 22px;text-align:center;border-bottom:1px solid #f0ebe3">
-        <img src="${logoUrl}" alt="B.A.A.D" style="height:40px;width:auto;margin:8px auto 14px;display:block" />
+        <img src="${logoUrl}" alt="Odubo" style="height:40px;width:auto;margin:8px auto 14px;display:block" />
       </div>
       <div style="padding:22px;color:${BRAND.text};font-family:${BRAND.serif};">
         ${content}
       </div>
       <div style="padding:14px 22px 20px;border-top:1px solid #f0ebe3;color:${BRAND.muted};font-size:12px;font-family:${BRAND.serif};text-align:center;">
-        <p style="margin:0 0 4px;">B.A.A.D @ Odubo Studio</p>
-        <p style="margin:0;color:${BRAND.muted};">&copy; ${new Date().getFullYear()} Bold Authentic Aesthetic Dreams. All rights reserved.</p>
+        <p style="margin:0 0 4px;">Odubo Studio</p>
+        <p style="margin:0;color:${BRAND.muted};">&copy; ${new Date().getFullYear()} Odubo. All rights reserved.</p>
       </div>
     </div>
   </div>
@@ -135,7 +135,7 @@ function orderConfirmationHTML(data: OrderConfirmationData): string {
   ` : '';
 
   const content = `
-    <h1 style="margin:0 0 8px;font-size:24px;color:${BRAND.primary}">Your B.A.A.D piece is on its way.</h1>
+    <h1 style="margin:0 0 8px;font-size:24px;color:${BRAND.primary}">Your Odubo piece is on its way.</h1>
     <p style="margin:0 0 20px;font-size:16px;color:${BRAND.text}">
       Hi ${data.customerName}, we&rsquo;ve received your order and are preparing it with care.
     </p>
@@ -172,7 +172,7 @@ function orderConfirmationHTML(data: OrderConfirmationData): string {
     </div>
   `;
 
-  return emailWrapper(content, `Order ${data.orderNumber} confirmed \u2014 your B.A.A.D piece is on its way.`);
+  return emailWrapper(content, `Order ${data.orderNumber} confirmed \u2014 your Odubo piece is on its way.`);
 }
 
 export interface WelcomeEmailData {
@@ -217,7 +217,7 @@ function day3EmailHTML(data: Day3EmailData): string {
   const content = `
     <h1 style="margin:0 0 8px;font-size:24px;color:${BRAND.primary}">What&rsquo;s New at the Studio</h1>
     <p style="margin:0 0 20px;font-size:16px;color:${BRAND.text}">
-      Hey ${data.name || 'there'}, here&rsquo;s what&rsquo;s been happening at B.A.A.D @ Odubo Studio.
+      Hey ${data.name || 'there'}, here&rsquo;s what&rsquo;s been happening at Odubo Studio.
     </p>
 
     <div style="margin:24px 0;padding:20px;background:${BRAND.warmBg};border-radius:12px;">
@@ -243,7 +243,7 @@ function day3EmailHTML(data: Day3EmailData): string {
     </div>
   `;
 
-  return emailWrapper(content, `New at B.A.A.D @ Odubo Studio \u2014 clips, collection, and more.`);
+  return emailWrapper(content, `New at Odubo Studio \u2014 clips, collection, and more.`);
 }
 
 // Day 7 Email — check back in, nudge to explore
@@ -273,7 +273,7 @@ function day7EmailHTML(data: Day7EmailData): string {
     </div>
   `;
 
-  return emailWrapper(content, `New work dropping at B.A.A.D @ Odubo Studio.`);
+  return emailWrapper(content, `New work dropping at Odubo Studio.`);
 }
 
 // ============================================================================
@@ -321,7 +321,7 @@ export async function sendWelcomeEmail(data: WelcomeEmailData): Promise<SendResu
     const result = await resend.emails.send({
       from: fromEmail,
       to: data.email,
-      subject: 'Welcome to B.A.A.D',
+      subject: 'Welcome to Odubo Studio',
       html: welcomeEmailHTML(data),
     });
 
@@ -348,7 +348,7 @@ export async function sendDay3Email(data: Day3EmailData): Promise<SendResult> {
     const result = await resend.emails.send({
       from: fromEmail,
       to: data.email,
-      subject: 'New at B.A.A.D @ Odubo Studio',
+      subject: 'New at Odubo Studio',
       html: day3EmailHTML(data),
     });
 
@@ -375,7 +375,7 @@ export async function sendDay7Email(data: Day7EmailData): Promise<SendResult> {
     const result = await resend.emails.send({
       from: fromEmail,
       to: data.email,
-      subject: 'Still Building \u2014 B.A.A.D @ Odubo Studio',
+      subject: 'Still Building \u2014 Odubo Studio',
       html: day7EmailHTML(data),
     });
 

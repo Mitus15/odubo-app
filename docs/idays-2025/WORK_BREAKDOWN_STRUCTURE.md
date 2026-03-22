@@ -1,12 +1,12 @@
 # Work Breakdown Structure
 
-## BAAD @ IDAYS.TRU
+## odubo studio @ IDAYS.TRU
 
 ---
 
 ## Overview
 
-This document decomposes all work required for the BAAD @ IDAYS.TRU project into manageable tasks organized by phase and category.
+This document decomposes all work required for the odubo studio @ IDAYS.TRU project into manageable tasks organized by phase and category.
 
 **WBS Levels:**
 - **Level 1:** Major Phase (1.0, 2.0, etc.)
@@ -119,7 +119,7 @@ This document decomposes all work required for the BAAD @ IDAYS.TRU project into
 
 #### 1.3.1 Design & Planning
 - 1.3.1.1 Determine overall aesthetic direction
-- 1.3.1.2 Inventory existing BAAD pieces
+- 1.3.1.2 Inventory existing odubo studio pieces
 - 1.3.1.3 Identify pieces to produce/source
 - 1.3.1.4 Create wardrobe assignment list
 
@@ -192,7 +192,7 @@ This document decomposes all work required for the BAAD @ IDAYS.TRU project into
 - 1.6.1.3 Create event announcement video (optional)
 
 #### 1.6.2 Distribution
-- 1.6.2.1 Post to BAAD/Odubo social media
+- 1.6.2.1 Post to odubo studio/Odubo social media
 - 1.6.2.2 Submit to TRU World for promotion
 - 1.6.2.3 Share with team for personal networks
 

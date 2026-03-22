@@ -5,7 +5,7 @@ async function testAdminSignup() {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      email: 'admin@odubo.studio',
+      email: 'info@odubo.studio',
       username: 'admin',
       password: 'admin123',
       first_name: 'Admin',

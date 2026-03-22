@@ -110,7 +110,7 @@
     "monitoring": {
       "enabled": true,
       "alert_threshold": 10,
-      "alert_email": "security@odubo.studio"
+      "alert_email": "info@odubo.studio"
     }
   }
 }

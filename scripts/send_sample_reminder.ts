@@ -12,7 +12,7 @@ function getArg(name: string, fallback?: string): string | undefined {
 
 async function main() {
   const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.RESEND_FROM_EMAIL || 'noreply@odubo.studio';
+  const from = process.env.RESEND_FROM_EMAIL || 'info@odubo.studio';
   const toArg = getArg('to') || getArg('email') || process.argv.slice(2).find(v => v.includes('@'));
   const to = toArg || (process.env.ADMIN_EMAILS?.split(',')[0]?.trim());
 

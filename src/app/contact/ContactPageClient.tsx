@@ -263,8 +263,8 @@ export default function ContactPageClient() {
         {/* Additional Contact Info */}
         <div className="mt-10 text-center text-sm text-[#726d6c]">
           <p className="mb-2">You can also reach us directly at:</p>
-          <a href="mailto:baad@odubo.studio" className="text-[#b2a491] hover:text-[#ede8df] transition-colors">
-            baad@odubo.studio
+          <a href="mailto:info@odubo.studio" className="text-[#b2a491] hover:text-[#ede8df] transition-colors">
+            info@odubo.studio
           </a>
         </div>
       </div>

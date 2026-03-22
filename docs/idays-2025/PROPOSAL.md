@@ -1,16 +1,16 @@
-# BAAD @ IDAYS.TRU
+# odubo studio @ IDAYS.TRU
 
 ## Partnership Proposal for International Days 2025
 
 **Submitted to:** TRU World
-**Submitted by:** Odubo (BAAD)
+**Submitted by:** Odubo (odubo studio)
 **Date:** January 2025
 
 ---
 
 ## Executive Summary
 
-BAAD, a student-founded clothing brand at Thompson Rivers University, proposes a collaborative partnership for International Days 2025 that elevates the event through integrated live performance, fashion showcase, and professional content creation.
+odubo studio, a student-founded clothing brand at Thompson Rivers University, proposes a collaborative partnership for International Days 2025 that elevates the event through integrated live performance, fashion showcase, and professional content creation.
 
 Our proposal offers:
 - A dynamic pre-event activation at Old Main that builds energy and draws attendees to the main venue
@@ -23,15 +23,15 @@ We are offering this as a **talent and content sponsorship** - bringing creative
 
 ---
 
-## About BAAD
+## About odubo studio
 
-**BAAD** (Bold Authentic Aesthetic Dreams) is a clothing brand founded by a current TRU student, focused on creating distinctive, quality apparel that celebrates individuality and cultural diversity.
+**odubo studio** (Bold Authentic Aesthetic Dreams) is a clothing brand founded by a current TRU student, focused on creating distinctive, quality apparel that celebrates individuality and cultural diversity.
 
 **Brand Website:** odubo.studio
 
 **Our Mission:** Create cultural moments that bring people together through fashion, music, and shared experience.
 
-**Why IDAYS:** International Days celebrates the diversity of TRU's global community. BAAD's vision aligns directly with this celebration - using fashion as a universal language that transcends cultural boundaries.
+**Why IDAYS:** International Days celebrates the diversity of TRU's global community. odubo studio's vision aligns directly with this celebration - using fashion as a universal language that transcends cultural boundaries.
 
 ---
 
@@ -44,7 +44,7 @@ We are offering this as a **talent and content sponsorship** - bringing creative
 | Pre-Event | Old Main | Live music build-up, energy generation, crowd gathering |
 | Transition | Campus | Group movement from Old Main to Old Gym |
 | Main Event | Old Gym | Integration with IDAYS programming |
-| Fashion Show | Old Gym | BAAD fashion showcase with student models |
+| Fashion Show | Old Gym | odubo studio fashion showcase with student models |
 | Finale | Old Gym | Musical performance with full band and choir |
 
 ### Component 1: Pre-Event Activation (Old Main)
@@ -64,7 +64,7 @@ We are offering this as a **talent and content sponsorship** - bringing creative
 
 ### Component 2: Fashion Show Integration
 
-**What:** A runway-style fashion presentation featuring BAAD clothing worn by student models representing TRU's diverse community.
+**What:** A runway-style fashion presentation featuring odubo studio clothing worn by student models representing TRU's diverse community.
 
 **How:**
 - 8-15 student models
@@ -95,7 +95,7 @@ We are offering this as a **talent and content sponsorship** - bringing creative
 
 ### Component 4: Content Creation
 
-**What:** Professional documentation of the entire event for both BAAD and TRU use.
+**What:** Professional documentation of the entire event for both odubo studio and TRU use.
 
 **Deliverables:**
 - 2-3 videographers capturing full event
@@ -162,7 +162,7 @@ We are open to discussing:
 
 **Odubo (Project Lead)**
 - TRU student
-- Founder of BAAD clothing brand
+- Founder of odubo studio clothing brand
 - Experience in event production and content creation
 
 **Supporting Team:**
@@ -176,7 +176,7 @@ Full team to be assembled upon approval.
 
 ## Value Proposition Summary
 
-| For IDAYS | For BAAD |
+| For IDAYS | For odubo studio |
 |-----------|----------|
 | Enhanced production value | Platform to showcase brand |
 | Professional content creation | Content for portfolio |
@@ -208,7 +208,7 @@ This is a mutually beneficial collaboration that adds to IDAYS without requiring
 
 *We believe International Days is an incredible celebration of TRU's global community. This proposal is our way of contributing to that celebration through our creative talents. We look forward to the opportunity to collaborate.*
 
-**BAAD @ IDAYS.TRU**
+**odubo studio @ IDAYS.TRU**
 
 ---
 

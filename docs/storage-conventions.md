@@ -21,7 +21,7 @@ social/{entity_slug}/{YYYY}/{MM}/{DD}/{uuid}.{ext}
 ```
 **Examples**:
 - `social/odubo/2025/01/15/a1b2c3d4-5678-90ab-cdef.mp4`
-- `social/baad/2025/01/15/f9e8d7c6-5432-10ab-cdef.jpg`
+- `social/odubo-studio/2025/01/15/f9e8d7c6-5432-10ab-cdef.jpg`
 
 **Organization**:
 - Grouped by brand/entity first

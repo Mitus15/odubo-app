@@ -200,8 +200,8 @@ export default function MaisonModal() {
 
         {/* Center - Brand Logo */}
         <img
-          src="/brand-logos/baad@odubo.png"
-          alt="B.A.A.D Brand Logo"
+          src="/brand-logos/odubo-logos/odubo-vin-type.png"
+          alt="Odubo Brand Logo"
           className="h-6 lg:h-12 w-auto"
           draggable={false}
         />
@@ -374,7 +374,7 @@ export default function MaisonModal() {
           </Link>
         </div>
         <p className="text-center text-[9px] text-[#ede8df]/30 tracking-wider">
-          &copy; {new Date().getFullYear()} B.A.A.D@Odubo. All rights reserved.
+          &copy; {new Date().getFullYear()} Odubo Studio. All rights reserved.
         </p>
       </footer>
     </motion.div>

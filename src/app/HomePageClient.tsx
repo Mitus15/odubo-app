@@ -56,7 +56,7 @@ export default function HomePageClient({
   const [isFirstVisit, setIsFirstVisit] = useState(false);
   useEffect(() => {
     try {
-      if (!localStorage.getItem('baad_welcomed')) {
+      if (!localStorage.getItem('odubo_welcomed')) {
         setIsFirstVisit(true);
       }
     } catch {
@@ -67,7 +67,7 @@ export default function HomePageClient({
   // Mark first visit complete (must be defined before effects that use it)
   const markWelcomed = useCallback(() => {
     try {
-      localStorage.setItem('baad_welcomed', 'true');
+      localStorage.setItem('odubo_welcomed', 'true');
       setIsFirstVisit(false);
     } catch {
       // localStorage not available
@@ -459,8 +459,8 @@ export default function HomePageClient({
                     transition={{ duration: 1, ease: [0.25, 0.46, 0.45, 0.94] }}
                   >
                     <Image
-                      src="/brand-logos/baad@odubo.png"
-                      alt="B.A.A.D @ Odubo.Studio"
+                      src="/brand-logos/odubo-logos/odubo-vin-type.png"
+                      alt="Odubo Studio"
                       width={180}
                       height={180}
                       className="mx-auto drop-shadow-[0_4px_30px_rgba(0,0,0,0.6)]"
@@ -476,7 +476,7 @@ export default function HomePageClient({
                     className="text-[0.7rem] md:text-xs uppercase text-[#ede8df]/70 font-light"
                     style={{ letterSpacing: '0.2em' }}
                   >
-                    Bold Authentic Aesthetic Dreams
+                    Odubo Studio
                   </motion.p>
 
                   {/* Terracotta divider */}

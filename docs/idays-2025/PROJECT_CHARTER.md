@@ -1,6 +1,6 @@
 # Project Charter
 
-## BAAD @ IDAYS.TRU
+## odubo studio @ IDAYS.TRU
 
 **International Days 2025 Performance & Fashion Experience**
 
@@ -10,7 +10,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Project Name** | BAAD @ IDAYS.TRU |
+| **Project Name** | odubo studio @ IDAYS.TRU |
 | **Project Tagline** | A Cinematic Cultural Experience |
 | **Project Code** | IDAYS-2025 |
 | **Start Date** | February 1, 2025 |
@@ -35,10 +35,10 @@
 ## Project Purpose
 
 ### Vision Statement
-Transform International Days 2025 into a cinematic, multi-location experience that celebrates cultural diversity through live music, fashion, and community movement, culminating in professional content that serves both the BAAD brand and the TRU community.
+Transform International Days 2025 into a cinematic, multi-location experience that celebrates cultural diversity through live music, fashion, and community movement, culminating in professional content that serves both the odubo studio brand and the TRU community.
 
 ### Business Case
-- Establish BAAD brand presence in the Kamloops community
+- Establish odubo studio brand presence in the Kamloops community
 - Create professional content portfolio for future use
 - Build relationships with TRU World and university administration
 - Demonstrate capability for large-scale event production
@@ -56,7 +56,7 @@ Transform International Days 2025 into a cinematic, multi-location experience th
 
 ### Secondary Objectives
 1. Build a reliable team for future events
-2. Establish BAAD @ [Event] model for replication
+2. Establish odubo studio @ [Event] model for replication
 3. Create lasting content (documentary, clips, photos)
 4. Strengthen TRU World relationship
 
@@ -68,7 +68,7 @@ Transform International Days 2025 into a cinematic, multi-location experience th
 | Category | Included |
 |----------|----------|
 | **Locations** | Old Main performance, Old Gym performance |
-| **Fashion** | Runway show, BAAD clothing, model coordination |
+| **Fashion** | Runway show, odubo studio clothing, model coordination |
 | **Music** | Band rehearsals, choir coordination, finale arrangement |
 | **Dance** | Ximena's choreographed piece, backup dancers |
 | **Content** | Videography, photography, post-production editing |
@@ -100,7 +100,7 @@ Transform International Days 2025 into a cinematic, multi-location experience th
 | Stakeholder | Interest | Influence |
 |-------------|----------|-----------|
 | TRU Administration | Positive representation | Low-Medium |
-| BAAD Followers | Brand activity | Low |
+| odubo studio Followers | Brand activity | Low |
 | Campus Community | Event quality | Low |
 
 ---
@@ -169,7 +169,7 @@ Transform International Days 2025 into a cinematic, multi-location experience th
 
 | Category | Items | Priority |
 |----------|-------|----------|
-| **Wardrobe** | BAAD pieces for performers/models | Essential |
+| **Wardrobe** | odubo studio pieces for performers/models | Essential |
 | **Equipment** | Any rental equipment needed | As needed |
 | **Production** | Memory cards, batteries, etc. | Essential |
 | **Supplies** | Water bottles, small logistics | Essential |
@@ -208,7 +208,7 @@ Changes to scope, schedule, or budget must be:
 
 ## Approval
 
-This Project Charter establishes the formal authorization to proceed with BAAD @ IDAYS.TRU. By signing below, stakeholders confirm their understanding of and commitment to the project as defined.
+This Project Charter establishes the formal authorization to proceed with odubo studio @ IDAYS.TRU. By signing below, stakeholders confirm their understanding of and commitment to the project as defined.
 
 | Role | Name | Signature | Date |
 |------|------|-----------|------|
@@ -227,4 +227,4 @@ This Project Charter establishes the formal authorization to proceed with BAAD @
 
 ---
 
-*This charter serves as the foundational governance document for the BAAD @ IDAYS.TRU project. All team members should familiarize themselves with its contents.*
+*This charter serves as the foundational governance document for the odubo studio @ IDAYS.TRU project. All team members should familiarize themselves with its contents.*
