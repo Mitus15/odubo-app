@@ -14,6 +14,7 @@ export async function POST(req: Request) {
     const code = body.code || body.eventCode || null;
     const key = body.r2_key || body.key; // r2 object key
     const thumbnailKey = body.thumbnail_key || body.thumbnailKey || null;
+    const thumbnailDataUrl = body.thumbnail || null; // Base64 thumbnail from client for video clips
     const uid = body.uid || Math.random().toString(36).slice(2, 10);
     const originalFilename = body.original_filename || body.originalFilename || null;
     const userName = body.user_name || body.userName || null;

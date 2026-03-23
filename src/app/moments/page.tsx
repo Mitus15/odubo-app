@@ -1,6 +1,7 @@
 import { generateSeoMetadata } from '@/lib/seo';
 import type { Metadata } from 'next';
 import MomentsPageClient from './MomentsPageClient';
+import MomentsNav from '@/components/moments/MomentsNav';
 
 export const metadata: Metadata = generateSeoMetadata({
   title: 'Moments',
@@ -11,5 +12,10 @@ export const metadata: Metadata = generateSeoMetadata({
 export const dynamic = 'force-dynamic';
 
 export default function MomentsPage() {
-  return <MomentsPageClient />;
+  return (
+    <div className="min-h-screen bg-[#171616]">
+      <MomentsNav />
+      <MomentsPageClient />
+    </div>
+  );
 }

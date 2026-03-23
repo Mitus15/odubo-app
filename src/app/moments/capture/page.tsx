@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState, use } from 'react';
 import Link from 'next/link';
+import VideoRecorder from '@/components/moments/VideoRecorder';
 
 export default function CapturePage({ searchParams }: { searchParams?: Promise<{ code?: string; starts_at?: string; ends_at?: string; ig?: string }> }) {
   const params = searchParams ? use(searchParams) : {};
@@ -20,8 +21,9 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
   const [error, setError] = useState('');
   const [mediaBlob, setMediaBlob] = useState<Blob | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  // We only support photos for now
-  const [mediaType] = useState<'photo'>('photo');
+  // We support photos and videos
+  const [mediaType, setMediaType] = useState<'photo' | 'video'>('photo');
+  const [videoModeActive, setVideoModeActive] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [cameraStarted, setCameraStarted] = useState(false);
@@ -35,6 +37,25 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
   const [userName, setUserName] = useState<string>('');
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [videoBlob, setVideoBlob] = useState<Blob | null>(null);
+  const [videoThumbnail, setVideoThumbnail] = useState<string | null>(null);
+
+  function handleVideoComplete(blob: Blob, thumbnail: string | null) {
+    setVideoBlob(blob);
+    setVideoThumbnail(thumbnail);
+    setMediaType('video');
+    setVideoModeActive(false);
+  }
+
+  function handleVideoError(error: string) {
+    setError(error);
+  }
+
+  function resetVideo() {
+    setVideoBlob(null);
+    setVideoThumbnail(null);
+    setMediaType('photo');
+  }
   // Helper: dataURL -> Blob (for Safari toBlob fallback)
   function dataURLToBlob(dataURL: string) {
     const parts = dataURL.split(',');
@@ -45,24 +66,6 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
     const u8arr = new Uint8Array(n);
     while (n--) u8arr[n] = bstr.charCodeAt(n);
     return new Blob([u8arr], { type: mime });
-  }
-
-  // Create a robust preview URL (object URL with dataURL fallback)
-  async function createPreviewURLFromBlob(blob: Blob): Promise<string> {
-    try {
-      const url = URL.createObjectURL(blob);
-      // quick sanity check via size; many failures throw, but we keep a fallback
-      if (blob.size > 0) return url;
-      URL.revokeObjectURL(url);
-    } catch {}
-    // Fallback to data URL
-    const reader = new FileReader();
-    const p = new Promise<string>((resolve) => {
-      reader.onload = () => resolve(String(reader.result || ''));
-      reader.onerror = () => resolve('');
-    });
-    reader.readAsDataURL(blob);
-    return p;
   }
 
   async function waitForVideoReady(video: HTMLVideoElement) {
@@ -429,7 +432,8 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
   }
 
   async function uploadMedia() {
-    if (!mediaBlob || !code) return setError('No media or event code');
+    const currentMediaBlob = videoBlob || mediaBlob;
+    if (!currentMediaBlob || !code) return setError('No media or event code');
     if (!galleryInfo) return setError('Please validate event code first');
     if (!canUploadNow()) return setError('This event is not accepting uploads at this time.');
 
@@ -461,20 +465,29 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
         };
         xhr.onerror = () => reject(new Error('Network error'));
         xhr.setRequestHeader('Content-Type', mediaType === 'photo' ? 'image/jpeg' : 'video/webm');
-        xhr.send(mediaBlob);
+        xhr.send(currentMediaBlob);
       });
 
       // Record in database
       const rRes = await fetch('/api/moments/record', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code, r2_key: key, original_filename: filename, user_name: (userName || 'Anonymous'), media_type: mediaType }),
+        body: JSON.stringify({ 
+          code, 
+          r2_key: key, 
+          original_filename: filename, 
+          user_name: (userName || 'Anonymous'), 
+          media_type: mediaType,
+          thumbnail: videoThumbnail || undefined,
+        }),
       });
       const rData = (await rRes.json()) as any;
       if (!rRes.ok) throw new Error(rData?.error || 'Failed to record');
 
       setMediaBlob(null);
       setPreviewUrl(null);
+      setVideoBlob(null);
+      setVideoThumbnail(null);
       setProgress(0);
       setUploadSuccess(true);
       setTimeout(() => setUploadSuccess(false), 3000);
@@ -718,6 +731,25 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
                 </div>
 
                 {/* Camera start */}
+                {videoModeActive && galleryInfo ? (
+                  <div className="rounded-2xl overflow-hidden border border-[#3b3733]">
+                    <VideoRecorder
+                      galleryId={galleryInfo.id}
+                      code={code!}
+                      onRecordingComplete={handleVideoComplete}
+                      onError={handleVideoError}
+                      maxDuration={15}
+                    />
+                    <div className="p-4 bg-[#1f1e1d] border-t border-[#3b3733]">
+                      <button 
+                        onClick={() => setVideoModeActive(false)}
+                        className="text-sm text-[#b2a491] hover:text-[#ede8df] transition-colors"
+                      >
+                        ← Back to photo mode
+                      </button>
+                    </div>
+                  </div>
+                ) : (
                 <div className="p-6 sm:p-8 bg-gradient-to-br from-blue-900/20 to-indigo-900/20 border border-blue-600/30 rounded-2xl text-center">
                   <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
                     <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -735,6 +767,22 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
                     Default: {facingMode === 'environment' ? 'Back' : 'Front'} camera
                   </div>
                 </div>
+                )}
+
+                {/* Mode toggle between photo and video */}
+                {!videoModeActive && (
+                  <div className="flex justify-center">
+                    <button 
+                      onClick={() => setVideoModeActive(true)}
+                      className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-600/20 border border-purple-500/50 text-purple-300 hover:bg-purple-600/30 transition-colors text-sm"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                      Record Video (15s)
+                    </button>
+                  </div>
+                )}
               </div>
             )}
             
@@ -836,8 +884,63 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
             {/* Hidden canvas for photo capture */}
             <canvas ref={canvasRef} style={{ display: 'none' }} />
             
-            {/* Media Preview */}
-            {mediaBlob && (
+            {/* Video Preview (from VideoRecorder) */}
+            {videoBlob && (
+              <div id="capture-preview" className="space-y-4">
+                <div className="p-4 sm:p-6 bg-[#1f1e1d] border border-[#3b3733] rounded-2xl">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-[#ede8df] flex items-center gap-2">
+                      <svg className="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                      Video Preview
+                    </h3>
+                    <button 
+                      onClick={resetVideo}
+                      className="text-sm text-[#b2a491] hover:text-red-400 transition-colors"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                  <video 
+                    src={URL.createObjectURL(videoBlob)} 
+                    controls 
+                    className="w-full rounded-xl shadow-lg"
+                  />
+                  {videoThumbnail && (
+                    <div className="mt-2">
+                      <span className="text-xs text-[#666461]">Thumbnail generated</span>
+                    </div>
+                  )}
+                </div>
+
+                <button 
+                  onClick={uploadMedia} 
+                  disabled={uploading || !canUploadNow()} 
+                  className="w-full px-6 py-4 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold hover:from-purple-500 hover:to-indigo-500 transition-all shadow-lg shadow-purple-600/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none text-lg flex items-center justify-center gap-3"
+                >
+                  {uploading ? (
+                    <>
+                      <svg className="w-6 h-6 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      Uploading {progress}%
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                      </svg>
+                      Upload Video
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
+            
+            {/* Photo Preview */}
+            {mediaBlob && !videoBlob && (
               <div id="capture-preview" className="space-y-4">
                 <div className="p-4 sm:p-6 bg-[#1f1e1d] border border-[#3b3733] rounded-2xl">
                   <h3 className="text-lg font-semibold text-[#ede8df] mb-4 flex items-center gap-2">
