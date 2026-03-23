@@ -78,6 +78,12 @@ export const gallery = {
     return `galleries/${safeSlug}/videos/${safeFilename}`;
   },
 
+  clips: (slug: string, filename: string): string => {
+    const safeSlug = toSlug(slug);
+    const safeFilename = sanitizeFilename(filename);
+    return `galleries/${safeSlug}/clips/${safeFilename}`;
+  },
+
   thumbnail: (slug: string, filename: string): string => {
     const safeSlug = toSlug(slug);
     const safeFilename = sanitizeFilename(filename);

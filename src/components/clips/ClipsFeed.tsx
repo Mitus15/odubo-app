@@ -1,12 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type MutableRefObject } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import type { ClipItem, ClipApiRow } from '@/types/clips';
 import { mapClipRows } from '@/lib/clipsMapper';
 import { useAudio } from '@/contexts/AudioContext';
 import { useAnalyticsSafe } from '@/contexts/AnalyticsContext';
 import PosterCard from '@/components/clips/PosterCard';
-import ClipFeedMenu, { type SortMode } from '@/components/clips/ClipFeedMenu';
+import type { SortMode } from '@/components/clips/ClipFeedMenu';
 
 const PAGE_SIZE = 12; // Larger pages for better infinite scroll
 
@@ -528,7 +529,6 @@ export default function ClipsFeed({
               clip={clip}
               active={activeId === clip.id}
               videoReady={activeId === clip.id && videoReady}
-              onTitleTap={activeId === clip.id ? () => setMenuOpen(prev => !prev) : undefined}
             />
           </section>
         );
@@ -550,16 +550,179 @@ export default function ClipsFeed({
         </div>
       )}
 
-      {/* Feed filter/sort menu */}
-      <ClipFeedMenu
-        open={menuOpen}
+      {/* Glass panel — bottom-left, collapsible filter/sort + title */}
+      <GlassPanel
+        menuOpen={menuOpen}
+        onToggle={() => setMenuOpen(prev => !prev)}
         onClose={() => setMenuOpen(false)}
         parents={parentVideos}
         activeParentId={filterParentId}
         onFilterParent={(id) => { setFilterParentId(id); setMenuOpen(false); }}
         sortMode={sortMode}
         onSortChange={(mode) => { setSortMode(mode); setMenuOpen(false); }}
+        activeTitle={displayClips.find(c => c.id === activeId)?.parentTitle || displayClips.find(c => c.id === activeId)?.title || ''}
       />
     </div>
+  );
+}
+
+// ============================================================================
+// GlassPanel — Bottom-left collapsible filter/sort panel
+// ============================================================================
+
+interface GlassPanelProps {
+  menuOpen: boolean;
+  onToggle: () => void;
+  onClose: () => void;
+  parents: Array<{ id: number; title: string }>;
+  activeParentId: number | null;
+  onFilterParent: (id: number | null) => void;
+  sortMode: SortMode;
+  onSortChange: (mode: SortMode) => void;
+  activeTitle: string;
+}
+
+const sortOptions: { mode: SortMode; label: string }[] = [
+  { mode: 'shuffle', label: 'Shuffle' },
+  { mode: 'newest', label: 'Newest' },
+  { mode: 'oldest', label: 'Oldest' },
+  { mode: 'popular', label: 'Popular' },
+];
+
+function GlassPanel({
+  menuOpen,
+  onToggle,
+  onClose,
+  parents,
+  activeParentId,
+  onFilterParent,
+  sortMode,
+  onSortChange,
+  activeTitle,
+}: GlassPanelProps) {
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  // Click outside to close
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
+        onClose();
+      }
+    };
+    const timeout = setTimeout(() => {
+      document.addEventListener('click', handleClickOutside);
+    }, 100);
+    return () => {
+      clearTimeout(timeout);
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [menuOpen, onClose]);
+
+  return (
+    <motion.div
+      ref={panelRef}
+      className="fixed z-40 left-4 md:hidden"
+      style={{
+        bottom: 'max(env(safe-area-inset-bottom, 0px), 16px)',
+        maxWidth: '66%',
+      }}
+      animate={{ height: menuOpen ? 'auto' : 48 }}
+      transition={{ type: 'spring', stiffness: 400, damping: 35 }}
+    >
+      <div className="bg-black/30 backdrop-blur-xl border border-white/5 rounded-2xl overflow-hidden">
+        {/* Collapsed title */}
+        <button
+          onClick={onToggle}
+          className="w-full flex items-center h-12 px-4 text-left active:scale-[0.98] transition-transform gap-2"
+          style={{ touchAction: 'manipulation' }}
+          aria-label={menuOpen ? 'Close menu' : 'Open filter menu'}
+        >
+          <p className="text-sm font-medium text-white/80 truncate">
+            {activeTitle}
+          </p>
+          <svg
+            className="w-4 h-4 text-white/30 shrink-0 transition-transform duration-200"
+            style={{ transform: menuOpen ? 'rotate(0deg)' : 'rotate(180deg)' }}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+
+        {/* Expanded menu */}
+        <AnimatePresence>
+          {menuOpen && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+              className="overflow-hidden"
+            >
+              <div className="px-4 pb-4 pt-1 space-y-4">
+                {/* Filter by parent video */}
+                {parents.length > 0 && (
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wider text-white/25 mb-2 font-medium">Filter</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      <button
+                        onClick={() => onFilterParent(null)}
+                        className={`px-3 py-1 rounded-full text-xs font-medium transition-all active:scale-95 ${
+                          activeParentId === null
+                            ? 'bg-white/12 text-white/80'
+                            : 'bg-white/[0.03] text-white/35'
+                        }`}
+                        style={{ touchAction: 'manipulation' }}
+                      >
+                        All
+                      </button>
+                      {parents.map(p => (
+                        <button
+                          key={p.id}
+                          onClick={() => onFilterParent(p.id)}
+                          className={`px-3 py-1 rounded-full text-xs font-medium transition-all active:scale-95 truncate max-w-[140px] ${
+                            activeParentId === p.id
+                              ? 'bg-white/12 text-white/80'
+                              : 'bg-white/[0.03] text-white/35'
+                          }`}
+                          style={{ touchAction: 'manipulation' }}
+                        >
+                          {p.title}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Sort options */}
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-white/25 mb-2 font-medium">Sort</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {sortOptions.map(opt => (
+                      <button
+                        key={opt.mode}
+                        onClick={() => onSortChange(opt.mode)}
+                        className={`px-3 py-1 rounded-full text-xs font-medium transition-all active:scale-95 ${
+                          sortMode === opt.mode
+                            ? 'bg-white/12 text-white/80'
+                            : 'bg-white/[0.03] text-white/35'
+                        }`}
+                        style={{ touchAction: 'manipulation' }}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </motion.div>
   );
 }

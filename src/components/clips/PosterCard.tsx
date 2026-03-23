@@ -9,7 +9,6 @@ interface PosterCardProps {
   clip: ClipItem;
   active: boolean;
   videoReady?: boolean; // Only fade when video is actually ready
-  onTitleTap?: () => void;
 }
 
 /**
@@ -26,7 +25,7 @@ interface PosterCardProps {
  * Wrapped with React.memo to prevent re-renders during scroll
  * when props haven't meaningfully changed.
  */
-function PosterCard({ clip, active, videoReady = false, onTitleTap }: PosterCardProps) {
+function PosterCard({ clip, active, videoReady = false }: PosterCardProps) {
   // Only become transparent when video is actually ready to show
   const shouldReveal = active && videoReady;
 
@@ -78,27 +77,6 @@ function PosterCard({ clip, active, videoReady = false, onTitleTap }: PosterCard
         onClick={(e) => e.stopPropagation()}
       >
         <VinylMiniPlayer className="mb-3" />
-
-        <div className="max-w-[260px]">
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); onTitleTap?.(); }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-left active:scale-95 transition-all"
-            style={{
-              background: 'rgba(255, 255, 255, 0.08)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              backdropFilter: 'blur(12px)',
-              WebkitBackdropFilter: 'blur(12px)',
-            }}
-          >
-            <h3 className="text-sm font-semibold text-white truncate drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
-              {clip.parentTitle || clip.title}
-            </h3>
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="shrink-0 opacity-40">
-              <path d="M4.5 2.5L7.5 6L4.5 9.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </button>
-        </div>
       </div>
 
     </div>
@@ -110,8 +88,7 @@ function arePropsEqual(prevProps: PosterCardProps, nextProps: PosterCardProps): 
   return (
     prevProps.clip.id === nextProps.clip.id &&
     prevProps.active === nextProps.active &&
-    prevProps.videoReady === nextProps.videoReady &&
-    prevProps.onTitleTap === nextProps.onTitleTap
+    prevProps.videoReady === nextProps.videoReady
   );
 }
 

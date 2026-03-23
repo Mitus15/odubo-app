@@ -11,6 +11,10 @@ interface ConnectButtonProps {
   onExternalOpenHandled?: () => void;
   /** Suppress auto-trigger while welcome/intro is showing */
   suppressAutoTrigger?: boolean;
+  /** Hide the fixed button (for when it's triggered from another component like ClipsHeader) */
+  hideButton?: boolean;
+  /** Callback to let parent trigger the connect modal open */
+  onConnectOpen?: (openFn: () => void) => void;
 }
 
 /**
@@ -20,27 +24,10 @@ interface ConnectButtonProps {
  * Tapping opens the Connect page (LinkTreeModal) which animates from this button.
  * Also auto-opens when EmailCaptureContext triggers (after welcome is dismissed).
  */
-export default function ConnectButton({ externalOpen, onExternalOpenHandled, suppressAutoTrigger }: ConnectButtonProps) {
+export default function ConnectButton({ externalOpen, onExternalOpenHandled, suppressAutoTrigger, hideButton, onConnectOpen }: ConnectButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const { isOpen: emailAutoTrigger, closeModal: dismissEmailTrigger } = useEmailCapture();
-
-  // Handle external open trigger (from URL route like /links)
-  useEffect(() => {
-    if (externalOpen && !isOpen) {
-      setIsOpen(true);
-      onExternalOpenHandled?.();
-    }
-  }, [externalOpen, isOpen, onExternalOpenHandled]);
-
-  // Handle email capture auto-trigger — opens Connect page instead of old popup
-  // Waits until welcome/intro has been dismissed
-  useEffect(() => {
-    if (emailAutoTrigger && !isOpen && !suppressAutoTrigger) {
-      setIsOpen(true);
-      dismissEmailTrigger();
-    }
-  }, [emailAutoTrigger, isOpen, suppressAutoTrigger, dismissEmailTrigger]);
 
   const handleOpen = useCallback(() => {
     setIsOpen(true);
@@ -50,11 +37,18 @@ export default function ConnectButton({ externalOpen, onExternalOpenHandled, sup
     setIsOpen(false);
   }, []);
 
+  // Expose the open function to parent so external triggers (e.g. ClipsHeader) can open the modal
+  useEffect(() => {
+    if (onConnectOpen) {
+      onConnectOpen(handleOpen);
+    }
+  }, [onConnectOpen, handleOpen]);
+
   return (
     <>
-      {/* Persistent Connect button — top-right, below mute */}
+      {/* Persistent Connect button — top-right, below mute. Hidden when hideButton is true. */}
       <AnimatePresence>
-        {!isOpen && (
+        {!isOpen && !hideButton && (
           <motion.button
             ref={buttonRef}
             initial={{ opacity: 0, scale: 0.8 }}

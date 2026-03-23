@@ -7,6 +7,7 @@ import ClipsFeed from '@/components/clips/ClipsFeed';
 import SingleVideoPlayer from '@/components/clips/SingleVideoPlayer';
 import TracksFeed from '@/components/music/TracksFeed';
 import ClipsErrorBoundary from '@/components/clips/ClipsErrorBoundary';
+import ClipsHeader from '@/components/clips/ClipsHeader';
 import ExpandableLogoMenu from '@/components/clips/ExpandableLogoMenu';
 import ConnectButton from '@/components/navigation/ConnectButton';
 import FilmGrain from '@/components/ui/FilmGrain';
@@ -91,6 +92,15 @@ export default function HomePageClient({
 
   // LinkTree modal state (for /links route)
   const [linkTreeOpen, setLinkTreeOpen] = useState(false);
+
+  // Connect open function ref (for ClipsHeader to trigger)
+  const connectOpenRef = useRef<(() => void) | null>(null);
+  const handleConnectOpen = useCallback((openFn: () => void) => {
+    connectOpenRef.current = openFn;
+  }, []);
+  const triggerConnect = useCallback(() => {
+    connectOpenRef.current?.();
+  }, []);
 
   // Audio state
   const { isMuted, toggleMute: toggleClipsMute } = useAudio();
@@ -371,10 +381,10 @@ export default function HomePageClient({
         )}
       </ClipsErrorBoundary>
 
-      {/* Mute Button - Top right, hidden when overlays are open */}
+      {/* Mute Button - Top right, desktop only (mobile uses ClipsHeader) */}
       {!anyOverlayOpen && <button
         onClick={handleMuteToggle}
-        className="fixed z-40 flex items-center justify-center rounded-full bg-black/40 backdrop-blur-xl border border-white/10 text-white shadow-lg active:scale-90 transition-transform right-4 md:right-16"
+        className="hidden md:flex fixed z-40 items-center justify-center rounded-full bg-black/40 backdrop-blur-xl border border-white/10 text-white shadow-lg active:scale-90 transition-transform right-16"
         style={{
           top: 'max(env(safe-area-inset-top, 12px), 12px)',
           width: 44,
@@ -396,7 +406,7 @@ export default function HomePageClient({
         )}
       </button>}
 
-      {/* Word Button - Single transforming button, hidden when overlays are open */}
+      {/* Word Button - Desktop only (mobile uses ClipsHeader) */}
       <AnimatePresence mode="wait">
         {phase !== 'intro' && !anyOverlayOpen && (
           <motion.button
@@ -406,7 +416,7 @@ export default function HomePageClient({
             exit={{ opacity: 0, scale: 0.8 }}
             transition={{ type: 'spring', stiffness: 500, damping: 30 }}
             onClick={handlePillClick}
-            className="fixed z-40 flex items-center justify-center rounded-full bg-black/40 backdrop-blur-xl border border-white/10 text-white shadow-lg active:scale-90 transition-transform left-4 md:left-auto md:right-4"
+            className="hidden md:flex fixed z-40 items-center justify-center rounded-full bg-black/40 backdrop-blur-xl border border-white/10 text-white shadow-lg active:scale-90 transition-transform right-4"
             style={{
               top: 'max(env(safe-area-inset-top, 12px), 12px)',
               touchAction: 'manipulation',
@@ -588,12 +598,25 @@ export default function HomePageClient({
         </div>
       )}
 
-      {/* Connect button - hidden when any overlay is open */}
+      {/* Connect button - hidden when any overlay is open. Button hidden on mobile (ClipsHeader handles it) */}
       {!anyOverlayOpen && (
         <ConnectButton
           externalOpen={linkTreeOpen}
           onExternalOpenHandled={() => setLinkTreeOpen(false)}
           suppressAutoTrigger={phase === 'intro'}
+          hideButton={true}
+          onConnectOpen={handleConnectOpen}
+        />
+      )}
+
+      {/* Clips Header - mobile only glass bar with logo, words, mute, connect */}
+      {!anyOverlayOpen && (
+        <ClipsHeader
+          isMuted={currentMuted}
+          onMuteToggle={handleMuteToggle}
+          versePhase={phase === 'intro' ? 'collapsed' : phase}
+          onVerseClick={(e) => handlePillClick(e)}
+          onConnectClick={triggerConnect}
         />
       )}
     </div>
