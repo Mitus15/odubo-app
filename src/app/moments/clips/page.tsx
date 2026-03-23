@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { Suspense, useEffect, useState, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 
@@ -19,7 +19,7 @@ interface Clip {
   created_at: string;
 }
 
-export default function MomentsClipsPage() {
+function MomentsClipsContent() {
   const params = useSearchParams();
   const eventId = params?.get('eventId');
   const code = params?.get('code');
@@ -238,5 +238,13 @@ export default function MomentsClipsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function MomentsClipsPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-black flex items-center justify-center"><div className="text-white">Loading...</div></div>}>
+      <MomentsClipsContent />
+    </Suspense>
   );
 }
