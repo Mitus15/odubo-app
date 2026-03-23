@@ -561,17 +561,19 @@ function CameraModal({ galleryId, ig, code, onClose, onUploadSuccess }: {
     if (!galleryId) throw new Error('Missing gallery ID');
     const filename = `photo_${Date.now()}.jpg`;
     let key: string | null = null;
-    const attempts = [
-      () => tryDirectUpload(filename, item.blob),
-      () => tryDirectUpload(filename, item.blob),
-      () => tryProxyUpload(filename, item.blob),
-      () => tryProxyUpload(filename, item.blob),
-    ];
-    let lastErr: any = null;
-    for (const fn of attempts) {
-      try { key = await fn(); break; } catch (e) { lastErr = e; }
+
+    // Try direct upload first, fall back to proxy
+    try {
+      key = await tryDirectUpload(filename, item.blob);
+    } catch (directErr: any) {
+      console.warn('Direct upload failed, trying proxy:', directErr?.message);
+      try {
+        key = await tryProxyUpload(filename, item.blob);
+      } catch {
+        throw directErr; // Throw original direct error as it's usually more informative
+      }
     }
-    if (!key) throw lastErr || new Error('Upload failed');
+
     const r = await timeoutFetch('/api/moments/record', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

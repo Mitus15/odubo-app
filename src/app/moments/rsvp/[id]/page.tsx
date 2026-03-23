@@ -159,7 +159,7 @@ export default function MomentsRsvpPage() {
           {error && <div className="mt-4 p-3 rounded-lg border border-red-700/70 bg-red-900/30 text-red-200">{error}</div>}
 
           <div className="mt-5 flex items-center gap-3">
-            <button onClick={submit} disabled={!email || saving} className="px-5 py-2.5 rounded-full bg-[#ede8df] text-[#171616] font-extrabold tracking-wide disabled:opacity-50">{saving ? 'Saving…' : done ? 'Saved' : 'Save RSVP'}</button>
+            <button onClick={submit} disabled={(!email && !ig && !phone) || saving} className="px-5 py-2.5 rounded-full bg-[#ede8df] text-[#171616] font-extrabold tracking-wide disabled:opacity-50">{saving ? 'Saving…' : done ? 'Saved' : 'Save RSVP'}</button>
             {beforeStart && <a href={`/moments?galleryId=${encodeURIComponent(String(id))}`} className="text-sm underline">Back to Moments</a>}
           </div>
           {done && <div className="mt-3 text-sm text-[#cfc2ae]">All set! Well remind you before it starts.</div>}

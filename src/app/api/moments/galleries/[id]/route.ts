@@ -27,6 +27,10 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
     );
 
     const gallery = { ...(rows[0] as object), links };
+    // Parse config if stored as JSON string
+    if (gallery && typeof (gallery as any).config === 'string') {
+      try { (gallery as any).config = JSON.parse((gallery as any).config); } catch { (gallery as any).config = {}; }
+    }
     return NextResponse.json({ gallery });
   } catch (e: any) {
     return NextResponse.json({ error: e.message || 'Failed' }, { status: 500 });

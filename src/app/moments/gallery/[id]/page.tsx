@@ -98,12 +98,26 @@ export default function GalleryViewer({ params }: { params: Promise<{ id: string
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [error, setError] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
+  const [loadingMore, setLoadingMore] = useState<boolean>(false);
+  const [hasMore, setHasMore] = useState<boolean>(true);
   const [viewerOpen, setViewerOpen] = useState(false);
   const [index, setIndex] = useState(0);
   const [galleryInfo, setGalleryInfo] = useState<GalleryInfo | null>(null);
+  const [copiedLink, setCopiedLink] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
-  const { openQuickShop } = useQuickShop();
+  
+  // Graceful QuickShop fallback - use context if available, otherwise navigate
+  let openQuickShop: ((handle: string) => void) | null = null;
+  try {
+    const qs = useQuickShop();
+    openQuickShop = qs.openQuickShop;
+  } catch {
+    // QuickShop context not available - use fallback navigation
+    openQuickShop = (handle: string) => {
+      window.location.href = `/store/product/${handle}`;
+    };
+  }
 
   // Setup portal root on mount
   useEffect(() => {
@@ -116,56 +130,65 @@ export default function GalleryViewer({ params }: { params: Promise<{ id: string
 
   const canFetch = useMemo(() => Number.isFinite(id), [id]);
 
-  const fetchPhotos = useCallback(async () => {
+  const PAGE_SIZE = 30;
+
+  const fetchPhotos = useCallback(async (append = false) => {
     if (!canFetch) return;
-    setLoading(true);
+    if (append) setLoadingMore(true); else setLoading(true);
     setError('');
     try {
       abortRef.current?.abort();
       const ac = new AbortController();
       abortRef.current = ac;
 
-      const infoRes = await fetch(`/api/moments/galleries/${id}`, { signal: ac.signal });
-      if (infoRes.ok) {
-        const infoData = await infoRes.json().catch(() => ({}));
-        if (infoData?.gallery) {
-          setGalleryInfo({
-            title: infoData.gallery.title,
-            description: infoData.gallery.description,
-            shopifyProductHandle: infoData.gallery.shopify_product_handle || undefined,
-            gallery_type: infoData.gallery.gallery_type || 'event',
-            upload_mode: infoData.gallery.upload_mode || 'public',
-            links: infoData.gallery.links || [],
-          });
+      if (!append) {
+        const infoRes = await fetch(`/api/moments/galleries/${id}`, { signal: ac.signal });
+        if (infoRes.ok) {
+          const infoData = await infoRes.json().catch(() => ({}));
+          if (infoData?.gallery) {
+            setGalleryInfo({
+              title: infoData.gallery.title,
+              description: infoData.gallery.description,
+              shopifyProductHandle: infoData.gallery.shopify_product_handle || undefined,
+              gallery_type: infoData.gallery.gallery_type || 'event',
+              upload_mode: infoData.gallery.upload_mode || 'public',
+              links: infoData.gallery.links || [],
+            });
+          }
         }
       }
 
+      const offset = append ? photos.length : 0;
       const url = new URL('/api/moments/list', window.location.origin);
       url.searchParams.set('galleryId', String(id));
       if (code) url.searchParams.set('code', code);
-      url.searchParams.set('limit', '200');
+      url.searchParams.set('limit', String(PAGE_SIZE));
+      url.searchParams.set('offset', String(offset));
       const res = await fetch(url.toString(), { signal: ac.signal });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || 'Failed to load photos');
-      const list = Array.isArray(data?.photos) ? data.photos : [];
-      setPhotos(list.filter((p: Photo) => p.moderated !== 2));
+      const list: Photo[] = Array.isArray(data?.photos) ? data.photos : [];
+      const filtered = list.filter((p: Photo) => p.moderated !== 2);
+      setPhotos(prev => append ? [...prev, ...filtered] : filtered);
+      setHasMore(list.length >= PAGE_SIZE);
     } catch (e: any) {
       if (e?.name !== 'AbortError') {
         setError(e?.message || String(e));
       }
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
-  }, [canFetch, id, code]);
+  }, [canFetch, id, code, photos.length]);
 
   useEffect(() => {
-    if (canFetch) fetchPhotos();
+    if (canFetch) fetchPhotos(false);
   }, [canFetch, fetchPhotos]);
 
   useEffect(() => {
     if (!canFetch) return;
     const timer = setInterval(() => {
-      if (!document.hidden) fetchPhotos();
+      if (!document.hidden) fetchPhotos(false);
     }, 30000);
     return () => clearInterval(timer);
   }, [canFetch, fetchPhotos]);
@@ -228,6 +251,33 @@ export default function GalleryViewer({ params }: { params: Promise<{ id: string
 
   const currentPhoto = photos[index];
 
+  async function shareGallery() {
+    const url = window.location.href;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: galleryInfo?.title || 'Photo Gallery', url });
+      } else {
+        await navigator.clipboard.writeText(url);
+        setCopiedLink(true);
+        setTimeout(() => setCopiedLink(false), 2000);
+      }
+    } catch {}
+  }
+
+  async function sharePhoto() {
+    if (!currentPhoto) return;
+    const url = currentPhoto.r2_url;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: galleryInfo?.title || 'Photo', url });
+      } else {
+        await navigator.clipboard.writeText(url);
+        setCopiedLink(true);
+        setTimeout(() => setCopiedLink(false), 2000);
+      }
+    } catch {}
+  }
+
   return (
     <div className="min-h-screen bg-[#0a0a0a] flex flex-col">
       {/* Gallery Header - scrolls with content, below app header */}
@@ -261,6 +311,22 @@ export default function GalleryViewer({ params }: { params: Promise<{ id: string
           </div>
 
           <span className="text-sm text-[#726d6c] tabular-nums">{photos.length}</span>
+
+          <button
+            onClick={shareGallery}
+            className="w-10 h-10 flex items-center justify-center rounded-full bg-[#1a1918] hover:bg-[#252221] transition-colors relative"
+            aria-label="Share gallery"
+          >
+            {copiedLink ? (
+              <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5 text-[#ede8df]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.933-2.185 2.25 2.25 0 00-3.933 2.185z" />
+              </svg>
+            )}
+          </button>
         </div>
       </header>
 
@@ -334,6 +400,29 @@ export default function GalleryViewer({ params }: { params: Promise<{ id: string
                 )}
               </button>
             ))}
+          </div>
+        )}
+
+        {/* Load More */}
+        {!loading && hasMore && photos.length > 0 && (
+          <div className="flex justify-center py-8">
+            <button
+              onClick={() => fetchPhotos(true)}
+              disabled={loadingMore}
+              className="px-6 py-3 rounded-xl bg-[#1a1918] border border-[#3b3733] text-sm text-[#ede8df] font-medium hover:bg-[#252221] transition-colors disabled:opacity-50"
+            >
+              {loadingMore ? (
+                <span className="flex items-center gap-2">
+                  <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  Loading...
+                </span>
+              ) : (
+                `Load More (${photos.length} loaded)`
+              )}
+            </button>
           </div>
         )}
       </main>
@@ -473,6 +562,30 @@ export default function GalleryViewer({ params }: { params: Promise<{ id: string
                 </svg>
               </a>
             )}
+
+            {/* Share button - top right, left of download */}
+            <button
+              onClick={sharePhoto}
+              style={{
+                position: 'absolute',
+                top: 'calc(16px + env(safe-area-inset-top, 0px))',
+                right: currentPhoto.media_type !== 'video' ? '72px' : '16px',
+                width: '48px',
+                height: '48px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: '50%',
+                backgroundColor: 'rgba(0,0,0,0.6)',
+                border: '1px solid rgba(255,255,255,0.2)',
+                zIndex: 100001,
+              }}
+              aria-label="Share"
+            >
+              <svg style={{ width: '22px', height: '22px', color: 'white' }} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.933-2.185 2.25 2.25 0 00-3.933 2.185z" />
+              </svg>
+            </button>
 
             {/* Image area - fills the screen */}
             <div

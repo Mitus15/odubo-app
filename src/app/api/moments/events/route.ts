@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
 import { EventCreateSchema } from '@/lib/momentsSchemas';
-import { executeQuery } from '@/lib/db';
+import { queryDatabase } from '@/lib/db';
 import { getUserFromRequest, isAdminUser } from '@/lib/auth';
 import { rateLimit } from '@/lib/rateLimit';
 import { writeAuditLog } from '@/lib/audit';
@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
       user.userId,
     ];
 
-    await executeQuery(sql, params);
+    await queryDatabase(sql, params);
 
     // Audit log
     await writeAuditLog(req, user, 'event_create', eventId, {
@@ -125,8 +125,7 @@ export async function GET(req: NextRequest) {
     sql += ' ORDER BY e.created_at DESC LIMIT ? OFFSET ?';
     params.push(limit, offset);
 
-    const result = await executeQuery(sql, params);
-    const events = result.result?.[0]?.results || [];
+    const events = await queryDatabase(sql, params);
 
     // Audit log
     await writeAuditLog(req, user, 'events_list', 'events', {

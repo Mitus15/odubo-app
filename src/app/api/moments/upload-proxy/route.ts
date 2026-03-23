@@ -74,10 +74,17 @@ export async function POST(req: NextRequest) {
 
     // Resolve gallery and enforce schedule (also load config for public allowance)
     const rows = code
-      ? await queryDatabase('SELECT id, code, title, starts_at, ends_at, config FROM galleries WHERE code = ? LIMIT 1', [code])
-      : await queryDatabase('SELECT id, code, title, starts_at, ends_at, config FROM galleries WHERE id = ? LIMIT 1', [galleryId]);
+      ? await queryDatabase('SELECT id, code, title, starts_at, ends_at, config, upload_mode FROM galleries WHERE code = ? LIMIT 1', [code])
+      : await queryDatabase('SELECT id, code, title, starts_at, ends_at, config, upload_mode FROM galleries WHERE id = ? LIMIT 1', [galleryId]);
     if (!rows[0]) return NextResponse.json({ error: 'Gallery not found' }, { status: 404 });
-  const g = rows[0] as { id: number; code?: string | null; title?: string | null; starts_at?: string | null; ends_at?: string | null; config?: any };
+  const g = rows[0] as { id: number; code?: string | null; title?: string | null; starts_at?: string | null; ends_at?: string | null; config?: any; upload_mode?: string | null };
+
+    // Check upload permission based on upload_mode
+    const uploadMode = g.upload_mode || 'public';
+    if (uploadMode === 'admin' && !isAdmin) {
+      return NextResponse.json({ error: 'This gallery only accepts uploads from administrators.' }, { status: 403 });
+    }
+
     const now = Date.now();
     const startOk = !g.starts_at || !Number.isNaN(Date.parse(g.starts_at)) ? (!g.starts_at || now >= Date.parse(g.starts_at!)) : true;
     const endOk = !g.ends_at || !Number.isNaN(Date.parse(g.ends_at)) ? (!g.ends_at || now <= Date.parse(g.ends_at!)) : true;

@@ -33,6 +33,8 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
   const [preferredBackId, setPreferredBackId] = useState<string | null>(null);
   const [selectedDeviceId, setSelectedDeviceId] = useState<string | 'auto'>('auto');
   const [userName, setUserName] = useState<string>('');
+  const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   // Helper: dataURL -> Blob (for Safari toBlob fallback)
   function dataURLToBlob(dataURL: string) {
     const parts = dataURL.split(',');
@@ -397,6 +399,35 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
     return true;
   }
 
+  function handleFileSelect(file: File) {
+    if (!file) return;
+    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
+    if (!allowed.includes(file.type)) {
+      setError('Unsupported file type. Use JPG, PNG, WebP, or HEIC.');
+      return;
+    }
+    if (file.size > 50 * 1024 * 1024) {
+      setError('File too large. Max 50 MB.');
+      return;
+    }
+    setError('');
+    setUploadSuccess(false);
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = String(reader.result);
+      setPreviewUrl(dataUrl);
+      setMediaBlob(dataURLToBlob(dataUrl));
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer?.files?.[0];
+    if (file) handleFileSelect(file);
+  }
+
   async function uploadMedia() {
     if (!mediaBlob || !code) return setError('No media or event code');
     if (!galleryInfo) return setError('Please validate event code first');
@@ -442,9 +473,11 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
       const rData = (await rRes.json()) as any;
       if (!rRes.ok) throw new Error(rData?.error || 'Failed to record');
 
-      alert('Uploaded!');
       setMediaBlob(null);
+      setPreviewUrl(null);
       setProgress(0);
+      setUploadSuccess(true);
+      setTimeout(() => setUploadSuccess(false), 3000);
     } catch (e: any) {
       setError(e?.message || String(e));
     } finally {
@@ -631,6 +664,15 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
               </label>
             </div>
             
+            {uploadSuccess && (
+              <div className="p-4 rounded-xl border border-emerald-600/50 bg-emerald-900/20 text-emerald-300 text-sm flex items-center gap-3">
+                <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                <span>Photo uploaded successfully!</span>
+              </div>
+            )}
+
             {error && (
               <div className="p-4 rounded-xl border border-red-600/50 bg-red-900/20 text-red-300 text-sm flex items-start gap-3">
                 <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -647,21 +689,51 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
             )}
             
             {!cameraStarted && (
-              <div className="p-6 sm:p-8 bg-gradient-to-br from-blue-900/20 to-indigo-900/20 border border-blue-600/30 rounded-2xl text-center">
-                <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
-                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                </div>
-                <button 
-                  onClick={() => startCamera()}
-                  className="px-8 py-4 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-semibold hover:from-blue-600 hover:to-indigo-700 transition-all shadow-lg shadow-blue-500/30 text-lg"
+              <div className="space-y-4">
+                {/* Drag & Drop zone - desktop */}
+                <div
+                  onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                  onDragLeave={() => setIsDragging(false)}
+                  onDrop={handleDrop}
+                  className={`hidden sm:block p-6 sm:p-8 border-2 border-dashed rounded-2xl text-center transition-colors ${
+                    isDragging
+                      ? 'border-[#ff8a3d] bg-[#ff8a3d]/10'
+                      : 'border-[#3b3733] bg-[#1f1e1d]/50 hover:border-[#502d26]'
+                  }`}
                 >
-                  📷 Start Camera
-                </button>
-                <div className="mt-4 text-sm text-blue-300/70">
-                  Default: {facingMode === 'environment' ? 'Back' : 'Front'} camera
+                  <svg className="w-10 h-10 mx-auto mb-3 text-[#666461]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                  </svg>
+                  <p className="text-sm text-[#b2a491] mb-2">Drag & drop a photo here</p>
+                  <p className="text-xs text-[#666461] mb-3">or</p>
+                  <label className="inline-block px-4 py-2 rounded-lg bg-[#3b3733] text-sm text-[#ede8df] font-medium hover:bg-[#502d26] transition-colors cursor-pointer">
+                    Choose File
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+                      className="hidden"
+                      onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFileSelect(f); }}
+                    />
+                  </label>
+                </div>
+
+                {/* Camera start */}
+                <div className="p-6 sm:p-8 bg-gradient-to-br from-blue-900/20 to-indigo-900/20 border border-blue-600/30 rounded-2xl text-center">
+                  <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+                    <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                  </div>
+                  <button 
+                    onClick={() => startCamera()}
+                    className="px-8 py-4 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-semibold hover:from-blue-600 hover:to-indigo-700 transition-all shadow-lg shadow-blue-500/30 text-lg"
+                  >
+                    📷 Start Camera
+                  </button>
+                  <div className="mt-4 text-sm text-blue-300/70">
+                    Default: {facingMode === 'environment' ? 'Back' : 'Front'} camera
+                  </div>
                 </div>
               </div>
             )}
