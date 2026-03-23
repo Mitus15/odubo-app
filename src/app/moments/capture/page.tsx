@@ -433,7 +433,8 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
 
   async function uploadMedia() {
     const currentMediaBlob = videoBlob || mediaBlob;
-    if (!currentMediaBlob || !code) return setError('No media or event code');
+    const uploadCode = code || codeInput; // Use URL code or form input code
+    if (!currentMediaBlob || !uploadCode) return setError('No media or event code');
     if (!galleryInfo) return setError('Please validate event code first');
     if (!canUploadNow()) return setError('This event is not accepting uploads at this time.');
 
@@ -445,7 +446,7 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
       const uRes = await fetch('/api/moments/upload-url', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code, fileName: filename }),
+        body: JSON.stringify({ code: uploadCode, fileName: filename }),
       });
       const uData = (await uRes.json()) as any;
       if (!uRes.ok) throw new Error(uData?.error || 'Failed to get upload url');
@@ -473,7 +474,7 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          code, 
+          code: uploadCode, 
           r2_key: key, 
           original_filename: filename, 
           user_name: (userName || 'Anonymous'), 
