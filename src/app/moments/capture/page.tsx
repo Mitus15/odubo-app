@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState, use } from 'react';
 import Link from 'next/link';
-import VideoRecorder from '@/components/moments/VideoRecorder';
+
 
 export default function CapturePage({ searchParams }: { searchParams?: Promise<{ code?: string; starts_at?: string; ends_at?: string; ig?: string }> }) {
   const params = searchParams ? use(searchParams) : {};
@@ -23,7 +23,12 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   // We support photos and videos
   const [mediaType, setMediaType] = useState<'photo' | 'video'>('photo');
-  const [videoModeActive, setVideoModeActive] = useState(false);
+  const [captureMode, setCaptureMode] = useState<'photo' | 'video'>('photo');
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [cameraStarted, setCameraStarted] = useState(false);
@@ -40,18 +45,69 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
   const [videoBlob, setVideoBlob] = useState<Blob | null>(null);
   const [videoThumbnail, setVideoThumbnail] = useState<string | null>(null);
 
-  function handleVideoComplete(blob: Blob, thumbnail: string | null) {
-    setVideoBlob(blob);
-    setVideoThumbnail(thumbnail);
-    setMediaType('video');
-    setVideoModeActive(false);
+  function startRecording() {
+    if (!stream || !stream.getAudioTracks().length) {
+      setError('Microphone not available');
+      return;
+    }
+    chunksRef.current = [];
+    const mediaRecorder = new MediaRecorder(stream, {
+      mimeType: 'video/webm;codecs=vp9,opus',
+    });
+    mediaRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0) {
+        chunksRef.current.push(e.data);
+      }
+    };
+    mediaRecorder.onstop = async () => {
+      const blob = new Blob(chunksRef.current, { type: 'video/webm' });
+      // Generate thumbnail
+      let thumbnail: string | null = null;
+      if (videoRef.current && canvasRef.current) {
+        const video = videoRef.current;
+        const canvas = canvasRef.current;
+        canvas.width = 320;
+        canvas.height = 180;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          thumbnail = canvas.toDataURL('image/jpeg', 0.7);
+        }
+      }
+      setVideoBlob(blob);
+      setVideoThumbnail(thumbnail);
+      setMediaType('video');
+      setIsRecording(false);
+      setRecordingTime(0);
+    };
+    mediaRecorderRef.current = mediaRecorder;
+    mediaRecorder.start(1000);
+    setIsRecording(true);
+    setRecordingTime(0);
+    // Start timer
+    timerRef.current = setInterval(() => {
+      setRecordingTime(prev => {
+        if (prev >= 60 - 1) {
+          stopRecording();
+          return prev;
+        }
+        return prev + 1;
+      });
+    }, 1000);
   }
 
-  function handleVideoError(error: string) {
-    setError(error);
+  function stopRecording() {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    }
   }
 
   function resetVideo() {
+    if (isRecording) stopRecording();
     setVideoBlob(null);
     setVideoThumbnail(null);
     setMediaType('photo');
@@ -200,7 +256,7 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
   }
 
   // Start the camera (optionally with specific facingMode or deviceId)
-  async function startCamera(opts?: { mode?: 'environment' | 'user'; deviceId?: string }) {
+  async function startCamera(opts?: { mode?: 'environment' | 'user'; deviceId?: string; audio?: boolean }) {
     try {
       if (typeof window !== 'undefined' && !window.isSecureContext) {
         setError('Camera requires HTTPS (or localhost). Please use a secure origin.');
@@ -228,7 +284,7 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
           video: desiredDeviceId
             ? { deviceId: { exact: desiredDeviceId } as any }
             : { facingMode: { ideal: desiredMode } as any },
-          audio: false,
+          audio: opts?.audio ?? false,
         };
         const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
         
@@ -390,7 +446,7 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
     setTimeout(() => document.getElementById('capture-preview')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
   }
 
-  // Video recording removed for now (photos only)
+
 
   // Check if uploads are allowed now
   function canUploadNow() {
@@ -525,6 +581,9 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
       }
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
     };
   }, [stream]);
 
@@ -533,6 +592,21 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
     if (!cameraStarted) return;
     refreshDevicesAndPersist(currentDeviceId || undefined);
   }, [cameraStarted, currentDeviceId]);
+
+  // Restart camera with appropriate audio when capture mode changes
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!cameraStarted) return;
+    startCamera({ audio: captureMode === 'video' });
+  }, [captureMode, cameraStarted]);
+
+  // Stop recording when switching away from video mode
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (captureMode === 'photo' && isRecording) {
+      stopRecording();
+    }
+  }, [captureMode, isRecording]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#0a0908] via-[#171616] to-[#0a0908]">
@@ -683,7 +757,7 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
                 <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
-                <span>Photo uploaded successfully!</span>
+                <span>{mediaType === 'photo' ? 'Photo uploaded successfully!' : 'Video uploaded successfully!'}</span>
               </div>
             )}
 
@@ -731,27 +805,34 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
                   </label>
                 </div>
 
-                {/* Camera start */}
-                {videoModeActive && galleryInfo ? (
-                  <div className="rounded-2xl overflow-hidden border border-[#3b3733]">
-                    <VideoRecorder
-                      galleryId={galleryInfo.id}
-                      code={code!}
-                      onRecordingComplete={handleVideoComplete}
-                      onError={handleVideoError}
-                      maxDuration={15}
-                    />
-                    <div className="p-4 bg-[#1f1e1d] border-t border-[#3b3733]">
-                      <button 
-                        onClick={() => setVideoModeActive(false)}
-                        className="text-sm text-[#b2a491] hover:text-[#ede8df] transition-colors"
+                {/* Camera start with mode selector */}
+                <div className="p-6 sm:p-8 bg-gradient-to-br from-blue-900/20 to-indigo-900/20 border border-blue-600/30 rounded-2xl text-center">
+                  {/* Mode selector */}
+                  <div className="flex justify-center mb-6">
+                    <div className="inline-flex rounded-lg bg-[#0a0908] border border-[#3b3733] p-1">
+                      <button
+                        onClick={() => setCaptureMode('photo')}
+                        className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                          captureMode === 'photo'
+                            ? 'bg-[#3b3733] text-[#ede8df]'
+                            : 'text-[#8f8271] hover:text-[#ede8df]'
+                        }`}
                       >
-                        ← Back to photo mode
+                        📷 Photo
+                      </button>
+                      <button
+                        onClick={() => setCaptureMode('video')}
+                        className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                          captureMode === 'video'
+                            ? 'bg-[#3b3733] text-[#ede8df]'
+                            : 'text-[#8f8271] hover:text-[#ede8df]'
+                        }`}
+                      >
+                        🎥 Video
                       </button>
                     </div>
                   </div>
-                ) : (
-                <div className="p-6 sm:p-8 bg-gradient-to-br from-blue-900/20 to-indigo-900/20 border border-blue-600/30 rounded-2xl text-center">
+                  
                   <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
                     <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
@@ -759,133 +840,191 @@ export default function CapturePage({ searchParams }: { searchParams?: Promise<{
                     </svg>
                   </div>
                   <button 
-                    onClick={() => startCamera()}
+                    onClick={() => startCamera({ audio: captureMode === 'video' })}
                     className="px-8 py-4 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-semibold hover:from-blue-600 hover:to-indigo-700 transition-all shadow-lg shadow-blue-500/30 text-lg"
                   >
                     📷 Start Camera
                   </button>
                   <div className="mt-4 text-sm text-blue-300/70">
-                    Default: {facingMode === 'environment' ? 'Back' : 'Front'} camera
+                    {captureMode === 'photo' ? 'Photos only' : 'Video with sound'} • Default: {facingMode === 'environment' ? 'Back' : 'Front'} camera
                   </div>
                 </div>
-                )}
 
-                {/* Mode toggle between photo and video */}
-                {!videoModeActive && (
-                  <div className="flex justify-center">
-                    <button 
-                      onClick={() => setVideoModeActive(true)}
-                      className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-600/20 border border-purple-500/50 text-purple-300 hover:bg-purple-600/30 transition-colors text-sm"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                      </svg>
-                      Record Video (15s)
-                    </button>
-                  </div>
-                )}
+
               </div>
             )}
             
             {/* Camera Feed */}
-            {cameraStarted && (
-              <div className="space-y-4">
-                <div className="relative rounded-2xl overflow-hidden bg-black border border-[#3b3733] shadow-2xl">
-                  <video
-                    ref={videoRef}
-                    autoPlay
-                    playsInline
-                    muted
-                    className="w-full h-auto"
-                    style={{ transform: isFrontActive() ? 'scaleX(-1)' : 'none', transformOrigin: 'center' }}
-                  />
-                  {/* Camera controls overlay */}
-                  <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
-                    <div className="flex items-center justify-center gap-4">
-                      <button 
-                        onClick={switchCamera} 
-                        className="p-3 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 hover:bg-white/20 transition-colors"
-                        title="Switch Camera"
-                      >
-                        <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
-                      </button>
-                      
-                      <button 
-                        onClick={takePhoto} 
-                        className="relative p-2 rounded-full bg-white shadow-lg hover:scale-105 transition-transform active:scale-95"
-                        title="Take Photo"
-                      >
-                        <div className="w-16 h-16 rounded-full border-4 border-[#171616] bg-white flex items-center justify-center">
-                          <svg className="w-8 h-8 text-[#171616]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                          </svg>
-                        </div>
-                      </button>
+             {cameraStarted && (
+               <div className="space-y-4">
+                 <div className="relative rounded-2xl overflow-hidden bg-black border border-[#3b3733] shadow-2xl">
+                   <video
+                     ref={videoRef}
+                     autoPlay
+                     playsInline
+                     muted
+                     className="w-full h-auto"
+                     style={{ transform: isFrontActive() ? 'scaleX(-1)' : 'none', transformOrigin: 'center' }}
+                   />
+                   
+                   {/* Side toggle - left side */}
+                   <div className="absolute left-4 top-1/2 -translate-y-1/2 z-10">
+                     <div className="flex flex-col gap-2 bg-black/30 backdrop-blur-sm rounded-2xl p-1 border border-white/10">
+                       <button
+                         onClick={() => setCaptureMode('photo')}
+                         className={`p-2 rounded-xl transition-colors ${
+                           captureMode === 'photo'
+                             ? 'bg-white/20 text-white'
+                             : 'text-white/50 hover:text-white/80'
+                         }`}
+                         title="Photo mode"
+                       >
+                         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                         </svg>
+                       </button>
+                       <button
+                         onClick={() => setCaptureMode('video')}
+                         className={`p-2 rounded-xl transition-colors ${
+                           captureMode === 'video'
+                             ? 'bg-white/20 text-white'
+                             : 'text-white/50 hover:text-white/80'
+                         }`}
+                         title="Video mode"
+                       >
+                         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                         </svg>
+                       </button>
+                     </div>
+                   </div>
+                   
+                   {/* Recording timer overlay */}
+                   {isRecording && (
+                     <div className="absolute top-4 left-4 flex items-center gap-2 px-3 py-1.5 bg-red-600/80 rounded-full">
+                       <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                       <span className="text-white text-sm font-medium">
+                         {recordingTime}s / 60s
+                       </span>
+                     </div>
+                   )}
 
-                      <button 
-                        onClick={() => { setMediaBlob(null); setPreviewUrl(null); setProgress(0); }} 
-                        className="p-3 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 hover:bg-white/20 transition-colors"
-                        title="Reset"
-                      >
-                        <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-                </div>
+                   {/* Camera controls overlay */}
+                   <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
+                     <div className="flex items-center justify-center gap-4">
+                       <button 
+                         onClick={switchCamera} 
+                         className="p-3 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 hover:bg-white/20 transition-colors"
+                         title="Switch Camera"
+                       >
+                         <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                         </svg>
+                       </button>
+                       
+                       {/* Capture button - changes based on mode and recording state */}
+                       {captureMode === 'photo' ? (
+                         <button 
+                           onClick={takePhoto} 
+                           className="relative p-2 rounded-full bg-white shadow-lg hover:scale-105 transition-transform active:scale-95"
+                           title="Take Photo"
+                         >
+                           <div className="w-16 h-16 rounded-full border-4 border-[#171616] bg-white flex items-center justify-center">
+                             <svg className="w-8 h-8 text-[#171616]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                             </svg>
+                           </div>
+                         </button>
+                       ) : (
+                         <button 
+                           onClick={isRecording ? stopRecording : startRecording} 
+                           className={`relative p-2 rounded-full shadow-lg hover:scale-105 transition-transform active:scale-95 ${
+                             isRecording ? 'bg-red-600' : 'bg-white'
+                           }`}
+                           title={isRecording ? 'Stop Recording' : 'Start Recording'}
+                         >
+                           <div className={`w-16 h-16 rounded-full border-4 border-[#171616] flex items-center justify-center ${
+                             isRecording ? 'bg-red-600' : 'bg-white'
+                           }`}>
+                             {isRecording ? (
+                               <div className="w-6 h-6 bg-white rounded" />
+                             ) : (
+                               <div className="w-8 h-8 bg-red-600 rounded-full" />
+                             )}
+                           </div>
+                         </button>
+                       )}
 
-                {/* Device selector (if multiple cameras) */}
-                {videoDevices.length > 1 && (
-                  <div className="p-4 bg-[#1f1e1d] border border-[#3b3733] rounded-xl">
-                    <label className="flex items-center gap-3">
-                      <svg className="w-5 h-5 text-[#b2a491]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                      </svg>
-                      <span className="text-sm font-medium text-[#ede8df]">Camera:</span>
-                      <select
-                        className="flex-1 bg-[#0a0908] border border-[#3b3733] rounded-lg px-3 py-2 text-sm text-[#ede8df] focus:outline-none focus:ring-2 focus:ring-[#ff8a3d]/50"
-                        value={selectedDeviceId}
-                        onChange={async (e) => {
-                          const val = e.target.value as string;
-                          setSelectedDeviceId(val as any);
-                          if (val !== 'auto') {
-                            await startCamera({ deviceId: val });
-                            const dev = videoDevices.find((d) => d.deviceId === val);
-                            const side = classifySideFromLabel(dev?.label || '');
-                            if (side === 'front') {
-                              setFacingMode('user');
-                              setPreferredFrontId(val);
-                              try { localStorage.setItem('cameraFrontId', val); } catch {}
-                            }
-                            if (side === 'back') {
-                              setFacingMode('environment');
-                              setPreferredBackId(val);
-                              try { localStorage.setItem('cameraBackId', val); } catch {}
-                            }
-                          }
-                        }}
-                      >
-                        <option value="auto">Auto</option>
-                        {videoDevices.map((d) => (
-                          <option key={d.deviceId} value={d.deviceId}>
-                            {d.label || `Camera (${d.deviceId.slice(0,6)}…)`}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  </div>
-                )}
-              </div>
-            )}
+                       <button 
+                         onClick={() => { 
+                           if (isRecording) stopRecording();
+                           setMediaBlob(null); 
+                           setPreviewUrl(null); 
+                           setProgress(0); 
+                           setVideoBlob(null);
+                           setVideoThumbnail(null);
+                         }} 
+                         className="p-3 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 hover:bg-white/20 transition-colors"
+                         title="Reset"
+                       >
+                         <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                         </svg>
+                       </button>
+                     </div>
+                   </div>
+                 </div>
+
+                 {/* Device selector (if multiple cameras) */}
+                 {videoDevices.length > 1 && (
+                   <div className="p-4 bg-[#1f1e1d] border border-[#3b3733] rounded-xl">
+                     <label className="flex items-center gap-3">
+                       <svg className="w-5 h-5 text-[#b2a491]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                       </svg>
+                       <span className="text-sm font-medium text-[#ede8df]">Camera:</span>
+                       <select
+                         className="flex-1 bg-[#0a0908] border border-[#3b3733] rounded-lg px-3 py-2 text-sm text-[#ede8df] focus:outline-none focus:ring-2 focus:ring-[#ff8a3d]/50"
+                         value={selectedDeviceId}
+                         onChange={async (e) => {
+                           const val = e.target.value as string;
+                           setSelectedDeviceId(val as any);
+                           if (val !== 'auto') {
+                             await startCamera({ deviceId: val, audio: captureMode === 'video' });
+                             const dev = videoDevices.find((d) => d.deviceId === val);
+                             const side = classifySideFromLabel(dev?.label || '');
+                             if (side === 'front') {
+                               setFacingMode('user');
+                               setPreferredFrontId(val);
+                               try { localStorage.setItem('cameraFrontId', val); } catch {}
+                             }
+                             if (side === 'back') {
+                               setFacingMode('environment');
+                               setPreferredBackId(val);
+                               try { localStorage.setItem('cameraBackId', val); } catch {}
+                             }
+                           }
+                         }}
+                       >
+                         <option value="auto">Auto</option>
+                         {videoDevices.map((d) => (
+                           <option key={d.deviceId} value={d.deviceId}>
+                             {d.label || `Camera (${d.deviceId.slice(0,6)}…)`}
+                           </option>
+                         ))}
+                       </select>
+                     </label>
+                   </div>
+                 )}
+               </div>
+             )}
             
             {/* Hidden canvas for photo capture */}
             <canvas ref={canvasRef} style={{ display: 'none' }} />
             
-            {/* Video Preview (from VideoRecorder) */}
+            {/* Video Preview */}
             {videoBlob && (
               <div id="capture-preview" className="space-y-4">
                 <div className="p-4 sm:p-6 bg-[#1f1e1d] border border-[#3b3733] rounded-2xl">
