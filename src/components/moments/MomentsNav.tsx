@@ -9,7 +9,6 @@ export default function MomentsNav() {
   
   const navItems = [
     { href: '/moments', label: 'Galleries', icon: 'grid' },
-    { href: '/moments/capture', label: 'Capture', icon: 'camera' },
     { href: '/moments/clips', label: 'Clips', icon: 'play' },
   ];
 
