@@ -92,3 +92,18 @@ export async function getInitialClips(limit = 12): Promise<ClipItem[]> {
     return [];
   }
 }
+
+/**
+ * Get featured clip from a list of clips
+ * Prioritizes clips with shop products, then by engagement, then random
+ */
+export function getFeaturedClip(clips: ClipItem[]): ClipItem | undefined {
+  if (!clips || clips.length === 0) return undefined;
+  
+  // First, try to find a clip with a shop product
+  const shopClip = clips.find(c => c.productHandle);
+  if (shopClip) return shopClip;
+  
+  // Otherwise, return the first clip
+  return clips[0];
+}

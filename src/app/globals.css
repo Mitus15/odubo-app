@@ -1450,3 +1450,468 @@ h6,
     size: A4;
   }
 }
+
+/* ============================================================================
+   Desktop Clips Gallery
+   Natural aspect ratio cards with masonry-style layout
+   ============================================================================ */
+
+.desktop-clips-gallery {
+  columns: 4;
+  column-gap: 1rem;
+}
+
+@media (min-width: 1280px) {
+  .desktop-clips-gallery {
+    columns: 5;
+    column-gap: 1.25rem;
+  }
+}
+
+@media (min-width: 1536px) {
+  .desktop-clips-gallery {
+    columns: 6;
+    column-gap: 1.5rem;
+  }
+}
+
+.gallery-clip-card {
+  break-inside: avoid;
+  margin-bottom: 1rem;
+  will-change: transform;
+}
+
+@media (min-width: 1280px) {
+  .gallery-clip-card {
+    margin-bottom: 1.25rem;
+  }
+}
+
+/* Cinematic modal container */
+.cinematic-modal {
+  contain: layout style paint;
+}
+
+/* Smooth scrollbar styling for desktop */
+@media (min-width: 1024px) {
+  .desktop-clips-grid::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .desktop-clips-grid::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .desktop-clips-grid::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+  }
+
+  .desktop-clips-grid::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+}
+
+/* Card entrance stagger animation */
+@keyframes card-entrance {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ============================================================================
+   EDITORIAL DESIGN SYSTEM - High Fashion / Archive Aesthetic
+   ============================================================================ */
+
+:root {
+  /* Editorial Color Palette */
+  --editorial-bg: #0a0a0a;
+  --editorial-surface: #141414;
+  --editorial-border: #2a2a2a;
+  --editorial-border-subtle: #1f1f1f;
+  --editorial-text: #ffffff;
+  --editorial-text-secondary: #888888;
+  --editorial-text-muted: #555555;
+  --editorial-accent: #c9a87c;
+  --editorial-accent-dim: #8a7456;
+  --editorial-alert: #8b2635;
+  --editorial-success: #2d8659;
+  
+  /* Editorial Typography */
+  --editorial-font-display: 'Baskerville', 'Times New Roman', serif;
+  --editorial-font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+  
+  /* Editorial Spacing */
+  --editorial-space-xs: 0.25rem;
+  --editorial-space-sm: 0.5rem;
+  --editorial-space-md: 1rem;
+  --editorial-space-lg: 1.5rem;
+  --editorial-space-xl: 2rem;
+  --editorial-space-2xl: 3rem;
+  --editorial-space-3xl: 4rem;
+}
+
+/* Editorial Typography Classes */
+.editorial-display {
+  font-family: var(--editorial-font-display);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--editorial-text);
+  line-height: 1.1;
+}
+
+.editorial-heading {
+  font-family: var(--editorial-font-display);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--editorial-text);
+  line-height: 1.2;
+}
+
+.editorial-label {
+  font-family: var(--editorial-font-sans);
+  font-size: 0.625rem;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--editorial-text-secondary);
+}
+
+.editorial-body {
+  font-family: var(--editorial-font-sans);
+  font-weight: 400;
+  color: var(--editorial-text-secondary);
+  line-height: 1.6;
+}
+
+/* Editorial Section Divider */
+.editorial-divider {
+  display: flex;
+  align-items: center;
+  gap: var(--editorial-space-md);
+  margin: var(--editorial-space-xl) 0;
+}
+
+.editorial-divider::before,
+.editorial-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--editorial-border), transparent);
+}
+
+.editorial-divider-label {
+  font-size: 0.625rem;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--editorial-text-muted);
+}
+
+/* Editorial Card - Minimal floating container */
+.editorial-card {
+  position: relative;
+  background: var(--editorial-surface);
+  border: 1px solid var(--editorial-border-subtle);
+  transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.editorial-card:hover {
+  border-color: var(--editorial-border);
+  transform: translateY(-2px);
+}
+
+.editorial-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background: radial-gradient(
+    ellipse at top center,
+    rgba(201, 168, 124, 0.05) 0%,
+    transparent 60%
+  );
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+}
+
+.editorial-card:hover::before {
+  opacity: 1;
+}
+
+/* Editorial Image Container */
+.editorial-image {
+  position: relative;
+  overflow: hidden;
+}
+
+.editorial-image img,
+.editorial-image video {
+  transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.editorial-card:hover .editorial-image img,
+.editorial-card:hover .editorial-image video {
+  transform: scale(1.03);
+}
+
+/* Editorial Overlay */
+.editorial-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgba(10, 10, 10, 0.9) 0%,
+    rgba(10, 10, 10, 0.4) 40%,
+    transparent 100%
+  );
+}
+
+/* Editorial Live Badge */
+.editorial-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.75rem;
+  background: var(--editorial-alert);
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: white;
+  border-radius: 2px;
+}
+
+.editorial-live-dot {
+  width: 6px;
+  height: 6px;
+  background: white;
+  border-radius: 50%;
+  animation: editorial-pulse 2s ease-in-out infinite;
+}
+
+@keyframes editorial-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(0.8);
+  }
+}
+
+/* Editorial Countdown */
+.editorial-countdown {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--editorial-font-sans);
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--editorial-text-secondary);
+  letter-spacing: 0.05em;
+}
+
+.editorial-countdown-unit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 2.5rem;
+}
+
+.editorial-countdown-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--editorial-text);
+  font-variant-numeric: tabular-nums;
+  font-family: var(--editorial-font-display);
+}
+
+.editorial-countdown-label {
+  font-size: 0.5rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--editorial-text-muted);
+}
+
+/* Editorial Button - Primary */
+.editorial-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.875rem 2rem;
+  background: var(--editorial-text);
+  color: var(--editorial-bg);
+  font-family: var(--editorial-font-sans);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.editorial-btn:hover {
+  background: var(--editorial-accent);
+  transform: translateY(-1px);
+}
+
+.editorial-btn:active {
+  transform: translateY(0);
+}
+
+/* Editorial Button - Ghost */
+.editorial-btn-ghost {
+  background: transparent;
+  color: var(--editorial-text);
+  border: 1px solid var(--editorial-border);
+}
+
+.editorial-btn-ghost:hover {
+  background: var(--editorial-surface);
+  border-color: var(--editorial-text-secondary);
+}
+
+/* Editorial FAB - Floating Action Button */
+.editorial-fab {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--editorial-text);
+  color: var(--editorial-bg);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  z-index: 50;
+}
+
+.editorial-fab:hover {
+  transform: scale(1.05);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+
+.editorial-fab:active {
+  transform: scale(0.95);
+}
+
+/* Editorial Spotlight Hero */
+.editorial-spotlight {
+  position: relative;
+  overflow: hidden;
+}
+
+.editorial-spotlight::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse at 50% 30%,
+    rgba(201, 168, 124, 0.08) 0%,
+    transparent 50%
+  );
+  pointer-events: none;
+}
+
+/* Editorial Masonry Grid */
+.editorial-masonry {
+  columns: 2;
+  column-gap: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .editorial-masonry {
+    columns: 3;
+    column-gap: 1rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .editorial-masonry {
+    columns: 4;
+  }
+}
+
+.editorial-masonry-item {
+  break-inside: avoid;
+  margin-bottom: 0.75rem;
+}
+
+/* Editorial Film Grain */
+.editorial-grain {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.03;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+}
+
+/* Editorial Scroll Container */
+.editorial-scroll {
+  display: flex;
+  gap: 1rem;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  -webkit-overflow-scrolling: touch;
+  padding: 0.5rem 0 1.5rem 0;
+  margin: 0 -1rem;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+.editorial-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.editorial-scroll-item {
+  flex-shrink: 0;
+  scroll-snap-align: start;
+}
+
+/* Editorial Page Transitions */
+@keyframes editorial-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.editorial-enter {
+  animation: editorial-fade-in 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+.editorial-stagger > * {
+  opacity: 0;
+  animation: editorial-fade-in 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+.editorial-stagger > *:nth-child(1) { animation-delay: 0ms; }
+.editorial-stagger > *:nth-child(2) { animation-delay: 100ms; }
+.editorial-stagger > *:nth-child(3) { animation-delay: 200ms; }
+.editorial-stagger > *:nth-child(4) { animation-delay: 300ms; }
+.editorial-stagger > *:nth-child(5) { animation-delay: 400ms; }
+.editorial-stagger > *:nth-child(6) { animation-delay: 500ms; }

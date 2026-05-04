@@ -421,7 +421,7 @@ export default function SingleVideoPlayer({
 
   return (
     <div
-      className="fixed inset-0 lg:left-20 xl:left-64 overflow-hidden bg-black select-none z-10"
+      className="fixed inset-0 overflow-hidden bg-black select-none z-10"
       onClick={handleTap}
       style={{ touchAction: 'pan-y', WebkitUserSelect: 'none', userSelect: 'none' }}
     >

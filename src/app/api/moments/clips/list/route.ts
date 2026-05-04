@@ -11,15 +11,11 @@ export async function GET(req: Request) {
     const url = new URL(req.url);
     const eventId = url.searchParams.get('eventId');
     const galleryId = url.searchParams.get('galleryId');
+    const sort = url.searchParams.get('sort') || 'newest';
+    const seed = url.searchParams.get('seed') || null;
     const limit = Math.min(50, Math.max(1, Number(url.searchParams.get('limit') || '20')));
     const offset = Math.max(0, Number(url.searchParams.get('offset') || '0'));
     const includePending = url.searchParams.get('includePending') === 'true' && isAdmin;
-
-    if (!eventId && !galleryId) {
-      return NextResponse.json({ error: 'Missing eventId or galleryId' }, { status: 400 });
-    }
-
-    const id = eventId || galleryId;
 
     // Rate limit
     const ip = (req.headers.get('x-forwarded-for') || '').split(',')[0].trim() || 'unknown';
@@ -29,21 +25,51 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
     }
 
-    // Build query
+    // Build query - support both filtered (by event) and all clips
     let sql = `
       SELECT ec.*, g.title as event_title, g.code as event_code
       FROM event_clips ec
       JOIN galleries g ON ec.event_id = g.id
-      WHERE ec.event_id = ?
+      WHERE 1=1
     `;
 
-    const params: any[] = [id];
+    const params: any[] = [];
+
+    // Filter by event if specified
+    if (eventId || galleryId) {
+      const id = eventId || galleryId;
+      sql += ' AND ec.event_id = ?';
+      params.push(id);
+    }
 
     if (!includePending) {
       sql += ' AND (ec.moderated = 1 OR ec.moderated IS NULL)';
     }
 
-    sql += ' ORDER BY ec.is_pinned DESC, ec.is_featured DESC, ec.created_at DESC LIMIT ? OFFSET ?';
+    // Sort options
+    switch (sort) {
+      case 'newest':
+        sql += ' ORDER BY ec.created_at DESC';
+        break;
+      case 'oldest':
+        sql += ' ORDER BY ec.created_at ASC';
+        break;
+      case 'popular':
+        sql += ' ORDER BY ec.view_count DESC, ec.created_at DESC';
+        break;
+      case 'shuffle':
+      default:
+        // For shuffle, we'll order by pinned/featured first, then use a seed for pseudo-random
+        if (seed) {
+          // Use seed for consistent random ordering
+          sql += ` ORDER BY ec.is_pinned DESC, ec.is_featured DESC, (ec.id * ${parseInt(seed, 36) || 1}) % 1000 ASC`;
+        } else {
+          sql += ' ORDER BY ec.is_pinned DESC, ec.is_featured DESC, ec.created_at DESC';
+        }
+        break;
+    }
+
+    sql += ' LIMIT ? OFFSET ?';
     params.push(limit, offset);
 
     const clips = await queryDatabase(sql, params);
@@ -67,8 +93,19 @@ export async function GET(req: Request) {
       created_at: c.created_at,
     }));
 
+    // Get unique parent videos for filter (only when listing all clips)
+    let parents: Array<{ id: number; title: string }> = [];
+    if (!eventId && !galleryId) {
+      const parentResult = await queryDatabase(
+        'SELECT DISTINCT ec.event_id as id, g.title FROM event_clips ec JOIN galleries g ON ec.event_id = g.id WHERE (ec.moderated = 1 OR ec.moderated IS NULL) ORDER BY g.title',
+        []
+      );
+      parents = (parentResult || []).map((p: any) => ({ id: p.id, title: p.title }));
+    }
+
     return NextResponse.json({
       clips: transformedClips,
+      parents,
       pagination: {
         limit,
         offset,

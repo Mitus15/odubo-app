@@ -28,13 +28,22 @@ export async function POST(req: Request) {
       cover_photo_key = null,
       sort_order = 0,
       links = [],
+      expires_at = null,
+      is_permanent = false,
+      content_rights = 'non-exclusive',
     } = parsed.data;
     const code = parsed.data.code || Math.random().toString(36).slice(2, 8).toUpperCase();
     const config = parsed.data.config ? JSON.stringify(parsed.data.config) : null;
 
+    // Calculate expires_at if not provided (default: 1 year from creation)
+    let finalExpiresAt = expires_at;
+    if (!finalExpiresAt && !is_permanent) {
+      finalExpiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
+    }
+
     // Insert the gallery
-    const sql = `INSERT INTO galleries (code, title, description, created_by, starts_at, ends_at, config, gallery_type, upload_mode, cover_photo_key, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-    await executeQuery(sql, [code, title, description, user.userId, starts_at, ends_at, config, gallery_type, upload_mode, cover_photo_key, sort_order]);
+    const sql = `INSERT INTO galleries (code, title, description, created_by, starts_at, ends_at, config, gallery_type, upload_mode, cover_photo_key, sort_order, expires_at, is_permanent, content_rights) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+    await executeQuery(sql, [code, title, description, user.userId, starts_at, ends_at, config, gallery_type, upload_mode, cover_photo_key, sort_order, finalExpiresAt, is_permanent, content_rights]);
 
     // Get the created gallery ID
     const galleryRows = await queryDatabase('SELECT id FROM galleries WHERE code = ? LIMIT 1', [code]);

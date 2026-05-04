@@ -8,7 +8,7 @@ export default function NotFound() {
         {/* odubo studio Logo Mark */}
         <div className="mb-8">
           <Image
-            src="/brand-logos/odubo-logos/odubo-vin-type.png"
+            src="/brand-logos/odubo-brand/odubo.svg"
             alt="odubo studio"
             width={48}
             height={48}

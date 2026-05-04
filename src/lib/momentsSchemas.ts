@@ -85,6 +85,10 @@ export const GalleryCreateSchema = z.object({
     })
     .optional()
     .nullable(),
+  // Retention settings (default: 1 year, host can extend)
+  expires_at: z.string().datetime().optional().nullable(),
+  is_permanent: z.boolean().optional().default(false),
+  content_rights: z.enum(['non-exclusive', 'exclusive', 'all-rights']).optional().default('non-exclusive'),
 });
 
 export const GalleryUpdateSchema = z.object({
@@ -106,8 +110,11 @@ export const GalleryUpdateSchema = z.object({
       persistent: z.boolean().optional(),
       visibility: z.enum(['private', 'link', 'public']).optional(),
     })
-    .optional()
-    .nullable(),
+    .optional(),
+  // Retention settings (hosts can extend)
+  expires_at: z.string().datetime().optional().nullable(),
+  is_permanent: z.boolean().optional(),
+  content_rights: z.enum(['non-exclusive', 'exclusive', 'all-rights']).optional(),
 });
 
 // RSVP creation schema: user provides email, optional name, and selected reminder offsets (minutes before start)

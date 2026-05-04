@@ -682,7 +682,7 @@ export default function StorePageClient({ isStoreOpen, isAdmin, initialProducts 
       {/* Fixed Header - odubo studio logo - positioned below main AppHeader (56px / h-14) */}
       <header className="fixed left-0 right-0 z-30 bg-[#0b0b0b] top-14 flex items-center justify-center h-12 sm:h-14 lg:h-16">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/brand-logos/odubo-logos/odubo-vin-type.png" alt="Odubo" className="h-10 sm:h-12 lg:h-20 w-auto ml-auto mr-4 sm:mx-auto" />
+        <img src="/brand-logos/odubo-brand/odubo.svg" alt="Odubo" className="h-10 sm:h-12 lg:h-20 w-auto ml-auto mr-4 sm:mx-auto" />
       </header>
       {/* Bag button - separate from header to avoid flex interference */}
       <Link

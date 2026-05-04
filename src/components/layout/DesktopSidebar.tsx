@@ -78,7 +78,8 @@ export default function DesktopSidebar() {
   }, [isCheckingAccess, isStoreAccessible, openStore, cartItemCount]);
 
   // Hide on admin/backend pages and admin subdomain (must be after all hooks)
-  if (isAdminSubdomain || pathname?.startsWith('/admin') || pathname?.startsWith('/command-center') || pathname?.startsWith('/featured/manage')) {
+  // Also hide on homepage - custom design without sidebar
+  if (isAdminSubdomain || pathname === '/' || pathname?.startsWith('/admin') || pathname?.startsWith('/command-center') || pathname?.startsWith('/featured/manage')) {
     return null;
   }
 
@@ -89,7 +90,7 @@ export default function DesktopSidebar() {
         <Link href="/">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/brand-logos/odubo-logo.png"
+            src="/brand-logos/Danceman_Logo_Red.png"
             alt="Odubo"
             className="w-10 h-10 xl:w-12 xl:h-12 object-contain opacity-80 hover:opacity-100 transition-opacity"
             draggable={false}

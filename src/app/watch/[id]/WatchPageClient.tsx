@@ -319,7 +319,7 @@ function JoinTheCool({ socialLinks }: { socialLinks: SocialLink[] }) {
               aria-label="Shop"
             >
               <Image
-                src="/brand-logos/odubo-logos/odubo-vin-type.png"
+                src="/brand-logos/odubo-brand/odubo.svg"
                 alt="odubo studio"
                 width={24}
                 height={24}

@@ -36,7 +36,7 @@ export default function ClipsHeader({
       <div className="flex items-center justify-between px-3 h-12">
         {/* Left — Logo */}
         <Image
-          src="/brand-logos/odubo-logo.png"
+           src="/brand-logos/Danceman_Logo_Red.png"
           alt="Odubo"
           width={28}
           height={28}

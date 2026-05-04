@@ -224,7 +224,7 @@ export default function ProductBrowse() {
     >
       {/* Header */}
       <header
-        className="relative flex items-center justify-between px-4 py-3 border-b border-white/10 bg-[#0d0c0b]/95 backdrop-blur-sm"
+        className="relative flex items-center justify-between px-4 py-3 lg:py-6 border-b border-white/10 bg-[#0d0c0b]/95 backdrop-blur-sm"
         style={{ paddingTop: 'max(12px, env(safe-area-inset-top, 0px))' }}
       >
         {/* Close button */}
@@ -241,7 +241,7 @@ export default function ProductBrowse() {
         {/* Brand logo - centered on all sizes */}
         <div className="absolute left-1/2 -translate-x-1/2">
           <img
-            src="/brand-logos/odubo-logos/odubo-vin-type.png"
+            src="/brand-logos/odubo-brand/odubo.svg"
             alt="Odubo"
             className="h-10 sm:h-14 lg:h-20 w-auto"
             draggable={false}

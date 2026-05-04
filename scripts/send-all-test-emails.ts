@@ -92,7 +92,7 @@ async function main() {
             <div style="background:#f6f3ee;padding:24px 16px;">
               <div style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:16px;border:1px solid #ece7df;overflow:hidden">
                 <div style="padding:20px 22px 0 22px;text-align:center;border-bottom:1px solid #f0ebe3">
-                  <img src="${site}/brand-logos/odubo-logo.png" alt="Odubo" style="height:40px;width:auto;margin:8px auto 14px;display:block" />
+                  <img src="${site}/brand-logos/Danceman_Logo_Red.png" alt="Odubo" style="height:40px;width:auto;margin:8px auto 14px;display:block" />
                 </div>
                 <div style="padding:22px;font-family:'Baskerville','Times New Roman',Times,Georgia,serif;color:#1a1716;">
                   <h2 style="margin:0 0 12px;font-size:22px;color:#171616;">Thanks for reaching out.</h2>

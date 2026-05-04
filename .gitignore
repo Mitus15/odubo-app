@@ -49,3 +49,9 @@ worker/node_modules/
 
 # Blender assets
 assets/blender/
+
+# Projects & Spinoffs
+projects/
+
+# clerk configuration (can include secrets)
+/.clerk/

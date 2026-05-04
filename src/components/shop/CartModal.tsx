@@ -111,7 +111,7 @@ export default function CartModal() {
         </button>
 
         <img
-          src="/brand-logos/odubo-logos/odubo-vin-type.png"
+          src="/brand-logos/odubo-logos/odubo-brand/odubo.svg"
           alt="Odubo Brand Logo"
           className="h-6 lg:h-12 w-auto"
           draggable={false}

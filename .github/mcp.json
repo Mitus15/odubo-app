@@ -15,6 +15,10 @@
       "env": {
         "PLAYWRIGHT_BASE_URL": "https://odubo.studio"
       }
+    },
+    "email": {
+      "command": "npx",
+      "args": ["-y", "@marlinjai/email-mcp"]
     }
   }
 }

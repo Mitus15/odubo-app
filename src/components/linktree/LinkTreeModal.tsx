@@ -187,7 +187,7 @@ export default function LinkTreeModal({ isOpen, onClose }: LinkTreeModalProps) {
               className="mb-7 lg:mb-10"
             >
               <img
-                src="/brand-logos/odubo-logos/odubo-vin-type.png"
+                 src="/brand-logos/Danceman_Logo_Red.png"
                 alt="Odubo Studio"
                 className="w-20 h-20 lg:w-36 lg:h-36 object-contain opacity-40"
                 draggable={false}
@@ -341,13 +341,13 @@ function PlatformIcon({ platform }: { platform: string | null }) {
     case 'shopify':
     case 'odubo':
       return (
-        <Image
-          src="/brand-logos/odubo-logo.png"
-          alt="Odubo"
-          width={28}
-          height={28}
-          className={iconClass}
-        />
+         <Image
+           src="/brand-logos/Danceman_Logo_Red.png"
+           alt="Odubo"
+           width={28}
+           height={28}
+           className={iconClass}
+         />
       );
     default:
       return (

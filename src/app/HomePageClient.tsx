@@ -323,7 +323,7 @@ export default function HomePageClient({
   const anyOverlayOpen = isShowingVerse || storeView !== 'closed' || modalStack.length > 0 || linkTreeOpen;
 
   return (
-    <div className="relative bg-black text-[#ede8df]" style={{ minHeight: '100dvh' }}>
+    <div className="relative bg-black text-[#ede8df] lg:pb-20" style={{ minHeight: '100dvh' }}>
       {/* Animated film grain overlay */}
       <FilmGrain opacity={0.03} />
 
@@ -347,10 +347,38 @@ export default function HomePageClient({
 
             {/* Clips scroll layer */}
             <div
-              className="fixed inset-0 lg:left-20 xl:left-64 bg-transparent z-20"
+              className="fixed inset-0 bg-transparent z-20"
               style={{ overscrollBehavior: 'none' }}
               onClick={handleBackdropClick}
             >
+              {/* Desktop verse display - centered in middle of clips */}
+              {verseOfTheDay.text && (
+                <div className="hidden lg:flex absolute inset-0 z-30 items-center justify-center pointer-events-none">
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="bg-black/50 backdrop-blur-md px-8 py-6 rounded-2xl">
+                      <p className="text-white/80 text-xl italic leading-relaxed max-w-md">
+                        &ldquo;{verseOfTheDay.text}&rdquo;
+                      </p>
+                      {verseOfTheDay.reference && (
+                        <p className="text-white/50 text-sm mt-2">
+                          — {verseOfTheDay.reference}
+                        </p>
+                      )}
+                    </div>
+                    
+                    <button
+                      onClick={openStore}
+                      className="pointer-events-auto px-8 py-3 bg-[#843c2d] text-white font-medium rounded-full hover:bg-[#9a4535] transition-colors"
+                    >
+                      Open Shop
+                    </button>
+                  </div>
+                </div>
+              )}
+              
+              {/* Desktop overlay opacity over clips */}
+              <div className="hidden lg:block absolute inset-0 bg-black/30 pointer-events-none" />
+              
               <ClipsFeed
                 navHeight={0}
                 initialClipId={initialClipId}
@@ -368,7 +396,7 @@ export default function HomePageClient({
         {/* MUSIC MODE */}
         {homepageMode === 'music' && (
           <div
-            className="fixed inset-0 lg:left-20 xl:left-64 bg-black z-20"
+            className="fixed inset-0 bg-black z-20"
             style={{ overscrollBehavior: 'none' }}
             onClick={handleBackdropClick}
           >
@@ -381,64 +409,6 @@ export default function HomePageClient({
         )}
       </ClipsErrorBoundary>
 
-      {/* Mute Button - Top right, desktop only (mobile uses ClipsHeader) */}
-      {!anyOverlayOpen && <button
-        onClick={handleMuteToggle}
-        className="hidden md:flex fixed z-40 items-center justify-center rounded-full bg-black/40 backdrop-blur-xl border border-white/10 text-white shadow-lg active:scale-90 transition-transform right-16"
-        style={{
-          top: 'max(env(safe-area-inset-top, 12px), 12px)',
-          width: 44,
-          height: 44,
-          touchAction: 'manipulation',
-          WebkitTapHighlightColor: 'transparent',
-        }}
-        aria-label={currentMuted ? 'Unmute' : 'Mute'}
-      >
-        {currentMuted ? (
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-            <path strokeLinecap="round" strokeLinejoin="round" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
-          </svg>
-        ) : (
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-          </svg>
-        )}
-      </button>}
-
-      {/* Word Button - Desktop only (mobile uses ClipsHeader) */}
-      <AnimatePresence mode="wait">
-        {phase !== 'intro' && !anyOverlayOpen && (
-          <motion.button
-            key={phase}
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.8 }}
-            transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-            onClick={handlePillClick}
-            className="hidden md:flex fixed z-40 items-center justify-center rounded-full bg-black/40 backdrop-blur-xl border border-white/10 text-white shadow-lg active:scale-90 transition-transform right-4"
-            style={{
-              top: 'max(env(safe-area-inset-top, 12px), 12px)',
-              touchAction: 'manipulation',
-              WebkitTapHighlightColor: 'transparent',
-              width: 44,
-              height: 44,
-            }}
-            aria-label={phase === 'expanded' ? 'Close verse' : 'Show verse'}
-          >
-            {phase === 'expanded' ? (
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            ) : (
-              <svg className="w-5 h-5 text-white/80" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            )}
-          </motion.button>
-        )}
-      </AnimatePresence>
-
       {/* Full Verse Overlay (intro & expanded states) */}
       <AnimatePresence>
         {isShowingVerse && (
@@ -447,7 +417,7 @@ export default function HomePageClient({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
-            className="fixed inset-0 lg:left-20 xl:left-64 flex items-center justify-center px-6 bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 flex items-center justify-center px-6 bg-black/60 backdrop-blur-sm"
             style={{ top: 0, zIndex: 35 }}
             onClick={handleBackdropClick}
           >
@@ -469,7 +439,7 @@ export default function HomePageClient({
                     transition={{ duration: 1, ease: [0.25, 0.46, 0.45, 0.94] }}
                   >
                     <Image
-                      src="/brand-logos/odubo-logos/odubo-vin-type.png"
+                      src="/brand-logos/odubo-logos/odubo-brand/odubo.svg"
                       alt="Odubo Studio"
                       width={180}
                       height={180}
@@ -598,7 +568,7 @@ export default function HomePageClient({
         </div>
       )}
 
-      {/* Connect button - hidden when any overlay is open. Button hidden on mobile (ClipsHeader handles it) */}
+{/* Connect button - hidden on desktop, shown on mobile (ClipsHeader handles mobile) */}
       {!anyOverlayOpen && (
         <ConnectButton
           externalOpen={linkTreeOpen}

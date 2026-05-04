@@ -647,7 +647,7 @@ This document outlines a comprehensive optimization strategy for Odubo Studio ac
      "@type": "Organization",
      "name": "Odubo Studio",
      "url": "https://odubo.studio",
-     "logo": "https://odubo.studio/brand-logos/odubo-logo.png",
+     "logo": "https://odubo.studio/brand-logos/Danceman_Logo_Red.png",
      "sameAs": [
        "https://instagram.com/odubostudio",
        "https://tiktok.com/@odubostudio",

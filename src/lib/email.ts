@@ -38,7 +38,7 @@ const BRAND = {
 // Email wrapper — shared chrome for all emails
 function emailWrapper(content: string, preheader?: string): string {
   const site = getSiteUrl();
-  const logoUrl = `${site}/brand-logos/odubo-logo.png`;
+  const logoUrl = `${site}/brand-logos/Danceman_Logo_Red.png`;
 
   return `
 <!DOCTYPE html>

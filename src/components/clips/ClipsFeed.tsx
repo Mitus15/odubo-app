@@ -202,8 +202,8 @@ export default function ClipsFeed({
   // Fetch parent video list for filter menu
   useEffect(() => {
     fetch('/api/clips/parents')
-      .then(res => res.json())
-      .then((data: { parents?: Array<{ id: number; title: string }> }) => {
+      .then(res => res.json() as Promise<{ parents?: Array<{ id: number; title: string }> }>)
+      .then((data) => {
         if (data.parents) setParentVideos(data.parents);
       })
       .catch(() => {});

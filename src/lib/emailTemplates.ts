@@ -14,7 +14,7 @@ export function brandedEmailHTML({
   const muted = '#6d6459';
   const bg = '#f6f3ee';
   const site = getSiteUrl();
-  const logoUrl = `${site}/brand-logos/odubo-logo.png`;
+  const logoUrl = `${site}/brand-logos/Danceman_Logo_Red.png`;
   const manageUrl = `${site}/moments/rsvp/${encodeURIComponent(String(galleryId))}?prefillEmail=${encodeURIComponent(email)}`;
   return `
       <div style="background:${bg};padding:24px 0;">

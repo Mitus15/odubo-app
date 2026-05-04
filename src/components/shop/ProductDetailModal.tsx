@@ -275,7 +275,7 @@ export default function ProductDetailModal({ productHandle }: ProductDetailModal
 
         {/* Centered logo - inverts based on background */}
         <img
-          src="/brand-logos/odubo-logos/odubo-vin-type.png"
+          src="/brand-logos/odubo-logos/odubo-brand/odubo.svg"
           alt="Odubo Brand Logo"
           className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-6 lg:h-12 w-auto transition-all duration-500"
           style={{

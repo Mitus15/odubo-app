@@ -46,6 +46,7 @@ export async function GET(request: NextRequest) {
     const results = {
       staleSessions: { cleaned: 0, failed: 0 },
       orphanedUploads: { aborted: 0, failed: 0 },
+      expiredGalleries: { marked: 0, deleted: 0, failed: 0 },
     };
 
     // 1. Clean up stale upload sessions
@@ -110,6 +111,41 @@ export async function GET(request: NextRequest) {
       }
     } catch (err) {
       console.error('[Cleanup] Failed to list/abort multipart uploads:', err);
+    }
+
+    // 3. Handle expired galleries (retention policy)
+    try {
+      // Galleries that have passed their expires_at and are not marked permanent
+      const expiredGalleries = await queryDatabase(
+        `SELECT id, title, expires_at
+         FROM galleries
+         WHERE expires_at IS NOT NULL
+           AND expires_at < datetime('now')
+           AND (is_permanent IS NULL OR is_permanent = 0)
+           AND deleted_at IS NULL
+         LIMIT 50`,
+        []
+      ) as Array<{ id: number; title: string; expires_at: string }>;
+
+      for (const gallery of expiredGalleries) {
+        try {
+          // Soft delete: mark as deleted
+          await executeQuery(
+            `UPDATE galleries SET deleted_at = datetime('now') WHERE id = ?`,
+            [gallery.id]
+          );
+          results.expiredGalleries.marked++;
+        } catch (err) {
+          console.error(`[Cleanup] Failed to mark gallery ${gallery.id} as deleted:`, err);
+          results.expiredGalleries.failed++;
+        }
+      }
+
+      if (expiredGalleries.length > 0) {
+        console.log(`[Cleanup] Marked ${results.expiredGalleries.marked} expired galleries for deletion`);
+      }
+    } catch (err) {
+      console.error('[Cleanup] Failed to process expired galleries:', err);
     }
 
     console.log('[Cleanup] Cron completed:', results);

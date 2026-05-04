@@ -13,7 +13,7 @@ export const DEFAULT_SEO = {
   siteName: 'Odubo Studio',
   title: 'Odubo Studio',
   description: 'Experience music, fashion, and art from Odubo. Watch exclusive clips, shop the latest drops, and join the community.',
-  ogImage: '/brand-logos/odubo-logo.png',
+  ogImage: '/brand-logos/Danceman_Logo_Red.png',
   twitterHandle: '@odubostudio',
   locale: 'en_US',
   themeColor: '#843c2d',
