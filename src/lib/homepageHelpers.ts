@@ -1,6 +1,6 @@
 import { queryDatabase } from '@/lib/db';
 import { mapClipRows } from '@/lib/clipsMapper';
-import { fetchVerseOfTheDay } from '@/lib/gemini';
+import { fetchVerseOfTheDay } from '@/lib/deepseek';
 import type { ClipApiRow, ClipItem } from '@/types/clips';
 
 export interface VerseOfTheDay {

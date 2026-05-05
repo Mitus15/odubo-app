@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export const runtime = 'edge';
 import { getUserFromRequest, isAdminUser } from '@/lib/auth';
 import { queryDatabase, executeQuery } from '@/lib/db';
-import { callGeminiWithRetry } from '@/lib/gemini';
+import { callDeepSeekWithRetry } from '@/lib/deepseek';
 
 // POST: Test caption generation with current profile settings
 export async function POST(req: NextRequest) {
@@ -47,8 +47,8 @@ export async function POST(req: NextRequest) {
     // Build the prompt with profile settings
     const prompt = buildTestPrompt(profile, examples || [], test_prompt, platform);
 
-    // Call Gemini
-    const { data } = await callGeminiWithRetry(prompt);
+    // Call DeepSeek
+    const { data } = await callDeepSeekWithRetry(prompt);
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
     // Parse the response

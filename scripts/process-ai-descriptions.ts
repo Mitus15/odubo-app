@@ -1,15 +1,20 @@
 #!/usr/bin/env tsx
 /**
  * Generate AI descriptions for parent videos (main videos only)
- * Uses Gemini API to create engaging descriptions
+ * Uses DeepSeek API to create engaging descriptions
  * Runs as background process after sync
  */
 
 import 'dotenv/config';
 import { queryDatabase, executeQuery } from '../src/lib/db';
+import OpenAI from 'openai';
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY!;
-const GEMINI_MODEL = 'gemini-2.0-flash-exp';
+const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY!;
+
+const openai = new OpenAI({
+  apiKey: DEEPSEEK_API_KEY,
+  baseURL: 'https://api.deepseek.com',
+});
 
 interface Video {
   id: number;
@@ -19,7 +24,7 @@ interface Video {
   ai_description: string | null;
 }
 
-// Generate description using Gemini API
+// Generate description using DeepSeek API
 async function generateDescription(video: Video): Promise<string> {
   const prompt = `Generate a compelling, concise description (2-3 sentences) for this music video:
 
@@ -28,29 +33,18 @@ Duration: ${Math.floor(video.duration / 60)}:${String(Math.floor(video.duration 
 
 Write in a style that captures the essence and mood of the title. Be creative and engaging. Return only the description, no extra formatting.`;
 
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{ text: prompt }]
-        }],
-        generationConfig: {
-          temperature: 0.8,
-          maxOutputTokens: 200,
-        },
-      }),
-    }
-  );
+  const response = await openai.chat.completions.create({
+    model: 'deepseek-v4-flash',
+    messages: [
+      { role: 'system', content: 'You are a helpful assistant.' },
+      { role: 'user', content: prompt }
+    ],
+    temperature: 0.8,
+    max_tokens: 200,
+    stream: false,
+  });
 
-  if (!response.ok) {
-    throw new Error(`Gemini API error: ${response.statusText}`);
-  }
-
-  const data = await response.json();
-  const description = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+  const description = response.choices[0]?.message?.content?.trim();
 
   if (!description) {
     throw new Error('No description generated');

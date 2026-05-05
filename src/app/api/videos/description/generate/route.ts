@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { callGeminiWithRetry, callGeminiMultimodal, GeminiPart } from '@/lib/gemini';
+import { callGeminiMultimodal, GeminiPart } from '@/lib/gemini';
+import { callDeepSeekWithRetry } from '@/lib/deepseek';
 import { queryDatabase } from '@/lib/db';
 
 export const runtime = 'nodejs';
@@ -196,10 +197,10 @@ export async function POST(request: NextRequest) {
       const { data } = await callGeminiMultimodal(parts);
       generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text;
     } else {
-      // Text-only Request - Fallback
+      // Text-only Request - Fallback to DeepSeek
       console.warn('[AI Desc] Falling back to text-only generation due to missing frames.');
       promptText += `\n\n(Note: Visual frames were unavailable. Base the description on the title and metadata provided.)`;
-      const { data } = await callGeminiWithRetry(promptText);
+      const { data } = await callDeepSeekWithRetry(promptText);
       generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text;
     }
 

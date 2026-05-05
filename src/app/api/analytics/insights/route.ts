@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { callGeminiWithRetry } from '@/lib/gemini';
+import { callDeepSeekWithRetry } from '@/lib/deepseek';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -42,8 +42,8 @@ export async function POST(req: NextRequest) {
     // Build prompt for Gemini
     const prompt = buildInsightsPrompt(period, metrics);
 
-    // Call Gemini
-    const result = await callGeminiWithRetry(prompt);
+    // Call DeepSeek
+    const result = await callDeepSeekWithRetry(prompt);
     const text = result.data.candidates?.[0]?.content?.parts?.[0]?.text;
 
     if (!text) {

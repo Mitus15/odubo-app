@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { queryDatabase, executeQuery } from '@/lib/db';
-import { callGeminiWithRetry } from '@/lib/gemini';
+import { callDeepSeekWithRetry } from '@/lib/deepseek';
 
 export const runtime = 'nodejs';
 
@@ -109,8 +109,8 @@ export async function POST(request: NextRequest) {
       familyContext
     );
 
-    // 5. Call Gemini
-    const { data } = await callGeminiWithRetry(prompt);
+    // 5. Call DeepSeek
+    const { data } = await callDeepSeekWithRetry(prompt);
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
     const result = parseWodaResponse(text);
 

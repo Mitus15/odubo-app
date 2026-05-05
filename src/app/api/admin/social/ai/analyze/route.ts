@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 export const runtime = 'edge';
 import { getUserFromRequest, isAdminUser } from '@/lib/auth';
 import { queryDatabase } from '@/lib/db';
-import { callGeminiWithRetry, callGeminiMultimodal, GeminiPart } from '@/lib/gemini';
+import { callGeminiMultimodal, GeminiPart } from '@/lib/gemini';
+import { callDeepSeekWithRetry } from '@/lib/deepseek';
 
 interface AIAnalysisResult {
   content_type: string;
@@ -316,19 +317,19 @@ Write in an artistic, minimal style. Short, impactful phrases. No excessive emoj
 }
 
 async function runCategorizationAnalysis(prompt: string): Promise<Partial<AIAnalysisResult>> {
-  const { data } = await callGeminiWithRetry(prompt);
+  const { data } = await callDeepSeekWithRetry(prompt);
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
   return parseAIResponse(text);
 }
 
 async function runCaptionAnalysis(prompt: string): Promise<Partial<AIAnalysisResult>> {
-  const { data } = await callGeminiWithRetry(prompt);
+  const { data } = await callDeepSeekWithRetry(prompt);
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
   return parseAIResponse(text);
 }
 
 async function runFullAnalysis(prompt: string): Promise<AIAnalysisResult> {
-  const { data } = await callGeminiWithRetry(prompt);
+  const { data } = await callDeepSeekWithRetry(prompt);
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
   const parsed = parseAIResponse(text);
 

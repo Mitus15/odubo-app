@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromRequest, isAdminUser } from '@/lib/auth';
 import { queryDatabase } from '@/lib/db';
-import { callGeminiWithRetry } from '@/lib/gemini';
+import { callDeepSeekWithRetry } from '@/lib/deepseek';
 
 export const runtime = 'edge';
 
@@ -195,19 +195,19 @@ export async function POST(req: NextRequest) {
       examples: trainingExamples,
     });
 
-    // Call Gemini API
-    console.log('[AI Suggest] Calling Gemini API...');
-    const result = await callGeminiWithRetry(prompt);
+    // Call DeepSeek API
+    console.log('[AI Suggest] Calling DeepSeek API...');
+    const result = await callDeepSeekWithRetry(prompt);
     
     if (!result?.data) {
-      console.error('[AI Suggest] No data from Gemini:', result);
+      console.error('[AI Suggest] No data from DeepSeek:', result);
       throw new Error('No response from AI service');
     }
 
     const text = result.data.candidates?.[0]?.content?.parts?.[0]?.text || '';
     
     if (!text) {
-      console.error('[AI Suggest] Empty response from Gemini');
+      console.error('[AI Suggest] Empty response from DeepSeek');
       throw new Error('Empty AI response');
     }
 
@@ -228,9 +228,9 @@ export async function POST(req: NextRequest) {
     let userMessage = 'Failed to generate AI suggestions';
     let hint = 'Try again or use manual captions';
     
-    if (errorMsg.includes('API key') || errorMsg.includes('GEMINI')) {
+    if (errorMsg.includes('API key') || errorMsg.includes('DEEPSEEK')) {
       userMessage = 'AI service not configured';
-      hint = 'Contact administrator to set up Gemini API key';
+      hint = 'Contact administrator to set up DeepSeek API key';
     } else if (errorMsg.includes('quota') || errorMsg.includes('rate limit')) {
       userMessage = 'AI service quota exceeded';
       hint = 'Try again in a few moments';

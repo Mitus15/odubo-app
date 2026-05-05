@@ -3,11 +3,17 @@ export const runtime = 'nodejs';
 import { getUserFromRequest, isAdminUser } from '@/lib/auth';
 import { executeQuery, queryDatabase } from '@/lib/db';
 import { writeAuditLog } from '@/lib/audit';
+import OpenAI from 'openai';
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
+const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || '';
+
+const openai = DEEPSEEK_API_KEY ? new OpenAI({
+  apiKey: DEEPSEEK_API_KEY,
+  baseURL: 'https://api.deepseek.com',
+}) : null;
 
 async function generateAIDescription(input: { title: string; description?: string; category?: string; mood?: string; tags?: string[]; }): Promise<string | null> {
-  if (!GEMINI_API_KEY) return null;
+  if (!DEEPSEEK_API_KEY || !openai) return null;
   try {
     const prompt = `Summarize this video for a public catalog in 2-3 sentences. Tone: concise, evocative, no clickbait. Include mood and style cues when helpful.\n\n` +
       `Title: ${input.title}\n` +
@@ -16,17 +22,18 @@ async function generateAIDescription(input: { title: string; description?: strin
       (input.mood ? `Mood: ${input.mood}\n` : '') +
       (input.tags && input.tags.length ? `Tags: ${input.tags.join(', ')}\n` : '');
 
-    const model = 'gemini-2.0-flash';
-    const url = `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
-    const resp = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }] })
+    const response = await openai.chat.completions.create({
+      model: 'deepseek-v4-flash',
+      messages: [
+        { role: 'system', content: 'You are a helpful assistant.' },
+        { role: 'user', content: prompt }
+      ],
+      temperature: 0.8,
+      max_tokens: 256,
+      stream: false,
     });
-    const data: any = await resp.json();
-    const text = data && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0] && data.candidates[0].content.parts[0].text
-      ? data.candidates[0].content.parts[0].text
-      : '';
+
+    const text = response.choices[0]?.message?.content || '';
     const clean = text.replace(/^\s+|\s+$/g, '').replace(/\n+/g, ' ');
     return clean || null;
   } catch (e) {
@@ -76,8 +83,8 @@ export async function POST(req: NextRequest) {
         v.mood || null,
         null,
         JSON.stringify(tags || []),
-        'google',
-        'gemini-2.0-flash',
+        'deepseek',
+        'deepseek-v4-flash',
         null,
       ]);
       await executeQuery(`UPDATE videos SET ai_description = ? WHERE id = ?`, [ai, v.id]);
