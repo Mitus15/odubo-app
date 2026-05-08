@@ -1,0 +1,101 @@
+/* ============================================================================
+   BCLC CASE STUDY — Additional Styles
+   Extends the about.css design system with BCLC-specific components.
+   ============================================================================ */
+
+/* ─── Hero Section ──────────────────────────────────────────────────────── */
+.bclc-hero {
+  padding: 6rem 0 2rem;
+  position: relative;
+}
+
+.bclc-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(132, 60, 45, 0.03) 0%,
+    transparent 50%,
+    transparent 100%
+  );
+  pointer-events: none;
+}
+
+@media (max-width: 640px) {
+  .bclc-hero {
+    padding: 3rem 0 2rem;
+  }
+}
+
+/* ─── Framework Badge ───────────────────────────────────────────────────── */
+.bclc-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: rgba(132, 60, 45, 0.08);
+  border: 1px solid rgba(132, 60, 45, 0.15);
+  border-radius: 100px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: #843c2d;
+  margin-bottom: 1.5rem;
+}
+
+/* ─── Icon Wrapper (Methodology Cards) ──────────────────────────────────── */
+.bclc-icon-wrapper {
+  width: 2.5rem;
+  height: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(132, 60, 45, 0.08);
+  border-radius: 10px;
+  margin-bottom: 1rem;
+}
+
+.bclc-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+  color: #843c2d;
+}
+
+/* ─── Stagger Scroll Animations ─────────────────────────────────────────── */
+.bclc-stagger {
+  opacity: 0;
+  transform: translateY(1.5rem);
+  transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.bclc-stagger-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ─── Stat Card Enhancements ────────────────────────────────────────────── */
+.bclc-stat-card {
+  text-align: center;
+}
+
+/* ─── Roadmap Pillar Accent Colors ──────────────────────────────────────── */
+.bclc-pillar-accent {
+  width: 2.5rem;
+  height: 0.25rem;
+  border-radius: 999px;
+  margin-bottom: 1rem;
+}
+
+/* ─── First section after hero — tighter spacing ───────────────────────── */
+.bclc-section-first {
+  padding-top: 2rem;
+}
+
+/* ─── Responsive Tweaks ─────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .bclc-badge {
+    font-size: 0.625rem;
+    padding: 0.375rem 0.75rem;
+  }
+}
