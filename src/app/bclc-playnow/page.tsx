@@ -173,21 +173,33 @@ const roadmapPillars = [
   {
     title: 'Marketing Strategy',
     items: [
-      'Localized brand personification strategy',
-      '"Coach Brian" — building trust and cultural resonance',
-      'Deep connection within the BC sports community',
+      'Brand Ambassador Program — local BC athlete/spokesperson as the human face of PlayNow',
+      'Weekly "PlayNow Insider Show" with expert analysis and community Q&A',
+      'Daily "Quick Picks" video segments with data-driven betting insights',
+      'Localized content partnerships with BC sports media, podcasts, and community events',
     ],
     accent: '#2d7d5a',
   },
   {
     title: 'Responsible Gaming 2.0',
     items: [
-      'Gamified loyalty system',
-      '"Responsibility Streaks" — rewarding healthy habits',
-      'Limit-setting tools and healthy betting patterns',
+      'Gamified loyalty system with "Responsibility Streaks"',
+      'Reward healthy betting habits and limit-setting tool usage',
+      'Community reinvestment messaging to build trust and differentiate from offshore competitors',
     ],
     accent: '#5a4a7a',
   },
+];
+
+const projectedOutcomes = [
+  { metric: 'Market Share', value: '8–10%', detail: 'Additional share of BC\'s online sports betting market within 24 months' },
+  { metric: 'User Engagement', value: '12–15%', detail: 'Improvement through platform enhancements and personalized content' },
+  { metric: 'Player Retention', value: '5–8%', detail: 'Increase in retention rates via loyalty mechanics and RG 2.0 framework' },
+  { metric: 'Audience Trust', value: '10%', detail: 'Uplift projected through Brand Ambassador Program and community engagement' },
+  { metric: 'Bet Frequency', value: '8–12%', detail: 'Increase via micro-betting markets and in-play wagering options' },
+  { metric: 'Revenue Growth', value: '15–25%', detail: 'Incremental revenue over baseline within 24-month implementation window' },
+  { metric: 'Social Engagement', value: '15%+', detail: 'Boost from digital marketing campaigns and ambassador content' },
+  { metric: 'Betting Volume', value: '7%', detail: 'Volume increase driven by product enhancements and market expansion' },
 ];
 
 const backlogItems = [
@@ -792,6 +804,54 @@ function RoadmapSection() {
   );
 }
 
+function ProjectedOutcomesSection() {
+  const ref = useStaggerAnimation();
+
+  return (
+    <section className="about-section" ref={ref}>
+      <div className="max-w-5xl mx-auto px-6 sm:px-10">
+        <div className="about-eyebrow bclc-stagger">Projected Impact</div>
+        <h2 className="about-heading mb-2 bclc-stagger">Forecasted Outcomes</h2>
+        <p className="about-body about-body-large max-w-3xl mb-8 bclc-stagger">
+          The implementation plan included projected KPIs over a 24-month rollout window, 
+          with an estimated <strong>$12M–$18M total investment</strong> and break-even 
+          projected within 18–24 months.
+        </p>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+          {projectedOutcomes.map((item, i) => (
+            <div key={item.metric} className="about-card bclc-stagger text-center" style={{ transitionDelay: `${i * 50}ms` }}>
+              <div className="about-stat text-lg mb-0.5" style={{ fontSize: '1.1rem' }}>{item.value}</div>
+              <div className="about-stat-label text-[0.5rem] mb-1">{item.metric}</div>
+              <div className="text-[0.4rem] text-[#9c9490] leading-tight">{item.detail}</div>
+            </div>
+          ))}
+        </div>
+
+        <div className="about-card bclc-stagger bg-[#f8f5f2] border border-[#e5ddd6]">
+          <div className="flex items-start gap-3">
+            <svg className="w-5 h-5 mt-0.5 shrink-0 text-[#843c2d]" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+            </svg>
+            <div>
+              <span className="text-[0.625rem] font-semibold tracking-[0.1em] uppercase text-[#5c5550] block mb-1">Key Strategic Recommendation</span>
+              <p className="text-xs text-[#5c5550] leading-relaxed">
+                <strong>Humanize the brand through a local BC Brand Ambassador</strong> — recruit a former BC athlete, 
+                local sports media personality, or influencer as the public face of PlayNow. Produce a weekly 
+                &ldquo;PlayNow Insider Show&rdquo; with expert analysis and community Q&A, plus daily 
+                &ldquo;Quick Picks&rdquo; video segments. This approach directly targets the <strong>21–40 demographic</strong> 
+                by meeting them on their terms — through local sports culture, authentic personalities, and 
+                community connection — rather than competing on bonus size with offshore operators. Projected 
+                <strong>10% uplift in audience trust</strong> and <strong>15%+ boost in social engagement</strong>.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function ArtifactsSection() {
   const ref = useStaggerAnimation();
   const [activeModal, setActiveModal] = useState<string | null>(null);
@@ -1291,6 +1351,10 @@ export default function BclcPlayNowPage() {
         <hr className="about-divider" />
       </div>
       <RoadmapSection />
+      <div className="max-w-5xl mx-auto px-6 sm:px-10">
+        <hr className="about-divider" />
+      </div>
+      <ProjectedOutcomesSection />
       <div className="max-w-5xl mx-auto px-6 sm:px-10">
         <hr className="about-divider" />
       </div>
