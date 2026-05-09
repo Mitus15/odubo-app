@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import '@/app/about/about.css';
+import '../about/about.css';
 import './bclc.css';
 
 /* ─── Types ─────────────────────────────────────────────────────────────── */
