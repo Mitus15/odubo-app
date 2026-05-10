@@ -3,6 +3,7 @@
 import { useEffect, useState, ReactNode, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useAuth as useClerkAuth } from "@clerk/nextjs";
 import UserProvider, { useUser } from "./UserProvider";
 import TabContent from "./TabContent";
 import { usePermissions } from "@/lib/usePermissions";
@@ -275,6 +276,7 @@ export default function AdminPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
   const { canAccess, hasAccessibleChildren, loading: permissionsLoading } = usePermissions();
+  const { userId: clerkUserId, isLoaded: clerkLoaded } = useClerkAuth();
 
   // Filter nav items based on user permissions
   const filteredNavItems = useMemo(() => {
@@ -300,6 +302,8 @@ export default function AdminPage() {
   }, [canAccess, hasAccessibleChildren]);
 
   useEffect(() => {
+    if (!clerkLoaded) return;
+
     const getCookieToken = () => {
       try {
         const all = typeof document !== 'undefined' ? document.cookie : '';
@@ -310,6 +314,12 @@ export default function AdminPage() {
 
     const lsToken = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
     const token = lsToken || getCookieToken();
+
+    // If Clerk session exists, don't redirect - let permissions API handle it
+    if (clerkUserId) {
+      setIsAdmin(true); // Temporary - permissions API will determine real access
+      return;
+    }
 
     if (!token) { setIsAdmin(false); router.replace('/login'); return; }
 
@@ -326,7 +336,7 @@ export default function AdminPage() {
       setIsAdmin(false);
       router.replace('/login');
     }
-  }, [router]);
+  }, [router, clerkUserId, clerkLoaded]);
 
   // Toggle expansion of folder items
   const toggleExpand = (id: string, siblings: string[]) => {

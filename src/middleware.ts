@@ -64,6 +64,20 @@ function handleSubdomainRouting(request: NextRequest): NextResponse | null {
       return null;
     }
 
+    if (
+      url.pathname.startsWith('/login') ||
+      url.pathname.startsWith('/sign-in') ||
+      url.pathname.startsWith('/sign-up') ||
+      url.pathname.startsWith('/reset-password')
+    ) {
+      if (isProduction) {
+        const loginUrl = new URL(url.pathname, `https://odubo.studio`);
+        loginUrl.search = url.search;
+        return NextResponse.redirect(loginUrl);
+      }
+      return null;
+    }
+
     if (url.pathname.startsWith('/admin')) {
       return null;
     }
