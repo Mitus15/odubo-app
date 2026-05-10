@@ -1,5 +1,6 @@
 'use client';
 
+// BCLC PlayNow consulting engagement case study
 import { useEffect, useRef, useState } from 'react';
 import '../about/about.css';
 import './bclc.css';
