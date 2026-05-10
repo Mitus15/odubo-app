@@ -33,15 +33,6 @@ const isPublicRoute = createRouteMatcher([
 ]);
 
 /**
- * Clerk middleware - auth protection
- */
-const clerkHandler = clerkMiddleware(async (auth, req) => {
-  if (!isPublicRoute(req)) {
-    await auth.protect();
-  }
-});
-
-/**
  * Subdomain routing
  * - admin.odubo.studio → serves /admin routes at root
  * - moments.odubo.studio → serves /moments routes at root
@@ -63,11 +54,11 @@ function handleSubdomainRouting(request: NextRequest): NextResponse | null {
       url.pathname.startsWith('/static/') ||
       url.pathname.includes('.')
     ) {
-      return NextResponse.next();
+      return null;
     }
 
     if (url.pathname.startsWith('/admin')) {
-      return NextResponse.next();
+      return null;
     }
 
     url.pathname = `/admin${url.pathname}`;
@@ -81,11 +72,11 @@ function handleSubdomainRouting(request: NextRequest): NextResponse | null {
       url.pathname.startsWith('/static/') ||
       url.pathname.includes('.')
     ) {
-      return NextResponse.next();
+      return null;
     }
 
     if (url.pathname.startsWith('/moments')) {
-      return NextResponse.next();
+      return null;
     }
 
     url.pathname = `/moments${url.pathname}`;
@@ -109,23 +100,21 @@ function handleSubdomainRouting(request: NextRequest): NextResponse | null {
   return null;
 }
 
-export default function middleware(request: NextRequest) {
-  // First handle Clerk auth
-  const clerkResponse = clerkHandler(request);
-  
-  // If Clerk returned a response (redirect, rewrite, etc.), return it
-  if (clerkResponse) {
-    return clerkResponse;
-  }
-  
-  // Then handle subdomain routing
-  const subdomainResponse = handleSubdomainRouting(request);
+/**
+ * Clerk v7 middleware - auth protection + subdomain routing
+ * In Clerk v7, clerkMiddleware() must be exported directly.
+ * All custom logic must go inside the callback.
+ */
+export default clerkMiddleware(async (auth, req) => {
+  const subdomainResponse = handleSubdomainRouting(req);
   if (subdomainResponse) {
     return subdomainResponse;
   }
-  
-  return NextResponse.next();
-}
+
+  if (!isPublicRoute(req)) {
+    await auth.protect();
+  }
+});
 
 export const config = {
   matcher: [
