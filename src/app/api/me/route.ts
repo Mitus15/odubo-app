@@ -25,7 +25,7 @@ async function checkClerkAuth(): Promise<{
   };
 }> {
   try {
-    const authResult = auth();
+    const authResult = await auth();
     const clerkUserId = authResult.userId;
 
     if (!clerkUserId) {
