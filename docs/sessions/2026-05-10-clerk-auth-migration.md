@@ -7,12 +7,14 @@
 
 ## Summary
 
-Fixed the Clerk v7 integration issues, resolved the middleware 500 error, and addressed the admin "Access Denied" page. The key changes involved:
+Fixed the Clerk v7 integration issues, resolved the middleware 500 error, addressed the admin "Access Denied" page, and configured satellite domain support for cross-subdomain session sharing.
 
+Key changes:
 1. Fixed Clerk v7 middleware pattern (`clerkMiddleware()` must be exported directly)
 2. Added proper dual-auth support (legacy JWT + Clerk) in API endpoints
 3. Fixed admin page to not assume `clerkUserId` means admin
-4. Added proper access denied handling in admin page
+4. **Configured Clerk satellite domains** (`admin.odubo.studio`, `moments.odubo.studio`)
+5. Removed `/admin(.*)` and `/api/admin(.*)` from public routes (now protected)
 
 ---
 
@@ -98,25 +100,84 @@ if (!WEBHOOK_SECRET) {
 **Files Modified:**
 - `src/app/api/webhooks/clerk/route.ts`
 
+### 6. Clerk Satellite Domain Configuration (NEW)
+
+**Problem:** Session cookies from `odubo.studio` are not accessible on `admin.odubo.studio` and `moments.odubo.studio`. When user logs in on main domain then navigates to admin subdomain, they appear logged out.
+
+**Root Cause:**
+1. Clerk session cookies are origin-bound by default
+2. Subdomain redirect (`odubo.studio/admin` → `admin.odubo.studio`) happens before session can be shared
+3. Development keys have stricter CORS/origin restrictions
+
+**Fix:** Configured Clerk middleware for **satellite domain architecture**:
+```tsx
+function getClerkMiddlewareOptions(req: NextRequest) {
+  const hostname = req.headers.get('host') || '';
+  const isAdminSubdomain = hostname.startsWith('admin.');
+  const isMomentsSubdomain = hostname.startsWith('moments.');
+  const isProduction = hostname.includes('odubo.studio');
+
+  if (isProduction && (isAdminSubdomain || isMomentsSubdomain)) {
+    return {
+      isSatellite: true,
+      domain: 'odubo.studio',  // Primary domain
+      signInUrl: 'https://odubo.studio/sign-in',
+      signUpUrl: 'https://odubo.studio/sign-up',
+    };
+  }
+  return {};
+}
+
+export default clerkMiddleware(
+  async (auth, req) => { /* ... */ },
+  getClerkMiddlewareOptions  // Dynamic options based on host
+);
+```
+
+**Also fixed:**
+- Removed `/admin(.*)` and `/api/admin(.*)` from `isPublicRoute` - these are now PROTECTED routes
+- Clerk's `auth.protect()` will now handle authentication for admin routes
+
+**Files Modified:**
+- `src/middleware.ts`
+
 ---
 
 ## Configuration Required in Vercel
 
-### Environment Variables Already Set (Per User)
-- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
-- `CLERK_SECRET_KEY`
+### Environment Variables Added to Vercel (May 10, 2026)
+| Variable | Value | Environments |
+|----------|-------|--------------|
+| `ADMIN_EMAILS` | `maniodubo@gmail.com` | Production |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | `pk_test_...` ⚠️ | Production, Preview |
+| `CLERK_SECRET_KEY` | `sk_test_...` ⚠️ | Production, Preview |
 
-### Environment Variables That NEED to Be Set
-**CRITICAL:** `ADMIN_EMAILS` - Comma-separated list of admin emails.
+### ⚠️ CRITICAL: Need Production Clerk Keys
 
-Example:
+The current keys are **DEVELOPMENT/TEST KEYS** (`pk_test_...` / `sk_test_...`). For production to work properly, you need **LIVE KEYS**.
+
+**How to get production keys:**
+1. Go to **Clerk Dashboard** → https://dashboard.clerk.com
+2. Select your application
+3. Go to **API Keys** (left sidebar)
+4. **Toggle "Production"** at the top of the page
+5. Copy:
+   - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` (starts with `pk_live_`)
+   - `CLERK_SECRET_KEY` (starts with `sk_live_`)
+
+**Add to Vercel:**
+```bash
+vercel env add NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY production
+vercel env add CLERK_SECRET_KEY production
 ```
-ADMIN_EMAILS=manio@odubo.studio,admin@odubo.studio
-```
 
-This is the simplest way to grant admin access. Without this:
-- The permissions API will check if there's a DB user with matching email and `is_admin=1`
-- If neither exists, user gets "Access Denied"
+### Clerk Dashboard Configuration Required
+
+For satellite domains to work:
+1. Go to **Clerk Dashboard** → **Domains**
+2. Ensure `odubo.studio` is set as **Primary Domain**
+3. Add `admin.odubo.studio` and `moments.odubo.studio` as **Satellite Domains**
+4. Or at minimum, add these to **Allowed Redirect Origins** and **Allowed Origins**
 
 ### Env Vars Marked as Sensitive (Per User)
 - `GEMINI_API_KEY`
@@ -165,7 +226,7 @@ Clerk session cookies from main domain (`odubo.studio`) may not be accessible on
 | File | Changes |
 |------|---------|
 | `src/app/admin/page.tsx` | Major refactor: renamed `isAdmin` → `isAuthenticated`, now uses `isAdmin` from `usePermissions()`, added proper Access Denied page, waits for permissions loading |
-| `src/middleware.ts` | Already fixed in previous work: `clerkMiddleware()` direct export, public routes include admin paths, login redirects to main domain |
+| `src/middleware.ts` | **Major update:** Added `getClerkMiddlewareOptions()` for satellite domain config, removed `/admin(.*)` and `/api/admin(.*)` from public routes (now protected), `clerkMiddleware()` with dynamic options |
 | `src/app/api/admin/permissions/route.ts` | Dual auth support, `await auth()` for Clerk v7, checks `ADMIN_EMAILS` env var |
 | `src/app/api/me/route.ts` | Dual auth support, `await auth()` for Clerk v7 |
 | `src/app/api/webhooks/clerk/route.ts` | Graceful when `CLERK_WEBHOOK_SECRET` not set |
@@ -208,12 +269,21 @@ Clerk session cookies from main domain (`odubo.studio`) may not be accessible on
 
 - [x] `clerkMiddleware()` exported directly (not called then exported)
 - [x] `auth()` calls are awaited with `await auth()`
-- [x] Public routes include `/admin(.*)`, `/api/admin(.*)`, `/login(.*)`, `/sign-in(.*)`, `/sign-up(.*)`
+- [x] **`/admin(.*)` and `/api/admin(.*)` are PROTECTED routes** (removed from public)
+- [x] Public routes include `/login(.*)`, `/sign-in(.*)`, `/sign-up(.*)`
 - [x] Admin subdomain login requests redirect to main domain
+- [x] **Clerk satellite domain configured** (`admin.odubo.studio`, `moments.odubo.studio` = satellites, `odubo.studio` = primary)
 - [x] Admin page uses `isAuthenticated` for auth check, `isAdmin` from `usePermissions()` for authorization
 - [x] `/api/admin/permissions` supports both legacy JWT and Clerk auth
 - [x] `/api/me` supports both legacy JWT and Clerk auth
 - [x] Clerk webhook returns 200 OK when secret not configured
+
+### Clerk Dashboard Configuration Checklist (NOT YET DONE)
+- [ ] Get **production keys** (`pk_live_...` / `sk_live_...`) from Clerk Dashboard
+- [ ] Update Vercel with production keys
+- [ ] Configure `odubo.studio` as primary domain in Clerk Dashboard
+- [ ] Add `admin.odubo.studio` and `moments.odubo.studio` as satellite domains
+- [ ] Add all domains to **Allowed Redirect Origins** and **Allowed Origins**
 
 ---
 
