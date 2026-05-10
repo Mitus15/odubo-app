@@ -6,8 +6,8 @@ export async function POST(req: Request) {
   const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET;
   
   if (!WEBHOOK_SECRET) {
-    console.error('[Clerk Webhook] Missing CLERK_WEBHOOK_SECRET');
-    return new Response('Server configuration error', { status: 500 });
+    console.log('[Clerk Webhook] CLERK_WEBHOOK_SECRET not configured. Endpoint disabled.');
+    return new Response('OK (webhook not configured)', { status: 200 });
   }
 
   const headerPayload = await headers();

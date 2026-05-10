@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { getUserFromRequest, isAdminUser } from '@/lib/auth';
 import { getUserByEmail, queryDatabase } from '@/lib/db';
-import { isUserAdmin, upsertClerkUser } from '@/lib/clerkSync';
 
 export const runtime = 'edge';
 
@@ -40,45 +39,55 @@ interface RoleRow {
   display_name: string;
 }
 
+function isEmailInAdminList(email: string): boolean {
+  const adminEmails = (process.env.ADMIN_EMAILS || '')
+    .split(',')
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean);
+  return adminEmails.includes(email.toLowerCase());
+}
+
 async function checkClerkAuth(): Promise<{
   isAuthenticated: boolean;
   isAdmin: boolean;
+  email?: string;
   dbUserId?: string;
-  clerkUserId?: string;
 }> {
   try {
     const authResult = auth();
     const clerkUserId = authResult.userId;
-    const { user } = authResult;
 
     if (!clerkUserId) {
       return { isAuthenticated: false, isAdmin: false };
     }
 
-    const primaryEmail = user?.emailAddresses?.[0]?.emailAddress;
+    const { user } = authResult;
+    const email = user?.emailAddresses?.[0]?.emailAddress;
 
-    if (!primaryEmail) {
-      return { isAuthenticated: true, isAdmin: false, clerkUserId };
+    if (!email) {
+      return { isAuthenticated: true, isAdmin: false };
     }
 
-    let dbUser = await getUserByEmail(primaryEmail);
-
-    if (!dbUser && user) {
-      try {
-        const upsertResult = await upsertClerkUser(user as any);
-        dbUser = upsertResult.user;
-      } catch (err) {
-        console.error('[Permissions] Error upserting user from Clerk:', err);
-      }
+    if (isEmailInAdminList(email)) {
+      return { isAuthenticated: true, isAdmin: true, email };
     }
 
-    const isAdmin = await isUserAdmin(dbUser, primaryEmail);
+    let dbUser = null;
+    try {
+      dbUser = await getUserByEmail(email);
+    } catch (err) {
+      console.error('[Permissions] Error looking up DB user by email:', err);
+    }
+
+    if (dbUser?.is_admin === true || dbUser?.is_admin === 1) {
+      return { isAuthenticated: true, isAdmin: true, email, dbUserId: dbUser.id };
+    }
 
     return {
       isAuthenticated: true,
-      isAdmin,
+      isAdmin: false,
+      email,
       dbUserId: dbUser?.id,
-      clerkUserId,
     };
   } catch (err) {
     console.error('[Permissions] Clerk auth check error:', err);
