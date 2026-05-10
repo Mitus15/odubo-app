@@ -22,7 +22,6 @@ const isPublicRoute = createRouteMatcher([
   '/bclc-playnow',
   '/login(.*)',
   '/reset-password(.*)',
-  '/admin(.*)',
   '/api/moments(.*)',
   '/api/clips(.*)',
   '/api/videos(.*)',
@@ -33,7 +32,6 @@ const isPublicRoute = createRouteMatcher([
   '/api/linktree(.*)',
   '/api/users(.*)',
   '/api/auth(.*)',
-  '/api/admin(.*)',
   '/api/webhooks(.*)',
   '/sign-in(.*)',
   '/sign-up(.*)',
@@ -121,21 +119,46 @@ function handleSubdomainRouting(request: NextRequest): NextResponse | null {
   return null;
 }
 
+function getClerkMiddlewareOptions(req: NextRequest) {
+  const hostname = req.headers.get('host') || '';
+  const isAdminSubdomain = hostname.startsWith('admin.');
+  const isMomentsSubdomain = hostname.startsWith('moments.');
+  const isProduction = hostname.includes('odubo.studio');
+
+  if (isProduction && (isAdminSubdomain || isMomentsSubdomain)) {
+    return {
+      isSatellite: true,
+      domain: 'odubo.studio',
+      signInUrl: 'https://odubo.studio/sign-in',
+      signUpUrl: 'https://odubo.studio/sign-up',
+    };
+  }
+
+  return {};
+}
+
 /**
  * Clerk v7 middleware - auth protection + subdomain routing
  * In Clerk v7, clerkMiddleware() must be exported directly.
- * All custom logic must go inside the callback.
+ * 
+ * Subdomain architecture:
+ * - odubo.studio = PRIMARY domain (handles sign-in/sign-up)
+ * - admin.odubo.studio = SATELLITE domain (reads session from primary)
+ * - moments.odubo.studio = SATELLITE domain (reads session from primary)
  */
-export default clerkMiddleware(async (auth, req) => {
-  const subdomainResponse = handleSubdomainRouting(req);
-  if (subdomainResponse) {
-    return subdomainResponse;
-  }
+export default clerkMiddleware(
+  async (auth, req) => {
+    const subdomainResponse = handleSubdomainRouting(req);
+    if (subdomainResponse) {
+      return subdomainResponse;
+    }
 
-  if (!isPublicRoute(req)) {
-    await auth.protect();
-  }
-});
+    if (!isPublicRoute(req)) {
+      await auth.protect();
+    }
+  },
+  getClerkMiddlewareOptions
+);
 
 export const config = {
   matcher: [
