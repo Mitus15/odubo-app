@@ -1,15 +1,12 @@
 import { Webhook } from 'svix';
 import { headers } from 'next/headers';
-import { clerkClient } from '@/lib/clerk-client';
-import { createClerkClient } from '@clerk/backend';
-import { D1Database } from '@cloudflare/workers-types';
+import { upsertClerkUser } from '@/lib/clerkSync';
 
-// Clerk webhook handler
 export async function POST(req: Request) {
   const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET;
   
   if (!WEBHOOK_SECRET) {
-    console.error('Missing CLERK_WEBHOOK_SECRET');
+    console.error('[Clerk Webhook] Missing CLERK_WEBHOOK_SECRET');
     return new Response('Server configuration error', { status: 500 });
   }
 
@@ -35,79 +32,48 @@ export async function POST(req: Request) {
       'svix-signature': svix_signature,
     });
   } catch (err) {
-    console.error('Webhook verification failed:', err);
+    console.error('[Clerk Webhook] Verification failed:', err);
     return new Response('Webhook verification failed', { status: 400 });
   }
 
   const { type, data } = evt;
-  const clerk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
+
+  console.log('[Clerk Webhook] Event:', type, 'for user:', data?.id || data?.user_id);
 
   switch (type) {
-    case 'user.created': {
-      const { id, email_addresses, public_metadata } = data;
-      const primaryEmail = email_addresses?.[0]?.email_address;
-      
-      console.log('New user created:', id, primaryEmail);
-      
-      // Link Shopify account if exists
-      if (primaryEmail) {
-        await linkShopifyAccount(id, primaryEmail);
-      }
-      break;
-    }
-
+    case 'user.created':
     case 'user.updated': {
-      const { id, email_addresses } = data;
-      const primaryEmail = email_addresses?.[0]?.email_address;
-      
-      console.log('User updated:', id);
-      
-      // Re-check Shopify linking on email change
-      if (primaryEmail) {
-        await linkShopifyAccount(id, primaryEmail);
+      try {
+        const { id, email_addresses, first_name, last_name, image_url } = data;
+        const result = await upsertClerkUser({
+          id,
+          emailAddresses: email_addresses || [],
+          firstName: first_name,
+          lastName: last_name,
+          imageUrl: image_url,
+        });
+        console.log('[Clerk Webhook] User synced:', id, 'isNew:', result.isNew, 'user id:', result.user?.id);
+      } catch (err) {
+        console.error('[Clerk Webhook] Failed to sync user:', err);
       }
-      break;
-    }
-
-    case 'user.deleted': {
-      const { id } = data;
-      console.log('User deleted:', id);
-      
-      // Clean up user data from D1
-      // (Would need D1 binding in this route)
       break;
     }
 
     case 'session.created': {
-      const { user_id } = data;
-      console.log('Session created for user:', user_id);
+      console.log('[Clerk Webhook] Session started for:', data?.user_id);
       break;
     }
 
     case 'session.ended': {
-      const { user_id } = data;
-      console.log('Session ended for user:', user_id);
+      console.log('[Clerk Webhook] Session ended for:', data?.user_id);
+      break;
+    }
+
+    case 'user.deleted': {
+      console.log('[Clerk Webhook] User deleted:', data?.id);
       break;
     }
   }
 
   return new Response('OK', { status: 200 });
-}
-
-async function linkShopifyAccount(clerkUserId: string, email: string) {
-  // This would need Shopify API integration
-  // For now, just log the attempt
-  console.log('Attempting to link Shopify account for:', email);
-  
-  // TODO: Implement Shopify customer lookup
-  // const shopifyCustomer = await shopify.customers.list({ query: `email:${email}` });
-  // if (shopifyCustomer.length > 0) {
-  //   await clerkClient.users.updateUserMetadata(clerkUserId, {
-  //     publicMetadata: {
-  //       shopify_customer_id: shopifyCustomer[0].id,
-  //       linked_at: new Date().toISOString(),
-  //       link_source: 'auto',
-  //     },
-  //   });
-  // }
 }

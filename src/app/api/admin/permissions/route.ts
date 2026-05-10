@@ -1,38 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@clerk/nextjs/server';
 import { getUserFromRequest, isAdminUser } from '@/lib/auth';
-import { queryDatabase } from '@/lib/db';
+import { getUserByEmail, queryDatabase } from '@/lib/db';
+import { isUserAdmin, upsertClerkUser } from '@/lib/clerkSync';
 
 export const runtime = 'edge';
 
-// Map child sections to their parent sections
 const SECTION_PARENT_MAP: Record<string, string> = {
-  // CMS
   'music-library': 'cms',
   'video-library': 'cms',
   'moments': 'cms',
   'featured': 'cms',
   'linktree': 'cms',
   'live': 'cms',
-  // Social
   'social-posts': 'social',
   'social-accounts': 'social',
   'social-analytics': 'social',
-  // Commerce
   'products': 'commerce',
   'orders': 'commerce',
   'customers': 'commerce',
   'discounts': 'commerce',
   'store-settings': 'commerce',
-  // Marketing
   'campaigns': 'marketing',
-  // Analytics
   'analytics-overview': 'analytics',
   'analytics-music': 'analytics',
   'analytics-video': 'analytics',
   'analytics-moments': 'analytics',
   'analytics-customers': 'analytics',
   'analytics-reports': 'analytics',
-  // System
   'users': 'system',
   'database': 'system',
   'storage': 'system',
@@ -45,22 +40,102 @@ interface RoleRow {
   display_name: string;
 }
 
-/**
- * GET /api/admin/permissions
- * Get current user's accessible sections based on their roles
- */
-export async function GET(request: NextRequest) {
+async function checkClerkAuth(): Promise<{
+  isAuthenticated: boolean;
+  isAdmin: boolean;
+  dbUserId?: string;
+  clerkUserId?: string;
+}> {
   try {
-    const user = getUserFromRequest(request);
-    if (!user) {
-      console.log('[Permissions] No user found in request. Headers:', Object.fromEntries(request.headers.entries()));
-      const cookieToken = request.cookies.get('token');
-      console.log('[Permissions] Cookie token exists:', !!cookieToken, 'Value length:', cookieToken?.value?.length || 0);
-      return NextResponse.json({ error: 'Unauthorized - No valid token found' }, { status: 401 });
+    const authResult = auth();
+    const clerkUserId = authResult.userId;
+    const { user } = authResult;
+
+    if (!clerkUserId) {
+      return { isAuthenticated: false, isAdmin: false };
     }
 
-    // Legacy admin check - if is_admin is true, grant full access
-    if (isAdminUser(user)) {
+    const primaryEmail = user?.emailAddresses?.[0]?.emailAddress;
+
+    if (!primaryEmail) {
+      return { isAuthenticated: true, isAdmin: false, clerkUserId };
+    }
+
+    let dbUser = await getUserByEmail(primaryEmail);
+
+    if (!dbUser && user) {
+      try {
+        const upsertResult = await upsertClerkUser(user as any);
+        dbUser = upsertResult.user;
+      } catch (err) {
+        console.error('[Permissions] Error upserting user from Clerk:', err);
+      }
+    }
+
+    const isAdmin = await isUserAdmin(dbUser, primaryEmail);
+
+    return {
+      isAuthenticated: true,
+      isAdmin,
+      dbUserId: dbUser?.id,
+      clerkUserId,
+    };
+  } catch (err) {
+    console.error('[Permissions] Clerk auth check error:', err);
+    return { isAuthenticated: false, isAdmin: false };
+  }
+}
+
+export async function GET(request: NextRequest) {
+  try {
+    const legacyUser = getUserFromRequest(request);
+
+    if (legacyUser) {
+      if (isAdminUser(legacyUser)) {
+        return NextResponse.json({
+          sections: ['*'],
+          isAdmin: true,
+          roles: [{ name: 'admin', display_name: 'Admin' }],
+        });
+      }
+
+      const userRoles = await queryDatabase<RoleRow>(
+        `SELECT ar.sections, ar.name, ar.display_name
+         FROM admin_user_roles aur
+         JOIN admin_roles ar ON aur.role_id = ar.id
+         WHERE aur.user_id = ?`,
+        [legacyUser.userId]
+      );
+
+      if (userRoles.length === 0) {
+        return NextResponse.json({
+          sections: [],
+          isAdmin: false,
+          roles: [],
+        });
+      }
+
+      let isAdmin = false;
+      const sectionsSet = new Set<string>();
+
+      for (const role of userRoles) {
+        const roleSections = JSON.parse(role.sections) as string[];
+        if (roleSections.includes('*')) {
+          isAdmin = true;
+          break;
+        }
+        roleSections.forEach(s => sectionsSet.add(s));
+      }
+
+      const sections = isAdmin ? ['*'] : Array.from(sectionsSet);
+      const roles = userRoles.map((r: RoleRow) => ({ name: r.name, display_name: r.display_name }));
+
+      return NextResponse.json({ sections, isAdmin, roles });
+    }
+
+    const clerkAuth = await checkClerkAuth();
+
+    if (clerkAuth.isAuthenticated && clerkAuth.isAdmin) {
       return NextResponse.json({
         sections: ['*'],
         isAdmin: true,
@@ -68,41 +143,40 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Get all roles for this user
-    const userRoles = await queryDatabase<RoleRow>(
-      `SELECT ar.sections, ar.name, ar.display_name
-       FROM admin_user_roles aur
-       JOIN admin_roles ar ON aur.role_id = ar.id
-       WHERE aur.user_id = ?`,
-      [user.userId]
-    );
+    if (clerkAuth.dbUserId) {
+      const userRoles = await queryDatabase<RoleRow>(
+        `SELECT ar.sections, ar.name, ar.display_name
+         FROM admin_user_roles aur
+         JOIN admin_roles ar ON aur.role_id = ar.id
+         WHERE aur.user_id = ?`,
+        [clerkAuth.dbUserId]
+      );
 
-    if (userRoles.length === 0) {
-      // No roles assigned - no access
-      return NextResponse.json({
-        sections: [],
-        isAdmin: false,
-        roles: [],
-      });
-    }
+      if (userRoles.length > 0) {
+        let isAdmin = false;
+        const sectionsSet = new Set<string>();
 
-    // Combine sections from all roles
-    const sectionsSet = new Set<string>();
-    let isAdmin = false;
+        for (const role of userRoles) {
+          const roleSections = JSON.parse(role.sections) as string[];
+          if (roleSections.includes('*')) {
+            isAdmin = true;
+            break;
+          }
+          roleSections.forEach(s => sectionsSet.add(s));
+        }
 
-    for (const role of userRoles) {
-      const roleSections = JSON.parse(role.sections) as string[];
-      if (roleSections.includes('*')) {
-        isAdmin = true;
-        break;
+        const sections = isAdmin ? ['*'] : Array.from(sectionsSet);
+        const roles = userRoles.map((r: RoleRow) => ({ name: r.name, display_name: r.display_name }));
+
+        return NextResponse.json({ sections, isAdmin, roles });
       }
-      roleSections.forEach(s => sectionsSet.add(s));
     }
 
-    const sections = isAdmin ? ['*'] : Array.from(sectionsSet);
-    const roles = userRoles.map((r: RoleRow) => ({ name: r.name, display_name: r.display_name }));
-
-    return NextResponse.json({ sections, isAdmin, roles });
+    return NextResponse.json({
+      sections: [],
+      isAdmin: false,
+      roles: [],
+    });
   } catch (error) {
     console.error('[Permissions] GET error:', error);
     return NextResponse.json(
@@ -112,20 +186,10 @@ export async function GET(request: NextRequest) {
   }
 }
 
-/**
- * Helper function to check if user can access a specific section
- * Exported for use in other API routes if needed
- */
 export function canAccessSection(accessibleSections: string[], sectionId: string): boolean {
-  // Full admin access
   if (accessibleSections.includes('*')) return true;
-
-  // Direct match
   if (accessibleSections.includes(sectionId)) return true;
-
-  // Check parent section
   const parent = SECTION_PARENT_MAP[sectionId];
   if (parent && accessibleSections.includes(parent)) return true;
-
   return false;
 }
