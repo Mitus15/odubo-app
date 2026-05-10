@@ -271,11 +271,11 @@ const navItems: NavItem[] = [
 
 export default function AdminPage() {
   const router = useRouter();
-  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [activeTab, setActiveTab] = useState<string>('overview');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
-  const { canAccess, hasAccessibleChildren, loading: permissionsLoading } = usePermissions();
+  const { canAccess, hasAccessibleChildren, loading: permissionsLoading, isAdmin } = usePermissions();
   const { userId: clerkUserId, isLoaded: clerkLoaded } = useClerkAuth();
 
   // Filter nav items based on user permissions
@@ -315,27 +315,29 @@ export default function AdminPage() {
     const lsToken = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
     const token = lsToken || getCookieToken();
 
-    // If Clerk session exists, don't redirect - let permissions API handle it
     if (clerkUserId) {
-      setIsAdmin(true); // Temporary - permissions API will determine real access
+      setIsAuthenticated(true);
       return;
     }
 
-    if (!token) { setIsAdmin(false); router.replace('/login'); return; }
-
-    try {
-      const base64Url = token.split('.')[1] || '';
-      const pad = (s: string) => s + '==='.slice((s.length + 3) % 4);
-      const base64 = pad(base64Url.replace(/-/g, '+').replace(/_/g, '/'));
-      const payload = JSON.parse(typeof atob === 'function' ? atob(base64) : Buffer.from(base64, 'base64').toString('utf-8'));
-      const ok = !!payload?.is_admin || payload?.role === 'admin';
-      setIsAdmin(ok);
-      if (!ok) router.replace('/');
-    } catch (e) {
-      console.error('Token decode failed:', e);
-      setIsAdmin(false);
-      router.replace('/login');
+    if (token) {
+      try {
+        const base64Url = token.split('.')[1] || '';
+        const pad = (s: string) => s + '==='.slice((s.length + 3) % 4);
+        const base64 = pad(base64Url.replace(/-/g, '+').replace(/_/g, '/'));
+        const payload = JSON.parse(typeof atob === 'function' ? atob(base64) : Buffer.from(base64, 'base64').toString('utf-8'));
+        const ok = !!payload?.is_admin || payload?.role === 'admin';
+        setIsAuthenticated(true);
+        if (!ok) router.replace('/');
+      } catch (e) {
+        console.error('Token decode failed:', e);
+        setIsAuthenticated(false);
+        window.location.href = 'https://odubo.studio/login';
+      }
+      return;
     }
+
+    window.location.href = 'https://odubo.studio/login';
   }, [router, clerkUserId, clerkLoaded]);
 
   // Toggle expansion of folder items
@@ -421,13 +423,37 @@ export default function AdminPage() {
     );
   };
 
-  if (isAdmin === null) {
-    return (
-      <div className="h-screen w-full flex items-center justify-center bg-[#0d0c0a]">
-        <div className="w-8 h-8 border-2 border-[#502d26]/30 border-t-[#843c2d] rounded-full animate-spin" />
-      </div>
-    );
-  }
+   if (isAuthenticated === null || permissionsLoading) {
+     return (
+       <div className="h-screen w-full flex items-center justify-center bg-[#0d0c0a]">
+         <div className="w-8 h-8 border-2 border-[#502d26]/30 border-t-[#843c2d] rounded-full animate-spin" />
+       </div>
+     );
+   }
+
+   if (isAuthenticated && !isAdmin && !permissionsLoading) {
+     return (
+       <div className="h-screen w-full flex items-center justify-center bg-[#0d0c0a]">
+         <div className="flex flex-col items-center gap-4 max-w-md text-center p-6">
+           <div className="w-16 h-16 rounded-full bg-[#843c2d]/20 flex items-center justify-center">
+             <svg className="w-8 h-8 text-[#843c2d]" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+               <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+             </svg>
+           </div>
+           <h3 className="text-lg font-medium text-[#ede8df]">Access Denied</h3>
+           <p className="text-sm text-[#726d6c]">
+             You don&apos;t have permission to access the admin dashboard.
+           </p>
+           <button
+             onClick={() => window.location.href = 'https://odubo.studio'}
+             className="mt-2 px-4 py-2 bg-[#843c2d]/20 text-[#ede8df] rounded-lg hover:bg-[#843c2d]/30 transition-colors"
+           >
+             Back to Site
+           </button>
+         </div>
+       </div>
+     );
+   }
 
   return (
     <UserProvider>
