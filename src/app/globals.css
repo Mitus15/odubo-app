@@ -206,6 +206,8 @@
 @keyframes glass-shimmer {
   0% { transform: translateX(-100%); }
   100% { transform: translateX(100%); }
+}
+
 @keyframes shimmer {
   0% { transform: translateX(-100%); }
   100% { transform: translateX(100%); }
@@ -214,8 +216,6 @@
 @keyframes fadeIn {
   0% { opacity: 0; transform: translateY(8px); }
   100% { opacity: 1; transform: translateY(0); }
-}
-
 }
 
 @keyframes liquid-pulse {
@@ -1915,3 +1915,146 @@ h6,
 .editorial-stagger > *:nth-child(4) { animation-delay: 300ms; }
 .editorial-stagger > *:nth-child(5) { animation-delay: 400ms; }
 .editorial-stagger > *:nth-child(6) { animation-delay: 500ms; }
+
+/* ============================================================================
+   DOCUMENTATION PAGE — Typography & Layout
+   ============================================================================ */
+
+.doc-content {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', sans-serif;
+  color: #1a1a1a;
+  line-height: 1.7;
+  font-size: 0.9375rem;
+}
+
+.doc-content h1,
+.doc-content h2,
+.doc-content h3 {
+  font-family: 'Baskerville', 'Times New Roman', Georgia, serif;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+  line-height: 1.2;
+}
+
+.doc-content h1:first-child,
+.doc-content h2:first-child,
+.doc-content h3:first-child {
+  margin-top: 0;
+}
+
+.doc-h1 {
+  font-size: 1.75rem;
+}
+
+.doc-h2 {
+  font-size: 1.375rem;
+  padding-bottom: 0.375rem;
+  border-bottom: 1px solid #efe9e3;
+}
+
+.doc-h3 {
+  font-size: 1.125rem;
+}
+
+.doc-p {
+  margin-bottom: 1rem;
+  line-height: 1.7;
+  color: #5c5550;
+}
+
+.doc-ul {
+  margin: 0.75rem 0 1.25rem;
+  padding-left: 1.5rem;
+  list-style: disc;
+}
+
+.doc-li {
+  margin-bottom: 0.375rem;
+  line-height: 1.6;
+  color: #5c5550;
+}
+
+.doc-code {
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  font-size: 0.8125rem;
+  background: #f5f0eb;
+  padding: 0.125rem 0.375rem;
+  border-radius: 4px;
+  color: #843c2d;
+  border: 1px solid #e5ddd6;
+}
+
+.doc-blockquote {
+  font-style: italic;
+  color: #5c5550;
+  padding: 0.5rem 1rem;
+  margin: 0.75rem 0;
+  border-left: 3px solid #843c2d;
+  background: #faf7f4;
+  border-radius: 0 8px 8px 0;
+}
+
+.doc-blockquote-wrapper {
+  margin: 1rem 0;
+}
+
+.doc-hr {
+  border: none;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, #d9d0c8 20%, #d9d0c8 80%, transparent 100%);
+  margin: 2rem 0;
+}
+
+.doc-content strong {
+  color: #1a1a1a;
+  font-weight: 600;
+}
+
+.doc-content em {
+  font-style: italic;
+}
+
+.doc-content a {
+  color: #843c2d;
+  text-decoration: none;
+  font-weight: 500;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.2s ease;
+}
+
+.doc-content a:hover {
+  border-bottom-color: #843c2d;
+}
+
+.doc-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+  font-size: 0.875rem;
+}
+
+.doc-content th,
+.doc-content td {
+  padding: 0.625rem 0.75rem;
+  border: 1px solid #e5ddd6;
+  text-align: left;
+}
+
+.doc-content th {
+  background: #f5f0eb;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.doc-content td {
+  color: #5c5550;
+}
+
+.doc-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  margin: 1rem 0;
+}

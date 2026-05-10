@@ -1,0 +1,150 @@
+Footprint Analysis
+
+BCLC’s PlayNow.com is the only legal, regulated online sportsbook in British Columbia. Despite its monopoly, competition from offshore betting platforms challenges its market presence. This section evaluates PlayNow.com’s website performance, user demographics, sports betting engagement trends, and overall strengths and weaknesses to comprehensively assess its current footprint.
+
+Before COVID-19, the platform's user trend remained relatively flat. However, since the pandemic, there has been a noticeable increase in player activity, with fluctuations over time. While the overall player base has grown significantly, recent data suggests that this growth is now starting to level off. Our engagement analysis suggests that this decline could be attributed to various factors. As lockdowns ended, users returned to pre-pandemic practices, which reduced the time spent on online gaming platforms. Furthermore, inflation led consumers to be more conservative with discretionary spending, affecting gaming revenue (Tan & Tan, 2022).
+
+Website & App Performance
+The total number of visits in February 2025 is 2.8M, of which 18.2% has a unique footprint. However, 1/4th of average visitors leaves the website after viewing the home page. The average visitor spent 10 minutes and, on average, browsed 10 pages. 75% of users use mobiles. PlayNow.com is the only gambling provider within BC where profits are shared with the Government of BC. There is a 135% increase in growth. Users of the website are skewed toward the younger male demographic (with a slightly riskier gambling profile). The website also allows players to earn points with the Encore loyalty system. Playnow is also available in 3 provinces: British Columbia, Manitoba, and Saskatchewan. Significant updates to their lineup include the ability for users to conduct single events betting.
+
+Total Visits (Feb 2025)
+2.802 M
+The total number of times people visited the website in February 2025. Includes repeat visits by the same users.
+Unique Visitors
+511.9K
+The number of distinct individuals who visited the site in February.
+Based on factors like total visits, unique visitors, engagement, and traffic.
+Global Rank 
+#13,499
+The website’s ranking compared to all websites worldwide.
+Country Rank
+#267
+ 
+Industry Rank 
+#44
+ 
+Device Distribution
+Desktop – 15%
+users access the website on a computer
+ 
+Mobile Web – 67%
+users access the website on mobile devices.
+ 
+App IOS – 18%
+users access the website on IOS app.
+Canada Share
+96.30%
+96.3% of the website’s visitors are from Canada
+Average Visit Duration
+Desktop - 00:27
+The average amount of time a visitor spends on the website per visit on a computer
+ 
+Mobile Web - 1:13
+The average amount of time a visitor spends on the website per visit on mobile devices
+ 
+App IOS - 00:21
+The average amount of time a visitor spends on the website per visit on IOS app
+Pages/Visit
+10.58
+visitor browses 10.58 different pages during a session.
+Bounce Rate
+Desktop - 7.21%
+Bounce rate is the visitors who leave the site after viewing only one page without further interaction on a computer.
+ 
+Mobile Web – 11.07%
+Bounce rate is the visitors who leave the site after viewing only one page without further interaction on a mobile devices.
+ 
+App IOS – 7.58%
+Bounce rate is the visitors who leave the site after viewing only one page without further interaction on IOS app.
+
+Compared to January Playnow.com has decreased the total number of visitors by 19.07%. It could be due to various factors, such as seasonal trends, reduced marketing efforts, or changes in user internet. 
+
+Direct and indirect traffic:
+
+
+
+
+
+Indirect traffic such as paid search, organic, email, display, paid other, organic social, and unassigned contributed 86% of visitors, higher than direct traffic. 
+
+Types of Bets:  Single Event Wagers (One-Game Bets) 
+Most common bet type, but lower profit per bet.
+
+Parlays (Multiple-Game Bets)
+Fewer bets than single-event wagers, but much higher profit margin.
+
+Same Game Parlay (Multiple Bets in One Game)
+Least common bet type, but the highest profit margin.
+
+Geographical Distribution of Playnow.com Website traffic
+
+Knowing where website visitors come from helps us understand who uses the platform the most. The data below shows where Playnow.com traffic comes from, with Canada being the primary source of visitors. Other countries contribute more diminutive amounts. This information is helpful for seeing which markets are the strongest and where there might be opportunities to grow.
+
+ 
+Canada is the country that contributes the most consumers to the platform with a total of 95.03%.
+
+
+
+
+
+
+
+
+
+
+
+
+Regional Distribution of Playnow.com Website traffic in BC
+
+
+
+
+Vancouver is the region in British Columbia that contributes the most consumers to the platform with a total of 20%.
+
+Demographics
+
+
+
+The platform attracts a mix of users, but most visitors are between 55 and 64 years old (21.47%) followed by those aged 45 to 54 (20.84%). This means that middle-aged and older adults make up the biggest group of users on the site. 
+ The websites audience is also mostly male (60.78%), with females making up 39.22% of visitors. Since understanding who uses the site is essential, this information can help Playnow.com adjust its marketing strategies to better connect with its users and attract more players.
+
+Player Demographics
+
+
+
+Note this is for playnow, not for playnow/sports
+
+Player Demographics & Behavior
+
+Sports betting engagement on PlayNow.com remains relatively low compared to other gambling categories:
+In 2015, only 9% of PlayNow.com users engaged in sports betting, making up just 0.1% of total bets (Lesch & Clark, 2017 – UBC Gambling Research Report).
+
+This data suggests that sports betting remains a niche segment within PlayNow.com, primarily driven by high-spending bettors rather than casual users.
+
+
+
+
+
+
+
+
+Footprint Comparison with Competitors (Bet365 and BetOnline)
+
+Looking at the total traffic in Canada among the three platforms, PlayNow currently leads with about 2.8 million visits monthly. Bet365 follows it with 2.6 million visits, and BetOnline is a much smaller market player, with only 127,600 monthly visitors (Betting Sites in Canada ✔️ Canadian Bookmakers 2025, n.d.). PlayNow’s high traffic volumes in Canada are mainly due to the fact that it is the only regulated online gaming website in British Columbia and Manitoba, which gives it an exclusive market advantage. 
+
+Bet365, while behind in total visits, is ahead in another important engagement measure—time spent per session. Users spend on average, 6 minutes and 43 seconds on the site, nearly five times the mobile session duration of 1 minute and 13 seconds for PlayNow. This informs us that while PlayNow users will see more pages, Bet365 users are investing more time per session, possibly with more detailed consumption of live betting and sports wagering functionality (SEMrush, 2025).
+
+
+References
+
+Similarweb. (2025). playnow.com website demographics. 
+https://www.similarweb.com/website/playnow.com/#demographics
+SEMrush. (2025). Website analytics overview for playnow.com. 
+https://www.semrush.com/analytics/overview/?q=playnow.com&searchType=domain
+Betting sites in Canada ✔️ Canadian Bookmakers 2025. (n.d.). https://bestonlinebookmakers.com/sports-betting-in-canada.
+SEMrush. (2025). Website analytics overview for bet365.com. 
+https://www.semrush.com/analytics/overview/?q=bet365.com&searchType=domain
+Tan, R., & Tan, R. (2022, August 24). Is the gaming industry shrinking after the pandemic? BusinessNewsAsia.com. https://www.businessnewsasia.com/2022082452353406-is-the-gaming-industry-shrinking-after-the-pandemic
+
+
+

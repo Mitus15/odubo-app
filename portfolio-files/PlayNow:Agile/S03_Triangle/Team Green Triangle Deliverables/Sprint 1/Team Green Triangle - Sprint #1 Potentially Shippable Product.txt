@@ -1,0 +1,192 @@
+Team Green Triangle - Sprint #1 Deliverable
+Name
+Tasks done
+Roles
+Manuel Chong
+Footprint Analysis
+Product Owner
+Roshnee Jayakumar
+Competitive Analysis
+Scrum Master
+Feliz Chibuzo Obi
+Marketing Strategy
+
+Digvijay Kulshreshtha
+Implementation Plan
+
+
+A. Playnow.com Footprint Analysis
+According to SimilarWeb data, PlayNow.com has shown an increase in its online presence, reflecting growth in user participation and a stronger position in the online gaming industry. Analyzing its website traffic provides insights into PlayNow.com's reach and competitiveness in the online sector.
+Before COVID-19, the platform's user trend remained relatively flat. However, since the pandemic, there has been a noticeable increase in player activity, with fluctuations over time. While the overall player base has grown significantly, recent data suggests that this growth is now starting to level off.
+The sports that generate the most revenue on this platform are:
+	•	NBA / NFL / NHL / MLB / Global Soccer / Tennis
+
+Major events that drive individual revenue:
+	•	Super Bowl / Stanley Cup / NBA / Masters / NCAAF Championship
+
+The sports that are growing on the platform are:
+	•	MMA / Global Soccer / Tennis / Cricket
+
+Types of bets
+On this online platform, people place different types of bets, with some being more popular than others. Single-event bets are the most common but make less profit per bet. Parlays are placed less often bringing in much higher profits. This information helps show what types of bets players prefer and which ones make the most money for the platform.
+Single Event Wagers (One-Game Bets) 
+	•	Total Bets: 3.5 million bets placed.
+	•	Profit Margin: 3.8% (This means BCLC earns 3.8% profit from these bets). 
+Most common bet type, but lower profit per bet.
+Parlays (Multiple-Game Bets)
+	•	Total Bets: 2.5 million bets placed.
+	•	Profit Margin: 16.5%. 
+Fewer bets than single-event wagers, but much higher profit margin.
+Same Game Parlay (Multiple Bets in One Game)
+	•	Total Bets: 270,000 bets placed.
+	•	Profit Margin: 22%. 
+Least common bet type, but the highest profit margin.
+Website Traffic and User Engagement
+In February 2025, the website maintained a strong digital presence, reflecting the consistent use of the platform by players (Similarweb, 2025). In this section, we will analyze web traffic by evaluating total visits, session duration, pages per visit, and bounce rate to understand user behavior and the platform’s effectiveness in retaining and engaging its audience. According to Similarweb.com, these are the detailed numbers of the website traffic and user engagement performance for the month.
+	•	Total Visits: In February 2025, Playnow.com had received approximately 2.8 millions visits.
+	•	Average Visit Duration: On average, users stayed on the site for 9 minutes and 50 seconds per visit.
+	•	Averages Pages per Visit: Visitors explored approximately 10.58 Pages per visit.
+	•	Bounce Rate: This website had a 38% website rate, meaning that 38% of users exited the site after viewing only one page.
+Playnow.com has decreased the total number of visitors by 19.07% compared to last month. It could be due to various factors, such as seasonal trends, reduced marketing efforts, or changes in user internet. 
+Geographical Distribution of Playnow.com Website traffic
+Knowing where website visitors come from helps us understand who is using the platform the most. The data below shows where Playnow.com traffic comes from, with Canada being the main source of visitors. Other countries contribute smaller amounts. This information is useful for seeing which markets are the strongest and where there might be opportunities to grow.
+ 
+Canada is the country that contributes the most consumers to the platform with a total of 95.03%.
+Demographics
+
+
+The platform attracts a mix of users, but most visitors are between 55 and 64 years old (21.47%) followed by those aged 45 to 54 (20.84%). This means that middle-aged and older adults make up the biggest group of users on the site. 
+ The websites audience is also mostly male (60.78%), with females making up 39.22% of visitors. Since understanding who uses the site is essential, this information can help Playnow.com adjust its marketing strategies to better connect with its users and attract more players.
+ B. Competitive Analysis of BCLC’s PlayNow and Illegal Sportsbooks (Bet365, BetOnline)
+British Columbia's (BC) internet sports betting market consists of regulated providers such as PlayNow, offered by the British Columbia Lottery Corporation (BCLC) and offshore websites such as Bet365 and BetOnline that provide services illegally to BC residents. 
+Legal and Market Context
+BCLC's PlayNow is BC's sole legal online sportsbook, generating CAD $341 million in net income (2023–2024) and funding public services like healthcare, education and community programs (BCLC Media Relations, 2024). Illegal offshore operators like Bet365 and BetOnline are dominating 51% of BC's online gambling market (Nightingale, 2025). These sites manage to control the international expertise through more favourable odds, live betting, and instant payouts to attract players. However, these sites expose players to risks like slowed payouts (Townsend & Mendick, 2017) and no legal recourse (Smyth, 2025) as they are operating without any legal framework.
+
+
+Player Needs and Product Offerings
+PlayNow focuses on responsible gambling tools such as mandated spending limits and self-exclusion to keep in alignment with BC's public health mandate (Government of British Columbia, 2015). However, its product offering lags behind its offshore competitors. For instance, PlayNow covers about 22 sports (PlayNow, n.d.) with limited live streaming of sports events, while Bet365 offers 40+ sports, along with massive live streaming of various sports (Bet365, n.d.). Similarly, BetOnline's cryptocurrency payouts complete withdrawals in under 24 hours (BetOnline, 2024), while PlayNow takes 3–5 business days via Interac (PlayNow, n.d.)
+Odds of competitiveness also differ between the sites. PlayNow's provincial margins render the odds less competitive because, as a provincially regulated site, they have higher margins in their odds. This is partly due to the fact that they have to pay taxes and support community programs, and therefore the odds become less competitive than private sportsbooks' (Bryant, 2025). Bet365 is an international private sportsbook and has lower margins, which results in more competitive odds to obtain a broader base of users. For instance, Bet365 maintains a betting margin of approximately 5.68% on average, making it one of the more competitive in the market (Best Betting Sites in Canada, 2024).
+Offshore operators also employ promotion aggressively; the 100% matching deposit bonus at Bet365 contrasts with the minimal promotions at PlayNow, a result of BC's strict advertising prohibitions. For instance, Bet365 offers Canadian new patrons a 100% matched bonus of as much as $200 for an initial deposit. That is, if a new patron deposits $200, they receive an additional $200 in bonus money, doubling what they have to wager (Smyth, 2025).
+User Experience and Technology
+PlayNow's mobile app, limits Android users and is criticized for its dated appearance and lack of iOS support (BC Sportsbook App, n.d.). Bet365, on the other hand, invests heavily in UX innovation in the form of live stats, bet builders, and personalized dashboards, and it has gained 80 million global users as a result (OddsShopper Sports Betting, 2025). BetOnline, though less polished, has functional cross-platform support that attracts tech-savvy bettors. PlayNow's lack of live streaming—a "must-have" feature for Bet365 patrons reduces its appeal for live games. YouGov research showed 71% of sports bettors aged 25-44 prefer having live streaming capability from their sportsbook apps (Mack, 2024). 
+Strategic Recommendations for BCLC
+BCLC must adopt international best practices while maintaining regulatory compliance to remain competitive. BCLC should partner with live-streaming platforms such as DAZN or TSN as this would increase user engagement and experience. Besides that, expanding different kinds of bets to include esports and proposition bets would allow PlayNow to engage with a wider audience. A loyalty program aligned with local teams could leverage regional pride and distinguish itself from offshore sites. BCLC is already partnered with the Vancouver Canucks, offering promotions like the "Canucks Fanuary Contest" with exclusive prizes like game tickets and autographed jerseys.  Expanding on such initiatives with a complete loyalty program would further enhance user engagement and loyalty (Canucks Fanuary Contest, n.d.). Finally, BCLC should also accelerate withdrawal speeds via Interac Instant, e-wallets, and cryptocurrency as this can address user complaints.  
+C. Marketing Strategy Development for BCLC
+The British Columbia Lottery Corporation (BCLC) plays a crucial role in the province’s gaming and lottery industry, offering everything from scratch tickets to online gaming through PlayNow.com. As the gambling landscape evolves with increasing digital competition and shifting consumer preferences, BCLC must refine its marketing strategy to remain relevant, attract new players, and promote responsible gaming.
+This strategy outlines key approaches to enhance brand awareness, engage customers, and expand digital offerings while ensuring responsible gambling remains at the forefront of all initiatives.
+Market Analysis
+Industry Overview
+The global gambling industry has experienced significant transformation, with online gaming and mobile gambling leading the charge. In Canada, the gaming market is tightly regulated, emphasizing consumer protection and responsible gambling (Canadian Gaming Association, 2023). The COVID-19 pandemic accelerated digital adoption, with more players opting for online gaming platforms.
+Target Audience
+BCLC’s marketing efforts must cater to a diverse audience, including:
+	•	Casual Lottery Players: People who purchase tickets occasionally, primarily for major jackpot draws.
+	•	Regular Gamers: Players engaged in both physical casino visits and online gaming.
+	•	Younger Demographics (18-35): A tech-savvy audience drawn to mobile gaming, esports betting, and interactive gaming experiences.
+	•	Responsible Gaming Advocates: Consumers looking for safe and regulated gambling options.
+Competitor Analysis
+BCLC competes with both government-regulated gaming organizations and private online gambling platforms. In BC, they only compete with the unregulated private online gambling platforms.
+	•	Direct Competitors: Other provincial lottery corporations like Ontario Lottery and Gaming (OLG) and Alberta Gaming, Liquor & Cannabis (AGLC).
+	•	Indirect Competitors: International and offshore gambling websites, such as Bet365 and DraftKings, which provide unregulated betting options.
+BCLC’s competitive advantage lies in its trustworthiness, contributions to the province, and strict adherence to responsible gaming standards (BCLC, 2024).
+ 
+Marketing Objectives
+To stay ahead in the evolving gaming industry, BCLC’s marketing strategy can focus on:
+	•	Boosting Brand Awareness: Strengthening its presence across digital and traditional platforms.
+	•	Increasing Player Engagement: Encouraging participation through interactive promotions and personalized offers.
+	•	Expanding Digital Reach: Enhancing PlayNow.com and mobile gaming options.
+	•	Promoting Responsible Gaming: Positioning BCLC as a leader in ethical gambling.
+	•	Driving Revenue Growth: Ensuring profitability while adhering to regulatory requirements.
+Marketing Strategies
+Digital Marketing & Online Expansion
+With online gaming on the rise, BCLC must strengthen its digital presence through:
+	•	SEO-Optimized Content: Creating engaging blogs and game guides to boost organic traffic.
+	•	Social Media & Influencer Marketing: Leveraging platforms like Instagram, TikTok, and YouTube for interactive campaigns.
+	•	Mobile App Enhancements: Improving the PlayNow app with seamless navigation, exclusive mobile promotions, and personalized notifications.
+Personalized Customer Engagement
+BCLC can enhance player experiences with:
+	•	Loyalty Programs: Offering incentives such as free plays, discounts, and VIP perks for repeat customers.
+	•	Data-Driven Email & SMS Marketing: Sending customized promotions based on user preferences and behaviors.
+	•	AI Chatbots & Customer Support: Providing real-time assistance and responsible gambling resources.
+Traditional Advertising & Brand Positioning
+	•	TV & Radio Ads: Running engaging commercials showcasing jackpot winners and community contributions.
+	•	Billboard & Transit Ads: Promoting major lottery draws in high-traffic areas.
+	•	Sponsorships & Events: Partnering with local sports teams and festivals to increase brand visibility.
+  
+Responsible Gaming Initiatives
+BCLC’s reputation relies on prioritizing responsible gambling through:
+	•	Public Awareness Campaigns: Educating players on safe gambling habits via online and offline channels.
+	•	Self-Exclusion Programs: Strengthening tools that help players manage their gambling behavior.
+	•	Collaborations with Mental Health Organizations: Partnering with experts to offer resources and support for problem gambling (Responsible Gambling Council, 2023).
+Expansion into New Markets
+	•	New Game Development: Introducing interactive lottery games and esports betting options to attract younger audiences.
+	•	Retail & Cross-Promotions: Enhancing partnerships with retailers to increase in-store lottery ticket sales.
+	•	Strategic Collaborations: Working with other regulated gaming platforms for exclusive promotions and joint incentives.
+Performance Measurement & KPIs
+To track success, BCLC should monitor key performance indicators (KPIs), such as:
+	•	Website Traffic & Engagement: Measuring visits, session duration, and conversion rates on PlayNow.com.
+	•	Lottery & Casino Sales Growth: Evaluating year-over-year revenue increases.
+	•	Social Media Metrics: Analyzing follower growth, engagement rates, and campaign effectiveness.
+	•	Customer Retention & Loyalty: Tracking repeat participation in promotions and loyalty programs.
+	•	Responsible Gaming Impact: Assessing the effectiveness of awareness campaigns and support initiatives.
+BCLC has a unique opportunity to strengthen its market position by embracing digital innovation, personalizing customer interactions, and championing responsible gaming. By executing this strategy, BCLC can attract new players, retain existing customers, and continue generating revenue that benefits communities across British Columbia.
+     
+
+D. Implementation Plan for BCLC
+Improving Digital Marketing for Increased Visitors 
+Problem: 19% drop in website visitors
+Solution: Improving Brand Awareness and outreach
+Steps:
+	•	Paid campaigns on social media
+	•	Summarize upcoming events by showing betting guidelines and match previews
+	•	Targeting ads on search platforms like Google.
+	•	Dynamic retargeting ads for users who visited the website but did not bet on it.
+Enhancing User Engagement & Session Duration
+The goal is to increase the session time and the number of pages viewed per visit.
+Steps:
+	•	Embed real-time sports statistics, interactive scoreboards, and live updates inside betting pages
+	•	Increase same-game double-up options – to promote longer times
+	•	Weekly betting challenges 
+	•	Rewards for consecutive bets
+	•	Rank users by wins and entries
+	•	Customized dashboards option for users
+	•	Quick bet feature for repeat users
+Diversifying High-Growth Betting Segments (Parlay & Same-Game Parlays)
+The goal is to change consumer behavior to drive them to more profitable wagers. More parlay bets placed increase average revenue per user and a higher profit margin.
+Steps:
+	•	Same game promotions
+	•	Risk free bets 
+	•	Refund users if one part of the double-up bet fails
+Guide and Instructional Content
+Steps:
+	•	Develop video tutorials step by step for placing Same-Game Parlays
+	•	Case studies on winning strategies to drive engagement
+	•	Unique bonuses for double-up betters
+Early cash-out option availability
+
+
+References
+Similarweb. (2025). playnow.com website demographics. https://www.similarweb.com/website/playnow.com/#demographics
+SEMrush. (2025). Website analytics overview for playnow.com. https://www.semrush.com/analytics/overview/?q=playnow.com&searchType=domain
+BCLC Media Relations. (2024, October). PLAYNOW IN B.C. [Press release]. https://corporate.bclc.com/content/dam/bclccorporate/documents/fact-sheets/fs-playnow-2024.pdf 
+Nightingale, T. (2025, February 19). How big is the unregulated slice of Canadian online gaming? canadiangamingbusiness. https://www.canadiangamingbusiness.com/2025/02/19/just-how-big-is-canadian-unregulated-gaming/ 
+Townsend, N., & Mendick, R. (2017, July 8). Exclusive: Teenager takes bet365 to court over £1m “won” on horse races. The Telegraph. https://www.telegraph.co.uk/news/2017/07/08/exclusive-teenager-takes-bet365-court-1m-won-horse-races/ 
+Smyth, D. (2025, March 7). Is gambling illegal? Understanding laws and regulations in Canada. . . talkSPORT. https://talksport.com/ca/casinos-ca/2242800/is-gambling-illegal-canada/ 
+Government of British Columbia. (2015). Responsible and problem gambling in British Columbia: A plan for public health and gambling in British Columbia. https://www2.gov.bc.ca/assets/gov/sports-recreation-arts-and-culture/gambling/gambling-in-bc/reports/plan-rg-public-health-and-gambling-2015.pdf 
+PlayNow. (n.d.). PlayNow.com. https://www.playnow.com/sports/sports/a-z 
+Bet365. (n.d.). Bet365. https://www.bet365.com/ 
+Betonline. (2024, December). How To Request A Withdrawal Through Cryptocurrency. https://help.betonline.ag/en/articles/185164-how-to-request-a-withdrawal-through-cryptocurrency 
+PlayNow.com. (n.d.). Help and frequently asked questions. https://www.playnow.com/about-playnow/help.html 
+Bryant, S. (2025, January 14). PlayNow BC Sports Betting in 2025. canadasportsbetting.ca. https://www.canadasportsbetting.ca/gambling-laws/british-columbia/playnow/ 
+Best betting sites in Canada. (2024, October 30). https://bettingguide.com/ca/betting/best-betting-sites/ 
+Smyth, D. (2025, February 5). Canada bet365 bonus: Get a 100% matched bonus up to $200 with bet365 CA!. . . talkSPORT. https://talksport.com/ca/casinos-ca/2401906/canada-bet365-match-deposit-bonus-up-to-200/ 
+BC Sportsbook App. (n.d.). PlayNow.com. https://www.playnow.com/sports/promotions/sportsbook-app/ 
+OddsShopper Sports Betting. (2025, February 13). Bet365 app and product review. OddsShopper. https://www.oddsshopper.com/sportsbook-promo-codes/bet365-app-review 
+Mack, L. (2024, April 24). YouGov research shows rise in live streaming trends for sports bettors. Gaming America. https://gamingamerica.com/news/10233/yougov-research-shows-rise-in-live-streaming-trends-for-sports-bettors 
+ Canucks Fanuary Contest. (n.d.). PlayNow.com. https://www.playnow.com/sports/promotions/canucks-fanuary/ 
+BCLC. (2024). Annual Report 2023-24. Retrieved from www.bclc.com
+Canadian Gaming Association. (2023). Trends in the Canadian Gaming Industry. Retrieved from www.canadiangaming.ca
+Responsible Gambling Council. (2023). Responsible Gaming Practices and Public Awareness. Retrieved from www.responsiblegambling.org
+Government of British Columbia. (2023). Gaming Policy and Enforcement Branch Regulations. Retrieved from www2.gov.bc.ca 
+McKinsey & Company. (2023). The Future of Digital Gaming and Customer Engagement. Retrieved from www.mckinsey.com 
+Responsible Gambling Council. (2023). Responsible Gaming Practices and Public Awareness. Retrieved from www.responsiblegambling.org 
+Statista. (2023). Online Gambling Market in Canada: Growth and Trends. Retrieved from www.statista.com

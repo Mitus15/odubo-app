@@ -1,0 +1,101 @@
+Product Backlog – BCLC Consulting Project – S03 Red Triangle
+Project Goal: Assess BCLC’s online Sportsbook presence and develop innovative product offerings & marketing strategies
+Product Owner: Emmanuel Morris-Odubo
+
+ID
+Task
+Dependency
+Category
+P1
+Analyze PlayNow sportsbook footprint
+N/A
+Current Footprint
+P2
+Assess website traffic sources
+N/A
+Current Footprint
+P3
+Evaluate user behavior metrics
+N/A
+Current Footprint
+P4
+Analyze app performance issues
+N/A
+Current Footprint
+P5
+Review user engagement metrics
+N/A
+Current Footprint
+C1
+Identify top 5 competitors
+N/A
+Competitive Analysis
+C2
+Analyze BC market share
+C1
+Competitive Analysis
+C3
+Compare PlayNow vs competitors
+C1
+Competitive Analysis
+C4
+Benchmark competitor best practices
+C2
+Competitive Analysis
+C5
+Review competitor loyalty programs
+C4
+Competitive Analysis
+M1
+Research sportsbook marketing trends
+N/A
+Marketing Strategy & Product Innovation
+M2
+Audit PlayNow marketing strategy
+P5
+Marketing Strategy & Product Innovation
+M3
+Develop 3 marketing campaigns
+P2
+Marketing Strategy & Product Innovation
+M4
+Identify new acquisition strategies
+P2
+Marketing Strategy & Product Innovation
+PX1
+Research sportsbook product innovations
+M1
+Marketing Strategy & Product Innovation
+PX2
+Develop product differentiation strategy
+C'
+Marketing Strategy & Product Innovation
+PX3
+Explore gamification opportunities
+PX2
+Marketing Strategy & Product Innovation
+PX4
+Enhance AI personalization strategies
+PX3
+Marketing Strategy & Product Innovation
+I1
+Create marketing rollout plan
+PX'
+Implementation
+I2
+Define resource allocation needs
+PX'
+Implementation
+I3
+Assess legal and compliance risks
+M'
+Implementation
+I4
+Develop player retention KPIs
+M'
+Implementation
+I5
+Plan risk mitigation strategies
+M'
+Implementation
+

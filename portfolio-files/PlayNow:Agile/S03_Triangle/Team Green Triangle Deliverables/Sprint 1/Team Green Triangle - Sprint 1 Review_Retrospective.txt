@@ -1,0 +1,28 @@
+Team Green Triangle Sprint 1 Review/Retrospective
+ Footprint Analysis: the team conducted a Footprint Analysis of PlayNow.com, examining website traffic, user engagement, and audience demographics. 
+
+Competitive Analysis: PlayNow with illegal offshore sportsbooks (Bet365, BetOnline), highlighting strengths and weaknesses.
+
+Marketing Strategy: Developed a comprehensive marketing plan to improve brand awareness, engagement, and responsible gaming efforts
+
+Implementation Plan: Outlined specific actions to improve digital marketing, enhance user experience, and expand profitable betting options.  Sprint Retrospective:  What went well?  Clear Roles & Responsibilities: Everyone knew their tasks and worked efficiently in their assigned roles (Product Owner, Scrum Master, Marketing, Implementation).
+
+	•	Thorough Research & Data Collection: The team gathered useful information about PlayNow, including website traffic, betting trends, and market position.
+
+	•	Practical Solutions & Strategies: The plan included clear steps to boost engagement, improve marketing, and enhance user experience.
+
+What Could Have Been Done Better?
+
+	•	More Organized Competitor Comparison: The PlayNow vs. Competitors section could be easier to read and understand.
+
+	•	More Details in the Marketing Plan: The marketing strategy was strong but needed a clearer step-by-step plan with goals.
+
+	•	Better Formatting & Clarity: Some parts of the document could be made clearer and more professional.
+
+How to Improve in the Next Sprint
+
+	•	Use a better format (like SWOT analysis) to compare PlayNow with competitors more clearly.
+
+	•	Add more details to the marketing plan, including specific actions and goals.
+	•	Check formatting and layout to make the document easier to read and more professional.
+

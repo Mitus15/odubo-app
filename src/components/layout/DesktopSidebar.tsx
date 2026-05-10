@@ -78,8 +78,8 @@ export default function DesktopSidebar() {
   }, [isCheckingAccess, isStoreAccessible, openStore, cartItemCount]);
 
   // Hide on admin/backend pages and admin subdomain (must be after all hooks)
-  // Also hide on homepage - custom design without sidebar
-  if (isAdminSubdomain || pathname === '/' || pathname?.startsWith('/admin') || pathname?.startsWith('/command-center') || pathname?.startsWith('/featured/manage')) {
+  // Also hide on homepage and showcase - custom designs without sidebar
+  if (isAdminSubdomain || pathname === '/' || pathname === '/showcase' || pathname?.startsWith('/admin') || pathname?.startsWith('/command-center') || pathname?.startsWith('/featured/manage')) {
     return null;
   }
 

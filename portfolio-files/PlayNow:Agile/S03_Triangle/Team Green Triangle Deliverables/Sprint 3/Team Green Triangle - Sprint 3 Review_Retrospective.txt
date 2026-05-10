@@ -1,0 +1,50 @@
+Team Green Triangle Sprint 3 Review/Retrospective  BCLC Footprint Analysis
+
+The team continued refining the Footprint Analysis of BCLC’s PlayNow.com, incorporating improvements based on last week’s review. This iteration focused on a more comprehensive analysis by including a segment on comparison of PlayNow’s traffic and user engagement with its competitors, namely Bet365 and BetOnline, ensuring data accuracy and enhancing insights. We also explored the reasons for the decline in Playnow’s traffic post-COVID.
+ Sprint Retrospective:  What went well?  More Comprehensive Footprint Analysis:
+
+	•	This week, the team built upon previous insights, refining data collection and analysis methods for greater accuracy and depth.
+
+	•	The report now presents a clearer picture of PlayNow.com’s traffic trends, user engagement, and demographic patterns.
+
+Enhanced Insights on User Behavior & Market Trends:
+
+	•	The team successfully identified key patterns in user behavior, particularly the reasons behind the low engagement in sports betting (9% active users).
+
+	•	Additional segmentation of the audience provided a more targeted understanding of PlayNow’s primary user base.
+
+
+Effective Use of Data Sources:
+
+	•	The inclusion of comparative analysis with industry competitors provided more contextualized insights.
+
+
+
+
+
+
+
+
+What Could Have Been Done Better?
+
+Better Teamwork & Communication:
+
+	•	Despite the improved quality of analysis, there was a noticeable lack of teamwork this week.
+
+	•	Communication gaps led to inefficiencies in task distribution and coordination, resulting in only one person working on the deliverables this week.
+
+
+Next Steps
+
+Finalize Presentation Slides & Report
+
+	•	Ensure that all insights are clearly presented and visually engaging for stakeholders.
+
+Decide on Presenters
+
+	•	Assign team members to present different sections based on expertise.
+
+Strengthen Team Collaboration
+
+	•	Implement better communication strategies to avoid misalignment in the next sprint.
+

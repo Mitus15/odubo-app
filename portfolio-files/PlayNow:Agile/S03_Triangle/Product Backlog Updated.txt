@@ -1,0 +1,135 @@
+BCLC PlayNow Sports Report Outline / Product Backlog
+1. Executive Summary (To be completed last)
+	•	Concise overview of current challenges, strategic recommendations, and phased implementation roadmap.
+2. Current Footprint
+1. Reach
+	•	Total active players
+	•	Market share of player base
+	•	Platform access points (web, iOS, Android)
+	•	App downloads & installs
+	•	Geographic penetration across B.C.
+	•	Cross-product exposure
+	•	Brand perception (trust, responsible gaming, provincial identity)
+	•	Share of overall PlayNow users engaging with Sportsbook
+2. Performance
+	•	Net win and revenue performance
+	•	Bet types and margin breakdown:
+	•	Top sports (NBA, NFL, NHL, MLB, Soccer, Tennis)
+	•	Top events (Super Bowl, Stanley Cup, NBA Finals, Masters, etc.)
+	•	High-value player concentration
+	•	Growth areas: MMA, Cricket, Tennis, Global Soccer
+3. Engagement
+	•	YOY lapse rate
+	•	YOY acquisition rate
+	•	Cross-product behavior and user segmentation
+	•	Platform engagement metrics (session length, bounce rates)
+	•	Frequency of use (daily/weekly vs. event-based)
+	•	Player journey flow (sign-up to bet placement)
+	•	Device preference (mobile vs. desktop)
+4. Brand Activity & Promotions
+	•	Current promotional strategy (bonuses, boosts, seasonal promos)
+	•	Partnerships and sponsorships (sports orgs, community events)
+	•	Advertising visibility (TV, digital, radio, podcast, social)
+	•	Loyalty and retention tools (points, streak rewards, milestones)
+5. Pain Points
+	•	UX/UI frustrations (clunky interface, confusing navigation)
+	•	Missing features (live betting, cash-out, deeper parlays)
+	•	Platform limitations (Android delay, app ratings)
+	•	Weak retention drivers (high lapse rate, low stickiness)
+	•	Competitive disadvantage (limited differentiation)
+	•	Blended identity with PlayNow (lack of stand-alone sportsbook feel)
+
+3. Competitive Analysis
+1. Competitor Landscape & Positioning
+	•	Market Overview
+	•	Key market players
+	•	Brand positioning and messaging
+	•	Localization and community involvement
+	•	Regulatory standing vs. PlayNow
+	•	Share of voice and media presence
+	•	Emerging market trends (e.g., esports, fantasy)
+2. Product & Feature Comparison
+	•	Core features: live betting, parlays, cash-out, bet builders
+	•	UX/UI strengths and weaknesses
+	•	Mobile performance and user feedback
+	•	Personalization: saved teams, bet suggestions, alerts
+	•	In-play tools and visuals (live stats, trackers)
+	•	Reliability, speed, and ease of use
+3. Promotions & Customer Acquisition Strategy
+	•	Welcome offers and onboarding experience
+	•	Ongoing promotions and bonus depth
+	•	VIP and loyalty programs
+	•	Referral systems
+	•	Retargeting and re-engagement funnels
+	•	Community marketing and local activations
+	•	Comparison to PlayNow's current strategy
+4. Experience Mapping & Brand Perception
+	•	Sign-up to bet placement flow
+	•	First-time user experience
+	•	Emotional tone and brand identity
+	•	Personalization and familiarity
+	•	Cool factor and relatability
+	•	Brand and user personas
+
+4. Product Innovation
+Layered Framework:
+1. Core Improvements
+	•	UX refresh, bug fixes, smoother navigation
+	•	Android app readiness and app optimization
+2. Competitive Parity
+	•	Add industry-standard features (live betting, cash out, advanced parlays)
+	•	Real-time stats overlays and visual betting aids
+	•	Personalized betting recommendations
+3. Differentiating Innovations
+	•	Standalone sportsbook interface/brand
+	•	Community or group betting features
+	•	Localized content tied to B.C. teams/events
+	•	Gamification (levels, badges, streaks, unlocks)
+
+5. Marketing Strategy
+Pillar-Based Structure:
+1. Brand Identity & Positioning
+	•	Core message/tagline
+	•	Brand tone and personality
+	•	Visual identity and platform vibe
+	•	Differentiation messaging (trust, community reinvestment)
+	•	Emotional resonance
+2. Community-Centric Marketing
+	•	Local team sponsorships and community partnerships
+	•	On-site activations and fan engagement at events
+	•	Ambassador/influencer collaborations
+	•	Education (responsible gambling + betting literacy)
+	•	Cultural integration (BC pride, local slang, holidays)
+3. Digital Engagement & Social Presence
+	•	Social media strategy (content types, platforms, tone)
+	•	Influencer collabs and creator content series
+	•	Interactive campaigns and user-generated content
+	•	Personalization across digital touchpoints
+	•	Always-on fan engagement
+	•	Real-time social interactions during live betting
+4. Campaigns & Conversion Strategy
+	•	Big event campaign strategy
+	•	New user funnels and onboarding flow
+	•	Retargeting lapsed users with smart prompts
+	•	Loyalty-driven lifecycle promotions
+	•	Thematic campaign series (e.g., "Bet With BC")
+
+6. Implementation Plan
+Phase-Based Rollout (4 Phases + Accountability Substructure):
+Phase 1: Fix the Foundation
+	•	Focus: Stability, UX cleanup, app performance
+	•	Timeline: 0–6 months
+	•	Key Activities, Resources, Risks, Metrics
+Phase 2: Competitive Catch-Up
+	•	Focus: Feature parity with market leaders
+	•	Timeline: 6–12 months
+	•	Key Activities, Resources, Risks, Metrics
+Phase 3: Brand Revamp & Community Build
+	•	Focus: Emotional resonance, local loyalty, brand visibility
+	•	Timeline: 12–18 months
+	•	Key Activities, Resources, Risks, Metrics
+Phase 4: Differentiation & Market Leadership
+	•	Focus: Bold innovation and standalone sportsbook identity
+	•	Timeline: 18–36 months
+	•	Key Activities, Resources, Risks, Metrics
+

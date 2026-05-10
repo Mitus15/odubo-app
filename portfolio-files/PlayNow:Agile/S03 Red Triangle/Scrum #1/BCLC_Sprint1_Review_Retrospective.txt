@@ -1,0 +1,59 @@
+Sprint 1 Review & Retrospective – BCLC Consulting Project – S03 Red Triangle
+Sprint Review
+What Went Well
+
+1. Holistic Understanding of BCLC & PlayNow
+   - Successfully gathered a broad overview of PlayNow’s positioning, market landscape, and competitors.
+2. Multiple Deliverables Completed
+   - Generated three comprehensive documents covering PlayNow’s footprint, competitor analysis, and market strategies.
+3. Diverse Research & Collaboration
+   - Each team member contributed research from multiple sources, allowing for a well-rounded perspective.
+4. Identification of Research Gaps
+   - Key areas where more depth is required were identified, particularly in competitive analysis and quantitative market data.
+5. Role Specialization Moving Forward
+   - Instead of all team members working on the same tasks, we now have a clearer plan to assign specific research areas.
+Gaps & Challenges in Sprint 1
+
+1. Lack of a Defined Product Backlog at the Start
+   - We did not begin with a structured backlog, leading to a lack of clear dependencies and prioritization.
+2. Broad Approach, Less Depth
+   - Since each member attempted to conduct a full analysis independently, we lacked depth in certain areas.
+3. Limited Competitor Coverage
+   - We only analyzed two competitors (Bet365 & DraftKings) instead of five.
+4. Minimal Quantitative Analysis
+   - Research lacked numerical insights such as market share, sportsbook offerings, and comparative feature evaluations.
+5. Disjointed Scrum Process
+   - Backlog, sprint backlog, and team agreement were developed after the Potentially Shippable Product (PSP), reversing the intended Agile workflow.
+6. Multiple Deliverables Instead of One
+   - Findings were split across three separate documents instead of a single comprehensive report.
+7. Lack of Explicit Scrum Roles
+   - No explicitly defined Product Owner or Scrum Master, leading to a lack of structured task assignments and oversight.
+
+Adjustments for Sprint 2
+Expanded Competitive Analysis
+• Identify three additional competitors in BC: Bulldog, Betway, and another BC-based sportsbook.
+• Conduct in-depth quantitative research on market share, market size, sportsbook offerings, features, pricing, and promotions.
+• Perform a comparative analysis evaluating PlayNow’s position against all competitors collectively.
+Enhanced PlayNow Footprint Analysis
+• Research player acquisition sources, advertising spend, and promotional strategies.
+• Assess PlayNow’s partnerships and its impact on BC’s sports betting market.
+Revised Product Backlog & Sprint Structure
+• Redesign the Product Backlog to ensure it includes all aspects of research, analysis, and presentation.
+• Integrate both technical and communication aspects such as report writing, visual presentation, and executive summaries.
+• Ensure one consolidated deliverable at the end of Sprint 2.
+Task Specialization for Sprint 2
+• Assign specific research roles to each team member:
+   - Current Footprint Analysis → One member refines PlayNow’s positioning with new findings.
+   - Comparative Analysis → One member focuses on evaluating competitors and PlayNow’s competitive position.
+   - Marketing Strategy → Two members expand on market trends, best practices, and industry innovations.
+Maintaining a Holistic Approach While Deepening Research
+• Continue using a broad approach while ensuring each component is researched in depth.
+• Maintain focus on competitive analysis, market strategy, and PlayNow’s current footprint.
+• Implementation planning and final marketing refinements will be pushed to Sprint 3.
+
+Key Takeaways & Next Steps
+• We gained a strong initial understanding of PlayNow’s position, competitors, and strategic opportunities.
+• Our biggest gap was in depth—Sprint 2 will prioritize expanding competitor analysis, enhancing quantitative research, and refining PlayNow’s footprint evaluation.
+• We need a structured backlog from the start to ensure efficiency in future sprints.
+• Each team member will specialize in one area to ensure deeper, focused research.
+• Sprint 2 deliverable will be consolidated into one comprehensive report.

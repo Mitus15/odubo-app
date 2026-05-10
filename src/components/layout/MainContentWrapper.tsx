@@ -27,12 +27,12 @@ export default function MainContentWrapper({
   }, []);
 
   // Admin/backend pages don't use the sidebar - don't add margin
-  // Also homepage doesn't use sidebar
+  // Also homepage and showcase don't use sidebar
   const isAdminPage = isAdminSubdomain || pathname?.startsWith('/admin') || pathname?.startsWith('/command-center') || pathname?.startsWith('/featured/manage');
-  const isHomePage = pathname === '/';
+  const isFullWidthPage = pathname === '/' || pathname === '/showcase';
 
   return (
-    <div className={`h-full w-full flex flex-col overflow-hidden ${isAdminPage || isHomePage ? '' : 'lg:ml-20 xl:ml-64'}`}>
+    <div className={`h-full w-full flex flex-col overflow-hidden ${isAdminPage || isFullWidthPage ? '' : 'lg:ml-20 xl:ml-64'}`}>
       {children}
     </div>
   );

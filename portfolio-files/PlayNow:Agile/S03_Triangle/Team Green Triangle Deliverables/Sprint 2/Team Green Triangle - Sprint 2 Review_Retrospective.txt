@@ -1,0 +1,45 @@
+Team Green Triangle Sprint 2 Review/Retrospective  BCLC Footprint Analysis
+
+The team performed a Footprint Analysis to BCLC's PlayNow.com, which included an analysis of website traffic, how users may engage with the site, as well as the target audience demographics on the site. The platform received 2.8 million visits in February 2025, where 75% accessed it through mobile, with a high bounce rate from the homepage. Vancouver alone accounted for 20% of traffic in BC, with most respondents aged 55-64. At the same time, the site enjoys a dominance in BC's legal betting arena, with a very low sports betting engagement rate of 9%, thus significant room for improvement in the activity. These findings give rise to valuable insights which can be used to improve BCLC’s marketing strategies and user retention rates.
+ Sprint Retrospective:  What went well?  Comprehensive Footprint Analysis:
+
+	•	The team was able to gather and analyze key website performance metrics, including total visits, unique visitors, bounce rates, session duration, and device distribution.
+	•	The data provided a clear indication of PlayNow.com's traffic trends and user engagement patterns over time.
+
+Detailed Traffic Breakdown & User Behavior Insights:
+
+	•	The analysis showed that mobile usage dominates, with 75% of users accessing the platform on mobile devices.
+	•	Geographic analysis pointed towards Vancouver as the primary user location, with traffic from the city accounting for 20% of traffic.
+	•	Research also shown a dramatic dip in visitors (19.07% decrease in February 2025 compared to January), stimulating awareness of potential seasonal trends or marketing loopholes.
+
+Effective Data-Driven Approach:
+
+	•	The utilization of third-party data sources such as Similarweb and SEMrush added validity and ensured that the report was industry-standard analytics-enabled.
+
+
+
+
+What Could Have Been Done Better?
+
+Deeper Competitor Benchmarking & Contextualization:
+
+	•	A more robust comparative analysis with its competitors,  Bet365 and BetOnline to analyze their footprint compared to BCLC can provide useful insights.
+
+Additional Analysis on User Behavior Trends & Target Audience Engagement:
+
+	•	The study contained demographic data (age and gender breaks) but no in-depth behavior data—why the majority are middle-aged users, why there is less activity from younger users, and why users bet on certain things.
+	•	With so little sports betting activity (only 9% active users), it would have been worthwhile to examine:
+1. Why users don't use sports betting.
+2. How activity can be encouraged to increase this area.
+
+How to Improve in the Next Sprint
+
+Conduct a brief Competitive Benchmarking Analysis:
+
+	•	Straightforward comparison of PlayNow's footprint to Bet365 and BetOnline on:
+1. Traffic growth
+2. User engagement rates
+
+Improve Behavioral & Engagement Analysis:
+
+	•	Examine why PlayNow user growth is declining despite initial post-COVID growth.

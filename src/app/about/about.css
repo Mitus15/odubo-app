@@ -1,0 +1,425 @@
+/* ============================================================================
+   ABOUT PAGE — "Alternate Kit" Styles v3
+   A magazine-style, personality-driven layout.
+   ============================================================================ */
+
+/* ─── Color Tokens ─────────────────────────────────────────────────────── */
+:root {
+  --about-bg: #f5f0eb;
+  --about-bg-alt: #ede6de;
+  --about-surface: #ffffff;
+  --about-surface-hover: #faf7f4;
+  --about-text: #1a1a1a;
+  --about-text-secondary: #5c5550;
+  --about-text-muted: #9c9490;
+  --about-accent: #843c2d;
+  --about-accent-light: #a85a48;
+  --about-accent-subtle: rgba(132, 60, 45, 0.08);
+  --about-accent-glow: rgba(132, 60, 45, 0.15);
+  --about-border: #e5ddd6;
+  --about-border-light: #efe9e3;
+  --about-divider: #d9d0c8;
+  --about-success: #2d7d5a;
+  --about-font-display: 'Baskerville', 'Times New Roman', Georgia, serif;
+  --about-font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', sans-serif;
+}
+
+/* ─── Base ─────────────────────────────────────────────────────────────── */
+.about-page {
+  background: var(--about-bg);
+  color: var(--about-text);
+  font-family: var(--about-font-sans);
+  min-height: 100vh;
+}
+
+/* ─── Typography ───────────────────────────────────────────────────────── */
+.about-eyebrow {
+  font-family: var(--about-font-sans);
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--about-accent);
+  margin-bottom: 0.75rem;
+}
+
+.about-display {
+  font-family: var(--about-font-display);
+  font-size: clamp(2.5rem, 6vw, 4.5rem);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--about-text);
+}
+
+.about-heading {
+  font-family: var(--about-font-display);
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  color: var(--about-text);
+}
+
+.about-subheading {
+  font-family: var(--about-font-display);
+  font-size: clamp(1.125rem, 2vw, 1.375rem);
+  font-weight: 500;
+  line-height: 1.3;
+  color: var(--about-text-secondary);
+}
+
+.about-body {
+  font-family: var(--about-font-sans);
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--about-text-secondary);
+}
+
+.about-body-large {
+  font-size: 1.125rem;
+  line-height: 1.75;
+}
+
+.about-label {
+  font-family: var(--about-font-sans);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--about-text-muted);
+}
+
+/* ─── Pull Quote ───────────────────────────────────────────────────────── */
+.about-pullquote {
+  font-family: var(--about-font-display);
+  font-size: clamp(1.25rem, 3vw, 1.75rem);
+  font-style: italic;
+  line-height: 1.4;
+  color: var(--about-accent);
+  padding: 1.5rem 0 1.5rem 2rem;
+  border-left: 3px solid var(--about-accent);
+  margin: 2rem 0;
+}
+
+.about-pullquote-attribution {
+  font-family: var(--about-font-sans);
+  font-size: 0.75rem;
+  font-style: normal;
+  color: var(--about-text-muted);
+  margin-top: 0.5rem;
+}
+
+/* ─── Marginal Note ────────────────────────────────────────────────────── */
+.about-marginal {
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--about-text-muted);
+  border-top: 1px solid var(--about-border);
+  padding-top: 0.75rem;
+  margin-top: 1rem;
+}
+
+@media (min-width: 1024px) {
+  .about-marginal {
+    position: absolute;
+    right: calc(100% + 2rem);
+    top: 0;
+    width: 12rem;
+    border-top: none;
+    padding-top: 0;
+    margin-top: 0;
+    text-align: right;
+  }
+}
+
+/* ─── Cards ────────────────────────────────────────────────────────────── */
+.about-card {
+  background: var(--about-surface);
+  border: 1px solid var(--about-border-light);
+  border-radius: 16px;
+  padding: 2rem;
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  position: relative;
+}
+
+.about-card:hover {
+  border-color: var(--about-divider);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
+  transform: translateY(-2px);
+}
+
+.about-card-accent {
+  border-left: 3px solid var(--about-accent);
+}
+
+/* ─── Full-bleed Poster Divider ────────────────────────────────────────── */
+.about-poster-break {
+  width: 100%;
+  height: 50vh;
+  min-height: 350px;
+  max-height: 600px;
+  position: relative;
+  overflow: hidden;
+  background: var(--about-bg-alt);
+}
+
+.about-poster-break img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* ─── Accent Elements ──────────────────────────────────────────────────── */
+.about-accent-line {
+  width: 40px;
+  height: 3px;
+  background: var(--about-accent);
+  border-radius: 2px;
+}
+
+.about-accent-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  background: var(--about-accent);
+  border-radius: 50%;
+  margin-right: 0.5rem;
+}
+
+/* ─── Buttons ──────────────────────────────────────────────────────────── */
+.about-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-family: var(--about-font-sans);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: none;
+  text-decoration: none;
+}
+
+.about-btn-primary {
+  background: var(--about-accent);
+  color: #fff;
+}
+
+.about-btn-primary:hover {
+  background: var(--about-accent-light);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px var(--about-accent-glow);
+}
+
+.about-btn-ghost {
+  background: transparent;
+  color: var(--about-text-secondary);
+  border: 1px solid var(--about-border);
+}
+
+.about-btn-ghost:hover {
+  border-color: var(--about-divider);
+  background: var(--about-surface-hover);
+  color: var(--about-text);
+}
+
+/* ─── Dividers ─────────────────────────────────────────────────────────── */
+.about-divider {
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--about-divider) 20%,
+    var(--about-divider) 80%,
+    transparent 100%
+  );
+  margin: 0;
+  border: none;
+}
+
+/* ─── Section Spacing ──────────────────────────────────────────────────── */
+.about-section {
+  padding: 5rem 0;
+}
+
+.about-section-sm {
+  padding: 3rem 0;
+}
+
+/* ─── Skill Tags ───────────────────────────────────────────────────────── */
+.about-skill-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.375rem 0.875rem;
+  background: var(--about-accent-subtle);
+  color: var(--about-accent);
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+/* ─── Stat Number ──────────────────────────────────────────────────────── */
+.about-stat {
+  font-family: var(--about-font-display);
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--about-accent);
+  line-height: 1;
+}
+
+.about-stat-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--about-text-muted);
+  letter-spacing: 0.05em;
+  margin-top: 0.25rem;
+}
+
+/* ─── Link Styles ──────────────────────────────────────────────────────── */
+.about-link {
+  color: var(--about-accent);
+  text-decoration: none;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  border-bottom: 1px solid transparent;
+}
+
+.about-link:hover {
+  border-bottom-color: var(--about-accent);
+}
+
+/* ─── Chapter Number Badge ─────────────────────────────────────────────── */
+.about-chapter-number {
+  font-family: var(--about-font-display);
+  font-size: clamp(3rem, 8vw, 6rem);
+  font-weight: 700;
+  line-height: 1;
+  color: var(--about-accent);
+  opacity: 0.15;
+  position: absolute;
+  top: -0.25rem;
+  right: 1rem;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* ─── Scroll-triggered stagger ─────────────────────────────────────────── */
+.about-stagger-item {
+  opacity: 0;
+  transform: translateY(1.5rem);
+  transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.about-stagger-item.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ─── Design Showcase Grid ─────────────────────────────────────────────── */
+.about-design-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.about-design-item {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--about-surface);
+  border: 1px solid var(--about-border-light);
+  aspect-ratio: 3/4;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.about-design-item:hover {
+  transform: scale(1.02);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  z-index: 2;
+}
+
+.about-design-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.about-design-item-label {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 0.75rem;
+  background: linear-gradient(transparent, rgba(0,0,0,0.7));
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+/* ─── Lightbox ─────────────────────────────────────────────────────────── */
+.about-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  cursor: pointer;
+}
+
+.about-lightbox img {
+  max-width: 90vw;
+  max-height: 90vh;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+/* ─── Responsive ───────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .about-card {
+    padding: 1.25rem;
+  }
+  .about-section {
+    padding: 3rem 0;
+  }
+  .about-section-sm {
+    padding: 2rem 0;
+  }
+  .about-poster-break {
+    height: 30vh;
+    min-height: 200px;
+  }
+  .about-design-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ─── Print Styles ─────────────────────────────────────────────────────── */
+@media print {
+  .about-page {
+    background: white;
+    color: black;
+  }
+  .about-card {
+    border: 1px solid #ddd;
+    box-shadow: none;
+    break-inside: avoid;
+  }
+  .about-section {
+    padding: 1.5rem 0;
+  }
+  .about-poster-break {
+    display: none;
+  }
+}

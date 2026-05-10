@@ -1,0 +1,10 @@
+
+Sprint 1 Retrospective S03 Blue Triangle
+What Went Well?
+	•	All tasks were finished within schedule without major delays as the team managed their work responsibilities successfully.
+	•	The finished analysis work provides a clear path toward future development activities. 
+	•	All team members understood their tasks which led to smooth operational movement throughout the process. 
+What Could Have Been Better?
+	•	Better communication would have prevented some delays because some important updates were missing. 
+	•	Regular short progress updates would have prevented such problems. Some work tasks experienced delayed completion during the last period of our schedule. 
+	•	The workload distribution needs improvement to simplify responsibilities. The project would have benefited from additional short meetings across the sprint period for better team alignment.

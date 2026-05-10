@@ -1,0 +1,29 @@
+Sprint 3 Review & Retrospective – BCLC Consulting Project
+1. Improved Coordination and Task Ownership
+	•	Roles and responsibilities were clearly defined, allowing teams to work more independently and efficiently.
+	•	The Red Triangle team successfully narrowed the competitive analysis to the top 3 key platforms, leading to more focused insights.
+2. Strong Communication and Deadline Management
+	•	Regular meetings and clear task deadlines helped keep everyone aligned.
+	•	Communication through Microsoft Teams was consistent and helped address questions quickly.
+3. Effective Use of Technology
+	•	Continued collaboration through Microsoft Teams for file sharing and updates.
+	•	AI tools supported research validation and source organization, saving time.
+4. Documentation and Workflow
+	•	The product backlog has been instrumental in tracking what’s done and what still needs attention.
+	•	The sprint backlog helped manage report progress, especially for marketing strategy and innovation planning sections.
+5. Research and Report Completion Progress
+	•	Solid foundation laid for the final report, with major sections such as marketing strategy, product innovation, and implementation nearly complete.
+	•	Academic sources, including UBC publications, were identified to support recommendations around responsible gambling.
+Gaps & Challenges in Sprint 2
+1. Data Accessibility
+	•	Internal player behavior data and engagement metrics remain unavailable, restricting quantitative analysis.
+	•	Some sections relied on reviews and secondary data due to lack of firsthand access.
+2. Need for Final Polishing
+	•	While content was developed, some sections still need stronger analytical depth and smoother integration into the final report.
+
+Final Steps: Report and Presentation
+	•	Complete the Final Report: All sections must be finalized and formatted by early next week to ensure time for feedback and revisions.
+	•	Presentation Preparation: Focus now shifts to crafting a compelling, client-ready presentation. The goal is to clearly communicate strategic recommendations and show how each is backed by research.
+	•	Integrate Visuals and Insights: Include relevant graphs, journey map visuals (if available), and competitor snapshots to enhance clarity.
+	•	Practice Delivery: Allocate time for team presentation rehearsals to ensure smooth delivery and alignment in messaging.
+

@@ -1,0 +1,43 @@
+Scrum Backlog – BCLC Consulting Project – S03 Red Triangle
+
+Sprint Goal: To develop a wholistic view of project and get a feel of the project scope. To identify the appropriate distribution of effort and focus for specific areas.
+
+Scrum Master: Md Shariful Islam 
+
+ID
+Task
+Assigned Team Member(s)
+Status
+P1
+Analyze PlayNow sportsbook footprint
+All Members
+In Progress
+P2
+Assess website traffic sources
+All Members
+In Progress
+C1
+Identify top 5 competitors
+All Members
+In Progress
+C2
+Analyze BC market share
+All Members
+In Progress
+C3
+Compare PlayNow vs competitors
+All Members
+In Progress
+M1
+Research sportsbook marketing trends
+All Members
+In Progress
+PX1
+Research sportsbook product innovations
+All Members
+In Progress
+I1
+Create marketing rollout plan
+All Members
+In Progress
+
