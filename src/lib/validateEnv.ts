@@ -188,14 +188,14 @@ export function getEnvStatus(): {
 }
 
 // Auto-validate on import (server-side only)
+// Logs warnings/errors for missing env vars, but never crashes the build.
+// Critical API routes validate their own dependencies at runtime.
 if (typeof window === 'undefined') {
   try {
     validateEnvironment();
-  } catch (e) {
-    // In production, this will throw and crash the app
-    // In development, it just logs warnings
-    if (process.env.NODE_ENV === 'production') {
-      throw e;
-    }
+  } catch {
+    // Swallow — env vars may not be available during Vercel build
+    // but will be available at runtime. Individual API routes handle
+    // missing credentials with proper error responses.
   }
 }
