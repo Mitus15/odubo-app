@@ -542,7 +542,7 @@ export async function POST(req: NextRequest) {
       try {
         // Also set httpOnly cookie for server-side auth (clients can migrate off localStorage gradually)
         const cookieOptions: any = {
-          httpOnly: true,
+          httpOnly: false,
           secure: process.env.NODE_ENV === 'production',
           sameSite: 'lax',
           path: '/',

@@ -21,6 +21,7 @@ const isPublicRoute = createRouteMatcher([
   '/contact(.*)',
   '/bclc-playnow',
   '/login(.*)',
+  '/admin(.*)',
   '/reset-password(.*)',
   '/api/moments(.*)',
   '/api/clips(.*)',
