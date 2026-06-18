@@ -3,7 +3,6 @@
 import { useEffect, useState, ReactNode, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useAuth as useClerkAuth } from "@clerk/nextjs";
 import UserProvider, { useUser } from "./UserProvider";
 import TabContent from "./TabContent";
 import { usePermissions } from "@/lib/usePermissions";
@@ -209,6 +208,12 @@ const Icons = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
     </svg>
   ),
+  ark: (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5a17.919 17.919 0 01-8.716-2.247m0 0A9.015 9.015 0 013 12c0-1.605.42-3.113 1.157-4.418" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 12h16.5M12 3v18" />
+    </svg>
+  ),
 };
 
 // Type for nav items with optional children (foldered structure)
@@ -223,6 +228,7 @@ interface NavItem {
 // Navigation - all tabs render in-place (no page navigation)
 const navItems: NavItem[] = [
   { id: 'overview', label: 'Dashboard', icon: Icons.home },
+  { id: 'ark', label: 'The Ark', icon: Icons.ark, href: '/admin/ark' },
   {
     id: 'content',
     label: 'Content',
@@ -276,7 +282,6 @@ export default function AdminPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
   const { canAccess, hasAccessibleChildren, loading: permissionsLoading, isAdmin } = usePermissions();
-  const { userId: clerkUserId, isLoaded: clerkLoaded } = useClerkAuth();
 
   // Filter nav items based on user permissions
   const filteredNavItems = useMemo(() => {
@@ -302,8 +307,6 @@ export default function AdminPage() {
   }, [canAccess, hasAccessibleChildren]);
 
   useEffect(() => {
-    if (!clerkLoaded) return;
-
     const getCookieToken = () => {
       try {
         const all = typeof document !== 'undefined' ? document.cookie : '';
@@ -314,11 +317,6 @@ export default function AdminPage() {
 
     const lsToken = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
     const token = lsToken || getCookieToken();
-
-    if (clerkUserId) {
-      setIsAuthenticated(true);
-      return;
-    }
 
     if (token) {
       try {
@@ -332,13 +330,13 @@ export default function AdminPage() {
       } catch (e) {
         console.error('Token decode failed:', e);
         setIsAuthenticated(false);
-        window.location.href = 'https://odubo.studio/login';
+        window.location.href = '/login';
       }
       return;
     }
 
-    window.location.href = 'https://odubo.studio/login';
-  }, [router, clerkUserId, clerkLoaded]);
+    window.location.href = '/login';
+  }, [router]);
 
   // Toggle expansion of folder items
   const toggleExpand = (id: string, siblings: string[]) => {
@@ -445,7 +443,7 @@ export default function AdminPage() {
              You don&apos;t have permission to access the admin dashboard.
            </p>
            <button
-             onClick={() => window.location.href = 'https://odubo.studio'}
+             onClick={() => window.location.href = '/'}
              className="mt-2 px-4 py-2 bg-[#843c2d]/20 text-[#ede8df] rounded-lg hover:bg-[#843c2d]/30 transition-colors"
            >
              Back to Site

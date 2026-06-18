@@ -4,6 +4,76 @@
   --app-nav-height: 56px;
 }
 
+/* ===========================
+   The Ark — Density-Driven UI
+   CSS vars set by ArkDensityProvider
+   =========================== */
+
+/* Typography */
+.ark-density-root { font-size: var(--ark-text-base, 14px); }
+.ark-density-root h1 { font-size: var(--ark-text-3xl, 30px); }
+.ark-density-root h2 { font-size: var(--ark-text-2xl, 24px); }
+.ark-density-root h3 { font-size: var(--ark-text-lg, 16px); }
+
+/* Card items: project cards, task rows, milestone cards, note cards, asset rows, timeline items */
+.ark-density-root .ark-card {
+  padding: var(--ark-card-pad, 16px);
+  border-radius: var(--ark-radius, 12px);
+  gap: var(--ark-gap, 12px);
+}
+.ark-density-root .ark-row {
+  padding: var(--ark-row-py, 14px) var(--ark-row-px, 16px);
+  border-radius: var(--ark-radius, 12px);
+  gap: var(--ark-gap, 12px);
+}
+
+/* List spacing */
+.ark-density-root .ark-list { gap: var(--ark-gap-sm, 6px); display: flex; flex-direction: column; }
+.ark-density-root .ark-grid { gap: var(--ark-gap-lg, 16px); }
+
+/* Section spacing */
+.ark-density-root .ark-section { padding: var(--ark-pad, 20px); }
+.ark-density-root .ark-section-sm { padding: var(--ark-pad-sm, 12px); }
+
+/* Text sizes */
+.ark-density-root .ark-text-xs { font-size: var(--ark-text-xs, 10px); }
+.ark-density-root .ark-text-sm { font-size: var(--ark-text-sm, 12px); }
+.ark-density-root .ark-text-base { font-size: var(--ark-text-base, 14px); }
+.ark-density-root .ark-text-lg { font-size: var(--ark-text-lg, 16px); }
+.ark-density-root .ark-text-xl { font-size: var(--ark-text-xl, 18px); }
+
+/* Inputs */
+.ark-density-root .ark-input {
+  padding: var(--ark-input-py, 10px) var(--ark-input-px, 12px);
+  font-size: var(--ark-text-base, 14px);
+  border-radius: var(--ark-radius, 12px);
+}
+
+/* Icons */
+.ark-density-root .ark-icon { width: var(--ark-icon, 20px); height: var(--ark-icon, 20px); }
+.ark-density-root .ark-icon-lg { width: var(--ark-icon-lg, 32px); height: var(--ark-icon-lg, 32px); }
+
+/* Checkbox */
+.ark-density-root .ark-checkbox {
+  width: var(--ark-checkbox, 20px);
+  height: var(--ark-checkbox, 20px);
+  border-radius: 4px;
+}
+
+/* Header areas */
+.ark-density-root .ark-header { padding-top: var(--ark-header-py, 20px); padding-bottom: var(--ark-header-py, 20px); }
+
+/* Badges */
+.ark-density-root .ark-badge {
+  padding: 2px 8px;
+  font-size: var(--ark-text-xs, 10px);
+  border-radius: 999px;
+}
+
+/* Project emoji icons */
+.ark-density-root .ark-emoji { font-size: var(--ark-icon-lg, 32px); }
+.ark-density-root .ark-emoji-sm { font-size: var(--ark-icon, 20px); }
+
 .glass-text {
   position: relative;
   color: transparent;

@@ -23,6 +23,9 @@ const BrandAssetsTab = dynamic(() => import('./tabs/BrandAssetsTab'));
 const LinksTab = dynamic(() => import('./tabs/LinksTab'));
 const ArsenalTab = dynamic(() => import('./tabs/ArsenalTab'));
 
+// === THE ARK ===
+const ArkTab = dynamic(() => import('./tabs/ArkTab'));
+
 // === BUSINESS / BI TABS ===
 const ReportsTab = dynamic(() => import('./tabs/ReportsTab'));
 const FinanceTab = dynamic(() => import('./tabs/FinanceTab'));
@@ -103,6 +106,14 @@ export default function TabContent({ activeTab, canAccess, permissionsLoading, o
       return (
         <Suspense fallback={<LoadingFallback title="Dashboard" />}>
           <OverviewTab onSetActiveTab={onSetActiveTab} />
+        </Suspense>
+      );
+
+    // === THE ARK ===
+    case 'ark':
+      return (
+        <Suspense fallback={<LoadingFallback title="The Ark" />}>
+          <ArkTab />
         </Suspense>
       );
 
