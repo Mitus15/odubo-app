@@ -548,9 +548,12 @@ export async function POST(req: NextRequest) {
           path: '/',
           maxAge: 60 * 60 * 24 * 7,
         };
-        // In production, set domain to work across subdomains (admin.odubo.studio and odubo.studio)
-        if (process.env.NODE_ENV === 'production') {
-          cookieOptions.domain = '.odubo.studio';
+        // Only scope the cookie to a parent domain when explicitly configured.
+        // Set AUTH_COOKIE_DOMAIN=.odubo.studio to share sessions across subdomains
+        // (admin.odubo.studio + odubo.studio). Leave unset (e.g. on *.vercel.app) so the
+        // cookie binds to the current host and login works anywhere.
+        if (process.env.AUTH_COOKIE_DOMAIN) {
+          cookieOptions.domain = process.env.AUTH_COOKIE_DOMAIN;
         }
         res.cookies.set('token', token, cookieOptions);
       } catch {}
