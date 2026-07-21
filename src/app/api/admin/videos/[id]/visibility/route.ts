@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyToken } from '@/lib/auth';
-import { getDb } from '@/lib/db';
+import { verifyUserFromRequest } from '@/lib/auth';
+import { queryDatabase } from '@/lib/db';
 
 /**
  * Manual visibility override for videos/clips
@@ -12,13 +12,11 @@ export async function PATCH(
 ) {
   try {
     // Verify admin authentication
-    const token = request.headers.get('Authorization')?.replace('Bearer ', '');
-    if (!token) {
+    const user = await verifyUserFromRequest(request);
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-
-    const payload = verifyToken(token);
-    if (!payload?.isAdmin) {
+    if (!user.is_admin) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
@@ -39,8 +37,6 @@ export async function PATCH(
         { status: 400 }
       );
     }
-
-    const db = await getDb();
 
     // Build update query
     const updates: string[] = [];
@@ -65,20 +61,18 @@ export async function PATCH(
 
     values.push(videoId);
 
-    const result = await db
-      .prepare(`UPDATE videos SET ${updates.join(', ')} WHERE id = ?`)
-      .bind(...values)
-      .run();
-
-    if (!result.success) {
-      throw new Error('Failed to update visibility');
-    }
+    await queryDatabase(
+      `UPDATE videos SET ${updates.join(', ')} WHERE id = ?`,
+      values
+    );
 
     // Fetch updated video
-    const video = await db
-      .prepare('SELECT id, title, type, publication_status, is_public FROM videos WHERE id = ?')
-      .bind(videoId)
-      .first();
+    const videos = await queryDatabase(
+      'SELECT id, title, type, publication_status, is_public FROM videos WHERE id = ?',
+      [videoId]
+    ) as any[];
+
+    const video = videos[0];
 
     return NextResponse.json({
       success: true,

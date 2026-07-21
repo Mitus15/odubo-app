@@ -121,16 +121,24 @@ Reply directly to this email to respond to the customer.
     if (resendApiKey) {
       const resend = new Resend(resendApiKey);
 
-      await resend.emails.send({
-        from: fromEmail,
-        to: supportEmail,
-        replyTo: email,
-        subject,
-        html: htmlContent,
-        text: textContent,
-      });
+      // Primary: notify the studio. Best-effort so a transient email failure
+      // never blocks the customer's inquiry from being acknowledged.
+      try {
+        await resend.emails.send({
+          from: fromEmail,
+          to: supportEmail,
+          replyTo: email,
+          subject,
+          html: htmlContent,
+          text: textContent,
+        });
+      } catch (notifyErr) {
+        console.error('Contact form: failed to send studio notification:', notifyErr);
+      }
 
-      // Also send confirmation to customer
+      // Confirmation to the customer is best-effort: without a verified sending
+      // domain, Resend may reject sends to arbitrary recipients. Never fatal.
+      try {
       await resend.emails.send({
         from: fromEmail,
         to: email,
@@ -179,6 +187,9 @@ In the meantime:
 \u2014 Odubo Studio
         `.trim(),
       });
+      } catch (confirmErr) {
+        console.error('Contact form: failed to send customer confirmation (non-fatal):', confirmErr);
+      }
     } else {
       // Log for development/debugging when Resend isn't configured
       console.log('[EMAIL] Contact form submission (Resend not configured):');

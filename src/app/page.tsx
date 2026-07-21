@@ -34,8 +34,6 @@ export default async function HomePage({ searchParams }: PageProps) {
   const initialClipId = params.clip ? parseInt(params.clip, 10) : null;
   const validClipId = initialClipId && Number.isFinite(initialClipId) ? initialClipId : null;
 
-  // Desktop: use HomePageClient with store open on load (like mobile but with desktop layout)
-  // The store opens automatically via defaultModal="store"
   return (
     <div className="pb-16">
       <HomePageClient
@@ -43,7 +41,6 @@ export default async function HomePage({ searchParams }: PageProps) {
         homepageMode={homepageMode}
         initialClipId={validClipId}
         initialClips={homepageMode === 'clips' ? initialClips : undefined}
-        defaultModal="store"
       />
       <Footer />
     </div>

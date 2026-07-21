@@ -1,55 +1,46 @@
-import { auth, currentUser } from '@clerk/nextjs/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { getAuthTokenFromRequest, getJwtSecret } from '@/lib/auth';
+import { jwtVerify } from 'jose';
 
-export interface CoolWrldUser {
-  id: string;
-  email: string;
-  firstName?: string;
-  lastName?: string;
-  imageUrl?: string;
-  publicMetadata: Record<string, any>;
-}
+export const runtime = 'edge';
 
-export async function getCurrentUser(): Promise<CoolWrldUser | null> {
-  const user = await currentUser();
-  
-  if (!user) {
+const getSecret = () => new TextEncoder().encode(getJwtSecret());
+
+/**
+ * Get the authenticated user from the JWT token in the request
+ */
+export async function getAuthenticatedUser(req: NextRequest) {
+  const token = getAuthTokenFromRequest(req);
+  if (!token) return null;
+
+  try {
+    const { payload } = await jwtVerify(token, getSecret());
+    return payload as { userId: string; email: string; is_admin: boolean; [key: string]: any };
+  } catch {
     return null;
   }
-
-  return {
-    id: user.id,
-    email: user.emailAddresses[0]?.emailAddress || '',
-    firstName: user.firstName || undefined,
-    lastName: user.lastName || undefined,
-    imageUrl: user.imageUrl || undefined,
-    publicMetadata: user.publicMetadata as Record<string, any> || {},
-  };
 }
 
-export async function getUserId(): Promise<string | null> {
-  const { userId } = await auth();
-  return userId;
-}
-
-export async function requireUser(): Promise<CoolWrldUser> {
-  const user = await getCurrentUser();
-  
+/**
+ * Require authentication - returns 401 if not authenticated
+ */
+export async function requireAuth(req: NextRequest) {
+  const user = await getAuthenticatedUser(req);
   if (!user) {
-    throw new Error('Unauthorized');
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-  
   return user;
 }
 
-export async function getUserEmail(): Promise<string | null> {
-  const user = await getCurrentUser();
-  return user?.email || null;
-}
-
-export function getShopifyCustomerId(user: CoolWrldUser): string | null {
-  return user.publicMetadata?.shopify_customer_id || null;
-}
-
-export function isLinkedToShopify(user: CoolWrldUser): boolean {
-  return !!user.publicMetadata?.shopify_customer_id;
+/**
+ * Require admin - returns 403 if not admin
+ */
+export async function requireAdmin(req: NextRequest) {
+  const user = await requireAuth(req);
+  if (user instanceof NextResponse) return user;
+  
+  if (!user.is_admin) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+  return user;
 }

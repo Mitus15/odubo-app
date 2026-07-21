@@ -50,7 +50,7 @@ const chapters = [
     items: [
       {
         label: 'Tech Stack',
-        text: 'Next.js 15 on Cloudflare Pages with D1 (SQLite), R2 (object storage), and Stream (video). Clerk for auth, Shopify for commerce, and Tailwind CSS for the design system.',
+        text: 'Next.js 15 on Cloudflare Pages with D1 (SQLite), R2 (object storage), and Stream (video). JWT-based auth, Shopify for commerce, and Tailwind CSS for the design system.',
       },
       {
         label: 'Video Pipeline',

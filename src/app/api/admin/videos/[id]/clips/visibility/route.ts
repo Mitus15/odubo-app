@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyToken } from '@/lib/auth';
-import { getDb } from '@/lib/db';
+import { verifyUserFromRequest } from '@/lib/auth';
+import { queryDatabase } from '@/lib/db';
 
 /**
  * Bulk visibility override for all clips of a parent video
@@ -12,13 +12,11 @@ export async function PATCH(
 ) {
   try {
     // Verify admin authentication
-    const token = request.headers.get('Authorization')?.replace('Bearer ', '');
-    if (!token) {
+    const user = await verifyUserFromRequest(request);
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-
-    const payload = verifyToken(token);
-    if (!payload?.isAdmin) {
+    if (!user.is_admin) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
@@ -39,8 +37,6 @@ export async function PATCH(
         { status: 400 }
       );
     }
-
-    const db = await getDb();
 
     // Build update query
     const updates: string[] = [];
@@ -66,25 +62,23 @@ export async function PATCH(
     values.push(parentVideoId);
 
     // Update all clips with this parent_video_id
-    const result = await db
-      .prepare(`UPDATE videos SET ${updates.join(', ')} WHERE parent_video_id = ?`)
-      .bind(...values)
-      .run();
-
-    if (!result.success) {
-      throw new Error('Failed to update clips visibility');
-    }
+    await queryDatabase(
+      `UPDATE videos SET ${updates.join(', ')} WHERE parent_video_id = ?`,
+      values
+    );
 
     // Count affected clips
-    const count = await db
-      .prepare('SELECT COUNT(*) as count FROM videos WHERE parent_video_id = ?')
-      .bind(parentVideoId)
-      .first<{ count: number }>();
+    const counts = await queryDatabase(
+      'SELECT COUNT(*) as count FROM videos WHERE parent_video_id = ?',
+      [parentVideoId]
+    ) as { count: number }[];
+
+    const count = counts[0]?.count || 0;
 
     return NextResponse.json({
       success: true,
-      clips_updated: count?.count || 0,
-      message: `${count?.count || 0} clips updated successfully`
+      clips_updated: count,
+      message: `${count} clips updated successfully`
     });
   } catch (error) {
     console.error('Error updating clips visibility:', error);

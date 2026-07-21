@@ -1,7 +1,6 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import { useUser } from '@clerk/nextjs';
 
 interface CoolWrldUser {
   id: string;
@@ -28,36 +27,55 @@ const CoolWrldContext = createContext<CoolWrldContextValue>({
 });
 
 export function CoolWrldProvider({ children }: { children: ReactNode }) {
-  const { user, isLoaded } = useUser();
-
   const [userData, setUserData] = useState<CoolWrldUser | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (isLoaded && user) {
-      const metadata = user.publicMetadata as Record<string, any> || {};
-      
-      setUserData({
-        id: user.id,
-        email: user.emailAddresses[0]?.emailAddress || '',
-        firstName: user.firstName || undefined,
-        lastName: user.lastName || undefined,
-        imageUrl: user.imageUrl || undefined,
-        shopifyLinked: !!metadata.shopify_customer_id,
-        shopifyCustomerId: metadata.shopify_customer_id,
-        coolPoints: metadata.cool_points_balance,
-        tier: metadata.tier || 'fan',
-      });
-    } else if (isLoaded && !user) {
-      setUserData(null);
-    }
-  }, [isLoaded, user]);
+    const fetchUser = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          setIsLoading(false);
+          return;
+        }
+
+        const res = await fetch('/api/me', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        if (!res.ok) {
+          setIsLoading(false);
+          return;
+        }
+
+        const data = await res.json() as { authenticated: boolean; user?: { id: string; email: string; firstName?: string; lastName?: string } };
+        if (data.authenticated && data.user) {
+          setUserData({
+            id: data.user.id,
+            email: data.user.email,
+            firstName: data.user.firstName || undefined,
+            lastName: data.user.lastName || undefined,
+            shopifyLinked: false,
+          });
+        }
+      } catch (err) {
+        console.error('Failed to fetch user:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchUser();
+  }, []);
 
   return (
     <CoolWrldContext.Provider
       value={{
         user: userData,
-        isLoading: !isLoaded,
-        isSignedIn: !!user,
+        isLoading,
+        isSignedIn: !!userData,
       }}
     >
       {children}

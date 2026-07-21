@@ -30,7 +30,6 @@ import GoogleAnalytics from "@/components/analytics/GoogleAnalytics";
 import { QuickShopProvider } from "@/contexts/QuickShopContext";
 import QuickShopModal from "@/components/shop/QuickShopModal";
 import { AnalyticsProvider } from "@/contexts/AnalyticsContext";
-import { ClerkProvider } from "@clerk/nextjs";
 // import AccessibilityEnhancer from "./components/AccessibilityEnhancer";
 
 const geistSans = Geist({
@@ -84,7 +83,6 @@ export default function RootLayout({
           WebkitOverflowScrolling: 'touch'
         }}
       >
-        <ClerkProvider>
         {/* Google Analytics 4 - respects GDPR consent */}
         <GoogleAnalytics />
         {/* <AuthProvider> */}
@@ -133,7 +131,6 @@ export default function RootLayout({
             </AnalyticsProvider>
           </PWAProvider>
         {/* </AuthProvider> */}
-        </ClerkProvider>
       </body>
     </html>
   );

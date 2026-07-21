@@ -1,45 +1,5 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
-
-const isPublicRoute = createRouteMatcher([
-  '/',
-  '/about',
-  '/showcase',
-  '/docs(.*)',
-  '/rsvp(.*)',
-  '/moments(.*)',
-  '/store(.*)',
-  '/music(.*)',
-  '/media(.*)',
-  '/clips(.*)',
-  '/links(.*)',
-  '/watch(.*)',
-  '/game(.*)',
-  '/featured(.*)',
-  '/legal(.*)',
-  '/contact(.*)',
-  '/bclc-playnow',
-  '/login(.*)',
-  '/admin(.*)',
-  '/reset-password(.*)',
-  '/api/admin(.*)',
-  '/api/moments(.*)',
-  '/api/clips(.*)',
-  '/api/videos(.*)',
-  '/api/tracks(.*)',
-  '/api/albums(.*)',
-  '/api/products(.*)',
-  '/api/store(.*)',
-  '/api/analytics(.*)',
-  '/api/galleries(.*)',
-  '/api/linktree(.*)',
-  '/api/users(.*)',
-  '/api/auth(.*)',
-  '/api/webhooks(.*)',
-  '/sign-in(.*)',
-  '/sign-up(.*)',
-]);
 
 /**
  * Subdomain routing
@@ -68,8 +28,6 @@ function handleSubdomainRouting(request: NextRequest): NextResponse | null {
 
     if (
       url.pathname.startsWith('/login') ||
-      url.pathname.startsWith('/sign-in') ||
-      url.pathname.startsWith('/sign-up') ||
       url.pathname.startsWith('/reset-password')
     ) {
       if (isProduction) {
@@ -123,46 +81,13 @@ function handleSubdomainRouting(request: NextRequest): NextResponse | null {
   return null;
 }
 
-function getClerkMiddlewareOptions(req: NextRequest) {
-  const hostname = req.headers.get('host') || '';
-  const isAdminSubdomain = hostname.startsWith('admin.');
-  const isMomentsSubdomain = hostname.startsWith('moments.');
-  const isProduction = hostname.includes('odubo.studio');
-
-  if (isProduction && (isAdminSubdomain || isMomentsSubdomain)) {
-    return {
-      isSatellite: true,
-      domain: 'odubo.studio',
-      signInUrl: 'https://odubo.studio/sign-in',
-      signUpUrl: 'https://odubo.studio/sign-up',
-    };
-  }
-
-  return {};
-}
-
 /**
- * Clerk v7 middleware - auth protection + subdomain routing
- * In Clerk v7, clerkMiddleware() must be exported directly.
- * 
- * Subdomain architecture:
- * - odubo.studio = PRIMARY domain (handles sign-in/sign-up)
- * - admin.odubo.studio = SATELLITE domain (reads session from primary)
- * - moments.odubo.studio = SATELLITE domain (reads session from primary)
+ * Middleware - subdomain routing only
+ * Clerk has been removed in favor of JWT-based auth for admin
  */
-export default clerkMiddleware(
-  async (auth, req) => {
-    const subdomainResponse = handleSubdomainRouting(req);
-    if (subdomainResponse) {
-      return subdomainResponse;
-    }
-
-    if (!isPublicRoute(req)) {
-      await auth.protect();
-    }
-  },
-  getClerkMiddlewareOptions
-);
+export default function middleware(request: NextRequest) {
+  return handleSubdomainRouting(request);
+}
 
 export const config = {
   matcher: [

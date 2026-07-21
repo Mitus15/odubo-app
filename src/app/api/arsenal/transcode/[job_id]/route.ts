@@ -24,8 +24,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyToken } from '@/lib/auth';
-import { getDb } from '@/lib/db';
+import { verifyUserFromRequest } from '@/lib/auth';
+import { queryDatabase } from '@/lib/db';
 
 export async function GET(
   req: NextRequest,
@@ -33,14 +33,11 @@ export async function GET(
 ) {
   try {
     // Verify admin authentication
-    const authHeader = req.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
+    const user = await verifyUserFromRequest(req);
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-
-    const token = authHeader.substring(7);
-    const payload = await verifyToken(token);
-    if (!payload?.isAdmin) {
+    if (!user.is_admin) {
       return NextResponse.json({ error: 'Forbidden: Admins only' }, { status: 403 });
     }
 
@@ -50,10 +47,8 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid job_id' }, { status: 400 });
     }
 
-    const db = await getDb();
-
     // Get job status
-    const job = await db.prepare(`
+    const jobs = await queryDatabase(`
       SELECT
         id as job_id,
         video_id,
@@ -75,7 +70,9 @@ export async function GET(
         updated_at
       FROM transcoding_jobs
       WHERE id = ?
-    `).bind(job_id).first();
+    `, [job_id]) as any[];
+
+    const job = jobs[0];
 
     if (!job) {
       return NextResponse.json({ error: 'Job not found' }, { status: 404 });
@@ -101,14 +98,11 @@ export async function DELETE(
 ) {
   try {
     // Verify admin authentication
-    const authHeader = req.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
+    const user = await verifyUserFromRequest(req);
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-
-    const token = authHeader.substring(7);
-    const payload = await verifyToken(token);
-    if (!payload?.isAdmin) {
+    if (!user.is_admin) {
       return NextResponse.json({ error: 'Forbidden: Admins only' }, { status: 403 });
     }
 
@@ -118,14 +112,12 @@ export async function DELETE(
       return NextResponse.json({ error: 'Invalid job_id' }, { status: 400 });
     }
 
-    const db = await getDb();
-
     // Update job status to failed
-    await db.prepare(`
+    await queryDatabase(`
       UPDATE transcoding_jobs
       SET status = 'failed', error_message = 'Cancelled by user', completed_at = CURRENT_TIMESTAMP
       WHERE id = ? AND status NOT IN ('complete', 'failed')
-    `).bind(job_id).run();
+    `, [job_id]);
 
     return NextResponse.json({ success: true, message: 'Job cancelled' });
   } catch (error: any) {

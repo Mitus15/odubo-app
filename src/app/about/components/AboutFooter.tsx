@@ -72,7 +72,7 @@ export default function AboutFooter() {
           <div className="mt-8 pt-6 border-t border-[#efe9e3]">
             <p className="about-label text-[0.625rem] mb-3">Built With</p>
             <div className="flex flex-wrap gap-2">
-              {['Next.js 15', 'React 19', 'TypeScript', 'Tailwind CSS 4', 'Cloudflare Pages', 'Cloudflare D1', 'Cloudflare R2', 'Cloudflare Stream', 'Clerk Auth', 'Shopify', 'Three.js', 'Blender', 'Claude Code', 'Gemini', 'MCP Servers'].map((tech) => (
+              {['Next.js 15', 'React 19', 'TypeScript', 'Tailwind CSS 4', 'Cloudflare Pages', 'Cloudflare D1', 'Cloudflare R2', 'Cloudflare Stream', 'JWT Auth', 'Shopify', 'Three.js', 'Blender', 'Claude Code', 'Gemini', 'MCP Servers'].map((tech) => (
                 <span
                   key={tech}
                   className="inline-flex items-center px-2.5 py-1 bg-[#f5f0eb] text-[#5c5550] rounded-md text-[0.6875rem] font-medium border border-[#e5ddd6]"

@@ -1,6 +1,6 @@
 import { queryDatabase } from '@/lib/db';
 import { mapClipRows } from '@/lib/clipsMapper';
-import { fetchVerseOfTheDay } from '@/lib/deepseek';
+import { getDailyVerse } from '@/lib/bible-verse';
 import type { ClipApiRow, ClipItem } from '@/types/clips';
 
 export interface VerseOfTheDay {
@@ -10,24 +10,24 @@ export interface VerseOfTheDay {
 }
 
 /**
- * Fetch verse of the day from Gemini
+ * Get verse of the day from the downloaded KJV Bible (Psalms & Proverbs).
+ * Reads from data/bible-psalms-proverbs.json — no AI, no API calls.
+ * Deterministic: same verse all day, different verse each day.
  */
 export async function getVerse(): Promise<VerseOfTheDay> {
   try {
-    const timestamp = Date.now().toString();
-    const requestId = Math.random().toString(36).substring(7);
-    const result = await fetchVerseOfTheDay(timestamp, requestId);
+    const verse = getDailyVerse();
     return {
-      text: result.text,
-      reference: result.reference,
-      error: result.note || result.error || null
+      text: verse.text,
+      reference: verse.reference,
+      error: null
     };
   } catch (error) {
     console.error('getVerse error:', error);
     return {
-      text: "Trust in the Lord with all your heart and lean not on your own understanding.",
+      text: "Trust in the Lord with all thine heart; and lean not unto thine own understanding.",
       reference: "Proverbs 3:5",
-      error: "Unable to fetch today's verse."
+      error: null
     };
   }
 }

@@ -12,8 +12,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyToken } from '@/lib/auth';
-import { getDb } from '@/lib/db';
+import { verifyUserFromRequest } from '@/lib/auth';
+import { queryDatabase } from '@/lib/db';
 
 /**
  * POST /api/arsenal/transcode
@@ -22,14 +22,11 @@ import { getDb } from '@/lib/db';
 export async function POST(req: NextRequest) {
   try {
     // Verify admin authentication
-    const authHeader = req.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
+    const user = await verifyUserFromRequest(req);
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-
-    const token = authHeader.substring(7);
-    const payload = await verifyToken(token);
-    if (!payload?.isAdmin) {
+    if (!user.is_admin) {
       return NextResponse.json({ error: 'Forbidden: Admins only' }, { status: 403 });
     }
 
@@ -40,15 +37,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'video_id is required' }, { status: 400 });
     }
 
-    const db = await getDb();
-
     // Get video details
-    const video = await db.prepare('SELECT id, title, mp4_url, uid FROM videos WHERE id = ?').bind(video_id).first<{
-      id: number;
-      title: string;
-      mp4_url: string;
-      uid: string;
-    }>();
+    const videos = await queryDatabase(
+      'SELECT id, title, mp4_url, uid FROM videos WHERE id = ?',
+      [video_id]
+    ) as { id: number; title: string; mp4_url: string; uid: string }[];
+
+    const video = videos[0];
 
     if (!video) {
       return NextResponse.json({ error: 'Video not found' }, { status: 404 });
@@ -61,18 +56,27 @@ export async function POST(req: NextRequest) {
     console.log('[Transcode] Creating job for video:', { video_id, title: video.title, source_url: video.mp4_url });
 
     // Create transcoding job record
-    const jobResult = await db.prepare(`
+    await queryDatabase(`
       INSERT INTO transcoding_jobs (
         video_id, status, progress, source_url, started_at
       ) VALUES (?, 'queued', 0, ?, CURRENT_TIMESTAMP)
-    `).bind(video_id, video.mp4_url).run();
+    `, [video_id, video.mp4_url]);
 
-    const job_id = jobResult.meta.last_row_id;
+    // Get the job id
+    const jobs = await queryDatabase(
+      'SELECT last_insert_rowid() as job_id',
+      []
+    ) as { job_id: number }[];
+
+    const job_id = jobs[0]?.job_id;
 
     console.log('[Transcode] Created job:', { job_id, video_id });
 
     // Update video with job reference
-    await db.prepare('UPDATE videos SET transcoding_job_id = ? WHERE id = ?').bind(job_id, video_id).run();
+    await queryDatabase(
+      'UPDATE videos SET transcoding_job_id = ? WHERE id = ?',
+      [job_id, video_id]
+    );
 
     // Railway worker will pick up this job and process it
     console.log('[Transcode] Job queued for Railway worker');

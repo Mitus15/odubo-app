@@ -31,6 +31,7 @@ interface StoreContextValue {
   // Store Access
   isStoreAccessible: boolean;
   isCheckingAccess: boolean;
+  storePublished: boolean;
 
   // View State
   view: StoreView;
@@ -88,6 +89,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   // Store access
   const [isStoreAccessible, setIsStoreAccessible] = useState(false);
   const [isCheckingAccess, setIsCheckingAccess] = useState(true);
+  const [storePublished, setStorePublished] = useState(false);
 
   // View state
   const [view, setView] = useState<StoreView>('closed');
@@ -126,6 +128,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         if (res.ok) {
           const data = await res.json() as { accessGranted: boolean; published: boolean; isAdmin: boolean };
           setIsStoreAccessible(data.accessGranted);
+          setStorePublished(data.published);
         }
       } catch (error) {
         console.error('Failed to check store access:', error);
@@ -336,6 +339,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     // Store Access
     isStoreAccessible,
     isCheckingAccess,
+    storePublished,
 
     // View State
     view,
@@ -378,6 +382,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }), [
     isStoreAccessible,
     isCheckingAccess,
+    storePublished,
     view,
     openStore,
     closeStore,
