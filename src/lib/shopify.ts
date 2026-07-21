@@ -1,3 +1,4 @@
+import { normalizeCountry } from './store/money';
 
 export interface ShopifyProduct {
   id: string;
@@ -132,8 +133,9 @@ export async function getShopifyProducts(): Promise<{ success: boolean; products
   }
 }
 
-export async function getShopifyProduct(handle: string): Promise<{ success: boolean; product?: ShopifyProduct; error?: string }> {
+export async function getShopifyProduct(handle: string, country?: string): Promise<{ success: boolean; product?: ShopifyProduct; error?: string }> {
   try {
+    const ctxCountry = normalizeCountry(country);
     const STORE_URL = process.env.SHOPIFY_STORE_URL || 'https://odubostudio.myshopify.com';
     const PUBLIC_TOKEN = process.env.NEXT_PUBLIC_SHOPIFY_API_KEY;
 
@@ -146,7 +148,7 @@ export async function getShopifyProduct(handle: string): Promise<{ success: bool
     };
 
     const query = `#graphql
-      query Product($handle: String!) {
+      query Product($handle: String!, $country: CountryCode!) @inContext(country: $country) {
         product(handle: $handle) {
           id
           title
@@ -202,7 +204,7 @@ export async function getShopifyProduct(handle: string): Promise<{ success: bool
     const res = await fetch(endpoint, {
       method: 'POST',
       headers,
-      body: JSON.stringify({ query, variables: { handle } }),
+      body: JSON.stringify({ query, variables: { handle, country: ctxCountry } }),
       next: { revalidate: 60 },
     });
 

@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import ScreenLayout from '@/components/ui/ScreenLayout';
 import ScrollContainer from '@/components/ui/ScrollContainer';
 import { useRouter } from 'next/navigation';
+import { formatMoney } from '@/lib/store/money';
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -35,6 +36,7 @@ export default function CheckoutPage() {
 
   const subtotal = useMemo(() => items.reduce((sum, it) => sum + (Number(it.price) || 0) * it.qty, 0), [items]);
   const total = subtotal; // Tax/Shipping logic can be added here
+  const cartCurrency = useMemo(() => items.find((it) => it.currency)?.currency || undefined, [items]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -100,14 +102,14 @@ export default function CheckoutPage() {
                       <div className="text-[#ede8df] text-sm truncate">{it.title}</div>
                       <div className="text-[#b2a491] text-xs">Qty: {it.qty}</div>
                     </div>
-                    <div className="text-[#ede8df] text-sm">${(it.price * it.qty).toFixed(2)}</div>
+                    <div className="text-[#ede8df] text-sm">{formatMoney(it.price * it.qty, it.currency || cartCurrency)}</div>
                   </div>
                 ))}
               </div>
               <div className="border-t border-[#502d26]/30 pt-4 space-y-2 text-sm">
                 <div className="flex justify-between text-[#b2a491]">
                   <span>Subtotal</span>
-                  <span>${subtotal.toFixed(2)}</span>
+                  <span>{formatMoney(subtotal, cartCurrency)}</span>
                 </div>
                 <div className="flex justify-between text-[#b2a491]">
                   <span>Shipping</span>
@@ -115,7 +117,7 @@ export default function CheckoutPage() {
                 </div>
                 <div className="flex justify-between text-[#ede8df] font-bold text-lg pt-2">
                   <span>Total</span>
-                  <span>${total.toFixed(2)}</span>
+                  <span>{formatMoney(total, cartCurrency)}</span>
                 </div>
               </div>
             </div>
@@ -199,7 +201,7 @@ export default function CheckoutPage() {
                   disabled={loading}
                   className="w-full py-4 bg-[#843c2d] text-[#ede8df] rounded-xl hover:bg-[#a0472f] transition-colors font-bold text-lg disabled:opacity-50"
                 >
-                  {loading ? 'Processing...' : `Pay $${total.toFixed(2)}`}
+                  {loading ? 'Processing...' : `Pay ${formatMoney(total, cartCurrency)}`}
                 </button>
                 <p className="text-center text-xs text-[#b2a491] mt-4">
                   This is a demo checkout. No payment will be processed.

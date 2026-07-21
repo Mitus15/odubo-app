@@ -12,6 +12,7 @@ import {
 } from 'react';
 import { useCart, type UseCartReturn } from '@/hooks/useCart';
 import { fetchProducts, fetchProduct, createCheckout } from '@/lib/store/api';
+import { getCountryFromCookie } from '@/lib/store/money';
 import { useAnalyticsSafe, type ModalType } from '@/contexts/AnalyticsContext';
 import { getAttribution, getSessionId } from '@/lib/attribution';
 import { getVisitorId } from '@/lib/visitorId';
@@ -196,6 +197,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         after: cursor,
         sort,
         filters,
+        country: getCountryFromCookie(),
       });
 
       if (reset) {
@@ -260,7 +262,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setIsLoadingProduct(true);
     
     try {
-      const product = await fetchProduct(handle);
+      const product = await fetchProduct(handle, getCountryFromCookie());
       if (product) {
         productCacheRef.current.set(handle, product);
         setCurrentProduct(product);
@@ -315,7 +317,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           entryGalleryId: attribution?.entryGalleryId,
           entryAlbumId: attribution?.entryAlbumId,
           entryPath: attribution?.landingPage,
-        }
+        },
+        getCountryFromCookie()
       );
 
       if (checkoutUrl) {

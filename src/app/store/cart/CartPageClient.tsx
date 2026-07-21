@@ -10,9 +10,10 @@ import { createCheckout, type CheckoutAttribution } from '@/lib/store/api';
 import { getAttribution as getStoredAttribution, getSessionId } from '@/lib/attribution';
 import { getVisitorId } from '@/lib/visitorId';
 import { isPreorderActive, PREORDER_CHECKOUT_CTA, PREORDER_DISCLAIMER } from '@/config/preorder';
+import { formatMoney, getCountryFromCookie } from '@/lib/store/money';
 
 export default function CartPage() {
-  type CartItem = { variantId: string; qty: number; title: string; price: number; image?: string };
+  type CartItem = { variantId: string; qty: number; title: string; price: number; currency?: string; image?: string };
   const [items, setItems] = useState<CartItem[]>([]);
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [inventoryError, setInventoryError] = useState<string | null>(null);
@@ -52,6 +53,9 @@ export default function CartPage() {
   }, []);
 
   const subtotal = useMemo(() => items.reduce((sum, it) => sum + (Number(it.price) || 0) * it.qty, 0), [items]);
+  // All items in a session share the visitor's currency; fall back to the first
+  // item's stored currency, then to the geo default.
+  const cartCurrency = useMemo(() => items.find(it => it.currency)?.currency || undefined, [items]);
 
   const save = (next: CartItem[]) => {
     setItems(next);
@@ -108,7 +112,7 @@ export default function CartPage() {
         quantity: i.qty,
       }));
 
-      const checkoutUrl = await createCheckout(checkoutItems, getAttribution());
+      const checkoutUrl = await createCheckout(checkoutItems, getAttribution(), getCountryFromCookie());
 
       if (checkoutUrl) {
         window.location.href = checkoutUrl;
@@ -175,7 +179,7 @@ export default function CartPage() {
                       <div>
                         <div className="flex justify-between items-start mb-2">
                           <h3 className="text-[#ede8df] font-medium text-lg tracking-wide">{it.title.split('—')[0]}</h3>
-                          <p className="text-[#ede8df] font-light tracking-widest">${(Number(it.price) * it.qty).toFixed(2)}</p>
+                          <p className="text-[#ede8df] font-light tracking-widest">{formatMoney(Number(it.price) * it.qty, it.currency || cartCurrency)}</p>
                         </div>
                         <p className="text-[#b2a491] text-xs uppercase tracking-widest mb-4">{it.title.split('—')[1] || 'Default'}</p>
                       </div>
@@ -215,7 +219,7 @@ export default function CartPage() {
                   
                   <div className="flex justify-between items-center mb-4">
                     <span className="text-[#b2a491] text-sm">Subtotal</span>
-                    <span className="text-[#ede8df] tracking-widest">${subtotal.toFixed(2)}</span>
+                    <span className="text-[#ede8df] tracking-widest">{formatMoney(subtotal, cartCurrency)}</span>
                   </div>
                   
                   <div className="flex justify-between items-center mb-8">

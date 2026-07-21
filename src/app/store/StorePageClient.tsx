@@ -7,6 +7,7 @@ import VinylMiniPlayer from '@/components/player/VinylMiniPlayer';
 import ContactModal from '@/components/store/ContactModal';
 import Link from 'next/link';
 import { isPreorderActive, DROP_DATE, PREORDER_CTA, PREORDER_FEEDBACK } from '@/config/preorder';
+import { formatMoney, getCountryFromCookie } from '@/lib/store/money';
 
 interface ProductCard {
   id: string;
@@ -14,6 +15,7 @@ interface ProductCard {
   handle: string;
   image: string | null;
   price: number | null;
+  currency?: string;
   available: boolean;
   createdAt: string;
   category: string;
@@ -191,7 +193,7 @@ function ProductFeedModal({
                   </h2>
                   {selectedVariant && (
                     <p className="text-sm font-medium text-[#f7f3ec]">
-                      {selectedVariant.price !== null ? `$${selectedVariant.price.toFixed(2)}` : 'Price on request'}
+                      {selectedVariant.price !== null ? formatMoney(selectedVariant.price, (selectedVariant as any).currency) : 'Price on request'}
                     </p>
                   )}
                   {selectedVariant?.available === false && (
@@ -335,11 +337,11 @@ export default function StorePageClient({ isStoreOpen, isAdmin, initialProducts 
         if (!PUBLIC_TOKEN) throw new Error('Missing token');
 
         const query = `#graphql
-          query Product($handle: String!) {
+          query Product($handle: String!, $country: CountryCode!) @inContext(country: $country) {
             product(handle: $handle) {
               variants(first: 1) { edges { node {
                 id title availableForSale
-                price { amount }
+                price { amount currencyCode }
                 image { url }
               }}}
             }
@@ -351,7 +353,7 @@ export default function StorePageClient({ isStoreOpen, isAdmin, initialProducts 
             'Content-Type': 'application/json',
             'X-Shopify-Storefront-Access-Token': PUBLIC_TOKEN,
           },
-          body: JSON.stringify({ query, variables: { handle: product.handle } }),
+          body: JSON.stringify({ query, variables: { handle: product.handle, country: getCountryFromCookie() } }),
         });
 
         const data = await res.json();
@@ -363,6 +365,7 @@ export default function StorePageClient({ isStoreOpen, isAdmin, initialProducts 
             id: v.id,
             title: v.title,
             price: parseFloat(v.price.amount),
+            currency: v.price.currencyCode,
             available: v.availableForSale,
             image: v.image?.url || null,
           }]
@@ -381,6 +384,7 @@ export default function StorePageClient({ isStoreOpen, isAdmin, initialProducts 
         qty: 1,
         title: variant.title === 'Default Title' ? product.title : `${product.title} — ${variant.title}`,
         price: variant.price,
+        currency: (variant as any).currency,
         image: variant.image || product.image,
       };
 
@@ -478,7 +482,7 @@ export default function StorePageClient({ isStoreOpen, isAdmin, initialProducts 
       const PUBLIC_TOKEN = process.env.NEXT_PUBLIC_SHOPIFY_API_KEY;
       if (!PUBLIC_TOKEN) throw new Error('Missing Shopify token');
 
-      const query = `#graphql\n        query Product($handle: String!) {\n          product(handle: $handle) {\n            id title handle description availableForSale\n            images(first: 10) { edges { node { url } } }\n            options { name values }\n            variants(first: 30) { edges { node {\n              id title availableForSale quantityAvailable\n              price { amount currencyCode }\n              selectedOptions { name value }\n              image { url }\n            }}}\n          }\n        }`;
+      const query = `#graphql\n        query Product($handle: String!, $country: CountryCode!) @inContext(country: $country) {\n          product(handle: $handle) {\n            id title handle description availableForSale\n            images(first: 10) { edges { node { url } } }\n            options { name values }\n            variants(first: 30) { edges { node {\n              id title availableForSale quantityAvailable\n              price { amount currencyCode }\n              selectedOptions { name value }\n              image { url }\n            }}}\n          }\n        }`;
 
       const res = await fetch(`${STORE_URL}/api/2024-07/graphql.json`, {
         method: 'POST',
@@ -486,7 +490,7 @@ export default function StorePageClient({ isStoreOpen, isAdmin, initialProducts 
           'Content-Type': 'application/json',
           'X-Shopify-Storefront-Access-Token': PUBLIC_TOKEN,
         },
-        body: JSON.stringify({ query, variables: { handle } }),
+        body: JSON.stringify({ query, variables: { handle, country: getCountryFromCookie() } }),
       });
 
       if (!res.ok) throw new Error(`Shopify ${res.status}`);
@@ -586,6 +590,7 @@ export default function StorePageClient({ isStoreOpen, isAdmin, initialProducts 
         qty: 1,
         title: `${selectedProduct.title} — ${selectedVariant.title}`,
         price: selectedVariant.price,
+        currency: (selectedVariant as any).currency,
         image: selectedVariant.image || selectedProduct.image,
       };
       const nextCart = existing

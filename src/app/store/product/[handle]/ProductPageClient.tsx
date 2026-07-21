@@ -6,6 +6,7 @@ import ScrollContainer from '@/components/ui/ScrollContainer';
 import { usePageAnalytics } from '@/hooks/usePageAnalytics';
 import { useAnalyticsSafe } from '@/contexts/AnalyticsContext';
 import { isPreorderActive, PREORDER_CTA, PREORDER_FEEDBACK, PREORDER_SHIP_TEXT } from '@/config/preorder';
+import { formatMoney } from '@/lib/store/money';
 
 // Define the shape of the product data
 interface ShopifyProduct {
@@ -138,11 +139,11 @@ export default function ProductPageClient({ product }: ProductPageClientProps) {
     }
     try {
       const cartRaw = localStorage.getItem('cart') || '[]';
-      const cart = JSON.parse(cartRaw) as Array<{ variantId: string; qty: number; title: string; price: number; image?: string }>;
+      const cart = JSON.parse(cartRaw) as Array<{ variantId: string; qty: number; title: string; price: number; currency?: string; image?: string }>;
       const v = product?.variants?.find(v => v.id === variantId);
       if (!v) return;
       const existing = cart.find(c => c.variantId === variantId);
-      if (existing) existing.qty += qty; else cart.push({ variantId: variantId, qty, title: `${product?.title} — ${v.title}`, price: parseFloat(String(v.price)), image: v.image?.src || product?.images?.[0]?.src });
+      if (existing) existing.qty += qty; else cart.push({ variantId: variantId, qty, title: `${product?.title} — ${v.title}`, price: parseFloat(String(v.price)), currency: (v as any).currency, image: v.image?.src || product?.images?.[0]?.src });
       localStorage.setItem('cart', JSON.stringify(cart));
 
       // Track add to cart
@@ -213,7 +214,7 @@ export default function ProductPageClient({ product }: ProductPageClientProps) {
               
               {selectedVariant && (
                 <div className="text-xl text-[#b2a491] font-light tracking-widest mb-8">
-                  {selectedVariant.currency ? `${selectedVariant.currency} ` : '$'}{parseFloat(selectedVariant.price).toFixed(2)}
+                  {formatMoney(parseFloat(selectedVariant.price), selectedVariant.currency)}
                 </div>
               )}
 

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { COUNTRY_COOKIE, normalizeCountry } from '@/lib/store/money';
 
 /**
  * Subdomain routing
@@ -86,7 +87,19 @@ function handleSubdomainRouting(request: NextRequest): NextResponse | null {
  * Clerk has been removed in favor of JWT-based auth for admin
  */
 export default function middleware(request: NextRequest) {
-  return handleSubdomainRouting(request);
+  const response = handleSubdomainRouting(request) ?? NextResponse.next();
+
+  // Carry the visitor's geo-detected country to the client so the store can
+  // localize currency (Shopify Markets). Vercel injects x-vercel-ip-country.
+  const country = normalizeCountry(request.headers.get('x-vercel-ip-country'));
+  if (request.cookies.get(COUNTRY_COOKIE)?.value !== country) {
+    response.cookies.set(COUNTRY_COOKIE, country, {
+      path: '/',
+      maxAge: 60 * 60 * 24 * 30,
+      sameSite: 'lax',
+    });
+  }
+  return response;
 }
 
 export const config = {

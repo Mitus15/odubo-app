@@ -1,14 +1,24 @@
 import { notFound } from 'next/navigation';
+import { cookies } from 'next/headers';
 import { Metadata } from 'next';
 import ProductPageClient from './ProductPageClient';
 import { getShopifyProduct } from '@/lib/shopify';
 import { requireStoreAccess } from '@/lib/storeAccess';
 import { generateProductMetadata } from '@/lib/seo';
+import { COUNTRY_COOKIE } from '@/lib/store/money';
+
+async function getCountry(): Promise<string | undefined> {
+  try {
+    return (await cookies()).get(COUNTRY_COOKIE)?.value;
+  } catch {
+    return undefined;
+  }
+}
 
 // Generate SEO metadata for product pages
 export async function generateMetadata({ params }: { params: Promise<{ handle: string }> }): Promise<Metadata> {
   const { handle } = await params;
-  const res = await getShopifyProduct(handle);
+  const res = await getShopifyProduct(handle, await getCountry());
 
   if (!res.success || !res.product) {
     return { title: 'Product Not Found | Odubo Studio' };
@@ -21,13 +31,13 @@ export async function generateMetadata({ params }: { params: Promise<{ handle: s
     handle: product.handle,
     image: product.images[0],
     price: String(product.price),
-    currency: 'USD',
+    currency: (product.variants?.[0] as any)?.currency || 'CAD',
   });
 }
 
 // This function now runs on the server
-async function fetchProduct(handle: string) {
-  const res = await getShopifyProduct(handle);
+async function fetchProduct(handle: string, country?: string) {
+  const res = await getShopifyProduct(handle, country);
   if (!res.success || !res.product) return null;
   
   const p = res.product;
@@ -99,7 +109,7 @@ export default async function ProductDetailPage({ params }: { params: { handle: 
     notFound();
   }
 
-  const product = await fetchProduct(handle);
+  const product = await fetchProduct(handle, await getCountry());
 
   if (!product) {
     notFound();

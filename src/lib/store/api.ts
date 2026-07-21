@@ -13,6 +13,7 @@ import type {
   ProductFilters,
   ShopifyConnection,
 } from './types';
+import { normalizeCountry } from './money';
 
 // ============================================
 // Configuration
@@ -37,7 +38,7 @@ const getConfig = () => {
 // ============================================
 
 const PRODUCTS_QUERY = `#graphql
-  query Products($first: Int!, $after: String, $sortKey: ProductSortKeys, $reverse: Boolean, $query: String) {
+  query Products($first: Int!, $after: String, $sortKey: ProductSortKeys, $reverse: Boolean, $query: String, $country: CountryCode!) @inContext(country: $country) {
     products(first: $first, after: $after, sortKey: $sortKey, reverse: $reverse, query: $query) {
       pageInfo {
         hasNextPage
@@ -83,7 +84,7 @@ const PRODUCTS_QUERY = `#graphql
 `;
 
 const PRODUCT_DETAIL_QUERY = `#graphql
-  query Product($handle: String!) {
+  query Product($handle: String!, $country: CountryCode!) @inContext(country: $country) {
     product(handle: $handle) {
       id
       handle
@@ -222,11 +223,12 @@ export async function fetchProducts(options: {
   after?: string | null;
   sort?: SortOption;
   filters?: ProductFilters;
+  country?: string;
 }): Promise<ProductsResponse> {
-  const { first = 24, after = null, sort = 'newest', filters = {} } = options;
+  const { first = 24, after = null, sort = 'newest', filters = {}, country } = options;
   const { sortKey, reverse } = getSortParams(sort);
   const query = buildFilterQuery(filters);
-  
+
   const data = await shopifyFetch<{
     products: ShopifyConnection<any>;
   }>(PRODUCTS_QUERY, {
@@ -235,6 +237,7 @@ export async function fetchProducts(options: {
     sortKey,
     reverse,
     query,
+    country: normalizeCountry(country),
   });
   
   const products: ProductSummary[] = data.products.edges.map(({ node: p }) => {
@@ -278,9 +281,12 @@ export async function fetchProducts(options: {
   };
 }
 
-export async function fetchProduct(handle: string): Promise<Product | null> {
+export async function fetchProduct(handle: string, country?: string): Promise<Product | null> {
   try {
-    const data = await shopifyFetch<{ product: any }>(PRODUCT_DETAIL_QUERY, { handle });
+    const data = await shopifyFetch<{ product: any }>(PRODUCT_DETAIL_QUERY, {
+      handle,
+      country: normalizeCountry(country),
+    });
     
     if (!data.product) return null;
     
@@ -345,12 +351,13 @@ export interface CheckoutAttribution {
 
 export async function createCheckout(
   items: { variantId: string; quantity: number }[],
-  attribution?: CheckoutAttribution
+  attribution?: CheckoutAttribution,
+  country?: string
 ): Promise<string | null> {
   const { endpoint, accessToken } = getConfig();
 
   const query = `#graphql
-    mutation CartCreate($input: CartInput!) {
+    mutation CartCreate($input: CartInput!, $country: CountryCode!) @inContext(country: $country) {
       cartCreate(input: $input) {
         cart {
           id
@@ -417,6 +424,7 @@ export async function createCheckout(
             lines,
             attributes,
           },
+          country: normalizeCountry(country),
         },
       }),
     });
