@@ -15,6 +15,12 @@ interface Attribution {
 interface CheckoutRequestBody {
   lineItems: LineItem[];
   attribution?: Attribution;
+  country?: string;
+}
+
+function normalizeCountry(country: string | null | undefined): string {
+  const c = (country || '').trim().toUpperCase();
+  return /^[A-Z]{2}$/.test(c) ? c : 'CA';
 }
 
 interface CartResponse {
@@ -42,7 +48,8 @@ interface CartResponse {
  */
 export async function POST(request: NextRequest) {
   try {
-    const { lineItems, attribution } = await request.json() as CheckoutRequestBody;
+    const { lineItems, attribution, country } = await request.json() as CheckoutRequestBody;
+    const ctxCountry = normalizeCountry(country);
 
     if (!lineItems || lineItems.length === 0) {
       return NextResponse.json(
@@ -66,7 +73,7 @@ export async function POST(request: NextRequest) {
 
     // Create cart with Storefront API (new Cart API, not deprecated Checkout API)
     const mutation = `#graphql
-      mutation cartCreate($input: CartInput!) {
+      mutation cartCreate($input: CartInput!, $country: CountryCode!) @inContext(country: $country) {
         cartCreate(input: $input) {
           cart {
             id
@@ -96,7 +103,8 @@ export async function POST(request: NextRequest) {
           { key: '_utm_medium', value: attribution?.medium || '' },
           { key: '_utm_campaign', value: attribution?.campaign || '' },
         ].filter(attr => attr.value) // Remove empty attributes
-      }
+      },
+      country: ctxCountry,
     };
 
     const response = await fetch(`${STORE_URL}/api/2024-07/graphql.json`, {

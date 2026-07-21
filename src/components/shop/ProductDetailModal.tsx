@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { formatMoney, getCountryFromCookie } from '@/lib/store/money';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { useOmniShop, type ProductDetail } from '@/contexts/OmniShopContext';
@@ -55,7 +56,7 @@ export default function ProductDetailModal({ productHandle }: ProductDetailModal
         if (!PUBLIC_TOKEN) throw new Error('Store configuration error');
 
         const query = `#graphql
-          query Product($handle: String!) {
+          query Product($handle: String!, $country: CountryCode!) @inContext(country: $country) {
             product(handle: $handle) {
               id title handle description availableForSale
               images(first: 10) { edges { node { url } } }
@@ -75,7 +76,7 @@ export default function ProductDetailModal({ productHandle }: ProductDetailModal
             'Content-Type': 'application/json',
             'X-Shopify-Storefront-Access-Token': PUBLIC_TOKEN,
           },
-          body: JSON.stringify({ query, variables: { handle: productHandle } }),
+          body: JSON.stringify({ query, variables: { handle: productHandle, country: getCountryFromCookie() } }),
         });
 
         if (!res.ok) throw new Error('Failed to load product');
@@ -158,6 +159,7 @@ export default function ProductDetailModal({ productHandle }: ProductDetailModal
       title: product.title,
       variantTitle: selectedVariant.title,
       price: selectedVariant.price,
+      currency: (selectedVariant as any).currency,
       image: selectedVariant.image || product.images[0],
     });
     setAddFeedback('Added — Go to Bag');
@@ -372,7 +374,7 @@ export default function ProductDetailModal({ productHandle }: ProductDetailModal
                     className="text-base tracking-wide transition-colors duration-500"
                     style={{ color: dynamicStyles.textSecondary }}
                   >
-                    ${selectedVariant.price.toFixed(2)} USD
+                    {formatMoney(selectedVariant.price, (selectedVariant as any).currency)}
                   </p>
                 )}
               </div>

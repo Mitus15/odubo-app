@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useOmniShop } from '@/contexts/OmniShopContext';
 import { getAttribution, getSessionId } from '@/lib/attribution';
 import { useAnalyticsSafe } from '@/contexts/AnalyticsContext';
+import { formatMoney, getCountryFromCookie } from '@/lib/store/money';
 
 export default function CartModal() {
   const {
@@ -19,6 +20,7 @@ export default function CartModal() {
     modalStack,
   } = useOmniShop();
   const analytics = useAnalyticsSafe();
+  const cartCurrency = cart.find(i => i.currency)?.currency;
 
   const [isRedirecting, setIsRedirecting] = useState(false);
 
@@ -59,7 +61,8 @@ export default function CartModal() {
             source: attr?.source,
             medium: attr?.medium,
             campaign: attr?.campaign,
-          }
+          },
+          country: getCountryFromCookie(),
         })
       });
 
@@ -202,7 +205,7 @@ export default function CartModal() {
 
                     {/* Price */}
                     <p className="text-[#ede8df] font-medium">
-                      ${(item.price * item.qty).toFixed(2)}
+                      {formatMoney(item.price * item.qty, item.currency || cartCurrency)}
                     </p>
                   </div>
                 </div>
@@ -233,7 +236,7 @@ export default function CartModal() {
           {/* Subtotal */}
           <div className="flex justify-between items-center">
             <span className="text-[#b2a491]/60 text-xs uppercase tracking-[0.15em]">Subtotal</span>
-            <span className="text-[#ede8df] text-lg font-medium">${cartSubtotal.toFixed(2)}</span>
+            <span className="text-[#ede8df] text-lg font-medium">{formatMoney(cartSubtotal, cartCurrency)}</span>
           </div>
 
           {/* Shipping note */}

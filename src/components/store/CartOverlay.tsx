@@ -1,6 +1,7 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
+import { formatMoney } from '@/lib/store/money';
 import { useStore } from '@/contexts/StoreContext';
 import { isPreorderActive, PREORDER_CHECKOUT_CTA, PREORDER_DISCLAIMER } from '@/config/preorder';
 
@@ -55,7 +56,7 @@ function CartItemRow({ item, onUpdateQuantity, onRemove }: CartItemRowProps) {
           <p className="text-white/50 text-xs mt-0.5">{item.variantTitle}</p>
         )}
         <p className="text-white/80 text-sm mt-1">
-          ${(item.price * item.quantity).toFixed(2)}
+          {formatMoney(item.price * item.quantity, (item as any).currency || cart.currency)}
         </p>
 
         {/* Quantity controls */}
@@ -199,7 +200,7 @@ export default function CartOverlay({ isOpen, onClose }: CartOverlayProps) {
                 <div className="flex items-center justify-between mb-4">
                   <span className="text-white/60">Subtotal</span>
                   <span className="text-lg font-semibold text-white">
-                    ${cart.subtotal.toFixed(2)} {cart.currency}
+                    {formatMoney(cart.subtotal, cart.currency)}
                   </span>
                 </div>
 

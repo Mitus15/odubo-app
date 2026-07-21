@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { formatMoney } from '@/lib/store/money';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '@/contexts/StoreContext';
 import { useCartOverlay } from './StoreOrchestrator';
@@ -487,15 +488,15 @@ export default function ProductDetailFeed() {
               <>
                 <div className="flex items-center gap-3 flex-wrap">
                   <span className={`text-2xl font-bold ${selectedVariant.compareAtPrice && selectedVariant.compareAtPrice > selectedVariant.price ? 'text-red-400' : 'text-white'}`}>
-                    ${selectedVariant.price.toFixed(2)}
+                    {formatMoney(selectedVariant.price, (selectedVariant as any).currency)}
                   </span>
                   {selectedVariant.compareAtPrice && selectedVariant.compareAtPrice > selectedVariant.price && (
                     <>
                       <span className="text-lg text-white/40 line-through">
-                        ${selectedVariant.compareAtPrice.toFixed(2)}
+                        {formatMoney(selectedVariant.compareAtPrice, (selectedVariant as any).currency)}
                       </span>
                       <span className="px-2 py-0.5 rounded-full bg-red-500 text-white text-xs font-bold">
-                        Save ${(selectedVariant.compareAtPrice - selectedVariant.price).toFixed(2)}
+                        Save {formatMoney(selectedVariant.compareAtPrice - selectedVariant.price, (selectedVariant as any).currency)}
                       </span>
                     </>
                   )}

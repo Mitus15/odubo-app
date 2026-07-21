@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { formatMoney, getCountryFromCookie } from '@/lib/store/money';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOmniShop, type ProductDetail } from '@/contexts/OmniShopContext';
 import { isPreorderActive, PREORDER_CTA } from '@/config/preorder';
@@ -42,7 +43,7 @@ export default function ProductVariantDrawer({ productHandle, isOpen, onClose }:
         if (!PUBLIC_TOKEN) throw new Error('Store configuration error');
 
         const query = `#graphql
-          query Product($handle: String!) {
+          query Product($handle: String!, $country: CountryCode!) @inContext(country: $country) {
             product(handle: $handle) {
               id title handle description availableForSale
               images(first: 10) { edges { node { url } } }
@@ -62,7 +63,7 @@ export default function ProductVariantDrawer({ productHandle, isOpen, onClose }:
             'Content-Type': 'application/json',
             'X-Shopify-Storefront-Access-Token': PUBLIC_TOKEN,
           },
-          body: JSON.stringify({ query, variables: { handle: productHandle } }),
+          body: JSON.stringify({ query, variables: { handle: productHandle, country: getCountryFromCookie() } }),
         });
 
         if (!res.ok) throw new Error('Failed to load product');
@@ -145,6 +146,7 @@ export default function ProductVariantDrawer({ productHandle, isOpen, onClose }:
       title: product.title,
       variantTitle: selectedVariant.title,
       price: selectedVariant.price,
+      currency: (selectedVariant as any).currency,
       image: selectedVariant.image || product.images[0],
     });
     setAddFeedback('Added — Go to Bag');
@@ -218,7 +220,7 @@ export default function ProductVariantDrawer({ productHandle, isOpen, onClose }:
                       </h4>
                       {selectedVariant && (
                         <p className="text-[#b2a491] text-sm">
-                          ${selectedVariant.price.toFixed(2)} USD
+                          {formatMoney(selectedVariant.price, (selectedVariant as any).currency)}
                         </p>
                       )}
                     </div>

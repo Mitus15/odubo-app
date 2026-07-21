@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { formatMoney, getCountryFromCookie } from '@/lib/store/money';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuickShop } from '@/contexts/QuickShopContext';
 import { useAnalyticsSafe } from '@/contexts/AnalyticsContext';
@@ -56,7 +57,7 @@ export default function QuickShopModal() {
         if (!PUBLIC_TOKEN) throw new Error('Store configuration error');
 
         const query = `#graphql
-          query Product($handle: String!) {
+          query Product($handle: String!, $country: CountryCode!) @inContext(country: $country) {
             product(handle: $handle) {
               id title handle description availableForSale
               images(first: 10) { edges { node { url } } }
@@ -76,7 +77,7 @@ export default function QuickShopModal() {
             'Content-Type': 'application/json',
             'X-Shopify-Storefront-Access-Token': PUBLIC_TOKEN,
           },
-          body: JSON.stringify({ query, variables: { handle: productHandle } }),
+          body: JSON.stringify({ query, variables: { handle: productHandle, country: getCountryFromCookie() } }),
         });
 
         if (!res.ok) throw new Error(`Failed to load product`);
@@ -156,6 +157,7 @@ export default function QuickShopModal() {
         qty: 1,
         title: `${product.title} — ${selectedVariant.title}`,
         price: selectedVariant.price,
+        currency: (selectedVariant as any).currency,
         image: selectedVariant.image || product.images[0],
       };
       const nextCart = existing
@@ -287,7 +289,7 @@ export default function QuickShopModal() {
                     </h2>
                     {selectedVariant && (
                       <p className="text-sm font-medium text-[#f7f3ec]">
-                        ${selectedVariant.price.toFixed(2)}
+                        {formatMoney(selectedVariant.price, (selectedVariant as any).currency)}
                       </p>
                     )}
                     {isPreorderActive() && selectedVariant?.available !== false && (

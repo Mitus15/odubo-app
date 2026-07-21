@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useRef, useEffect, useState } from 'react';
+import { formatMoney } from '@/lib/store/money';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '@/contexts/StoreContext';
 import { useCartOverlay } from './StoreOrchestrator';
@@ -162,11 +163,11 @@ function ProductGridItem({ product, index, onSelect }: ProductGridItemProps) {
       {/* Price only - no product name in grid */}
       <div className="absolute bottom-2 left-2 flex items-center gap-1.5">
         <span className={`text-sm font-semibold px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-sm ${isOnSale ? 'text-red-400' : 'text-white'}`}>
-          ${Math.round(product.price)}
+          {formatMoney(product.price, (product as any).currency)}
         </span>
         {isOnSale && (
           <span className="text-white/50 text-xs line-through px-1.5 py-0.5 rounded-full bg-black/40">
-            ${Math.round(product.compareAtPrice!)}
+            {formatMoney(product.compareAtPrice!, (product as any).currency)}
           </span>
         )}
       </div>

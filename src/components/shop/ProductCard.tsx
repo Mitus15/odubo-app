@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, memo } from 'react';
+import { formatMoney, getCountryFromCookie } from '@/lib/store/money';
 import { useOmniShop, type ProductCard as ProductCardType } from '@/contexts/OmniShopContext';
 import ProductVariantDrawer from './ProductVariantDrawer';
 import { useImageLuminosity } from '@/hooks/useImageLuminosity';
@@ -44,7 +45,7 @@ function ProductCardComponent({ product, isActive, index }: ProductCardProps) {
       if (!PUBLIC_TOKEN) throw new Error('Store configuration error');
 
       const query = `#graphql
-        query Product($handle: String!) {
+        query Product($handle: String!, $country: CountryCode!) @inContext(country: $country) {
           product(handle: $handle) {
             variants(first: 1) { edges { node {
               id title availableForSale
@@ -60,7 +61,7 @@ function ProductCardComponent({ product, isActive, index }: ProductCardProps) {
           'Content-Type': 'application/json',
           'X-Shopify-Storefront-Access-Token': PUBLIC_TOKEN,
         },
-        body: JSON.stringify({ query, variables: { handle: product.handle } }),
+        body: JSON.stringify({ query, variables: { handle: product.handle, country: getCountryFromCookie() } }),
       });
 
       if (!res.ok) throw new Error('Failed to load product');
@@ -75,6 +76,7 @@ function ProductCardComponent({ product, isActive, index }: ProductCardProps) {
         title: product.title,
         variantTitle: firstVariant.title,
         price: parseFloat(firstVariant.price.amount),
+        currency: firstVariant.price.currencyCode,
         image: firstVariant.image?.url || product.image || undefined,
       });
     } catch (error) {
@@ -85,8 +87,8 @@ function ProductCardComponent({ product, isActive, index }: ProductCardProps) {
   }, [addToCart, product, setIsDrawerOpen]);
 
   // Format price
-  const formattedPrice = product.price !== null 
-    ? `$${product.price.toFixed(2)}` 
+  const formattedPrice = product.price !== null
+    ? formatMoney(product.price, (product as any).currency)
     : 'Price unavailable';
 
   return (
