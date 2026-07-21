@@ -423,7 +423,7 @@ export default function HomePageClient({
                     transition={{ duration: 1, ease: [0.25, 0.46, 0.45, 0.94] }}
                   >
                     <Image
-                      src="/brand-logos/odubo-logos/odubo-brand/odubo.svg"
+                      src="/brand-logos/odubo-brand/odubo.svg"
                       alt="Odubo Studio"
                       width={180}
                       height={180}

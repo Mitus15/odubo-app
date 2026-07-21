@@ -21,11 +21,22 @@ const nextConfig: NextConfig = {
     'http://moments.localhost:3000',
     'http://admin.localhost:3000',
   ],
+  // Bundle the daily-verse data file into serverless functions that read it at
+  // runtime (bible-verse.ts uses fs.readFileSync); without this Vercel omits it.
+  outputFileTracingIncludes: {
+    '/**': ['./data/bible-psalms-proverbs.json'],
+  },
   images: {
     // Enable Next.js Image Optimization (remove unoptimized: true)
     formats: ['image/avif', 'image/webp'],
     deviceSizes: [320, 420, 640, 768, 1024, 1280, 1536, 1920],
     imageSizes: [16, 24, 32, 48, 64, 96, 128, 256],
+    // Allow our own brand SVGs to render through next/image. Safe here because
+    // we only serve trusted first-party SVGs from /public; attachment + sandbox
+    // CSP neutralize any inline script if an untrusted SVG ever slips in.
+    dangerouslyAllowSVG: true,
+    contentDispositionType: 'attachment',
+    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
     remotePatterns: [
       {
         protocol: 'https',

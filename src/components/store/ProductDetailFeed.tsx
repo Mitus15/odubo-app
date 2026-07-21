@@ -429,7 +429,7 @@ export default function ProductDetailFeed() {
 
         {/* Brand logo */}
         <img
-          src="/brand-logos/odubo-logos/odubo-brand/odubo.svg"
+          src="/brand-logos/odubo-brand/odubo.svg"
           alt="Odubo"
           className="h-6 w-auto"
           draggable={false}
