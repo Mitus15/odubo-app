@@ -79,7 +79,7 @@ export default function DesktopSidebar() {
 
   // Hide on admin/backend pages and admin subdomain (must be after all hooks)
   // Also hide on homepage and showcase - custom designs without sidebar
-  if (isAdminSubdomain || pathname === '/' || pathname === '/showcase' || pathname?.startsWith('/admin') || pathname?.startsWith('/command-center') || pathname?.startsWith('/featured/manage')) {
+  if (isAdminSubdomain || pathname === '/' || pathname === '/showcase' || pathname?.startsWith('/admin') || pathname?.startsWith('/command-center') || pathname?.startsWith('/featured/manage') || pathname?.startsWith('/loop')) {
     return null;
   }
 
