@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { COUNTRY_COOKIE, normalizeCountry } from '@/lib/store/money';
+import { VOTER_COOKIE, verifyVoter, mintVoter } from '@/lib/loop/anthem-identity';
+import { ADMIN_COOKIE as LOOP_ADMIN_COOKIE, verifyAdminSession as verifyLoopAdminSession } from '@/lib/loop/admin-auth';
 
 /**
  * Subdomain routing
@@ -83,11 +85,74 @@ function handleSubdomainRouting(request: NextRequest): NextResponse | null {
 }
 
 /**
- * Middleware - subdomain routing only
+ * Loop Soul surface (/loop, /api/loop) — two jobs, both STRICTLY scoped to
+ * loop paths so they can never touch odubo's own /admin or its visitors:
+ *
+ *  1. Admin gate — /loop/admin and /api/loop/admin/* require a valid signed
+ *     `ls_admin` session (login page/route excepted). Pages redirect to the
+ *     login; API routes get a 401.
+ *  2. Voter identity — every /loop visitor carries a signed anonymous voter id
+ *     (`ls_voter`) so route handlers can just READ it. Minted here on both the
+ *     forwarded request (same render sees it) and the response (browser keeps it).
+ *
+ * Returns null for non-loop paths so odubo's flow is untouched.
+ */
+async function handleLoopSoul(request: NextRequest): Promise<NextResponse | null> {
+  const { pathname } = request.nextUrl;
+  const isLoopPage = pathname === '/loop' || pathname.startsWith('/loop/');
+  const isLoopApi = pathname.startsWith('/api/loop/');
+  if (!isLoopPage && !isLoopApi) return null;
+
+  // 1) Admin gate — skip the login page/route so users can actually sign in.
+  const isAdminArea =
+    pathname.startsWith('/loop/admin') || pathname.startsWith('/api/loop/admin');
+  const isLogin = pathname === '/loop/admin/login' || pathname === '/api/loop/admin/login';
+  if (isAdminArea && !isLogin) {
+    const ok = await verifyLoopAdminSession(request.cookies.get(LOOP_ADMIN_COOKIE)?.value);
+    if (!ok) {
+      if (isLoopApi) {
+        return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+      }
+      const url = request.nextUrl.clone();
+      url.pathname = '/loop/admin/login';
+      url.search = `?from=${encodeURIComponent(pathname)}`;
+      return NextResponse.redirect(url);
+    }
+  }
+
+  // 2) Voter identity.
+  const existing = request.cookies.get(VOTER_COOKIE)?.value;
+  const valid = await verifyVoter(existing);
+  if (valid) return NextResponse.next();
+
+  const { token } = await mintVoter();
+
+  // Make the new identity visible to the current render…
+  const requestHeaders = new Headers(request.headers);
+  request.cookies.set(VOTER_COOKIE, token);
+  const res = NextResponse.next({ request: { headers: requestHeaders } });
+
+  // …and persist it on the browser. Cookie path stays '/' (a '/loop' path
+  // would exclude /api/loop/*), but MINTING is loop-scoped above — a visitor
+  // who never opens /loop never receives a Loop Soul identity.
+  res.cookies.set(VOTER_COOKIE, token, {
+    httpOnly: true,
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 60 * 60 * 24 * 180, // ~180 days
+  });
+  return res;
+}
+
+/**
+ * Middleware - subdomain routing + Loop Soul surface
  * Clerk has been removed in favor of JWT-based auth for admin
  */
-export default function middleware(request: NextRequest) {
-  const response = handleSubdomainRouting(request) ?? NextResponse.next();
+export default async function middleware(request: NextRequest) {
+  const response =
+    (await handleLoopSoul(request)) ??
+    handleSubdomainRouting(request) ??
+    NextResponse.next();
 
   // Carry the visitor's geo-detected country to the client so the store can
   // localize currency (Shopify Markets). Vercel injects x-vercel-ip-country.
