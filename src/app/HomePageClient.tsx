@@ -121,7 +121,7 @@ export default function HomePageClient({
   const currentMuted = homepageMode === 'music' ? musicPlayerState.isMuted : isMuted;
 
   // Modal contexts
-  const { openStore, view: storeView, closeStore } = useStore();
+  const { openStore, view: storeView, closeStore, storePublished } = useStore();
   const { openHub, modalStack, closeAll: closeMedia } = useUnifiedMedia();
 
   // Page analytics tracking
@@ -185,8 +185,19 @@ export default function HomePageClient({
     return () => clearTimeout(timer);
   }, [defaultModal, openStore, openHub]);
 
-  // Store auto-open is intentionally disabled.
-  // The store only opens when the user explicitly clicks "Open Shop" or navigates to /store.
+  // Auto-open the store on the homepage while the store is live (published).
+  // Opens once per page load; if the visitor closes it, it won't pop back open.
+  // Gated on storePublished so it never auto-opens while the store is unpublished.
+  const didAutoOpenStore = useRef(false);
+  useEffect(() => {
+    if (defaultModal) return;              // only the plain homepage (not /media, deep links, etc.)
+    if (!storePublished) return;           // only while the store is live
+    if (didAutoOpenStore.current) return;  // don't reopen after it's been triggered this load
+    if (storeView !== 'closed') return;    // don't override an already-open modal
+    didAutoOpenStore.current = true;
+    const timer = setTimeout(() => openStore(), 400);
+    return () => clearTimeout(timer);
+  }, [defaultModal, storePublished, storeView, openStore]);
 
   // Navigate back to / when modal closes (only if opened via URL)
   useEffect(() => {
