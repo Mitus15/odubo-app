@@ -318,10 +318,10 @@ export default function AboutPageClient() {
             <div className="about-card">
               <span className="about-label text-[0.625rem] block mb-2">Target URL</span>
               <p className="about-body text-sm">
-                <a href="https://moments.odubo.studio" target="_blank" rel="noopener noreferrer" className="about-link">
-                  moments.odubo.studio
+                <a href="/moments" className="about-link">
+                  View Moments
                 </a>
-                {' '}— or accessible via the /moments route on the main platform.
+                {' '}— live now via the /moments route on the main platform.
               </p>
             </div>
             <div className="about-card">

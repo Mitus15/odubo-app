@@ -88,11 +88,11 @@ const REGISTER: {
 ];
 
 const QUALIFICATIONS: { requirement: string; status: string }[] = [
-  { requirement: 'Post-secondary education in Business Administration', status: 'BBA (TRU, 2024); MBA candidate, completing April 2026' },
+  { requirement: 'Post-secondary education in Business Administration', status: 'BBA — Marketing (TRU, 2024) and MBA (TRU, 2026)' },
   { requirement: 'Three or more years in a related field', status: 'Operations and administrative roles, 2022 – present' },
   { requirement: 'Records management, naming conventions, version control, retention', status: 'Daily working practice — evidenced in Appendix C' },
   { requirement: 'Document formatting and quality control (Word, PowerPoint, Excel, PDF)', status: 'Microsoft 365 across academic, consulting and operations work' },
-  { requirement: 'Adobe software', status: 'Photoshop in production use for marketing and brand assets' },
+  { requirement: 'Adobe software and PDF tools', status: 'Photoshop for brand and marketing assets; Acrobat for PDF document control' },
   { requirement: 'Board portal / repository management', status: 'Builds and administers one — Appendices A, C, D' },
   { requirement: 'Meeting planning and logistics, including virtual tools', status: 'Teams and virtual meeting cadences; in-person logistics at Scott’s and TRUSU' },
   { requirement: 'Agile methodology / cross-functional teams (asset)', status: 'Scrum Product Owner and Scrum Master — BCLC PlayNow engagement' },
@@ -123,7 +123,7 @@ export default function GovernanceBriefingPage() {
           <dl className="mt-8 grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4 border border-[var(--hairline)] rounded-sm p-4 sm:p-5">
             {[
               ['Reference', 'ODB-GOV-2026-001'],
-              ['Version', '1.0 · 21 July 2026'],
+              ['Version', '1.1 · 21 July 2026'],
               ['Status', 'Current'],
               ['Prepared for', 'Corporate Secretary’s Office, BCLC'],
               ['Prepared by', 'Emmanuel Morris-Odubo'],
@@ -149,8 +149,8 @@ export default function GovernanceBriefingPage() {
             </p>
             <p>
               Everything referenced below is real and in operation: a platform I designed, built,
-              and administer at odubo.studio &mdash; its records, its access controls, its calendars and
-              action-item systems, and the operating discipline around them. The register in
+              and administer &mdash; its records, its access controls, its calendars and action-item
+              systems, and the operating discipline around them. The register in
               section&nbsp;3 maps each accountability in your posting to a practice I already
               perform, with references to the evidence.
             </p>
@@ -165,7 +165,7 @@ export default function GovernanceBriefingPage() {
         <section className="gov-section mt-12 pt-10" id="profile">
           <p className="gov-label" style={{ color: 'var(--registry)' }}>2 &middot; Candidate profile</p>
           <ul className="mt-5 space-y-3 text-[1.0625rem]">
-            <li><strong>MBA candidate</strong>, Thompson Rivers University &mdash; completing April 2026. BBA (Marketing), TRU, 2024. Three years of Chemical Engineering training, UBC.</li>
+            <li><strong>MBA</strong>, Thompson Rivers University (2026); BBA in Marketing, TRU (2024). Three years of Chemical Engineering training, UBC.</li>
             <li><strong>Operations Associate &amp; Administrative Support to Management</strong>, Scott&rsquo;s Inn &amp; Suites, Kamloops &mdash; daily reporting, reconciliations, corporate-account logistics, structured summaries to leadership.</li>
             <li><strong>Founder, Odubo Studio</strong> &mdash; a working commerce and media platform whose records, repositories and operating procedures form the evidence in this briefing.</li>
             <li><strong>Agile consulting for BCLC PlayNow</strong> (TRU BUSN 6070, 2025) &mdash; Product Owner and Scrum Master across a three-sprint engagement with weekly BCLC stakeholder consultations.</li>
