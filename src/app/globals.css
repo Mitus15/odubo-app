@@ -2128,3 +2128,70 @@ h6,
   border-radius: 8px;
   margin: 1rem 0;
 }
+
+/* ===========================================================================
+   LOOP SOUL — design tokens + scoped theme
+   Aesthetic (from the poster concepts): electric-green field, deep-black
+   silhouettes, pop-art high-contrast, minimal. "Poster mode" = green field;
+   "Vault mode" = ink field with green ink.
+
+   Scoping contract: the @theme block only ADDS utilities (bg-electric,
+   font-script, ease-soul, …) — every name is Loop-Soul-specific, so odubo's
+   utility surface is untouched. Everything semantic (backgrounds, fonts,
+   vault flip) lives under .loop-theme, the wrapper rendered by
+   src/app/loop/layout.tsx, and cannot leak onto odubo surfaces.
+   =========================================================================== */
+@theme {
+  /* Brand palette */
+  --color-electric: #00e170;
+  --color-electric-bright: #2bff8f;
+  --color-electric-deep: #00a854;
+  --color-ink: #050505;
+  --color-ink-soft: #121212;
+  --color-bone: #f4f1ea;
+
+  /* Script accent for the "Soul" wordmark (bound to next/font var in the
+     loop layout; resolves to the fallback stack anywhere else) */
+  --font-script: var(--font-script), "Brush Script MT", cursive;
+
+  /* Motion */
+  --ease-soul: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.loop-theme {
+  /* Semantic tokens — poster mode default */
+  --background: var(--color-electric);
+  --foreground: var(--color-ink);
+  --accent: var(--color-ink);
+  /* Redefine --font-sans locally so the font-sans utility resolves to Inter
+     INSIDE Loop Soul only (odubo's body is font-serif and never uses it) */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, sans-serif;
+
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  /* Honour iOS safe areas — this runs in mobile Safari at a venue. */
+  min-height: 100dvh;
+  overscroll-behavior-y: none;
+}
+
+/* Vault / Legacy mode flips the field to ink with green ink. Set on the
+   wrapper (not <body>) by components/loop/shell/VaultMode.tsx. */
+.loop-theme[data-mode="vault"] {
+  --background: var(--color-ink);
+  --foreground: var(--color-electric);
+  --accent: var(--color-electric);
+}
+
+/* Respect reduced motion across the Loop Soul surface. */
+@media (prefers-reduced-motion: reduce) {
+  .loop-theme *,
+  .loop-theme *::before,
+  .loop-theme *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
