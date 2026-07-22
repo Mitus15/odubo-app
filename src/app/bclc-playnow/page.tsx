@@ -921,6 +921,35 @@ function ArtifactsSection() {
           </button>
         </div>
 
+        {/* Original documents — curated process artifacts (Team Red Triangle) */}
+        <div className="about-card bclc-stagger mb-4">
+          <span className="text-[0.625rem] font-semibold tracking-[0.1em] uppercase text-[#843c2d] block mb-3">
+            Original Documents · Team Red Triangle
+          </span>
+          <ul className="grid sm:grid-cols-2 gap-x-6 gap-y-2">
+            {[
+              { name: 'Product Backlog', meta: 'Sprint 1 · DOCX', href: '/portfolio/bclc/sprint1-product-backlog.docx' },
+              { name: 'Sprint 1 Review & Retrospective', meta: 'DOCX', href: '/portfolio/bclc/sprint1-review-retrospective.docx' },
+              { name: 'Sprint 2 Review & Retrospective', meta: 'DOCX', href: '/portfolio/bclc/sprint2-review-retrospective.docx' },
+              { name: 'Sprint 3 Review & Retrospective', meta: 'DOCX', href: '/portfolio/bclc/sprint3-review-retrospective.docx' },
+              { name: 'Scrum Log — Sprint 2', meta: 'PDF', href: '/portfolio/bclc/sprint2-scrum-log.pdf' },
+              { name: 'Scrum Log — Sprint 3', meta: 'PDF', href: '/portfolio/bclc/sprint3-scrum-log.pdf' },
+              { name: 'Team Agreement Canvas', meta: 'Team artifact · PDF', href: '/portfolio/bclc/team-agreement-canvas.pdf' },
+            ].map((doc) => (
+              <li key={doc.href}>
+                <a
+                  href={doc.href}
+                  download
+                  className="group flex items-baseline justify-between gap-3 py-1 text-xs text-[#1a1a1a] hover:text-[#843c2d] transition-colors duration-200"
+                >
+                  <span className="underline decoration-[#e5ddd6] underline-offset-4 group-hover:decoration-[#843c2d]/50">{doc.name}</span>
+                  <span className="text-[0.5rem] uppercase tracking-wider text-[#9c9490] shrink-0">{doc.meta}</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+
         {/* Note about confidentiality */}
         <div className="about-card bclc-stagger bg-[#f8f5f2] border border-[#e5ddd6]">
           <div className="flex items-start gap-3">
@@ -928,11 +957,13 @@ function ArtifactsSection() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
             </svg>
             <div>
-              <span className="text-[0.625rem] font-semibold tracking-[0.1em] uppercase text-[#5c5550] block mb-1">Confidentiality Notice</span>
+              <span className="text-[0.625rem] font-semibold tracking-[0.1em] uppercase text-[#5c5550] block mb-1">Disclosure Note</span>
               <p className="text-xs text-[#9c9490] leading-relaxed">
-                The full deliverables contain proprietary BCLC data and are not publicly available. 
-                The summaries above demonstrate the structure, methodology, and strategic thinking 
-                applied during the engagement without exposing confidential information.
+                Selected process artifacts from my team are published above as originals to show
+                the working methodology. Strategy deliverables containing engagement-specific
+                analysis (competitive assessments, marketing plans) remain private as a matter of
+                professional discretion. The Team Agreement Canvas is a team-authored document,
+                shared with credit to Team Red Triangle.
               </p>
             </div>
           </div>
