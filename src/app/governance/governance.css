@@ -1,0 +1,94 @@
+/* Governance briefing document — paper artifact styling.
+   Deliberately breaks from the dark artist chrome: this page reads as a
+   controlled document prepared for a corporate secretary's office. */
+
+.gov-doc {
+  --paper: #fdfcfa;
+  --ink: #1a1816;
+  --ink-muted: #6b6259;
+  --hairline: #ddd6ca;
+  --field: #f5f1e9;
+  --registry: #843c2d;
+
+  background: var(--paper);
+  color: var(--ink);
+  font-family: 'Baskerville', 'Iowan Old Style', Georgia, 'Times New Roman', serif;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Utility voices */
+.gov-label {
+  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.gov-mono {
+  font-family: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.75rem;
+}
+
+/* Registry reference chip — the accent is reserved for references and stamps */
+.gov-ref {
+  font-family: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: var(--registry);
+  border: 1px solid color-mix(in srgb, var(--registry) 35%, transparent);
+  border-radius: 2px;
+  padding: 0.1rem 0.4rem;
+  white-space: nowrap;
+  text-decoration: none;
+  transition: background-color 150ms ease;
+}
+.gov-ref:hover { background: color-mix(in srgb, var(--registry) 8%, transparent); }
+.gov-ref:focus-visible { outline: 2px solid var(--registry); outline-offset: 2px; }
+
+/* Section numbering rule */
+.gov-section {
+  border-top: 1px solid var(--hairline);
+  scroll-margin-top: 5rem;
+}
+
+/* Specimen blocks — real records shown as evidence */
+.gov-specimen {
+  background: var(--field);
+  border: 1px solid var(--hairline);
+  border-left: 3px solid var(--registry);
+  border-radius: 2px;
+  overflow-x: auto;
+}
+
+/* Register rows */
+.gov-row { border-bottom: 1px solid var(--hairline); }
+.gov-row:last-child { border-bottom: none; }
+
+/* Links inside prose keep the document voice */
+.gov-doc a.gov-link {
+  color: var(--registry);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+.gov-doc a.gov-link:focus-visible { outline: 2px solid var(--registry); outline-offset: 2px; }
+
+/* Checklist marks */
+.gov-check {
+  color: var(--registry);
+  font-weight: 600;
+}
+
+/* Print: this is a document — let it print like one */
+@media print {
+  .gov-doc { background: #fff; }
+  .gov-no-print { display: none !important; }
+  .gov-section { break-inside: avoid-page; }
+  .gov-doc a.gov-link { color: var(--ink); text-decoration: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gov-doc * { transition: none !important; }
+}
