@@ -225,7 +225,7 @@ function sobelMag(field: Float32Array, w: number, h: number): Float32Array {
 export async function stampWatermark(frame: HTMLCanvasElement): Promise<void> {
   const ctx = frame.getContext("2d");
   if (!ctx) return;
-  const mark = await loadImage("/branding/loop-soul.svg").catch(() => null);
+  const mark = await loadImage("/loop/branding/loop-soul.svg").catch(() => null);
   const pad = Math.round(frame.width * 0.04);
   if (mark) {
     const w = Math.round(frame.width * 0.22);

@@ -12,8 +12,8 @@
 
 import { FilesetResolver, ImageSegmenter } from "@mediapipe/tasks-vision";
 
-const WASM_PATH = "/models/wasm";
-const MODEL_PATH = "/models/selfie_segmenter.tflite";
+const WASM_PATH = "/loop/models/wasm";
+const MODEL_PATH = "/loop/models/selfie_segmenter.tflite";
 
 let segmenter: ImageSegmenter | null = null;
 let initPromise: Promise<ImageSegmenter | null> | null = null;
