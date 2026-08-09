@@ -13,7 +13,7 @@
  * the repo so the transform is auditable and re-runnable against the original
  * green artwork in git history — it is lossy and not reversible in place.
  */
-const sharp = require("sharp");
+import sharp from "sharp";
 
 const INK = [42, 15, 10]; // #2a0f0a
 const SAND = [217, 170, 122]; // #d9aa7a
@@ -29,22 +29,29 @@ async function duotone(inPath, outPath) {
   const { data, info } = await sharp(inPath).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   const C = info.channels;
 
-  let lo = 1, hi = 0;
+  // Anchor on the FIELD, not on each image's own min/max. The posters were
+  // printed at slightly different densities, so per-image normalisation gave
+  // every poster a different ground — one bright sand, the next muddy brown.
+  // The field is by far the most common colour, so the modal bucket finds it,
+  // and pinning that one luminance to sand makes the whole set share a ground.
+  const buckets = new Map();
   for (let i = 0; i < data.length; i += C) {
     if (data[i + 3] < 40) continue;
-    const L = lum(data[i], data[i + 1], data[i + 2]);
-    if (L < lo) lo = L;
-    if (L > hi) hi = L;
+    const k = `${data[i] >> 3},${data[i + 1] >> 3},${data[i + 2] >> 3}`;
+    buckets.set(k, (buckets.get(k) || 0) + 1);
   }
-  const span = Math.max(hi - lo, 1e-6);
+  const [mr, mg, mb] = [...buckets.entries()].sort((a, b) => b[1] - a[1])[0][0]
+    .split(",")
+    .map((v) => v * 8 + 4);
+  const field = Math.max(lum(mr, mg, mb), 1e-6);
 
   for (let i = 0; i < data.length; i += C) {
     if (data[i + 3] < 8) continue;
-    const t = Math.min(1, Math.max(0, (lum(data[i], data[i + 1], data[i + 2]) - lo) / span));
+    const t = Math.min(1, lum(data[i], data[i + 1], data[i + 2]) / field);
     for (let c = 0; c < 3; c++) data[i + c] = Math.round(INK[c] + (SAND[c] - INK[c]) * t);
   }
   await sharp(data, { raw: { width: info.width, height: info.height, channels: C } }).png().toFile(outPath);
-  return `${info.width}x${info.height}`;
+  return `${info.width}x${info.height} field=#${[mr, mg, mb].map((v) => v.toString(16).padStart(2, "0")).join("")}`;
 }
 
 async function warmDarks(inPath, outPath) {
@@ -63,12 +70,17 @@ async function warmDarks(inPath, outPath) {
   return `${info.width}x${info.height}`;
 }
 
+// Usage: node scripts/loop-recolour-artwork.js [srcDir] [dstDir]
+// Both default to public/loop. Pass a srcDir holding the ORIGINAL green artwork
+// (recoverable from git history) when re-running — the transform is lossy, so
+// running it twice over its own output compounds the shift.
 (async () => {
-  const dst = process.argv[2] || 'public/loop';
+  const src = process.argv[2] || "public/loop";
+  const dst = process.argv[3] || src;
   for (const n of ["dance", "fashion", "listen", "play", "spin"]) {
-    console.log("poster", n, await duotone(`public/loop/posters/${n}.png`, `${dst}/posters/${n}.png`));
+    console.log("poster", n, await duotone(`${src}/posters/${n}.png`, `${dst}/posters/${n}.png`));
   }
   for (const n of ["dance", "listen", "spin"]) {
-    console.log("figure", n, await warmDarks(`public/loop/figures/${n}.png`, `${dst}/figures/${n}.png`));
+    console.log("figure", n, await warmDarks(`${src}/figures/${n}.png`, `${dst}/figures/${n}.png`));
   }
 })();

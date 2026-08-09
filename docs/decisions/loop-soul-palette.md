@@ -60,9 +60,12 @@ against sand they read as murky green patches.
 `scripts/loop-recolour-artwork.js` fixes both, with two different treatments
 because they are two different kinds of asset:
 
-- **`public/loop/posters/*`** — duotone, normalised so the brightest tone (the
-  field) lands on sand and the darkest (the silhouettes) lands on ink, which
-  preserves every tonal relationship in between.
+- **`public/loop/posters/*`** — duotone anchored on the field. The first pass
+  normalised each image to its own min/max, which gave every poster a slightly
+  different ground: side by side in the Lookbook, one was bright sand and the
+  next muddy brown. The field is by far the most common colour in a poster, so
+  the modal colour bucket finds it (all five agree on `#34b45c`), and pinning
+  that one luminance to sand makes the set share a ground.
 - **`public/loop/figures/*`** — transparent cut-outs that must stay dark, so no
   normalisation. The green channel carries the tone in the source, so it
   becomes red, and the remainder is damped to keep the result warm brown rather
