@@ -49,6 +49,28 @@ Deliberately **not** applied to the poster itself. The poster is a flat print;
 blurring it would undo the contrast the whole design rests on. Glass is for
 what sits above the print, not the print.
 
+## The artwork had green baked in
+
+Recolouring tokens alone was not enough, and this only showed up on a rendered
+screenshot. The crowd artwork is not a flat silhouette — the figures carry
+green-tinted shadows and pattern fill, and the five poster prints have the
+green field baked into the image. Against a green page these were invisible;
+against sand they read as murky green patches.
+
+`scripts/loop-recolour-artwork.js` fixes both, with two different treatments
+because they are two different kinds of asset:
+
+- **`public/loop/posters/*`** — duotone, normalised so the brightest tone (the
+  field) lands on sand and the darkest (the silhouettes) lands on ink, which
+  preserves every tonal relationship in between.
+- **`public/loop/figures/*`** — transparent cut-outs that must stay dark, so no
+  normalisation. The green channel carries the tone in the source, so it
+  becomes red, and the remainder is damped to keep the result warm brown rather
+  than magenta.
+
+Side benefit: re-encoding with a palette dropped the eight assets from ~8.9MB
+to ~1.1MB, which matters on a page designed to be opened on phones at a venue.
+
 ## Not covered
 
 - `/loops-soul` — a separate, older Moments-based episode layer with its own
