@@ -136,7 +136,7 @@ export function AnthemControls({
               onClick={() => act({ action: "setGate", mode })}
               className={[
                 "flex-1 rounded-2xl border px-4 py-3 text-left text-sm transition-colors disabled:opacity-50",
-                gate === mode ? "border-ink bg-ink text-electric" : "border-ink/15 bg-ink/5",
+                gate === mode ? "border-ink bg-ink text-sand" : "border-ink/15 bg-ink/5",
               ].join(" ")}
             >
               <span className="font-bold">{mode === "open" ? "Open" : "Pass-holders"}</span>
@@ -152,7 +152,7 @@ export function AnthemControls({
             type="button"
             disabled={disabled}
             onClick={() => generateCodes(10)}
-            className="rounded-full bg-ink px-4 py-2 text-xs font-bold text-electric disabled:opacity-50"
+            className="rounded-full bg-ink px-4 py-2 text-xs font-bold text-sand disabled:opacity-50"
           >
             Generate 10 codes
           </button>
@@ -223,7 +223,7 @@ export function AnthemControls({
                         { action: "closeNow", key },
                       )
                     }
-                    className="rounded-full bg-ink px-3 py-1.5 text-xs font-bold text-electric disabled:opacity-50"
+                    className="rounded-full bg-ink px-3 py-1.5 text-xs font-bold text-sand disabled:opacity-50"
                   >
                     Close now
                   </button>
@@ -280,7 +280,7 @@ export function AnthemControls({
                   { action: "lockSeeds", ids: Array.from(selected) },
                 )
               }
-              className="rounded-full bg-ink px-3 py-1.5 text-xs font-bold text-electric disabled:opacity-40"
+              className="rounded-full bg-ink px-3 py-1.5 text-xs font-bold text-sand disabled:opacity-40"
             >
               {disabled ? <LoopLoader size={14} /> : "Lock 8 seeds"}
             </button>
@@ -321,7 +321,7 @@ export function AnthemControls({
                     onClick={() => toggleSelect(id)}
                     className={[
                       "rounded-full px-3 py-1.5 text-xs font-bold",
-                      isPicked ? "bg-ink text-electric" : "bg-ink/10",
+                      isPicked ? "bg-ink text-sand" : "bg-ink/10",
                     ].join(" ")}
                   >
                     {isPicked ? "Picked" : "Pick"}
@@ -357,7 +357,7 @@ function Standings({ bracket }: { bracket: Bracket }) {
       <h3 className="text-xs font-bold uppercase tracking-widest opacity-60">Live standings</h3>
 
       {bracket.champion ? (
-        <div className="mt-2 rounded-2xl border border-ink bg-ink px-4 py-3 text-electric">
+        <div className="mt-2 rounded-2xl border border-ink bg-ink px-4 py-3 text-sand">
           <div className="text-xs font-bold uppercase tracking-widest opacity-70">
             The anthem is crowned
           </div>

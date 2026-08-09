@@ -64,7 +64,7 @@ export function EventDetails({ initial }: { initial: Details }) {
         type="button"
         disabled={busy}
         onClick={save}
-        className="mt-3 rounded-full bg-ink px-4 py-2 text-xs font-bold text-electric disabled:opacity-50"
+        className="mt-3 rounded-full bg-ink px-4 py-2 text-xs font-bold text-sand disabled:opacity-50"
       >
         {busy ? <LoopLoader size={14} /> : saved ? "Saved ✓" : "Save"}
       </button>

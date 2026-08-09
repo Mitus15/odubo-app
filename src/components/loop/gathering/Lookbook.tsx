@@ -17,7 +17,7 @@ export function Lookbook() {
         {LOOKBOOK.map((item) => (
           <figure
             key={item.id}
-            className="relative aspect-[3/4] w-[68%] shrink-0 snap-center overflow-hidden rounded-3xl bg-electric-deep/10 sm:w-[44%]"
+            className="relative aspect-[3/4] w-[68%] shrink-0 snap-center overflow-hidden rounded-3xl bg-sand-deep/10 sm:w-[44%]"
           >
             <Image
               src={item.src}

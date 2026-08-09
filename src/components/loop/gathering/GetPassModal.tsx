@@ -34,7 +34,7 @@ export function GetPassModal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md rounded-3xl bg-electric p-6 text-ink shadow-2xl"
+        className="loop-glass w-full max-w-md rounded-3xl p-6 text-ink"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between">
@@ -62,7 +62,7 @@ export function GetPassModal({
             href={checkoutUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-5 block w-full rounded-full bg-ink py-4 text-center text-base font-bold text-electric"
+            className="mt-5 block w-full rounded-full bg-ink py-4 text-center text-base font-bold text-sand"
           >
             Continue to checkout
           </a>

@@ -25,7 +25,7 @@ export function ModuleSheet({
 
   return (
     <motion.div
-      className="fixed inset-0 z-50 flex flex-col bg-electric"
+      className="loop-glass fixed inset-0 z-50 flex flex-col"
       initial={{ y: "100%" }}
       animate={{ y: 0 }}
       exit={{ y: "100%" }}

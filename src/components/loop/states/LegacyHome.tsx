@@ -5,7 +5,7 @@ import Lookbook from "@/components/loop/gathering/Lookbook";
  * STATE 3 — Legacy (persistent content hub). The multi-event vault, gated
  * downloads and Iconic Moments still land in the State 3 build task, but the
  * Lookbook (the theme mood board) now lives here — its intended home. Rendered
- * in "vault mode" (ink field, green ink).
+ * in "vault mode" (oxblood field, sand ink).
  */
 export function LegacyHome() {
   return (
@@ -15,7 +15,7 @@ export function LegacyHome() {
       </p>
 
       <div className="mt-10">
-        <ArcedTagline text="What do you remember?" className="text-electric" />
+        <ArcedTagline text="What do you remember?" className="text-sand" />
       </div>
 
       <section className="mt-12 grid w-full max-w-md grid-cols-1 gap-3 text-left">
@@ -26,7 +26,7 @@ export function LegacyHome() {
         ].map(([title, desc]) => (
           <div
             key={title}
-            className="rounded-2xl border border-electric/25 bg-electric/5 px-5 py-4"
+            className="rounded-2xl border border-sand/25 bg-sand/5 px-5 py-4"
           >
             <div className="font-bold">{title}</div>
             <div className="text-sm opacity-70">{desc}</div>

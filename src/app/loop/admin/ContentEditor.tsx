@@ -75,7 +75,7 @@ function ListEditor<T extends { id: string }>({
           type="button"
           disabled={busy}
           onClick={save}
-          className="rounded-full bg-ink px-4 py-2 text-xs font-bold text-electric disabled:opacity-50"
+          className="rounded-full bg-ink px-4 py-2 text-xs font-bold text-sand disabled:opacity-50"
         >
           {busy ? <LoopLoader size={14} /> : saved ? "Saved ✓" : "Save"}
         </button>

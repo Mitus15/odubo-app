@@ -124,7 +124,7 @@ export function PoseVideoStudio({ onSaved }: { onSaved?: () => void }) {
 
   return (
     <div className="flex w-full flex-col items-center gap-4">
-      <div className="relative aspect-[3/4] w-full overflow-hidden rounded-3xl border border-electric/20 bg-black">
+      <div className="relative aspect-[3/4] w-full overflow-hidden rounded-3xl border border-sand/20 bg-black">
         {/* Hidden source video; the visible output is the WebGL canvas. */}
         <video ref={videoRef} playsInline muted className="hidden" />
         <canvas ref={canvasRef} className="h-full w-full object-cover" />
@@ -139,21 +139,21 @@ export function PoseVideoStudio({ onSaved }: { onSaved?: () => void }) {
         {(phase === "starting" || phase === "processing") && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-ink/70">
             <LoopLoader size={48} />
-            <p className="text-xs font-bold uppercase tracking-widest text-electric">
+            <p className="text-xs font-bold uppercase tracking-widest text-sand">
               {phase === "processing" ? "Processing video…" : "Starting camera…"}
             </p>
           </div>
         )}
 
         {toast && (
-          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-electric px-4 py-1.5 text-xs font-bold text-ink">
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-sand px-4 py-1.5 text-xs font-bold text-ink">
             {toast}
           </div>
         )}
       </div>
 
       {error && (
-        <p className="w-full rounded-2xl border border-electric/30 bg-ink-soft px-4 py-3 text-center text-sm text-electric">
+        <p className="w-full rounded-2xl border border-sand/30 bg-ink-soft px-4 py-3 text-center text-sm text-sand">
           {error}
         </p>
       )}
@@ -164,7 +164,7 @@ export function PoseVideoStudio({ onSaved }: { onSaved?: () => void }) {
           onClick={toggleRecord}
           disabled={phase !== "live" || !canRecord}
           className={`flex-1 rounded-full py-4 text-base font-bold transition-transform active:scale-95 disabled:opacity-40 ${
-            recording ? "bg-red-500 text-white" : "bg-electric text-ink"
+            recording ? "bg-red-500 text-white" : "bg-sand text-ink"
           }`}
         >
           {recording ? "Stop" : "Record"}
@@ -174,11 +174,11 @@ export function PoseVideoStudio({ onSaved }: { onSaved?: () => void }) {
           onClick={flip}
           disabled={phase !== "live"}
           aria-label="Flip camera"
-          className="shrink-0 rounded-full border border-electric/40 px-5 py-4 text-base font-bold text-electric disabled:opacity-40"
+          className="shrink-0 rounded-full border border-sand/40 px-5 py-4 text-base font-bold text-sand disabled:opacity-40"
         >
           ⟲
         </button>
-        <label className="shrink-0 cursor-pointer rounded-full border border-electric/40 px-5 py-4 text-base font-bold text-electric">
+        <label className="shrink-0 cursor-pointer rounded-full border border-sand/40 px-5 py-4 text-base font-bold text-sand">
           Upload
           <input type="file" accept="video/*" onChange={onUpload} className="hidden" />
         </label>

@@ -9,7 +9,7 @@ import { saveItem } from "@/lib/loop/pose/gallery";
 
 /**
  * Pose Studio — guided capture → on-device segmentation → Loop Soul duotone
- * (subject silhouetted on a flat electric-green field) → Save / Share. All
+ * (subject silhouetted on a flat sand field) → Save / Share. All
  * processing is on-device; nothing is uploaded here (that rides on the moments
  * core / State 2 later — the output Blob is already in the right format).
  */
@@ -152,7 +152,7 @@ export function PoseStudio({ onSaved }: { onSaved?: () => void }) {
 
   return (
     <div className="flex w-full flex-col items-center gap-4">
-      <div className="relative aspect-[3/4] w-full overflow-hidden rounded-3xl border border-electric/20 bg-black">
+      <div className="relative aspect-[3/4] w-full overflow-hidden rounded-3xl border border-sand/20 bg-black">
         {/* Live camera (hidden once we have a result) */}
         <video
           ref={videoRef}
@@ -178,7 +178,7 @@ export function PoseStudio({ onSaved }: { onSaved?: () => void }) {
         {(phase === "working" || phase === "starting" || enhancing) && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-ink/70">
             <LoopLoader size={48} />
-            <p className="text-xs font-bold uppercase tracking-widest text-electric">
+            <p className="text-xs font-bold uppercase tracking-widest text-sand">
               {enhancing
                 ? "Making your poster…"
                 : phase === "working"
@@ -190,7 +190,7 @@ export function PoseStudio({ onSaved }: { onSaved?: () => void }) {
       </div>
 
       {error && (
-        <p className="w-full rounded-2xl border border-electric/30 bg-ink-soft px-4 py-3 text-center text-sm text-electric">
+        <p className="w-full rounded-2xl border border-sand/30 bg-ink-soft px-4 py-3 text-center text-sm text-sand">
           {error}
         </p>
       )}
@@ -204,7 +204,7 @@ export function PoseStudio({ onSaved }: { onSaved?: () => void }) {
                 type="button"
                 onClick={makePoster}
                 disabled={enhancing}
-                className="rounded-full bg-electric-bright py-4 text-base font-bold text-ink transition-transform active:scale-95 disabled:opacity-40"
+                className="rounded-full bg-sand-bright py-4 text-base font-bold text-ink transition-transform active:scale-95 disabled:opacity-40"
               >
                 ✦ Make it a poster
               </button>
@@ -213,14 +213,14 @@ export function PoseStudio({ onSaved }: { onSaved?: () => void }) {
               <button
                 type="button"
                 onClick={share}
-                className="rounded-full bg-electric py-4 text-base font-bold text-ink transition-transform active:scale-95"
+                className="rounded-full bg-sand py-4 text-base font-bold text-ink transition-transform active:scale-95"
               >
                 Share
               </button>
               <button
                 type="button"
                 onClick={save}
-                className="rounded-full border border-electric/40 py-4 text-base font-bold text-electric transition-transform active:scale-95"
+                className="rounded-full border border-sand/40 py-4 text-base font-bold text-sand transition-transform active:scale-95"
               >
                 Save
               </button>
@@ -239,7 +239,7 @@ export function PoseStudio({ onSaved }: { onSaved?: () => void }) {
               type="button"
               onClick={capture}
               disabled={phase !== "live"}
-              className="flex-1 rounded-full bg-electric py-4 text-base font-bold text-ink transition-transform active:scale-95 disabled:opacity-40"
+              className="flex-1 rounded-full bg-sand py-4 text-base font-bold text-ink transition-transform active:scale-95 disabled:opacity-40"
             >
               Capture
             </button>
@@ -248,7 +248,7 @@ export function PoseStudio({ onSaved }: { onSaved?: () => void }) {
               onClick={flip}
               disabled={phase !== "live"}
               aria-label="Flip camera"
-              className="shrink-0 rounded-full border border-electric/40 px-5 py-4 text-base font-bold text-electric disabled:opacity-40"
+              className="shrink-0 rounded-full border border-sand/40 px-5 py-4 text-base font-bold text-sand disabled:opacity-40"
             >
               ⟲
             </button>
@@ -272,14 +272,14 @@ function PoseGuide() {
         viewBox="0 0 100 130"
         className="h-3/4 w-auto opacity-40"
         fill="none"
-        stroke="#00e170"
+        stroke="#d9aa7a"
         strokeWidth={1.5}
         strokeDasharray="4 3"
       >
         <circle cx="50" cy="34" r="20" />
         <path d="M16 130 C16 92 30 70 50 70 C70 70 84 92 84 130" />
       </svg>
-      <span className="absolute bottom-4 rounded-full bg-ink/70 px-4 py-1.5 text-[11px] font-bold uppercase tracking-widest text-electric">
+      <span className="absolute bottom-4 rounded-full bg-ink/70 px-4 py-1.5 text-[11px] font-bold uppercase tracking-widest text-sand">
         Stand in the frame
       </span>
     </div>

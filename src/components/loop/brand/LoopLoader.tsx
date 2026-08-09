@@ -7,7 +7,7 @@
  * an infinity / "loop" path (echoing the "oo" of the loop Soul wordmark). Per
  * the spec, EVERY async action (votes, fetches, image processing) surfaces this,
  * so it is intentionally tiny, dependency-free (pure SVG + CSS), and inherits
- * `currentColor` so it reads on both the green poster field and the ink vault.
+ * `currentColor` so it reads on both the sand poster field and the ink vault.
  *
  * The same path + comet drives the full-screen brand intro (see LoopIntro).
  */

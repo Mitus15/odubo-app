@@ -2131,11 +2131,19 @@ h6,
 
 /* ===========================================================================
    LOOP SOUL — design tokens + scoped theme
-   Aesthetic (from the poster concepts): electric-green field, deep-black
-   silhouettes, pop-art high-contrast, minimal. "Poster mode" = green field;
-   "Vault mode" = ink field with green ink.
+   Aesthetic: the Loops Soul poster, not an invented palette — a sand field
+   carrying deep-black silhouettes, with off-wine reddish brown as the ink.
+   Values are sampled from the mark itself (#390f07 script stroke, #d9aa7a
+   poster ground) and bridged by odubo's house terracotta #843c2d.
+   "Poster mode" = sand field; "Vault mode" flips to an oxblood field with
+   sand ink, which is where the glass surfaces live.
 
-   Scoping contract: the @theme block only ADDS utilities (bg-electric,
+   The field stays light on purpose: the silhouettes are flat black artwork,
+   and pop-art contrast is the whole point of the poster. Sand holds ~10:1
+   against black — the same punch the previous electric green had — where a
+   wine field would have dropped it to ~4:1 and muddied the crowd.
+
+   Scoping contract: the @theme block only ADDS utilities (bg-sand,
    font-script, ease-soul, …) — every name is Loop-Soul-specific, so odubo's
    utility surface is untouched. Everything semantic (backgrounds, fonts,
    vault flip) lives under .loop-theme, the wrapper rendered by
@@ -2143,11 +2151,13 @@ h6,
    =========================================================================== */
 @theme {
   /* Brand palette */
-  --color-electric: #00e170;
-  --color-electric-bright: #2bff8f;
-  --color-electric-deep: #00a854;
-  --color-ink: #050505;
-  --color-ink-soft: #121212;
+  --color-sand: #d9aa7a;
+  --color-sand-bright: #f0d3ad;
+  --color-sand-deep: #9c5f3c;
+  --color-wine: #843c2d;
+  --color-wine-deep: #502d26;
+  --color-ink: #2a0f0a;
+  --color-ink-soft: #3d1a12;
   --color-bone: #f4f1ea;
 
   /* Script accent for the "Soul" wordmark (bound to next/font var in the
@@ -2160,9 +2170,14 @@ h6,
 
 .loop-theme {
   /* Semantic tokens — poster mode default */
-  --background: var(--color-electric);
+  --background: var(--color-sand);
   --foreground: var(--color-ink);
   --accent: var(--color-ink);
+  /* Glass is tinted with the field it sits on, so one class works in both
+     modes: warm and darkening on sand, warm and lifting on oxblood. */
+  --loop-glass-tint: rgba(61, 26, 18, 0.16);
+  --loop-glass-edge: rgba(42, 15, 10, 0.22);
+  --loop-glass-sheen: rgba(255, 255, 255, 0.4);
   /* Redefine --font-sans locally so the font-sans utility resolves to Inter
      INSIDE Loop Soul only (odubo's body is font-serif and never uses it) */
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, sans-serif;
@@ -2177,12 +2192,39 @@ h6,
   overscroll-behavior-y: none;
 }
 
-/* Vault / Legacy mode flips the field to ink with green ink. Set on the
+/* Vault / Legacy mode flips the field to oxblood with sand ink. Set on the
    wrapper (not <body>) by components/loop/shell/VaultMode.tsx. */
 .loop-theme[data-mode="vault"] {
   --background: var(--color-ink);
-  --foreground: var(--color-electric);
-  --accent: var(--color-electric);
+  --foreground: var(--color-sand);
+  --accent: var(--color-sand);
+  --loop-glass-tint: rgba(217, 170, 122, 0.1);
+  --loop-glass-edge: rgba(240, 211, 173, 0.22);
+  --loop-glass-sheen: rgba(240, 211, 173, 0.16);
+}
+
+/* Frosted panel for anything that floats above the field — sheets, modals,
+   gates. Deliberately not applied to the poster itself: the poster is a flat
+   print, and blurring it would undo the pop-art contrast. */
+.loop-glass {
+  background: var(--loop-glass-tint);
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  border: 1px solid var(--loop-glass-edge);
+  box-shadow:
+    0 18px 44px -24px rgba(42, 15, 10, 0.7),
+    inset 0 1px 0 var(--loop-glass-sheen);
+}
+
+/* In-app browsers without backdrop-filter get an opaque panel rather than an
+   unreadable translucent one. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .loop-theme .loop-glass {
+    background: var(--color-sand-bright);
+  }
+  .loop-theme[data-mode='vault'] .loop-glass {
+    background: var(--color-ink-soft);
+  }
 }
 
 /* Respect reduced motion across the Loop Soul surface. */

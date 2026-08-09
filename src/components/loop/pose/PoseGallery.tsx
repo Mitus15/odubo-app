@@ -68,7 +68,7 @@ export function PoseGallery({ refreshKey }: { refreshKey?: number }) {
   return (
     <div className="grid w-full grid-cols-2 gap-3">
       {items.map((it) => (
-        <div key={it.id} className="relative overflow-hidden rounded-2xl border border-electric/20 bg-black">
+        <div key={it.id} className="relative overflow-hidden rounded-2xl border border-sand/20 bg-black">
           {it.kind === "video" ? (
             // eslint-disable-next-line jsx-a11y/media-has-caption
             <video src={urls[it.id]} className="aspect-[3/4] w-full object-cover" muted loop playsInline autoPlay />
@@ -80,7 +80,7 @@ export function PoseGallery({ refreshKey }: { refreshKey?: number }) {
             <button
               type="button"
               onClick={() => share(it)}
-              className="rounded-full bg-electric px-3 py-1 text-[11px] font-bold text-ink active:scale-95"
+              className="rounded-full bg-sand px-3 py-1 text-[11px] font-bold text-ink active:scale-95"
             >
               Share
             </button>
@@ -94,7 +94,7 @@ export function PoseGallery({ refreshKey }: { refreshKey?: number }) {
             </button>
           </div>
           {it.kind === "video" && (
-            <span className="absolute right-2 top-2 rounded-full bg-ink/70 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-electric">
+            <span className="absolute right-2 top-2 rounded-full bg-ink/70 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-sand">
               Clip
             </span>
           )}
