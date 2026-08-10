@@ -6,6 +6,7 @@ import { buildBracket, type Bracket } from "@/lib/loop/anthem";
 import { voteStore } from "@/lib/loop/votes";
 import { countRedeemed, gateMode } from "@/lib/loop/event-codes";
 import { getRunOfShow } from "@/lib/loop/content-store";
+import { getJournalIssue, getJournalMoments } from "@/lib/loop/journal-store";
 import { mockOutbox } from "@/lib/loop/email";
 import PhaseSwitcher from "./PhaseSwitcher";
 import AdminLogout from "./AdminLogout";
@@ -13,6 +14,7 @@ import EventDetails from "./EventDetails";
 import AnthemControls from "./AnthemControls";
 import AnthemSim from "./AnthemSim";
 import ContentEditor from "./ContentEditor";
+import JournalEditor from "./JournalEditor";
 
 /**
  * /admin — control surface for the (non-technical) marketing team. Gated by the
@@ -30,7 +32,7 @@ export default async function AdminPage() {
   const emailMode = process.env.EMAIL_MODE === "live" ? "live" : "mock";
 
   // Every read the dashboard needs, issued together rather than in series.
-  const [stage, schedule, rows, lockedSeedIds, gate, codeStats, runOfShow] = await Promise.all([
+  const [stage, schedule, rows, lockedSeedIds, gate, codeStats, runOfShow, journalIssue, journalMoments] = await Promise.all([
     stageNow(event, now),
     effectiveSchedule(event),
     leaderboard(event.id, voterId),
@@ -38,6 +40,8 @@ export default async function AdminPage() {
     gateMode(event.id),
     countRedeemed(event.id),
     getRunOfShow(event.id),
+    getJournalIssue(event.id),
+    getJournalMoments(event.id),
   ]);
 
   // Build the live bracket so the team can watch standings + the champion from
@@ -130,6 +134,21 @@ export default async function AdminPage() {
 
       <section className="mt-12">
         <h2 className="text-sm font-bold uppercase tracking-widest opacity-70">
+          The Loop Journal {journalIssue?.published ? "(published)" : "(draft)"}
+        </h2>
+        <p className="mt-1 text-sm opacity-70">
+          The volume&apos;s magazine at /loop/journal. The anthem result and the
+          night recap print themselves; you curate the photography and the
+          headline, then publish.{" "}
+          <a href="/loop/journal" className="underline">
+            Preview the issue ↗
+          </a>
+        </p>
+        <JournalEditor initialIssue={journalIssue} initialMoments={journalMoments} />
+      </section>
+
+      <section className="mt-12">
+        <h2 className="text-sm font-bold uppercase tracking-widest opacity-70">
           Email outbox {emailMode === "live" ? "(live · Resend)" : "(mock)"}
         </h2>
         <p className="mt-1 text-sm opacity-70">
@@ -175,7 +194,7 @@ export default async function AdminPage() {
         <ul className="mt-2 list-disc pl-5">
           <li>Capacity & Get-Pass settings</li>
           <li>Event codes — generate & issue</li>
-          <li>Photo moderation & Iconic Moments curation</li>
+          <li>Portal photo submissions → Journal moderation queue</li>
           <li>Waitlist & reminders</li>
         </ul>
       </section>

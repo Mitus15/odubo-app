@@ -35,11 +35,14 @@ export function GatheringPoster({
   capacity: initialCapacity,
   anthem,
   runOfShow,
+  journalPublished = false,
 }: {
   event: LoopEvent;
   capacity: Capacity;
   anthem: AnthemState;
   runOfShow: RunOfShowItem[];
+  /** A published Loop Journal issue makes last volume the pre-phase hype reel. */
+  journalPublished?: boolean;
 }) {
   const [active, setActive] = useState<ModuleKey | null>(null);
   const [passOpen, setPassOpen] = useState(false);
@@ -132,12 +135,22 @@ export function GatheringPoster({
       <footer className="mt-5 flex flex-col items-center gap-2">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/loop/branding/scotts-bw.svg" alt="Scott's Inn & Suites" className="h-8 w-auto" />
-        <Link
-          href="/loop/legacy"
-          className="text-[10px] font-semibold uppercase tracking-[0.3em] opacity-50 hover:opacity-90"
-        >
-          Loop Soul Legacy ↗
-        </Link>
+        <div className="flex items-center gap-5">
+          {journalPublished && (
+            <Link
+              href="/loop/journal"
+              className="text-[10px] font-semibold uppercase tracking-[0.3em] opacity-50 hover:opacity-90"
+            >
+              The Journal ↗
+            </Link>
+          )}
+          <Link
+            href="/loop/legacy"
+            className="text-[10px] font-semibold uppercase tracking-[0.3em] opacity-50 hover:opacity-90"
+          >
+            Loop Soul Legacy ↗
+          </Link>
+        </div>
       </footer>
 
       {/* Module overlay */}
