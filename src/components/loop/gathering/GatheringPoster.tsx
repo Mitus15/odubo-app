@@ -108,7 +108,7 @@ export function GatheringPoster({
         <button
           type="button"
           onClick={() => setPassOpen(true)}
-          className="w-full rounded-full bg-ink py-4 text-base font-bold text-electric transition-transform active:scale-95"
+          className="w-full rounded-full bg-ink py-4 text-base font-bold text-sand transition-transform active:scale-95"
         >
           {soldOut ? "Join the Waitlist" : "Get Pass"}
         </button>

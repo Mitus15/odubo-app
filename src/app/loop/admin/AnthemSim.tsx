@@ -73,7 +73,7 @@ export function AnthemSim() {
           type="button"
           disabled={disabled}
           onClick={() => run("runAll", "Full session")}
-          className="mt-1.5 rounded-full bg-ink px-5 py-2.5 text-xs font-bold text-electric disabled:opacity-50"
+          className="mt-1.5 rounded-full bg-ink px-5 py-2.5 text-xs font-bold text-sand disabled:opacity-50"
         >
           {busy === "runAll" ? <LoopLoader size={16} /> : `Run full ${count}-person session`}
         </button>

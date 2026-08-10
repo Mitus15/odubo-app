@@ -49,7 +49,7 @@ export function ScarcityCounter({ initial }: { initial: Capacity }) {
         type="button"
         onClick={() => setOpen(true)}
         disabled={soldOut}
-        className="mt-6 rounded-full bg-ink px-10 py-4 text-base font-bold text-electric transition-transform active:scale-95 disabled:opacity-50"
+        className="mt-6 rounded-full bg-ink px-10 py-4 text-base font-bold text-sand transition-transform active:scale-95 disabled:opacity-50"
       >
         {soldOut ? "Join the Waitlist" : "Get Pass"}
       </button>

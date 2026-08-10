@@ -40,7 +40,7 @@ export function PhaseSwitcher({ current }: { current: EventPhase }) {
             className={[
               "flex items-center justify-between rounded-2xl border px-5 py-4 text-left transition-colors",
               active
-                ? "border-ink bg-ink text-electric"
+                ? "border-ink bg-ink text-sand"
                 : "border-ink/15 bg-ink/5 hover:bg-ink/10",
             ].join(" ")}
           >

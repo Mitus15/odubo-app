@@ -11,8 +11,8 @@ import { INFINITY_D } from "./LoopLoader";
  * the full infinity lit up — the event's logo — holds a beat, then the ink
  * overlay fades up to reveal the page.
  *
- * It is phase-agnostic: always an ink field with an electric comet, so it reads
- * as a deliberate brand moment regardless of which state (green Gathering /
+ * It is phase-agnostic: always an ink field with an sand comet, so it reads
+ * as a deliberate brand moment regardless of which state (sand Gathering /
  * ink Legacy) is underneath. Mounted once in the root layout, it plays once per
  * full page load — refresh replays it; client-side navigation does not.
  *
@@ -90,7 +90,7 @@ export default function LoopIntro() {
           display: flex;
           align-items: center;
           justify-content: center;
-          background: var(--color-ink, #050505);
+          background: var(--color-ink, #2a0f0a);
           /* Failsafe: even with no JS, clear the overlay so the page is reachable. */
           animation: intro-failsafe 0ms linear forwards;
           animation-delay: ${MAX_MS + 700}ms;
@@ -99,39 +99,39 @@ export default function LoopIntro() {
           width: min(58vw, 300px);
           height: auto;
           overflow: visible;
-          color: var(--color-electric, #00e170);
+          color: var(--color-sand, #d9aa7a);
         }
         .intro-mark path {
           fill: none;
           stroke-linecap: round;
           stroke-width: 4;
         }
-        .intro-rail { stroke: var(--color-electric, #00e170); opacity: 0.12; }
+        .intro-rail { stroke: var(--color-sand, #d9aa7a); opacity: 0.12; }
 
         /* Comet — same stacked-dash technique as LoopLoader, scaled up + glow. */
         .intro-comet {
-          stroke: var(--color-electric, #00e170);
+          stroke: var(--color-sand, #d9aa7a);
           stroke-dashoffset: 0;
           animation: loop-run 1.5s linear infinite;
         }
         .intro-tail { stroke-dasharray: 0.26 0.74; opacity: 0.35; }
         .intro-mid  { stroke-dasharray: 0.13 0.87; opacity: 0.75; }
         .intro-core {
-          stroke: var(--color-electric-bright, #2bff8f);
+          stroke: var(--color-sand-bright, #f0d3ad);
           stroke-dasharray: 0.05 0.95;
           stroke-width: 4.5;
-          filter: drop-shadow(0 0 4px var(--color-electric, #00e170))
-                  drop-shadow(0 0 9px var(--color-electric-deep, #00a854));
+          filter: drop-shadow(0 0 4px var(--color-sand, #d9aa7a))
+                  drop-shadow(0 0 9px var(--color-sand-deep, #9c5f3c));
         }
 
         /* The lit logo — hidden until completion. */
         .intro-draw {
-          stroke: var(--color-electric-bright, #2bff8f);
+          stroke: var(--color-sand-bright, #f0d3ad);
           stroke-dasharray: 1 1;
           stroke-dashoffset: 1;
           opacity: 0;
-          filter: drop-shadow(0 0 6px var(--color-electric, #00e170))
-                  drop-shadow(0 0 16px var(--color-electric-deep, #00a854));
+          filter: drop-shadow(0 0 6px var(--color-sand, #d9aa7a))
+                  drop-shadow(0 0 16px var(--color-sand-deep, #9c5f3c));
         }
 
         @keyframes loop-run {

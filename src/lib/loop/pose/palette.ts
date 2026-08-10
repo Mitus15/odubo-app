@@ -10,20 +10,20 @@
 
 export type RGB = [number, number, number];
 
-export const INK: RGB = [5, 5, 5]; // #050505
-export const INK_SOFT: RGB = [18, 18, 18]; // #121212
-export const ELECTRIC_DEEP: RGB = [0, 168, 84]; // #00a854
-export const ELECTRIC: RGB = [0, 225, 112]; // #00e170
-export const ELECTRIC_BRIGHT: RGB = [43, 255, 143]; // #2bff8f
+export const INK: RGB = [42, 15, 10]; // #2a0f0a
+export const INK_SOFT: RGB = [61, 26, 18]; // #3d1a12
+export const SAND_DEEP: RGB = [156, 95, 60]; // #9c5f3c
+export const SAND: RGB = [217, 170, 122]; // #d9aa7a
+export const SAND_BRIGHT: RGB = [240, 211, 173]; // #f0d3ad
 
-/** Subject tone ramp: stays dark through the mids (silhouette), greens up only
- *  in the highlights — matching the dark-green-shifted hero figures. */
+/** Subject tone ramp: stays dark through the mids (silhouette), warms up only
+ *  in the highlights — matching the dark-warm-shifted hero figures. */
 export const RAMP: { at: number; color: RGB }[] = [
   { at: 0.0, color: INK },
   { at: 0.35, color: INK_SOFT },
-  { at: 0.65, color: ELECTRIC_DEEP },
-  { at: 0.88, color: ELECTRIC },
-  { at: 1.0, color: ELECTRIC_BRIGHT },
+  { at: 0.65, color: SAND_DEEP },
+  { at: 0.88, color: SAND },
+  { at: 1.0, color: SAND_BRIGHT },
 ];
 
 /** Build a 256-entry RGB LUT from the ramp (row of an RGB texture / Canvas LUT). */
@@ -60,7 +60,7 @@ export const DEFAULTS = {
   /** Contour line-art (Sobel edges) strength. 0 → off. */
   edgeStrength: 0.3,
   /** Colour of the contour lines. */
-  edgeColor: ELECTRIC_BRIGHT as RGB,
+  edgeColor: SAND_BRIGHT as RGB,
   /** Rim-light strength around the silhouette. 0 → off. */
   rimStrength: 0.5,
   /** Tone bands (posterize). 0/1 → smooth. */
@@ -69,8 +69,8 @@ export const DEFAULTS = {
   preSmooth: 1,
   /** Dilate the contour lines by this radius (px) for ink-weight. 0 → hairline. */
   edgeWeight: 1,
-  /** Background fill (the green field). */
-  background: ELECTRIC as RGB,
+  /** Background fill (the sand field). */
+  background: SAND as RGB,
 } as const;
 
 /** silhouetteStrength → tone-curve gamma (shared so both paths darken alike). */

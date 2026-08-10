@@ -2,7 +2,7 @@ import { ImageResponse } from "next/og";
 import { MOCK_CURRENT_EVENT } from "@/lib/loop/hub";
 
 /**
- * Branded share card for when the link is posted (July 11 promo). Electric-green
+ * Branded share card for when the link is posted (July 11 promo). Sand
  * field, black wordmark + the signature tagline — matches the poster language.
  * Note: Satori (next/og) needs explicit display on multi-child nodes and only
  * the default Latin font offline, so we avoid the ∞ glyph and draw the loop.
@@ -21,8 +21,8 @@ export default function OgImage() {
           display: "flex",
           flexDirection: "column",
           justifyContent: "space-between",
-          background: "#00e170",
-          color: "#050505",
+          background: "#d9aa7a",
+          color: "#2a0f0a",
           padding: "72px 80px",
           fontFamily: "sans-serif",
         }}

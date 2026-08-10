@@ -3,8 +3,8 @@
 import { useEffect, useRef } from "react";
 
 /**
- * Flips the Loop Soul surface into "vault mode" (ink field, green ink) while
- * mounted, then restores the green poster field on unmount. Used by Legacy
+ * Flips the Loop Soul surface into "vault mode" (oxblood field, sand ink) while
+ * mounted, then restores the sand poster field on unmount. Used by Legacy
  * surfaces.
  *
  * Targets the nearest `.loop-theme` wrapper — NOT document.body — because in

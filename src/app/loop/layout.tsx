@@ -6,7 +6,7 @@ import LoopIntro from "@/components/loop/brand/LoopIntro";
  * Loop Soul's layout — NESTED inside odubo's root layout, not a root layout of
  * its own. It therefore renders no <html>/<body>; instead everything sits in a
  * `.loop-theme` wrapper that (a) carries the brand fonts' CSS variables,
- * (b) scopes Loop Soul's electric/ink token assignments (see globals.css), and
+ * (b) scopes Loop Soul's sand/ink token assignments (see globals.css), and
  * (c) hosts vault mode's `data-mode` flip so the brand can never leak onto the
  * odubo surfaces sharing the same <body>.
  */
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#00e170",
+  themeColor: "#d9aa7a",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,

@@ -3,14 +3,14 @@
  *
  * Turns a photo into the Loop Soul poster grade entirely on-device:
  *   1. Subject pixels are mapped through a brand gradient LUT (ink → ink-soft →
- *      deep-green → electric → bright) biased dark, so the figure reads as a
+ *      deep-clay → sand → bright) biased dark, so the figure reads as a
  *      SILHOUETTE while keeping highlight/shadow detail.
- *   2. A Sobel edge pass draws thin electric-green CONTOUR LINES over the body
+ *   2. A Sobel edge pass draws thin sand CONTOUR LINES over the body
  *      (folds, features, fabric) — the illustrated "line-art" that makes the
  *      reference figures read as posters, not filters.
- *   3. A RIM LIGHT traces the silhouette boundary in bright electric, lifting the
- *      subject off the flat green field.
- *   4. Background pixels become a flat electric-green field; edges feather via the
+ *   3. A RIM LIGHT traces the silhouette boundary in bright sand, lifting the
+ *      subject off the flat sand field.
+ *   4. Background pixels become a flat sand field; edges feather via the
  *      mask's confidence so the cutout isn't hard.
  *
  * This is an APPROXIMATION of the generative reference look in public/figures/
@@ -24,7 +24,7 @@
 
 import {
   type RGB,
-  ELECTRIC_BRIGHT,
+  SAND_BRIGHT,
   LUT,
   DEFAULTS,
   gammaFor,
@@ -35,12 +35,12 @@ export type StylizeOptions = {
   /** 0 → fully shaded; 1 → near-flat silhouette. Default 0.85 (darker silhouette
    *  reads more like a poster; tuned against the reference figures). */
   silhouetteStrength?: number;
-  /** Background fill (the green field). Default electric. */
+  /** Background fill (the sand field). Default sand. */
   background?: RGB;
-  /** Green contour line-art strength (Sobel edges on the subject). 0 → off.
+  /** Sand contour line-art strength (Sobel edges on the subject). 0 → off.
    *  Default 0.3 — enough to describe folds/patterns without turning faces busy. */
   edgeStrength?: number;
-  /** Colour of the contour lines. Default electric-bright. */
+  /** Colour of the contour lines. Default sand-bright. */
   edgeColor?: RGB;
   /** Rim-light strength around the silhouette. 0 → off. Default 0.5. */
   rimStrength?: number;
@@ -117,7 +117,7 @@ export function stylize(
     let sg = LUT[idx + 1];
     let sb = LUT[idx + 2];
 
-    // 2. Contour line-art: paint electric where the subject's edges are.
+    // 2. Contour line-art: paint sand where the subject's edges are.
     if (lineField) {
       const line = lineField[p] * edgeStrength * conf[p];
       sr += (edgeColor[0] - sr) * line;
@@ -128,12 +128,12 @@ export function stylize(
     // 3. Rim light: brighten the silhouette boundary (peaks where the mask flips).
     if (maskEdge) {
       const rim = conf[p] > 0.12 ? clamp01(maskEdge[p] / 2) * rimStrength : 0;
-      sr += (ELECTRIC_BRIGHT[0] - sr) * rim;
-      sg += (ELECTRIC_BRIGHT[1] - sg) * rim;
-      sb += (ELECTRIC_BRIGHT[2] - sb) * rim;
+      sr += (SAND_BRIGHT[0] - sr) * rim;
+      sg += (SAND_BRIGHT[1] - sg) * rim;
+      sb += (SAND_BRIGHT[2] - sb) * rim;
     }
 
-    // 4. Composite subject over the green field by confidence (feathered edges).
+    // 4. Composite subject over the sand field by confidence (feathered edges).
     const m = conf[p];
     d[i] = bg[0] + (sr - bg[0]) * m;
     d[i + 1] = bg[1] + (sg - bg[1]) * m;
@@ -235,7 +235,7 @@ export async function stampWatermark(frame: HTMLCanvasElement): Promise<void> {
     ctx.globalAlpha = 1;
   } else {
     // Fallback: wordmark text in ink.
-    ctx.fillStyle = "#050505";
+    ctx.fillStyle = "#2a0f0a";
     ctx.font = `700 ${Math.round(frame.width * 0.045)}px sans-serif`;
     ctx.textAlign = "right";
     ctx.textBaseline = "bottom";

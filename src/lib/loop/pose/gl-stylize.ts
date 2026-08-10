@@ -1,7 +1,7 @@
 /**
  * WebGL2 Loop Soul renderer — the real-time twin of `stylize.ts`.
  *
- * Runs the same look (duotone LUT + Sobel line-art + rim + flat-green composite)
+ * Runs the same look (duotone LUT + Sobel line-art + rim + flat-sand composite)
  * in a fragment shader so it's fast enough for live video (30fps). The palette,
  * LUT and default params come from `palette.ts`, so a video frame reproduces the
  * photo path's look. Deterministic (no randomness) → identical input, identical
@@ -12,7 +12,7 @@
  * Usage: new GLStylizer(canvas) → render(videoEl, mask, params, mirror) per frame.
  */
 
-import { buildLUT, DEFAULTS, ELECTRIC_BRIGHT, gammaFor, type RGB } from "./palette";
+import { buildLUT, DEFAULTS, SAND_BRIGHT, gammaFor, type RGB } from "./palette";
 
 export type GLParams = {
   silhouetteStrength?: number;
@@ -207,7 +207,7 @@ export class GLStylizer {
     gl.uniform1f(this.u.uEdgeStrength, params.edgeStrength ?? DEFAULTS.edgeStrength);
     gl.uniform3fv(this.u.uEdgeColor, norm(params.edgeColor ?? DEFAULTS.edgeColor));
     gl.uniform1f(this.u.uRimStrength, params.rimStrength ?? DEFAULTS.rimStrength);
-    gl.uniform3fv(this.u.uRimColor, norm(ELECTRIC_BRIGHT));
+    gl.uniform3fv(this.u.uRimColor, norm(SAND_BRIGHT));
     gl.uniform1f(this.u.uBands, params.posterize ?? DEFAULTS.posterize);
     gl.uniform3fv(this.u.uBg, norm(params.background ?? DEFAULTS.background));
     gl.uniform1i(this.u.uHasMask, hasMask ? 1 : 0);

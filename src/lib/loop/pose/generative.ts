@@ -47,13 +47,13 @@ export interface StylizeProvider {
  */
 export const POSE_STYLE_PROMPT =
   "Redraw this photo as a flat two-colour screen-print poster illustration — " +
-  "ONLY solid black (#050505) and electric green (#00e170), no other colours, no " +
+  "ONLY solid black (#2a0f0a) and poster sand (#d9aa7a), no other colours, no " +
   "greys, no gradients, no photographic shading. Keep every person's exact pose, " +
   "proportions, hairstyle and expression. Render the people as bold solid-black " +
-  "silhouettes with crisp negative-space line-art (thin electric-green lines and " +
+  "silhouettes with crisp negative-space line-art (thin poster-sand lines and " +
   "cut-outs) describing clothing folds, lapels, patterns and just enough facial " +
   "detail to read the expression — clean vector linework, not photographic. " +
-  "Reinterpret the entire background as a single flat electric-green (#00e170) " +
+  "Reinterpret the entire background as a single flat poster-sand (#d9aa7a) " +
   "field; stylise any signage or stage hardware into simple bold black graphic " +
   "shapes rather than removing meaning. High-contrast, sharp edges, poster/vector " +
   "aesthetic matching the reference images. No text, no watermark, no logos.";

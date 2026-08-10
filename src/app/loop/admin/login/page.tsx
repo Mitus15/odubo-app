@@ -67,7 +67,7 @@ function AdminLoginForm() {
         <button
           type="submit"
           disabled={busy || password.length === 0}
-          className="flex items-center justify-center gap-2 rounded-2xl border border-ink bg-ink px-5 py-3 font-bold text-electric transition-opacity disabled:opacity-50"
+          className="flex items-center justify-center gap-2 rounded-2xl border border-ink bg-ink px-5 py-3 font-bold text-sand transition-opacity disabled:opacity-50"
         >
           {busy ? <LoopLoader size={24} label="Signing in" /> : "Enter"}
         </button>

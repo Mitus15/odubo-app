@@ -213,7 +213,7 @@ export function AnthemBracket({ initial }: { initial: AnthemState }) {
           {active ? active.name : "The bracket"} · vote to advance — change it until the round closes
         </p>
         {bracket?.activeRoundClosesAt != null && (
-          <p className="mt-1 text-xs font-bold uppercase tracking-widest text-electric-deep">
+          <p className="mt-1 text-xs font-bold uppercase tracking-widest text-sand-deep">
             Closes in {fmtCountdown(bracket.activeRoundClosesAt - now())}
           </p>
         )}
@@ -409,7 +409,7 @@ function NominationStage({
         <p className="text-sm opacity-70">
           {open ? "Suggest a song & upvote the longlist" : "The longlist is locked"}
         </p>
-        <p className="mt-1 text-xs font-bold uppercase tracking-widest text-electric-deep">
+        <p className="mt-1 text-xs font-bold uppercase tracking-widest text-sand-deep">
           {open ? `Nominations close in ${fmtCountdown(closesIn)}` : "The 8 are being chosen…"}
         </p>
       </div>
@@ -435,7 +435,7 @@ function NominationStage({
               type="button"
               disabled={redeeming || !code.trim()}
               onClick={redeemCode}
-              className="shrink-0 rounded-full bg-ink px-5 py-3 text-sm font-bold text-electric transition-transform active:scale-95 disabled:opacity-40"
+              className="shrink-0 rounded-full bg-ink px-5 py-3 text-sm font-bold text-sand transition-transform active:scale-95 disabled:opacity-40"
             >
               {redeeming ? <LoopLoader size={18} /> : "Unlock"}
             </button>
@@ -480,7 +480,7 @@ function NominationStage({
                       type="button"
                       disabled={busyId === t.id || already}
                       onClick={() => suggest(t)}
-                      className="shrink-0 rounded-full bg-ink px-4 py-2 text-xs font-bold text-electric transition-transform active:scale-95 disabled:opacity-40"
+                      className="shrink-0 rounded-full bg-ink px-4 py-2 text-xs font-bold text-sand transition-transform active:scale-95 disabled:opacity-40"
                     >
                       {busyId === t.id ? <LoopLoader size={16} /> : already ? "On list" : "Suggest"}
                     </button>
@@ -527,7 +527,7 @@ function NominationStage({
                 title={!row.mine && atLimit ? `You get ${state.upvoteLimit} likes` : undefined}
                 className={[
                   "flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-bold transition-transform active:scale-95 disabled:opacity-40",
-                  row.mine ? "bg-ink text-electric" : "bg-ink/10 text-ink",
+                  row.mine ? "bg-ink text-sand" : "bg-ink/10 text-ink",
                 ].join(" ")}
                 aria-pressed={row.mine}
               >
@@ -561,7 +561,7 @@ function fmtCountdown(ms: number): string {
 
 function Toast({ text }: { text: string }) {
   return (
-    <div className="fixed inset-x-0 bottom-6 z-50 mx-auto w-fit rounded-full bg-ink px-5 py-2.5 text-sm font-medium text-electric shadow-lg">
+    <div className="fixed inset-x-0 bottom-6 z-50 mx-auto w-fit rounded-full bg-ink px-5 py-2.5 text-sm font-medium text-sand shadow-lg">
       {text}
     </div>
   );
@@ -582,7 +582,7 @@ function PlayButton({
     <button
       type="button"
       onClick={onClick}
-      className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-ink text-electric"
+      className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-ink text-sand"
       aria-label={playing ? `Pause ${label}` : `Play ${label}`}
     >
       {artworkUrl ? (
@@ -670,7 +670,7 @@ function TrackRow({
   return (
     <div className="relative flex items-center gap-3 overflow-hidden rounded-2xl bg-bone/40 p-2">
       <div
-        className="absolute inset-y-0 left-0 bg-electric-deep/20 transition-[width] duration-500"
+        className="absolute inset-y-0 left-0 bg-sand-deep/20 transition-[width] duration-500"
         style={{ width: `${share}%` }}
         aria-hidden="true"
       />
@@ -693,7 +693,7 @@ function TrackRow({
         disabled={busy}
         className={[
           "relative z-10 shrink-0 rounded-full px-4 py-2 text-xs font-bold transition-transform active:scale-95 disabled:opacity-50",
-          mine ? "bg-electric text-ink ring-2 ring-ink/20" : "bg-ink text-electric",
+          mine ? "bg-sand text-ink ring-2 ring-ink/20" : "bg-ink text-sand",
         ].join(" ")}
       >
         {busy ? <LoopLoader size={18} /> : mine ? "Voted ✓" : "Vote"}
@@ -715,7 +715,7 @@ function ChampionCard({
     <button
       type="button"
       onClick={() => onPlay(track.id, track.previewUrl)}
-      className="mt-4 flex items-center gap-4 rounded-3xl bg-ink p-4 text-left text-electric"
+      className="mt-4 flex items-center gap-4 rounded-3xl bg-ink p-4 text-left text-sand"
     >
       {track.artworkUrl ? (
         <Image

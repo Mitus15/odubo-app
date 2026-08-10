@@ -3,7 +3,7 @@ import clsx from "clsx";
 /**
  * The real Loop Soul logo (hand-script "loop" with the infinity, "Soul" beneath).
  * Source: the owner's vector (`public/branding/loop-soul.svg`). Black artwork —
- * sits correctly on the electric-green field, matching the posters.
+ * sits correctly on the sand field, matching the posters.
  *
  * Do NOT replace this with a typeset approximation; use the actual file.
  */
