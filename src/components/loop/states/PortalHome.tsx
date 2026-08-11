@@ -1,10 +1,12 @@
 import type { LoopEvent } from "@/lib/loop/hub";
-import { currentVoterId } from "@/lib/loop/anthem-server";
+import { currentVoterId, getAnthemState } from "@/lib/loop/anthem-server";
+import { getSettings as getDanceyokeySettings } from "@/lib/loop/danceyokey";
 import { hasRoomAccess } from "@/lib/loop/doors";
 import { getPassCapacity } from "@/lib/loop/pass";
 import { getPassSettings } from "@/lib/loop/pass/settings";
 import { getRunOfShow } from "@/lib/loop/content-store";
 import PortalGate from "@/components/loop/portal/PortalGate";
+import PortalPreview from "@/components/loop/portal/PortalPreview";
 import InRoom from "@/components/loop/portal/InRoom";
 
 /**
@@ -19,13 +21,31 @@ export async function PortalHome({ event }: { event: LoopEvent }) {
   const unlocked = await hasRoomAccess(event.id, voterId);
 
   if (!unlocked) {
-    const pass = await getPassSettings();
+    // Someone arriving from a poster, a QR code or a friend's story lands
+    // here. A bare code prompt tells them nothing about what they'd be buying,
+    // so the night is shown in full underneath it — only participation is
+    // gated, never the pitch.
+    const [pass, cap, runOfShow, anthem, dy] = await Promise.all([
+      getPassSettings(),
+      getPassCapacity(),
+      getRunOfShow(event.id),
+      getAnthemState(event, voterId),
+      getDanceyokeySettings(),
+    ]);
     return (
       <main className="flex flex-col items-center px-6 pb-24 pt-10 text-center">
         <p className="loop-muted text-xs uppercase tracking-[0.3em]">Live · {event.venue}</p>
         <PortalGate
           checkoutUrl={pass.checkoutUrl}
           priceLabel={pass.price ? `$${Number(pass.price).toFixed(0)}` : null}
+        />
+        <PortalPreview
+          runOfShow={runOfShow}
+          sold={cap.sold}
+          capacity={event.capacity}
+          nominations={anthem.leaderboard.length}
+          anthemStage={anthem.stage}
+          danceyokeySpots={dy.spots}
         />
       </main>
     );

@@ -2,10 +2,13 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "odubo-dev",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
-      "port": 3000
+      "name": "loop-live-preview",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "LOOP_FORCE_PHASE=live npx next dev -p 3111"
+      ],
+      "port": 3111
     }
   ]
 }
