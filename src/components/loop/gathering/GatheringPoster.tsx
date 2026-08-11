@@ -131,10 +131,13 @@ export function GatheringPoster({
         </nav>
       </div>
 
-      {/* Footer: Scott's Inn (poster placement) + subtle Legacy access */}
-      <footer className="mt-5 flex flex-col items-center gap-2">
+      {/* Footer: Odubo presents · Scott's is the venue partner + Legacy access */}
+      <footer className="mt-5 flex flex-col items-center gap-1.5">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/loop/branding/scotts-bw.svg" alt="Scott's Inn & Suites" className="h-8 w-auto" />
+        <img src="/loop/branding/odubo.svg" alt="Odubo — presenter" className="h-10 w-auto" />
+        <div className="text-[9px] font-semibold uppercase tracking-[0.3em] opacity-50">
+          Venue partner · Scott&apos;s Inn &amp; Suites
+        </div>
         <Link
           href="/loop/legacy"
           className="text-[10px] font-semibold uppercase tracking-[0.3em] opacity-50 hover:opacity-90"
