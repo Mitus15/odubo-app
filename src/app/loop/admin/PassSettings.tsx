@@ -9,6 +9,14 @@ type Settings = {
   mode: "mock" | "shopify";
 };
 type Capacity = { total: number; sold: number; remaining: number };
+type PassCandidate = {
+  title: string;
+  sku: string | null;
+  price: string;
+  currency: string;
+  quantityAvailable: number | null;
+  checkoutUrl: string;
+};
 
 /**
  * Pass sales — sell tickets through Shopify without touching env vars.
@@ -21,6 +29,8 @@ export function PassSettings() {
   const [checkoutUrl, setCheckoutUrl] = useState("");
   const [sku, setSku] = useState("");
   const [busy, setBusy] = useState(false);
+  const [detecting, setDetecting] = useState(false);
+  const [candidates, setCandidates] = useState<PassCandidate[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -73,6 +83,36 @@ export function PassSettings() {
     }
   }
 
+  function applyCandidate(c: PassCandidate) {
+    if (c.sku) setSku(c.sku);
+    setCheckoutUrl(c.checkoutUrl);
+    setCandidates(null);
+    flash(`${c.title} — fields filled, review & save`);
+  }
+
+  async function detect() {
+    setDetecting(true);
+    setError(null);
+    setCandidates(null);
+    try {
+      const res = await fetch("/api/loop/admin/pass-detect", { cache: "no-store" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error ?? `Detection failed (${res.status})`);
+      const found = (data.candidates ?? []) as PassCandidate[];
+      if (found.length === 0) {
+        setError("No pass product found in the store yet — create it in Shopify (step 1), then detect again.");
+      } else if (found.length === 1) {
+        applyCandidate(found[0]);
+      } else {
+        setCandidates(found);
+      }
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setDetecting(false);
+    }
+  }
+
   const live = settings?.mode === "shopify";
   const ready = Boolean((checkoutUrl.trim() || settings?.checkoutUrl) && (sku.trim() || settings?.sku));
 
@@ -104,6 +144,29 @@ export function PassSettings() {
       </ol>
 
       <div className="mt-3 grid gap-2">
+        <button
+          type="button"
+          onClick={detect}
+          disabled={detecting}
+          className="rounded-full border border-ink/25 py-3 text-sm font-bold active:scale-95 disabled:opacity-50"
+        >
+          {detecting ? "Looking in the store…" : "⌕ Detect pass product"}
+        </button>
+        {candidates && (
+          <div className="grid gap-1.5">
+            {candidates.map((c) => (
+              <button
+                key={c.checkoutUrl}
+                type="button"
+                onClick={() => applyCandidate(c)}
+                className="rounded-2xl border border-ink/20 px-4 py-3 text-left text-sm active:scale-[0.99]"
+              >
+                <b>{c.title}</b> · {c.price} {c.currency}
+                {c.sku ? <span className="ml-1 font-mono text-xs opacity-70">{c.sku}</span> : null}
+              </button>
+            ))}
+          </div>
+        )}
         <input
           type="url"
           value={checkoutUrl}
