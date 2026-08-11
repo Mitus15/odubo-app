@@ -14,6 +14,7 @@ import AnthemControls from "./AnthemControls";
 import AnthemSim from "./AnthemSim";
 import ContentEditor from "./ContentEditor";
 import EventCodes from "./EventCodes";
+import PassSettings from "./PassSettings";
 import WallModeration from "./WallModeration";
 
 /**
@@ -121,6 +122,17 @@ export default async function AdminPage() {
 
       <section className="mt-12">
         <h2 className="text-sm font-bold uppercase tracking-widest opacity-70">
+          Pass sales
+        </h2>
+        <p className="mt-1 text-sm opacity-70">
+          Sell passes through the store checkout. Each paid pass emails the
+          buyer an event code automatically — the code is the ticket.
+        </p>
+        <PassSettings />
+      </section>
+
+      <section className="mt-12">
+        <h2 className="text-sm font-bold uppercase tracking-widest opacity-70">
           Event codes
         </h2>
         <p className="mt-1 text-sm opacity-70">
@@ -197,7 +209,6 @@ export default async function AdminPage() {
       <section className="mt-12 text-sm opacity-60">
         <h2 className="text-sm font-bold uppercase tracking-widest">Coming here</h2>
         <ul className="mt-2 list-disc pl-5">
-          <li>Capacity & Get-Pass settings</li>
           <li>Waitlist & reminders</li>
         </ul>
       </section>

@@ -35,11 +35,14 @@ export function GatheringPoster({
   capacity: initialCapacity,
   anthem,
   runOfShow,
+  checkoutUrl = null,
 }: {
   event: LoopEvent;
   capacity: Capacity;
   anthem: AnthemState;
   runOfShow: RunOfShowItem[];
+  /** Admin-configured pass checkout link (loop_settings). */
+  checkoutUrl?: string | null;
 }) {
   const [active, setActive] = useState<ModuleKey | null>(null);
   const [passOpen, setPassOpen] = useState(false);
@@ -150,7 +153,9 @@ export function GatheringPoster({
         )}
       </AnimatePresence>
 
-      {passOpen && <GetPassModal capacity={capacity} onClose={() => setPassOpen(false)} />}
+      {passOpen && (
+        <GetPassModal capacity={capacity} checkoutUrl={checkoutUrl} onClose={() => setPassOpen(false)} />
+      )}
     </div>
   );
 }
