@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { getStylizeProvider } from "@/lib/loop/pose/generative";
+import { getCurrentEvent } from "@/lib/loop/hub";
+import { currentVoterId } from "@/lib/loop/anthem-server";
+import { isHolder } from "@/lib/loop/event-codes";
+import { ADMIN_COOKIE, verifyAdminSession } from "@/lib/loop/admin-auth";
+import { rateLimit } from "@/lib/rateLimit";
 
 /**
  * "Make it a poster" — the generative stylize upgrade for Pose Studio.
@@ -19,6 +25,29 @@ export const runtime = "nodejs";
 const MAX_BYTES = 12 * 1024 * 1024;
 
 export async function POST(req: Request) {
+  // The upgrade calls a paid image API — attendees (redeemed code) and the
+  // admin only, throttled per voter so the key can't be farmed.
+  const store = await cookies();
+  const isAdmin = await verifyAdminSession(store.get(ADMIN_COOKIE)?.value);
+  const voterId = await currentVoterId();
+  if (!isAdmin) {
+    const event = await getCurrentEvent();
+    if (voterId === "anonymous" || !(await isHolder(event.id, voterId))) {
+      return NextResponse.json(
+        { error: "Posters are for pass-holders — redeem your event code." },
+        { status: 403 },
+      );
+    }
+  }
+  const limiter = await rateLimit({
+    key: `loop:pose:stylize:${isAdmin ? "admin" : voterId}`,
+    limit: 10,
+    windowMs: 10 * 60 * 1000,
+  });
+  if (!limiter.allowed) {
+    return NextResponse.json({ error: "Easy — try again in a few minutes." }, { status: 429 });
+  }
+
   const buf = await req.arrayBuffer();
   if (!buf || buf.byteLength === 0) {
     return NextResponse.json({ error: "no image supplied" }, { status: 400 });

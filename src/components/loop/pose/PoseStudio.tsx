@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import LoopLoader from "@/components/loop/brand/LoopLoader";
 import { startCamera, stopStream, captureFrame, type CameraFacing } from "@/lib/loop/capture/camera";
 import { segmentSubject, preloadSegmenter } from "@/lib/loop/pose/segment";
-import { stylize, stampWatermark, toJpegBlob } from "@/lib/loop/pose/stylize";
+import { stylizePoster, stampWatermark, toJpegBlob } from "@/lib/loop/pose/stylize";
 import { saveItem } from "@/lib/loop/pose/gallery";
 import { postToWall, savedWallName } from "@/lib/loop/wall/client";
 
@@ -35,8 +35,10 @@ export function PoseStudio({
   const [enhanced, setEnhanced] = useState(false);
   const [wallState, setWallState] = useState<"idle" | "posting" | "posted">("idle");
 
-  // Build-time flag: is the generative "Make it a poster" upgrade offered?
-  const posterEnabled = process.env.NEXT_PUBLIC_POSE_GENERATIVE === "1";
+  // Generative "Make it a poster" upgrade: build-time flag AND the gated
+  // Portal only (the API is pass-holder-gated; the public /loop/pose page
+  // must not show a button that can only 403).
+  const posterEnabled = process.env.NEXT_PUBLIC_POSE_GENERATIVE === "1" && wallEnabled;
 
   const begin = useCallback(async (f: CameraFacing) => {
     setError(null);
@@ -68,7 +70,7 @@ export function PoseStudio({
       const frame = captureFrame(videoRef.current, facing === "user");
       rawRef.current = toJpegBlob(frame, 0.92); // keep the original before we stylize
       const mask = await segmentSubject(frame); // null → duotone fallback
-      stylize(frame, mask); // tuned B3 defaults (darker silhouette, cleaner line-art)
+      stylizePoster(frame, mask); // "The Redraw" — vector-traced poster art
       await stampWatermark(frame);
       const blob = toJpegBlob(frame, 0.92);
       if (urlRef.current) URL.revokeObjectURL(urlRef.current);
