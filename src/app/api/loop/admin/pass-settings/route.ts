@@ -20,6 +20,8 @@ export async function POST(req: NextRequest) {
     sku?: string | null;
     productId?: string | null;
     mode?: string | null;
+    price?: string | null;
+    currency?: string | null;
   } | null;
   if (!body) return NextResponse.json({ error: "Invalid body" }, { status: 400 });
 
@@ -39,6 +41,8 @@ export async function POST(req: NextRequest) {
   if (body.sku !== undefined) await setPassSetting("pass_sku", body.sku);
   if (body.productId !== undefined) await setPassSetting("pass_product_id", body.productId);
   if (body.mode !== undefined) await setPassSetting("pass_mode", body.mode);
+  if (body.price !== undefined) await setPassSetting("pass_price", body.price);
+  if (body.currency !== undefined) await setPassSetting("pass_currency", body.currency);
 
   const [settings, capacity] = await Promise.all([getPassSettings(), getPassCapacity()]);
   return NextResponse.json({ success: true, settings: publicSettings(settings), capacity });

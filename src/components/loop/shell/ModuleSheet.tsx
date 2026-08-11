@@ -31,18 +31,20 @@ export function ModuleSheet({
       exit={{ y: "100%" }}
       transition={{ type: "spring", stiffness: 320, damping: 34 }}
     >
-      <header className="flex items-center justify-between px-5 py-4">
+      <header className="flex items-center justify-between border-b border-ink/15 px-5 pb-4 pt-[max(env(safe-area-inset-top),1rem)]">
         <h2 className="text-xl font-extrabold">{title}</h2>
         <button
           type="button"
           onClick={onClose}
           aria-label="Close"
-          className="rounded-full p-2 text-2xl leading-none hover:bg-ink/10"
+          className="-mr-2 flex h-11 w-11 items-center justify-center rounded-full text-2xl leading-none hover:bg-ink/10"
         >
           ×
         </button>
       </header>
-      <div className="flex-1 overflow-y-auto px-5 pb-10">{children}</div>
+      <div className="flex-1 overflow-y-auto px-5 pb-[max(env(safe-area-inset-bottom),2.5rem)] pt-4">
+        {children}
+      </div>
     </motion.div>
   );
 }
