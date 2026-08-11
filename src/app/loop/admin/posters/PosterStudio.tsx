@@ -16,7 +16,11 @@ const BRAND_FIGURES = [
   { id: "listen", src: "/loop/figures/listen.png", label: "Listen" },
 ];
 
-const DEFAULT_QR = "https://odubo-studio-app.vercel.app/loop";
+/** Never hardcode a host — the domain situation changes (see
+ *  docs/decisions/loop-soul-product-architecture.md). Whatever origin this
+ *  admin is being used from is the origin the poster should point at. */
+const defaultQr = () =>
+  typeof window === "undefined" ? "/loop" : `${window.location.origin}/loop`;
 
 type SourceTab = "figures" | "upload" | "wall";
 
@@ -39,7 +43,7 @@ export function PosterStudio({
   const [uploadUrl, setUploadUrl] = useState<string | null>(null);
   const [wallPhotos, setWallPhotos] = useState<WallPhotoDto[]>([]);
   const [tagline, setTagline] = useState("What are you dancing to?");
-  const [qrUrl, setQrUrl] = useState(DEFAULT_QR);
+  const [qrUrl, setQrUrl] = useState(defaultQr);
   const [showDetails, setShowDetails] = useState(true);
   const [size, setSize] = useState<PosterSize>("print");
   const [busy, setBusy] = useState<string | null>(null);

@@ -91,6 +91,15 @@ export function PortalGate({
           {busy ? <LoopLoader size={24} label="Unlocking" /> : cta}
         </button>
       </form>
+
+      {/* Email delivery can't be trusted yet, so the recovery path is always
+          one tap away — at the door as much as at home. */}
+      <a
+        href="/loop/code"
+        className="loop-muted mt-4 block text-center text-[11px] font-bold uppercase tracking-[0.2em] underline underline-offset-4"
+      >
+        Didn&apos;t get your code?
+      </a>
     </div>
   );
 }
