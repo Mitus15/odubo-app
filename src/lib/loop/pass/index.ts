@@ -2,6 +2,7 @@ import crypto from "crypto";
 import { queryOne } from "@/lib/loop/db";
 import { getCurrentEvent } from "@/lib/loop/hub";
 import { getEventbrite, type CapacityInfo, type EventbriteProvider } from "@/lib/loop/eventbrite";
+import { getPassSettings } from "./settings";
 
 /**
  * Shopify pass sales for Loop Soul. Shopify handles money and inventory; Loop
@@ -49,7 +50,10 @@ export type ShopifyOrder = {
  * matches LOOP_PASS_PRODUCT_ID. Returns null for unusable payloads; a valid
  * order with no pass items comes back with passCount 0.
  */
-export function parseShopifyOrder(rawBody: string): ShopifyOrder | null {
+export function parseShopifyOrder(
+  rawBody: string,
+  matcher: { sku: string | null; productId: string | null },
+): ShopifyOrder | null {
   let body: {
     id?: number | string;
     email?: string | null;
@@ -64,8 +68,7 @@ export function parseShopifyOrder(rawBody: string): ShopifyOrder | null {
   }
   if (body.id === undefined || body.id === null) return null;
 
-  const sku = process.env.LOOP_PASS_SKU;
-  const productId = process.env.LOOP_PASS_PRODUCT_ID;
+  const { sku, productId } = matcher;
 
   let passCount = 0;
   if (sku || productId) {
@@ -87,8 +90,8 @@ export function parseShopifyOrder(rawBody: string): ShopifyOrder | null {
 }
 
 /** True when at least one pass matcher is configured. */
-export function passMatcherConfigured(): boolean {
-  return Boolean(process.env.LOOP_PASS_SKU || process.env.LOOP_PASS_PRODUCT_ID);
+export function passMatcherConfigured(matcher: { sku: string | null; productId: string | null }): boolean {
+  return Boolean(matcher.sku || matcher.productId);
 }
 
 /**
@@ -120,9 +123,14 @@ class ShopifyPassProvider implements EventbriteProvider {
   }
 }
 
-/** The active pass/capacity provider: Shopify when PASS_MODE=shopify, else the
- *  existing Eventbrite chain (live or mock). Flipping the env var is the only
- *  change at handover. */
-export function getPassProvider(): EventbriteProvider {
-  return process.env.PASS_MODE === "shopify" ? new ShopifyPassProvider() : getEventbrite();
+/**
+ * Capacity via the active pass mode — admin-set in loop_settings (env
+ * fallback): "shopify" reads the D1 code ledger; "mock" keeps the existing
+ * Eventbrite chain (live or mock counters).
+ */
+export async function getPassCapacity(): Promise<CapacityInfo> {
+  const settings = await getPassSettings();
+  return settings.mode === "shopify"
+    ? new ShopifyPassProvider().getCapacity()
+    : getEventbrite().getCapacity();
 }

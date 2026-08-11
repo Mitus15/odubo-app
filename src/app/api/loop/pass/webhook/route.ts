@@ -8,6 +8,7 @@ import {
   passUnitOrderIds,
   verifyShopifyHmac,
 } from "@/lib/loop/pass";
+import { getPassSettings } from "@/lib/loop/pass/settings";
 
 // node crypto for the HMAC check.
 export const runtime = "nodejs";
@@ -34,13 +35,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "invalid signature" }, { status: 401 });
   }
 
-  const order = parseShopifyOrder(rawBody);
+  // Matcher comes from admin-set loop_settings (env fallback).
+  const settings = await getPassSettings();
+  const order = parseShopifyOrder(rawBody, settings);
   if (!order) {
     return NextResponse.json({ error: "unrecognised order payload" }, { status: 400 });
   }
 
-  if (!passMatcherConfigured()) {
-    console.warn("[loop:pass] webhook hit but LOOP_PASS_SKU / LOOP_PASS_PRODUCT_ID are unset.");
+  if (!passMatcherConfigured(settings)) {
+    console.warn("[loop:pass] webhook hit but no pass SKU/product id is configured (admin → Pass sales).");
     return NextResponse.json({ ok: true, skipped: "no pass matcher configured" });
   }
   if (order.passCount === 0) {

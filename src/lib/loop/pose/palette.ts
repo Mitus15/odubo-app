@@ -97,6 +97,60 @@ export function hardenMask(conf: number): number {
   return t * t * (3 - 2 * t);
 }
 
+/**
+ * "The Redraw" — vector pipeline parameters (see vectorize.ts). The mask is
+ * TRACED into smooth closed paths and the figure is redrawn, instead of
+ * colourizing pixels — this is what makes the output read as clean poster art
+ * on real phone photos. One block, both engines.
+ */
+export const VECTOR_DEFAULTS = {
+  /** Working resolution (long side) for mask tracing. */
+  maskWorkRes: 256,
+  /** Blur radius (work px) before iso-tracing — seals pinholes, shaves spurs.
+   *  Kept at 1: r=2 rounds off shape character (cap brims, jawlines). */
+  maskBlurR: 1,
+  /** Iso value of the silhouette cut. */
+  maskIso: 0.5,
+  /** Outer loops smaller than this fraction of frame area are noise blobs. */
+  minLoopAreaFrac: 0.01,
+  /** Holes smaller than this fraction of frame area are mask pinholes. */
+  minHoleAreaFrac: 0.003,
+  /** Safety cap on kept outer loops (multiple people still fit). */
+  maxOuterLoops: 4,
+  /** RDP epsilon (work px). Video's larger value doubles as anti-jitter snap. */
+  simplifyEpsPhoto: 1.4,
+  simplifyEpsVideo: 2.0,
+  /** Chaikin corner-cut iterations. */
+  chaikinIters: 2,
+  /** Tone-cut working resolution (long side). */
+  toneWorkResPhoto: 192,
+  toneWorkResVideo: 144,
+  /** In-mask luminance quantiles for the cut levels. Kept tight — cuts are
+   *  sparse accents (folds, highlights); the figure stays predominantly ink. */
+  toneQuantile1: 0.86,
+  toneQuantile2: 0.95,
+  /** Luminance blur radius (work px) before tone tracing. */
+  toneBlurR: 2,
+  /** Cut loops smaller than this fraction of the silhouette area are noise. */
+  minCutAreaFrac: 0.005,
+  maxCutLoops: 12,
+  /** Video: recompute tone-cuts every Nth frame (paths reused between). */
+  toneEveryN: 2,
+  /** EMA weight on the tone threshold (video) — stops exposure "breathing". */
+  toneThreshEma: 0.2,
+  /** Colours (the engraving idiom: paper cut through ink). */
+  ink: INK as RGB,
+  cut1: SAND as RGB,
+  cut2: SAND_BRIGHT as RGB,
+  background: SAND as RGB,
+  /** Mask coverage sanity window — outside it the frame is "bad" (fallback). */
+  coverageMin: 0.015,
+  coverageMax: 0.85,
+  /** Video fallback hysteresis (frames). */
+  fallbackBadFrames: 15,
+  fallbackGoodFrames: 10,
+} as const;
+
 /** silhouetteStrength → tone-curve gamma (shared so both paths darken alike). */
 export function gammaFor(silhouetteStrength: number): number {
   return 1 + clamp01(silhouetteStrength) * 1.5;

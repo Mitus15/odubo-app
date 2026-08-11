@@ -15,7 +15,7 @@ export const runtime = "nodejs";
  * list APIs are where attendee gating lives.
  */
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   ctx: { params: Promise<{ key: string[] }> },
 ) {
   const { key: segments } = await ctx.params;
@@ -32,6 +32,24 @@ export async function GET(
       operation: "get",
       expiresIn: 3600,
     });
+
+    // ?stream=1 pipes the bytes through this origin instead of redirecting —
+    // needed when the image feeds a canvas (Poster Studio): a cross-origin
+    // redirect target would taint the canvas and block export.
+    if (new URL(req.url).searchParams.get("stream") === "1") {
+      const upstream = await fetch(url);
+      if (!upstream.ok || !upstream.body) {
+        return NextResponse.json({ error: "Media unavailable" }, { status: 502 });
+      }
+      return new Response(upstream.body, {
+        status: 200,
+        headers: {
+          "content-type": upstream.headers.get("content-type") ?? "application/octet-stream",
+          "Cache-Control": "private, max-age=900",
+        },
+      });
+    }
+
     return NextResponse.redirect(url, {
       status: 302,
       headers: {

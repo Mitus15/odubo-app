@@ -22,7 +22,59 @@
  * so the WebGL video path (`gl-stylize.ts`) reproduces it IDENTICALLY.
  */
 
-import { type RGB, SAND_BRIGHT, LUT, DEFAULTS, gammaFor, clamp01, hardenMask } from "./palette";
+import { type RGB, SAND_BRIGHT, LUT, DEFAULTS, VECTOR_DEFAULTS, gammaFor, clamp01, hardenMask } from "./palette";
+import { boxBlurField } from "./geometry";
+import { buildScene, renderScene } from "./vectorize";
+
+/**
+ * "The Redraw" — the primary photo path. Traces the segmentation mask into
+ * smooth vector paths and redraws the figure as clean poster art (see
+ * vectorize.ts). Falls back to the pixel duotone `stylize()` below when
+ * there's no usable mask (segmentation unavailable, empty frame, or the
+ * segmenter ate the whole frame).
+ */
+export function stylizePoster(
+  frame: HTMLCanvasElement,
+  mask: Float32Array | Uint8Array | null,
+): void {
+  const { width, height } = frame;
+  const n = width * height;
+  const useMask = !!mask && mask.length === n;
+  if (!useMask) {
+    stylize(frame, mask);
+    return;
+  }
+
+  // Normalise Uint8 masks to 0..1 floats for the tracer.
+  let floatMask: Float32Array;
+  if (mask instanceof Uint8Array) {
+    floatMask = new Float32Array(n);
+    for (let i = 0; i < n; i++) floatMask[i] = mask[i] / 255;
+  } else {
+    floatMask = mask as Float32Array;
+  }
+
+  const ctx = frame.getContext("2d");
+  if (!ctx) throw new Error("Canvas 2D context unavailable.");
+
+  // The scene must be built from the ORIGINAL pixels, so snapshot the frame
+  // before drawing over it.
+  const src = document.createElement("canvas");
+  src.width = width;
+  src.height = height;
+  src.getContext("2d")?.drawImage(frame, 0, 0);
+
+  const scene = buildScene(src, width, height, floatMask, width, height, width, height, null);
+  if (
+    !scene.silhouette ||
+    scene.coverage < VECTOR_DEFAULTS.coverageMin ||
+    scene.coverage > VECTOR_DEFAULTS.coverageMax
+  ) {
+    stylize(frame, mask);
+    return;
+  }
+  renderScene(ctx, scene, width, height);
+}
 
 export type StylizeOptions = {
   /** 0 → fully shaded; 1 → near-flat silhouette. Default 0.85 (darker silhouette
@@ -139,33 +191,8 @@ export function stylize(
   ctx.putImageData(image, 0, 0);
 }
 
-/** Separable box blur of a single-channel field (edge denoise before Sobel). */
-function boxBlur(field: Float32Array, w: number, h: number, r: number): Float32Array {
-  if (r <= 0) return field;
-  const tmp = new Float32Array(w * h);
-  const out = new Float32Array(w * h);
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      let s = 0, c = 0;
-      for (let k = -r; k <= r; k++) {
-        const xx = x + k;
-        if (xx >= 0 && xx < w) { s += field[y * w + xx]; c++; }
-      }
-      tmp[y * w + x] = s / c;
-    }
-  }
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      let s = 0, c = 0;
-      for (let k = -r; k <= r; k++) {
-        const yy = y + k;
-        if (yy >= 0 && yy < h) { s += tmp[yy * w + x]; c++; }
-      }
-      out[y * w + x] = s / c;
-    }
-  }
-  return out;
-}
+// Box blur now lives in geometry.ts (shared with the vector pipeline).
+const boxBlur = boxBlurField;
 
 /** Separable grayscale dilation (local max) — thickens the contour lines. */
 function dilateField(field: Float32Array, w: number, h: number, r: number): Float32Array {

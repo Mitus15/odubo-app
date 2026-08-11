@@ -14,9 +14,12 @@ type Capacity = { total: number; sold: number; remaining: number };
  */
 export function GetPassModal({
   capacity,
+  checkoutUrl: checkoutUrlProp,
   onClose,
 }: {
   capacity: Capacity;
+  /** Admin-configured checkout link (loop_settings) — wins over env fallbacks. */
+  checkoutUrl?: string | null;
   onClose: () => void;
 }) {
   useEffect(() => {
@@ -25,9 +28,9 @@ export function GetPassModal({
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  // Shopify pass checkout wins when configured; the Eventbrite widget URL
-  // remains as the fallback path.
+  // Admin-set checkout link first, then env fallbacks (Shopify, Eventbrite).
   const checkoutUrl =
+    checkoutUrlProp ||
     process.env.NEXT_PUBLIC_LOOP_PASS_CHECKOUT_URL ||
     process.env.NEXT_PUBLIC_EVENTBRITE_CHECKOUT_WIDGET;
   const soldOut = capacity.remaining <= 0;
