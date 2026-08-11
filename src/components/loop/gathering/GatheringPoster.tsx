@@ -13,13 +13,15 @@ import ModuleSheet from "@/components/loop/shell/ModuleSheet";
 import AnthemBracket from "@/components/loop/anthem/AnthemBracket";
 import RunOfShow from "@/components/loop/gathering/RunOfShow";
 import GetPassModal from "@/components/loop/gathering/GetPassModal";
+import DanceyokeyPanel from "@/components/loop/danceyokey/DanceyokeyPanel";
 
 type Capacity = { total: number; sold: number; remaining: number };
-type ModuleKey = "anthem" | "night";
+type ModuleKey = "anthem" | "night" | "danceyokey";
 
 const MODULES: { key: ModuleKey; label: string; title: string }[] = [
   { key: "anthem", label: "Soul Anthem", title: "Soul Loop Anthem" },
   { key: "night", label: "The Night", title: "The Night" },
+  { key: "danceyokey", label: "Danceyokey", title: "Danceyokey" },
 ];
 
 /**
@@ -149,7 +151,7 @@ export function GatheringPoster({
         )}
 
         {/* Module launchers */}
-        <nav className="grid w-full grid-cols-2 gap-2">
+        <nav className="grid w-full grid-cols-2 gap-2 [&>*:last-child:nth-child(odd)]:col-span-2">
           {MODULES.map((m) => (
             <button
               key={m.key}
@@ -184,6 +186,7 @@ export function GatheringPoster({
           <ModuleSheet title={activeModule.title} onClose={() => setActive(null)}>
             {active === "anthem" && <AnthemBracket initial={anthem} />}
             {active === "night" && <RunOfShow items={runOfShow} showHeader={false} />}
+            {active === "danceyokey" && <DanceyokeyPanel />}
           </ModuleSheet>
         )}
       </AnimatePresence>

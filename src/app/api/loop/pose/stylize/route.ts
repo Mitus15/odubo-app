@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { getStylizeProvider } from "@/lib/loop/pose/generative";
 import { getCurrentEvent } from "@/lib/loop/hub";
 import { currentVoterId } from "@/lib/loop/anthem-server";
-import { isHolder } from "@/lib/loop/event-codes";
+import { hasRoomAccess } from "@/lib/loop/doors";
 import { ADMIN_COOKIE, verifyAdminSession } from "@/lib/loop/admin-auth";
 import { rateLimit } from "@/lib/rateLimit";
 
@@ -32,7 +32,7 @@ export async function POST(req: Request) {
   const voterId = await currentVoterId();
   if (!isAdmin) {
     const event = await getCurrentEvent();
-    if (voterId === "anonymous" || !(await isHolder(event.id, voterId))) {
+    if (!(await hasRoomAccess(event.id, voterId))) {
       return NextResponse.json(
         { error: "Posters are for pass-holders — redeem your event code." },
         { status: 403 },

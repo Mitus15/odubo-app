@@ -13,6 +13,7 @@ import EventDetails from "./EventDetails";
 import AnthemControls from "./AnthemControls";
 import AnthemSim from "./AnthemSim";
 import ContentEditor from "./ContentEditor";
+import DoorsToggle from "./DoorsToggle";
 import EventCodes from "./EventCodes";
 import PassSettings from "./PassSettings";
 import WallModeration from "./WallModeration";
@@ -82,6 +83,7 @@ export default async function AdminPage() {
           Switches what every visitor sees. Legacy stays reachable in all phases.
         </p>
         <PhaseSwitcher current={phase} />
+        <DoorsToggle />
       </section>
 
       <section className="mt-12">
@@ -151,6 +153,22 @@ export default async function AdminPage() {
           Iconic Moments — the public face of Legacy.
         </p>
         <WallModeration />
+      </section>
+
+      <section className="mt-12">
+        <h2 className="text-sm font-bold uppercase tracking-widest opacity-70">
+          Danceyokey
+        </h2>
+        <p className="mt-1 text-sm opacity-70">
+          The night&apos;s dance-floor queue: who&apos;s waiting, the running order,
+          the draw, and wildcards. Run it from your pocket.
+        </p>
+        <a
+          href="/loop/admin/danceyokey"
+          className="mt-4 block rounded-2xl border border-ink/15 bg-ink/5 px-5 py-4 font-bold"
+        >
+          Open the Danceyokey console →
+        </a>
       </section>
 
       <section className="mt-12">
