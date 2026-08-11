@@ -80,6 +80,26 @@ export function getEmail(): EmailProvider {
     : new MockEmailProvider();
 }
 
+/** Deliver several codes (a multi-pass order) in ONE email — one per guest. */
+export async function sendEventCodesEmail(
+  to: string,
+  codes: string[],
+  eventTitle: string,
+): Promise<{ ok: boolean }> {
+  if (codes.length === 1) return sendEventCodeEmail(to, codes[0], eventTitle);
+  return getEmail().send({
+    to,
+    subject: `Your ${codes.length} Loop Soul codes for ${eventTitle}`,
+    text:
+      `You're in for ${eventTitle} — ${codes.length} passes.\n\n` +
+      `Your event codes (one per guest):\n\n` +
+      codes.map((c) => `  ${c}`).join("\n") +
+      `\n\nEach code unlocks the room on the night for one person, and lets ` +
+      `them suggest a song for the Soul Loop Anthem at loopsoul.ca. ` +
+      `Share one with each guest and keep yours handy.`,
+  });
+}
+
 /** Deliver an auto-issued event code to a buyer. */
 export async function sendEventCodeEmail(
   to: string,

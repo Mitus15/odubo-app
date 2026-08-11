@@ -25,7 +25,11 @@ export function GetPassModal({
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  const checkoutUrl = process.env.NEXT_PUBLIC_EVENTBRITE_CHECKOUT_WIDGET;
+  // Shopify pass checkout wins when configured; the Eventbrite widget URL
+  // remains as the fallback path.
+  const checkoutUrl =
+    process.env.NEXT_PUBLIC_LOOP_PASS_CHECKOUT_URL ||
+    process.env.NEXT_PUBLIC_EVENTBRITE_CHECKOUT_WIDGET;
   const soldOut = capacity.remaining <= 0;
 
   return (

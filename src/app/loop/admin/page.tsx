@@ -13,6 +13,8 @@ import EventDetails from "./EventDetails";
 import AnthemControls from "./AnthemControls";
 import AnthemSim from "./AnthemSim";
 import ContentEditor from "./ContentEditor";
+import EventCodes from "./EventCodes";
+import WallModeration from "./WallModeration";
 
 /**
  * /admin — control surface for the (non-technical) marketing team. Gated by the
@@ -119,6 +121,28 @@ export default async function AdminPage() {
 
       <section className="mt-12">
         <h2 className="text-sm font-bold uppercase tracking-widest opacity-70">
+          Event codes
+        </h2>
+        <p className="mt-1 text-sm opacity-70">
+          Mint pass codes for the door. Each code unlocks the Portal (and the
+          Wall) once, for one guest.
+        </p>
+        <EventCodes />
+      </section>
+
+      <section className="mt-12">
+        <h2 className="text-sm font-bold uppercase tracking-widest opacity-70">
+          The Wall — moderation &amp; Iconic Moments
+        </h2>
+        <p className="mt-1 text-sm opacity-70">
+          Approve or hide guest shots as they land; ✦ features a shot into
+          Iconic Moments — the public face of Legacy.
+        </p>
+        <WallModeration />
+      </section>
+
+      <section className="mt-12">
+        <h2 className="text-sm font-bold uppercase tracking-widest opacity-70">
           The Night — Run of Show
         </h2>
         <p className="mt-1 text-sm opacity-70">
@@ -174,8 +198,6 @@ export default async function AdminPage() {
         <h2 className="text-sm font-bold uppercase tracking-widest">Coming here</h2>
         <ul className="mt-2 list-disc pl-5">
           <li>Capacity & Get-Pass settings</li>
-          <li>Event codes — generate & issue</li>
-          <li>Photo moderation & Iconic Moments curation</li>
           <li>Waitlist & reminders</li>
         </ul>
       </section>

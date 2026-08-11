@@ -6,14 +6,21 @@ import { startCamera, stopStream, captureFrame, type CameraFacing } from "@/lib/
 import { segmentSubject, preloadSegmenter } from "@/lib/loop/pose/segment";
 import { stylize, stampWatermark, toJpegBlob } from "@/lib/loop/pose/stylize";
 import { saveItem } from "@/lib/loop/pose/gallery";
+import { postToWall, savedWallName } from "@/lib/loop/wall/client";
 
 /**
  * Pose Studio — guided capture → on-device segmentation → Loop Soul duotone
- * (subject silhouetted on a flat sand field) → Save / Share. All
- * processing is on-device; nothing is uploaded here (that rides on the moments
- * core / State 2 later — the output Blob is already in the right format).
+ * (subject silhouetted on a flat sand field) → Save / Share. All processing is
+ * on-device. In the gated Portal (`wallEnabled`) the result can also be posted
+ * to the Wall — the room's shared gallery on the moments core.
  */
-export function PoseStudio({ onSaved }: { onSaved?: () => void }) {
+export function PoseStudio({
+  onSaved,
+  wallEnabled = false,
+}: {
+  onSaved?: () => void;
+  wallEnabled?: boolean;
+}) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const urlRef = useRef<string | null>(null);
@@ -26,6 +33,7 @@ export function PoseStudio({ onSaved }: { onSaved?: () => void }) {
   const [resultBlob, setResultBlob] = useState<Blob | null>(null);
   const [enhancing, setEnhancing] = useState(false);
   const [enhanced, setEnhanced] = useState(false);
+  const [wallState, setWallState] = useState<"idle" | "posting" | "posted">("idle");
 
   // Build-time flag: is the generative "Make it a poster" upgrade offered?
   const posterEnabled = process.env.NEXT_PUBLIC_POSE_GENERATIVE === "1";
@@ -81,7 +89,26 @@ export function PoseStudio({ onSaved }: { onSaved?: () => void }) {
     setResultUrl(null);
     setResultBlob(null);
     setEnhanced(false);
+    setWallState("idle");
     void begin(facing);
+  }
+
+  /** Post the portrait to the Wall (the room's shared gallery). */
+  async function postWall() {
+    if (!resultBlob || wallState !== "idle") return;
+    setWallState("posting");
+    setError(null);
+    try {
+      await postToWall(resultBlob, {
+        fileName: "loop-soul.jpg",
+        userName: savedWallName() || null,
+      });
+      setWallState("posted");
+      void persistToGallery(); // keep a local copy too
+    } catch (e) {
+      setError((e as Error).message);
+      setWallState("idle");
+    }
   }
 
   /** Generative upgrade: send the ORIGINAL photo to the provider, swap in the
@@ -199,6 +226,20 @@ export function PoseStudio({ onSaved }: { onSaved?: () => void }) {
       <div className="flex w-full flex-col gap-2">
         {phase === "result" ? (
           <>
+            {wallEnabled && (
+              <button
+                type="button"
+                onClick={postWall}
+                disabled={wallState !== "idle"}
+                className="rounded-full bg-sand-bright py-4 text-base font-bold text-ink transition-transform active:scale-95 disabled:opacity-70"
+              >
+                {wallState === "posted"
+                  ? "On the Wall ✦"
+                  : wallState === "posting"
+                    ? "Posting…"
+                    : "Post to the Wall"}
+              </button>
+            )}
             {posterEnabled && !enhanced && (
               <button
                 type="button"
@@ -258,7 +299,8 @@ export function PoseStudio({ onSaved }: { onSaved?: () => void }) {
 
       <p className="text-center text-[11px] leading-relaxed opacity-50">
         Tip: stand against a plain wall with light on your face for the cleanest
-        silhouette. Everything happens on your device — nothing is uploaded.
+        silhouette. Everything happens on your device
+        {wallEnabled ? " — only what you post goes to the Wall." : " — nothing is uploaded."}
       </p>
     </div>
   );
