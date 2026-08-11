@@ -31,12 +31,11 @@ export const runtime = "nodejs";
  */
 export async function POST(req: Request) {
   const rawBody = await req.text();
-  if (!verifyShopifyHmac(rawBody, req.headers.get("x-shopify-hmac-sha256"))) {
+  // Settings first — they carry the webhook signing secret (see settings.ts).
+  const settings = await getPassSettings();
+  if (!verifyShopifyHmac(rawBody, req.headers.get("x-shopify-hmac-sha256"), settings.webhookSecret)) {
     return NextResponse.json({ error: "invalid signature" }, { status: 401 });
   }
-
-  // Matcher comes from admin-set loop_settings (env fallback).
-  const settings = await getPassSettings();
   const order = parseShopifyOrder(rawBody, settings);
   if (!order) {
     return NextResponse.json({ error: "unrecognised order payload" }, { status: 400 });

@@ -15,15 +15,25 @@ export type PassSettings = {
   productId: string | null;
   /** Capacity source: mock env counters, or the D1 code ledger (Shopify). */
   mode: "mock" | "shopify";
+  /** HMAC secret the pass webhook is signed with. API-registered webhooks
+   *  sign with the registering APP's API secret key — not the store-wide
+   *  notification secret — so it's its own setting. */
+  webhookSecret: string | null;
 };
 
-const KEYS = ["pass_checkout_url", "pass_sku", "pass_product_id", "pass_mode"] as const;
+const KEYS = [
+  "pass_checkout_url",
+  "pass_sku",
+  "pass_product_id",
+  "pass_mode",
+  "pass_webhook_secret",
+] as const;
 
 export async function getPassSettings(): Promise<PassSettings> {
   let rows: { key: string; value: string }[] = [];
   try {
     rows = await queryDatabase<{ key: string; value: string }>(
-      `SELECT key, value FROM loop_settings WHERE key IN (?1, ?2, ?3, ?4)`,
+      `SELECT key, value FROM loop_settings WHERE key IN (?1, ?2, ?3, ?4, ?5)`,
       [...KEYS],
     );
   } catch {
@@ -38,12 +48,18 @@ export async function getPassSettings(): Promise<PassSettings> {
   const sku = map.get("pass_sku") || process.env.LOOP_PASS_SKU || null;
   const productId = map.get("pass_product_id") || process.env.LOOP_PASS_PRODUCT_ID || null;
   const modeRaw = map.get("pass_mode") || process.env.PASS_MODE || "mock";
+  const webhookSecret =
+    map.get("pass_webhook_secret") ||
+    process.env.SHOPIFY_ADMIN_API_SECRET ||
+    process.env.SHOPIFY_WEBHOOK_SECRET ||
+    null;
 
   return {
     checkoutUrl: checkoutUrl?.trim() || null,
     sku: sku?.trim() || null,
     productId: productId?.trim() || null,
     mode: modeRaw === "shopify" ? "shopify" : "mock",
+    webhookSecret: webhookSecret?.trim() || null,
   };
 }
 
