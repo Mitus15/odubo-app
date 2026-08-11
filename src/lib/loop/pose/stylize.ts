@@ -22,14 +22,7 @@
  * so the WebGL video path (`gl-stylize.ts`) reproduces it IDENTICALLY.
  */
 
-import {
-  type RGB,
-  SAND_BRIGHT,
-  LUT,
-  DEFAULTS,
-  gammaFor,
-  clamp01,
-} from "./palette";
+import { type RGB, SAND_BRIGHT, LUT, DEFAULTS, gammaFor, clamp01, hardenMask } from "./palette";
 
 export type StylizeOptions = {
   /** 0 → fully shaded; 1 → near-flat silhouette. Default 0.85 (darker silhouette
@@ -91,7 +84,8 @@ export function stylize(
   const conf = new Float32Array(n);
   for (let i = 0, p = 0; i < d.length; i += 4, p++) {
     lum[p] = (0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2]) / 255;
-    conf[p] = useMask ? (mask as ArrayLike<number>)[p] / maxMask : 1;
+    // Harden the segmentation feather into the reference's clean poster cut.
+    conf[p] = useMask ? hardenMask((mask as ArrayLike<number>)[p] / maxMask) : 1;
   }
 
   // Contour line field: detect edges on a PRE-SMOOTHED luminance (so lines trace
@@ -102,7 +96,9 @@ export function stylize(
     const edgeSrc = preSmooth > 0 ? boxBlur(lum, width, height, preSmooth) : lum;
     const lumEdge = sobelMag(edgeSrc, width, height);
     lineField = new Float32Array(n);
-    for (let p = 0; p < n; p++) lineField[p] = clamp01((lumEdge[p] / 2 - 0.06) / 0.4);
+    for (let p = 0; p < n; p++) {
+      lineField[p] = clamp01((lumEdge[p] / 2 - DEFAULTS.edgeThreshold) / DEFAULTS.edgeRange);
+    }
     if (edgeWeight > 0) lineField = dilateField(lineField, width, height, edgeWeight);
   }
   // Mask edges → rim light.
