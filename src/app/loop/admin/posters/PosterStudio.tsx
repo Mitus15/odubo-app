@@ -42,7 +42,7 @@ export function PosterStudio({
   const [figureSrc, setFigureSrc] = useState<string | null>(BRAND_FIGURES[0].src);
   const [uploadUrl, setUploadUrl] = useState<string | null>(null);
   const [wallPhotos, setWallPhotos] = useState<WallPhotoDto[]>([]);
-  const [tagline, setTagline] = useState("What are you dancing to?");
+  const [tagline, setTagline] = useState("What we dancin' to");
   const [qrUrl, setQrUrl] = useState(defaultQr);
   const [showDetails, setShowDetails] = useState(true);
   const [size, setSize] = useState<PosterSize>("print");
@@ -215,7 +215,7 @@ export function PosterStudio({
           type="text"
           value={tagline}
           onChange={(e) => setTagline(e.target.value)}
-          placeholder="The arced question (e.g. What are you dancing to?)"
+          placeholder="The arced line (slogan: What we dancin' to)"
           maxLength={40}
           className="rounded-2xl border border-ink/20 bg-transparent px-4 py-3 text-sm outline-none focus:border-ink"
         />

@@ -98,7 +98,7 @@ export function GatheringPoster({
           the tagline (no floating gap); the slack collects below the figure. */}
       <div className="flex min-h-0 flex-1 flex-col items-center gap-2">
         <ArcedTagline
-          text="What are you dancing to?"
+          text="What we dancin' to"
           className="text-ink"
           width={300}
         />
