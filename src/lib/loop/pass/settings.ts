@@ -19,6 +19,9 @@ export type PassSettings = {
    *  sign with the registering APP's API secret key — not the store-wide
    *  notification secret — so it's its own setting. */
   webhookSecret: string | null;
+  /** Price shown on the page BEFORE checkout (e.g. "20.00" / "CAD"). */
+  price: string | null;
+  currency: string | null;
 };
 
 const KEYS = [
@@ -27,13 +30,15 @@ const KEYS = [
   "pass_product_id",
   "pass_mode",
   "pass_webhook_secret",
+  "pass_price",
+  "pass_currency",
 ] as const;
 
 export async function getPassSettings(): Promise<PassSettings> {
   let rows: { key: string; value: string }[] = [];
   try {
     rows = await queryDatabase<{ key: string; value: string }>(
-      `SELECT key, value FROM loop_settings WHERE key IN (?1, ?2, ?3, ?4, ?5)`,
+      `SELECT key, value FROM loop_settings WHERE key IN (?1, ?2, ?3, ?4, ?5, ?6, ?7)`,
       [...KEYS],
     );
   } catch {
@@ -60,6 +65,8 @@ export async function getPassSettings(): Promise<PassSettings> {
     productId: productId?.trim() || null,
     mode: modeRaw === "shopify" ? "shopify" : "mock",
     webhookSecret: webhookSecret?.trim() || null,
+    price: map.get("pass_price")?.trim() || null,
+    currency: map.get("pass_currency")?.trim() || null,
   };
 }
 

@@ -31,6 +31,7 @@ export function PassSettings() {
   const [busy, setBusy] = useState(false);
   const [detecting, setDetecting] = useState(false);
   const [candidates, setCandidates] = useState<PassCandidate[] | null>(null);
+  const [detected, setDetected] = useState<{ price: string; currency: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -68,6 +69,8 @@ export function PassSettings() {
         body: JSON.stringify({
           checkoutUrl: checkoutUrl.trim() || null,
           sku: sku.trim() || null,
+          // Price shown on the page before checkout — captured by Detect.
+          ...(detected ? { price: detected.price, currency: detected.currency } : {}),
           ...extra,
         }),
       });
@@ -86,6 +89,7 @@ export function PassSettings() {
   function applyCandidate(c: PassCandidate) {
     if (c.sku) setSku(c.sku);
     setCheckoutUrl(c.checkoutUrl);
+    setDetected({ price: c.price, currency: c.currency });
     setCandidates(null);
     flash(`${c.title} — fields filled, review & save`);
   }

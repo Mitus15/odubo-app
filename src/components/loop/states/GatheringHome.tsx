@@ -21,6 +21,20 @@ export async function GatheringHome({ event }: { event: LoopEvent }) {
     getPassSettings(),
   ]);
 
+  // Formatted server-side so the venue's timezone is authoritative — not the
+  // visitor's phone.
+  const when = new Date(event.date);
+  const dateLabel = when.toLocaleDateString("en-CA", {
+    timeZone: "America/Vancouver",
+    month: "short",
+    day: "numeric",
+  });
+  const timeLabel = when.toLocaleTimeString("en-CA", {
+    timeZone: "America/Vancouver",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+
   return (
     <GatheringPoster
       event={event}
@@ -28,6 +42,10 @@ export async function GatheringHome({ event }: { event: LoopEvent }) {
       anthem={anthem}
       runOfShow={runOfShow}
       checkoutUrl={passSettings.checkoutUrl}
+      price={passSettings.price}
+      currency={passSettings.currency}
+      dateLabel={dateLabel}
+      timeLabel={timeLabel}
     />
   );
 }

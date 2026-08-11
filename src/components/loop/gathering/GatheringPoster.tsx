@@ -36,6 +36,10 @@ export function GatheringPoster({
   anthem,
   runOfShow,
   checkoutUrl = null,
+  price = null,
+  currency = null,
+  dateLabel,
+  timeLabel,
 }: {
   event: LoopEvent;
   capacity: Capacity;
@@ -43,6 +47,12 @@ export function GatheringPoster({
   runOfShow: RunOfShowItem[];
   /** Admin-configured pass checkout link (loop_settings). */
   checkoutUrl?: string | null;
+  /** Pass price, shown up front (loop_settings). */
+  price?: string | null;
+  currency?: string | null;
+  /** Server-formatted so the venue's timezone is authoritative. */
+  dateLabel: string;
+  timeLabel: string;
 }) {
   const [active, setActive] = useState<ModuleKey | null>(null);
   const [passOpen, setPassOpen] = useState(false);
@@ -64,6 +74,9 @@ export function GatheringPoster({
 
   const soldOut = capacity.remaining <= 0;
   const activeModule = MODULES.find((m) => m.key === active) ?? null;
+  const priceLabel = price ? `$${Number(price).toFixed(0)}` : null;
+  // "Scott's Inn, Kamloops" → "Scott's Inn" on the tight poster line.
+  const venueShort = event.venue.split(",")[0];
 
   return (
     <div className="relative mx-auto flex h-[100dvh] max-w-md flex-col px-5 pb-5 pt-5">
@@ -99,22 +112,41 @@ export function GatheringPoster({
         </div>
       </div>
 
-      {/* Scarcity + primary CTA */}
+      {/* The offer, in the open: price, scarcity, when and where — before
+          anyone has to tap anything. */}
       <div className="flex flex-col items-center gap-3">
-        <div className="text-sm font-bold uppercase tracking-widest opacity-75">
-          {soldOut ? "Room is full" : (
-            <>
-              <span className="tabular-nums">{capacity.remaining}</span> / {capacity.total} passes left
-            </>
-          )}
+        <div className="text-center">
+          <div className="text-sm font-bold uppercase tracking-widest">
+            {soldOut ? (
+              "Room is full"
+            ) : (
+              <>
+                {priceLabel ? <>{priceLabel} · </> : null}
+                <span className="tabular-nums">{capacity.remaining}</span> / {capacity.total}{" "}
+                passes left
+              </>
+            )}
+          </div>
+          <div className="loop-muted mt-1 text-[11px] font-semibold uppercase tracking-[0.18em]">
+            {dateLabel} · Doors {timeLabel} · {venueShort}
+          </div>
         </div>
         <button
           type="button"
           onClick={() => setPassOpen(true)}
           className="w-full rounded-full bg-ink py-4 text-base font-bold text-sand transition-transform active:scale-95"
         >
-          {soldOut ? "Join the Waitlist" : "Get Pass"}
+          {soldOut ? "Join the Waitlist" : `Get Pass${priceLabel ? ` · ${priceLabel}` : ""}`}
         </button>
+        {!soldOut && (
+          <button
+            type="button"
+            onClick={() => setPassOpen(true)}
+            className="loop-muted -mt-1 text-[11px] font-bold uppercase tracking-[0.2em] underline underline-offset-4"
+          >
+            What&apos;s included
+          </button>
+        )}
 
         {/* Module launchers */}
         <nav className="grid w-full grid-cols-2 gap-2">
@@ -157,7 +189,18 @@ export function GatheringPoster({
       </AnimatePresence>
 
       {passOpen && (
-        <GetPassModal capacity={capacity} checkoutUrl={checkoutUrl} onClose={() => setPassOpen(false)} />
+        <GetPassModal
+          capacity={capacity}
+          checkoutUrl={checkoutUrl}
+          price={price}
+          currency={currency}
+          eventTitle={event.title}
+          theme={event.theme}
+          venue={event.venue}
+          dateLabel={dateLabel}
+          timeLabel={timeLabel}
+          onClose={() => setPassOpen(false)}
+        />
       )}
     </div>
   );

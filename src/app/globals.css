@@ -2173,11 +2173,13 @@ h6,
   --background: var(--color-sand);
   --foreground: var(--color-ink);
   --accent: var(--color-ink);
-  /* Glass is tinted with the field it sits on, so one class works in both
-     modes: warm and darkening on sand, warm and lifting on oxblood. */
-  --loop-glass-tint: rgba(61, 26, 18, 0.16);
+  /* Glass sits on the field it floats over. It is deliberately NEAR-OPAQUE:
+     these panels carry reading copy (pass details, run of show, the anthem)
+     over busy poster artwork, and a translucent tint made that copy hard to
+     read on a phone at a venue. Blur now adds depth, not transparency. */
+  --loop-glass-tint: rgba(244, 238, 228, 0.96);
   --loop-glass-edge: rgba(42, 15, 10, 0.22);
-  --loop-glass-sheen: rgba(255, 255, 255, 0.4);
+  --loop-glass-sheen: rgba(255, 255, 255, 0.5);
   /* Redefine --font-sans locally so the font-sans utility resolves to Inter
      INSIDE Loop Soul only (odubo's body is font-serif and never uses it) */
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, sans-serif;
@@ -2198,8 +2200,8 @@ h6,
   --background: var(--color-ink);
   --foreground: var(--color-sand);
   --accent: var(--color-sand);
-  --loop-glass-tint: rgba(217, 170, 122, 0.1);
-  --loop-glass-edge: rgba(240, 211, 173, 0.22);
+  --loop-glass-tint: rgba(35, 12, 8, 0.96);
+  --loop-glass-edge: rgba(240, 211, 173, 0.28);
   --loop-glass-sheen: rgba(240, 211, 173, 0.16);
 }
 
@@ -2214,6 +2216,20 @@ h6,
   box-shadow:
     0 18px 44px -24px rgba(42, 15, 10, 0.7),
     inset 0 1px 0 var(--loop-glass-sheen);
+}
+
+/* Secondary copy anywhere on the Loop surface. Tailwind's opacity-70/60 on
+   small type drops below comfortable reading contrast on a phone at a venue,
+   so secondary text gets a dedicated tone that stays legible in both modes. */
+.loop-theme .loop-muted {
+  color: color-mix(in srgb, var(--foreground) 78%, transparent);
+}
+
+/* Solid reading panel — same reading surface as .loop-glass, no blur, for
+   cards and sections that sit directly on the field. */
+.loop-panel {
+  background: var(--loop-glass-tint);
+  border: 1px solid var(--loop-glass-edge);
 }
 
 /* In-app browsers without backdrop-filter get an opaque panel rather than an
