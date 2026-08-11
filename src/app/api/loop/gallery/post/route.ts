@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getCurrentEvent } from "@/lib/loop/hub";
 import { currentVoterId } from "@/lib/loop/anthem-server";
-import { isHolder } from "@/lib/loop/event-codes";
+import { hasRoomAccess } from "@/lib/loop/doors";
 import { ADMIN_COOKIE, verifyAdminSession } from "@/lib/loop/admin-auth";
 import { ensureLoopGallery, insertWallPhoto } from "@/lib/loop/wall/server";
+import { attendeeForVoter, claimIdentity, creditMedia } from "@/lib/loop/identity";
 import { createStorageService } from "@/lib/storage/StorageService";
 import { gallery as galleryPaths } from "@/lib/storage/pathGenerators";
 import { rateLimit } from "@/lib/rateLimit";
@@ -40,7 +41,7 @@ export async function POST(req: NextRequest) {
         { status: 403 },
       );
     }
-    if (voterId === "anonymous" || !(await isHolder(event.id, voterId))) {
+    if (!(await hasRoomAccess(event.id, voterId))) {
       return NextResponse.json(
         { error: "Redeem your event code to post to the Wall." },
         { status: 403 },
@@ -114,6 +115,22 @@ export async function POST(req: NextRequest) {
   });
   if (!photo) {
     return NextResponse.json({ error: "Saved the file but not the record — try again." }, { status: 500 });
+  }
+
+  // Credit the shot to its author — the row that later powers "your shots",
+  // profiles, contributor credits and magazine royalties. Best-effort: a
+  // credit failure must never lose the guest their photo.
+  try {
+    const attendee = await attendeeForVoter(voterId);
+    if (attendee) {
+      await creditMedia(uid, attendee.id, event.id);
+      // The name typed on a post is the display name, if they've not set one.
+      if (userName && !attendee.displayName) {
+        await claimIdentity(voterId, userName, null);
+      }
+    }
+  } catch (e) {
+    console.error("[loop:identity] credit not recorded:", e);
   }
 
   return NextResponse.json({ success: true, photo });

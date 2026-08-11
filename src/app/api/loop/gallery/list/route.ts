@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getCurrentEvent } from "@/lib/loop/hub";
 import { currentVoterId } from "@/lib/loop/anthem-server";
-import { isHolder } from "@/lib/loop/event-codes";
+import { hasRoomAccess } from "@/lib/loop/doors";
 import { ADMIN_COOKIE, verifyAdminSession } from "@/lib/loop/admin-auth";
 import { ensureLoopGallery, listWallPhotos } from "@/lib/loop/wall/server";
 
@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
     const isAdmin = await verifyAdminSession(store.get(ADMIN_COOKIE)?.value);
     if (!isAdmin) {
       const voterId = await currentVoterId();
-      if (voterId === "anonymous" || !(await isHolder(event.id, voterId))) {
+      if (!(await hasRoomAccess(event.id, voterId))) {
         return NextResponse.json(
           { error: "The Wall is for attendees — redeem your event code." },
           { status: 403 },

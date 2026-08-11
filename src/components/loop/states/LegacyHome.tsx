@@ -4,7 +4,7 @@ import PortalGate from "@/components/loop/portal/PortalGate";
 import WallGallery from "@/components/loop/wall/WallGallery";
 import { getCurrentEvent } from "@/lib/loop/hub";
 import { currentVoterId } from "@/lib/loop/anthem-server";
-import { isHolder } from "@/lib/loop/event-codes";
+import { hasRoomAccess } from "@/lib/loop/doors";
 
 /**
  * STATE 3 — Legacy (persistent content hub), rendered in "vault mode"
@@ -18,7 +18,7 @@ import { isHolder } from "@/lib/loop/event-codes";
 export async function LegacyHome() {
   const event = await getCurrentEvent();
   const voterId = await currentVoterId();
-  const attendee = await isHolder(event.id, voterId);
+  const attendee = await hasRoomAccess(event.id, voterId);
 
   return (
     <main className="flex flex-col items-center px-6 pb-24 pt-10 text-center">
@@ -53,6 +53,7 @@ export async function LegacyHome() {
             title="Were you in the room?"
             copy="The Vault is for attendees. Your event code unlocks every shot from the night."
             cta="Unlock the Vault"
+            checkoutUrl={(await getPassSettings()).checkoutUrl}
           />
         )}
       </section>

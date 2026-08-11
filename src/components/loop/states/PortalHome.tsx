@@ -1,7 +1,8 @@
 import type { LoopEvent } from "@/lib/loop/hub";
 import { currentVoterId } from "@/lib/loop/anthem-server";
-import { isHolder } from "@/lib/loop/event-codes";
+import { hasRoomAccess } from "@/lib/loop/doors";
 import { getPassCapacity } from "@/lib/loop/pass";
+import { getPassSettings } from "@/lib/loop/pass/settings";
 import { getRunOfShow } from "@/lib/loop/content-store";
 import PortalGate from "@/components/loop/portal/PortalGate";
 import InRoom from "@/components/loop/portal/InRoom";
@@ -15,13 +16,17 @@ import InRoom from "@/components/loop/portal/InRoom";
  */
 export async function PortalHome({ event }: { event: LoopEvent }) {
   const voterId = await currentVoterId();
-  const unlocked = await isHolder(event.id, voterId);
+  const unlocked = await hasRoomAccess(event.id, voterId);
 
   if (!unlocked) {
+    const pass = await getPassSettings();
     return (
       <main className="flex flex-col items-center px-6 pb-24 pt-10 text-center">
         <p className="loop-muted text-xs uppercase tracking-[0.3em]">Live · {event.venue}</p>
-        <PortalGate />
+        <PortalGate
+          checkoutUrl={pass.checkoutUrl}
+          priceLabel={pass.price ? `$${Number(pass.price).toFixed(0)}` : null}
+        />
       </main>
     );
   }

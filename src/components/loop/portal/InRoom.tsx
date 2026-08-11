@@ -5,9 +5,10 @@ import CameraSheet from "@/components/loop/pose/CameraSheet";
 import WallGallery from "@/components/loop/wall/WallGallery";
 import ModuleSheet from "@/components/loop/shell/ModuleSheet";
 import RunOfShow from "@/components/loop/gathering/RunOfShow";
+import DanceyokeyPanel from "@/components/loop/danceyokey/DanceyokeyPanel";
 import type { RunOfShowItem } from "@/lib/loop/content";
 
-type Surface = "camera" | "wall" | "program" | null;
+type Surface = "camera" | "wall" | "danceyokey" | "program" | null;
 
 /**
  * STATE 2 — the in-room home for pass-holders. A short stack of what's
@@ -89,6 +90,22 @@ export function InRoom({
 
           <button
             type="button"
+            onClick={() => setSurface("danceyokey")}
+            className="loop-panel flex items-center justify-between rounded-3xl px-6 py-5 text-left transition-transform active:scale-[0.98]"
+          >
+            <span>
+              <span className="block text-xl font-extrabold">Danceyokey</span>
+              <span className="block text-sm opacity-75">
+                Claim the floor — pick your song
+              </span>
+            </span>
+            <span aria-hidden className="text-2xl">
+              ✦
+            </span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => setSurface("program")}
             className="rounded-2xl border border-[color-mix(in_srgb,var(--foreground)_25%,transparent)] py-3 text-xs font-bold uppercase tracking-widest"
           >
@@ -104,6 +121,12 @@ export function InRoom({
       {surface === "wall" && (
         <ModuleSheet title="The Wall" onClose={() => setSurface(null)}>
           <WallGallery key={wallBump} canPost />
+        </ModuleSheet>
+      )}
+
+      {surface === "danceyokey" && (
+        <ModuleSheet title="Danceyokey" onClose={() => setSurface(null)}>
+          <DanceyokeyPanel />
         </ModuleSheet>
       )}
 

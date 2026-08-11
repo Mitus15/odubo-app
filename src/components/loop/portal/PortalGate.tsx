@@ -17,11 +17,17 @@ export function PortalGate({
   copy = "Your pass code unlocks the galleries, Pose Studio, the queue, and the live program.",
   cta = "Unlock the Portal",
   tone = "poster",
+  checkoutUrl = null,
+  priceLabel = null,
 }: {
   title?: string;
   copy?: string;
   cta?: string;
   tone?: "poster" | "vault";
+  /** Where someone without a pass goes to get one — a gate with no way in is
+   *  a dead end. */
+  checkoutUrl?: string | null;
+  priceLabel?: string | null;
 }) {
   const router = useRouter();
   const [code, setCode] = useState("");
@@ -92,13 +98,43 @@ export function PortalGate({
         </button>
       </form>
 
+      {/* No pass yet? Then a code prompt alone is a dead end. */}
+      <div className={`mt-5 border-t pt-4 ${vault ? "border-sand/20" : "border-ink/15"}`}>
+        <p className="text-sm font-bold">No pass yet?</p>
+        {checkoutUrl ? (
+          <a
+            href={checkoutUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`mt-2 block rounded-2xl px-5 py-3 text-center font-bold ${
+              vault ? "bg-sand text-ink" : "bg-ink text-sand"
+            }`}
+          >
+            Get a pass{priceLabel ? ` · ${priceLabel}` : ""}
+          </a>
+        ) : (
+          <a
+            href="/loop"
+            className={`mt-2 block rounded-2xl border px-5 py-3 text-center font-bold ${
+              vault ? "border-sand/40 text-sand" : "border-ink/25"
+            }`}
+          >
+            See the event & get a pass
+          </a>
+        )}
+        <p className="loop-muted mt-2 text-xs leading-relaxed">
+          Your code arrives with your pass — it&apos;s what gets you in the door and
+          unlocks the app.
+        </p>
+      </div>
+
       {/* Email delivery can't be trusted yet, so the recovery path is always
           one tap away — at the door as much as at home. */}
       <a
         href="/loop/code"
         className="loop-muted mt-4 block text-center text-[11px] font-bold uppercase tracking-[0.2em] underline underline-offset-4"
       >
-        Didn&apos;t get your code?
+        Bought a pass but no code?
       </a>
     </div>
   );
