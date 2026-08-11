@@ -139,7 +139,7 @@ async function poster({ ev, figure, size, out }) {
 
   // 2. Volume · theme, one line, centred.
   const volSize = Math.round(52 * S);
-  const volY = headBottom + Math.round(120 * S);
+  const volY = headBottom + Math.round(250 * S);
 
   // Type below the hero is fixed in size, so its total height is known before
   // the hero is sized.
