@@ -132,6 +132,26 @@ export async function issueForOrder(
   return { code, isNew: true };
 }
 
+/**
+ * Every code bought with this email address. The buyer's own recovery path
+ * when the confirmation email doesn't arrive — which, with no verified sending
+ * domain, is the normal case rather than the exception (see
+ * docs/decisions/loop-soul-product-architecture.md). Matching is
+ * case-insensitive and trimmed because people type their address by hand.
+ */
+export async function codesForEmail(
+  eventId: string,
+  email: string,
+): Promise<{ code: string; redeemed: boolean }[]> {
+  const rows = await queryDatabase<{ code: string; redeemed_by: string | null }>(
+    `SELECT code, redeemed_by FROM event_codes
+      WHERE event_id = ?1 AND LOWER(TRIM(email)) = ?2
+      ORDER BY created_at ASC`,
+    [eventId, email.trim().toLowerCase()],
+  );
+  return rows.map((r) => ({ code: r.code, redeemed: r.redeemed_by !== null }));
+}
+
 export async function codeForOrder(eventId: string, orderId: string): Promise<string | null> {
   const row = await queryOne<{ code: string }>(
     `SELECT code FROM event_codes WHERE event_id = ?1 AND order_id = ?2`,

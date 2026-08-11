@@ -187,8 +187,11 @@ export function GetPassModal({
 
               <p className="loop-muted mt-5 text-xs leading-relaxed">
                 One code per pass, single use. Buying more than one? You&apos;ll get a
-                code for each — share one with every guest. Keep the email; the code
-                is how you get in.
+                code for each — share one with every guest. Email not arrived?{" "}
+                <a href="/loop/code" className="font-bold underline underline-offset-2">
+                  Look it up with your checkout email
+                </a>{" "}
+                any time.
               </p>
             </>
           )}

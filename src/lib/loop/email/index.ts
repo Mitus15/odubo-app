@@ -36,10 +36,15 @@ class MockEmailProvider implements EmailProvider {
  * does NOT fall back to the mock outbox, so a real miss is visible.
  */
 class ResendEmailProvider implements EmailProvider {
+  constructor(private fromOverride: string | null = null) {}
+
   async send(msg: EmailMessage): Promise<{ ok: boolean }> {
-    // Prefer a Loop-Soul-specific sender; fall back to odubo's shared one so
-    // event-code emails never silently stop when only the shared var is set.
-    const from = process.env.LOOP_RESEND_FROM_EMAIL || process.env.RESEND_FROM_EMAIL;
+    // Sender precedence: admin setting (loop_settings.email_from) → Loop env →
+    // odubo's shared env. It's a setting first because the sending domain is
+    // expected to change (see docs/decisions/loop-soul-product-architecture.md)
+    // and shouldn't need a deploy.
+    const from =
+      this.fromOverride || process.env.LOOP_RESEND_FROM_EMAIL || process.env.RESEND_FROM_EMAIL;
     if (!from) {
       console.error(
         "[loop:email:resend] LOOP_RESEND_FROM_EMAIL / RESEND_FROM_EMAIL are unset — cannot send.",
@@ -74,10 +79,24 @@ class ResendEmailProvider implements EmailProvider {
   }
 }
 
-export function getEmail(): EmailProvider {
+export function getEmail(from: string | null = null): EmailProvider {
   return process.env.EMAIL_MODE === "live" && process.env.RESEND_API_KEY
-    ? new ResendEmailProvider()
+    ? new ResendEmailProvider(from)
     : new MockEmailProvider();
+}
+
+/** The admin-set sender, if any (loop_settings.email_from). Falls back to env
+ *  inside the provider, so an unset value changes nothing. */
+export async function configuredSender(): Promise<string | null> {
+  try {
+    const { queryOne } = await import("@/lib/loop/db");
+    const row = await queryOne<{ value: string }>(
+      `SELECT value FROM loop_settings WHERE key = 'email_from'`,
+    );
+    return row?.value?.trim() || null;
+  } catch {
+    return null;
+  }
 }
 
 /** Deliver several codes (a multi-pass order) in ONE email — one per guest. */
@@ -87,16 +106,17 @@ export async function sendEventCodesEmail(
   eventTitle: string,
 ): Promise<{ ok: boolean }> {
   if (codes.length === 1) return sendEventCodeEmail(to, codes[0], eventTitle);
-  return getEmail().send({
+  return getEmail(await configuredSender()).send({
     to,
     subject: `Your ${codes.length} Loop Soul codes for ${eventTitle}`,
     text:
       `You're in for ${eventTitle} — ${codes.length} passes.\n\n` +
       `Your event codes (one per guest):\n\n` +
       codes.map((c) => `  ${c}`).join("\n") +
-      `\n\nEach code unlocks the room on the night for one person, and lets ` +
-      `them suggest a song for the Soul Loop Anthem at loopsoul.ca. ` +
-      `Share one with each guest and keep yours handy.`,
+      `\n\nEach code admits one guest and unlocks the app on the night. ` +
+      `Share one with every guest and keep yours handy.\n\n` +
+      `Lost them? Look them up any time with this email address on the ` +
+      `"Find your event code" page.`,
   });
 }
 
@@ -106,13 +126,14 @@ export async function sendEventCodeEmail(
   code: string,
   eventTitle: string,
 ): Promise<{ ok: boolean }> {
-  return getEmail().send({
+  return getEmail(await configuredSender()).send({
     to,
     subject: `Your Loop Soul code for ${eventTitle}`,
     text:
       `You're in for ${eventTitle}.\n\n` +
       `Your event code is ${code}.\n\n` +
-      `It unlocks the room on the night, and lets you suggest a song for the ` +
-      `Soul Loop Anthem at loopsoul.ca. Keep it handy.`,
+      `It's your ticket at the door and it unlocks the app on the night. ` +
+      `Keep it handy — and if you lose it, you can look it up any time with ` +
+      `this email address on the "Find your event code" page.`,
   });
 }
