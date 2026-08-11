@@ -234,13 +234,35 @@ export async function composePoster(spec: PosterSpec): Promise<HTMLCanvasElement
     ctx.globalAlpha = 1;
   }
 
-  // 6. Scott's mark — bottom-centre.
+  // 6. Brand row — Odubo PRESENTS (centre), Scott's as VENUE PARTNER (left).
+  const labelFont = `700 ${Math.round(W * 0.012)}px ${spec.fontSans}`;
+  const odubo = await loadInkSvg("/loop/branding/odubo.svg");
+  if (odubo) {
+    const oh = H * 0.045;
+    const ow = (odubo.width / odubo.height) * oh;
+    const oy = H - oh - pad * 0.7;
+    ctx.fillStyle = INK;
+    ctx.font = labelFont;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "bottom";
+    ctx.globalAlpha = 0.6;
+    ctx.fillText("P R E S E N T E D   B Y", W / 2, oy - H * 0.008);
+    ctx.globalAlpha = 1;
+    ctx.drawImage(odubo, W / 2 - ow / 2, oy, ow, oh);
+  }
   const scotts = await loadInkSvg("/loop/branding/scotts-bw.svg");
   if (scotts) {
-    const sh = H * 0.03;
+    const sh = H * 0.02;
     const sw = (scotts.width / scotts.height) * sh;
+    const sy = H - sh - pad * 0.7;
+    ctx.fillStyle = INK;
+    ctx.font = labelFont;
+    ctx.textAlign = "left";
+    ctx.textBaseline = "bottom";
+    ctx.globalAlpha = 0.6;
+    ctx.fillText("V E N U E   P A R T N E R", pad, sy - H * 0.008);
     ctx.globalAlpha = 0.85;
-    ctx.drawImage(scotts, W / 2 - sw / 2, H - sh - pad * 0.8, sw, sh);
+    ctx.drawImage(scotts, pad, sy, sw, sh);
     ctx.globalAlpha = 1;
   }
 
