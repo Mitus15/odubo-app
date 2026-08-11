@@ -230,6 +230,124 @@ export function extractToneCuts(
   return out;
 }
 
+/**
+ * The face, traced on its own terms. A body-wide histogram buries facial
+ * structure — brow, nose, cheek, lip all sit within a couple of percent of
+ * each other while a lit shoulder owns the top of the range — so the head
+ * region gets its own quantiles and a finer grid. This is what makes the
+ * engraving read as a person in ordinary venue light instead of only under
+ * perfect lighting.
+ */
+export function extractFaceCuts(
+  frame: CanvasImageSource,
+  frameW: number,
+  frameH: number,
+  silhouette: SilhouetteResult,
+  cw: number,
+  ch: number,
+  opts: VectorizeOptions = {},
+): { path: Path2D; color: RGB }[] {
+  const o = { ...VECTOR_DEFAULTS, ...opts };
+  const isVideo = opts.toneWorkResVideo !== undefined;
+  const workRes = isVideo ? o.faceWorkResVideo : o.faceWorkResPhoto;
+
+  // Head band: the top slice of the silhouette's own bounding box, not of the
+  // frame — a figure low in frame still gets its face found.
+  const { field: mfield, fw: mfw, fh: mfh } = silhouette;
+  let top = mfh;
+  let bottom = -1;
+  let left = mfw;
+  let right = -1;
+  for (let y = 0; y < mfh; y++) {
+    for (let x = 0; x < mfw; x++) {
+      if (mfield[y * mfw + x] >= o.maskIso) {
+        if (y < top) top = y;
+        if (y > bottom) bottom = y;
+        if (x < left) left = x;
+        if (x > right) right = x;
+      }
+    }
+  }
+  if (bottom < top) return [];
+  const bandBottom = top + (bottom - top) * o.faceRegionFrac;
+
+  const scale = workRes / Math.max(frameW, frameH);
+  const tw = Math.max(1, Math.round(frameW * scale));
+  const th = Math.max(1, Math.round(frameH * scale));
+  const off = getFaceCanvas(tw, th);
+  const ctx = off.getContext("2d", { willReadFrequently: true });
+  if (!ctx) return [];
+  ctx.drawImage(frame, 0, 0, tw, th);
+  let img: ImageData;
+  try {
+    img = ctx.getImageData(0, 0, tw, th);
+  } catch {
+    return [];
+  }
+
+  const n = tw * th;
+  const lum = new Float32Array(n);
+  const d = img.data;
+  for (let i = 0, p = 0; p < n; i += 4, p++) {
+    lum[p] = (0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2]) / 255;
+  }
+  // Blur radius 1 only: heavier smoothing erases the very detail we're after.
+  const blurred = boxBlurField(lum, tw, th, 1);
+
+  // Mask to the head band; everything else is sentinel.
+  let count = 0;
+  const hist = new Float32Array(64);
+  for (let y = 0; y < th; y++) {
+    const my = Math.min(mfh - 1, Math.round((y * mfh) / th));
+    const inBand = my >= top && my <= bandBottom;
+    for (let x = 0; x < tw; x++) {
+      const mx = Math.min(mfw - 1, Math.round((x * mfw) / tw));
+      const p = y * tw + x;
+      if (!inBand || mfield[my * mfw + mx] < o.maskIso) {
+        blurred[p] = -1;
+      } else {
+        count++;
+        hist[Math.min(63, Math.max(0, Math.floor(blurred[p] * 64)))]++;
+      }
+    }
+  }
+  if (count < 64) return [];
+
+  const q = (frac: number): number => {
+    const target = count * frac;
+    let acc = 0;
+    for (let b = 0; b < 64; b++) {
+      acc += hist[b];
+      if (acc >= target) return (b + 0.5) / 64;
+    }
+    return 1;
+  };
+
+  const levels: { iso: number; color: RGB }[] = isVideo
+    ? [{ iso: q(o.faceQuantile1), color: o.cut1 }]
+    : [
+        { iso: q(o.faceQuantile1), color: o.cut1 },
+        { iso: q(o.faceQuantile2), color: o.cut2 },
+      ];
+
+  const sx = cw / tw;
+  const sy = ch / th;
+  const out: { path: Path2D; color: RGB }[] = [];
+  for (const level of levels) {
+    const loops = marchingSquares(blurred, tw, th, level.iso)
+      .filter((l) => Math.abs(l.area) >= count * o.minFaceCutAreaFrac)
+      .sort((a, b) => Math.abs(b.area) - Math.abs(a.area))
+      .slice(0, o.maxFaceCutLoops);
+    if (loops.length === 0) continue;
+    const path = new Path2D();
+    for (const loop of loops) {
+      addLoop(path, smoothLoop(loop, o.faceSimplifyEps, o.chaikinIters), sx, sy);
+    }
+    out.push({ path, color: level.color });
+  }
+  return out;
+}
+
 /** Full scene for one frame (photo: both tone levels; video passes video opts). */
 export function buildScene(
   frame: CanvasImageSource,
@@ -246,7 +364,9 @@ export function buildScene(
   const sil = extractSilhouette(mask, mw, mh, cw, ch, opts);
   if (!sil.path) return { silhouette: null, cuts: [], coverage: sil.coverage };
   const cuts = extractToneCuts(frame, frameW, frameH, sil, cw, ch, state, opts);
-  return { silhouette: sil.path, cuts, coverage: sil.coverage };
+  // Face last so its finer cuts draw over the broad body ones.
+  const face = extractFaceCuts(frame, frameW, frameH, sil, cw, ch, opts);
+  return { silhouette: sil.path, cuts: [...cuts, ...face], coverage: sil.coverage };
 }
 
 /** Draw a scene: sand field → ink silhouette → clipped cuts. */
@@ -324,4 +444,14 @@ function getToneCanvas(w: number, h: number): HTMLCanvasElement {
   if (toneCanvas.width !== w) toneCanvas.width = w;
   if (toneCanvas.height !== h) toneCanvas.height = h;
   return toneCanvas;
+}
+
+/** Separate canvas for the face pass — it runs at a different resolution, and
+ *  sharing one would thrash the size on every frame. */
+let faceCanvas: HTMLCanvasElement | null = null;
+function getFaceCanvas(w: number, h: number): HTMLCanvasElement {
+  if (!faceCanvas) faceCanvas = document.createElement("canvas");
+  if (faceCanvas.width !== w) faceCanvas.width = w;
+  if (faceCanvas.height !== h) faceCanvas.height = h;
+  return faceCanvas;
 }
