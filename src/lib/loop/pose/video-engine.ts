@@ -19,6 +19,7 @@ import { segmentVideoFrame, resetVideoMask, preloadVideoSegmenter, type VideoMas
 import { VECTOR_DEFAULTS } from "./palette";
 import {
   createToneState,
+  extractFaceCuts,
   extractSilhouette,
   extractToneCuts,
   renderScene,
@@ -191,7 +192,7 @@ export class PoseVideoEngine {
         this.scene = { silhouette: sil.path, cuts: this.scene.cuts, coverage: sil.coverage };
         // Interior cuts every Nth frame (they're the expensive lane).
         if (this.frameNo % D.toneEveryN === 0) {
-          this.scene.cuts = extractToneCuts(
+          const body = extractToneCuts(
             this.video,
             this.video.videoWidth,
             this.video.videoHeight,
@@ -201,6 +202,18 @@ export class PoseVideoEngine {
             this.toneState,
             VIDEO_OPTS,
           );
+          // Faces carry the performance — they get the same treatment live as
+          // in stills, drawn over the broad body cuts.
+          const face = extractFaceCuts(
+            this.video,
+            this.video.videoWidth,
+            this.video.videoHeight,
+            sil,
+            cw,
+            ch,
+            VIDEO_OPTS,
+          );
+          this.scene.cuts = [...body, ...face];
         }
       }
       this.silhouetteFor = mask;

@@ -129,6 +129,26 @@ export const VECTOR_DEFAULTS = {
    *  sparse accents (folds, highlights); the figure stays predominantly ink. */
   toneQuantile1: 0.86,
   toneQuantile2: 0.95,
+  /**
+   * FACE NUANCE. One global threshold across a whole body throws the face
+   * away: clothing highlights dominate the histogram, while brow, nose, cheek
+   * and lip structure lives in a narrow band a few percent wide and never
+   * reaches the cut. So the head gets its OWN quantiles, computed from the
+   * head region alone, traced on a finer grid. Without this the style only
+   * reads when the lighting is excellent.
+   */
+  faceQuantile1: 0.62,
+  faceQuantile2: 0.88,
+  /** Top fraction of the silhouette treated as the head region. */
+  faceRegionFrac: 0.3,
+  /** Face cuts are far smaller than body cuts, so they need their own floor. */
+  minFaceCutAreaFrac: 0.0012,
+  maxFaceCutLoops: 20,
+  /** The face is traced at a finer working resolution than the body. */
+  faceWorkResPhoto: 320,
+  faceWorkResVideo: 208,
+  /** Gentler simplification inside the face — features are small. */
+  faceSimplifyEps: 0.9,
   /** Luminance blur radius (work px) before tone tracing. */
   toneBlurR: 2,
   /** Cut loops smaller than this fraction of the silhouette area are noise. */
