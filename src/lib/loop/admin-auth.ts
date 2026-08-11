@@ -8,32 +8,39 @@
  *
  * The HMAC key IS the admin password, so: only someone who knows the password
  * can forge a session, and rotating the password instantly invalidates old
- * sessions. Fails CLOSED — if no password is configured, login and verification
- * both reject.
+ * sessions.
  *
- * Set LOOP_ADMIN_PASSWORD before any deploy. A dev fallback keeps local work
- * frictionless (with a one-time warning); it is refused in production.
+ * OPEN MODE (owner's explicit call, 2026-08-10): while LOOP_ADMIN_PASSWORD is
+ * unset, login accepts anything — including an empty password — so the team
+ * isn't locked out during the test-event phase. Sessions are then signed with
+ * a fixed fallback key, so the moment a real password is set, open-mode
+ * sessions stop verifying and the door locks. Anyone who finds /loop/admin
+ * can enter while open mode is on; set the password when that stops being ok.
  * (Namespaced LOOP_ because this lives inside the shared odubo app — the
  * generic ADMIN_PASSWORD name is a landmine there.)
  */
 
-const DEV_PASSWORD = "loop-soul-dev-admin";
+const FALLBACK_KEY = "loop-soul-dev-admin";
 const SESSION_PAYLOAD = "admin.v1";
 let warnedAboutPassword = false;
 
-/** The configured admin password, or a dev fallback outside production. */
-function getAdminPassword(): string | null {
+/** True while no password is configured — login is open by owner decision. */
+export function adminOpenMode(): boolean {
+  return !process.env.LOOP_ADMIN_PASSWORD;
+}
+
+/** The configured admin password, or the open-mode fallback signing key. */
+function getAdminPassword(): string {
   const pw = process.env.LOOP_ADMIN_PASSWORD;
   if (pw) return pw;
-  if (process.env.NODE_ENV === "production") return null; // fail closed in prod
   if (!warnedAboutPassword) {
     warnedAboutPassword = true;
     console.warn(
-      "[loop:admin] LOOP_ADMIN_PASSWORD is not set — using an insecure dev fallback " +
-        `("${DEV_PASSWORD}"). Set it before any deploy.`,
+      "[loop:admin] LOOP_ADMIN_PASSWORD is not set — admin is in OPEN MODE " +
+        "(any login is accepted). Set the env var to lock it down.",
     );
   }
-  return DEV_PASSWORD;
+  return FALLBACK_KEY;
 }
 
 function toBase64Url(bytes: Uint8Array): string {
@@ -63,24 +70,24 @@ function safeEqual(a: string, b: string): boolean {
   return diff === 0;
 }
 
-/** True if the submitted password matches the configured one (constant-time). */
+/** True if the submitted password matches (constant-time) — or open mode is on. */
 export function verifyPassword(input: string | undefined | null): boolean {
+  if (adminOpenMode()) return true;
   const pw = getAdminPassword();
-  if (!pw || !input) return false;
+  if (!input) return false;
   return safeEqual(input, pw);
 }
 
 /** Mint a signed admin session token to set as the `ls_admin` cookie. */
 export async function signAdminSession(): Promise<string | null> {
   const pw = getAdminPassword();
-  if (!pw) return null;
   return `${SESSION_PAYLOAD}.${await hmac(SESSION_PAYLOAD, pw)}`;
 }
 
-/** Verify an `ls_admin` cookie token. Fails closed if no password configured. */
+/** Verify an `ls_admin` cookie token against the current signing key. */
 export async function verifyAdminSession(token: string | undefined | null): Promise<boolean> {
   const pw = getAdminPassword();
-  if (!pw || !token) return false;
+  if (!token) return false;
   const dot = token.lastIndexOf(".");
   if (dot <= 0) return false;
   const payload = token.slice(0, dot);

@@ -47,7 +47,9 @@ function AdminLoginForm() {
   return (
     <main className="mx-auto flex min-h-[70vh] max-w-sm flex-col justify-center px-6 py-12">
       <h1 className="text-2xl font-extrabold">Loop Soul · Admin</h1>
-      <p className="mt-2 text-sm opacity-70">Enter the team password to continue.</p>
+      <p className="mt-2 text-sm opacity-70">
+        Enter the team password — if none is set yet, just tap Enter.
+      </p>
 
       <form onSubmit={submit} className="mt-8 grid gap-4">
         <label className="grid gap-2">
@@ -66,7 +68,7 @@ function AdminLoginForm() {
 
         <button
           type="submit"
-          disabled={busy || password.length === 0}
+          disabled={busy}
           className="flex items-center justify-center gap-2 rounded-2xl border border-ink bg-ink px-5 py-3 font-bold text-sand transition-opacity disabled:opacity-50"
         >
           {busy ? <LoopLoader size={24} label="Signing in" /> : "Enter"}
