@@ -31,8 +31,8 @@ write-up says Loop Soul. *(Already true in code — this makes it a rule.)*
 
 | # | Deliverable | For | Status |
 |---|---|---|---|
-| 1 | **Print posters** (2–3, print-ready) | Physical distribution, Kamloops | Poster Studio built; produce + export |
-| 2 | **Ticket / wristband artwork** | Shopify product image, physical wristband, digital keepsake | Source art found: `Images:banners/Banner1.png` (2550×1000, old green — needs recolour) |
+| 1 | **Print posters** (2–3, print-ready) | Physical distribution, Kamloops | ✅ DONE — three, 2400×3300 (8×11in @300dpi), in `~/Documents/Loop-soul-the-entertainment-room/print-2026-08/` |
+| 2 | **Ticket / wristband artwork** | Shopify product image, physical wristband, digital keepsake | ✅ DONE — 2550×1000 with tear-off stub, same folder |
 | 3 | **Wallet-ready pass** | Guests keep it on their phone | Design after #2 |
 | 4 | **Venue brief for Scott's** | Scott's Inn (venue partner) | To write |
 | 5 | **Concept brief for performers / promoters / affiliates** | Recruiting the room's talent + reach | To write |
