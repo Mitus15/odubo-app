@@ -18,13 +18,19 @@ import { getPassSettings } from "./settings";
 
 /* ---------------------------------------------------------------- webhook */
 
-/** Verify Shopify's X-Shopify-Hmac-Sha256 over the RAW body (base64 HMAC). */
-export function verifyShopifyHmac(rawBody: string, signature: string | null): boolean {
-  const secret = process.env.SHOPIFY_WEBHOOK_SECRET;
+/** Verify Shopify's X-Shopify-Hmac-Sha256 over the RAW body (base64 HMAC).
+ *  The secret comes from pass settings (D1 `pass_webhook_secret`, env
+ *  fallback) — API-registered webhooks sign with the registering app's API
+ *  secret key, not the store notification secret. */
+export function verifyShopifyHmac(
+  rawBody: string,
+  signature: string | null,
+  secret: string | null,
+): boolean {
   if (!secret) {
     // No secret configured: allow only outside production (local/mock driving).
     if (process.env.NODE_ENV === "production") {
-      console.error("[loop:pass] SHOPIFY_WEBHOOK_SECRET is not set — rejecting webhook.");
+      console.error("[loop:pass] no webhook secret configured — rejecting webhook.");
       return false;
     }
     console.warn("[loop:pass] Skipping webhook signature verification (dev, no secret).");
