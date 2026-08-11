@@ -1,6 +1,6 @@
 import type { LoopEvent } from "@/lib/loop/hub";
 import { currentVoterId, getAnthemState } from "@/lib/loop/anthem-server";
-import { getEventbrite } from "@/lib/loop/eventbrite";
+import { getPassProvider } from "@/lib/loop/pass";
 import { getRunOfShow } from "@/lib/loop/content-store";
 import GatheringPoster from "@/components/loop/gathering/GatheringPoster";
 
@@ -15,7 +15,7 @@ export async function GatheringHome({ event }: { event: LoopEvent }) {
   const voterId = await currentVoterId();
   const [anthem, capacity, runOfShow] = await Promise.all([
     getAnthemState(event, voterId),
-    getEventbrite().getCapacity(),
+    getPassProvider().getCapacity(),
     getRunOfShow(event.id),
   ]);
 

@@ -1,7 +1,7 @@
 import type { LoopEvent } from "@/lib/loop/hub";
 import { currentVoterId } from "@/lib/loop/anthem-server";
 import { isHolder } from "@/lib/loop/event-codes";
-import { getEventbrite } from "@/lib/loop/eventbrite";
+import { getPassProvider } from "@/lib/loop/pass";
 import PortalGate from "@/components/loop/portal/PortalGate";
 import PoseStudioShell from "@/components/loop/pose/PoseStudioShell";
 
@@ -25,7 +25,7 @@ export async function PortalHome({ event }: { event: LoopEvent }) {
     );
   }
 
-  const cap = await getEventbrite().getCapacity();
+  const cap = await getPassProvider().getCapacity();
 
   return (
     <main className="flex flex-col items-center px-6 pb-24 pt-10 text-center">
