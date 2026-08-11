@@ -2,16 +2,25 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { listItems, deleteItem, type GalleryItem } from "@/lib/loop/pose/gallery";
+import { postToWall, savedWallName } from "@/lib/loop/wall/client";
 
 /**
  * On-device gallery — the stills and clips saved from Photo/Video mode
- * (IndexedDB, nothing uploaded). View, share, or delete. Becomes the R2 sync
- * source once the backend lands.
+ * (IndexedDB). View, share, or delete. In the gated Portal (`wallEnabled`)
+ * each item can also be posted to the Wall — the room's shared gallery.
  */
-export function PoseGallery({ refreshKey }: { refreshKey?: number }) {
+export function PoseGallery({
+  refreshKey,
+  wallEnabled = false,
+}: {
+  refreshKey?: number;
+  wallEnabled?: boolean;
+}) {
   const [items, setItems] = useState<GalleryItem[]>([]);
   const [urls, setUrls] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
+  const [wallState, setWallState] = useState<Record<string, "posting" | "posted">>({});
+  const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -35,6 +44,27 @@ export function PoseGallery({ refreshKey }: { refreshKey?: number }) {
   async function remove(id: string) {
     await deleteItem(id);
     await load();
+  }
+
+  async function post(it: GalleryItem) {
+    if (wallState[it.id]) return;
+    setWallState((s) => ({ ...s, [it.id]: "posting" }));
+    setError(null);
+    try {
+      const ext = it.kind === "video" ? "webm" : "jpg";
+      await postToWall(it.blob, {
+        fileName: `loop-soul.${ext}`,
+        userName: savedWallName() || null,
+      });
+      setWallState((s) => ({ ...s, [it.id]: "posted" }));
+    } catch (e) {
+      setError((e as Error).message);
+      setWallState((s) => {
+        const next = { ...s };
+        delete next[it.id];
+        return next;
+      });
+    }
   }
 
   async function share(it: GalleryItem) {
@@ -66,7 +96,13 @@ export function PoseGallery({ refreshKey }: { refreshKey?: number }) {
   }
 
   return (
-    <div className="grid w-full grid-cols-2 gap-3">
+    <div className="flex w-full flex-col gap-3">
+      {error && (
+        <p className="w-full rounded-2xl border border-sand/30 bg-ink-soft px-4 py-3 text-center text-sm text-sand">
+          {error}
+        </p>
+      )}
+      <div className="grid w-full grid-cols-2 gap-3">
       {items.map((it) => (
         <div key={it.id} className="relative overflow-hidden rounded-2xl border border-sand/20 bg-black">
           {it.kind === "video" ? (
@@ -77,6 +113,20 @@ export function PoseGallery({ refreshKey }: { refreshKey?: number }) {
             <img src={urls[it.id]} alt="Saved Loop Soul" className="aspect-[3/4] w-full object-cover" />
           )}
           <div className="absolute inset-x-0 bottom-0 flex justify-between gap-1 bg-gradient-to-t from-ink/80 to-transparent p-2">
+            {wallEnabled && (
+              <button
+                type="button"
+                onClick={() => post(it)}
+                disabled={!!wallState[it.id]}
+                className="rounded-full bg-sand-bright px-3 py-1 text-[11px] font-bold text-ink active:scale-95 disabled:opacity-70"
+              >
+                {wallState[it.id] === "posted"
+                  ? "On the Wall ✦"
+                  : wallState[it.id] === "posting"
+                    ? "Posting…"
+                    : "Wall"}
+              </button>
+            )}
             <button
               type="button"
               onClick={() => share(it)}
@@ -100,6 +150,7 @@ export function PoseGallery({ refreshKey }: { refreshKey?: number }) {
           )}
         </div>
       ))}
+      </div>
     </div>
   );
 }

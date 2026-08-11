@@ -1,0 +1,19 @@
+{
+  "name": "Loop Soul",
+  "short_name": "Loop Soul",
+  "description": "The soul of Kamloops — the room, the Wall, the anthem.",
+  "start_url": "/loop",
+  "scope": "/loop",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#d9aa7a",
+  "theme_color": "#d9aa7a",
+  "icons": [
+    {
+      "src": "/loop/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

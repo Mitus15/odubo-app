@@ -41,7 +41,7 @@ export async function PortalHome({ event }: { event: LoopEvent }) {
       </div>
 
       <section className="mt-12 w-full">
-        <PoseStudioShell />
+        <PoseStudioShell wallEnabled />
       </section>
     </main>
   );

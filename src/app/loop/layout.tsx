@@ -31,6 +31,14 @@ export const metadata: Metadata = {
   description:
     "The soul of Kamloops, before, during, and between events. A Loop Soul series experience at Scott's Inn.",
   applicationName: "Loop Soul",
+  // Loop-scoped manifest → "Add to Home Screen" installs /loop as its own
+  // standalone app (overrides odubo's /site.webmanifest for this segment).
+  manifest: "/loop/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    title: "Loop Soul",
+    statusBarStyle: "default",
+  },
 };
 
 export const viewport: Viewport = {

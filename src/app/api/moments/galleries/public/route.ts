@@ -11,7 +11,9 @@ export async function GET(req: Request) {
     const offset = Math.max(0, Number(url.searchParams.get('offset') || '0'));
     const includePreview = url.searchParams.get('preview') === 'true';
 
-    // In the future: filter by visibility in config JSON
+    // Galleries whose config marks them private (config.visibility = 'private')
+    // are link/code-access only and stay off the public listing. json_valid
+    // guards rows with malformed config; missing visibility means public.
     const rows = await queryDatabase(
       `SELECT g.id, g.title, g.description, g.starts_at, g.ends_at, g.created_at, g.updated_at,
         (
@@ -31,6 +33,8 @@ export async function GET(req: Request) {
           WHERE gp.gallery_id = g.id AND (gp.moderated != 2 OR gp.moderated IS NULL)
         ) AS photo_count
        FROM galleries g
+       WHERE g.config IS NULL
+          OR NOT (json_valid(g.config) AND json_extract(g.config, '$.visibility') = 'private')
        ORDER BY g.created_at DESC
        LIMIT ? OFFSET ?`,
       [limit, offset]

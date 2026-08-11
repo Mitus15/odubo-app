@@ -5,13 +5,24 @@ import { useState } from "react";
 import LoopLoader from "@/components/loop/brand/LoopLoader";
 
 /**
- * The Portal (State 2) entry gate. A ticket-holder redeems their event code to
- * unlock the in-room experience. On success we refresh the route — the server
- * re-renders the unlocked Portal because `isHolder` is now true for this
- * `ls_voter`. Reuses the existing /api/anthem/redeem endpoint (which binds the
- * code to the voter and marks them a holder).
+ * The event-code gate. A ticket-holder redeems their code to unlock the
+ * attendee-only surfaces — the Portal in State 2, the Vault in Legacy. On
+ * success we refresh the route — the server re-renders unlocked because
+ * `isHolder` is now true for this `ls_voter`. Reuses the existing
+ * /api/anthem/redeem endpoint (which binds the code to the voter and marks
+ * them a holder). `tone="vault"` restyles for the dark Legacy field.
  */
-export function PortalGate() {
+export function PortalGate({
+  title = "Enter your event code",
+  copy = "Your pass code unlocks the galleries, Pose Studio, the queue, and the live program.",
+  cta = "Unlock the Portal",
+  tone = "poster",
+}: {
+  title?: string;
+  copy?: string;
+  cta?: string;
+  tone?: "poster" | "vault";
+}) {
   const router = useRouter();
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -41,13 +52,15 @@ export function PortalGate() {
     );
   }
 
+  const vault = tone === "vault";
   return (
-    <div className="mt-12 w-full max-w-md rounded-2xl border border-ink/15 bg-ink/5 px-5 py-6 text-left">
-      <div className="font-bold">Enter your event code</div>
-      <div className="mt-1 text-sm opacity-70">
-        Your pass code unlocks the galleries, Pose Studio, the queue, and the live
-        program.
-      </div>
+    <div
+      className={`mt-12 w-full max-w-md rounded-2xl border px-5 py-6 text-left ${
+        vault ? "border-sand/25 bg-sand/5" : "border-ink/15 bg-ink/5"
+      }`}
+    >
+      <div className="font-bold">{title}</div>
+      <div className="mt-1 text-sm opacity-70">{copy}</div>
 
       <form onSubmit={submit} className="mt-5 grid gap-3">
         <input
@@ -57,15 +70,25 @@ export function PortalGate() {
           autoCapitalize="characters"
           spellCheck={false}
           placeholder="e.g. LOOP-XXXX"
-          className="rounded-2xl border border-ink/15 bg-bone px-4 py-3 font-mono uppercase tracking-widest outline-none focus:border-ink"
+          className={`rounded-2xl border px-4 py-3 font-mono uppercase tracking-widest outline-none ${
+            vault
+              ? "border-sand/30 bg-ink-soft text-bone focus:border-sand"
+              : "border-ink/15 bg-bone focus:border-ink"
+          }`}
         />
-        {error ? <p className="text-sm font-semibold text-red-600">{error}</p> : null}
+        {error ? (
+          <p className={`text-sm font-semibold ${vault ? "text-sand-bright" : "text-red-600"}`}>
+            {error}
+          </p>
+        ) : null}
         <button
           type="submit"
           disabled={busy || code.trim().length === 0}
-          className="flex items-center justify-center gap-2 rounded-2xl border border-ink bg-ink px-5 py-3 font-bold text-sand transition-opacity disabled:opacity-50"
+          className={`flex items-center justify-center gap-2 rounded-2xl border px-5 py-3 font-bold transition-opacity disabled:opacity-50 ${
+            vault ? "border-sand bg-sand text-ink" : "border-ink bg-ink text-sand"
+          }`}
         >
-          {busy ? <LoopLoader size={24} label="Unlocking" /> : "Unlock the Portal"}
+          {busy ? <LoopLoader size={24} label="Unlocking" /> : cta}
         </button>
       </form>
     </div>
