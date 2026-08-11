@@ -54,8 +54,12 @@ uniform vec3 uRimColor;
 uniform float uBands;
 uniform vec3 uBg;
 uniform int uHasMask;
+uniform vec2 uEdgeMap; // (threshold, range) — shared with the Canvas engine
 
 float luma(vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
+
+uniform vec2 uMaskStep; // (lo, hi) — confidence hardening, shared with Canvas
+float harden(float c) { return smoothstep(uMaskStep.x, uMaskStep.y, c); }
 
 void main() {
   float l = luma(texture(uFrame, vUv).rgb);
@@ -71,14 +75,14 @@ void main() {
   float br = luma(texture(uFrame, vUv + uTexel * vec2( 1.0, 1.0)).rgb);
   float gx = (tr + 2.0*mr + br) - (tl + 2.0*ml + bl);
   float gy = (bl + 2.0*bc + br) - (tl + 2.0*tc + tr);
-  float line = clamp((length(vec2(gx, gy)) / 2.0 - 0.06) / 0.4, 0.0, 1.0);
+  float line = clamp((length(vec2(gx, gy)) / 2.0 - uEdgeMap.x) / uEdgeMap.y, 0.0, 1.0);
 
   // Tone → posterize → brand LUT.
   float tone = pow(clamp(l, 0.0, 1.0), uGamma);
   if (uBands > 1.0) tone = floor(tone * (uBands - 1.0) + 0.5) / (uBands - 1.0);
   vec3 s = texture(uLut, vec2(tone, 0.5)).rgb;
 
-  float conf = uHasMask == 1 ? texture(uMask, vUv).r : 1.0;
+  float conf = uHasMask == 1 ? harden(texture(uMask, vUv).r) : 1.0;
 
   // Contour line-art.
   s = mix(s, uEdgeColor, line * uEdgeStrength * conf);
@@ -143,7 +147,7 @@ export class GLStylizer {
     gl.enableVertexAttribArray(loc);
     gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
 
-    for (const name of ["uFrame","uMask","uLut","uTexel","uGamma","uEdgeStrength","uEdgeColor","uRimStrength","uRimColor","uBands","uBg","uHasMask","uMirror"]) {
+    for (const name of ["uFrame","uMask","uLut","uTexel","uGamma","uEdgeStrength","uEdgeColor","uRimStrength","uRimColor","uBands","uBg","uHasMask","uMirror","uEdgeMap","uMaskStep"]) {
       this.u[name] = gl.getUniformLocation(prog, name);
     }
     gl.uniform1i(this.u.uFrame, 0);
@@ -201,8 +205,11 @@ export class GLStylizer {
     gl.bindTexture(gl.TEXTURE_2D, this.lutTex);
 
     // Uniforms (defaults from the shared palette so video == photo).
-    const edgeScale = params.edgeScale ?? 1.5;
+    // edgeScale 2.0 stands in for the Canvas engine's preSmooth 2 + dilate 1.
+    const edgeScale = params.edgeScale ?? 2.0;
     gl.uniform2f(this.u.uTexel, edgeScale / w, edgeScale / h);
+    gl.uniform2f(this.u.uEdgeMap, DEFAULTS.edgeThreshold, DEFAULTS.edgeRange);
+    gl.uniform2f(this.u.uMaskStep, DEFAULTS.maskLo, DEFAULTS.maskHi);
     gl.uniform1f(this.u.uGamma, gammaFor(params.silhouetteStrength ?? DEFAULTS.silhouetteStrength));
     gl.uniform1f(this.u.uEdgeStrength, params.edgeStrength ?? DEFAULTS.edgeStrength);
     gl.uniform3fv(this.u.uEdgeColor, norm(params.edgeColor ?? DEFAULTS.edgeColor));

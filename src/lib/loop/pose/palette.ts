@@ -16,14 +16,16 @@ export const SAND_DEEP: RGB = [156, 95, 60]; // #9c5f3c
 export const SAND: RGB = [217, 170, 122]; // #d9aa7a
 export const SAND_BRIGHT: RGB = [240, 211, 173]; // #f0d3ad
 
-/** Subject tone ramp: stays dark through the mids (silhouette), warms up only
- *  in the highlights — matching the dark-warm-shifted hero figures. */
+/** Subject tone ramp for the ENGRAVED look: the figure holds near-solid ink
+ *  deep into the mids (a woodcut block, not a shaded portrait) and only true
+ *  highlights lift toward the paper — the sand line-work supplies the interior
+ *  detail, matching the poster figures (see the DJ reference). */
 export const RAMP: { at: number; color: RGB }[] = [
   { at: 0.0, color: INK },
-  { at: 0.35, color: INK_SOFT },
-  { at: 0.65, color: SAND_DEEP },
-  { at: 0.88, color: SAND },
-  { at: 1.0, color: SAND_BRIGHT },
+  { at: 0.5, color: INK },
+  { at: 0.75, color: INK_SOFT },
+  { at: 0.92, color: SAND_DEEP },
+  { at: 1.0, color: SAND },
 ];
 
 /** Build a 256-entry RGB LUT from the ramp (row of an RGB texture / Canvas LUT). */
@@ -52,26 +54,48 @@ export function buildLUT(): Uint8ClampedArray {
 /** Precomputed LUT (built once at module load) — shared by the Canvas path. */
 export const LUT: Uint8ClampedArray = buildLUT();
 
-/** The canonical "B3" Loop Soul look — the tuned defaults both renderers use.
- *  These ARE the signature effect; keep them here so photo == video. */
+/** The canonical Loop Soul look — "the engraving" (v2, tuned against the DJ
+ *  poster reference): near-solid ink figure, strong paper-colour line-work
+ *  tracing folds and features, flat sand field, no rim glow. These ARE the
+ *  signature effect; keep them here so photo == video. */
 export const DEFAULTS = {
   /** 0 → fully shaded; 1 → near-flat silhouette. */
-  silhouetteStrength: 0.85,
+  silhouetteStrength: 0.9,
   /** Contour line-art (Sobel edges) strength. 0 → off. */
-  edgeStrength: 0.3,
-  /** Colour of the contour lines. */
-  edgeColor: SAND_BRIGHT as RGB,
-  /** Rim-light strength around the silhouette. 0 → off. */
-  rimStrength: 0.5,
+  edgeStrength: 0.9,
+  /** Colour of the contour lines — the FIELD colour, so lines read as paper
+   *  cut through the ink (woodcut), not as a glow. */
+  edgeColor: SAND as RGB,
+  /** Rim-light strength around the silhouette. The reference figures sit flat
+   *  on the field with no glow — off. */
+  rimStrength: 0,
   /** Tone bands (posterize). 0/1 → smooth. */
-  posterize: 5,
-  /** Edge-preserving pre-smooth radius (px) before edge detection. 0 → off. */
+  posterize: 3,
+  /** Edge-preserving pre-smooth radius (px) before edge detection. 0 → off.
+   *  Kept tight — heavier smoothing mushes the cuts the engraving relies on. */
   preSmooth: 1,
   /** Dilate the contour lines by this radius (px) for ink-weight. 0 → hairline. */
   edgeWeight: 1,
   /** Background fill (the sand field). */
   background: SAND as RGB,
+  /** Sobel magnitude → line intensity mapping (shared by BOTH engines):
+   *  line = clamp((mag/2 - edgeThreshold) / edgeRange). Lower threshold picks
+   *  up finer fold lines; smaller range makes lines commit faster — the
+   *  engraving wants decisive cuts, not gradients. */
+  edgeThreshold: 0.04,
+  edgeRange: 0.2,
+  /** Subject-mask hardening (smoothstep lo→hi on confidence, shared by BOTH
+   *  engines): turns the feathered segmentation edge into the clean poster cut
+   *  of the reference. Narrower window = harder cut. */
+  maskLo: 0.35,
+  maskHi: 0.65,
 } as const;
+
+/** Shared confidence-hardening curve (smoothstep between DEFAULTS.maskLo/Hi). */
+export function hardenMask(conf: number): number {
+  const t = clamp01((conf - DEFAULTS.maskLo) / (DEFAULTS.maskHi - DEFAULTS.maskLo));
+  return t * t * (3 - 2 * t);
+}
 
 /** silhouetteStrength → tone-curve gamma (shared so both paths darken alike). */
 export function gammaFor(silhouetteStrength: number): number {
