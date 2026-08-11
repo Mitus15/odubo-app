@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPassCapacity } from "@/lib/loop/pass";
-import { getPassSettings, setPassSetting } from "@/lib/loop/pass/settings";
+import { getPassSettings, setPassSetting, type PassSettings } from "@/lib/loop/pass/settings";
+
+/** Never echo the webhook signing secret to the client — presence only. */
+function publicSettings(s: PassSettings) {
+  const { webhookSecret, ...rest } = s;
+  return { ...rest, hasWebhookSecret: Boolean(webhookSecret) };
+}
 
 /** Pass-sales configuration. Auth: middleware gates /api/loop/admin/*. */
 export async function GET() {
   const [settings, capacity] = await Promise.all([getPassSettings(), getPassCapacity()]);
-  return NextResponse.json({ settings, capacity });
+  return NextResponse.json({ settings: publicSettings(settings), capacity });
 }
 
 export async function POST(req: NextRequest) {
@@ -35,5 +41,5 @@ export async function POST(req: NextRequest) {
   if (body.mode !== undefined) await setPassSetting("pass_mode", body.mode);
 
   const [settings, capacity] = await Promise.all([getPassSettings(), getPassCapacity()]);
-  return NextResponse.json({ success: true, settings, capacity });
+  return NextResponse.json({ success: true, settings: publicSettings(settings), capacity });
 }
