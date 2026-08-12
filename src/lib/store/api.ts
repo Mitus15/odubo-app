@@ -44,6 +44,7 @@ const PRODUCT_CARD_FIELDS = `#graphql
   handle
   title
   availableForSale
+  tags
   priceRange {
     minVariantPrice {
       amount
@@ -274,6 +275,7 @@ function toProductSummary(p: any): ProductSummary {
     currency: p.priceRange?.minVariantPrice?.currencyCode || 'USD',
     available: p.availableForSale,
     collection: p.collections?.edges?.[0]?.node?.handle,
+    tags: p.tags ?? [],
   };
 }
 
