@@ -33,7 +33,12 @@ export function generateSeoMetadata({
   path?: string;
   ogImage?: string;
   noIndex?: boolean;
-  type?: 'website' | 'article' | 'music.album' | 'video.other' | 'product';
+  // No 'product': Next's Metadata API only accepts the OpenGraph types it
+  // models (website / article / book / profile / music.* / video.*) and throws
+  // "Invalid OpenGraph type: product" at render. `product` is an OG extension
+  // Facebook understands but Next does not — it is expressed through the
+  // `product:price:*` meta tags instead (see generateProductMetadata).
+  type?: 'website' | 'article' | 'music.album' | 'video.other';
 }): Metadata {
   const fullTitle = title
     ? `${title} | ${DEFAULT_SEO.siteName}`
@@ -102,15 +107,18 @@ export function generateProductMetadata({
     description: description || `Shop ${title} at Odubo Studio`,
     path: `/store/product/${handle}`,
     ogImage: image,
-    type: 'product',
+    type: 'website',
   });
 
-  // Add product-specific meta
+  // og:type stays "website". Next emits og:* as `property=`, but anything in
+  // `other` comes out as `name=`, so re-declaring og:type here just produces
+  // two contradictory tags and scrapers read the `property=` one regardless.
+  // The price tags below are what actually carry the commerce signal.
   if (price) {
     metadata.other = {
       ...metadata.other,
       'product:price:amount': price,
-      'product:price:currency': currency,
+      'product:price:currency': currency ?? '',
     };
   }
 
