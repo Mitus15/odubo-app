@@ -1,10 +1,10 @@
 import type { NextConfig } from "next";
-import { setupDevPlatform } from '@cloudflare/next-on-pages/next-dev';
 
-// Set up Cloudflare platform for local development
-if (process.env.NODE_ENV === 'development') {
-  setupDevPlatform();
-}
+// No setupDevPlatform(): that emulated Cloudflare *bindings* for a Pages
+// deploy we no longer do. Nothing reads bindings — D1 is reached over HTTP via
+// DATABASE_URL (src/lib/db.ts), R2 over the S3 API — so it only cost every
+// `next dev` a workerd boot. Cloudflare itself stays: D1, R2 and Stream are
+// still the data layer, and wrangler still runs migrations.
 
 const nextConfig: NextConfig = {
   reactStrictMode: false,
