@@ -60,7 +60,7 @@ export function GatheringPoster({
   const [passOpen, setPassOpen] = useState(false);
   const [capacity, setCapacity] = useState<Capacity>(initialCapacity);
 
-  // Keep the scarcity number fresh (mock Eventbrite now, live later).
+  // Keep the scarcity number fresh — it reads the real issued-code ledger.
   useEffect(() => {
     const tick = async () => {
       try {

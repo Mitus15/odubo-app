@@ -50,15 +50,13 @@ export function AnthemControls({
 
   async function simulatePurchase() {
     setBusy(true);
-    const orderId = `sim-${crypto.randomUUID().slice(0, 8)}`;
-    const email = `test+${orderId}@loopsoul.ca`;
-    const res = await fetch("/api/loop/eventbrite/webhook", {
+    const res = await fetch("/api/loop/admin/simulate-purchase", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ orderId, email }),
+      body: JSON.stringify({}),
     });
-    const data = (await res.json()) as { code?: string };
-    setSimulated(data.code ? `${data.code} → emailed to ${email} (mock)` : "failed");
+    const data = (await res.json()) as { code?: string; email?: string };
+    setSimulated(data.code ? `${data.code} → ${data.email}` : "failed");
     setBusy(false);
     startTransition(() => router.refresh());
   }
@@ -171,7 +169,7 @@ export function AnthemControls({
             Simulate a ticket purchase
           </button>
           <span className="text-xs opacity-60">
-            Test the auto-issue flow (live once Eventbrite + email are wired)
+            Test the buy → code → email flow without taking money
           </span>
         </div>
         {simulated && (

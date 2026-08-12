@@ -31,7 +31,13 @@ export type LoopEvent = {
   phase: EventPhase;
 };
 
-/** Mock "current event" until the D1 `events` table exists. */
+/**
+ * Seed "current event" until the D1 `events` table exists.
+ *
+ * `capacity` here is only a FALLBACK — the live number is an admin-editable
+ * override in `event_overrides` (migration 149). The venue owns that figure and
+ * had not confirmed it, so it must be changeable without a deploy.
+ */
 export const MOCK_CURRENT_EVENT: LoopEvent = {
   id: "vol-1",
   title: "Volume 1",
@@ -71,8 +77,8 @@ export async function getCurrentPhase(): Promise<EventPhase> {
 
 export async function getCurrentEvent(): Promise<LoopEvent> {
   const phase = await getCurrentPhase();
-  // Admin-editable details (theme/title/venue) layer over the seed; id, date,
-  // capacity, and phase stay controlled here.
+  // Admin-editable details (title/theme/venue/capacity) layer over the seed;
+  // id and date stay controlled here, and phase has its own store.
   const overrides = await getEventOverrides(MOCK_CURRENT_EVENT.id);
   return { ...MOCK_CURRENT_EVENT, ...overrides, phase };
 }
