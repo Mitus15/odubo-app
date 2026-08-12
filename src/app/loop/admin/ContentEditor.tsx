@@ -9,16 +9,18 @@ type Field = { key: string; label: string; placeholder?: string; wide?: boolean 
 
 /**
  * Generic list editor (mirrors the AnthemControls pattern): edit rows inline,
- * add / remove / reorder, then Save posts the whole list to /api/admin/content
- * and refreshes. Edits stay local until Save so mid-typing isn't persisted.
+ * add / remove / reorder, then Save posts the whole list as `{ items }` to
+ * `endpoint` and refreshes. Edits stay local until Save so mid-typing isn't
+ * persisted. Shared by the Run of Show and the Journal's Iconic Moments.
  */
-function ListEditor<T extends { id: string }>({
+export function ListEditor<T extends { id: string }>({
   title,
   hint,
   fields,
   initial,
   makeRow,
   addLabel,
+  endpoint = "/api/loop/admin/content",
 }: {
   title: string;
   hint: string;
@@ -26,6 +28,7 @@ function ListEditor<T extends { id: string }>({
   initial: T[];
   makeRow: () => T;
   addLabel: string;
+  endpoint?: string;
 }) {
   const router = useRouter();
   const [rows, setRows] = useState<T[]>(initial);
@@ -57,7 +60,7 @@ function ListEditor<T extends { id: string }>({
   }
   async function save() {
     setBusy(true);
-    await fetch("/api/loop/admin/content", {
+    await fetch(endpoint, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ items: rows }),
