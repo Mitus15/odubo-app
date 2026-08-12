@@ -14,6 +14,7 @@ import type {
   ShopifyConnection,
 } from './types';
 import { normalizeCountry } from './money';
+import { ODUBO_EXCLUDED_TAGS, excludeTagsClause } from './brands';
 
 // ============================================
 // Configuration
@@ -37,6 +38,41 @@ const getConfig = () => {
 // GraphQL Queries
 // ============================================
 
+/** Grid-card shape, shared so the two listing queries can never drift apart. */
+const PRODUCT_CARD_FIELDS = `#graphql
+  id
+  handle
+  title
+  availableForSale
+  priceRange {
+    minVariantPrice {
+      amount
+      currencyCode
+    }
+  }
+  compareAtPriceRange {
+    minVariantPrice {
+      amount
+      currencyCode
+    }
+  }
+  images(first: 1) {
+    edges {
+      node {
+        url
+        altText
+      }
+    }
+  }
+  collections(first: 1) {
+    edges {
+      node {
+        handle
+      }
+    }
+  }
+`;
+
 const PRODUCTS_QUERY = `#graphql
   query Products($first: Int!, $after: String, $sortKey: ProductSortKeys, $reverse: Boolean, $query: String, $country: CountryCode!) @inContext(country: $country) {
     products(first: $first, after: $after, sortKey: $sortKey, reverse: $reverse, query: $query) {
@@ -46,36 +82,32 @@ const PRODUCTS_QUERY = `#graphql
       }
       edges {
         node {
-          id
-          handle
-          title
-          availableForSale
-          priceRange {
-            minVariantPrice {
-              amount
-              currencyCode
-            }
-          }
-          compareAtPriceRange {
-            minVariantPrice {
-              amount
-              currencyCode
-            }
-          }
-          images(first: 1) {
-            edges {
-              node {
-                url
-                altText
-              }
-            }
-          }
-          collections(first: 1) {
-            edges {
-              node {
-                handle
-              }
-            }
+          ${PRODUCT_CARD_FIELDS}
+        }
+      }
+    }
+  }
+`;
+
+/**
+ * Products of one collection. This is the real collection read — the Storefront
+ * API exposes collection membership here and NOT as a `products(query:)` filter,
+ * which is why the Loop Soul store cannot be built out of fetchProducts().
+ */
+const COLLECTION_PRODUCTS_QUERY = `#graphql
+  query CollectionProducts($handle: String!, $first: Int!, $after: String, $sortKey: ProductCollectionSortKeys, $reverse: Boolean, $country: CountryCode!) @inContext(country: $country) {
+    collection(handle: $handle) {
+      id
+      handle
+      title
+      products(first: $first, after: $after, sortKey: $sortKey, reverse: $reverse) {
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+        edges {
+          node {
+            ${PRODUCT_CARD_FIELDS}
           }
         }
       }
@@ -193,24 +225,30 @@ function getSortParams(sort: SortOption): { sortKey: string; reverse: boolean } 
 // Build Query String for Filters
 // ============================================
 
-function buildFilterQuery(filters: ProductFilters): string | undefined {
+function buildFilterQuery(filters: ProductFilters, excludeTags: readonly string[]): string | undefined {
   const parts: string[] = [];
-  
-  if (filters.collection) {
-    parts.push(`collection:${filters.collection}`);
+
+  // NOTE: `collection:` is deliberately absent. It is an Admin API search
+  // field, not a Storefront one — emitting it here matched every product and
+  // read as "the filter works". Collection browsing goes through
+  // fetchCollectionProducts(), which uses the real `collection(handle:)` query.
+
+  const exclusion = excludeTagsClause(excludeTags);
+  if (exclusion) {
+    parts.push(exclusion);
   }
-  
+
   if (filters.available !== undefined) {
     parts.push(`available_for_sale:${filters.available}`);
   }
-  
+
   if (filters.search) {
     parts.push(filters.search);
   }
-  
+
   // Note: Price filtering via query is limited in Storefront API
   // We filter client-side for price ranges
-  
+
   return parts.length > 0 ? parts.join(' AND ') : undefined;
 }
 
@@ -218,16 +256,50 @@ function buildFilterQuery(filters: ProductFilters): string | undefined {
 // Exported API Functions
 // ============================================
 
+/** Map one Storefront product node onto the grid-card shape. */
+function toProductSummary(p: any): ProductSummary {
+  const image = p.images?.edges?.[0]?.node;
+  const price = parseFloat(p.priceRange?.minVariantPrice?.amount || '0');
+  const compareAtPrice = p.compareAtPriceRange?.minVariantPrice?.amount
+    ? parseFloat(p.compareAtPriceRange.minVariantPrice.amount)
+    : null;
+
+  return {
+    id: p.id,
+    handle: p.handle,
+    title: p.title,
+    image: image ? { url: image.url, altText: image.altText } : null,
+    price,
+    compareAtPrice: compareAtPrice && compareAtPrice > price ? compareAtPrice : null,
+    currency: p.priceRange?.minVariantPrice?.currencyCode || 'USD',
+    available: p.availableForSale,
+    collection: p.collections?.edges?.[0]?.node?.handle,
+  };
+}
+
 export async function fetchProducts(options: {
   first?: number;
   after?: string | null;
   sort?: SortOption;
   filters?: ProductFilters;
   country?: string;
+  /**
+   * Tags to keep out of the results. Defaults to ODUBO_EXCLUDED_TAGS so the
+   * pass can never reappear in the merch grid by a caller forgetting to ask —
+   * the Loop Soul store opts back in by passing [].
+   */
+  excludeTags?: readonly string[];
 }): Promise<ProductsResponse> {
-  const { first = 24, after = null, sort = 'newest', filters = {}, country } = options;
+  const {
+    first = 24,
+    after = null,
+    sort = 'newest',
+    filters = {},
+    country,
+    excludeTags = ODUBO_EXCLUDED_TAGS,
+  } = options;
   const { sortKey, reverse } = getSortParams(sort);
-  const query = buildFilterQuery(filters);
+  const query = buildFilterQuery(filters, excludeTags);
 
   const data = await shopifyFetch<{
     products: ShopifyConnection<any>;
@@ -240,28 +312,8 @@ export async function fetchProducts(options: {
     country: normalizeCountry(country),
   });
   
-  const products: ProductSummary[] = data.products.edges.map(({ node: p }) => {
-    const image = p.images?.edges?.[0]?.node;
-    const price = parseFloat(p.priceRange?.minVariantPrice?.amount || '0');
-    const compareAtPrice = p.compareAtPriceRange?.minVariantPrice?.amount
-      ? parseFloat(p.compareAtPriceRange.minVariantPrice.amount)
-      : null;
-    const currency = p.priceRange?.minVariantPrice?.currencyCode || 'USD';
-    const collection = p.collections?.edges?.[0]?.node?.handle;
-    
-    return {
-      id: p.id,
-      handle: p.handle,
-      title: p.title,
-      image: image ? { url: image.url, altText: image.altText } : null,
-      price,
-      compareAtPrice: compareAtPrice && compareAtPrice > price ? compareAtPrice : null,
-      currency,
-      available: p.availableForSale,
-      collection,
-    };
-  });
-  
+  const products: ProductSummary[] = data.products.edges.map(({ node }) => toProductSummary(node));
+
   // Client-side price filtering
   let filteredProducts = products;
   if (filters.priceMin !== undefined || filters.priceMax !== undefined) {
@@ -277,6 +329,60 @@ export async function fetchProducts(options: {
     pageInfo: {
       hasNextPage: data.products.pageInfo.hasNextPage,
       endCursor: data.products.pageInfo.endCursor,
+    },
+  };
+}
+
+/**
+ * Products in one Shopify collection — how the Loop Soul store gets its shelf.
+ *
+ * Defaults to COLLECTION_DEFAULT, i.e. the order the owner drags them into in
+ * the Shopify admin. A curated store should show what the curator arranged;
+ * "newest first" would bury the pass under whatever merch shipped last.
+ *
+ * Returns null when the collection does not exist, so a missing `loop-soul`
+ * collection reads as "not set up yet" rather than as an empty store.
+ */
+export async function fetchCollectionProducts(options: {
+  handle: string;
+  first?: number;
+  after?: string | null;
+  sortKey?: string;
+  reverse?: boolean;
+  country?: string;
+}): Promise<(ProductsResponse & { title: string }) | null> {
+  const {
+    handle,
+    first = 24,
+    after = null,
+    sortKey = 'COLLECTION_DEFAULT',
+    reverse = false,
+    country,
+  } = options;
+
+  const data = await shopifyFetch<{
+    collection: {
+      handle: string;
+      title: string;
+      products: ShopifyConnection<any>;
+    } | null;
+  }>(COLLECTION_PRODUCTS_QUERY, {
+    handle,
+    first,
+    after,
+    sortKey,
+    reverse,
+    country: normalizeCountry(country),
+  });
+
+  if (!data.collection) return null;
+
+  return {
+    title: data.collection.title,
+    products: data.collection.products.edges.map(({ node }) => toProductSummary(node)),
+    pageInfo: {
+      hasNextPage: data.collection.products.pageInfo.hasNextPage,
+      endCursor: data.collection.products.pageInfo.endCursor,
     },
   };
 }
