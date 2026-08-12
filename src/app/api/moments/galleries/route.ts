@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getUserFromRequest, isAdminUser } from '@/lib/auth';
 import { queryDatabase } from '@/lib/db';
 import { rateLimit } from '@/lib/rateLimit';
+import { readableGallery } from '@/lib/moments/access';
 import { writeAuditLog } from '@/lib/audit';
 import { GalleryTypeEnum } from '@/lib/momentsSchemas';
 
@@ -48,6 +49,16 @@ export async function GET(req: Request) {
 
       const rl = await rateLimit({ key: `galleries:byid:${id}`, limit: 30, windowMs: 60_000 });
       if (!rl.allowed) return NextResponse.json({ error: 'Rate limited' }, { status: 429 });
+
+      // Lookup BY CODE above is the intended public door — the code is the
+      // credential. Lookup by id is not, and this response carries the code,
+      // so a private gallery must not answer it without one.
+      if (!(await readableGallery(galleryId, {
+        code,
+        isAdmin: isAdminUser(getUserFromRequest(req as any)),
+      }))) {
+        return NextResponse.json({ error: 'Gallery not found' }, { status: 404 });
+      }
 
       const rows = await queryDatabase(
         `SELECT id, code, title, description, starts_at, ends_at, created_at,

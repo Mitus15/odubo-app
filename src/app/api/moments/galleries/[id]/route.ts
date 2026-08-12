@@ -4,12 +4,22 @@ import { executeQuery, queryDatabase } from '@/lib/db';
 import { GalleryUpdateSchema, type GalleryLinkInput } from '@/lib/momentsSchemas';
 import { writeAuditLog } from '@/lib/audit';
 import { rateLimit } from '@/lib/rateLimit';
+import { readableGallery } from '@/lib/moments/access';
 
-export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {
+export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }) {
   try {
     const { id: idStr } = await ctx.params;
     const id = Number(idStr);
     if (!Number.isFinite(id)) return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
+
+    // This response includes the gallery's `code` — the credential that grants
+    // access to a private gallery — so an unguarded read here handed out the
+    // key, not just the contents.
+    const code = new URL(req.url).searchParams.get('code');
+    const isAdmin = isAdminUser(getUserFromRequest(req as any));
+    if (!(await readableGallery(id, { code, isAdmin }))) {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    }
 
     const rows = await queryDatabase(
       `SELECT id, code, title, description, starts_at, ends_at, created_by, created_at, updated_at, config,

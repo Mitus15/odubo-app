@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { queryDatabase } from '@/lib/db';
 import { getUserFromRequest, isAdminUser } from '@/lib/auth';
+import { readableGallery } from '@/lib/moments/access';
 import { rateLimit } from '@/lib/rateLimit';
 
 export async function GET(req: Request) {
@@ -22,6 +23,14 @@ export async function GET(req: Request) {
     const rlKey = isAdmin ? `moments:list:admin:${user!.userId}` : `moments:list:${galleryId}:public`;
     const rl = await rateLimit({ key: rlKey, limit: 300, windowMs: 60_000 });
     if (!rl.allowed) return NextResponse.json({ error: 'Rate limited' }, { status: 429 });
+
+    // A private gallery is link/code-access only. This route took `code` off
+    // the query string and never looked at it, so every photo in every private
+    // gallery was readable by anyone who could guess the id. 404 rather than
+    // 403 — confirming a private gallery exists at an id is itself a leak.
+    if (!(await readableGallery(galleryId, { code, isAdmin }))) {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    }
 
     let where: string;
     if (isAdmin) {

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getUserFromRequest, isAdminUser } from '@/lib/auth';
 import { queryDatabase } from '@/lib/db';
 import { rateLimit } from '@/lib/rateLimit';
+import { readableGallery } from '@/lib/moments/access';
 
 export async function GET(req: Request) {
   try {
@@ -38,8 +39,21 @@ export async function GET(req: Request) {
     // Filter by event if specified
     if (eventId || galleryId) {
       const id = eventId || galleryId;
+      // A private gallery is link/code-access only — asking for its clips by id
+      // is not a way around that. 404 rather than 403 so this doesn't confirm
+      // the gallery exists.
+      const code = url.searchParams.get('code');
+      if (!(await readableGallery(id!, { code, isAdmin }))) {
+        return NextResponse.json({ error: 'Not found' }, { status: 404 });
+      }
       sql += ' AND ec.event_id = ?';
       params.push(id);
+    } else if (!isAdmin) {
+      // Unfiltered feed: private galleries stay out of it entirely, the same
+      // rule /api/moments/galleries/public applies to the gallery listing.
+      sql += ` AND (g.config IS NULL
+                    OR NOT (json_valid(g.config)
+                            AND json_extract(g.config, '$.visibility') = 'private'))`;
     }
 
     if (!includePending) {
@@ -96,8 +110,17 @@ export async function GET(req: Request) {
     // Get unique parent videos for filter (only when listing all clips)
     let parents: Array<{ id: number; title: string }> = [];
     if (!eventId && !galleryId) {
+      // Same visibility rule as the feed above — otherwise the filter dropdown
+      // leaks the titles and ids of private galleries even though their clips
+      // are excluded.
       const parentResult = await queryDatabase(
-        'SELECT DISTINCT ec.event_id as id, g.title FROM event_clips ec JOIN galleries g ON ec.event_id = g.id WHERE (ec.moderated = 1 OR ec.moderated IS NULL) ORDER BY g.title',
+        `SELECT DISTINCT ec.event_id as id, g.title
+           FROM event_clips ec JOIN galleries g ON ec.event_id = g.id
+          WHERE (ec.moderated = 1 OR ec.moderated IS NULL)
+            ${isAdmin ? '' : `AND (g.config IS NULL
+                    OR NOT (json_valid(g.config)
+                            AND json_extract(g.config, '$.visibility') = 'private'))`}
+          ORDER BY g.title`,
         []
       );
       parents = (parentResult || []).map((p: any) => ({ id: p.id, title: p.title }));
