@@ -98,7 +98,9 @@ export function LoopStore({
               )}
             </div>
             <div className="flex min-w-0 flex-1 flex-col justify-center py-4 pr-4 sm:py-6">
-              <h3 className="truncate text-lg font-bold sm:text-xl">
+              {/* Wraps rather than truncates — a product title ending in
+                  "Volu…" tells the buyer nothing about what they're buying. */}
+              <h3 className="text-lg font-bold leading-tight sm:text-xl">
                 {passProduct?.title || `${eventTitle} — Pass`}
               </h3>
               <p className="mt-1 text-sm opacity-70">
