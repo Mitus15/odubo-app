@@ -1,17 +1,18 @@
 import { NextResponse } from "next/server";
 import { getCurrentEvent } from "@/lib/loop/hub";
-import {
-  setJournalIssue,
-  setJournalMoments,
-  type JournalMoment,
-} from "@/lib/loop/journal-store";
+import { setJournalIssue, setJournalMoments } from "@/lib/loop/journal-store";
 
 /**
  * Save The Loop Journal for the active event. One endpoint, two payload
  * shapes, because the panel has two save buttons that must not clobber each
  * other's data:
- *   { issue: { headline, standfirst, published } } — the editorial frame
- *   { items: JournalMoment[] }                     — the Iconic Moments list
+ *   { issue: { headline, standfirst, published } }  — the editorial frame
+ *   { items: [{ id, photoUid, caption }] }          — the Iconic Moments order
+ *
+ * `items` is only the editorial overlay. The photographs themselves come from
+ * the Wall's featured set, so there is no image URL to accept here — which also
+ * means this route can no longer be used to point the magazine at an arbitrary
+ * off-site image.
  *
  * Gated by the `ls_admin` session cookie in middleware (see admin-auth.ts).
  */
@@ -23,7 +24,16 @@ export async function POST(req: Request) {
   const event = await getCurrentEvent();
 
   if (Array.isArray(body.items)) {
-    await setJournalMoments(event.id, body.items as JournalMoment[]);
+    // Take only the overlay fields, whatever else the client sent.
+    const items = body.items.map((raw) => {
+      const m = (raw ?? {}) as Record<string, unknown>;
+      return {
+        id: typeof m.id === "string" ? m.id : undefined,
+        photoUid: typeof m.photoUid === "string" ? m.photoUid : null,
+        caption: typeof m.caption === "string" ? m.caption : "",
+      };
+    });
+    await setJournalMoments(event.id, items);
     return NextResponse.json({ ok: true });
   }
 
