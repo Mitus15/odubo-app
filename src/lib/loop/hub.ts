@@ -45,28 +45,43 @@ export const MOCK_CURRENT_EVENT: LoopEvent = {
   phase: "pre",
 };
 
+const VALID_PHASES: EventPhase[] = ["pre", "live", "archived"];
+
+const asPhase = (v: string | undefined): EventPhase | null =>
+  VALID_PHASES.includes(v as EventPhase) ? (v as EventPhase) : null;
+
 /**
  * Resolve the active phase for the current event.
  *
  * Order of precedence:
- *   1. The D1-stored phase — an explicit admin choice, global to all visitors.
- *   2. `NEXT_PUBLIC_DEFAULT_PHASE` — a per-deploy/local default (handy for
- *      previewing a phase locally before any admin has set one).
- *   3. The seed default (`pre`).
+ *   1. `LOOP_FORCE_PHASE` — **local development only**, see below.
+ *   2. The D1-stored phase — an explicit admin choice, global to all visitors.
+ *   3. `NEXT_PUBLIC_DEFAULT_PHASE` — a per-deploy/local default (handy for
+ *      previewing a phase before any admin has set one).
+ *   4. The seed default (`pre`).
  *
- * D1 wins over the env var on purpose: once an admin sets a phase it must be
- * authoritative, otherwise a pinned env default would make the /admin switch a
- * no-op in production.
+ * D1 wins over `NEXT_PUBLIC_DEFAULT_PHASE` on purpose: once an admin sets a
+ * phase it must be authoritative, otherwise a pinned env default would make
+ * the /admin switch a no-op in production.
+ *
+ * That correct rule had a sharp edge, though. Local development runs against
+ * the PRODUCTION database, so once a phase is stored there — which it is — the
+ * only way to see another phase locally was to flip the real one, which
+ * changes what every visitor to /loop sees. That has already caught us out
+ * once. `LOOP_FORCE_PHASE` is the escape hatch: it outranks everything, and it
+ * is ignored outright in a production build, so it cannot be used to override
+ * an admin on the live site even if someone sets it on the deploy.
  */
 export async function getCurrentPhase(): Promise<EventPhase> {
+  if (process.env.NODE_ENV !== "production") {
+    const forced = asPhase(process.env.LOOP_FORCE_PHASE);
+    if (forced) return forced;
+  }
+
   const stored = await getStoredPhase(MOCK_CURRENT_EVENT.id);
   if (stored) return stored;
 
-  const envDefault = process.env.NEXT_PUBLIC_DEFAULT_PHASE;
-  if (envDefault === "pre" || envDefault === "live" || envDefault === "archived") {
-    return envDefault;
-  }
-  return MOCK_CURRENT_EVENT.phase;
+  return asPhase(process.env.NEXT_PUBLIC_DEFAULT_PHASE) ?? MOCK_CURRENT_EVENT.phase;
 }
 
 export async function getCurrentEvent(): Promise<LoopEvent> {
