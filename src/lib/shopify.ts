@@ -1,4 +1,5 @@
 import { normalizeCountry } from './store/money';
+import { excludeTagsClause } from './store/brands';
 
 export interface ShopifyProduct {
   id: string;
@@ -33,9 +34,12 @@ export async function getShopifyProducts(): Promise<{ success: boolean; products
       'X-Shopify-Storefront-Access-Token': PUBLIC_TOKEN,
     };
 
+    // Excludes the Loop Soul pass. This feeds the sitemap and /api/products,
+    // so without it the pass gets a public, indexable /store/product/… URL and
+    // an entry in the merch API — the two surfaces least likely to be noticed.
     const query = `#graphql
-      query Products {
-        products(first: 50, sortKey: CREATED_AT, reverse: true) {
+      query Products($query: String) {
+        products(first: 50, sortKey: CREATED_AT, reverse: true, query: $query) {
           edges {
             node {
               id
@@ -81,7 +85,7 @@ export async function getShopifyProducts(): Promise<{ success: boolean; products
     const res = await fetch(endpoint, {
       method: 'POST',
       headers,
-      body: JSON.stringify({ query }),
+      body: JSON.stringify({ query, variables: { query: excludeTagsClause() } }),
       next: { revalidate: 60 },
     });
 

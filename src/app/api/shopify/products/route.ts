@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { excludeTagsClause } from '@/lib/store/brands';
 export const runtime = 'edge';
 
 const STORE_URL = process.env.SHOPIFY_STORE_URL || 'https://odubostudio.myshopify.com';
@@ -13,9 +14,10 @@ export async function GET() {
 
     const endpoint = `${STORE_URL}/api/${API_VERSION}/graphql.json`;
     
+    // Loop Soul passes are not merch — see lib/store/brands.
     const query = `#graphql
-      query AllProducts {
-        products(first: 50, sortKey: UPDATED_AT, reverse: true) {
+      query AllProducts($query: String) {
+        products(first: 50, sortKey: UPDATED_AT, reverse: true, query: $query) {
           edges {
             node {
               id
@@ -43,7 +45,7 @@ export async function GET() {
         'Content-Type': 'application/json',
         'X-Shopify-Storefront-Access-Token': PUBLIC_TOKEN,
       },
-      body: JSON.stringify({ query }),
+      body: JSON.stringify({ query, variables: { query: excludeTagsClause() } }),
       next: { revalidate: 300 }, // Cache for 5 minutes
     });
 

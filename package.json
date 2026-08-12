@@ -6,7 +6,6 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build --no-lint",
-    "build:deploy": "npx --yes @cloudflare/next-on-pages",
     "start": "next start",
     "lint": "next lint",
     "test:performance": "node scripts/test-performance.js",
@@ -14,7 +13,6 @@
     "test": "jest --config jest.config.cjs",
     "test:watch": "jest --config jest.config.cjs --watch",
     "test:coverage": "jest --config jest.config.cjs --coverage",
-    "pages:build": "next-on-pages build",
     "migrate:r2-to-stream": "tsx scripts/migrate_r2_to_stream.ts",
     "migrate:videos": "tsx --env-file=.env.local scripts/migrate_video_files_to_organized_structure.ts",
     "preview:migration": "tsx --env-file=.env.local scripts/preview_video_migration.ts",
@@ -22,9 +20,6 @@
     "fix:albums": "tsx --env-file=.env.local scripts/fix_album_issues.ts",
     "deploy:prod": "./scripts/deploy_production.sh",
     "deploy:prod:organize": "./scripts/deploy_production.sh --organize-media",
-    "deploy:cf": "./scripts/deploy_cloudflare_pages.sh",
-    "deploy:cf:secrets": "./scripts/deploy_cloudflare_pages.sh --skip-migrations --set-secrets",
-    "deploy:cf:full": "./scripts/deploy_cloudflare_pages.sh --organize-media --set-secrets",
     "audio:transcode:track": "tsx --env-file=.env.local scripts/transcode_audio_to_web.ts --track",
     "audio:transcode:album": "tsx --env-file=.env.local scripts/transcode_audio_to_web.ts --album",
     "audio:transcode:all": "tsx --env-file=.env.local scripts/transcode_audio_to_web.ts --all",
@@ -105,7 +100,6 @@
     "zustand": "^5.0.14"
   },
   "devDependencies": {
-    "@cloudflare/next-on-pages": "^1.13.14",
     "@cloudflare/workers-types": "^4.20250801.0",
     "@eslint/eslintrc": "^3",
     "@ffmpeg-installer/ffmpeg": "^1.1.0",

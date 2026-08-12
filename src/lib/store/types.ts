@@ -40,6 +40,8 @@ export interface ProductSummary {
   currency: string;
   available: boolean;
   collection?: string;
+  /** Shopify tags — how the Loop store tells a pass from merch. See store/brands. */
+  tags?: string[];
 }
 
 /** Full product data for detail view */

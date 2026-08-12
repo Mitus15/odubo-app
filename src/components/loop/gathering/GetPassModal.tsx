@@ -52,11 +52,8 @@ export function GetPassModal({
     };
   }, []);
 
-  // Admin-set checkout link first, then env fallbacks (Shopify, Eventbrite).
-  const checkoutUrl =
-    checkoutUrlProp ||
-    process.env.NEXT_PUBLIC_LOOP_PASS_CHECKOUT_URL ||
-    process.env.NEXT_PUBLIC_EVENTBRITE_CHECKOUT_WIDGET;
+  // Admin-set Shopify checkout link first, then the env fallback.
+  const checkoutUrl = checkoutUrlProp || process.env.NEXT_PUBLIC_LOOP_PASS_CHECKOUT_URL;
   const soldOut = capacity.remaining <= 0;
   const priceLabel = price
     ? `$${Number(price).toFixed(2)}${currency ? ` ${currency}` : ""}`

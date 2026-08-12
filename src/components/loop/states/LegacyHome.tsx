@@ -5,6 +5,11 @@ import WallGallery from "@/components/loop/wall/WallGallery";
 import { getCurrentEvent } from "@/lib/loop/hub";
 import { currentVoterId } from "@/lib/loop/anthem-server";
 import { hasRoomAccess } from "@/lib/loop/doors";
+// Used in the non-attendee branch below. It was missing, so /loop/legacy threw
+// a ReferenceError for every visitor without a pass — i.e. the entire public,
+// which is the audience the page exists for. `ignoreBuildErrors` + `--no-lint`
+// meant the build never said a word.
+import { getPassSettings } from "@/lib/loop/pass/settings";
 
 /**
  * STATE 3 — Legacy (persistent content hub), rendered in "vault mode"

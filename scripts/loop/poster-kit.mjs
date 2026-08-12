@@ -109,6 +109,29 @@ const line = (text, { x, y, size, weight = 600, anchor = "middle", track = 0, op
     track ? ` letter-spacing="${(size * track).toFixed(1)}"` : ""
   } text-anchor="${anchor}" opacity="${opacity}">${esc(text)}</text>`;
 
+/**
+ * Rough advance-width estimate for a line of Avenir Next set in caps.
+ *
+ * SVG gives us no way to measure text before rasterising, and the ticket's
+ * type is left-anchored against a hero that has to fit beside it — so a guess
+ * that is never checked is exactly how the crowd ended up printed through the
+ * slogan. This only has to be good enough to catch a collision: every caller
+ * asserts the result against a real budget, and over-estimating is safe.
+ */
+const CAP_ADVANCE = { 500: 0.6, 600: 0.62, 700: 0.64 };
+const estWidth = (text, size, { weight = 600, track = 0 } = {}) =>
+  String(text).length * size * ((CAP_ADVANCE[weight] ?? 0.62) + track);
+
+/** Refuse to render rather than ship an overlap — the kit's one hard rule. */
+const assertFits = (what, needed, budget) => {
+  if (needed > budget) {
+    throw new Error(
+      `${what} needs ${Math.round(needed)}px but only ${Math.round(budget)}px is free. ` +
+        `Shrink the type or widen the column — do not let it overlap.`,
+    );
+  }
+};
+
 async function qrPng(url, px) {
   return QRCode.toBuffer(url, {
     width: px,
@@ -237,69 +260,145 @@ async function poster({ ev, figure, size, out }) {
 
 /* ──────────────────────────────── the ticket ────────────────────────────── */
 
+/**
+ * The ticket is three ZONES, not a set of percentages: an identity column on
+ * the left, the crowd in the middle, and the tear-off stub on the right. The
+ * middle is whatever is left over once the other two have been measured —
+ * which is the whole point. The previous version pinned the crowd at 66% height
+ * and x=30%, so at the crowd's 2.44:1 it rendered 1608px wide and printed
+ * straight through both the slogan and the entire stub.
+ */
 async function ticket({ ev, out, W = 2550, H = 1000 }) {
   const S = W / 2550;
+  const pad = Math.round(90 * S);
+  const gutter = Math.round(70 * S);
   const wordmark = await inkSvg("loop-soul.svg");
   const odubo = await inkSvg("odubo.svg");
   const scotts = await inkSvg("scotts-bw.svg");
   const layers = [];
-  const pad = Math.round(90 * S);
-  const stubX = Math.round(W * 0.70);
 
-  // Hero crowd fills the middle, bleeding to the bottom edge like a stage.
+  // The stub edge is the fixed landmark; both other zones measure against it.
+  const stubX = Math.round(W * 0.7);
+  const mainInnerW = stubX - pad * 2;
+  const mainCx = pad + mainInnerW / 2;
+
+  /* ── zone 1: the main body, stacked in rows ──────────────────────────────
+     Wordmark and credits take the two top corners, the slogan spans the full
+     width between them, and the crowd gets every pixel that is left. Stacking
+     rather than columning is what lets the hero be a hero: side by side, the
+     slogan's width starved the crowd down to a footnote. */
+  const labelSize = Math.round(16 * S);
+  const labelTrack = 0.2;
+  const wmW = Math.round(340 * S);
+  const wmH = Math.round(wmW * wordmark.ratio);
+  const wmTop = pad;
+
+  const odW = Math.round(140 * S);
+  const odH = Math.round(odW * odubo.ratio);
+  const scW = Math.round(190 * S);
+  const scH = Math.round(scW * scotts.ratio);
+  // Each credit is a COLUMN as wide as the wider of its mark and its label —
+  // the labels are longer than the logos they caption, so sizing the block off
+  // the logos ran "PRESENTED BY" straight into "IN PARTNERSHIP WITH".
+  const odLabel = "PRESENTED BY";
+  const scLabel = "IN PARTNERSHIP WITH";
+  const odColW = Math.max(odW, estWidth(odLabel, labelSize, { track: labelTrack }));
+  const scColW = Math.max(scW, estWidth(scLabel, labelSize, { track: labelTrack }));
+  const creditGap = Math.round(60 * S);
+  const creditRowW = odColW + creditGap + scColW;
+  const creditLeft = stubX - pad - creditRowW;
+  const odCx = creditLeft + odColW / 2;
+  const scCx = creditLeft + odColW + creditGap + scColW / 2;
+  const creditLabelY = pad + Math.round(22 * S);
+  const creditTop = creditLabelY + Math.round(18 * S);
+  const creditRowH = Math.max(odH, scH);
+  assertFits("ticket credit block", creditRowW, mainInnerW - wmW - Math.round(80 * S));
+
+  const rowABottom = Math.max(wmTop + wmH, creditTop + creditRowH);
+
+  const sloganSize = Math.round(116 * S);
+  const triadSize = Math.round(30 * S);
+  const sloganY = rowABottom + Math.round(120 * S);
+  const triadY = sloganY + Math.round(58 * S);
+  assertFits("ticket slogan", estWidth(BRAND.slogan, sloganSize, { weight: 700, track: 0.02 }), mainInnerW);
+  assertFits("ticket triad", estWidth(BRAND.triad, triadSize, { weight: 600, track: 0.4 }), mainInnerW);
+
+  /* ── zone 3: the stub, right ─────────────────────────────────────────── */
+  const stubInnerW = W - stubX - pad * 2;
+  const sx = stubX + (W - stubX) / 2;
+  const volSize = Math.round(46 * S);
+  const dateSize = Math.round(38 * S);
+  const doorsSize = Math.round(29 * S);
+  const venueSize = Math.round(23 * S);
+  const admitsSize = Math.round(44 * S);
+  const qrPx = Math.round(200 * S);
+  const volText = `${ev.volume} · ${ev.theme}`;
+  const dateText = ev.date.replace("SATURDAY ", "SAT ");
+
+  assertFits("stub volume line", estWidth(volText, volSize, { weight: 700, track: 0.04 }), stubInnerW);
+  assertFits("stub date line", estWidth(dateText, dateSize, { weight: 600, track: 0.08 }), stubInnerW);
+  assertFits("stub venue line", estWidth(ev.venueShort, venueSize, { weight: 500, track: 0.1 }), stubInnerW);
+
+  const volY = pad + volSize + Math.round(40 * S);
+  const dateY = volY + Math.round(80 * S);
+  const doorsY = dateY + Math.round(58 * S);
+  const venueY = doorsY + Math.round(52 * S);
+  const admitsY = venueY + Math.round(105 * S);
+  const qrTop = admitsY + Math.round(40 * S);
+  const scanY = qrTop + qrPx + Math.round(38 * S);
+  assertFits("ticket stub", scanY, H - pad);
+
+  /* ── zone 2: the crowd, everything left under the type ───────────────── */
+  const heroTop = triadY + Math.round(50 * S);
+  const heroMaxH = H - heroTop;
+  const heroMaxW = mainInnerW;
+  assertFits("ticket hero band", Math.round(300 * S), heroMaxH);
+
   const figBuf = await fs.readFile(path.join(ROOT, "public/loop/figures", FIGURES.crowd));
   const figMeta = await sharp(figBuf).metadata();
-  const heroH = Math.round(H * 0.66);
-  const heroW = Math.round((figMeta.width / figMeta.height) * heroH);
-  layers.push({
-    input: await sharp(figBuf).resize({ height: heroH }).toBuffer(),
-    left: Math.round(W * 0.30),
-    top: Math.round(H * 0.26),
-  });
+  const heroScale = Math.min(heroMaxW / figMeta.width, heroMaxH / figMeta.height);
+  const heroW = Math.round(figMeta.width * heroScale);
+  const heroH = Math.round(figMeta.height * heroScale);
 
-  const wmW = Math.round(430 * S);
+  layers.push({
+    input: await sharp(figBuf).resize({ width: heroW, height: heroH }).toBuffer(),
+    // Stands on the bottom edge like a stage, centred in the main body.
+    left: Math.round(mainCx - heroW / 2),
+    top: H - heroH,
+  });
   layers.push({
     input: await sharp(wordmark.buf, { density: 900 }).resize({ width: wmW }).png().toBuffer(),
     left: pad,
-    top: Math.round(90 * S),
+    top: wmTop,
   });
-
-  const qrPx = Math.round(190 * S);
   layers.push({
     input: await qrPng(ev.url, qrPx),
-    left: Math.round(stubX - qrPx - 60 * S),
-    top: Math.round(H - qrPx - 70 * S),
+    left: Math.round(sx - qrPx / 2),
+    top: qrTop,
   });
-
-  const odW = Math.round(150 * S);
-  const odH = Math.round(odW * odubo.ratio);
-  const scW = Math.round(200 * S);
-  const scH = Math.round(scW * scotts.ratio);
-  const markTop = Math.round(H - odH - 90 * S);
   layers.push({
     input: await sharp(odubo.buf, { density: 900 }).resize({ width: odW }).png().toBuffer(),
-    left: pad,
-    top: markTop,
+    left: Math.round(odCx - odW / 2),
+    top: creditTop + Math.round((creditRowH - odH) / 2),
   });
   layers.push({
     input: await sharp(scotts.buf, { density: 900 }).resize({ width: scW }).png().toBuffer(),
-    left: pad + odW + Math.round(90 * S),
-    top: markTop + Math.round((odH - scH) / 2),
+    left: Math.round(scCx - scW / 2),
+    top: creditTop + Math.round((creditRowH - scH) / 2),
   });
 
-  const sx = stubX + (W - stubX) / 2;
   const svg = `<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">
     <line x1="${stubX}" y1="${Math.round(50 * S)}" x2="${stubX}" y2="${H - Math.round(50 * S)}" stroke="${BRAND.ink}" stroke-width="${Math.round(5 * S)}" stroke-dasharray="${Math.round(20 * S)} ${Math.round(24 * S)}" opacity="0.45"/>
-    ${line(BRAND.slogan, { x: pad, y: Math.round(H * 0.46), size: Math.round(74 * S), weight: 700, anchor: "start", track: 0.03 })}
-    ${line(BRAND.triad, { x: pad, y: Math.round(H * 0.545), size: Math.round(26 * S), weight: 600, anchor: "start", track: 0.36, opacity: 0.75 })}
-    ${line("PRESENTED BY", { x: pad, y: markTop - Math.round(22 * S), size: Math.round(20 * S), anchor: "start", track: 0.3, opacity: 0.55 })}
-    ${line("IN PARTNERSHIP WITH", { x: pad + odW + Math.round(90 * S), y: markTop - Math.round(22 * S), size: Math.round(20 * S), anchor: "start", track: 0.3, opacity: 0.55 })}
-    ${line(`${ev.volume} · ${ev.theme}`, { x: sx, y: Math.round(H * 0.22), size: Math.round(60 * S), weight: 700, track: 0.04 })}
-    ${line(ev.date.replace("SATURDAY ", "SAT "), { x: sx, y: Math.round(H * 0.34), size: Math.round(40 * S), weight: 600, track: 0.08 })}
-    ${line(ev.doors, { x: sx, y: Math.round(H * 0.425), size: Math.round(32 * S), weight: 500, track: 0.12, opacity: 0.85 })}
-    ${line(ev.venueShort, { x: sx, y: Math.round(H * 0.505), size: Math.round(24 * S), weight: 500, track: 0.1, opacity: 0.75 })}
-    ${line("ADMITS ONE", { x: sx, y: Math.round(H * 0.65), size: Math.round(46 * S), weight: 700, track: 0.08 })}
-    ${line("SCAN FOR YOUR CODE", { x: sx, y: Math.round(H * 0.74), size: Math.round(20 * S), track: 0.16, opacity: 0.6 })}
+    ${line(BRAND.slogan, { x: mainCx, y: sloganY, size: sloganSize, weight: 700, track: 0.02 })}
+    ${line(BRAND.triad, { x: mainCx, y: triadY, size: triadSize, weight: 600, track: 0.4, opacity: 0.75 })}
+    ${line(odLabel, { x: odCx, y: creditLabelY, size: labelSize, track: labelTrack, opacity: 0.55 })}
+    ${line(scLabel, { x: scCx, y: creditLabelY, size: labelSize, track: labelTrack, opacity: 0.55 })}
+    ${line(volText, { x: sx, y: volY, size: volSize, weight: 700, track: 0.04 })}
+    ${line(dateText, { x: sx, y: dateY, size: dateSize, weight: 600, track: 0.08 })}
+    ${line(ev.doors, { x: sx, y: doorsY, size: doorsSize, weight: 500, track: 0.12, opacity: 0.85 })}
+    ${line(ev.venueShort, { x: sx, y: venueY, size: venueSize, weight: 500, track: 0.1, opacity: 0.75 })}
+    ${line("ADMITS ONE", { x: sx, y: admitsY, size: admitsSize, weight: 700, track: 0.08 })}
+    ${line("SCAN FOR YOUR CODE", { x: sx, y: scanY, size: labelSize, track: 0.16, opacity: 0.6 })}
   </svg>`;
   layers.push({ input: Buffer.from(svg), left: 0, top: 0 });
 
@@ -311,6 +410,79 @@ async function ticket({ ev, out, W = 2550, H = 1000 }) {
   console.log("ticket →", file);
 }
 
+/**
+ * The pass as a STORE PRODUCT IMAGE — square, because the store grid is
+ * `aspect-square` (src/components/store/ProductBrowse.tsx). This is the pass's
+ * shelf face in the Loop Soul store, so it carries no QR (the buyer is already
+ * in the app) and no price — Shopify owns price and currency, and a baked-in
+ * "$20" would go stale and would read wrong for anyone shopping outside CAD.
+ */
+async function passCard({ ev, out, W = 2000 }) {
+  const H = W;
+  const S = W / 2000;
+  const pad = Math.round(150 * S);
+  const wordmark = await inkSvg("loop-soul.svg");
+  const layers = [];
+
+  const wmW = Math.round(520 * S);
+  const wmH = Math.round(wmW * wordmark.ratio);
+  const wmTop = pad;
+
+  const volSize = Math.round(46 * S);
+  const volY = wmTop + wmH + Math.round(96 * S);
+
+  // Bottom-anchored type, computed before the hero so the hero gets the rest.
+  const admitsSize = Math.round(78 * S);
+  const venueSize = Math.round(34 * S);
+  const dateSize = Math.round(44 * S);
+  const admitsY = H - pad;
+  const venueY = admitsY - Math.round(96 * S);
+  const dateY = venueY - Math.round(62 * S);
+
+  const innerW = W - pad * 2;
+  const dateText = `${ev.date.replace("SATURDAY ", "SAT ")} · ${ev.doors}`;
+  assertFits("pass card date line", estWidth(dateText, dateSize, { weight: 600, track: 0.06 }), innerW);
+  assertFits("pass card venue line", estWidth(ev.venueShort, venueSize, { weight: 500, track: 0.12 }), innerW);
+  assertFits("pass card admits line", estWidth("ADMITS ONE", admitsSize, { weight: 700, track: 0.08 }), innerW);
+
+  const heroTop = volY + Math.round(70 * S);
+  const heroMaxH = dateY - dateSize - Math.round(90 * S) - heroTop;
+  const heroMaxW = innerW;
+  assertFits("pass card hero band", Math.round(420 * S), heroMaxH);
+
+  const figBuf = await fs.readFile(path.join(ROOT, "public/loop/figures", FIGURES.crowd));
+  const figMeta = await sharp(figBuf).metadata();
+  const heroScale = Math.min(heroMaxW / figMeta.width, heroMaxH / figMeta.height);
+  const heroW = Math.round(figMeta.width * heroScale);
+  const heroH = Math.round(figMeta.height * heroScale);
+
+  layers.push({
+    input: await sharp(figBuf).resize({ width: heroW, height: heroH }).toBuffer(),
+    left: Math.round(W / 2 - heroW / 2),
+    top: Math.round(heroTop + (heroMaxH - heroH) / 2),
+  });
+  layers.push({
+    input: await sharp(wordmark.buf, { density: 900 }).resize({ width: wmW }).png().toBuffer(),
+    left: Math.round(W / 2 - wmW / 2),
+    top: wmTop,
+  });
+
+  const svg = `<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">
+    ${line(`${ev.volume} · ${ev.theme}`, { x: W / 2, y: volY, size: volSize, weight: 600, track: 0.3, opacity: 0.85 })}
+    ${line(dateText, { x: W / 2, y: dateY, size: dateSize, weight: 600, track: 0.06 })}
+    ${line(ev.venueShort, { x: W / 2, y: venueY, size: venueSize, weight: 500, track: 0.12, opacity: 0.8 })}
+    ${line("ADMITS ONE", { x: W / 2, y: admitsY, size: admitsSize, weight: 700, track: 0.08 })}
+  </svg>`;
+  layers.push({ input: Buffer.from(svg), left: 0, top: 0 });
+
+  const file = `loop-soul-v${args.volume ?? 1}-pass-square.png`;
+  await sharp({ create: { width: W, height: H, channels: 3, background: BRAND.sand } })
+    .composite(layers)
+    .png()
+    .toFile(path.join(out, file));
+  console.log("pass card →", file);
+}
+
 /* ──────────────────────────────────── run ───────────────────────────────── */
 
 const ev = VOLUMES[args.volume ?? 1];
@@ -320,10 +492,15 @@ const out =
 const figures = String(args.figures || "crowd,dance,spin").split(",");
 const sizes = String(args.sizes || "print,story").split(",");
 
+const pieces = String(args.pieces || "posters,ticket,pass").split(",");
+
 await fs.mkdir(out, { recursive: true });
-for (const figure of figures) {
-  if (!FIGURES[figure]) throw new Error(`unknown figure "${figure}"`);
-  for (const size of sizes) await poster({ ev, figure, size, out });
+if (pieces.includes("posters")) {
+  for (const figure of figures) {
+    if (!FIGURES[figure]) throw new Error(`unknown figure "${figure}"`);
+    for (const size of sizes) await poster({ ev, figure, size, out });
+  }
 }
-await ticket({ ev, out });
+if (pieces.includes("ticket")) await ticket({ ev, out });
+if (pieces.includes("pass")) await passCard({ ev, out });
 console.log("\nout:", out);

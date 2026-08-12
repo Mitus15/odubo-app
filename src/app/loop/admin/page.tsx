@@ -91,11 +91,16 @@ export default async function AdminPage() {
           Event details
         </h2>
         <p className="mt-1 text-sm opacity-70">
-          The volume, theme, and venue shown on the poster. Changes show for every
-          visitor on their next load.
+          The volume, theme, venue and capacity shown on the poster. Changes show
+          for every visitor on their next load.
         </p>
         <EventDetails
-          initial={{ title: event.title, theme: event.theme, venue: event.venue }}
+          initial={{
+            title: event.title,
+            theme: event.theme,
+            venue: event.venue,
+            capacity: String(event.capacity),
+          }}
         />
       </section>
 

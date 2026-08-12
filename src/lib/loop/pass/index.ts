@@ -1,20 +1,26 @@
 import crypto from "crypto";
 import { queryOne } from "@/lib/loop/db";
 import { getCurrentEvent } from "@/lib/loop/hub";
-import { getEventbrite, type CapacityInfo, type EventbriteProvider } from "@/lib/loop/eventbrite";
 import { getPassSettings } from "./settings";
 
 /**
  * Shopify pass sales for Loop Soul. Shopify handles money and inventory; Loop
- * keeps identity — a purchase mints event codes (the ticket) via the same
- * idempotent `issueForOrder` chain the Eventbrite path uses.
+ * keeps identity — a purchase mints event codes (the ticket) through the
+ * idempotent `issueForOrder` chain.
  *
- * Dormant until configured:
- *   PASS_MODE=shopify                     → capacity comes from issued codes
+ * Shopify is the ONLY ticketing path. The Eventbrite provider chain that used
+ * to sit behind this was removed: it was never going to be used, its public
+ * webhook minted real event codes for anyone who posted to it, and its "mock"
+ * capacity provider was the thing publishing invented sales figures.
+ *
+ * Configured from /loop/admin (D1 `loop_settings`), env as fallback:
  *   LOOP_PASS_SKU / LOOP_PASS_PRODUCT_ID  → which line items are passes
  *   SHOPIFY_WEBHOOK_SECRET                → webhook HMAC (shared with odubo's)
  *   NEXT_PUBLIC_LOOP_PASS_CHECKOUT_URL    → Get Pass button target
  */
+
+/** Passes sold / remaining for the scarcity counter. */
+export type CapacityInfo = { total: number; sold: number; remaining: number };
 
 /* ---------------------------------------------------------------- webhook */
 
@@ -112,31 +118,25 @@ export function passUnitOrderIds(orderId: string, count: number): string[] {
 /* --------------------------------------------------------------- capacity */
 
 /**
- * Capacity when passes sell through Shopify: sold = codes issued against
- * ticket orders (order_id IS NOT NULL — admin hand-outs don't count), total =
- * the event's seed capacity. No Shopify API call; D1 is the ledger.
- */
-class ShopifyPassProvider implements EventbriteProvider {
-  async getCapacity(): Promise<CapacityInfo> {
-    const event = await getCurrentEvent();
-    const row = await queryOne<{ n: number }>(
-      `SELECT COUNT(*) AS n FROM event_codes WHERE event_id = ?1 AND order_id IS NOT NULL`,
-      [event.id],
-    );
-    const sold = row?.n ?? 0;
-    const total = event.capacity;
-    return { total, sold, remaining: Math.max(0, total - sold) };
-  }
-}
-
-/**
- * Capacity via the active pass mode — admin-set in loop_settings (env
- * fallback): "shopify" reads the D1 code ledger; "mock" keeps the existing
- * Eventbrite chain (live or mock counters).
+ * The scarcity counter, from the only source that can't lie: D1.
+ *
+ * `sold` counts codes issued against real ticket orders (`order_id IS NOT NULL`
+ * — admin hand-outs and comps don't count as sales). `total` is the event's
+ * capacity, which the venue owns and an admin edits (migration 149).
+ *
+ * There is deliberately no mode switch and no env override here. This number is
+ * published on /loop as a claim about ticket sales, so the only acceptable
+ * answer is the true one: before anything sells it reads 0 sold, which is
+ * correct and unembarrassing. The previous implementation defaulted an
+ * unconfigured deploy to "44 sold of 75" and put that in front of the public.
  */
 export async function getPassCapacity(): Promise<CapacityInfo> {
-  const settings = await getPassSettings();
-  return settings.mode === "shopify"
-    ? new ShopifyPassProvider().getCapacity()
-    : getEventbrite().getCapacity();
+  const event = await getCurrentEvent();
+  const row = await queryOne<{ n: number }>(
+    `SELECT COUNT(*) AS n FROM event_codes WHERE event_id = ?1 AND order_id IS NOT NULL`,
+    [event.id],
+  );
+  const sold = row?.n ?? 0;
+  const total = event.capacity;
+  return { total, sold, remaining: Math.max(0, total - sold) };
 }

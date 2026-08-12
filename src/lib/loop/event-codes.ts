@@ -9,7 +9,7 @@ import { chunkForParams, executeQuery, queryDatabase, queryOne } from "@/lib/loo
  * single-use codes, hands one to each buyer, and the buyer redeems it to become
  * a "holder" who can nominate. Upvoting and bracket voting stay open to everyone.
  *
- * Driven by a mode (mirrors EVENTBRITE_MODE): `open` (anyone can suggest — the
+ * Driven by a mode: `open` (anyone can suggest — the
  * promo default before tickets exist) or `ticket` (holders only). Scoped per
  * event, backed by D1. Reuses the existing `ls_voter` identity, so no new
  * cookie. Known limits (promo-acceptable): clearing cookies drops holder status;
@@ -97,9 +97,9 @@ export async function generate(eventId: string, count: number, now: number): Pro
 /**
  * Mint exactly one unique code bound to a ticket order — idempotent per order,
  * so re-delivering the confirmation never issues a second code. This is the hook
- * real checkout calls: buy a ticket → one unique code for that order. Until
- * Eventbrite-live + email are wired, the same function is driven by the admin
- * "simulate a purchase" tool so the whole flow is testable today.
+ * real checkout calls: buy a pass on Shopify → one unique code for that order.
+ * The same function backs the admin "simulate a purchase" tool, so the whole
+ * flow is testable without taking money.
  *
  * Idempotency is enforced by the UNIQUE index on (event_id, order_id), not just
  * by the read below — so even two webhook deliveries racing each other can only
