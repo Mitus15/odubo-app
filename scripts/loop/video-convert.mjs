@@ -209,75 +209,118 @@ function blur(src, w, h, r) {
   return out;
 }
 
-/** Bilinear upsample. Thresholding the RESULT is what puts an edge on a
- *  subpixel boundary instead of an analysis-res pixel boundary. */
-function upsample(src, sw, sh, dw, dh) {
-  if (sw === dw && sh === dh) return src;
-  const out = new Float32Array(dw * dh);
+/**
+ * Bilinear upsample, as a reusable resampler for a FIXED (sw,sh)→(dw,dh)
+ * pair. Thresholding the result is what puts an edge on a subpixel boundary
+ * instead of an analysis-res pixel boundary.
+ *
+ * The scene renderer calls this twice per frame at output resolution (up to
+ * 8M+ pixels each on 4K vertical). The coordinate mapping — which source
+ * pixels a destination pixel blends, and by how much — never changes across
+ * frames, since it depends only on the fixed analysis/output dimensions. The
+ * original version recomputed that mapping from scratch on every pixel of
+ * every frame; this precomputes it once and reuses it, leaving only the
+ * actual interpolation arithmetic in the hot path.
+ */
+function makeUpsampler(sw, sh, dw, dh) {
+  if (sw === dw && sh === dh) return (src) => src;
+  const x0 = new Int32Array(dw);
+  const x1 = new Int32Array(dw);
+  const wx = new Float32Array(dw);
   const fx = sw / dw;
+  for (let x = 0; x < dw; x++) {
+    const sx = Math.min(sw - 1.001, Math.max(0, (x + 0.5) * fx - 0.5));
+    x0[x] = sx | 0;
+    x1[x] = Math.min(sw - 1, x0[x] + 1);
+    wx[x] = sx - x0[x];
+  }
+  const y0 = new Int32Array(dh);
+  const y1 = new Int32Array(dh);
+  const wy = new Float32Array(dh);
   const fy = sh / dh;
   for (let y = 0; y < dh; y++) {
     const sy = Math.min(sh - 1.001, Math.max(0, (y + 0.5) * fy - 0.5));
-    const y0 = sy | 0;
-    const y1 = Math.min(sh - 1, y0 + 1);
-    const wy = sy - y0;
-    for (let x = 0; x < dw; x++) {
-      const sx = Math.min(sw - 1.001, Math.max(0, (x + 0.5) * fx - 0.5));
-      const x0 = sx | 0;
-      const x1 = Math.min(sw - 1, x0 + 1);
-      const wx = sx - x0;
-      const a = src[y0 * sw + x0] * (1 - wx) + src[y0 * sw + x1] * wx;
-      const b = src[y1 * sw + x0] * (1 - wx) + src[y1 * sw + x1] * wx;
-      out[y * dw + x] = a * (1 - wy) + b * wy;
-    }
+    y0[y] = sy | 0;
+    y1[y] = Math.min(sh - 1, y0[y] + 1);
+    wy[y] = sy - y0[y];
   }
-  return out;
+  const out = new Float32Array(dw * dh);
+  return function upsample(src) {
+    for (let y = 0; y < dh; y++) {
+      const row0 = y0[y] * sw;
+      const row1 = y1[y] * sw;
+      const wyy = wy[y];
+      const outRow = y * dw;
+      for (let x = 0; x < dw; x++) {
+        const xx0 = x0[x];
+        const xx1 = x1[x];
+        const wxx = wx[x];
+        const a = src[row0 + xx0] * (1 - wxx) + src[row0 + xx1] * wxx;
+        const b = src[row1 + xx0] * (1 - wxx) + src[row1 + xx1] * wxx;
+        out[outRow + x] = a * (1 - wyy) + b * wyy;
+      }
+    }
+    return out;
+  };
 }
 
 /**
  * Absorb regions too small to be a real shape into whichever band surrounds
- * them. This is the difference between "graphic" and "dirty" — it removes
- * compression mush, sensor grain and the speckle low-light phone footage
- * leaves in the shadows.
+ * them, as a reusable despeckler for a FIXED (w,h). This is the difference
+ * between "graphic" and "dirty" — it removes compression mush, sensor grain
+ * and the speckle low-light phone footage leaves in the shadows.
+ *
+ * The scene renderer calls this every frame at output resolution. A flood
+ * fill over 8M+ pixels is real work regardless, but the original version
+ * allocated three fresh typed arrays sized to the full frame — tens of MB —
+ * on every single call, only to throw them away a frame later. That's
+ * garbage the collector has to clean up 24+ times a second for no reason:
+ * the scratch space is the same size every time, so it can be built once and
+ * reused. Only `seen` needs resetting between frames.
  */
-function despeckle(labels, w, h, minPx) {
-  const seen = new Uint8Array(w * h);
-  const stack = new Int32Array(w * h);
-  const region = new Int32Array(w * h);
-  for (let start = 0; start < labels.length; start++) {
-    if (seen[start]) continue;
-    const band = labels[start];
-    let sp = 0;
-    let n = 0;
-    stack[sp++] = start;
-    seen[start] = 1;
-    while (sp > 0) {
-      const p = stack[--sp];
-      region[n++] = p;
-      const x = p % w;
-      const y = (p / w) | 0;
-      if (x > 0 && !seen[p - 1] && labels[p - 1] === band) { seen[p - 1] = 1; stack[sp++] = p - 1; }
-      if (x < w - 1 && !seen[p + 1] && labels[p + 1] === band) { seen[p + 1] = 1; stack[sp++] = p + 1; }
-      if (y > 0 && !seen[p - w] && labels[p - w] === band) { seen[p - w] = 1; stack[sp++] = p - w; }
-      if (y < h - 1 && !seen[p + w] && labels[p + w] === band) { seen[p + w] = 1; stack[sp++] = p + w; }
+function makeDespeckler(w, h) {
+  const n = w * h;
+  const seen = new Uint8Array(n);
+  const stack = new Int32Array(n);
+  const region = new Int32Array(n);
+  const votes = new Int32Array(BANDS.length);
+  return function despeckle(labels, minPx) {
+    seen.fill(0);
+    for (let start = 0; start < n; start++) {
+      if (seen[start]) continue;
+      const band = labels[start];
+      let sp = 0;
+      let count = 0;
+      stack[sp++] = start;
+      seen[start] = 1;
+      while (sp > 0) {
+        const p = stack[--sp];
+        region[count++] = p;
+        const x = p % w;
+        const y = (p / w) | 0;
+        if (x > 0 && !seen[p - 1] && labels[p - 1] === band) { seen[p - 1] = 1; stack[sp++] = p - 1; }
+        if (x < w - 1 && !seen[p + 1] && labels[p + 1] === band) { seen[p + 1] = 1; stack[sp++] = p + 1; }
+        if (y > 0 && !seen[p - w] && labels[p - w] === band) { seen[p - w] = 1; stack[sp++] = p - w; }
+        if (y < h - 1 && !seen[p + w] && labels[p + w] === band) { seen[p + w] = 1; stack[sp++] = p + w; }
+      }
+      if (count >= minPx) continue;
+      votes.fill(0);
+      for (let i = 0; i < count; i++) {
+        const p = region[i];
+        const x = p % w;
+        const y = (p / w) | 0;
+        if (x > 0 && labels[p - 1] !== band) votes[labels[p - 1]]++;
+        if (x < w - 1 && labels[p + 1] !== band) votes[labels[p + 1]]++;
+        if (y > 0 && labels[p - w] !== band) votes[labels[p - w]]++;
+        if (y < h - 1 && labels[p + w] !== band) votes[labels[p + w]]++;
+      }
+      let best = band;
+      let bestVotes = -1;
+      for (let b = 0; b < votes.length; b++) if (votes[b] > bestVotes) { bestVotes = votes[b]; best = b; }
+      for (let i = 0; i < count; i++) labels[region[i]] = best;
     }
-    if (n >= minPx) continue;
-    const votes = new Int32Array(BANDS.length);
-    for (let i = 0; i < n; i++) {
-      const p = region[i];
-      const x = p % w;
-      const y = (p / w) | 0;
-      if (x > 0 && labels[p - 1] !== band) votes[labels[p - 1]]++;
-      if (x < w - 1 && labels[p + 1] !== band) votes[labels[p + 1]]++;
-      if (y > 0 && labels[p - w] !== band) votes[labels[p - w]]++;
-      if (y < h - 1 && labels[p + w] !== band) votes[labels[p + w]]++;
-    }
-    let best = band;
-    let bestVotes = -1;
-    for (let b = 0; b < votes.length; b++) if (votes[b] > bestVotes) { bestVotes = votes[b]; best = b; }
-    for (let i = 0; i < n; i++) labels[region[i]] = best;
-  }
-  return labels;
+    return labels;
+  };
 }
 
 /**
@@ -437,13 +480,44 @@ function decode(file, w, h, { seek = null, frames = null, duration = null, fps =
       pause: () => proc.stdout.pause(),
       resume: () => proc.stdout.resume(),
     };
-    let carry = Buffer.alloc(0);
+    // A pipe delivers a 4K frame (tens of MB) as hundreds of small chunks
+    // (often 64KB). Re-concatenating the whole growing buffer on EVERY
+    // chunk — the obvious way to write this — copies the accumulated bytes
+    // over and over: O(chunks²) in the frame size. At native 4K that alone
+    // was the entire bottleneck (encoder presets made no difference). A
+    // queue assembles each frame with one copy per byte, total, instead.
+    const queue = [];
+    let queued = 0;
     proc.stderr.on("data", (d) => process.stderr.write(d));
     proc.stdout.on("data", (chunk) => {
-      carry = carry.length ? Buffer.concat([carry, chunk]) : chunk;
-      while (carry.length >= frameBytes) {
-        onFrame(carry.subarray(0, frameBytes), ctl);
-        carry = carry.subarray(frameBytes);
+      queue.push(chunk);
+      queued += chunk.length;
+      while (queued >= frameBytes) {
+        let frame;
+        if (queue[0].length === frameBytes) {
+          frame = queue.shift();
+        } else if (queue[0].length > frameBytes) {
+          frame = queue[0].subarray(0, frameBytes);
+          queue[0] = queue[0].subarray(frameBytes);
+        } else {
+          const parts = [];
+          let have = 0;
+          while (have < frameBytes) {
+            const head = queue[0];
+            const take = Math.min(head.length, frameBytes - have);
+            if (take === head.length) {
+              parts.push(head);
+              queue.shift();
+            } else {
+              parts.push(head.subarray(0, take));
+              queue[0] = head.subarray(take);
+            }
+            have += take;
+          }
+          frame = Buffer.concat(parts, frameBytes);
+        }
+        queued -= frameBytes;
+        onFrame(frame, ctl);
       }
     });
     proc.on("error", reject);
@@ -593,19 +667,26 @@ function makeSceneRenderer(plate, ww, wh, ow, oh) {
   const on = ow * oh;
 
   // The background, quantized ONCE — identical in every frame, so no boil.
+  const despeckleWork = makeDespeckler(ww, wh);
   const plateSmooth = blur(blur(plate.lum, ww, wh, OPTS.smooth), ww, wh, OPTS.smooth);
-  const plateLabels = despeckle(
+  const plateLabels = despeckleWork(
     quantize(plateSmooth, OPTS.bands),
-    ww, wh,
     Math.max(8, Math.round(wn * OPTS.bgMinRegion)),
   );
   // Carry it up as a continuous field then re-snap, so background shapes get
   // the same subpixel edges as the figure.
   const bgField = new Float32Array(wn);
   for (let p = 0; p < wn; p++) bgField[p] = plateLabels[p] / (BANDS.length - 1);
-  const bgUp = upsample(bgField, ww, wh, ow, oh);
+  const bgUp = makeUpsampler(ww, wh, ow, oh)(bgField);
   const bgLabels = new Uint8Array(on);
   for (let p = 0; p < on; p++) bgLabels[p] = Math.round(bgUp[p] * (BANDS.length - 1));
+
+  // Every one of these — the resampling grid and the despeckle scratch space
+  // — depends only on ww/wh/ow/oh, which are fixed for the whole video. Built
+  // once here rather than every frame; see makeUpsampler / makeDespeckler.
+  const upMask = makeUpsampler(ww, wh, ow, oh);
+  const upFig = makeUpsampler(ww, wh, ow, oh);
+  const despeckleOut = makeDespeckler(ow, oh);
 
   const strong = new Uint8Array(wn);
   const weak = new Uint8Array(wn);
@@ -677,11 +758,10 @@ function makeSceneRenderer(plate, ww, wh, ow, oh) {
     // Smoothing the binary mask and thresholding the smoothed field turns a
     // ragged per-pixel decision into a drawn line: nicks fill, specks
     // dissolve, and the boundary becomes a smooth curve.
-    const maskUp = upsample(
+    const maskUp = upMask(
       blur(blur(maskField, ww, wh, OPTS.maskSmooth), ww, wh, OPTS.maskSmooth),
-      ww, wh, ow, oh,
     );
-    const figUp = upsample(blur(figField, ww, wh, 1), ww, wh, ow, oh);
+    const figUp = upFig(blur(figField, ww, wh, 1));
 
     // The ink rim, measured in output pixels: blur the hard silhouette and
     // read a level above 0.5, which sits a fixed distance inside the outline
@@ -712,7 +792,7 @@ function makeSceneRenderer(plate, ww, wh, ow, oh) {
         labels[p] = bgLabels[p];
       }
     }
-    despeckle(labels, ow, oh, Math.max(12, Math.round(on * OPTS.minRegion)));
+    despeckleOut(labels, Math.max(12, Math.round(on * OPTS.minRegion)));
 
     if (OPTS.debug && !reported) {
       reported = true;
@@ -779,15 +859,17 @@ function makeFlatRenderer(ww, wh, ow, oh) {
   const field = new Float32Array(wn);
   const labels = new Uint8Array(on);
   const out = Buffer.alloc(on * 3);
+  const upFlat = makeUpsampler(ww, wh, ow, oh);
+  const despeckleFlat = makeDespeckler(ow, oh);
   return function render(rgba) {
     for (let p = 0, i4 = 0; p < wn; p++, i4 += 4) {
       lum[p] = (0.2126 * rgba[i4] + 0.7152 * rgba[i4 + 1] + 0.0722 * rgba[i4 + 2]) / 255;
     }
     const work = quantize(blur(blur(lum, ww, wh, OPTS.smooth), ww, wh, OPTS.smooth), OPTS.bands);
     for (let p = 0; p < wn; p++) field[p] = work[p] / (BANDS.length - 1);
-    const up = upsample(field, ww, wh, ow, oh);
+    const up = upFlat(field);
     for (let p = 0; p < on; p++) labels[p] = Math.round(up[p] * (BANDS.length - 1));
-    despeckle(labels, ow, oh, Math.max(12, Math.round(on * OPTS.minRegion)));
+    despeckleFlat(labels, Math.max(12, Math.round(on * OPTS.minRegion)));
     for (let p = 0; p < on; p++) {
       const c = BANDS[labels[p]];
       out[p * 3] = c[0]; out[p * 3 + 1] = c[1]; out[p * 3 + 2] = c[2];
