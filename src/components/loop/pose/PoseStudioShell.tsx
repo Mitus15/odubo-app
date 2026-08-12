@@ -7,10 +7,15 @@ import WallGallery from "@/components/loop/wall/WallGallery";
 /**
  * Pose Studio, standalone (`/loop/pose`) — the public camera page, outside the
  * gated Portal. The camera itself is the full-bleed CameraSheet; this page is
- * just its front door plus your own saved shots. Posting to the Wall lives in
- * the Portal (pass-holders only), so `canPost` is never set here.
+ * just its front door plus your own saved shots.
+ *
+ * `canPost` is NOT hardcoded off. It mirrors `hasRoomAccess`, resolved on the
+ * server — the same rule that governs the Wall everywhere else, so a code
+ * holder or an open-doors night can post from here too, and nobody else can.
+ * Hardcoding it off meant the only way to exercise camera → Wall was to flip
+ * the event phase to `live`, which changes what every visitor to /loop sees.
  */
-export function PoseStudioShell() {
+export function PoseStudioShell({ canPost = false }: { canPost?: boolean }) {
   const [cameraOpen, setCameraOpen] = useState(false);
 
   return (
@@ -48,7 +53,9 @@ export function PoseStudioShell() {
         </div>
       </section>
 
-      {cameraOpen && <CameraSheet onClose={() => setCameraOpen(false)} />}
+      {cameraOpen && (
+        <CameraSheet canPost={canPost} onClose={() => setCameraOpen(false)} />
+      )}
     </main>
   );
 }
