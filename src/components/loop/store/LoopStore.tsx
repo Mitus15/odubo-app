@@ -5,7 +5,10 @@ import Link from "next/link";
 import type { ProductSummary } from "@/lib/store/types";
 import { LOOP_PASS_TAG } from "@/lib/store/brands";
 import { formatMoney } from "@/lib/store/money";
+import { useLoopCart } from "@/hooks/useLoopCart";
 import GetPassModal from "@/components/loop/gathering/GetPassModal";
+import AddToBagSheet from "@/components/loop/store/AddToBagSheet";
+import LoopBag from "@/components/loop/store/LoopBag";
 
 type Capacity = { total: number; sold: number; remaining: number };
 
@@ -46,6 +49,9 @@ export function LoopStore({
   timeLabel: string;
 }) {
   const [passOpen, setPassOpen] = useState(false);
+  const [bagOpen, setBagOpen] = useState(false);
+  const [adding, setAdding] = useState<string | null>(null);
+  const { cart, isHydrated, addItem, setQuantity, removeItem } = useLoopCart();
 
   const { passes, merch } = useMemo(() => {
     const isPass = (p: ProductSummary) => p.tags?.includes(LOOP_PASS_TAG);
@@ -64,12 +70,25 @@ export function LoopStore({
 
   return (
     <main className="mx-auto w-full max-w-5xl px-5 pb-24 pt-2">
-      <header className="pb-8 pt-4">
-        <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Store</h1>
-        <p className="mt-2 max-w-md text-sm opacity-70">
-          Passes and pieces for {eventTitle} · {theme}. Everything else the studio
-          makes lives at odubo.
-        </p>
+      <header className="flex items-start justify-between gap-4 pb-8 pt-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Store</h1>
+          <p className="mt-2 max-w-md text-sm opacity-70">
+            Passes and pieces for {eventTitle} · {theme}. Everything else the studio
+            makes lives at odubo.
+          </p>
+        </div>
+        {/* Rendered only once the bag has hydrated — a count that flashes 0
+            then corrects itself reads as the bag losing someone's items. */}
+        {isHydrated && cart.itemCount > 0 && (
+          <button
+            type="button"
+            onClick={() => setBagOpen(true)}
+            className="shrink-0 rounded-full bg-ink px-4 py-2 text-xs font-bold text-sand"
+          >
+            Bag · {cart.itemCount}
+          </button>
+        )}
       </header>
 
       {showPassCard && (
@@ -130,10 +149,12 @@ export function LoopStore({
         ) : (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
             {merch.map((p) => (
-              <Link
+              <button
                 key={p.id}
-                href={`/store/product/${p.handle}`}
-                className="group block overflow-hidden rounded-xl border border-ink/10 bg-ink/[0.03] transition-colors hover:bg-ink/[0.06]"
+                type="button"
+                disabled={!p.available}
+                onClick={() => setAdding(p.handle)}
+                className="group block overflow-hidden rounded-xl border border-ink/10 bg-ink/[0.03] text-left transition-colors hover:bg-ink/[0.06] disabled:cursor-not-allowed"
               >
                 <div className="relative aspect-square overflow-hidden bg-ink/10">
                   {p.image?.url ? (
@@ -155,7 +176,7 @@ export function LoopStore({
                   <p className="truncate text-sm font-semibold">{p.title}</p>
                   <p className="mt-0.5 text-xs opacity-70">{formatMoney(p.price, p.currency)}</p>
                 </div>
-              </Link>
+              </button>
             ))}
           </div>
         )}
@@ -174,6 +195,26 @@ export function LoopStore({
           </span>
         </Link>
       </footer>
+
+      {adding && (
+        <AddToBagSheet
+          handle={adding}
+          onAdd={(item) => {
+            addItem(item);
+            setBagOpen(true);
+          }}
+          onClose={() => setAdding(null)}
+        />
+      )}
+
+      {bagOpen && (
+        <LoopBag
+          cart={cart}
+          onSetQuantity={setQuantity}
+          onRemove={removeItem}
+          onClose={() => setBagOpen(false)}
+        />
+      )}
 
       {passOpen && (
         <GetPassModal

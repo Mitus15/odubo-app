@@ -445,6 +445,8 @@ export async function fetchProduct(handle: string, country?: string): Promise<Pr
 }
 
 export interface CheckoutAttribution {
+  /** Which storefront sold it — 'odubo_store' (default) or 'loop_soul_store'. */
+  source?: string;
   sessionId?: string;
   utmSource?: string;
   utmMedium?: string;
@@ -484,9 +486,11 @@ export async function createCheckout(
     quantity: item.quantity,
   }));
 
-  // Build attribution attributes for revenue tracking
+  // Build attribution attributes for revenue tracking. `source` names WHICH
+  // storefront made the sale — without it every Loop Soul checkout reports as
+  // an odubo one and the two stores can't be told apart in revenue.
   const attributes = [
-    { key: '_source', value: 'odubo_store' },
+    { key: '_source', value: attribution?.source || 'odubo_store' },
   ];
 
   if (attribution?.sessionId) {
