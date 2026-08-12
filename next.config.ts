@@ -70,9 +70,19 @@ const nextConfig: NextConfig = {
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'X-Frame-Options', value: 'DENY' },
           { key: 'X-XSS-Protection', value: '0' },
-          { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(self)' },
-          // Basic CSP; adjust as needed
-          { key: 'Content-Security-Policy', value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://static.cloudflareinsights.com https://www.googletagmanager.com; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: https:; media-src 'self' https: blob:; worker-src 'self' blob:; frame-src https://iframe.videodelivery.net https://customer-tpkm273r1u0s40no.cloudflarestream.com; connect-src 'self' https: http: ws: wss:;" },
+          // `camera=(self)`, not `camera=()`. An EMPTY allowlist disables the
+          // camera for this origin too, not just for embeds — Chromium then
+          // throws NotAllowedError from getUserMedia and the Loop Soul camera
+          // cannot open at all. Safari enforces this header loosely, which is
+          // why it appeared to work on iOS and would not have on Android.
+          { key: 'Permissions-Policy', value: 'camera=(self), microphone=(self), geolocation=(self)' },
+          // `blob:` must be in img-src. It is its own scheme — `https:` does not
+          // cover it — and every photo the camera takes is previewed and listed
+          // from a blob URL (CameraSheet result, "Your shots"). Without it the
+          // browser blocks the image and draws its broken-image glyph, which on
+          // iOS is a question mark in a box. media-src already allowed blob:,
+          // so clips played while stills silently failed.
+          { key: 'Content-Security-Policy', value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://static.cloudflareinsights.com https://www.googletagmanager.com; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; media-src 'self' https: blob:; worker-src 'self' blob:; frame-src https://iframe.videodelivery.net https://customer-tpkm273r1u0s40no.cloudflarestream.com; connect-src 'self' https: http: ws: wss:;" },
           { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains; preload' },
         ],
       },

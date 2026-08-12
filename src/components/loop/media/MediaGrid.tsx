@@ -49,8 +49,12 @@ export function MediaGrid({
           key={item.id}
           type="button"
           onClick={() => onOpen(i)}
-          className="relative aspect-[3/4] overflow-hidden rounded-2xl border border-[color-mix(in_srgb,var(--foreground)_20%,transparent)] bg-black text-left"
+          className="group relative aspect-[3/4] overflow-hidden rounded-2xl border border-[color-mix(in_srgb,var(--foreground)_20%,transparent)] bg-black text-left [&[data-media-error]]:bg-ink"
         >
+          {/* Only visible once the <img> below reports an error. */}
+          <span className="pointer-events-none absolute inset-0 hidden items-center justify-center px-3 text-center text-[10px] font-semibold uppercase tracking-widest text-sand/70 group-[&[data-media-error]]:flex">
+            Couldn&apos;t load
+          </span>
           {item.kind === "video" ? (
             <>
               <video
@@ -71,6 +75,16 @@ export function MediaGrid({
               alt={item.caption ?? "Loop Soul shot"}
               loading={i < 8 ? "eager" : "lazy"}
               className="h-full w-full object-cover"
+              // Say something when a shot won't load. With no handler the only
+              // signal is the browser's broken-image glyph — a question mark on
+              // iOS — which reads as "the app lost my photo" and gives nobody a
+              // thread to pull. A CSP blocking blob: hid behind that glyph for
+              // an entire round of testing.
+              onError={(e) => {
+                const el = e.currentTarget;
+                el.style.display = "none";
+                el.parentElement?.setAttribute("data-media-error", "1");
+              }}
             />
           )}
 
