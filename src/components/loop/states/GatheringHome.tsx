@@ -3,6 +3,7 @@ import { currentVoterId, getAnthemState } from "@/lib/loop/anthem-server";
 import { getPassCapacity } from "@/lib/loop/pass";
 import { getPassSettings } from "@/lib/loop/pass/settings";
 import { getRunOfShow } from "@/lib/loop/content-store";
+import { isJournalPublished } from "@/lib/loop/journal-server";
 import GatheringPoster from "@/components/loop/gathering/GatheringPoster";
 
 /**
@@ -14,11 +15,12 @@ import GatheringPoster from "@/components/loop/gathering/GatheringPoster";
  */
 export async function GatheringHome({ event }: { event: LoopEvent }) {
   const voterId = await currentVoterId();
-  const [anthem, capacity, runOfShow, passSettings] = await Promise.all([
+  const [anthem, capacity, runOfShow, passSettings, journalPublished] = await Promise.all([
     getAnthemState(event, voterId),
     getPassCapacity(),
     getRunOfShow(event.id),
     getPassSettings(),
+    isJournalPublished(event.id),
   ]);
 
   // Formatted server-side so the venue's timezone is authoritative — not the
@@ -46,6 +48,7 @@ export async function GatheringHome({ event }: { event: LoopEvent }) {
       currency={passSettings.currency}
       dateLabel={dateLabel}
       timeLabel={timeLabel}
+      journalPublished={journalPublished}
     />
   );
 }

@@ -42,6 +42,7 @@ export function GatheringPoster({
   currency = null,
   dateLabel,
   timeLabel,
+  journalPublished = false,
 }: {
   event: LoopEvent;
   capacity: Capacity;
@@ -55,6 +56,8 @@ export function GatheringPoster({
   /** Server-formatted so the venue's timezone is authoritative. */
   dateLabel: string;
   timeLabel: string;
+  /** A published Loop Journal issue makes last volume the pre-phase hype reel. */
+  journalPublished?: boolean;
 }) {
   const [active, setActive] = useState<ModuleKey | null>(null);
   const [passOpen, setPassOpen] = useState(false);
@@ -172,12 +175,22 @@ export function GatheringPoster({
         <div className="text-[9px] font-semibold uppercase tracking-[0.3em] opacity-50">
           Venue partner · Scott&apos;s Inn &amp; Suites
         </div>
-        <Link
-          href="/loop/legacy"
-          className="text-[10px] font-semibold uppercase tracking-[0.3em] opacity-50 hover:opacity-90"
-        >
-          Loop Soul Legacy ↗
-        </Link>
+        <div className="flex items-center gap-5">
+          {journalPublished && (
+            <Link
+              href="/loop/journal"
+              className="text-[10px] font-semibold uppercase tracking-[0.3em] opacity-50 hover:opacity-90"
+            >
+              The Journal ↗
+            </Link>
+          )}
+          <Link
+            href="/loop/legacy"
+            className="text-[10px] font-semibold uppercase tracking-[0.3em] opacity-50 hover:opacity-90"
+          >
+            Loop Soul Legacy ↗
+          </Link>
+        </div>
       </footer>
 
       {/* Module overlay */}
