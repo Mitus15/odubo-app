@@ -129,13 +129,25 @@ export function JournalIssueView({
           <SectionRule index={nextIndex()} label="Iconic Moments" />
           <figure className="mt-6">
             <div className="overflow-hidden rounded-3xl bg-ink/10">
-              {/* Remote R2/Stream stills — plain <img>, domains aren't in next.config. */}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={spotlight.imageUrl}
-                alt={spotlight.caption || "Iconic moment"}
-                className="aspect-[4/5] w-full object-cover"
-              />
+              {/* The Wall's featured set can include clips, so this is not
+                  always a still. Plain <img>/<video> — the media route isn't in
+                  next.config's image domains. */}
+              {spotlight.kind === "video" ? (
+                <video
+                  src={spotlight.imageUrl}
+                  className="aspect-[4/5] w-full object-cover"
+                  controls
+                  playsInline
+                  preload="metadata"
+                />
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={spotlight.imageUrl}
+                  alt={spotlight.caption || "Iconic moment"}
+                  className="aspect-[4/5] w-full object-cover"
+                />
+              )}
             </div>
             {(spotlight.caption || spotlight.credit) && (
               <figcaption className="mt-2 px-1 text-sm">
@@ -152,12 +164,22 @@ export function JournalIssueView({
               {rest.map((m) => (
                 <figure key={m.id}>
                   <div className="overflow-hidden rounded-2xl bg-ink/10">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={m.imageUrl}
-                      alt={m.caption || "Iconic moment"}
-                      className="aspect-square w-full object-cover"
-                    />
+                    {m.kind === "video" ? (
+                      <video
+                        src={m.imageUrl}
+                        className="aspect-square w-full object-cover"
+                        muted
+                        playsInline
+                        preload="metadata"
+                      />
+                    ) : (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={m.imageUrl}
+                        alt={m.caption || "Iconic moment"}
+                        className="aspect-square w-full object-cover"
+                      />
+                    )}
                   </div>
                   {(m.caption || m.credit) && (
                     <figcaption className="mt-1.5 px-1 text-xs">

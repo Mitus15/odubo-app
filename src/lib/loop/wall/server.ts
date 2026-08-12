@@ -84,7 +84,7 @@ export type WallPhoto = {
  * bucket's public URL — media.odubo.studio is down while the domain is lapsed,
  * and the redirect works either way (see /api/loop/gallery/media/[...key]).
  */
-function publicUrlFor(key: string): string {
+export function publicUrlFor(key: string): string {
   return `/api/loop/gallery/media/${key}`;
 }
 
