@@ -14,9 +14,28 @@ export type GalleryKind = "image" | "video";
 export type GalleryItem = {
   id: string;
   kind: GalleryKind;
+  /** What the shot looks like — filtered when the filter was on. */
   blob: Blob;
   mime: string;
   createdAt: number;
+  /** True when `blob` carries the Loop Soul look. */
+  filtered?: boolean;
+  /**
+   * The untouched camera frame, kept alongside a filtered still.
+   *
+   * The filter is destructive — stylizePoster paints over the frame in place —
+   * so without this the original is gone the instant the shutter fires. Keeping
+   * it is what makes "convert it later" possible at all, and the generative
+   * upgrade needs it specifically: its route documents that it wants the
+   * ORIGINAL capture, not the on-device redraw.
+   *
+   * Stills only. A filtered clip is recorded from the canvas, so retaining a
+   * raw one would mean running a second MediaRecorder on the camera stream for
+   * the whole take — real battery and memory cost on a phone, for something the
+   * owner explicitly didn't ask for ("the video they take is gonna exist in the
+   * filter alone").
+   */
+  originalBlob?: Blob;
 };
 
 function idbAvailable(): boolean {
@@ -55,10 +74,28 @@ function newId(): string {
   return `${Date.now()}-${Math.floor(Math.random() * 1e9)}`;
 }
 
-/** Persist a still or clip; returns the stored item. No-op-safe if IDB missing. */
-export async function saveItem(blob: Blob, kind: GalleryKind): Promise<GalleryItem | null> {
+/**
+ * Persist a still or clip; returns the stored item. No-op-safe if IDB missing.
+ *
+ * `opts.original` is stored as an extra Blob on the same record. The keyPath is
+ * unchanged and both new fields are optional, so existing records stay readable
+ * and no VERSION bump is needed.
+ */
+export async function saveItem(
+  blob: Blob,
+  kind: GalleryKind,
+  opts?: { filtered?: boolean; original?: Blob | null },
+): Promise<GalleryItem | null> {
   if (!idbAvailable()) return null;
-  const item: GalleryItem = { id: newId(), kind, blob, mime: blob.type || (kind === "video" ? "video/webm" : "image/jpeg"), createdAt: Date.now() };
+  const item: GalleryItem = {
+    id: newId(),
+    kind,
+    blob,
+    mime: blob.type || (kind === "video" ? "video/webm" : "image/jpeg"),
+    createdAt: Date.now(),
+    filtered: opts?.filtered ?? true,
+    ...(opts?.original ? { originalBlob: opts.original } : {}),
+  };
   await tx("readwrite", (s) => s.put(item));
   return item;
 }

@@ -38,6 +38,17 @@ export type EngineParams = GLParams & {
   maxHeight?: number;
   /** Segment every Nth frame (reuse the mask between). Default 1. */
   segEveryN?: number;
+  /**
+   * Apply the Loop Soul look. Default true.
+   *
+   * When false the engine becomes a passthrough: it draws the camera straight
+   * to the canvas and skips segmentation entirely. Going through the canvas
+   * rather than recording the raw MediaStream keeps the mirror transform, the
+   * height cap and the whole recorder path identical between the two, so
+   * preview and output match by construction instead of by coincidence — and
+   * it is *cheaper* than the filtered path, not more expensive.
+   */
+  filter?: boolean;
 };
 
 /** Video-path options for the vector pipeline (presence of the keys selects
@@ -151,6 +162,19 @@ export class PoseVideoEngine {
     if (!this.running) return;
     const v = this.video;
     if (this.ctx && v.readyState >= 2 && v.videoWidth > 0) {
+      // Passthrough: no mask needed, so the per-frame segmentation and the
+      // vector trace are both skipped rather than computed and discarded.
+      if (this.params.filter === false) {
+        try {
+          this.drawPassthrough();
+        } catch {
+          /* transient — skip frame */
+        }
+        this.frameNo++;
+        this.raf = requestAnimationFrame(() => void this.loop());
+        return;
+      }
+
       const n = this.params.segEveryN ?? 1;
       if (this.frameNo % n === 0) {
         this.lastMask = await segmentVideoFrame(v, performance.now(), this.params.smoothing ?? 0.6);
@@ -164,6 +188,38 @@ export class PoseVideoEngine {
     }
     this.raf = requestAnimationFrame(() => void this.loop());
   };
+
+  /**
+   * The unfiltered path: the camera, drawn to the canvas as-is.
+   *
+   * Deliberately the same canvas the filtered path paints and the recorder taps
+   * (`captureStream` in startRecording), so "what you see is what you record"
+   * holds for both looks without a second code path for preview or capture.
+   * `object-cover` semantics are preserved by cropping to the canvas aspect
+   * rather than letterboxing, matching how the filtered scene fills the frame.
+   */
+  private drawPassthrough(): void {
+    const ctx = this.ctx!;
+    const cw = this.canvas.width;
+    const ch = this.canvas.height;
+    const vw = this.video.videoWidth;
+    const vh = this.video.videoHeight;
+    if (!vw || !vh) return;
+
+    const scale = Math.max(cw / vw, ch / vh);
+    const dw = vw * scale;
+    const dh = vh * scale;
+    const dx = (cw - dw) / 2;
+    const dy = (ch - dh) / 2;
+
+    ctx.save();
+    if (this.mirror) {
+      ctx.translate(cw, 0);
+      ctx.scale(-1, 1);
+    }
+    ctx.drawImage(this.video, dx, dy, dw, dh);
+    ctx.restore();
+  }
 
   private renderFrame(): void {
     const ctx = this.ctx!;

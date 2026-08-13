@@ -42,6 +42,9 @@ export function CameraSheet({
   const capTimer = useRef<number | null>(null);
 
   const [mode, setMode] = useState<Mode>("photo");
+  // On by default — the look IS Loop Soul. Off is a deliberate choice, not the
+  // resting state.
+  const [filterOn, setFilterOn] = useState(true);
   const [facing, setFacing] = useState<CameraFacing>("user");
   const [phase, setPhase] = useState<Phase>("starting");
   const [recording, setRecording] = useState(false);
@@ -49,6 +52,8 @@ export function CameraSheet({
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [resultBlob, setResultBlob] = useState<Blob | null>(null);
   const [resultKind, setResultKind] = useState<"image" | "video">("image");
+  /** The untouched frame behind a filtered still — see gallery.ts. */
+  const [originalBlob, setOriginalBlob] = useState<Blob | null>(null);
   const [posting, setPosting] = useState<"idle" | "posting" | "posted">("idle");
   const [saved, setSaved] = useState(false);
   const [name, setName] = useState("");
@@ -63,22 +68,34 @@ export function CameraSheet({
     streamRef.current = null;
   }, []);
 
-  /** Start (or restart) the live view for the current mode. */
+  /**
+   * Start (or restart) the live view.
+   *
+   * The engine drives the preview whenever the canvas is what gets shown —
+   * filtered in either mode, and unfiltered VIDEO (where the recorder taps the
+   * canvas, so passthrough has to run through it too). Only unfiltered PHOTO
+   * uses the bare <video>, because there the shutter reads the element directly
+   * at full sensor resolution rather than the engine's height-capped canvas.
+   *
+   * The upshot is that the preview now shows what you will actually get. It did
+   * not before: photo previewed raw and produced a poster.
+   */
   const begin = useCallback(
-    async (m: Mode, f: CameraFacing) => {
+    async (m: Mode, f: CameraFacing, filtered: boolean) => {
       setError(null);
       setPhase("starting");
       teardown();
       try {
-        if (m === "photo") {
+        const rawPhoto = m === "photo" && !filtered;
+        if (rawPhoto) {
           if (!videoRef.current) return;
           streamRef.current = await startCamera(videoRef.current, f);
-          preloadSegmenter();
         } else {
           if (!videoRef.current || !canvasRef.current) return;
           const engine = new PoseVideoEngine(videoRef.current, canvasRef.current);
           engineRef.current = engine;
-          await engine.start({ kind: "camera", facing: f });
+          await engine.start({ kind: "camera", facing: f }, { filter: filtered });
+          if (m === "photo") preloadSegmenter();
         }
         setPhase("live");
       } catch (e) {
@@ -89,9 +106,9 @@ export function CameraSheet({
   );
 
   useEffect(() => {
-    void begin(mode, facing);
+    void begin(mode, facing, filterOn);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode]);
+  }, [mode, filterOn]);
 
   useEffect(() => {
     return () => {
@@ -100,10 +117,11 @@ export function CameraSheet({
     };
   }, [teardown]);
 
-  function showResult(blob: Blob, kind: "image" | "video") {
+  function showResult(blob: Blob, kind: "image" | "video", original: Blob | null = null) {
     if (urlRef.current) URL.revokeObjectURL(urlRef.current);
     const url = URL.createObjectURL(blob);
     urlRef.current = url;
+    setOriginalBlob(original);
     setResultBlob(blob);
     setResultUrl(url);
     setResultKind(kind);
@@ -116,12 +134,26 @@ export function CameraSheet({
     if (!videoRef.current || phase !== "live" || mode !== "photo") return;
     setPhase("working");
     try {
+      // Read the <video> element directly either way, so the still is full
+      // sensor resolution rather than the engine's height-capped preview canvas.
       const frame = captureFrame(videoRef.current, facing === "user");
+
+      if (!filterOn) {
+        // No watermark on an unfiltered shot: it is the guest's photograph, not
+        // a Loop Soul artwork, and branding it would be claiming something.
+        teardown();
+        showResult(toJpegBlob(frame, 0.92), "image");
+        return;
+      }
+
+      // Snapshot the original BEFORE the filter runs — stylizePoster paints
+      // over the canvas in place, so after this line the raw frame is gone.
+      const original = toJpegBlob(frame, 0.92);
       const mask = await segmentSubject(frame);
       stylizePoster(frame, mask);
       await stampWatermark(frame);
-      stopStream(streamRef.current, videoRef.current);
-      showResult(toJpegBlob(frame, 0.92), "image");
+      teardown();
+      showResult(toJpegBlob(frame, 0.92), "image", original);
     } catch (e) {
       setError((e as Error).message);
       setPhase("live");
@@ -150,13 +182,14 @@ export function CameraSheet({
   async function flip() {
     const next: CameraFacing = facing === "user" ? "environment" : "user";
     setFacing(next);
-    await begin(mode, next);
+    await begin(mode, next, filterOn);
   }
 
   function retake() {
     setResultUrl(null);
     setResultBlob(null);
-    void begin(mode, facing);
+    setOriginalBlob(null);
+    void begin(mode, facing, filterOn);
   }
 
   async function post() {
@@ -170,7 +203,8 @@ export function CameraSheet({
         userName: name.trim() || null,
       });
       setPosting("posted");
-      void saveItem(resultBlob, resultKind); // keep a copy on the device too
+      // Keep a copy on the device too — with the original, when there is one.
+      void saveItem(resultBlob, resultKind, { filtered: filterOn, original: originalBlob });
       setSaved(true);
       onPosted?.();
     } catch (e) {
@@ -181,7 +215,7 @@ export function CameraSheet({
 
   async function keep() {
     if (!resultBlob || saved) return;
-    await saveItem(resultBlob, resultKind);
+    await saveItem(resultBlob, resultKind, { filtered: filterOn, original: originalBlob });
     setSaved(true);
     if (resultUrl) {
       const a = document.createElement("a");
@@ -193,24 +227,30 @@ export function CameraSheet({
 
   // An error replaces the spinner — never both at once.
   const busy = (phase === "starting" || phase === "working") && !error;
+  /** The one case that previews the camera element rather than the canvas. */
+  const rawPhotoPreview = mode === "photo" && !filterOn;
 
   return (
     <div className="fixed inset-0 z-[65] bg-black">
       {/* Viewfinder / result — full bleed. */}
       <div className="absolute inset-0">
+        {/* Unfiltered photo is the only case that shows the bare camera; every
+            other combination previews through the engine canvas, which is also
+            what gets recorded. Both elements stay mounted — the engine needs the
+            <video> as its source even while the canvas is what you see. */}
         <video
           ref={videoRef}
           playsInline
           muted
           className={`h-full w-full object-cover ${
-            mode === "video" || phase === "result" ? "hidden" : ""
+            rawPhotoPreview && phase !== "result" ? "" : "hidden"
           }`}
           style={{ transform: facing === "user" ? "scaleX(-1)" : undefined }}
         />
         <canvas
           ref={canvasRef}
           className={`h-full w-full object-cover ${
-            mode === "video" && phase !== "result" ? "" : "hidden"
+            !rawPhotoPreview && phase !== "result" ? "" : "hidden"
           }`}
         />
         {phase === "result" && resultUrl && (
@@ -326,7 +366,25 @@ export function CameraSheet({
           </div>
         ) : (
           <div className="flex items-center justify-between gap-6">
-            <div className="h-14 w-14" aria-hidden />
+            <button
+              type="button"
+              onClick={() => setFilterOn((v) => !v)}
+              // Not gated on phase === "live". Flipping the filter restarts the
+              // view anyway, so leaving it live while the camera is starting or
+              // has failed makes it a retry as well as a toggle — and a failed
+              // start leaves `phase` at "starting" forever, which would
+              // otherwise disable this permanently. Only mid-record and
+              // mid-process are genuinely unsafe.
+              disabled={recording || phase === "working"}
+              aria-pressed={filterOn}
+              aria-label={filterOn ? "Turn the Loop Soul filter off" : "Turn the Loop Soul filter on"}
+              className={`flex h-14 w-14 flex-col items-center justify-center rounded-full text-[9px] font-bold uppercase tracking-widest backdrop-blur transition-colors disabled:opacity-40 ${
+                filterOn ? "bg-sand text-ink" : "bg-ink/60 text-bone/80"
+              }`}
+            >
+              <span aria-hidden className="text-base leading-none">∞</span>
+              <span className="mt-0.5 leading-none">{filterOn ? "On" : "Off"}</span>
+            </button>
             {mode === "photo" ? (
               <button
                 type="button"
