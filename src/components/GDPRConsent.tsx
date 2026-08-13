@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { isMonitoringEnabled } from '../config/monitoring';
+import { CONSENT_KEY, notifyConsentChange } from '@/lib/consent';
 
 interface CookiePreferences {
   necessary: boolean;
@@ -29,7 +30,7 @@ export default function GDPRConsent({ onConsentChange }: GDPRConsentProps) {
 
   useEffect(() => {
     // Check if user has already given consent
-    const hasConsent = localStorage.getItem('gdpr-consent');
+    const hasConsent = localStorage.getItem(CONSENT_KEY);
     if (!hasConsent) {
       setShowBanner(true);
     } else {
@@ -53,7 +54,8 @@ export default function GDPRConsent({ onConsentChange }: GDPRConsentProps) {
     };
     
     setPreferences(allAccepted);
-    localStorage.setItem('gdpr-consent', JSON.stringify(allAccepted));
+    localStorage.setItem(CONSENT_KEY, JSON.stringify(allAccepted));
+    notifyConsentChange();
     setShowBanner(false);
     onConsentChange?.(allAccepted);
     
@@ -72,7 +74,8 @@ export default function GDPRConsent({ onConsentChange }: GDPRConsentProps) {
     };
     
     setPreferences(necessaryOnly);
-    localStorage.setItem('gdpr-consent', JSON.stringify(necessaryOnly));
+    localStorage.setItem(CONSENT_KEY, JSON.stringify(necessaryOnly));
+    notifyConsentChange();
     setShowBanner(false);
     onConsentChange?.(necessaryOnly);
     
@@ -83,7 +86,8 @@ export default function GDPRConsent({ onConsentChange }: GDPRConsentProps) {
   };
 
   const handleSavePreferences = () => {
-    localStorage.setItem('gdpr-consent', JSON.stringify(preferences));
+    localStorage.setItem(CONSENT_KEY, JSON.stringify(preferences));
+    notifyConsentChange();
     setShowPreferences(false);
     onConsentChange?.(preferences);
     
