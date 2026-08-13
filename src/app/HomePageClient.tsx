@@ -20,6 +20,7 @@ import { usePageAnalytics } from '@/hooks/usePageAnalytics';
 import { useAnalyticsSafe } from '@/contexts/AnalyticsContext';
 import type { ClipItem } from '@/types/clips';
 import type { Track, Album } from '@/types/music';
+import { useCookieConsent } from '@/lib/consent';
 
 // Modal types that can be opened via URL
 export type DefaultModal = 'store' | 'moments' | 'media' | 'links' | null;
@@ -78,6 +79,8 @@ export default function HomePageClient({
   // Verse overlay states - skip intro if opening a modal
   const [phase, setPhase] = useState<'intro' | 'collapsed' | 'expanded'>(defaultModal ? 'collapsed' : 'intro');
   const [hasInteracted, setHasInteracted] = useState(!!defaultModal);
+  /** Has the visitor answered the cookie banner? Gates the store auto-open. */
+  const cookieConsent = useCookieConsent();
 
   // Active content for global menu (clips or tracks)
   const [activeClip, setActiveClip] = useState<ClipItem | null>(null);
@@ -187,17 +190,30 @@ export default function HomePageClient({
 
   // Auto-open the store on the homepage while the store is live (published).
   // Opens once per page load; if the visitor closes it, it won't pop back open.
-  // Gated on storePublished so it never auto-opens while the store is unpublished.
+  //
+  // It waits for two things, in this order, because it used to wait for
+  // neither: it fired 400ms after load and threw a shop over the top of the
+  // welcome — the first thing a new visitor saw was a sales modal covering an
+  // intro they hadn't read.
+  //
+  //   1. The cookie banner has been ANSWERED. Not accepted-everything —
+  //      necessary-only is an answer too. Opening a shop over an unanswered
+  //      consent prompt buries the choice we are legally obliged to offer.
+  //   2. The visitor has entered the studio — `hasInteracted` covers the
+  //      "Enter the Studio" button and the backdrop tap, so it holds for
+  //      first-time and returning visitors alike (both start at `intro`).
   const didAutoOpenStore = useRef(false);
   useEffect(() => {
     if (defaultModal) return;              // only the plain homepage (not /media, deep links, etc.)
     if (!storePublished) return;           // only while the store is live
+    if (!cookieConsent) return;            // wait for the banner to be answered
+    if (!hasInteracted) return;            // wait for them to enter the studio
     if (didAutoOpenStore.current) return;  // don't reopen after it's been triggered this load
     if (storeView !== 'closed') return;    // don't override an already-open modal
     didAutoOpenStore.current = true;
     const timer = setTimeout(() => openStore(), 400);
     return () => clearTimeout(timer);
-  }, [defaultModal, storePublished, storeView, openStore]);
+  }, [defaultModal, storePublished, cookieConsent, hasInteracted, storeView, openStore]);
 
   // Navigate back to / when modal closes (only if opened via URL)
   useEffect(() => {
