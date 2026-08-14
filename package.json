@@ -43,7 +43,8 @@
     "mp4:backfill": "tsx --env-file=.env.local scripts/backfill-stream-mp4-urls.ts",
     "mp4:monitor": "tsx --env-file=.env.local scripts/monitor-mp4-processing.ts",
     "mp4:reset-stuck": "tsx --env-file=.env.local scripts/reset-stuck-videos.ts",
-    "loop:posters": "tsx scripts/loop/poster-kit.ts"
+    "loop:posters": "tsx scripts/loop/poster-kit.ts",
+    "loop:merch": "tsx scripts/loop/merch-kit.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.858.0",

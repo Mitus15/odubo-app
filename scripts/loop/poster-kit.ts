@@ -5,6 +5,7 @@ import {
   layoutEventPoster,
   layoutTicket,
   layoutPassCard,
+  layoutTournament,
   withBleed,
   qrSrc,
   WORDMARK_SRC,
@@ -15,6 +16,8 @@ import {
   type PosterSize,
   type LayoutResult,
 } from "../../src/lib/loop/poster/layout";
+import { tournamentSpec, TOURNAMENT_EMPTY_FIGURE } from "../../src/lib/loop/poster/tournament";
+import type { AnthemState } from "../../src/lib/loop/anthem-server";
 import { prepareSharp, renderSharp, assertFontResolves } from "./poster-render-sharp";
 
 /**
@@ -169,6 +172,58 @@ async function main() {
       layoutPassCard({ figureSrc: FIGURES.crowd, details: ev }, deps),
     );
     await write(`loop-soul-v${volume}-pass-square.png`, await renderSharp(list, prepared));
+  }
+
+  // The tournament poster renders the LIVE anthem — same data the app draws,
+  // fetched from the volume's own deployment. Offline → skip loudly, never
+  // render a stale guess.
+  if (pieces.includes("tournament")) {
+    const api = new URL("/api/loop/anthem", ev.url).toString();
+    let state: AnthemState;
+    try {
+      const res = await fetch(api);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      state = (await res.json()) as AnthemState;
+    } catch (e) {
+      console.error(`✗ tournament skipped — anthem state unreachable at ${api} (${String(e)})`);
+      state = null as never;
+    }
+    if (state) {
+      for (const size of sizes) {
+        const spec = tournamentSpec(state, { size, qrUrl: ev.url, now: Date.now() });
+        const artSrcs: string[] = [TOURNAMENT_EMPTY_FIGURE];
+        const band = spec.band;
+        if (band.kind === "grid" || band.kind === "seeds") {
+          artSrcs.push(...band.art.map((a) => a.src).filter(Boolean));
+        } else if (band.kind === "pairs") {
+          for (const p of band.pairs) {
+            if (p.a?.src) artSrcs.push(p.a.src);
+            if (p.b?.src) artSrcs.push(p.b.src);
+          }
+        } else if (band.art.src) {
+          artSrcs.push(band.art.src);
+        }
+        const artPrepared = await prepareSharp(artSrcs);
+        const merged = {
+          sizes: { ...prepared.sizes, ...artPrepared.sizes },
+          raw: new Map([...prepared.raw, ...artPrepared.raw]),
+        };
+        const list = unwrap(
+          `tournament ${state.stage}/${size}`,
+          layoutTournament(spec, { sizes: merged.sizes }),
+        );
+        await write(
+          `loop-soul-v${volume}-anthem-${state.stage}-${FILE_LABELS[size]}.png`,
+          await renderSharp(list, merged),
+        );
+        if (bleed && size === "print") {
+          await write(
+            `loop-soul-v${volume}-anthem-${state.stage}-print-bleed.png`,
+            await renderSharp(withBleed(list, "TRIM 8 × 11 IN · BLEED ⅛ IN · 300 DPI"), merged),
+          );
+        }
+      }
+    }
   }
 
   console.log("\nout:", out);

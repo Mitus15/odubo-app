@@ -37,7 +37,7 @@ const FONT_FILES: Record<FontWeight, string> = {
 
 const fontCache = new Map<FontWeight, opentype.Font>();
 
-async function face(weight: FontWeight): Promise<opentype.Font> {
+export async function face(weight: FontWeight): Promise<opentype.Font> {
   const cached = fontCache.get(weight);
   if (cached) return cached;
   const buf = await fs.readFile(path.join(ROOT, FONT_FILES[weight]));
@@ -57,7 +57,7 @@ async function face(weight: FontWeight): Promise<opentype.Font> {
  * retried once, then refused loudly. Silence is the one failure mode this
  * pipeline is not allowed to have.
  */
-function glyphPathData(
+export function glyphPathData(
   font: opentype.Font,
   ch: string,
   x: number,
