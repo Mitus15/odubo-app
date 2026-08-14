@@ -103,7 +103,7 @@ export function GatheringPoster({
             states (docs/decisions/loop-soul-brand-language.md). Mixed case is
             deliberate — the one line on the piece that invites rather than
             announces. */}
-        <div className="text-4xl font-extrabold tracking-tight text-ink">
+        <div className="loop-display text-4xl font-bold tracking-tight text-ink">
           Come Dance
         </div>
         <div className="relative min-h-0 w-full flex-1">

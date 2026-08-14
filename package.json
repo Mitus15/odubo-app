@@ -42,7 +42,8 @@
     "transcode:backfill": "tsx --env-file=.env.local scripts/backfill-transcode.ts",
     "mp4:backfill": "tsx --env-file=.env.local scripts/backfill-stream-mp4-urls.ts",
     "mp4:monitor": "tsx --env-file=.env.local scripts/monitor-mp4-processing.ts",
-    "mp4:reset-stuck": "tsx --env-file=.env.local scripts/reset-stuck-videos.ts"
+    "mp4:reset-stuck": "tsx --env-file=.env.local scripts/reset-stuck-videos.ts",
+    "loop:posters": "tsx scripts/loop/poster-kit.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.858.0",
@@ -118,6 +119,7 @@
     "eslint": "^9",
     "eslint-config-next": "15.4.8",
     "ffmpeg-static": "^5.2.0",
+    "opentype.js": "^1.3.4",
     "tsx": "^4.20.4",
     "typescript": "^5"
   }
