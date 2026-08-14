@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getCurrentEvent } from "@/lib/loop/hub";
+import { getPassCapacity } from "@/lib/loop/pass";
 import PosterStudio from "./PosterStudio";
 
 /**
@@ -7,7 +8,7 @@ import PosterStudio from "./PosterStudio";
  * /loop/admin page. Server shell resolves the event for the details block.
  */
 export default async function PostersPage() {
-  const event = await getCurrentEvent();
+  const [event, capacity] = await Promise.all([getCurrentEvent(), getPassCapacity()]);
   const dateLabel = new Date(event.date).toLocaleDateString("en-CA", {
     timeZone: "America/Vancouver",
     month: "long",
@@ -37,6 +38,7 @@ export default async function PostersPage() {
           theme: event.theme,
           venue: event.venue,
           dateLabel,
+          passes: `${capacity.total} PASSES`,
         }}
       />
     </main>

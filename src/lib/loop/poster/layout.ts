@@ -873,7 +873,7 @@ export function layoutTournament(spec: TournamentPosterSpec, deps: LayoutDeps): 
     const arcEndY = headBottom + R(120 * S) + R(arcRise);
     ops.push(arcLine(arcText, { cx: W / 2, y: arcEndY, width: arcW, size: R(58 * S), weight: 700 }));
 
-    // Bottom-up: credits, sublines, headline — the band gets what remains.
+    // Bottom-up: credits, triad, sublines, headline — the band gets the rest.
     const od = need(deps, ODUBO_SRC);
     const sc = need(deps, SCOTTS_SRC);
     const odW = R(250 * S);
@@ -884,10 +884,16 @@ export function layoutTournament(spec: TournamentPosterSpec, deps: LayoutDeps): 
     const creditTop = H - pad - creditRowH;
     const creditLabelY = creditTop - R(28 * S);
 
+    // The triad signs off above the credits — shared chrome with the event
+    // family, quieter here so the headline stays the loudest line.
+    const triadSize = R(34 * S);
+    const triadY = creditLabelY - R(76 * S);
     const sublines = (spec.sublines ?? []).filter(Boolean).slice(0, 2);
     const subSize = R(40 * S);
-    let cursorY = creditLabelY - R(130 * S);
-    const textOps: Op[] = [];
+    let cursorY = triadY - R(96 * S);
+    const textOps: Op[] = [
+      line(TRIAD, { x: W / 2, y: triadY, size: triadSize, track: 0.42, opacity: 0.6 }),
+    ];
     for (let i = sublines.length - 1; i >= 0; i--) {
       const text = truncate(sublines[i], innerW, { size: subSize, track: 0.14 });
       textOps.push(line(text, { x: W / 2, y: cursorY, size: subSize, track: 0.14, opacity: 0.75 }));

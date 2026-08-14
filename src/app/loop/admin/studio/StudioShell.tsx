@@ -87,7 +87,7 @@ export function StudioShell({
   facts: PlaybookFacts;
   stats: { sold: number; total: number; redeemed: number; codes: number; anthemEntries: number };
   notes: LoopNote[];
-  eventDetails: { title: string; theme: string; venue: string; dateLabel: string };
+  eventDetails: { title: string; theme: string; venue: string; dateLabel: string; passes?: string };
 }) {
   const [playbookTab, setPlaybookTab] = useState<PlaybookTab | null>(null);
 

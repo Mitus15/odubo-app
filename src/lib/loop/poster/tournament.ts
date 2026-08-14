@@ -87,15 +87,23 @@ export function tournamentSpec(
       const art = rows.slice(0, GRID_MAX).map((r) => toArt(r.candidate, size));
       const n = rows.length;
       const leader = rows[0];
-      const sublines = [
-        leader ? `LEADING · ${leader.candidate.title.toUpperCase()}` : "THE FLOOR IS OPEN",
-        closesLine(state.schedule.nominations, size, now).replace("CLOSES", "NOMINATIONS CLOSE"),
-      ];
+      const closes = closesLine(state.schedule.nominations, size, now).replace(
+        "CLOSES",
+        "NOMINATIONS CLOSE",
+      );
+      // An empty longlist is an invitation, not a count — "0 SONGS NOMINATED"
+      // is the one honest headline that would still sink the poster.
+      const headline =
+        n === 0 ? "THE FLOOR IS OPEN" : n === 1 ? "1 SONG NOMINATED" : `${n} SONGS NOMINATED`;
+      const sublines =
+        n === 0
+          ? ["BE THE FIRST TO NOMINATE", closes]
+          : [leader ? `LEADING · ${leader.candidate.title.toUpperCase()}` : closes, closes];
       return {
         ...base,
         band: { kind: "grid", art, emptyFigureSrc: TOURNAMENT_EMPTY_FIGURE },
-        headline: n === 1 ? "1 SONG NOMINATED" : `${n} SONGS NOMINATED`,
-        sublines,
+        headline,
+        sublines: [...new Set(sublines)],
         // The gate decides who may SUGGEST; upvoting is open to everyone.
         cta: state.gate === "open" ? "SCAN TO NOMINATE" : "SCAN TO UPVOTE",
       };
