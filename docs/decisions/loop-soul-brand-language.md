@@ -105,11 +105,16 @@ cut highlights. Print artwork is RGB; convert at the shop if they want CMYK.
 
 ## Where this lives in code
 
-- Brand constants (colours, both lines, triad, credits, font):
+- Brand constants (colours, both lines, triad, credits, font, the measure):
   `src/lib/loop/brand.ts` — the single source both renderers read.
-- Print/batch artwork: `scripts/loop/poster-kit.mjs` (regenerates posters,
-  ticket, pass card from one volume block — being converted to TypeScript).
-- Merch elements: `scripts/loop/merch-kit.mjs`.
+- The layout engine (every piece, both runtimes): `src/lib/loop/poster/layout.ts`
+  — pure display lists; the renderers (`poster/render-canvas.ts`,
+  `scripts/loop/poster-render-sharp.ts`) never make a layout decision.
+- Print/batch artwork: `npm run loop:posters` (`scripts/loop/poster-kit.ts` —
+  posters, ticket, pass card, and the live-anthem tournament piece).
+- Merch elements: `npm run loop:merch` (`scripts/loop/merch-kit.ts` — Jost
+  outlines, same pipeline as the posters).
+- Tournament mapping (anthem state → poster): `src/lib/loop/poster/tournament.ts`.
 - In-app Poster Studio: `src/app/loop/admin/posters/PosterStudio.tsx` over
   `src/lib/loop/poster/compose.ts`.
 - App poster (front door): `src/components/loop/gathering/GatheringPoster.tsx`.
