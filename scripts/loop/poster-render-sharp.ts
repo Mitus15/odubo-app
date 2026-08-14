@@ -133,7 +133,15 @@ export async function prepareSharp(srcs: string[]): Promise<Prepared> {
       sizes[src] = { w, h };
       raw.set(src, { kind: "svg", data: Buffer.from(svg) });
     } else {
-      const buf = await fs.readFile(path.join(ROOT, "public", src));
+      // Repo-relative under public/, or remote (tournament album artwork).
+      const buf = src.startsWith("http")
+        ? Buffer.from(
+            await (await fetch(src).then((r) => {
+              if (!r.ok) throw new Error(`artwork fetch failed (${r.status}): ${src}`);
+              return r;
+            })).arrayBuffer(),
+          )
+        : await fs.readFile(path.join(ROOT, "public", src));
       const meta = await sharp(buf).metadata();
       sizes[src] = { w: meta.width ?? 0, h: meta.height ?? 0 };
       raw.set(src, { kind: "raster", data: buf });

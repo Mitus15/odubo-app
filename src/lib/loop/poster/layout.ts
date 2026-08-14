@@ -2,6 +2,7 @@ import {
   SAND,
   INK,
   SLOGAN,
+  ANTHEM_PHRASE,
   TRIAD,
   CREDIT_PRESENTER,
   CREDIT_PARTNER,
@@ -119,6 +120,48 @@ export type EventPosterSpec = {
   showTriad?: boolean;
   qrUrl: string;
   details?: EventDetails | null;
+};
+
+/** One piece of quoted album artwork — the only colour allowed on the poster. */
+export type TournamentArt = {
+  /** Artwork URL — "" when the track has none (renders a keylined text tile). */
+  src: string;
+  title: string;
+  artist: string;
+};
+
+export type TournamentPair = {
+  a: TournamentArt | null;
+  b: TournamentArt | null;
+  /** A's share of the vote, 0..1 — null when NOBODY has voted (neutral bar, never "0% / 0%"). */
+  pctA: number | null;
+};
+
+export type TournamentBand =
+  | { kind: "grid"; art: TournamentArt[]; /** 0 nominations → this figure instead of holes. */ emptyFigureSrc: string }
+  | { kind: "seeds"; art: TournamentArt[] }
+  | { kind: "pairs"; pairs: TournamentPair[] }
+  | { kind: "hero"; art: TournamentArt };
+
+/**
+ * The tournament poster — the event poster's sibling, not its twin. Same sand
+ * field, margins, wordmark, QR + caption, credits; the middle band carries the
+ * tournament's STATE in quoted album artwork, and the arc carries the anthem
+ * phrase where the event poster puts its volume line. The arc asks; the
+ * headline below the band answers straight.
+ */
+export type TournamentPosterSpec = {
+  size: PosterSize;
+  qrUrl: string;
+  /** The arced question. Defaults to the brand anthem phrase. */
+  arcText?: string;
+  band: TournamentBand;
+  /** Straight and bold under the band — "14 SONGS NOMINATED", a round name, the champion. */
+  headline: string;
+  /** Up to two quiet lines under the headline (leader, closing time). */
+  sublines?: string[];
+  /** QR caption — the stage's call to action. */
+  cta: string;
 };
 
 export type TicketSpec = {
@@ -722,4 +765,318 @@ export function arcLine(
   }
 
   return { kind: "arcGlyphs", glyphs, size: fitted, weight, opacity, fill };
+}
+
+/* ── the tournament poster ──────────────────────────────────────────────── */
+
+/** Cut `text` to fit `maxWidth`, with an ellipsis when it had to. */
+function truncate(
+  text: string,
+  maxWidth: number,
+  opts: { size: number; weight?: FontWeight; track?: number },
+): string {
+  if (measure(text, opts) <= maxWidth) return text;
+  let t = text;
+  while (t.length > 1 && measure(`${t}…`, opts) > maxWidth) t = t.slice(0, -1).trimEnd();
+  return `${t}…`;
+}
+
+/**
+ * One piece of album artwork inside a 1px-rule ink keyline — the only colour
+ * allowed on the poster, always quoted, never duotoned. A track without
+ * artwork ("" — the DB stores empty string, not null) gets a keylined sand
+ * tile carrying its title, so a missing image can never render as a hole or a
+ * broken glyph. `art: null` is an undecided slot and reads TBD.
+ */
+function artTile(
+  art: TournamentArt | null,
+  box: { x: number; y: number; w: number; h: number },
+  k: number,
+): Op[] {
+  const ops: Op[] = [
+    // The keyline is a slightly larger ink rect UNDER the tile — both
+    // renderers already know rects and images; no stroke primitive needed.
+    { kind: "rect", x: box.x - k, y: box.y - k, w: box.w + 2 * k, h: box.h + 2 * k, fill: INK },
+  ];
+  if (art?.src) {
+    ops.push({ kind: "image", src: art.src, x: box.x, y: box.y, w: box.w, h: box.h });
+    return ops;
+  }
+  ops.push({ kind: "rect", x: box.x, y: box.y, w: box.w, h: box.h, fill: SAND });
+  const cx = box.x + box.w / 2;
+  const inner = box.w * 0.82;
+  if (art) {
+    const titleSize = Math.max(14, R(box.w * 0.085));
+    const artistSize = Math.max(12, R(box.w * 0.065));
+    ops.push(
+      line(truncate(art.title, inner, { size: titleSize, weight: 700, track: 0.04 }), {
+        x: cx,
+        y: box.y + box.h / 2 - titleSize * 0.25,
+        size: titleSize,
+        weight: 700,
+        track: 0.04,
+      }),
+    );
+    ops.push(
+      line(truncate(art.artist, inner, { size: artistSize, track: 0.08 }), {
+        x: cx,
+        y: box.y + box.h / 2 + artistSize * 1.1,
+        size: artistSize,
+        track: 0.08,
+        opacity: 0.7,
+      }),
+    );
+  } else {
+    const size = Math.max(14, R(box.w * 0.14));
+    ops.push(
+      line("TBD", { x: cx, y: box.y + box.h / 2 + size * 0.35, size, weight: 700, track: 0.2, opacity: 0.45 }),
+    );
+  }
+  return ops;
+}
+
+export function layoutTournament(spec: TournamentPosterSpec, deps: LayoutDeps): LayoutResult {
+  return run(() => {
+    const { w: W, h: H } = POSTER_SIZES[spec.size];
+    const S = W / 2400;
+    const pad = R(240 * S);
+    const innerW = W - pad * 2;
+    const keyW = Math.max(2, R(4 * S));
+    const arcText = spec.arcText ?? ANTHEM_PHRASE;
+
+    const ops: Op[] = [{ kind: "rect", x: 0, y: 0, w: W, h: H, fill: SAND }];
+
+    // Header — identical anchors to the event poster; the caption under the
+    // QR carries the stage's CTA instead of SCAN FOR PASSES.
+    const wm = need(deps, WORDMARK_SRC);
+    const wmW = R(560 * S);
+    const wmH = R(wmW * (wm.h / wm.w));
+    const qrPx = R(300 * S);
+    const headTop = pad;
+    const headBottom = headTop + Math.max(wmH, qrPx + R(46 * S));
+    ops.push({ kind: "image", src: WORDMARK_SRC, x: pad, y: headTop, w: wmW, h: wmH });
+    ops.push({ kind: "image", src: qrSrc(spec.qrUrl), x: W - pad - qrPx, y: headTop, w: qrPx, h: qrPx });
+    ops.push(
+      line(spec.cta, {
+        x: W - pad - qrPx / 2,
+        y: headTop + qrPx + R(36 * S),
+        size: R(24 * S),
+        track: 0.24,
+        opacity: 0.65,
+      }),
+    );
+
+    // The arc — the anthem phrase asks its question where the event poster
+    // states its volume line.
+    const arcW = R(W * 0.44);
+    const arcRise = (100 * arcW) / 320;
+    const arcEndY = headBottom + R(120 * S) + R(arcRise);
+    ops.push(arcLine(arcText, { cx: W / 2, y: arcEndY, width: arcW, size: R(58 * S), weight: 700 }));
+
+    // Bottom-up: credits, triad, sublines, headline — the band gets the rest.
+    const od = need(deps, ODUBO_SRC);
+    const sc = need(deps, SCOTTS_SRC);
+    const odW = R(250 * S);
+    const odH = R(odW * (od.h / od.w));
+    const scW = R(330 * S);
+    const scH = R(scW * (sc.h / sc.w));
+    const creditRowH = Math.max(odH, scH);
+    const creditTop = H - pad - creditRowH;
+    const creditLabelY = creditTop - R(28 * S);
+
+    // The triad signs off above the credits — shared chrome with the event
+    // family, quieter here so the headline stays the loudest line.
+    const triadSize = R(34 * S);
+    const triadY = creditLabelY - R(76 * S);
+    const sublines = (spec.sublines ?? []).filter(Boolean).slice(0, 2);
+    const subSize = R(40 * S);
+    let cursorY = triadY - R(96 * S);
+    const textOps: Op[] = [
+      line(TRIAD, { x: W / 2, y: triadY, size: triadSize, track: 0.42, opacity: 0.6 }),
+    ];
+    for (let i = sublines.length - 1; i >= 0; i--) {
+      const text = truncate(sublines[i], innerW, { size: subSize, track: 0.14 });
+      textOps.push(line(text, { x: W / 2, y: cursorY, size: subSize, track: 0.14, opacity: 0.75 }));
+      cursorY -= R(64 * S);
+    }
+    const headSize = fitSize(spec.headline, innerW, { weight: 700, track: 0.02 }, { max: R(170 * S) });
+    assertFits("the headline", measure(spec.headline, { size: headSize, weight: 700, track: 0.02 }), innerW);
+    textOps.push(line(spec.headline, { x: W / 2, y: cursorY, size: headSize, weight: 700, track: 0.02 }));
+    const headTopY = cursorY - Math.round(headSize * CAP_HEIGHT);
+    ops.push(...textOps);
+
+    // The band.
+    const bandTop = arcEndY + R(110 * S);
+    const bandBottom = headTopY - R(140 * S);
+    const bandH = bandBottom - bandTop;
+    const bandW = innerW;
+    assertFits("the tournament band", R(420 * S), bandH);
+    ops.push(...bandOps(spec.band, { x: pad, y: bandTop, w: bandW, h: bandH }, S, keyW, deps));
+
+    // Credits — same row as every other piece.
+    ops.push(line(CREDIT_PRESENTER, { x: W * 0.33, y: creditLabelY, size: R(24 * S), track: 0.3, opacity: 0.55 }));
+    ops.push(line(CREDIT_PARTNER, { x: W * 0.67, y: creditLabelY, size: R(24 * S), track: 0.3, opacity: 0.55 }));
+    ops.push({ kind: "image", src: ODUBO_SRC, x: R(W * 0.33 - odW / 2), y: R(creditTop + (creditRowH - odH) / 2), w: odW, h: odH });
+    ops.push({ kind: "image", src: SCOTTS_SRC, x: R(W * 0.67 - scW / 2), y: R(creditTop + (creditRowH - scH) / 2), w: scW, h: scH, opacity: 0.85 });
+
+    return { w: W, h: H, ops };
+  });
+}
+
+/** Lay the stage band inside its box. Pure geometry; every tile keylined. */
+function bandOps(
+  band: TournamentBand,
+  box: { x: number; y: number; w: number; h: number },
+  S: number,
+  keyW: number,
+  deps: LayoutDeps,
+): Op[] {
+  const ops: Op[] = [];
+  const cx = box.x + box.w / 2;
+
+  switch (band.kind) {
+    case "grid": {
+      const art = band.art;
+      if (art.length === 0) {
+        // No nominations yet — the crowd holds the space, never a hole.
+        const fig = need(deps, band.emptyFigureSrc);
+        const scale = Math.min(box.h / fig.h, box.w / fig.w);
+        const fw = R(fig.w * scale);
+        const fh = R(fig.h * scale);
+        ops.push({ kind: "image", src: band.emptyFigureSrc, x: R(cx - fw / 2), y: R(box.y + (box.h - fh) / 2), w: fw, h: fh });
+        return ops;
+      }
+      const cols = Math.min(Math.ceil(Math.sqrt(art.length)), 5);
+      const rows = Math.ceil(art.length / cols);
+      const gap = R(36 * S);
+      const capH = R(52 * S); // caption line + its air
+      const tile = Math.floor(
+        Math.min((box.w - gap * (cols - 1)) / cols, (box.h - gap * (rows - 1)) / rows - capH),
+      );
+      const gridH = rows * (tile + capH) + (rows - 1) * gap;
+      const y0 = box.y + (box.h - gridH) / 2;
+      art.forEach((a, i) => {
+        const row = Math.floor(i / cols);
+        const inRow = row === rows - 1 ? art.length - row * cols : cols;
+        const rowW = inRow * tile + (inRow - 1) * gap;
+        const col = i - row * cols;
+        const x = R(cx - rowW / 2 + col * (tile + gap));
+        const y = R(y0 + row * (tile + capH + gap));
+        ops.push(...artTile(a, { x, y, w: tile, h: tile }, keyW));
+        const capSize = R(20 * S);
+        ops.push(
+          line(truncate(a.title, tile, { size: capSize, track: 0.08 }), {
+            x: x + tile / 2,
+            y: y + tile + R(34 * S),
+            size: capSize,
+            track: 0.08,
+            opacity: 0.7,
+          }),
+        );
+      });
+      return ops;
+    }
+
+    case "seeds": {
+      const art = band.art.slice(0, 8);
+      const cols = 4;
+      const rows = Math.ceil(art.length / cols);
+      const gap = R(44 * S);
+      const capH = R(56 * S);
+      const tile = Math.floor(
+        Math.min((box.w - gap * (cols - 1)) / cols, (box.h - gap * (rows - 1)) / rows - capH),
+      );
+      const gridW = cols * tile + (cols - 1) * gap;
+      const gridH = rows * (tile + capH) + (rows - 1) * gap;
+      const x0 = cx - gridW / 2;
+      const y0 = box.y + (box.h - gridH) / 2;
+      art.forEach((a, i) => {
+        const row = Math.floor(i / cols);
+        const col = i % cols;
+        const x = R(x0 + col * (tile + gap));
+        const y = R(y0 + row * (tile + capH + gap));
+        ops.push(...artTile(a, { x, y, w: tile, h: tile }, keyW));
+        const capSize = R(22 * S);
+        ops.push(
+          line(truncate(`${i + 1} · ${a.title}`, tile, { size: capSize, weight: 700, track: 0.06 }), {
+            x: x + tile / 2,
+            y: y + tile + R(38 * S),
+            size: capSize,
+            weight: 700,
+            track: 0.06,
+            opacity: 0.8,
+          }),
+        );
+      });
+      return ops;
+    }
+
+    case "pairs": {
+      const pairs = band.pairs;
+      const rows = Math.max(1, pairs.length);
+      const gap = R(56 * S);
+      const rowH = Math.floor((box.h - gap * (rows - 1)) / rows);
+      const midW = R(300 * S);
+      const capH = R(50 * S);
+      const tile = Math.min(rowH - capH, Math.floor((box.w - midW - 2 * R(40 * S)) / 2));
+      pairs.forEach((p, i) => {
+        const rowTop = box.y + i * (rowH + gap);
+        const tileY = R(rowTop + (rowH - capH - tile) / 2);
+        const ax = R(cx - midW / 2 - R(40 * S) - tile);
+        const bx = R(cx + midW / 2 + R(40 * S));
+        ops.push(...artTile(p.a, { x: ax, y: tileY, w: tile, h: tile }, keyW));
+        ops.push(...artTile(p.b, { x: bx, y: tileY, w: tile, h: tile }, keyW));
+        const capSize = R(20 * S);
+        if (p.a) {
+          ops.push(
+            line(truncate(p.a.title, tile, { size: capSize, track: 0.08 }), {
+              x: ax + tile / 2, y: tileY + tile + R(34 * S), size: capSize, track: 0.08, opacity: 0.7,
+            }),
+          );
+        }
+        if (p.b) {
+          ops.push(
+            line(truncate(p.b.title, tile, { size: capSize, track: 0.08 }), {
+              x: bx + tile / 2, y: tileY + tile + R(34 * S), size: capSize, track: 0.08, opacity: 0.7,
+            }),
+          );
+        }
+        // VS + the vote bar. 0–0 is a neutral hairline — never "0% / 0%".
+        const midCy = tileY + tile / 2;
+        const vsSize = R(44 * S);
+        ops.push(line("VS", { x: cx, y: midCy - R(24 * S), size: vsSize, weight: 700, track: 0.12, opacity: 0.85 }));
+        const barW = R(220 * S);
+        const barH = Math.max(3, R(10 * S));
+        const barY = R(midCy + R(28 * S));
+        if (p.pctA == null) {
+          ops.push({
+            kind: "rule",
+            x1: cx - barW / 2, y1: barY + barH / 2, x2: cx + barW / 2, y2: barY + barH / 2,
+            width: Math.max(2, R(3 * S)), opacity: 0.3,
+          });
+        } else {
+          const aW = R(barW * Math.min(1, Math.max(0, p.pctA)));
+          ops.push({ kind: "rect", x: R(cx - barW / 2), y: barY, w: barW, h: barH, fill: INK });
+          // The unfilled side reads as sand through a second, inset rect.
+          if (barW - aW > 0) {
+            ops.push({
+              kind: "rect",
+              x: R(cx - barW / 2) + aW, y: barY + Math.max(1, R(2 * S)),
+              w: barW - aW, h: barH - 2 * Math.max(1, R(2 * S)),
+              fill: SAND,
+            });
+          }
+        }
+      });
+      return ops;
+    }
+
+    case "hero": {
+      const side = Math.floor(Math.min(box.w * 0.72, box.h));
+      ops.push(
+        ...artTile(band.art, { x: R(cx - side / 2), y: R(box.y + (box.h - side) / 2), w: side, h: side }, keyW),
+      );
+      return ops;
+    }
+  }
 }
