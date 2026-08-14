@@ -63,7 +63,7 @@ export type LookbookItem = {
 /** Poster concepts double as the visual mood board until curated outfit shots land. */
 export const LOOKBOOK: LookbookItem[] = [
   { id: "spin", src: "/loop/posters/spin.png", label: "What are you spinning?" },
-  { id: "dance", src: "/loop/posters/dance.png", label: "What are you dancing to?" },
+  { id: "dance", src: "/loop/posters/dance.png", label: "What we dancin' to" },
   { id: "listen", src: "/loop/posters/listen.png", label: "What are you listening to?" },
   { id: "fashion", src: "/loop/posters/fashion.png", label: "What are you wearing?" },
   { id: "play", src: "/loop/posters/play.png", label: "What are you playing?" },

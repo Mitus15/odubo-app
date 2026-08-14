@@ -9,6 +9,15 @@
         "LOOP_FORCE_PHASE=live npx next dev -p 3111"
       ],
       "port": 3111
+    },
+    {
+      "name": "loop-pre-preview",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "LOOP_FORCE_PHASE=pre npx next dev -p 3112"
+      ],
+      "port": 3112
     }
   ]
 }

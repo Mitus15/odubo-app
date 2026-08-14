@@ -46,7 +46,7 @@ export function PosterStudio({
   const [figureSrc, setFigureSrc] = useState<string | null>(BRAND_FIGURES[0].src);
   const [uploadUrl, setUploadUrl] = useState<string | null>(null);
   const [wallPhotos, setWallPhotos] = useState<WallPhotoDto[]>([]);
-  const [tagline, setTagline] = useState("What we dancin' to");
+  const [tagline, setTagline] = useState("Come Dance");
   const [qrUrl, setQrUrl] = useState(DEFAULT_QR_PATH);
 
   // Upgrade the QR target to the real origin once we're on the client.
@@ -245,7 +245,7 @@ export function PosterStudio({
           type="text"
           value={tagline}
           onChange={(e) => setTagline(e.target.value)}
-          placeholder="The arced line (slogan: What we dancin' to)"
+          placeholder="The line over the figure (slogan: Come Dance)"
           maxLength={40}
           className="rounded-2xl border border-ink/20 bg-transparent px-4 py-3 text-sm outline-none focus:border-ink"
         />

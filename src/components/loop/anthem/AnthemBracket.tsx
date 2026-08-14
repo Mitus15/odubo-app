@@ -207,7 +207,10 @@ export function AnthemBracket({ initial }: { initial: AnthemState }) {
   return (
     <div className="w-full">
       <div className="flex flex-col items-center text-center">
-        <ArcedTagline text="What are you dancing to?" className="text-ink" width={280} />
+        {/* The anthem phrase, exact — never "What are you dancing to?"
+            (docs/decisions/loop-soul-brand-language.md). The arc asks, and
+            this is the question the tournament answers. */}
+        <ArcedTagline text="What we dancin' to" className="text-ink" width={280} />
         <h2 className="-mt-2 text-2xl font-extrabold">Soul Loop Anthem</h2>
         <p className="text-sm opacity-70">
           {active ? active.name : "The bracket"} · vote to advance — change it until the round closes
@@ -404,7 +407,10 @@ function NominationStage({
   return (
     <div className="w-full">
       <div className="flex flex-col items-center text-center">
-        <ArcedTagline text="What should we dance to?" className="text-ink" width={300} />
+        {/* Same exact phrase as the bracket stage — the brand doc forbids the
+            "What should we dance to?" variant as firmly as the question-mark
+            one. One phrase, everywhere the anthem speaks. */}
+        <ArcedTagline text="What we dancin' to" className="text-ink" width={300} />
         <h2 className="-mt-2 text-2xl font-extrabold">Soul Loop Anthem</h2>
         <p className="text-sm opacity-70">
           {open ? "Suggest a song & upvote the longlist" : "The longlist is locked"}

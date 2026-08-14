@@ -37,8 +37,8 @@ export default function OgImage() {
         </div>
 
         <div style={{ display: "flex", flexDirection: "column" }}>
-          <div style={{ display: "flex", fontSize: 48, fontWeight: 700 }}>
-            What are you dancing to?
+          <div style={{ display: "flex", fontSize: 56, fontWeight: 700 }}>
+            Come Dance
           </div>
           <div
             style={{
