@@ -2225,6 +2225,30 @@ h6,
   color: color-mix(in srgb, var(--foreground) 78%, transparent);
 }
 
+/* ── The artwork face ──────────────────────────────────────────────────────
+   Jost — the committed brand typeface (docs/decisions/loop-soul-brand-language.md).
+   Two weights only, 500 and 700: the artwork type system is restricted to
+   weights that exist as shipped files, so the app and the Node poster kit can
+   never resolve the same line differently. UI chrome stays in Inter; this face
+   is for artwork surfaces (posters, the front-door slogan, the arc device). */
+@font-face {
+  font-family: "Jost";
+  src: url("/loop/fonts/Jost-500.ttf") format("truetype");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Jost";
+  src: url("/loop/fonts/Jost-700.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+.loop-theme .loop-display {
+  font-family: "Jost", var(--font-sans, sans-serif);
+}
+
 /* Solid reading panel — same reading surface as .loop-glass, no blur, for
    cards and sections that sit directly on the field. */
 .loop-panel {

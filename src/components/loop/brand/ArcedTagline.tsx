@@ -35,7 +35,7 @@ export function ArcedTagline({
       </defs>
       <text
         fill="currentColor"
-        style={{ fontFamily: "var(--font-sans)", fontWeight: 700, fontSize: 22 }}
+        style={{ fontFamily: '"Jost", var(--font-sans)', fontWeight: 700, fontSize: 22 }}
         letterSpacing="0.5"
       >
         <textPath href={`#${id}`} startOffset="50%" textAnchor="middle">

@@ -40,7 +40,6 @@ export function PosterStudio({
   eventDetails: { title: string; theme: string; venue: string; dateLabel: string };
 }) {
   const previewRef = useRef<HTMLCanvasElement | null>(null);
-  const fontProbeRef = useRef<HTMLDivElement | null>(null);
 
   const [tab, setTab] = useState<SourceTab>("figures");
   const [figureSrc, setFigureSrc] = useState<string | null>(BRAND_FIGURES[0].src);
@@ -66,7 +65,10 @@ export function PosterStudio({
     void (async () => {
       try {
         const res = await fetch("/api/loop/admin/gallery/list?filter=all", { cache: "no-store" });
-        if (res.ok) setWallPhotos(((await res.json()).photos ?? []) as WallPhotoDto[]);
+        if (res.ok) {
+          const data = (await res.json()) as { photos?: WallPhotoDto[] };
+          setWallPhotos(data.photos ?? []);
+        }
       } catch {
         /* picker just stays empty */
       }
@@ -81,9 +83,9 @@ export function PosterStudio({
       qrUrl,
       showDetails,
       details: eventDetails,
-      fontSans: fontProbeRef.current
-        ? getComputedStyle(fontProbeRef.current).fontFamily
-        : "sans-serif",
+      // The committed artwork face — never a DOM probe. The probe's silent
+      // fallback to "sans-serif" was how a wrong-font export went unnoticed.
+      fontSans: '"Jost", sans-serif',
     }),
     [figureSrc, tagline, qrUrl, showDetails, eventDetails],
   );
@@ -159,9 +161,6 @@ export function PosterStudio({
 
   return (
     <div className="mt-4">
-      {/* Hidden probe so the canvas uses the REAL loaded Inter face. */}
-      <div ref={fontProbeRef} className="font-sans absolute h-0 w-0 overflow-hidden" aria-hidden />
-
       {/* Figure source */}
       <div className="flex rounded-full border border-ink/15 bg-ink/5 p-1">
         {(
