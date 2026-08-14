@@ -132,8 +132,12 @@ export function passUnitOrderIds(orderId: string, count: number): string[] {
  */
 export async function getPassCapacity(): Promise<CapacityInfo> {
   const event = await getCurrentEvent();
+  // `sim:` orders are the admin "simulate a purchase" tool, not sales. Without
+  // this exclusion every test press inflated the public sold counter — the
+  // exact fabricated-scarcity failure this function exists to prevent.
   const row = await queryOne<{ n: number }>(
-    `SELECT COUNT(*) AS n FROM event_codes WHERE event_id = ?1 AND order_id IS NOT NULL`,
+    `SELECT COUNT(*) AS n FROM event_codes
+      WHERE event_id = ?1 AND order_id IS NOT NULL AND order_id NOT LIKE 'sim:%'`,
     [event.id],
   );
   const sold = row?.n ?? 0;
