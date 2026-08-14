@@ -34,7 +34,14 @@ const COLOURWAYS = {
 };
 
 const FIGURES = ["crowd", "dance", "spin", "listen"];
-const BRAND = { slogan: "WHAT WE DANCIN' TO", triad: "MUSIC · MODE · MOVEMENT", sans: "Avenir Next" };
+// Slogan is mixed case on purpose — the one non-caps line in the system.
+// The anthem phrase is a SECONDARY merch piece, not the slogan (brand doc).
+const BRAND = {
+  slogan: "Come Dance",
+  anthemPhrase: "What we dancin' to",
+  triad: "MUSIC · MODE · MOVEMENT",
+  sans: "Avenir Next",
+};
 
 const args = Object.fromEntries(
   process.argv.slice(2).map((a) => {
@@ -134,8 +141,8 @@ for (const [name, colour] of Object.entries(COLOURWAYS)) {
     "slogan-stacked.png",
     await type(
       [
-        { text: "WHAT WE", size: 150, weight: 700, track: 0.02, gap: 10 },
-        { text: "DANCIN' TO", size: 150, weight: 700, track: 0.02 },
+        { text: "Come", size: 150, weight: 700, track: 0.02, gap: 10 },
+        { text: "Dance", size: 150, weight: 700, track: 0.02 },
       ],
       colour.hex,
       Math.round(TYPE_WIDTH * 0.62),

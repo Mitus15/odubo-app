@@ -206,9 +206,15 @@ function IdeaTab() {
       <H>The brand, exactly</H>
       <ul className="list-disc pl-5">
         <LI>
-          The slogan is <b>WHAT WE DANCIN&rsquo; TO</b> — never with a question mark,
-          ever. Said aloud it&rsquo;s also &ldquo;what we dance into&rdquo;: a question
-          and a statement at once. Don&rsquo;t clean it up.
+          The slogan is <b>Come Dance</b> — two words, mixed case on purpose (the one
+          line that invites instead of announces), no punctuation. It goes on posters,
+          the ticket, and the front of the app.
+        </LI>
+        <LI>
+          The anthem phrase is <b>What we dancin&rsquo; to</b> — never with a question
+          mark, ever. Said aloud it&rsquo;s also &ldquo;what we dance into&rdquo;: a
+          question and a statement at once. It belongs to the Soul Anthem tournament
+          only — don&rsquo;t promote it back to slogan, don&rsquo;t clean it up.
         </LI>
         <LI>
           The triad is <b>MUSIC · MODE · MOVEMENT</b> — what the night is made of.

@@ -31,6 +31,14 @@ import { fileURLToPath } from "node:url";
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, "../..");
 
+/* flags first — BRAND reads args.slogan below */
+const args = Object.fromEntries(
+  process.argv.slice(2).map((a) => {
+    const [k, v] = a.replace(/^--/, "").split("=");
+    return [k, v ?? true];
+  }),
+);
+
 /* ─────────────────────────── the only thing to edit ─────────────────────── */
 
 const VOLUMES = {
@@ -59,7 +67,12 @@ const VOLUMES = {
 };
 
 const BRAND = {
-  slogan: "WHAT WE DANCIN' TO",
+  // The slogan — mixed case on purpose: the one line on any piece that is not
+  // caps, because it invites rather than announces. Override for a one-off
+  // render with --slogan="…". The anthem phrase ("What we dancin' to") is NOT
+  // a slogan any more — it belongs to the tournament family (see
+  // docs/decisions/loop-soul-brand-language.md).
+  slogan: args.slogan || "Come Dance",
   triad: "MUSIC · MODE · MOVEMENT",
   sand: "#d9aa7a",
   ink: "#2a0f0a",
@@ -81,13 +94,6 @@ const SIZES = {
 };
 
 /* ────────────────────────────────── helpers ─────────────────────────────── */
-
-const args = Object.fromEntries(
-  process.argv.slice(2).map((a) => {
-    const [k, v] = a.replace(/^--/, "").split("=");
-    return [k, v ?? true];
-  }),
-);
 
 const esc = (t) => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;");
 
@@ -121,6 +127,21 @@ const line = (text, { x, y, size, weight = 600, anchor = "middle", track = 0, op
 const CAP_ADVANCE = { 500: 0.6, 600: 0.62, 700: 0.64 };
 const estWidth = (text, size, { weight = 600, track = 0 } = {}) =>
   String(text).length * size * ((CAP_ADVANCE[weight] ?? 0.62) + track);
+
+/**
+ * The largest size at which `text` fills `maxWidth` without exceeding it.
+ *
+ * The slogan is the loudest line on the piece, and a size hand-tuned for one
+ * string goes wrong the moment the string changes: an 18-character line and a
+ * 10-character line set at the same size are two completely different posters,
+ * one of them wrong. Sizing from the measure keeps the LINE the constant
+ * instead of the point size.
+ */
+const fitSize = (text, maxWidth, opts = {}, { fill = 0.92, max = 400, min = 24 } = {}) => {
+  let size = max;
+  while (size > min && estWidth(text, size, opts) > maxWidth * fill) size -= 2;
+  return size;
+};
 
 /** Refuse to render rather than ship an overlap — the kit's one hard rule. */
 const assertFits = (what, needed, budget) => {
@@ -166,7 +187,12 @@ async function poster({ ev, figure, size, out }) {
 
   // Type below the hero is fixed in size, so its total height is known before
   // the hero is sized.
-  const sloganSize = Math.round(132 * S);
+  const sloganSize = fitSize(
+    BRAND.slogan,
+    W - Math.round(240 * S) * 2,
+    { weight: 700, track: 0.02 },
+    { max: Math.round(300 * S) },
+  );
   const triadSize = Math.round(46 * S);
   const typeBlockH = Math.round(200 * S) + sloganSize + Math.round(96 * S) + triadSize;
 
@@ -316,7 +342,12 @@ async function ticket({ ev, out, W = 2550, H = 1000 }) {
 
   const rowABottom = Math.max(wmTop + wmH, creditTop + creditRowH);
 
-  const sloganSize = Math.round(116 * S);
+  const sloganSize = fitSize(
+    BRAND.slogan,
+    mainInnerW,
+    { weight: 700, track: 0.02 },
+    { max: Math.round(150 * S) },
+  );
   const triadSize = Math.round(30 * S);
   const sloganY = rowABottom + Math.round(120 * S);
   const triadY = sloganY + Math.round(58 * S);

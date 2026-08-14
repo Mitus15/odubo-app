@@ -1,7 +1,11 @@
 /**
- * ArcedTagline — the recurring poster device: a hand-marker question curved
- * along an arc ("What are you dancing to?", "…listening to?", "…spinning?").
- * Reused across states as a brand motif ("…voting for?", "…wearing?").
+ * ArcedTagline — the question device: a line curved along an upward arc.
+ *
+ * The rule (docs/decisions/loop-soul-brand-language.md): **the arc asks;
+ * straight type states.** It carries question-shaped lines — the anthem phrase
+ * "What we dancin' to", "What do you remember?" — on the tournament family and
+ * the app's question screens. It never carries the slogan ("Come Dance"),
+ * which is always set straight.
  */
 export function ArcedTagline({
   text,

@@ -8,7 +8,6 @@ import type { LoopEvent } from "@/lib/loop/hub";
 import type { AnthemState } from "@/lib/loop/anthem-server";
 import type { RunOfShowItem } from "@/lib/loop/content";
 import Logo from "@/components/loop/brand/Logo";
-import ArcedTagline from "@/components/loop/brand/ArcedTagline";
 import ModuleSheet from "@/components/loop/shell/ModuleSheet";
 import AnthemBracket from "@/components/loop/anthem/AnthemBracket";
 import RunOfShow from "@/components/loop/gathering/RunOfShow";
@@ -100,11 +99,13 @@ export function GatheringPoster({
       {/* Tagline + silhouette hero. Figure top-anchored so it sits right under
           the tagline (no floating gap); the slack collects below the figure. */}
       <div className="flex min-h-0 flex-1 flex-col items-center gap-2">
-        <ArcedTagline
-          text="What we dancin' to"
-          className="text-ink"
-          width={300}
-        />
+        {/* The slogan — straight, never arced: the arc asks, straight type
+            states (docs/decisions/loop-soul-brand-language.md). Mixed case is
+            deliberate — the one line on the piece that invites rather than
+            announces. */}
+        <div className="text-4xl font-extrabold tracking-tight text-ink">
+          Come Dance
+        </div>
         <div className="relative min-h-0 w-full flex-1">
           <Image
             src="/loop/figures/dance.png"
