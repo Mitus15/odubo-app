@@ -282,6 +282,81 @@ export async function composePoster(spec: PosterSpec): Promise<HTMLCanvasElement
   return canvas;
 }
 
+/**
+ * Print-with-bleed export: the print poster on a larger sheet with bleed and
+ * crop marks, so a print shop can cut it clean without a conversation.
+ *
+ *   canvas = mark margin (white) → bleed (sand) → artwork at trim size
+ *
+ * The poster's ground is a flat sand field, so extending that colour into the
+ * bleed IS correct bleed — no artwork needs to be re-laid-out. Bleed is 38px
+ * (⅛in at 300dpi is 37.5; rounded up so the artwork lands on a whole pixel —
+ * drawing at x.5 would resample the entire poster half a pixel soft, and a
+ * 0.0017in difference means nothing to a cutter). Crop marks live ONLY in the
+ * white margin, aligned to the trim lines and stopping short of the bleed box,
+ * so cutting guides can never sit on artwork.
+ */
+export const PRINT_BLEED = {
+  bleedPx: 38, // ≈⅛in @300dpi, integer-aligned
+  marginPx: 75, // ¼in of white for the marks
+  label: "Print + bleed · 8×11in, ⅛in bleed, crop marks",
+} as const;
+
+export async function composePrintWithBleed(spec: PosterSpec): Promise<HTMLCanvasElement> {
+  const art = await composePoster({ ...spec, size: "print" });
+  const { bleedPx: B, marginPx: M } = PRINT_BLEED;
+  const W = art.width + 2 * (B + M);
+  const H = art.height + 2 * (B + M);
+
+  const sheet = document.createElement("canvas");
+  sheet.width = W;
+  sheet.height = H;
+  const ctx = sheet.getContext("2d");
+  if (!ctx) throw new Error("Canvas 2D unavailable.");
+
+  // White mark margin, sand bleed box, artwork at trim.
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = SAND;
+  ctx.fillRect(M, M, W - 2 * M, H - 2 * M);
+  ctx.drawImage(art, M + B, M + B);
+
+  // Crop marks: two hairlines per corner on the trim lines, margin-only.
+  const trimL = M + B;
+  const trimT = M + B;
+  const trimR = W - M - B;
+  const trimB = H - M - B;
+  const len = 55; // reach of each mark into the margin
+  const gap = 8; // stop short of the bleed box
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 3; // 0.01in hairline — visible, not chunky
+  ctx.beginPath();
+  for (const x of [trimL, trimR]) {
+    ctx.moveTo(x, Math.max(4, M - len));
+    ctx.lineTo(x, M - gap);
+    ctx.moveTo(x, H - M + gap);
+    ctx.lineTo(x, Math.min(H - 4, H - M + len));
+  }
+  for (const y of [trimT, trimB]) {
+    ctx.moveTo(Math.max(4, M - len), y);
+    ctx.lineTo(M - gap, y);
+    ctx.moveTo(W - M + gap, y);
+    ctx.lineTo(Math.min(W - 4, W - M + len), y);
+  }
+  ctx.stroke();
+
+  // A quiet spec line for the print shop, bottom margin.
+  ctx.fillStyle = INK;
+  ctx.globalAlpha = 0.55;
+  ctx.font = `600 26px ${spec.fontSans}`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("TRIM 8 × 11 IN · BLEED ⅛ IN · 300 DPI", W / 2, H - M / 2);
+  ctx.globalAlpha = 1;
+
+  return sheet;
+}
+
 /** Letter-tracked uppercase line (canvas has no letter-spacing). */
 function drawTracked(
   ctx: CanvasRenderingContext2D,

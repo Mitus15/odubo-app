@@ -18,8 +18,8 @@ export const runtime = "nodejs";
  * middleware requires a valid `ls_admin` session before this runs at all.
  *
  * Simulated orders are prefixed `sim:` so they are distinguishable in the
- * ledger, and they DO count toward the scarcity counter (they carry an
- * order_id) — clear them out before announcing or the public number is wrong.
+ * ledger, and getPassCapacity explicitly excludes them — pressing this button
+ * can never inflate the public sold counter.
  */
 export async function POST(req: Request) {
   const body = (await req.json().catch(() => ({}))) as { email?: string };

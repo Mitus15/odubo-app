@@ -17,6 +17,11 @@ export function PhaseSwitcher({ current }: { current: EventPhase }) {
   const [saving, setSaving] = useState<EventPhase | null>(null);
 
   async function setPhase(phase: EventPhase) {
+    if (phase === current) return;
+    // One tap re-skins the live site for every visitor. With the admin key now
+    // shared beyond the owner, this must not be clickable by accident.
+    const label = PHASES.find((p) => p.value === phase)?.label ?? phase;
+    if (!window.confirm(`Switch the LIVE site to “${label}” for every visitor?`)) return;
     setSaving(phase);
     await fetch("/api/loop/admin/phase", {
       method: "POST",

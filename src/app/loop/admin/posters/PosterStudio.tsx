@@ -4,7 +4,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { saveAs } from "file-saver";
 import {
   composePoster,
+  composePrintWithBleed,
   POSTER_SIZES,
+  PRINT_BLEED,
   type PosterSize,
   type PosterSpec,
 } from "@/lib/loop/poster/compose";
@@ -18,9 +20,11 @@ const BRAND_FIGURES = [
 
 /** Never hardcode a host — the domain situation changes (see
  *  docs/decisions/loop-soul-product-architecture.md). Whatever origin this
- *  admin is being used from is the origin the poster should point at. */
-const defaultQr = () =>
-  typeof window === "undefined" ? "/loop" : `${window.location.origin}/loop`;
+ *  admin is being used from is the origin the poster should point at.
+ *  Resolved in an effect, not at render: the server can't know the origin, and
+ *  rendering "/loop" there vs the full URL on the client was a guaranteed
+ *  hydration mismatch on every page embedding this studio. */
+const DEFAULT_QR_PATH = "/loop";
 
 type SourceTab = "figures" | "upload" | "wall";
 
@@ -43,7 +47,14 @@ export function PosterStudio({
   const [uploadUrl, setUploadUrl] = useState<string | null>(null);
   const [wallPhotos, setWallPhotos] = useState<WallPhotoDto[]>([]);
   const [tagline, setTagline] = useState("What we dancin' to");
-  const [qrUrl, setQrUrl] = useState(defaultQr);
+  const [qrUrl, setQrUrl] = useState(DEFAULT_QR_PATH);
+
+  // Upgrade the QR target to the real origin once we're on the client.
+  useEffect(() => {
+    setQrUrl((prev) =>
+      prev === DEFAULT_QR_PATH ? `${window.location.origin}${DEFAULT_QR_PATH}` : prev,
+    );
+  }, []);
   const [showDetails, setShowDetails] = useState(true);
   const [size, setSize] = useState<PosterSize>("print");
   const [busy, setBusy] = useState<string | null>(null);
@@ -118,6 +129,25 @@ export function PosterStudio({
       );
       if (!blob) throw new Error("Export failed — try again.");
       saveAs(blob, `loop-soul-poster-${s}-${canvas.width}x${canvas.height}.png`);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  /** The print-shop file: trim + bleed + crop marks. Separate from exportSize
+   *  because it composes on the larger sheet, not at a POSTER_SIZES entry. */
+  async function exportPrintBleed() {
+    setBusy("print-bleed");
+    setError(null);
+    try {
+      const canvas = await composePrintWithBleed(buildSpec("print"));
+      const blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob(resolve, "image/png"),
+      );
+      if (!blob) throw new Error("Export failed — try again.");
+      saveAs(blob, `loop-soul-poster-print-bleed-${canvas.width}x${canvas.height}.png`);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -281,6 +311,14 @@ export function PosterStudio({
           </button>
         ))}
       </div>
+      <button
+        type="button"
+        onClick={exportPrintBleed}
+        disabled={busy !== null}
+        className="mt-2 w-full rounded-full border border-ink bg-transparent py-3 text-xs font-bold text-ink transition-transform active:scale-95 disabled:opacity-50"
+      >
+        {busy === "print-bleed" ? "Exporting…" : `Export for the print shop — ${PRINT_BLEED.label}`}
+      </button>
     </div>
   );
 }

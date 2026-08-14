@@ -77,7 +77,20 @@ export default async function AdminPage() {
         <h1 className="text-2xl font-extrabold">Loop Soul · Admin</h1>
         <AdminLogout />
       </div>
-      <p className="mt-2 text-sm opacity-70">Marketing control surface.</p>
+      <p className="mt-2 text-sm opacity-70">
+        The owner&apos;s console. Everything here changes the live site.
+      </p>
+
+      <a
+        href="/loop/admin/studio"
+        className="mt-4 block rounded-2xl border border-ink bg-ink px-5 py-4 text-sand"
+      >
+        <span className="block font-bold">Promoter Studio →</span>
+        <span className="block text-sm opacity-80">
+          The one-page workspace — posters, tickets, pricing, numbers, the Playbook,
+          and the thread.
+        </span>
+      </a>
 
       <section className="mt-10">
         <h2 className="text-sm font-bold uppercase tracking-widest opacity-70">
