@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { queryDatabase } from '@/lib/db';
+import { requireAdmin } from '@/lib/api/requireAdmin';
 
 export async function GET(request: NextRequest) {
   try {
+    const gate = await requireAdmin(request);
+    if (gate.error) return gate.error;
+
     const { searchParams } = new URL(request.url);
     const days = Math.min(Math.max(parseInt(searchParams.get('days') || '30', 10), 1), 365);
     const dateFilter = `date >= date('now', '-${days} days')`;

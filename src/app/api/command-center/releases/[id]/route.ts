@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { queryDatabase, executeQuery } from '@/lib/db';
+import { requireAdmin } from '@/lib/api/requireAdmin';
 
 // GET /api/command-center/releases/[id] - Get a single release
 export async function GET(
@@ -7,6 +8,9 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const gate = await requireAdmin(request);
+    if (gate.error) return gate.error;
+
     const { id } = await params;
 
     const releases = await queryDatabase(
@@ -138,6 +142,9 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const gate = await requireAdmin(request);
+    if (gate.error) return gate.error;
+
     const { id } = await params;
 
     const body = await request.json();
@@ -212,6 +219,9 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const gate = await requireAdmin(request);
+    if (gate.error) return gate.error;
+
     const { id } = await params;
 
     // Check if release exists and is a draft

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { queryDatabase, executeQuery } from '@/lib/db';
+import { requireAdmin } from '@/lib/api/requireAdmin';
 
 // GET /api/command-center/video-releases/[id]/assets - List assets for a release
 export async function GET(
@@ -7,6 +8,9 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const gate = await requireAdmin(request);
+    if (gate.error) return gate.error;
+
     const { id } = await params;
 
     const assets = await queryDatabase(
@@ -60,6 +64,9 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const gate = await requireAdmin(request);
+    if (gate.error) return gate.error;
+
     const { id: releaseId } = await params;
 
     const body = (await request.json()) as {

@@ -18,6 +18,15 @@
         "LOOP_FORCE_PHASE=pre npx next dev -p 3112"
       ],
       "port": 3112
+    },
+    {
+      "name": "release-control",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "npx next dev -p 3113"
+      ],
+      "port": 3113
     }
   ]
 }

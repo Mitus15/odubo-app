@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { queryDatabase } from '@/lib/db';
+import { requireAdmin } from '@/lib/api/requireAdmin';
 
 // GET /api/command-center/hub-videos - List videos from the hub (Cloudflare Stream)
 // These are existing videos that can be imported into video distribution
 export async function GET(request: NextRequest) {
   try {
+    const gate = await requireAdmin(request);
+    if (gate.error) return gate.error;
+
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search') || '';
     const excludeImported = searchParams.get('excludeImported') === 'true';
