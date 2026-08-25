@@ -82,7 +82,12 @@ async function finish(buf: Buffer) {
 async function wordmark(colour: string, widthPx: number) {
   let svg = await fs.readFile(path.join(ROOT, "public/loop/branding/loop-soul.svg"), "utf8");
   svg = svg.replace(/fill:\s*#[0-9a-fA-F]{3,6}/g, `fill:${colour}`);
-  svg = svg.replace(/<svg/, `<svg fill="${colour}"`);
+  // The source now carries a root fill of its own (ink). Replace it rather than
+  // prepending a second one — duplicate attributes are invalid XML and librsvg
+  // is entitled to reject the whole file rather than pick a winner.
+  svg = /<svg[^>]*\sfill="/.test(svg)
+    ? svg.replace(/(<svg[^>]*\sfill=")[^"]*(")/, `$1${colour}$2`)
+    : svg.replace(/<svg/, `<svg fill="${colour}"`);
   return sharp(Buffer.from(svg), { density: 900 }).resize({ width: widthPx }).png().toBuffer();
 }
 

@@ -65,7 +65,8 @@ export const RUN_OF_SHOW: RunOfShowItem[] = [
     id: "doors",
     time: "6:30",
     title: "Doors · The Barbecue",
-    detail: "Come in, eat, meet the room. The grill is on the whole night.",
+    detail:
+      "Come in, meet the room. The grill is on all night — food is available to buy.",
   },
   {
     id: "welcome",
@@ -98,10 +99,17 @@ export const RUN_OF_SHOW: RunOfShowItem[] = [
     role: "live · recorded",
   },
   {
-    id: "floor",
+    id: "line",
     time: "9:15",
+    title: "The Loop Soul Line",
+    detail:
+      "The floor moment: a line that becomes a circle, two into the middle at a time, then back in. Nothing to sign up for — everyone is already in it.",
+  },
+  {
+    id: "floor",
+    time: "9:30",
     title: "The Dance Floor",
-    detail: "Everyone in, until they turn the lights on.",
+    detail: "Open until they turn the lights on.",
   },
   {
     id: "out",

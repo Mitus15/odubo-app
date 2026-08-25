@@ -156,14 +156,12 @@ second page.
 `LOOP-PASS-VOL1`, has media; `loop-soul` collection resolves correctly through
 the Storefront API; Odubo store correctly excludes the pass (11 products);
 `ORDERS_PAID` webhook registered. Two things to fix:
-- ⚠️ **Shopify inventory is 75.** Tickets are now uncapped in the app, so
-  Shopify's stock limit is the only remaining cap — it should be set to
-  unlimited (or a real number) to match.
-- ⚠️ **The pass still charges $20 in Shopify** while the app now says **$5**.
-  `loop_settings.pass_price` is set to 5.00; the live product is deliberately
-  untouched because changing real checkout needs the owner's word. **These two
-  must move together** — a poster and a checkout that disagree is exactly what
-  the single-price-source work exists to prevent.
+- ✅ **Shopify matches the event** (2026-08-25, owner gave standing permission
+  to change Shopify to fit): pass is **$5 CAD**, inventory **untracked** so the
+  door is genuinely uncapped. Verified through the Storefront API the app reads:
+  `availableForSale: true`, `quantityAvailable: null`, `$5.0 CAD`.
+- ✅ **Price agrees end to end**: `loop_settings.pass_price` 5.00, the Shopify
+  product $5, the poster and the front door both rendering from the one source.
 - The `loop-soul` collection still holds **only the pass**. No merch listed.
 
 ## Event production
@@ -251,3 +249,25 @@ the app and the print kit, so opening or closing the door is one field.
   Both are stated on `/loop` in the Cover Contest sheet — a contest that names
   its payment reads as an offer; one that doesn't reads as free labour.
 - **Magazine delivery: digital next week, physical the week after.**
+
+
+---
+
+## Volume 1 scope (locked 2026-08-25)
+
+**In:** the programme · the album cover contest · the band · the Loop Soul Line ·
+the barbecue (**food is bought, not laid on**) · venue partner Scott's Inn &
+Suites.
+
+**Out for this volume:** **Danceyokey** — no sign-up, no queue. The floor moment
+is the Loop Soul Line, which needs no module because there is nothing to join.
+The host console at `/loop/admin/danceyokey` is left intact for later volumes.
+
+**Waiting on:** the **band's name**. When it lands it goes on `/loop` and on the
+marketing assets. No code needed for the app — the run of show is editable at
+/loop/admin, and the band is already the performer on the "1984" slot; replacing
+"The Band" with the real name is a field edit. The poster is a `--slogan`/detail
+edit in the Marketing Studio.
+
+**Later, deliberately not now:** tiers and pricing, including **food-inclusive
+options**. Owner: "that's later."

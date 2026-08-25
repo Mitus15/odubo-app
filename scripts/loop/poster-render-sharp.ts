@@ -112,7 +112,13 @@ function inkSvg(text: string): { svg: string; w: number; h: number } {
   const [, , vw, vh] = vb && vb.length === 4 ? vb : [0, 0, 300, 150];
   const svg = text
     .replace(/fill:\s*#[0-9a-fA-F]{3,6}/g, `fill:${INK}`)
-    .replace(/<svg/, `<svg fill="${INK}" width="${vw}" height="${vh}"`);
+    // Replace an existing root fill rather than prepending a second one —
+    // duplicate attributes are invalid XML and librsvg rejects the whole file
+    // ("Attribute fill redefined"), which is how the wordmark's own ink fill
+    // broke every poster the moment it was added.
+    .replace(/<svg(?![^>]*\sfill=)/, `<svg fill="${INK}"`)
+    .replace(/(<svg[^>]*\sfill=")[^"]*(")/, `$1${INK}$2`)
+    .replace(/<svg/, `<svg width="${vw}" height="${vh}"`);
   return { svg, w: vw, h: vh };
 }
 

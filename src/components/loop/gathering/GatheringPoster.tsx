@@ -15,14 +15,13 @@ import ModuleSheet from "@/components/loop/shell/ModuleSheet";
 import AnthemBracket from "@/components/loop/anthem/AnthemBracket";
 import RunOfShow from "@/components/loop/gathering/RunOfShow";
 import GetPassModal from "@/components/loop/gathering/GetPassModal";
-import DanceyokeyPanel from "@/components/loop/danceyokey/DanceyokeyPanel";
 
 /** Mirrors CapacityInfo — unlimited carries null counts on purpose, so a
  *  scarcity line can't render "0 left" for a room with no cap. */
 type Capacity =
   | { unlimited: true; sold: number; total: null; remaining: null }
   | { unlimited: false; sold: number; total: number; remaining: number };
-type ModuleKey = "anthem" | "night" | "cover" | "danceyokey";
+type ModuleKey = "anthem" | "night" | "cover";
 
 const MODULES: { key: ModuleKey; label: string; title: string }[] = [
   // Advertising a module that does nothing is worse than not showing it, so
@@ -36,7 +35,10 @@ const MODULES: { key: ModuleKey; label: string; title: string }[] = [
   // programme all along, just not findable by that word.
   { key: "night", label: "The Programme", title: "The Night" },
   { key: "cover", label: "Cover Contest", title: "The Cover Contest" },
-  { key: "danceyokey", label: "Danceyokey", title: "Danceyokey" },
+  // Danceyokey is NOT part of Volume 1 (owner, 2026-08-25). The floor moment
+  // this volume has is the Loop Soul Line, which lives in the programme rather
+  // than needing a module of its own — there is nothing to sign up for.
+  // The host console at /loop/admin/danceyokey is untouched for later volumes.
 ];
 
 /**
@@ -137,26 +139,24 @@ export function GatheringPoster({
         </div>
       </div>
 
-      {/* The offer, in the open: price, scarcity, when and where — before
-          anyone has to tap anything. */}
+      {/* When and where, in the open — before anyone has to tap anything. The
+          PRICE is deliberately not here: it is on the button directly below,
+          and printing it twice in the same eyeful just read as a stutter. The
+          scarcity count only appears when there is a cap to count against. */}
       <div className="flex flex-col items-center gap-3">
         <div className="text-center">
-          <div className="text-sm font-bold uppercase tracking-widest">
-            {soldOut ? (
-              "Room is full"
-            ) : (
-              <>
-                {priceLabel}
-                {!capacity.unlimited && (
-                  <>
-                    {" · "}
-                    <span className="tabular-nums">{capacity.remaining}</span> / {capacity.total}{" "}
-                    {isFree ? "spots left" : "passes left"}
-                  </>
-                )}
-              </>
-            )}
-          </div>
+          {(soldOut || !capacity.unlimited) && (
+            <div className="text-sm font-bold uppercase tracking-widest">
+              {soldOut ? (
+                "Room is full"
+              ) : (
+                <>
+                  <span className="tabular-nums">{capacity.remaining}</span> / {capacity.total}{" "}
+                  {isFree ? "spots left" : "passes left"}
+                </>
+              )}
+            </div>
+          )}
           <div className="loop-muted mt-1 text-[11px] font-semibold uppercase tracking-[0.18em]">
             {dateLabel} · Doors {timeLabel} · {venueShort}
           </div>
@@ -225,7 +225,6 @@ export function GatheringPoster({
             {ANTHEM_ENABLED && active === "anthem" && <AnthemBracket initial={anthem} />}
             {active === "night" && <RunOfShow items={runOfShow} showHeader={false} />}
             {active === "cover" && <CoverContest />}
-            {active === "danceyokey" && <DanceyokeyPanel />}
           </ModuleSheet>
         )}
       </AnimatePresence>
