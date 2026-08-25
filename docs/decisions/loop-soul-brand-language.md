@@ -62,8 +62,9 @@ brought into a room.
 
 - The record is credited to **Mani Odubo**. **Odubo** stays the presenting
   studio, so the credit block below is unchanged on event pieces.
-- `MANI ODUBO` sets on **album-facing** pieces only — the pass card, the cover,
-  the metadata. Never added to the event poster, which is about the night.
+- `AN ALBUM BY MANI ODUBO` sets on the **event poster** (big line under the
+  header), the **ticket stub**, and the **pass card** (the store shelf face, and
+  the first thing anyone sees of the record).
 - A poster may carry one optional album line (`EventDetails.record`), e.g.
   **THE ALBUM · FIRST PLAY**. Optional on purpose: a volume only *usually*
   takes its name from a track.

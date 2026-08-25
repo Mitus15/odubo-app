@@ -46,8 +46,6 @@ import { prepareSharp, renderSharp, assertFontResolves } from "./poster-render-s
 
 const VOLUMES: Record<string, EventDetails & { venueShort: string }> = {
   1: {
-    volume: "VOLUME ONE",
-    theme: "1984",
     date: "SATURDAY SEPTEMBER 26",
     // The one thing a reader has to act on is BE HERE BEFORE 8 — an end time
     // only tells them when to leave.
@@ -58,13 +56,12 @@ const VOLUMES: Record<string, EventDetails & { venueShort: string }> = {
     record: "AN ALBUM BY MANI ODUBO",
   },
   2: {
-    volume: "VOLUME TWO",
-    theme: "TBD",
     date: "DATE TBD",
     doors: "DOORS 6:30 · ALBUM AT 8",
     venue: "SCOTT'S INN & SUITES · KAMLOOPS",
     venueShort: "SCOTT'S INN · KAMLOOPS",
     note: "DRESS CODE · TBD",
+    record: "AN ALBUM BY MANI ODUBO",
   },
 };
 

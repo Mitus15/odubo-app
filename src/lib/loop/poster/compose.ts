@@ -73,8 +73,6 @@ const trimLabelFor = (size: PosterSize) =>
 
 function toDetails(spec: PosterSpec): EventDetails {
   return {
-    volume: spec.details.title || undefined,
-    theme: spec.details.theme || undefined,
     date: spec.details.dateLabel || undefined,
     venue: spec.details.venue || undefined,
     doors: spec.details.doors || undefined,

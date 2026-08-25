@@ -11,6 +11,7 @@ import {
   measure,
   type FontWeight,
 } from "../../src/lib/loop/brand";
+import { ANTHEM_ENABLED } from "../../src/lib/loop/content";
 import { face, glyphPathData, assertFontResolves } from "./poster-render-sharp";
 
 /**
@@ -174,23 +175,28 @@ async function main() {
         Math.round(TYPE_WIDTH * 0.62),
       ),
     );
-    // The anthem phrase — a SECONDARY piece, never the slogan (brand doc).
-    // Mixed case as written, never punctuated, never "cleaned up".
-    await write(
-      "anthem-phrase.png",
-      await type([{ text: ANTHEM_PHRASE, size: 110, weight: 700, track: 0.02 }], colour.hex, TYPE_WIDTH),
-    );
-    await write(
-      "anthem-phrase-stacked.png",
-      await type(
-        [
-          { text: "What we", size: 140, weight: 700, track: 0.02, gap: 10 },
-          { text: "dancin' to", size: 140, weight: 700, track: 0.02 },
-        ],
-        colour.hex,
-        Math.round(TYPE_WIDTH * 0.62),
-      ),
-    );
+    // The anthem phrase is a SECONDARY piece (brand doc) and the anthem is
+    // parked for Volume 1, so it is not generated — the same reason the
+    // tournament poster family is skipped. The line itself is unchanged and
+    // comes back with the tracklist vote; flip ANTHEM_ENABLED to restore.
+    if (ANTHEM_ENABLED) {
+      // Mixed case as written, never punctuated, never "cleaned up".
+      await write(
+        "anthem-phrase.png",
+        await type([{ text: ANTHEM_PHRASE, size: 110, weight: 700, track: 0.02 }], colour.hex, TYPE_WIDTH),
+      );
+      await write(
+        "anthem-phrase-stacked.png",
+        await type(
+          [
+            { text: "What we", size: 140, weight: 700, track: 0.02, gap: 10 },
+            { text: "dancin' to", size: 140, weight: 700, track: 0.02 },
+          ],
+          colour.hex,
+          Math.round(TYPE_WIDTH * 0.62),
+        ),
+      );
+    }
     await write(
       "triad.png",
       await type([{ text: TRIAD, size: 60, weight: 500, track: 0.4 }], colour.hex, TYPE_WIDTH),

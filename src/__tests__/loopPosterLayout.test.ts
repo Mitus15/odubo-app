@@ -54,6 +54,7 @@ const details: EventDetails = {
   venue: "SCOTT'S INN & SUITES · KAMLOOPS",
   note: "DRESS CODE · 1984",
   price: "$5",
+  record: "AN ALBUM BY MANI ODUBO",
 };
 
 type Box = { x1: number; y1: number; x2: number; y2: number; label: string };
@@ -247,17 +248,36 @@ describe("layoutTicket", () => {
     expect(r.list.ops.some((o) => o.kind === "image" && o.src.startsWith("qr:"))).toBe(true);
   });
 
-  it("refuses an oversized theme rather than printing over the stub", () => {
+  it("refuses an oversized credit rather than printing over the stub", () => {
     const r = layoutTicket(
       {
         qrUrl: "https://x.co",
         figureSrc: "/loop/figures/crowd.png",
-        details: { ...details, theme: "A VERY LONG THEME NAME THAT CANNOT POSSIBLY FIT" },
+        details: { ...details, record: "AN EXCEEDINGLY LONG CREDIT LINE THAT CANNOT POSSIBLY FIT" },
       },
       deps,
     );
     expect(r.ok).toBe(false);
-    if (!r.ok) expect(r.error).toMatch(/volume line/);
+    if (!r.ok) expect(r.error).toMatch(/record line/);
+  });
+
+  // The stub is what a holder keeps in a pocket, so it carries the credit and
+  // the one instruction they can still act on before the night.
+  it("prints the credit and the dress code on the stub, and never a volume", () => {
+    const r = layoutTicket(
+      { qrUrl: "https://x.co", figureSrc: "/loop/figures/crowd.png", details },
+      deps,
+    );
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    const texts = r.list.ops
+      .filter((o) => o.kind === "glyphs")
+      .map((o) => (o.kind === "glyphs" ? o.glyphs.map((g) => g.ch).join("") : ""));
+    expect(texts).toContain("AN ALBUM BY MANI ODUBO");
+    expect(texts).toContain("DRESS CODE · 1984");
+    expect(texts).toContain("ADMITS ONE");
+    expect(texts.some((t) => t.includes("VOLUME"))).toBe(false);
+    assertNoOverlap(r.list.ops);
   });
 });
 

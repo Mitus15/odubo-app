@@ -114,8 +114,6 @@ export const PASS_CARD_SIZE = { w: 2000, h: 2000 } as const;
 /* ── specs ──────────────────────────────────────────────────────────────── */
 
 export type EventDetails = {
-  volume?: string;
-  theme?: string;
   /** e.g. "SATURDAY SEPTEMBER 12" */
   date?: string;
   /** e.g. "DOORS 9PM" */
@@ -542,30 +540,44 @@ export function layoutTicket(spec: TicketSpec, deps: LayoutDeps): LayoutResult {
 
     const stubInnerW = W - stubX - pad * 2;
     const sx = stubX + (W - stubX) / 2;
-    const volText = [d.volume, d.theme].filter(Boolean).join(" · ");
+    // The event is called Loop Soul — the wordmark on the main face says so, and
+    // the DATE is what identifies which night a code belongs to. An edition
+    // number was doing neither job, so the stub leads with the credit instead:
+    // 1984 is the lead single, the theme and the dress code, never the name.
     const dateText = (d.date ?? "").replace("SATURDAY ", "SAT ");
-    const volSize = R(46 * S);
+    const recordSize = R(30 * S);
     const dateSize = R(38 * S);
-    assertFits("the stub volume line", measure(volText, { size: volSize, weight: 700, track: 0.04 }), stubInnerW);
+    if (d.record) {
+      assertFits("the stub record line", measure(d.record, { size: recordSize, weight: 700, track: 0.14 }), stubInnerW);
+    }
     assertFits("the stub date line", measure(dateText, { size: dateSize, weight: 700, track: 0.08 }), stubInnerW);
     if (d.venue) {
       assertFits("the stub venue line", measure(d.venue, { size: R(23 * S), track: 0.1 }), stubInnerW);
     }
+    if (d.note) {
+      assertFits("the stub dress line", measure(d.note, { size: R(23 * S), track: 0.1 }), stubInnerW);
+    }
 
-    const volY = pad + volSize + R(40 * S);
-    const dateY = volY + R(80 * S);
+    const recordY = pad + recordSize + R(40 * S);
+    const dateY = recordY + R(72 * S);
     const doorsY = dateY + R(58 * S);
     const venueY = doorsY + R(52 * S);
-    const admitsY = venueY + R(105 * S);
+    // The dress code earns its place here: it is the only thing on a ticket the
+    // holder can still act on between buying it and the night.
+    const dressY = d.note ? venueY + R(40 * S) : venueY;
+    const admitsY = dressY + R(100 * S);
     const qrPx = R(200 * S);
     const qrTop = admitsY + R(40 * S);
     const scanY = qrTop + qrPx + R(38 * S);
     assertFits("the ticket stub", scanY, H - pad);
 
-    ops.push(line(volText, { x: sx, y: volY, size: volSize, weight: 700, track: 0.04 }));
+    if (d.record) {
+      ops.push(line(d.record, { x: sx, y: recordY, size: recordSize, weight: 700, track: 0.14, opacity: 0.85 }));
+    }
     ops.push(line(dateText, { x: sx, y: dateY, size: dateSize, weight: 700, track: 0.08 }));
     if (d.doors) ops.push(line(d.doors, { x: sx, y: doorsY, size: R(29 * S), track: 0.12, opacity: 0.85 }));
     if (d.venue) ops.push(line(d.venue, { x: sx, y: venueY, size: R(23 * S), track: 0.1, opacity: 0.75 }));
+    if (d.note) ops.push(line(d.note, { x: sx, y: dressY, size: R(23 * S), track: 0.1, opacity: 0.75 }));
     ops.push(line("ADMITS ONE", { x: sx, y: admitsY, size: R(44 * S), weight: 700, track: 0.08 }));
     ops.push({ kind: "image", src: qrSrc(spec.qrUrl), x: R(sx - qrPx / 2), y: qrTop, w: qrPx, h: qrPx });
     ops.push(line("SCAN FOR YOUR CODE", { x: sx, y: scanY, size: labelSize, track: 0.16, opacity: 0.6 }));
@@ -591,11 +603,18 @@ export function layoutPassCard(spec: PassCardSpec, deps: LayoutDeps): LayoutResu
     const wmTop = pad;
     ops.push({ kind: "image", src: WORDMARK_SRC, x: R(W / 2 - wmW / 2), y: wmTop, w: wmW, h: wmH });
 
-    const volText = [d.volume, d.theme].filter(Boolean).join(" · ");
-    const volSize = R(46 * S);
-    const volY = wmTop + wmH + R(96 * S);
-    if (volText) {
-      ops.push(line(volText, { x: W / 2, y: volY, size: volSize, track: 0.3, opacity: 0.85 }));
+    // The store shelf face is the first thing anyone sees of this record, so it
+    // carries the credit. No edition number: the event is Loop Soul (the
+    // wordmark above says it) and the date below identifies the night.
+    const creditSize = R(46 * S);
+    const creditY = wmTop + wmH + R(96 * S);
+    if (d.record) {
+      assertFits(
+        "the pass card credit line",
+        measure(d.record, { size: creditSize, track: 0.3 }),
+        W - pad * 2,
+      );
+      ops.push(line(d.record, { x: W / 2, y: creditY, size: creditSize, track: 0.3, opacity: 0.85 }));
     }
 
     const admitsSize = R(78 * S);
@@ -615,7 +634,7 @@ export function layoutPassCard(spec: PassCardSpec, deps: LayoutDeps): LayoutResu
     if (d.venue) assertFits("the pass card venue line", measure(d.venue, { size: venueSize, track: 0.12 }), innerW);
     assertFits("the pass card admits line", measure("ADMITS ONE", { size: admitsSize, weight: 700, track: 0.08 }), innerW);
 
-    const heroTop = volY + R(70 * S);
+    const heroTop = creditY + R(70 * S);
     const heroMaxH = dateY - dateSize - R(90 * S) - heroTop;
     assertFits("the pass card hero band", R(420 * S), heroMaxH);
     const fig = need(deps, spec.figureSrc);

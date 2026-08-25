@@ -61,8 +61,6 @@ type Details = {
 };
 
 const DETAIL_FIELDS: [keyof Details, string][] = [
-  ["title", "Volume"],
-  ["theme", "Theme"],
   ["dateLabel", "Date"],
   ["doors", "Doors"],
   ["venue", "Venue"],
