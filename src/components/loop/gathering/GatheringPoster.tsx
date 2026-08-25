@@ -6,6 +6,8 @@ import Link from "next/link";
 import { AnimatePresence } from "framer-motion";
 import type { LoopEvent } from "@/lib/loop/hub";
 import type { AnthemState } from "@/lib/loop/anthem-server";
+import { priceLabel as formatPrice } from "@/lib/loop/priceLabel";
+import { ANTHEM_ENABLED } from "@/lib/loop/content";
 import type { RunOfShowItem } from "@/lib/loop/content";
 import Logo from "@/components/loop/brand/Logo";
 import ModuleSheet from "@/components/loop/shell/ModuleSheet";
@@ -18,7 +20,11 @@ type Capacity = { total: number; sold: number; remaining: number };
 type ModuleKey = "anthem" | "night" | "danceyokey";
 
 const MODULES: { key: ModuleKey; label: string; title: string }[] = [
-  { key: "anthem", label: "Soul Anthem", title: "Soul Loop Anthem" },
+  // Advertising a module that does nothing is worse than not showing it, so
+  // the anthem drops out entirely while it is parked (see ANTHEM_ENABLED).
+  ...(ANTHEM_ENABLED
+    ? [{ key: "anthem" as const, label: "Soul Anthem", title: "Soul Loop Anthem" }]
+    : []),
   { key: "night", label: "The Night", title: "The Night" },
   { key: "danceyokey", label: "Danceyokey", title: "Danceyokey" },
 ];
@@ -78,7 +84,11 @@ export function GatheringPoster({
 
   const soldOut = capacity.remaining <= 0;
   const activeModule = MODULES.find((m) => m.key === active) ?? null;
-  const priceLabel = price ? `$${Number(price).toFixed(0)}` : null;
+  // The exact formatter the print kit uses (loopSetting.priceLabel), so the
+  // poster on the wall and the front door always say the same thing. An unset
+  // or zero price reads "FREE ENTRY" — that is how the door opens.
+  const priceLabel = formatPrice(price, currency);
+  const isFree = priceLabel === "FREE ENTRY";
   // "Scott's Inn, Kamloops" → "Scott's Inn" on the tight poster line.
   const venueShort = event.venue.split(",")[0];
 
@@ -127,9 +137,9 @@ export function GatheringPoster({
               "Room is full"
             ) : (
               <>
-                {priceLabel ? <>{priceLabel} · </> : null}
+                {priceLabel} ·{" "}
                 <span className="tabular-nums">{capacity.remaining}</span> / {capacity.total}{" "}
-                passes left
+                {isFree ? "spots left" : "passes left"}
               </>
             )}
           </div>
@@ -142,7 +152,7 @@ export function GatheringPoster({
           onClick={() => setPassOpen(true)}
           className="w-full rounded-full bg-ink py-4 text-base font-bold text-sand transition-transform active:scale-95"
         >
-          {soldOut ? "Join the Waitlist" : `Get Pass${priceLabel ? ` · ${priceLabel}` : ""}`}
+          {soldOut ? "Join the Waitlist" : isFree ? "Register · Free" : `Get Pass · ${priceLabel}`}
         </button>
         {!soldOut && (
           <button
@@ -198,7 +208,7 @@ export function GatheringPoster({
       <AnimatePresence>
         {activeModule && (
           <ModuleSheet title={activeModule.title} onClose={() => setActive(null)}>
-            {active === "anthem" && <AnthemBracket initial={anthem} />}
+            {ANTHEM_ENABLED && active === "anthem" && <AnthemBracket initial={anthem} />}
             {active === "night" && <RunOfShow items={runOfShow} showHeader={false} />}
             {active === "danceyokey" && <DanceyokeyPanel />}
           </ModuleSheet>

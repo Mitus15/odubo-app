@@ -12,6 +12,7 @@
  * longer produce different posters from the same brief.
  */
 
+import { normalizeBaseUrl } from "../publicUrl";
 import {
   layoutEventPoster,
   layoutTicket,
@@ -53,6 +54,8 @@ export type PosterSpec = {
     doors?: string;
     passes?: string;
     price?: string;
+    /** Optional kicker naming the record — see EventDetails.record. */
+    record?: string;
   };
   /** Ignored — the face is the committed brand font. Kept for compatibility. */
   fontSans?: string;
@@ -60,8 +63,13 @@ export type PosterSpec = {
 
 const TRIM_LABELS = {
   poster: "TRIM 8 × 11 IN · BLEED ⅛ IN · 300 DPI",
+  flyer: "TRIM 5.5 × 8.5 IN · BLEED ⅛ IN · 300 DPI",
   ticket: "TRIM 8.5 × 3.33 IN · BLEED ⅛ IN · 300 DPI",
 } as const;
+
+/** The print shop's spec line for whichever sheet we're actually cutting. */
+const trimLabelFor = (size: PosterSize) =>
+  size === "flyer" ? TRIM_LABELS.flyer : TRIM_LABELS.poster;
 
 function toDetails(spec: PosterSpec): EventDetails {
   return {
@@ -72,7 +80,28 @@ function toDetails(spec: PosterSpec): EventDetails {
     doors: spec.details.doors || undefined,
     passes: spec.details.passes || undefined,
     price: spec.details.price || undefined,
+    record: spec.details.record || undefined,
   };
+}
+
+/**
+ * A QR is the one thing that cannot be fixed after printing, so an unusable
+ * destination has to fail loudly here rather than quietly encode itself.
+ *
+ * The old fallback was the bare string "/loop" — a relative path, which looks
+ * correct in the preview and produces a code no phone camera can resolve. That
+ * is exactly the failure the layout engine already refuses to make with
+ * overlapping text (`assertFits`), applied to the destination.
+ */
+function requireScannable(raw: string): string {
+  const url = normalizeBaseUrl(raw);
+  if (!url) {
+    throw new Error(
+      `Poster destination "${raw.trim()}" is not a scannable URL — a QR needs a full ` +
+        `origin like https://example.com/loop. Set the public base URL before exporting.`,
+    );
+  }
+  return url;
 }
 
 function toEngineSpec(spec: PosterSpec): EventPosterSpec {
@@ -82,7 +111,7 @@ function toEngineSpec(spec: PosterSpec): EventPosterSpec {
     // The studio's free-text line rides the slogan slot; empty = brand default.
     slogan: spec.tagline.trim() || undefined,
     showTriad: spec.showTriad,
-    qrUrl: spec.qrUrl.trim() || "/loop",
+    qrUrl: requireScannable(spec.qrUrl),
     details: spec.showDetails ? toDetails(spec) : null,
   };
 }
@@ -108,14 +137,16 @@ export async function composePoster(spec: PosterSpec): Promise<HTMLCanvasElement
 
 /** The print-shop file: trim + bleed + crop marks, via the pure transform. */
 export async function composePrintWithBleed(spec: PosterSpec): Promise<HTMLCanvasElement> {
-  const engineSpec = toEngineSpec({ ...spec, size: "print" });
+  // Flyers get cut too — anything else falls back to the 8×11 sheet.
+  const sheet: PosterSize = spec.size === "flyer" ? "flyer" : "print";
+  const engineSpec = toEngineSpec({ ...spec, size: sheet });
   const prepared = await prepareImages([
     ...CHROME,
     qrSrc(engineSpec.qrUrl),
     ...(engineSpec.figureSrc ? [engineSpec.figureSrc] : []),
   ]);
   const list = unwrap(layoutEventPoster(engineSpec, { sizes: prepared.sizes }));
-  return renderCanvas(withBleed(list, TRIM_LABELS.poster), prepared);
+  return renderCanvas(withBleed(list, trimLabelFor(sheet)), prepared);
 }
 
 /** The door ticket — the crowd is always its hero. Optional print bleed. */
@@ -124,7 +155,7 @@ export async function composeTicket(
   opts: { bleed?: boolean } = {},
 ): Promise<HTMLCanvasElement> {
   const figureSrc = spec.figureSrc ?? "/loop/figures/crowd.png";
-  const qrUrl = spec.qrUrl.trim() || "/loop";
+  const qrUrl = requireScannable(spec.qrUrl);
   const prepared = await prepareImages([...CHROME, qrSrc(qrUrl), figureSrc]);
   const list = unwrap(
     layoutTicket({ qrUrl, figureSrc, details: toDetails(spec) }, { sizes: prepared.sizes }),

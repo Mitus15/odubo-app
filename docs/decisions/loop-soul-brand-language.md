@@ -34,7 +34,7 @@ to "What are you dancing to?" or add a question mark.
 | Line | Lives on |
 |---|---|
 | **Come Dance** | Event posters · the ticket · the pass card · the app front door (`/loop`) · the OG share card · primary merch |
-| **What we dancin' to** | The Soul Anthem module in the app · tournament promo posters · secondary merch pieces |
+| **What we dancin' to** | The Soul Anthem module in the app · tournament promo posters · secondary merch pieces. **Parked for Volume 1** (`ANTHEM_ENABLED`) — returns for the tracklist vote after the event |
 | **"That's how we do it."** | Spoken only — the host's line, the end of a post. Never set on artwork |
 
 This table is the locked decision. If a line isn't listed for a surface, it
@@ -54,12 +54,31 @@ doesn't go there.
 
 Never arc the slogan. Never straighten the anthem phrase on tournament artwork.
 
-## Album artwork — the colour exception
+## The album
 
-Loop Soul artwork is two colours: sand field, ink figure. **Album artwork is
-the one exception** — it appears in **full colour**, because recognisability is
-the entire point of showing it. It is quoted material, and it is always set
-inside a **1px ink keyline**. Nothing else in colour, ever.
+Loop Soul **is an album** by **Mani Odubo** — see
+[loop-soul-is-the-album.md](loop-soul-is-the-album.md). A volume is that album
+brought into a room.
+
+- The record is credited to **Mani Odubo**. **Odubo** stays the presenting
+  studio, so the credit block below is unchanged on event pieces.
+- `MANI ODUBO` sets on **album-facing** pieces only — the pass card, the cover,
+  the metadata. Never added to the event poster, which is about the night.
+- A poster may carry one optional album line (`EventDetails.record`), e.g.
+  **THE ALBUM · FIRST PLAY**. Optional on purpose: a volume only *usually*
+  takes its name from a track.
+
+## Quoted artwork — the colour exception
+
+Loop Soul artwork is two colours: sand field, ink figure. **Artwork we quote —
+other artists' record sleeves, on tournament pieces — is the one exception**:
+it appears in **full colour**, because recognisability is the entire point of
+showing it. It is quoted material, and it is always set inside a **1px ink
+keyline**. Nothing else in colour, ever.
+
+⚠️ This rule is about **other people's** sleeves. It says nothing about Loop
+Soul's own cover, which is two-colour like everything else. The section used to
+be headed "Album artwork", which now reads as the opposite of what it means.
 
 ## The catchphrase
 
@@ -118,4 +137,9 @@ cut highlights. Print artwork is RGB; convert at the shop if they want CMYK.
 - In-app Poster Studio: `src/app/loop/admin/posters/PosterStudio.tsx` over
   `src/lib/loop/poster/compose.ts`.
 - App poster (front door): `src/components/loop/gathering/GatheringPoster.tsx`.
+- The printed destination (one setting, both runtimes): `src/lib/loop/publicUrl.ts`
+  over `loop_settings.public_base_url`. **Never hardcode a host in a QR.**
+- The price line, shared by the front door and the print kit:
+  `src/lib/loop/priceLabel.ts` over `loop_settings.pass_price`. An unset or zero
+  price reads **FREE ENTRY** — that is how a free door is set.
 - The arc device (app): `src/components/loop/brand/ArcedTagline.tsx`.

@@ -132,3 +132,29 @@ The run of show in the app should read as **acts**, matching the above:
 
 Times get filled in once doors and set lengths are fixed; the app's Run of Show
 editor holds it, and the same list drives the "On now" line in the Portal.
+
+---
+
+## Addendum — the record is the spine (2026-08-24)
+
+The arc above is unchanged. What changed is what it is an arc *of*: Loop Soul is
+an album (see [loop-soul-is-the-album.md](loop-soul-is-the-album.md)), and
+Volume 1 is the first time it is played anywhere.
+
+Three named changes:
+
+1. **The band's peak set is the album.** The slot already exists in the arc —
+   this names what plays in it. The room hears the record before the internet
+   does, which is the reason to be there on that specific Saturday.
+2. **One track is recorded live in the room.** "1984" is already staged for
+   this: it is a distinct recording on the release. Announced from the stage —
+   *this becomes part of the record; you're on it.* The audience stops being an
+   audience and becomes contributors, which is the same witness/curation logic
+   the rest of the product runs on.
+3. **The Soul Anthem is parked** (`ANTHEM_ENABLED` in `src/lib/loop/content.ts`).
+   Picking a cover song competed with the album for meaning, and a four-round
+   tournament was work the campaign did not need. It returns after the event as
+   the **tracklist vote** — the room deciding the record's running order.
+
+**The night is free.** The door is not the revenue; the circle is the offer.
+Registration closes on the night and never reopens.

@@ -83,11 +83,14 @@ export function StudioShell({
   stats,
   notes,
   eventDetails,
+  publicBaseUrl,
 }: {
   facts: PlaybookFacts;
   stats: { sold: number; total: number; redeemed: number; codes: number; anthemEntries: number };
   notes: LoopNote[];
   eventDetails: { title: string; theme: string; venue: string; dateLabel: string; passes?: string };
+  /** `loop_settings.public_base_url` — the origin printed QRs are built from. */
+  publicBaseUrl?: string | null;
 }) {
   const [playbookTab, setPlaybookTab] = useState<PlaybookTab | null>(null);
 
@@ -156,7 +159,7 @@ export function StudioShell({
 
       <section className="mt-12" id="posters">
         <SectionHeader section={SECTIONS.posters} onMore={setPlaybookTab} />
-        <PosterStudio eventDetails={eventDetails} />
+        <PosterStudio eventDetails={eventDetails} publicBaseUrl={publicBaseUrl} />
       </section>
 
       <section className="mt-12" id="tickets">

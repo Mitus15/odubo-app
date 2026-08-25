@@ -17,6 +17,13 @@ import {
   type LayoutResult,
 } from "../../src/lib/loop/poster/layout";
 import { tournamentSpec, TOURNAMENT_EMPTY_FIGURE } from "../../src/lib/loop/poster/tournament";
+import {
+  getPublicBaseUrl,
+  normalizeBaseUrl,
+  destinationFor,
+} from "../../src/lib/loop/publicUrl";
+import { getSetting } from "../../src/lib/loop/loopSetting";
+import { priceLabel } from "../../src/lib/loop/priceLabel";
 import type { AnthemState } from "../../src/lib/loop/anthem-server";
 import { prepareSharp, renderSharp, assertFontResolves } from "./poster-render-sharp";
 
@@ -37,17 +44,16 @@ import { prepareSharp, renderSharp, assertFontResolves } from "./poster-render-s
 
 /* ─────────────────────────── the only thing to edit ─────────────────────── */
 
-const VOLUMES: Record<string, EventDetails & { venueShort: string; url: string }> = {
+const VOLUMES: Record<string, EventDetails & { venueShort: string }> = {
   1: {
     volume: "VOLUME ONE",
     theme: "1984",
-    date: "SATURDAY SEPTEMBER 12",
+    date: "SATURDAY SEPTEMBER 26",
     doors: "DOORS 9PM",
     venue: "SCOTT'S INN & SUITES · KAMLOOPS",
     venueShort: "SCOTT'S INN · KAMLOOPS",
     passes: "60 PASSES",
-    price: "$20",
-    url: "https://odubo-studio-app.vercel.app/loop",
+    record: "THE ALBUM · FIRST PLAY",
   },
   2: {
     volume: "VOLUME TWO",
@@ -57,8 +63,6 @@ const VOLUMES: Record<string, EventDetails & { venueShort: string; url: string }
     venue: "SCOTT'S INN & SUITES · KAMLOOPS",
     venueShort: "SCOTT'S INN · KAMLOOPS",
     passes: "60 PASSES",
-    price: "$20",
-    url: "https://odubo-studio-app.vercel.app/loop",
   },
 };
 
@@ -72,6 +76,7 @@ const FIGURES: Record<string, string> = {
 
 const FILE_LABELS: Record<PosterSize, string> = {
   print: "8x11in-300dpi",
+  flyer: "flyer-5.5x8.5in-300dpi",
   story: "story",
   feed: "feed",
 };
@@ -99,6 +104,35 @@ async function main() {
   if (!ev) throw new Error(`no config for volume ${volume}`);
   const slogan = typeof args.slogan === "string" ? args.slogan : undefined;
 
+  // Where every QR in this run points. A printed code cannot be corrected, so
+  // there is deliberately NO default: the kit refuses rather than bake in a
+  // host that might not be ours by the time the posters come back.
+  //   --url=…  >  LOOP_PUBLIC_BASE_URL  >  loop_settings.public_base_url
+  const placement = typeof args.placement === "string" ? args.placement : null;
+  const baseUrl =
+    normalizeBaseUrl(typeof args.url === "string" ? args.url : null) ??
+    normalizeBaseUrl(process.env.LOOP_PUBLIC_BASE_URL) ??
+    (await getPublicBaseUrl());
+  if (!baseUrl) {
+    throw new Error(
+      "No public base URL. A QR code is permanent once printed, so this kit will not " +
+        "guess one.\n  Set it in /loop/admin/studio (Pass sales → public base URL), or " +
+        "pass --url=https://your-domain, or export LOOP_PUBLIC_BASE_URL.",
+    );
+  }
+  const qrFor = (piece: "event" | "tournament" | "ticket" | "flyer") =>
+    destinationFor(piece, baseUrl, placement)!;
+  console.log(`→ QR destination: ${qrFor("event")}`);
+
+  // The price on artwork is the SAME value the front door shows — read from
+  // loop_settings, never typed in twice. An unset or zero price prints
+  // "FREE ENTRY", so opening the door is one field, not a poster rewrite.
+  ev.price =
+    typeof args.price === "string"
+      ? args.price
+      : priceLabel(await getSetting("pass_price"), await getSetting("pass_currency"));
+  console.log(`→ price line: ${ev.price}`);
+
   const HERE = path.dirname(fileURLToPath(import.meta.url));
   const out =
     typeof args.out === "string"
@@ -116,7 +150,9 @@ async function main() {
     WORDMARK_SRC,
     ODUBO_SRC,
     SCOTTS_SRC,
-    qrSrc(ev.url),
+    // Every distinct destination in this run — pieces may diverge later, and a
+    // QR whose image was never prepared renders as a blank square.
+    ...[...new Set((["event", "tournament", "ticket", "flyer"] as const).map(qrFor))].map(qrSrc),
     ...Object.values(FIGURES),
   ]);
   const deps = { sizes: prepared.sizes };
@@ -133,7 +169,7 @@ async function main() {
       for (const size of sizes) {
         const list = unwrap(
           `poster ${figure}/${size}`,
-          layoutEventPoster({ size, figureSrc: src, slogan, qrUrl: ev.url, details: ev }, deps),
+          layoutEventPoster({ size, figureSrc: src, slogan, qrUrl: qrFor("event"), details: ev }, deps),
         );
         await write(
           `loop-soul-v${volume}-${figure}-${FILE_LABELS[size]}.png`,
@@ -153,7 +189,7 @@ async function main() {
     const list = unwrap(
       "ticket",
       layoutTicket(
-        { qrUrl: ev.url, figureSrc: FIGURES.crowd, details: { ...ev, venue: ev.venueShort } },
+        { qrUrl: qrFor("ticket"), figureSrc: FIGURES.crowd, details: { ...ev, venue: ev.venueShort } },
         deps,
       ),
     );
@@ -178,7 +214,7 @@ async function main() {
   // fetched from the volume's own deployment. Offline → skip loudly, never
   // render a stale guess.
   if (pieces.includes("tournament")) {
-    const api = new URL("/api/loop/anthem", ev.url).toString();
+    const api = new URL("/api/loop/anthem", baseUrl).toString();
     let state: AnthemState;
     try {
       const res = await fetch(api);
@@ -190,7 +226,7 @@ async function main() {
     }
     if (state) {
       for (const size of sizes) {
-        const spec = tournamentSpec(state, { size, qrUrl: ev.url, now: Date.now() });
+        const spec = tournamentSpec(state, { size, qrUrl: qrFor("tournament"), now: Date.now() });
         const artSrcs: string[] = [TOURNAMENT_EMPTY_FIGURE];
         const band = spec.band;
         if (band.kind === "grid" || band.kind === "seeds") {

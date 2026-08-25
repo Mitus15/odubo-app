@@ -1,4 +1,19 @@
 /**
+ * Is the Soul Loop Anthem running?
+ *
+ * Parked for Volume 1 (2026-08-24, owner's call): a four-round tournament was
+ * work the campaign did not need, and picking a cover song competed with the
+ * album for meaning. The machinery is deliberately left intact — it comes back
+ * after the event pointed at a better question, VOTING ON THE ALBUM'S
+ * TRACKLIST, which makes the room shape the record instead of choosing
+ * something outside it.
+ *
+ * Flip this to true to bring the module, its poster family and its pass
+ * promise back. Nothing else has to change.
+ */
+export const ANTHEM_ENABLED = false;
+
+/**
  * Seed content for State 1 — The Gathering.
  *
  * This is the content the marketing team will eventually edit from /admin

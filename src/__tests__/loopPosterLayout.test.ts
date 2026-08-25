@@ -49,11 +49,11 @@ const deps: LayoutDeps = {
 const details: EventDetails = {
   volume: "VOLUME ONE",
   theme: "1984",
-  date: "SATURDAY SEPTEMBER 12",
+  date: "SATURDAY SEPTEMBER 26",
   doors: "DOORS 9PM",
   venue: "SCOTT'S INN & SUITES · KAMLOOPS",
   passes: "60 PASSES",
-  price: "$20",
+  price: "FREE ENTRY",
 };
 
 type Box = { x1: number; y1: number; x2: number; y2: number; label: string };
@@ -113,6 +113,58 @@ describe("layoutEventPoster", () => {
     );
     expect(r.ok).toBe(true);
     if (r.ok) assertNoOverlap(r.list.ops);
+  });
+
+  // The record kicker is the album's one claim on the artwork. It is optional
+  // because a volume only USUALLY takes its name from a track, so it has to be
+  // safe both present and absent, at every size.
+  it.each(sizes)("lays out the record line at %s with no overlap", (size) => {
+    const r = layoutEventPoster(
+      {
+        size,
+        figureSrc: "/loop/figures/crowd.png",
+        qrUrl: "https://example.com/loop",
+        details: { ...details, record: "THE ALBUM · FIRST PLAY" },
+      },
+      deps,
+    );
+    expect(r.ok).toBe(true);
+    if (r.ok) assertNoOverlap(r.list.ops);
+  });
+
+  it.each(sizes)("gives the record line its own row at %s, above the date", (size) => {
+    const spec = {
+      size,
+      figureSrc: "/loop/figures/crowd.png",
+      qrUrl: "https://example.com/loop",
+    } as const;
+    const withRecord = layoutEventPoster(
+      { ...spec, details: { ...details, record: "THE ALBUM · FIRST PLAY" } },
+      deps,
+    );
+    const without = layoutEventPoster({ ...spec, details }, deps);
+    expect(withRecord.ok && without.ok).toBe(true);
+    if (!withRecord.ok || !without.ok) return;
+
+    const text = (ops: Op[], t: string) =>
+      ops.find((o) => o.kind === "glyphs" && o.glyphs.map((g) => g.ch).join("") === t);
+
+    const record = text(withRecord.list.ops, "THE ALBUM · FIRST PLAY");
+    expect(record).toBeDefined();
+
+    // It sits above the date line, and the hero shrinks to pay for it rather
+    // than the row being squeezed in on top of something.
+    const dateLine = withRecord.list.ops.find(
+      (o) => o.kind === "glyphs" && o.glyphs.map((g) => g.ch).join("").includes("SEPTEMBER"),
+    );
+    if (record?.kind === "glyphs" && dateLine?.kind === "glyphs") {
+      expect(record.y).toBeLessThan(dateLine.y);
+    }
+
+    const hero = (l: typeof withRecord.list) => l.ops.find((o) => o.kind === "image" && o.src.includes("crowd"));
+    const a = hero(withRecord.list);
+    const b = hero(without.list);
+    if (a?.kind === "image" && b?.kind === "image") expect(a.h).toBeLessThanOrEqual(b.h);
   });
 
   it.each(sizes)("fits the slogan inside the measure at %s", (size) => {

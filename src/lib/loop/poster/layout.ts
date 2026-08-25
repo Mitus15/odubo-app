@@ -87,6 +87,11 @@ export const qrSrc = (url: string) => `qr:${url}`;
 
 export const POSTER_SIZES = {
   print: { w: 2400, h: 3300, label: "Print · 8×11in 300dpi" },
+  // Half-letter at 300dpi — the hand-out piece. Two up on a letter sheet, so
+  // it is the cheapest thing to run in quantity, and it is the only size meant
+  // to be given to a person rather than hung on a wall. Its aspect is taller
+  // than print's, so the air budget never has to squeeze.
+  flyer: { w: 1650, h: 2550, label: "Flyer · 5.5×8.5in 300dpi (half-letter)" },
   feed: { w: 1080, h: 1350, label: "Feed · 4:5" },
   story: { w: 1080, h: 1920, label: "Story · 9:16" },
 } as const;
@@ -109,6 +114,11 @@ export type EventDetails = {
   passes?: string;
   /** e.g. "$20" */
   price?: string;
+  /** Optional kicker naming the record, e.g. "THE ALBUM · FIRST PLAY".
+   *  Deliberately free text and deliberately optional: a volume usually takes
+   *  its name from a track, but that is a habit, not a rule, so the engine is
+   *  never taught about the tracklist. */
+  record?: string;
 };
 
 export type EventPosterSpec = {
@@ -312,10 +322,15 @@ export function layoutEventPoster(spec: EventPosterSpec, deps: LayoutDeps): Layo
     // deficit. Roomy formats get air = 1 and lay out identically to before.
     const GAP = { vol: 250, hero: 90, slogan: 200, triad: 96, details: 80, price: 150 } as const;
     const heroFloor = R(600 * S);
+    // Every present detail row owns its drop here AND decrements the cursor by
+    // the same amount below — the two must agree or the hero band is sized
+    // against a block it doesn't match.
+    const recordDrop = R(58 * S);
     const fixedDetailDrop =
       (d && (d.passes || d.price) ? R(64 * S) : 0) +
       (d?.venue ? R(72 * S) : 0) +
-      (d && (d.date || d.doors) ? dateSize : 0);
+      (d && (d.date || d.doors) ? dateSize : 0) +
+      (d?.record ? recordDrop : 0);
     const airPx =
       (GAP.vol + GAP.hero + GAP.slogan + GAP.details + GAP.price + (showTriad ? GAP.triad : 0)) * S;
     const heroMaxAt = (air: number) =>
@@ -354,6 +369,20 @@ export function layoutEventPoster(spec: EventPosterSpec, deps: LayoutDeps): Layo
     if (dateText) {
       detailOps.push(line(dateText, { x: W / 2, y: cursorY, size: dateSize, weight: 700, track: 0.06 }));
       cursorY -= dateSize;
+    }
+    // The record kicker sits at the top of the detail block, so it reads into
+    // the date beneath it rather than trailing off the bottom of the poster.
+    if (d?.record) {
+      const recordSize = R(34 * S);
+      assertFits(
+        "the record line",
+        measure(d.record, { size: recordSize, weight: 700, track: 0.3 }),
+        W - pad * 2,
+      );
+      detailOps.push(
+        line(d.record, { x: W / 2, y: cursorY, size: recordSize, weight: 700, track: 0.3, opacity: 0.8 }),
+      );
+      cursorY -= recordDrop;
     }
 
     // 7. The hero — every pixel between the volume line and the type block.

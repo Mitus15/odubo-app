@@ -9,7 +9,7 @@ import JournalIssueView from "@/components/loop/journal/JournalIssueView";
 
 export const metadata: Metadata = {
   title: "The Loop Journal — Loop Soul",
-  description: "One issue per volume. The anthem, the iconic moments, the night that was.",
+  description: "One issue per volume — the liner notes for the night that was: the iconic moments, the room, the record.",
 };
 
 /**

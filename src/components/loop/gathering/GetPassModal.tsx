@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { priceLabel as formatPrice } from "@/lib/loop/priceLabel";
 
 type Capacity = { total: number; sold: number; remaining: number };
 
@@ -55,23 +56,31 @@ export function GetPassModal({
   // Admin-set Shopify checkout link first, then the env fallback.
   const checkoutUrl = checkoutUrlProp || process.env.NEXT_PUBLIC_LOOP_PASS_CHECKOUT_URL;
   const soldOut = capacity.remaining <= 0;
-  const priceLabel = price
-    ? `$${Number(price).toFixed(2)}${currency ? ` ${currency}` : ""}`
-    : null;
+  // Same formatter as the front door and the print kit — see priceLabel.ts.
+  const priceLabel = formatPrice(price, currency);
+  const isFree = priceLabel === "FREE ENTRY";
 
   const includes: [string, string][] = [
     ["Entry for one", `One pass admits one guest to ${eventTitle} — themed ${theme}.`],
     [
       "Your event code",
-      "Arrives by email right after checkout. It's your ticket at the door and it unlocks the app on the night.",
+      "Arrives by email right after you register. It's your ticket at the door and it unlocks the app on the night.",
     ],
     [
       "The room, in the app",
       "Pose Studio (the Loop Soul filter), The Wall — the room's live photo gallery — and the live program.",
     ],
+    // The record is the reason the night exists — see
+    // docs/decisions/loop-soul-is-the-album.md.
     [
-      "A say in the anthem",
-      "Pass-holders can suggest and vote on the Soul Loop Anthem before the night.",
+      "The record, first",
+      "Loop Soul is an album. Volume 1 is the first time it's played anywhere, and one track is recorded live in the room — you're on it.",
+    ],
+    // Registration closes at the event and never reopens: the people in the
+    // room are the album's audience. This is the whole offer.
+    [
+      "In the circle, for good",
+      "Everyone in the room keeps the record, the community gallery, the cover contest and the vote on the tracklist. Registration closes on the night and doesn't reopen.",
     ],
     [
       "The Vault, after",
@@ -98,7 +107,7 @@ export function GetPassModal({
             <h3 className="text-2xl font-extrabold leading-tight">
               {soldOut ? "The room is full" : "The Pass"}
             </h3>
-            {priceLabel && !soldOut && (
+            {!soldOut && (
               <p className="mt-1 text-lg font-bold tabular-nums">{priceLabel}</p>
             )}
           </div>
@@ -204,7 +213,7 @@ export function GetPassModal({
                 rel="noopener noreferrer"
                 className="block w-full rounded-full bg-ink py-4 text-center text-base font-bold text-sand transition-transform active:scale-95"
               >
-                Continue to checkout{priceLabel ? ` · ${priceLabel}` : ""}
+                {isFree ? "Register · Free" : `Continue to checkout · ${priceLabel}`}
               </a>
               <p className="loop-muted mt-2 text-center text-[11px]">
                 Secure checkout on our store. You&apos;ll come back here with your code.

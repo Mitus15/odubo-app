@@ -17,6 +17,7 @@ import {
 } from "@/lib/loop/poster/compose";
 import { tournamentSpec } from "@/lib/loop/poster/tournament";
 import { SLOGAN, ANTHEM_PHRASE } from "@/lib/loop/brand";
+import { buildDestination, destinationFor, PIECE_PATHS } from "@/lib/loop/publicUrl";
 import type { AnthemState } from "@/lib/loop/anthem-server";
 import type { WallPhotoDto } from "@/lib/loop/wall/client";
 
@@ -28,11 +29,12 @@ const BRAND_FIGURES = [
 ];
 
 /** Never hardcode a host — the domain situation changes (see
- *  docs/decisions/loop-soul-product-architecture.md). Whatever origin this
- *  admin is being used from is the origin the poster should point at.
- *  Resolved in an effect, not at render: the server can't know the origin, and
- *  rendering "/loop" there vs the full URL on the client was a guaranteed
- *  hydration mismatch on every page embedding this studio. */
+ *  docs/decisions/loop-soul-product-architecture.md). The origin comes from
+ *  `loop_settings.public_base_url`, the same value the print kit reads, and
+ *  falls back to whatever origin this admin is being used from.
+ *  Resolved in an effect, not at render: the server can't know the browser's
+ *  origin, and rendering one value there and another on the client was a
+ *  guaranteed hydration mismatch on every page embedding this studio. */
 const DEFAULT_QR_PATH = "/loop";
 
 type SourceTab = "figures" | "upload" | "wall";
@@ -55,6 +57,7 @@ type Details = {
   doors: string;
   passes: string;
   price: string;
+  record: string;
 };
 
 const DETAIL_FIELDS: [keyof Details, string][] = [
@@ -65,6 +68,7 @@ const DETAIL_FIELDS: [keyof Details, string][] = [
   ["venue", "Venue"],
   ["passes", "Passes"],
   ["price", "Price"],
+  ["record", "Record line"],
 ];
 
 /** Export failures in words a promoter can act on. */
@@ -84,6 +88,7 @@ function humanError(e: unknown): string {
  */
 export function PosterStudio({
   eventDetails,
+  publicBaseUrl,
 }: {
   eventDetails: {
     title: string;
@@ -93,6 +98,10 @@ export function PosterStudio({
     /** e.g. "60 PASSES" — from the live capacity when the server knows it. */
     passes?: string;
   };
+  /** `loop_settings.public_base_url` — the origin every printed QR is built
+   *  from. Undefined until the owner sets it; we fall back to this admin's own
+   *  origin so the studio still works, but print should wait for the real one. */
+  publicBaseUrl?: string | null;
 }) {
   const previewRef = useRef<HTMLCanvasElement | null>(null);
   const renderSeq = useRef(0);
@@ -105,7 +114,9 @@ export function PosterStudio({
   const [sloganMode, setSloganMode] = useState<SloganMode>("slogan");
   const [customSlogan, setCustomSlogan] = useState("");
   const [showTriad, setShowTriad] = useState(true);
-  const [qrUrl, setQrUrl] = useState(DEFAULT_QR_PATH);
+  const [baseUrl, setBaseUrl] = useState(publicBaseUrl ?? DEFAULT_QR_PATH);
+  const [placement, setPlacement] = useState("");
+  const [qrOverride, setQrOverride] = useState("");
   const [showDetails, setShowDetails] = useState(true);
   const [size, setSize] = useState<PosterSize>("print");
   const [busy, setBusy] = useState<string | null>(null);
@@ -122,18 +133,30 @@ export function PosterStudio({
       dateLabel: eventDetails.dateLabel,
       doors: "DOORS 9PM",
       passes: eventDetails.passes ?? "",
-      price: "$20",
+      price: "FREE ENTRY",
+      record: "THE ALBUM · FIRST PLAY",
     }),
     [eventDetails],
   );
   const [details, setDetails] = useState<Details>(initialDetails);
 
-  // Upgrade the QR target to the real origin once we're on the client.
+  // Upgrade the QR origin once we're on the client. Only ever fills the gap:
+  // a configured public_base_url always wins, because that is the value the
+  // print kit uses and the two must not disagree.
   useEffect(() => {
-    setQrUrl((prev) =>
-      prev === DEFAULT_QR_PATH ? `${window.location.origin}${DEFAULT_QR_PATH}` : prev,
-    );
+    setBaseUrl((prev) => (prev === DEFAULT_QR_PATH ? window.location.origin : prev));
   }, []);
+
+  /** The destination this piece will actually encode. An explicit override
+   *  wins; otherwise it is the per-piece default path on the configured
+   *  origin, plus the placement tag. Null means the piece carries no QR. */
+  const qrUrl = useMemo(
+    () =>
+      qrOverride.trim()
+        ? buildDestination(baseUrl, qrOverride.trim(), placement)
+        : destinationFor(piece, baseUrl, placement),
+    [piece, baseUrl, placement, qrOverride],
+  );
 
   // Wall shots for the picker (admin view — includes everything visible).
   useEffect(() => {
@@ -174,7 +197,7 @@ export function PosterStudio({
       size: forSize,
       figureSrc,
       tagline,
-      qrUrl,
+      qrUrl: qrUrl ?? "",
       showTriad,
       showDetails,
       details,
@@ -191,7 +214,7 @@ export function PosterStudio({
         case "tournament": {
           if (!anthem) return null; // still loading — keep the last preview
           return composeTournament(
-            tournamentSpec(anthem, { size: forSize, qrUrl: qrUrl.trim() || "/loop" }),
+            tournamentSpec(anthem, { size: forSize, qrUrl: qrUrl ?? "" }),
           );
         }
         case "ticket":
@@ -435,13 +458,45 @@ export function PosterStudio({
       )}
 
       {piece !== "pass" && (
-        <input
-          type="url"
-          value={qrUrl}
-          onChange={(e) => setQrUrl(e.target.value)}
-          placeholder="QR link (where the poster sends people)"
-          className="mt-2 w-full rounded-2xl border border-ink/20 bg-transparent px-4 py-3 font-mono text-xs outline-none focus:border-ink"
-        />
+        <div className="mt-2 space-y-2">
+          <div className="grid grid-cols-2 gap-2">
+            <input
+              type="url"
+              value={baseUrl}
+              onChange={(e) => setBaseUrl(e.target.value)}
+              placeholder="Public base URL (https://…)"
+              className="rounded-2xl border border-ink/20 bg-transparent px-4 py-3 font-mono text-xs outline-none focus:border-ink"
+            />
+            <input
+              type="text"
+              value={placement}
+              onChange={(e) => setPlacement(e.target.value)}
+              placeholder="Placement tag (campus, scotts…)"
+              className="rounded-2xl border border-ink/20 bg-transparent px-4 py-3 font-mono text-xs outline-none focus:border-ink"
+            />
+          </div>
+          <input
+            type="text"
+            value={qrOverride}
+            onChange={(e) => setQrOverride(e.target.value)}
+            placeholder={`Override this piece's link (default ${PIECE_PATHS[piece] ?? "—"})`}
+            className="w-full rounded-2xl border border-ink/20 bg-transparent px-4 py-3 font-mono text-xs outline-none focus:border-ink"
+          />
+          <p className="loop-muted px-1 font-mono text-[11px] break-all">
+            {qrUrl ? (
+              <>QR → {qrUrl}</>
+            ) : (
+              <>No scannable destination — a QR needs a full origin like https://example.com</>
+            )}
+            {!publicBaseUrl && (
+              <>
+                {" "}
+                · using this browser&rsquo;s origin. Set the public base URL before printing,
+                so the studio and the print kit agree.
+              </>
+            )}
+          </p>
+        </div>
       )}
 
       {/* Session-only detail overrides, tucked away until needed */}
