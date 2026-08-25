@@ -43,14 +43,19 @@ export const MOCK_CURRENT_EVENT: LoopEvent = {
   title: "Volume 1",
   theme: "1984",
   venue: "Scott's Inn, Kamloops",
-  // Anchored to 9pm Vancouver (PDT, −07:00) — not bare "2026-09-26", which JS
-  // parses as UTC midnight and shows as Sep 25 in Pacific time, skewing every
-  // derived anthem cutoff half a day early (see anthem-rounds.ts `derive`).
+  // This is DOORS, not the start of the music — the front door renders it as
+  // "Doors {time}" and the pass modal as "when". 6:30pm Vancouver (PDT,
+  // −07:00); the album plays at 8 and the room is empty by 10:30.
+  //
+  // Written with an explicit offset, not a bare "2026-09-26", which JS parses
+  // as UTC midnight and shows as Sep 25 in Pacific time, skewing every derived
+  // anthem cutoff half a day early (see anthem-rounds.ts `derive`).
   //
   // Moved from Sept 12 on 2026-08-24: at 19 days out nothing was sold and
   // nothing was printed. Sept 26 buys back three weeks and still clears the
   // Oct 3 ceiling (Rocky Mountaineer leaves Scott's Oct 13) by one weekend.
-  date: "2026-09-26T21:00:00-07:00",
+  // The 9pm doors it carried until 2026-08-25 were simply wrong.
+  date: "2026-09-26T18:30:00-07:00",
   capacity: 75,
   phase: "pre",
 };

@@ -28,9 +28,9 @@ type StudioSection = {
 const SECTIONS: Record<"posters" | "tickets" | "pricing", StudioSection> = {
   posters: {
     id: "posters",
-    title: "Posters & assets",
+    title: "Marketing Studio",
     blurb:
-      "Build and export finished artwork — print, feed, story, and a print-shop file with bleed + crop marks. The QR on every poster points people at the app.",
+      "Every piece for the volume — poster, flyer, ticket, pass card — from one workbench. The QR sends people to the programme, the cover contest and the rest of the room.",
     playbookTab: "push",
   },
   tickets: {
@@ -88,7 +88,7 @@ export function StudioShell({
   facts: PlaybookFacts;
   stats: { sold: number; total: number; redeemed: number; codes: number; anthemEntries: number };
   notes: LoopNote[];
-  eventDetails: { title: string; theme: string; venue: string; dateLabel: string; passes?: string };
+  eventDetails: { title: string; theme: string; venue: string; dateLabel: string; note?: string };
   /** `loop_settings.public_base_url` — the origin printed QRs are built from. */
   publicBaseUrl?: string | null;
 }) {

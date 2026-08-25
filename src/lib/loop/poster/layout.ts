@@ -85,6 +85,17 @@ export const SCOTTS_SRC = "/loop/branding/scotts-bw.svg";
 /** The QR is an image the runtime generates; layout only places it. */
 export const qrSrc = (url: string) => `qr:${url}`;
 
+/**
+ * The line under the QR on the event poster.
+ *
+ * "MORE" rather than "PASSES" because the poster deliberately no longer carries
+ * the programme, the cover contest, the community gallery or the single — the
+ * scan is the only route to any of them, and naming just one of them would sell
+ * the rest short. The tournament piece has always passed its own caption; this
+ * gives the event poster the same freedom.
+ */
+export const DEFAULT_QR_CAPTION = "SCAN FOR MORE";
+
 export const POSTER_SIZES = {
   print: { w: 2400, h: 3300, label: "Print · 8×11in 300dpi" },
   // Half-letter at 300dpi — the hand-out piece. Two up on a letter sheet, so
@@ -110,8 +121,10 @@ export type EventDetails = {
   /** e.g. "DOORS 9PM" */
   doors?: string;
   venue?: string;
-  /** e.g. "60 PASSES" */
-  passes?: string;
+  /** The small line that shares a row with the price. Free text — it has
+   *  carried a pass count and now carries the dress code, which is exactly why
+   *  it is not named after either of them. */
+  note?: string;
   /** e.g. "$20" */
   price?: string;
   /** Optional kicker naming the record, e.g. "THE ALBUM · FIRST PLAY".
@@ -129,6 +142,8 @@ export type EventPosterSpec = {
   slogan?: string;
   showTriad?: boolean;
   qrUrl: string;
+  /** The line under the QR. Defaults to DEFAULT_QR_CAPTION. */
+  qrCaption?: string;
   details?: EventDetails | null;
 };
 
@@ -288,7 +303,7 @@ export function layoutEventPoster(spec: EventPosterSpec, deps: LayoutDeps): Layo
     ops.push({ kind: "image", src: WORDMARK_SRC, x: pad, y: headTop, w: wmW, h: wmH });
     ops.push({ kind: "image", src: qrSrc(spec.qrUrl), x: W - pad - qrPx, y: headTop, w: qrPx, h: qrPx });
     ops.push(
-      line("SCAN FOR PASSES", {
+      line(spec.qrCaption ?? DEFAULT_QR_CAPTION, {
         x: W - pad - qrPx / 2,
         y: headTop + qrPx + R(36 * S),
         size: R(24 * S),
@@ -298,7 +313,12 @@ export function layoutEventPoster(spec: EventPosterSpec, deps: LayoutDeps): Layo
     );
 
     // 2. Sizes that never flex — the air between rows does, these don't.
+    // Two lines that swapped slots on 2026-08-25. The album credit is the
+    // primary identity, so it takes the big line under the header; the volume
+    // and theme drop into the detail block, where they read as particulars of
+    // this night rather than as the name of the thing.
     const volText = d && (d.volume || d.theme) ? [d.volume, d.theme].filter(Boolean).join("  ·  ") : null;
+    const albumLine = d?.record ?? null;
     const sloganSize = fitSize(slogan, W - pad * 2, { weight: 700, track: 0.02 }, { max: R(300 * S) });
     const triadSize = R(46 * S);
     const dateSize = R(58 * S);
@@ -327,10 +347,10 @@ export function layoutEventPoster(spec: EventPosterSpec, deps: LayoutDeps): Layo
     // against a block it doesn't match.
     const recordDrop = R(58 * S);
     const fixedDetailDrop =
-      (d && (d.passes || d.price) ? R(64 * S) : 0) +
+      (d && (d.note || d.price) ? R(64 * S) : 0) +
       (d?.venue ? R(72 * S) : 0) +
       (d && (d.date || d.doors) ? dateSize : 0) +
-      (d?.record ? recordDrop : 0);
+      (volText ? recordDrop : 0);
     const airPx =
       (GAP.vol + GAP.hero + GAP.slogan + GAP.details + GAP.price + (showTriad ? GAP.triad : 0)) * S;
     const heroMaxAt = (air: number) =>
@@ -345,10 +365,16 @@ export function layoutEventPoster(spec: EventPosterSpec, deps: LayoutDeps): Layo
     const air = deficit <= 0 ? 1 : Math.max(0.55, 1 - (deficit + 6) / airPx);
     const a = (px: number) => R(px * S * air);
 
-    // 5. Volume · theme.
+    // 5. The album credit — the big line under the header.
     const volY = headBottom + a(GAP.vol);
-    if (volText) {
-      ops.push(line(volText, { x: W / 2, y: volY, size: R(52 * S), track: 0.34, opacity: 0.85 }));
+    if (albumLine) {
+      const albumSize = R(52 * S);
+      assertFits(
+        "the album line",
+        measure(albumLine, { size: albumSize, track: 0.34 }),
+        W - pad * 2,
+      );
+      ops.push(line(albumLine, { x: W / 2, y: volY, size: albumSize, track: 0.34, opacity: 0.85 }));
     }
 
     // 6. Detail lines, bottom-anchored above the credits — only present rows
@@ -356,7 +382,7 @@ export function layoutEventPoster(spec: EventPosterSpec, deps: LayoutDeps): Layo
     // hero instead of leaving a hole.
     let cursorY = creditLabelY - a(GAP.price);
     const detailOps: Op[] = [];
-    const priceText = d && (d.passes || d.price) ? [d.passes, d.price].filter(Boolean).join("  ·  ") : null;
+    const priceText = d && (d.note || d.price) ? [d.note, d.price].filter(Boolean).join("  ·  ") : null;
     if (priceText) {
       detailOps.push(line(priceText, { x: W / 2, y: cursorY, size: R(38 * S), track: 0.2, opacity: 0.7 }));
       cursorY -= R(64 * S);
@@ -370,17 +396,17 @@ export function layoutEventPoster(spec: EventPosterSpec, deps: LayoutDeps): Layo
       detailOps.push(line(dateText, { x: W / 2, y: cursorY, size: dateSize, weight: 700, track: 0.06 }));
       cursorY -= dateSize;
     }
-    // The record kicker sits at the top of the detail block, so it reads into
-    // the date beneath it rather than trailing off the bottom of the poster.
-    if (d?.record) {
-      const recordSize = R(34 * S);
+    // Volume · theme sits at the top of the detail block, so it reads into the
+    // date beneath it rather than trailing off the bottom of the poster.
+    if (volText) {
+      const volDetailSize = R(34 * S);
       assertFits(
-        "the record line",
-        measure(d.record, { size: recordSize, weight: 700, track: 0.3 }),
+        "the volume line",
+        measure(volText, { size: volDetailSize, weight: 700, track: 0.3 }),
         W - pad * 2,
       );
       detailOps.push(
-        line(d.record, { x: W / 2, y: cursorY, size: recordSize, weight: 700, track: 0.3, opacity: 0.8 }),
+        line(volText, { x: W / 2, y: cursorY, size: volDetailSize, weight: 700, track: 0.3, opacity: 0.8 }),
       );
       cursorY -= recordDrop;
     }

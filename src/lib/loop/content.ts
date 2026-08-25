@@ -61,12 +61,54 @@ export type RunOfShowItem = {
 };
 
 export const RUN_OF_SHOW: RunOfShowItem[] = [
-  { id: "doors", time: "6:00", title: "Doors & The Lookbook", detail: "Arrive, get scanned, set the tone." },
-  { id: "band-open", time: "7:00", title: "The Band — Opening Set", detail: "Loose and low-stakes. Easing the room in.", performer: "The Band", role: "live · original music", instagram: "loopsoul.ca" },
-  { id: "pregame", time: "7:45", title: "The Pre-Game", detail: "Drinks, mingling, first spins.", performer: "DJ Cornelius", role: "resident DJ", instagram: "loopsoul.ca" },
-  { id: "danceoke", time: "8:30", title: "Danceoke", detail: "Take the floor — the queue is in the app.", performer: "The Host", role: "MC & Danceoke conductor", instagram: "loopsoul.ca" },
-  { id: "room", time: "9:30", title: "The Rec Room", detail: "The band returns — filmed live session at Scott's.", performer: "The Band", role: "filmed set", instagram: "loopsoul.ca" },
-  { id: "soul-loop", time: "10:15", title: "The Soul Loop Line", detail: "The anthem you voted for. Soul Train line — everyone in.", performer: "DJ Cornelius", role: "the anthem", instagram: "loopsoul.ca" },
+  {
+    id: "doors",
+    time: "6:30",
+    title: "Doors · The Barbecue",
+    detail: "Come in, eat, meet the room. The grill is on the whole night.",
+  },
+  {
+    id: "welcome",
+    time: "7:00",
+    title: "The Welcome",
+    detail: "The opening address — what Loop Soul is, and what tonight is.",
+  },
+  {
+    id: "warm",
+    time: "7:30",
+    title: "Before The Record",
+    detail: "Something to get the room together before the album starts.",
+  },
+  {
+    id: "album",
+    time: "8:00",
+    title: "The Album",
+    detail:
+      "Loop Soul, start to finish, outside in the courtyard under the lights. This is the part you came for — be here before 8.",
+    performer: "Mani Odubo",
+    role: "front to back",
+  },
+  {
+    id: "1984",
+    time: "9:00",
+    title: "\u201C1984\u201D — Live",
+    detail:
+      "The band plays 1984 inside, in the entertainment room. This take is recorded and it goes on the record — you\u2019re on it.",
+    performer: "The Band",
+    role: "live · recorded",
+  },
+  {
+    id: "floor",
+    time: "9:15",
+    title: "The Dance Floor",
+    detail: "Everyone in, until they turn the lights on.",
+  },
+  {
+    id: "out",
+    time: "10:30",
+    title: "Out",
+    detail: "Hard stop. The room has to be empty by 10:30.",
+  },
 ];
 
 export type LookbookItem = {

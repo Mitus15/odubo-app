@@ -49,20 +49,22 @@ const VOLUMES: Record<string, EventDetails & { venueShort: string }> = {
     volume: "VOLUME ONE",
     theme: "1984",
     date: "SATURDAY SEPTEMBER 26",
-    doors: "DOORS 9PM",
+    // The one thing a reader has to act on is BE HERE BEFORE 8 — an end time
+    // only tells them when to leave.
+    doors: "DOORS 6:30 · ALBUM AT 8",
     venue: "SCOTT'S INN & SUITES · KAMLOOPS",
     venueShort: "SCOTT'S INN · KAMLOOPS",
-    passes: "60 PASSES",
-    record: "THE ALBUM · FIRST PLAY",
+    note: "DRESS CODE · 1984",
+    record: "AN ALBUM BY MANI ODUBO",
   },
   2: {
     volume: "VOLUME TWO",
     theme: "TBD",
     date: "DATE TBD",
-    doors: "DOORS 9PM",
+    doors: "DOORS 6:30 · ALBUM AT 8",
     venue: "SCOTT'S INN & SUITES · KAMLOOPS",
     venueShort: "SCOTT'S INN · KAMLOOPS",
-    passes: "60 PASSES",
+    note: "DRESS CODE · TBD",
   },
 };
 

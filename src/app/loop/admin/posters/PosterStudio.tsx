@@ -55,7 +55,7 @@ type Details = {
   venue: string;
   dateLabel: string;
   doors: string;
-  passes: string;
+  note: string;
   price: string;
   record: string;
 };
@@ -66,7 +66,7 @@ const DETAIL_FIELDS: [keyof Details, string][] = [
   ["dateLabel", "Date"],
   ["doors", "Doors"],
   ["venue", "Venue"],
-  ["passes", "Passes"],
+  ["note", "Note (dress code)"],
   ["price", "Price"],
   ["record", "Record line"],
 ];
@@ -96,7 +96,9 @@ export function PosterStudio({
     venue: string;
     dateLabel: string;
     /** e.g. "60 PASSES" — from the live capacity when the server knows it. */
-    passes?: string;
+    note?: string;
+    /** From loop_settings.pass_price via priceLabel() — never typed in twice. */
+    price?: string;
   };
   /** `loop_settings.public_base_url` — the origin every printed QR is built
    *  from. Undefined until the owner sets it; we fall back to this admin's own
@@ -132,9 +134,9 @@ export function PosterStudio({
       venue: eventDetails.venue,
       dateLabel: eventDetails.dateLabel,
       doors: "DOORS 9PM",
-      passes: eventDetails.passes ?? "",
-      price: "FREE ENTRY",
-      record: "THE ALBUM · FIRST PLAY",
+      note: eventDetails.note ?? "DRESS CODE · 1984",
+      price: eventDetails.price ?? "",
+      record: "AN ALBUM BY MANI ODUBO",
     }),
     [eventDetails],
   );

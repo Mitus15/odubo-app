@@ -158,3 +158,38 @@ Three named changes:
 
 **The night is free.** The door is not the revenue; the circle is the offer.
 Registration closes on the night and never reopens.
+
+
+---
+
+## The real programme (locked 2026-08-25)
+
+This supersedes the arc above for Volume 1. The night is short and early, and it
+is built around one thing: the record plays at 8.
+
+| Time | | Where |
+|---|---|---|
+| 6:30 | Doors · the barbecue | both |
+| 7:00 | The Welcome — opening address | entertainment room |
+| 7:30 | Before The Record — something to gather the room | both |
+| **8:00** | **The Album** — Loop Soul, front to back | **courtyard, outdoors** |
+| 9:00 | **"1984" — Live**, recorded, goes on the release | **entertainment room, indoors** |
+| 9:15 | The Dance Floor | both |
+| **10:30** | **Out.** Hard stop | — |
+
+**Two spaces.** The record plays outside in the courtyard; the band plays inside
+in the entertainment room. Guests can watch from either side. Two consequences
+that are easy to miss:
+
+- **The courtyard needs evening lighting, not daytime.** Sunset in Kamloops in
+  late September is around 7pm, so the album at 8 plays in the dark.
+- **Sound crosses two zones.** Whether they are ever live *at the same time*
+  decides the whole cost: sequential zones need switching (cheap), overlapping
+  ones need delay alignment (not). Settle that before getting quotes.
+
+**Entry is $5.** Doors 6:30 is derived from the 7:00 start and still wants
+confirming against the venue before anything is printed.
+
+**The live programme is in D1**, not in `RUN_OF_SHOW` — the seed only fills a
+brand-new event. Volume 1's rows are written and correct as of 2026-08-25; edit
+them from /loop/admin, not by changing the seed.

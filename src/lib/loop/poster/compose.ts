@@ -52,7 +52,7 @@ export type PosterSpec = {
     venue: string;
     dateLabel: string;
     doors?: string;
-    passes?: string;
+    note?: string;
     price?: string;
     /** Optional kicker naming the record — see EventDetails.record. */
     record?: string;
@@ -78,7 +78,7 @@ function toDetails(spec: PosterSpec): EventDetails {
     date: spec.details.dateLabel || undefined,
     venue: spec.details.venue || undefined,
     doors: spec.details.doors || undefined,
-    passes: spec.details.passes || undefined,
+    note: spec.details.note || undefined,
     price: spec.details.price || undefined,
     record: spec.details.record || undefined,
   };

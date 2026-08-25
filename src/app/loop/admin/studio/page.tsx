@@ -64,7 +64,6 @@ export default async function StudioPage() {
           day: "numeric",
           year: "numeric",
         }),
-        passes: `${capacity.total} PASSES`,
       }}
     />
   );

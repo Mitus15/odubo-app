@@ -8,6 +8,7 @@ import type { LoopEvent } from "@/lib/loop/hub";
 import type { AnthemState } from "@/lib/loop/anthem-server";
 import { priceLabel as formatPrice } from "@/lib/loop/priceLabel";
 import { ANTHEM_ENABLED } from "@/lib/loop/content";
+import CoverContest from "./CoverContest";
 import type { RunOfShowItem } from "@/lib/loop/content";
 import Logo from "@/components/loop/brand/Logo";
 import ModuleSheet from "@/components/loop/shell/ModuleSheet";
@@ -17,7 +18,7 @@ import GetPassModal from "@/components/loop/gathering/GetPassModal";
 import DanceyokeyPanel from "@/components/loop/danceyokey/DanceyokeyPanel";
 
 type Capacity = { total: number; sold: number; remaining: number };
-type ModuleKey = "anthem" | "night" | "danceyokey";
+type ModuleKey = "anthem" | "night" | "cover" | "danceyokey";
 
 const MODULES: { key: ModuleKey; label: string; title: string }[] = [
   // Advertising a module that does nothing is worse than not showing it, so
@@ -25,7 +26,12 @@ const MODULES: { key: ModuleKey; label: string; title: string }[] = [
   ...(ANTHEM_ENABLED
     ? [{ key: "anthem" as const, label: "Soul Anthem", title: "Soul Loop Anthem" }]
     : []),
-  { key: "night", label: "The Night", title: "The Night" },
+  // Label vs title on purpose: someone scanning the poster is looking for "the
+  // programme", so the button says that; the sheet keeps the brand's own name
+  // for the night. The Night has always rendered RUN_OF_SHOW — it was the
+  // programme all along, just not findable by that word.
+  { key: "night", label: "The Programme", title: "The Night" },
+  { key: "cover", label: "Cover Contest", title: "The Cover Contest" },
   { key: "danceyokey", label: "Danceyokey", title: "Danceyokey" },
 ];
 
@@ -210,6 +216,7 @@ export function GatheringPoster({
           <ModuleSheet title={activeModule.title} onClose={() => setActive(null)}>
             {ANTHEM_ENABLED && active === "anthem" && <AnthemBracket initial={anthem} />}
             {active === "night" && <RunOfShow items={runOfShow} showHeader={false} />}
+            {active === "cover" && <CoverContest />}
             {active === "danceyokey" && <DanceyokeyPanel />}
           </ModuleSheet>
         )}

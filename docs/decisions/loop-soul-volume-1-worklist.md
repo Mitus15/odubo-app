@@ -24,8 +24,13 @@ a weekend. The premise changed at the same time — see the album doc — becaus
 $20 party with a band had no reason to exist on one specific Saturday, and the
 first play of an unreleased record does.
 
-**Entry is now free.** The offer is the circle, not the ticket: registration
-closes on the night and never reopens.
+**Entry is $5** (revised 2026-08-25 — briefly "free"; the $20 pass was never
+true either). The offer is the circle, not the ticket: registration closes on
+the night and never reopens. Microtransactions come later; the door stays $5.
+
+**The night is early and short:** doors 6:30, the album at 8 in the courtyard,
+"1984" live indoors at 9, dance floor, **everybody out by 10:30**. Full table in
+[loop-soul-show-flow.md](loop-soul-show-flow.md).
 
 ---
 
@@ -150,8 +155,11 @@ the Storefront API; Odubo store correctly excludes the pass (11 products);
 `ORDERS_PAID` webhook registered. Two things to fix:
 - ⚠️ **Shopify inventory is 75, the room is 60.** As configured the store would
   sell 15 more passes than the room holds.
-- ⚠️ **The pass still charges $20** while the event is now free. The product,
-  `pass_price` and `pass_mode` all need a decision — deliberately untouched.
+- ⚠️ **The pass still charges $20 in Shopify** while the app now says **$5**.
+  `loop_settings.pass_price` is set to 5.00; the live product is deliberately
+  untouched because changing real checkout needs the owner's word. **These two
+  must move together** — a poster and a checkout that disagree is exactly what
+  the single-price-source work exists to prevent.
 - The `loop-soul` collection still holds **only the pass**. No merch listed.
 
 ## Event production
@@ -159,8 +167,9 @@ the Storefront API; Odubo store correctly excludes the pass (11 products);
 | # | Item | State |
 |---|---|---|
 | 6 | Digital aspect of the event | Placeholder — break down later |
-| 7 | Lighting for outdoor daytime visibility | ❓ **Is this the Sept 11 booth, or has part of Sept 26 moved outdoors?** Changes the run of show and the spend |
-| 8 | Sound pre-approved | Owner |
+| 7 | Lighting | ✅ **Answered, but not as asked.** The album plays in the **courtyard, outdoors, at 8pm** — sunset in Kamloops in late September is ~7pm, so it plays **in the dark**. This is evening outdoor lighting, not daytime visibility |
+| 8 | Sound pre-approved | Now covers **two spaces**, one outdoors — which is where venue noise limits usually bite. See the sound note below |
+| 8b | **Two-zone sound** | Band indoors (entertainment room), album outdoors (courtyard). **Settle first: are the two zones ever live at the same moment?** Sequential → zone *switching*, cheap. Overlapping → delay alignment, expensive. That answer decides what to buy |
 
 ## The album
 
@@ -200,7 +209,7 @@ decision (it is a deliberate preview feature of the Odubo platform).
 
 | # | Item | State |
 |---|---|---|
-| 16 | Album cover contest — filter + registration + winner | Mostly wired: the filter, the Wall and `loop_media_credits` already exist. Needs the contest framing, not new capture |
+| 16 | Album cover contest | ✅ **Live on /loop** as its own sheet — how it works, and what it pays: **$50** for the cover, **$5** for any shot used in the magazine. The capture path (filter + Wall + `loop_media_credits`) already existed |
 | 18 | World-building invite page (1984) | Extend `/loop`; don't build a second page |
 | 19 | In-app apparel auction | Deferred with 22 |
 | 20 | Social push Aug 24 → Sept 11 | **Unblocked** — digital posters regenerate on the new date and need no domain |
@@ -228,3 +237,13 @@ and any pricing. Recorded here so it is not lost; **not designed**, to keep the
 Volume 1 scope from creeping. The mechanism is ready when it is wanted: price is
 already one setting (`pass_price` → `src/lib/loop/priceLabel.ts`), read by both
 the app and the print kit, so opening or closing the door is one field.
+
+
+---
+
+## Magazine & payments (added 2026-08-25)
+
+- **Album cover winner: $50.** Anyone whose shot is used in the magazine: **$5**.
+  Both are stated on `/loop` in the Cover Contest sheet — a contest that names
+  its payment reads as an offer; one that doesn't reads as free labour.
+- **Magazine delivery: digital next week, physical the week after.**

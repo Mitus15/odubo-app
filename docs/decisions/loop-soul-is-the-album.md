@@ -58,9 +58,15 @@ default (`src/lib/loop/poster/layout.ts`). Nothing derives a theme from a track.
 - **Odubo** remains the presenting studio. The event credit hierarchy is
   unchanged: `PRESENTED BY → Odubo`, `IN PARTNERSHIP WITH → Scott's Inn &
   Suites`.
-- `MANI ODUBO` belongs on **album-facing** pieces — the pass card, the cover,
-  the metadata. It is **not** added to the event poster, which is about the
-  night.
+- **On artwork the line is exactly `AN ALBUM BY MANI ODUBO`** (revised
+  2026-08-25). Indefinite article, one line, no "first play". *An* album
+  credits; *the* album announces — it sits on the poster the way a credit sits
+  on a sleeve, and it cannot be edited to "the album" later without changing
+  what it claims.
+- It takes the **big line under the header**, where the volume used to sit.
+  Volume and theme drop into the detail block, reading as particulars of this
+  night rather than the name of the thing. The album is the identity; the
+  volume is an instance of it.
 
 ## The audience is closed
 

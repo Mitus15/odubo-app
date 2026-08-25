@@ -50,10 +50,10 @@ const details: EventDetails = {
   volume: "VOLUME ONE",
   theme: "1984",
   date: "SATURDAY SEPTEMBER 26",
-  doors: "DOORS 9PM",
+  doors: "DOORS 6:30 · ALBUM AT 8",
   venue: "SCOTT'S INN & SUITES · KAMLOOPS",
-  passes: "60 PASSES",
-  price: "FREE ENTRY",
+  note: "DRESS CODE · 1984",
+  price: "$5",
 };
 
 type Box = { x1: number; y1: number; x2: number; y2: number; label: string };
@@ -124,7 +124,7 @@ describe("layoutEventPoster", () => {
         size,
         figureSrc: "/loop/figures/crowd.png",
         qrUrl: "https://example.com/loop",
-        details: { ...details, record: "THE ALBUM · FIRST PLAY" },
+        details: { ...details, record: "AN ALBUM BY MANI ODUBO" },
       },
       deps,
     );
@@ -132,39 +132,44 @@ describe("layoutEventPoster", () => {
     if (r.ok) assertNoOverlap(r.list.ops);
   });
 
-  it.each(sizes)("gives the record line its own row at %s, above the date", (size) => {
-    const spec = {
-      size,
-      figureSrc: "/loop/figures/crowd.png",
-      qrUrl: "https://example.com/loop",
-    } as const;
-    const withRecord = layoutEventPoster(
-      { ...spec, details: { ...details, record: "THE ALBUM · FIRST PLAY" } },
+  // Swapped 2026-08-25: the album credit is the primary identity, so it takes
+  // the big line under the header, and volume/theme drops into the detail block
+  // where it reads as a particular of this night rather than the name of it.
+  it.each(sizes)("puts the album credit above the hero at %s, and volume below", (size) => {
+    const r = layoutEventPoster(
+      {
+        size,
+        figureSrc: "/loop/figures/crowd.png",
+        qrUrl: "https://example.com/loop",
+        details: { ...details, record: "AN ALBUM BY MANI ODUBO" },
+      },
       deps,
     );
-    const without = layoutEventPoster({ ...spec, details }, deps);
-    expect(withRecord.ok && without.ok).toBe(true);
-    if (!withRecord.ok || !without.ok) return;
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
 
-    const text = (ops: Op[], t: string) =>
-      ops.find((o) => o.kind === "glyphs" && o.glyphs.map((g) => g.ch).join("") === t);
-
-    const record = text(withRecord.list.ops, "THE ALBUM · FIRST PLAY");
-    expect(record).toBeDefined();
-
-    // It sits above the date line, and the hero shrinks to pay for it rather
-    // than the row being squeezed in on top of something.
-    const dateLine = withRecord.list.ops.find(
+    const glyphY = (t: string) => {
+      const op = r.list.ops.find(
+        (o) => o.kind === "glyphs" && o.glyphs.map((g) => g.ch).join("") === t,
+      );
+      return op?.kind === "glyphs" ? op.y : null;
+    };
+    const album = glyphY("AN ALBUM BY MANI ODUBO");
+    const volume = glyphY("VOLUME ONE  ·  1984");
+    const hero = r.list.ops.find((o) => o.kind === "image" && o.src.includes("crowd"));
+    const date = r.list.ops.find(
       (o) => o.kind === "glyphs" && o.glyphs.map((g) => g.ch).join("").includes("SEPTEMBER"),
     );
-    if (record?.kind === "glyphs" && dateLine?.kind === "glyphs") {
-      expect(record.y).toBeLessThan(dateLine.y);
-    }
 
-    const hero = (l: typeof withRecord.list) => l.ops.find((o) => o.kind === "image" && o.src.includes("crowd"));
-    const a = hero(withRecord.list);
-    const b = hero(without.list);
-    if (a?.kind === "image" && b?.kind === "image") expect(a.h).toBeLessThanOrEqual(b.h);
+    expect(album).not.toBeNull();
+    expect(volume).not.toBeNull();
+
+    // The credit is above the hero; the volume is below it, above the date.
+    if (album !== null && hero?.kind === "image") expect(album).toBeLessThan(hero.y);
+    if (volume !== null && hero?.kind === "image") {
+      expect(volume).toBeGreaterThan(hero.y + hero.h);
+    }
+    if (volume !== null && date?.kind === "glyphs") expect(volume).toBeLessThan(date.y);
   });
 
   it.each(sizes)("fits the slogan inside the measure at %s", (size) => {
