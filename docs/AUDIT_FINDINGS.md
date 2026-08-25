@@ -85,6 +85,52 @@ it as a Runway warning rather than depending on it.
 
 ---
 
+## OPEN — R2 CORS rejects the origin production actually runs on
+
+**Severity: high. Breaks Arsenal too, not just the warehouse.**
+
+Every large upload in this app goes browser → R2 directly, because a 100MB
+request body cannot pass through a Function. That makes the browser do a
+cross-origin PUT to a presigned URL, which needs two things from the bucket:
+the page's origin in `AllowedOrigins`, and `ETag` in `ExposeHeaders` (without
+the ETag a multipart upload cannot be completed).
+
+Probed against `odubo-studio-media` on 2026-08-24:
+
+| Origin | Preflight | ETag exposed |
+|---|---|---|
+| `https://odubo.studio` | 204 allowed | yes |
+| `https://odubo-app.vercel.app` | **403 rejected** | — |
+| `http://localhost:3113` | **403 rejected** | — |
+
+The policy is correct for `odubo.studio` — but that domain is lapsed, and the
+site is served from the vercel.app URL. **So browser uploads are currently
+broken in production**, and have been since the domain went. It presents as
+"Failed to fetch" on the first part, which reads like a dead connection and
+is nothing of the sort.
+
+Not fixed here because it cannot be: the R2 keys in `.env.local` can read and
+write objects but not change bucket configuration, and this needs an R2 token
+with admin rights.
+
+**The fix**, once such a token exists:
+
+```bash
+node --env-file=.env.local scripts/release/set_r2_cors.mjs --apply
+```
+
+Run it without `--apply` first to print the policy. Failing that, paste the
+printed JSON into R2 → the bucket → Settings → CORS Policy by hand.
+
+**R2 gotcha, already learned once on this project:** unlike AWS S3, R2 does
+**not** accept `"*"` in a header list. Every header must be named. A wildcard
+there is silently rejected and looks exactly like a network failure.
+
+The upload driver now names this cause explicitly when a part fails with a
+CORS-shaped error, rather than reporting three failed retries.
+
+---
+
 ## Context — production schema drift
 
 Not a vulnerability, but it is how the Warehouse code came to be lost and is

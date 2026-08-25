@@ -209,10 +209,19 @@ export async function uploadMultipart<TComplete = unknown>(
           }
         }
       }
+      // A CORS rejection surfaces as a TypeError with no status — identical
+      // to a dead network from here. Say so, because the fix is completely
+      // different: the bucket's allowed origins, not the connection.
+      const message = (lastError as Error)?.message ?? 'unknown error';
+      const looksLikeCors =
+        lastError instanceof TypeError || /failed to fetch|networkerror|load failed/i.test(message);
       throw new Error(
-        `Failed to upload part ${partNumber} after ${maxRetries} attempts: ${
-          (lastError as Error)?.message ?? 'unknown error'
-        }`
+        looksLikeCors
+          ? `Part ${partNumber} could not reach storage (${message}). This is usually the ` +
+            `bucket's CORS policy: it must allow this exact origin (${
+              typeof location !== 'undefined' ? location.origin : 'this origin'
+            }) for PUT and expose the ETag header.`
+          : `Failed to upload part ${partNumber} after ${maxRetries} attempts: ${message}`
       );
     };
 

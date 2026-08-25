@@ -5,6 +5,7 @@ import { queryDatabase } from '@/lib/db';
 export const runtime = 'edge';
 
 const SECTION_PARENT_MAP: Record<string, string> = {
+  'release': 'cms',
   'music-library': 'cms',
   'video-library': 'cms',
   'moments': 'cms',

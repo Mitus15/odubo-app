@@ -229,6 +229,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { id: 'overview', label: 'Dashboard', icon: Icons.home },
   { id: 'ark', label: 'The Ark', icon: Icons.ark, href: '/admin/ark' },
+  { id: 'release', label: 'Release', icon: Icons.albums, href: '/admin/release' },
   {
     id: 'content',
     label: 'Content',
