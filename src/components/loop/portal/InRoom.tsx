@@ -6,6 +6,7 @@ import WallGallery from "@/components/loop/wall/WallGallery";
 import ModuleSheet from "@/components/loop/shell/ModuleSheet";
 import RunOfShow from "@/components/loop/gathering/RunOfShow";
 import DanceyokeyPanel from "@/components/loop/danceyokey/DanceyokeyPanel";
+import { DANCEYOKEY_ENABLED } from "@/lib/loop/content";
 import type { RunOfShowItem } from "@/lib/loop/content";
 
 type Surface = "camera" | "wall" | "danceyokey" | "program" | null;
@@ -88,21 +89,23 @@ export function InRoom({
             </span>
           </button>
 
-          <button
-            type="button"
-            onClick={() => setSurface("danceyokey")}
-            className="loop-panel flex items-center justify-between rounded-3xl px-6 py-5 text-left transition-transform active:scale-[0.98]"
-          >
-            <span>
-              <span className="block text-xl font-extrabold">Danceyokey</span>
-              <span className="block text-sm opacity-75">
-                Claim the floor — pick your song
+          {DANCEYOKEY_ENABLED && (
+            <button
+              type="button"
+              onClick={() => setSurface("danceyokey")}
+              className="loop-panel flex items-center justify-between rounded-3xl px-6 py-5 text-left transition-transform active:scale-[0.98]"
+            >
+              <span>
+                <span className="block text-xl font-extrabold">Danceyokey</span>
+                <span className="block text-sm opacity-75">
+                  Claim the floor — pick your song
+                </span>
               </span>
-            </span>
-            <span aria-hidden className="text-2xl">
-              ✦
-            </span>
-          </button>
+              <span aria-hidden className="text-2xl">
+                ✦
+              </span>
+            </button>
+          )}
 
           <button
             type="button"
@@ -124,7 +127,7 @@ export function InRoom({
         </ModuleSheet>
       )}
 
-      {surface === "danceyokey" && (
+      {DANCEYOKEY_ENABLED && surface === "danceyokey" && (
         <ModuleSheet title="Danceyokey" onClose={() => setSurface(null)}>
           <DanceyokeyPanel />
         </ModuleSheet>

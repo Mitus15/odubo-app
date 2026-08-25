@@ -41,8 +41,7 @@ export async function PortalHome({ event }: { event: LoopEvent }) {
         />
         <PortalPreview
           runOfShow={runOfShow}
-          sold={cap.sold}
-          capacity={event.capacity}
+          capacity={cap}
           nominations={anthem.leaderboard.length}
           anthemStage={anthem.stage}
           danceyokeySpots={dy.spots}

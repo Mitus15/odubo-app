@@ -14,6 +14,16 @@
 export const ANTHEM_ENABLED = false;
 
 /**
+ * Is Danceyokey running?
+ *
+ * Not part of Volume 1 (owner, 2026-08-25) — the floor moment this volume has
+ * is the Loop Soul Line, which needs no sign-up. The idea stands and the whole
+ * feature is intact (panel, host console, API routes, D1 table); this flag is
+ * the single switch that brings it back for a later volume.
+ */
+export const DANCEYOKEY_ENABLED = false;
+
+/**
  * Seed content for State 1 — The Gathering.
  *
  * This is the content the marketing team will eventually edit from /admin

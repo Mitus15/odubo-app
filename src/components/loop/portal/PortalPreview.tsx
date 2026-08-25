@@ -1,4 +1,4 @@
-import type { RunOfShowItem } from "@/lib/loop/content";
+import { ANTHEM_ENABLED, DANCEYOKEY_ENABLED, type RunOfShowItem } from "@/lib/loop/content";
 
 /**
  * What someone WITHOUT a pass sees, under the code gate.
@@ -16,21 +16,25 @@ import type { RunOfShowItem } from "@/lib/loop/content";
  */
 export function PortalPreview({
   runOfShow,
-  sold,
   capacity,
   nominations,
   anthemStage,
   danceyokeySpots,
 }: {
   runOfShow: RunOfShowItem[];
-  sold: number;
-  capacity: number;
+  /** The whole CapacityInfo, not loose numbers. Taking `sold` and `capacity`
+   *  as plain numbers let this component compute its own `remaining`, which
+   *  is how it went on rendering "0 PASSES LEFT OF 0" after the room became
+   *  uncapped — it had side-stepped the discriminant that exists to stop
+   *  exactly that. */
+  capacity:
+    | { unlimited: true; sold: number; total: null; remaining: null }
+    | { unlimited: false; sold: number; total: number; remaining: number };
   /** Songs nominated so far — evidence the room is already choosing. */
   nominations: number;
   anthemStage: "nominating" | "seeding" | "bracket" | "champion";
   danceyokeySpots: number;
 }) {
-  const remaining = Math.max(0, capacity - sold);
   const anthemLine =
     anthemStage === "champion"
       ? "The anthem has been chosen."
@@ -46,15 +50,19 @@ export function PortalPreview({
         What a pass gets you
       </h2>
 
-      {/* The room is finite and that is the whole pitch — say it plainly. */}
-      <div className="mt-5 rounded-2xl border border-ink/15 bg-ink/5 px-5 py-4 text-center">
-        <div className="font-sans text-5xl font-extrabold leading-none tabular-nums">
-          {remaining}
+      {/* When the room is finite that IS the pitch, so say it plainly. When it
+          isn't, say nothing — a scarcity block with no scarcity behind it is
+          worse than no block at all. */}
+      {!capacity.unlimited && (
+        <div className="mt-5 rounded-2xl border border-ink/15 bg-ink/5 px-5 py-4 text-center">
+          <div className="font-sans text-5xl font-extrabold leading-none tabular-nums">
+            {capacity.remaining}
+          </div>
+          <div className="loop-muted mt-1 text-xs font-semibold uppercase tracking-widest">
+            {capacity.remaining === 1 ? "Pass left" : "Passes left"} of {capacity.total}
+          </div>
         </div>
-        <div className="loop-muted mt-1 text-xs font-semibold uppercase tracking-widest">
-          {remaining === 1 ? "Pass left" : "Passes left"} of {capacity}
-        </div>
-      </div>
+      )}
 
       <div className="mt-4 grid gap-3">
         <PreviewCard
@@ -80,20 +88,24 @@ export function PortalPreview({
           ) : null}
         </PreviewCard>
 
-        <PreviewCard
-          title="The anthem"
-          body="The room decides what we all dance to. Nominate a song, then vote it through the rounds until one is left standing."
-          foot={anthemLine}
-        />
+        {ANTHEM_ENABLED && (
+          <PreviewCard
+            title="The anthem"
+            body="The room decides what we all dance to. Nominate a song, then vote it through the rounds until one is left standing."
+            foot={anthemLine}
+          />
+        )}
 
-        <PreviewCard
-          title="Danceyokey"
-          body={`Karaoke, but for dancing. Pick your song, take the floor for the length of it. ${
-            danceyokeySpots > 0
-              ? `${danceyokeySpots} spot${danceyokeySpots === 1 ? "" : "s"} a night`
-              : "A handful of spots a night"
-          } — sign up in advance or in the room, alone or with as many people as you want.`}
-        />
+        {DANCEYOKEY_ENABLED && (
+          <PreviewCard
+            title="Danceyokey"
+            body={`Karaoke, but for dancing. Pick your song, take the floor for the length of it. ${
+              danceyokeySpots > 0
+                ? `${danceyokeySpots} spot${danceyokeySpots === 1 ? "" : "s"} a night`
+                : "A handful of spots a night"
+            } — sign up in advance or in the room, alone or with as many people as you want.`}
+          />
+        )}
 
         <PreviewCard
           title="The camera"
