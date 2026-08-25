@@ -313,11 +313,11 @@ export function layoutEventPoster(spec: EventPosterSpec, deps: LayoutDeps): Layo
     );
 
     // 2. Sizes that never flex — the air between rows does, these don't.
-    // Two lines that swapped slots on 2026-08-25. The album credit is the
-    // primary identity, so it takes the big line under the header; the volume
-    // and theme drop into the detail block, where they read as particulars of
-    // this night rather than as the name of the thing.
-    const volText = d && (d.volume || d.theme) ? [d.volume, d.theme].filter(Boolean).join("  ·  ") : null;
+    // The album credit takes the big line under the header. Volume and theme
+    // are NOT printed on the event poster at all (removed 2026-08-25): leading
+    // with an edition number made the night read as an instalment of something
+    // you had missed the start of. The theme still does its work where it
+    // matters — the dress code line, and the programme behind the QR.
     const albumLine = d?.record ?? null;
     const sloganSize = fitSize(slogan, W - pad * 2, { weight: 700, track: 0.02 }, { max: R(300 * S) });
     const triadSize = R(46 * S);
@@ -345,12 +345,10 @@ export function layoutEventPoster(spec: EventPosterSpec, deps: LayoutDeps): Layo
     // Every present detail row owns its drop here AND decrements the cursor by
     // the same amount below — the two must agree or the hero band is sized
     // against a block it doesn't match.
-    const recordDrop = R(58 * S);
     const fixedDetailDrop =
       (d && (d.note || d.price) ? R(64 * S) : 0) +
       (d?.venue ? R(72 * S) : 0) +
-      (d && (d.date || d.doors) ? dateSize : 0) +
-      (volText ? recordDrop : 0);
+      (d && (d.date || d.doors) ? dateSize : 0);
     const airPx =
       (GAP.vol + GAP.hero + GAP.slogan + GAP.details + GAP.price + (showTriad ? GAP.triad : 0)) * S;
     const heroMaxAt = (air: number) =>
@@ -395,20 +393,6 @@ export function layoutEventPoster(spec: EventPosterSpec, deps: LayoutDeps): Layo
     if (dateText) {
       detailOps.push(line(dateText, { x: W / 2, y: cursorY, size: dateSize, weight: 700, track: 0.06 }));
       cursorY -= dateSize;
-    }
-    // Volume · theme sits at the top of the detail block, so it reads into the
-    // date beneath it rather than trailing off the bottom of the poster.
-    if (volText) {
-      const volDetailSize = R(34 * S);
-      assertFits(
-        "the volume line",
-        measure(volText, { size: volDetailSize, weight: 700, track: 0.3 }),
-        W - pad * 2,
-      );
-      detailOps.push(
-        line(volText, { x: W / 2, y: cursorY, size: volDetailSize, weight: 700, track: 0.3, opacity: 0.8 }),
-      );
-      cursorY -= recordDrop;
     }
 
     // 7. The hero — every pixel between the volume line and the type block.

@@ -63,10 +63,13 @@ default (`src/lib/loop/poster/layout.ts`). Nothing derives a theme from a track.
   credits; *the* album announces — it sits on the poster the way a credit sits
   on a sleeve, and it cannot be edited to "the album" later without changing
   what it claims.
-- It takes the **big line under the header**, where the volume used to sit.
-  Volume and theme drop into the detail block, reading as particulars of this
-  night rather than the name of the thing. The album is the identity; the
-  volume is an instance of it.
+- It takes the **big line under the header**. **Volume and theme are not on the
+  event poster or the app's front door at all** (removed 2026-08-25): leading
+  with an edition number made the night read as an instalment of something you
+  had missed the start of. The album is the identity. The theme still does its
+  work where it is an instruction rather than a label — the **dress code** line,
+  and the programme behind the QR. The door ticket and pass card still carry
+  volume/theme, because those identify *which* night a code belongs to.
 
 ## The audience is closed
 

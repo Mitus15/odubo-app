@@ -38,7 +38,8 @@ export type PlaybookFacts = {
   theme: string;
   venue: string;
   dateLabel: string;
-  capacity: number;
+  /** null = no cap. Tickets are unlimited for Volume 1. */
+  capacity: number | null;
   sold: number;
 };
 
@@ -262,7 +263,7 @@ function NightTab({ facts }: { facts: PlaybookFacts }) {
           {facts.venue}.
         </LI>
         <LI>
-          Capacity <b>{facts.capacity}</b> — working number, final confirmation with
+          Capacity <b>{facts.capacity ?? "no cap"}</b> — final confirmation with
           the venue in progress. Announce target: week of Aug 18.
         </LI>
       </ul>
@@ -335,7 +336,7 @@ function MoneyTab({ facts }: { facts: PlaybookFacts }) {
         <LI>
           The public &ldquo;X of Y left&rdquo; counter reads <b>only real paid
           orders</b> — comps and test codes never inflate it. It shows{" "}
-          <b>{facts.sold} sold of {facts.capacity}</b> right now, and that&rsquo;s the
+          <b>{facts.sold} sold{facts.capacity ? ` of ${facts.capacity}` : " — tickets are unlimited"}</b> right now, and that&rsquo;s the
           truth.
         </LI>
         <LI>
@@ -347,14 +348,15 @@ function MoneyTab({ facts }: { facts: PlaybookFacts }) {
       <H>The price — deliberately unsettled</H>
       <P>
         <b>$20 CAD is a working price, explicitly TBD — this is the first question I
-        want your take on.</b> My current position: at ~{facts.capacity} people the
+        want your take on.</b> My current position: at the size this room holds, the
         price barely moves total revenue either way, so price for a <b>full room</b>,
         not for margin — a full room is the asset (the footage, the series, the
         story), an empty room at $35 is worthless. Argue with me on the thread.
       </P>
       <H>Where the money actually is</H>
       <P>
-        Not the door — {facts.capacity} × $20 caps around $1,200. Tickets fund the
+        Not the door — entry is $5 and uncapped, so it will not fund the night on
+        its own. Tickets fund the
         night; the <b>assets compound</b>: the audience list, the filmed catalogue,
         the magazine, and artwork made from guest photos that becomes the next
         volume&rsquo;s marketing for free. Volume 1 is priced as a pilot, not a

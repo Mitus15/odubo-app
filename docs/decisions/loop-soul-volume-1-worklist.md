@@ -24,8 +24,11 @@ a weekend. The premise changed at the same time — see the album doc — becaus
 $20 party with a band had no reason to exist on one specific Saturday, and the
 first play of an unreleased record does.
 
-**Entry is $5** (revised 2026-08-25 — briefly "free"; the $20 pass was never
-true either). The offer is the circle, not the ticket: registration closes on
+**Entry is $5 and tickets are UNLIMITED** (revised 2026-08-25 — briefly "free";
+the $20/60-pass poster line was never true either). Capacity `0` in
+`event_overrides` is the uncapped sentinel; `getPassCapacity()` returns an
+`unlimited` result whose counts are null, so no scarcity line can be built from
+it by accident. The offer is the circle, not the ticket: registration closes on
 the night and never reopens. Microtransactions come later; the door stays $5.
 
 **The night is early and short:** doors 6:30, the album at 8 in the courtyard,
@@ -153,8 +156,9 @@ second page.
 `LOOP-PASS-VOL1`, has media; `loop-soul` collection resolves correctly through
 the Storefront API; Odubo store correctly excludes the pass (11 products);
 `ORDERS_PAID` webhook registered. Two things to fix:
-- ⚠️ **Shopify inventory is 75, the room is 60.** As configured the store would
-  sell 15 more passes than the room holds.
+- ⚠️ **Shopify inventory is 75.** Tickets are now uncapped in the app, so
+  Shopify's stock limit is the only remaining cap — it should be set to
+  unlimited (or a real number) to match.
 - ⚠️ **The pass still charges $20 in Shopify** while the app now says **$5**.
   `loop_settings.pass_price` is set to 5.00; the live product is deliberately
   untouched because changing real checkout needs the owner's word. **These two

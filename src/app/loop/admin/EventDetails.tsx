@@ -12,7 +12,7 @@ const FIELDS: { key: "title" | "theme" | "venue"; label: string; hint: string }[
   { key: "venue", label: "Venue", hint: "e.g. Scott's Inn, Kamloops" },
 ];
 
-const MIN_CAPACITY = 1;
+const MIN_CAPACITY = 0; // 0 = uncapped (see event-store UNCAPPED)
 const MAX_CAPACITY = 2000;
 
 /**
@@ -91,9 +91,11 @@ export function EventDetails({ initial }: { initial: Details }) {
             }`}
           />
           <span className="mt-0.5 block text-[11px] opacity-50">
-            {capacityValid
-              ? "Passes available. Drives the “X left” counter and the door — confirm it with the venue before announcing."
-              : `Enter a whole number between ${MIN_CAPACITY} and ${MAX_CAPACITY}.`}
+            {!capacityValid
+              ? `Enter a whole number between ${MIN_CAPACITY} and ${MAX_CAPACITY}.`
+              : capacityNum === 0
+                ? "0 = unlimited. No “X left” counter, and the room can never read as full."
+                : "Passes available. Drives the “X left” counter and the door — confirm it with the venue before announcing."}
           </span>
         </label>
       </div>

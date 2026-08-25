@@ -86,7 +86,7 @@ export function StudioShell({
   publicBaseUrl,
 }: {
   facts: PlaybookFacts;
-  stats: { sold: number; total: number; redeemed: number; codes: number; anthemEntries: number };
+  stats: { sold: number; total: number | null; redeemed: number; codes: number; anthemEntries: number };
   notes: LoopNote[];
   eventDetails: { title: string; theme: string; venue: string; dateLabel: string; note?: string };
   /** `loop_settings.public_base_url` — the origin printed QRs are built from. */
@@ -121,7 +121,7 @@ export function StudioShell({
       <div className="mt-4 flex flex-wrap gap-2 text-sm">
         <span className="rounded-full border border-ink/15 bg-ink/5 px-3 py-1.5">
           <b className="tabular-nums">{stats.sold}</b>
-          <span className="opacity-70"> / {stats.total} passes sold</span>
+          <span className="opacity-70">{stats.total === null ? " sold — no cap" : ` / ${stats.total} passes sold`}</span>
         </span>
         <span className="rounded-full border border-ink/15 bg-ink/5 px-3 py-1.5">
           <b className="tabular-nums">{stats.redeemed}</b>

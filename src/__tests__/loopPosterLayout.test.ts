@@ -132,10 +132,10 @@ describe("layoutEventPoster", () => {
     if (r.ok) assertNoOverlap(r.list.ops);
   });
 
-  // Swapped 2026-08-25: the album credit is the primary identity, so it takes
-  // the big line under the header, and volume/theme drops into the detail block
-  // where it reads as a particular of this night rather than the name of it.
-  it.each(sizes)("puts the album credit above the hero at %s, and volume below", (size) => {
+  // The album credit is the identity and takes the big line under the header.
+  // Volume and theme are NOT on the event poster at all (removed 2026-08-25) —
+  // leading with an edition number made the night read as an instalment.
+  it.each(sizes)("puts the album credit above the hero at %s, and prints no volume", (size) => {
     const r = layoutEventPoster(
       {
         size,
@@ -148,28 +148,22 @@ describe("layoutEventPoster", () => {
     expect(r.ok).toBe(true);
     if (!r.ok) return;
 
-    const glyphY = (t: string) => {
-      const op = r.list.ops.find(
-        (o) => o.kind === "glyphs" && o.glyphs.map((g) => g.ch).join("") === t,
-      );
-      return op?.kind === "glyphs" ? op.y : null;
-    };
-    const album = glyphY("AN ALBUM BY MANI ODUBO");
-    const volume = glyphY("VOLUME ONE  ·  1984");
-    const hero = r.list.ops.find((o) => o.kind === "image" && o.src.includes("crowd"));
-    const date = r.list.ops.find(
-      (o) => o.kind === "glyphs" && o.glyphs.map((g) => g.ch).join("").includes("SEPTEMBER"),
+    const texts = r.list.ops
+      .filter((o) => o.kind === "glyphs")
+      .map((o) => (o.kind === "glyphs" ? o.glyphs.map((g) => g.ch).join("") : ""));
+
+    expect(texts).toContain("AN ALBUM BY MANI ODUBO");
+    // The volume/theme never appears, in any joined form.
+    expect(texts.some((t) => t.includes("VOLUME"))).toBe(false);
+    expect(texts.some((t) => t.includes("1984") && !t.includes("DRESS"))).toBe(false);
+
+    const album = r.list.ops.find(
+      (o) => o.kind === "glyphs" && o.glyphs.map((g) => g.ch).join("") === "AN ALBUM BY MANI ODUBO",
     );
-
-    expect(album).not.toBeNull();
-    expect(volume).not.toBeNull();
-
-    // The credit is above the hero; the volume is below it, above the date.
-    if (album !== null && hero?.kind === "image") expect(album).toBeLessThan(hero.y);
-    if (volume !== null && hero?.kind === "image") {
-      expect(volume).toBeGreaterThan(hero.y + hero.h);
+    const hero = r.list.ops.find((o) => o.kind === "image" && o.src.includes("crowd"));
+    if (album?.kind === "glyphs" && hero?.kind === "image") {
+      expect(album.y).toBeLessThan(hero.y);
     }
-    if (volume !== null && date?.kind === "glyphs") expect(volume).toBeLessThan(date.y);
   });
 
   it.each(sizes)("fits the slogan inside the measure at %s", (size) => {

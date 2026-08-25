@@ -17,7 +17,11 @@ import RunOfShow from "@/components/loop/gathering/RunOfShow";
 import GetPassModal from "@/components/loop/gathering/GetPassModal";
 import DanceyokeyPanel from "@/components/loop/danceyokey/DanceyokeyPanel";
 
-type Capacity = { total: number; sold: number; remaining: number };
+/** Mirrors CapacityInfo — unlimited carries null counts on purpose, so a
+ *  scarcity line can't render "0 left" for a room with no cap. */
+type Capacity =
+  | { unlimited: true; sold: number; total: null; remaining: null }
+  | { unlimited: false; sold: number; total: number; remaining: number };
 type ModuleKey = "anthem" | "night" | "cover" | "danceyokey";
 
 const MODULES: { key: ModuleKey; label: string; title: string }[] = [
@@ -37,7 +41,7 @@ const MODULES: { key: ModuleKey; label: string; title: string }[] = [
 
 /**
  * STATE 1 — The Gathering, as a single non-scrolling POSTER:
- *   • real Loop Soul logo (top-right)         • Volume + Theme (top-left)
+ *   • real Loop Soul logo (top-right)
  *   • silhouette hero + arced tagline         • Scott's Inn (bottom)
  *   • compact pass counter + Get Pass CTA     • modules that open/close
  * Everything else (Anthem, The Night) opens in a ModuleSheet over the poster,
@@ -88,7 +92,9 @@ export function GatheringPoster({
     return () => clearInterval(id);
   }, []);
 
-  const soldOut = capacity.remaining <= 0;
+  // An unlimited room can never be full — the check has to run through the
+  // discriminant, not through a number that would read 0 when uncapped.
+  const soldOut = !capacity.unlimited && capacity.remaining <= 0;
   const activeModule = MODULES.find((m) => m.key === active) ?? null;
   // The exact formatter the print kit uses (loopSetting.priceLabel), so the
   // poster on the wall and the front door always say the same thing. An unset
@@ -100,15 +106,12 @@ export function GatheringPoster({
 
   return (
     <div className="relative mx-auto flex h-[100dvh] max-w-md flex-col px-5 pb-5 pt-5">
-      {/* Header: volume + theme (left), real logo (right) */}
-      <header className="flex items-start justify-between">
-        <div className="leading-none">
-          <div className="text-[11px] font-bold uppercase tracking-[0.3em] opacity-70">
-            {event.title}
-          </div>
-          <div className="mt-1 text-3xl font-black tracking-tight">{event.theme}</div>
-          <div className="text-[11px] uppercase tracking-[0.25em] opacity-60">Theme</div>
-        </div>
+      {/* Header: the wordmark alone. The volume/theme block was removed on
+          2026-08-25 — the album is the identity, and leading with an edition
+          number made the night look like an instalment of something you'd
+          missed the start of. The theme survives where it does work: the dress
+          code, and the programme. */}
+      <header className="flex items-start justify-end">
         <Logo width={116} />
       </header>
 
@@ -143,9 +146,14 @@ export function GatheringPoster({
               "Room is full"
             ) : (
               <>
-                {priceLabel} ·{" "}
-                <span className="tabular-nums">{capacity.remaining}</span> / {capacity.total}{" "}
-                {isFree ? "spots left" : "passes left"}
+                {priceLabel}
+                {!capacity.unlimited && (
+                  <>
+                    {" · "}
+                    <span className="tabular-nums">{capacity.remaining}</span> / {capacity.total}{" "}
+                    {isFree ? "spots left" : "passes left"}
+                  </>
+                )}
               </>
             )}
           </div>
@@ -228,7 +236,6 @@ export function GatheringPoster({
           checkoutUrl={checkoutUrl}
           price={price}
           currency={currency}
-          eventTitle={event.title}
           theme={event.theme}
           venue={event.venue}
           dateLabel={dateLabel}

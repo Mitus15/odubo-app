@@ -8,7 +8,11 @@ type Settings = {
   productId: string | null;
   mode: "mock" | "shopify";
 };
-type Capacity = { total: number; sold: number; remaining: number };
+/** Mirrors CapacityInfo — unlimited carries null counts on purpose, so a
+ *  scarcity line can't render "0 left" for a room with no cap. */
+type Capacity =
+  | { unlimited: true; sold: number; total: null; remaining: null }
+  | { unlimited: false; sold: number; total: number; remaining: number };
 type PassCandidate = {
   title: string;
   sku: string | null;
@@ -124,9 +128,16 @@ export function PassSettings() {
     <div className="mt-4">
       {capacity && (
         <div className="rounded-2xl border border-ink/15 bg-ink/5 px-5 py-3 text-sm">
-          <b className="tabular-nums">{capacity.sold}</b> sold ·{" "}
-          <b className="tabular-nums">{capacity.remaining}</b> of{" "}
-          <b className="tabular-nums">{capacity.total}</b> left
+          <b className="tabular-nums">{capacity.sold}</b> sold
+          {capacity.unlimited ? (
+            <> · no cap</>
+          ) : (
+            <>
+              {" · "}
+              <b className="tabular-nums">{capacity.remaining}</b> of{" "}
+              <b className="tabular-nums">{capacity.total}</b> left
+            </>
+          )}
           <span className="ml-2 rounded-full border border-ink/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest">
             {live ? "Shopify · live" : "mock counter"}
           </span>

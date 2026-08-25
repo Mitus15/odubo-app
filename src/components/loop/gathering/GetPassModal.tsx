@@ -3,7 +3,11 @@
 import { useEffect } from "react";
 import { priceLabel as formatPrice } from "@/lib/loop/priceLabel";
 
-type Capacity = { total: number; sold: number; remaining: number };
+/** Mirrors CapacityInfo — unlimited carries null counts on purpose, so a
+ *  scarcity line can't render "0 left" for a room with no cap. */
+type Capacity =
+  | { unlimited: true; sold: number; total: null; remaining: null }
+  | { unlimited: false; sold: number; total: number; remaining: number };
 
 /**
  * The pass, in full, BEFORE checkout — price, what it includes, when, where,
@@ -19,7 +23,6 @@ export function GetPassModal({
   checkoutUrl: checkoutUrlProp,
   price,
   currency,
-  eventTitle,
   theme,
   venue,
   dateLabel,
@@ -31,7 +34,6 @@ export function GetPassModal({
   checkoutUrl?: string | null;
   price?: string | null;
   currency?: string | null;
-  eventTitle: string;
   theme: string;
   venue: string;
   dateLabel: string;
@@ -55,13 +57,16 @@ export function GetPassModal({
 
   // Admin-set Shopify checkout link first, then the env fallback.
   const checkoutUrl = checkoutUrlProp || process.env.NEXT_PUBLIC_LOOP_PASS_CHECKOUT_URL;
-  const soldOut = capacity.remaining <= 0;
+  const soldOut = !capacity.unlimited && capacity.remaining <= 0;
   // Same formatter as the front door and the print kit — see priceLabel.ts.
   const priceLabel = formatPrice(price, currency);
   const isFree = priceLabel === "FREE ENTRY";
 
   const includes: [string, string][] = [
-    ["Entry for one", `One pass admits one guest to ${eventTitle} — themed ${theme}.`],
+    // No volume/edition number here either — see GatheringPoster. The dress
+    // code carries the theme, and it reads better as an instruction than as a
+    // label.
+    ["Entry for one", `One pass admits one guest. Dress code: ${theme}.`],
     [
       "Your event code",
       "Arrives by email right after you register. It's your ticket at the door and it unlocks the app on the night.",
@@ -146,10 +151,16 @@ export function GetPassModal({
                   Room
                 </dt>
                 <dd className="font-semibold tabular-nums">
-                  {capacity.total} passes ·{" "}
-                  <span className={capacity.remaining <= 10 ? "text-wine" : ""}>
-                    {capacity.remaining} left
-                  </span>
+                  {capacity.unlimited ? (
+                    "Open — no cap"
+                  ) : (
+                    <>
+                      {capacity.total} passes ·{" "}
+                      <span className={capacity.remaining <= 10 ? "text-wine" : ""}>
+                        {capacity.remaining} left
+                      </span>
+                    </>
+                  )}
                 </dd>
               </dl>
 

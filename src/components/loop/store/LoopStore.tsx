@@ -10,7 +10,11 @@ import GetPassModal from "@/components/loop/gathering/GetPassModal";
 import AddToBagSheet from "@/components/loop/store/AddToBagSheet";
 import LoopBag from "@/components/loop/store/LoopBag";
 
-type Capacity = { total: number; sold: number; remaining: number };
+/** Mirrors CapacityInfo — unlimited carries null counts on purpose, so a
+ *  scarcity line can't render "0 left" for a room with no cap. */
+type Capacity =
+  | { unlimited: true; sold: number; total: null; remaining: null }
+  | { unlimited: false; sold: number; total: number; remaining: number };
 
 /**
  * The Loop Soul shelf.
@@ -66,7 +70,7 @@ export function LoopStore({
   // half-configured store must never be a closed door.
   const showPassCard = passes.length > 0 || Boolean(checkoutUrl);
   const passProduct = passes[0];
-  const soldOut = capacity.remaining <= 0;
+  const soldOut = !capacity.unlimited && capacity.remaining <= 0;
 
   return (
     <main className="mx-auto w-full max-w-5xl px-5 pb-24 pt-2">
@@ -128,7 +132,14 @@ export function LoopStore({
               <p className="mt-3 text-sm font-semibold">
                 {soldOut
                   ? "Sold out"
-                  : `${price ? formatMoney(price, currency) : "Get a pass"} · ${capacity.remaining} of ${capacity.total} left`}
+                  : [
+                      price ? formatMoney(price, currency) : "Get a pass",
+                      capacity.unlimited
+                        ? null
+                        : `${capacity.remaining} of ${capacity.total} left`,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
               </p>
             </div>
           </button>
@@ -222,7 +233,6 @@ export function LoopStore({
           checkoutUrl={checkoutUrl}
           price={price}
           currency={currency}
-          eventTitle={eventTitle}
           theme={theme}
           venue={venue}
           dateLabel={dateLabel}

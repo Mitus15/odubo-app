@@ -42,12 +42,12 @@ export default async function StudioPage() {
         theme: event.theme,
         venue: event.venue,
         dateLabel,
-        capacity: capacity.total,
+        capacity: capacity.total ?? null,
         sold: capacity.sold,
       }}
       stats={{
         sold: capacity.sold,
-        total: capacity.total,
+        total: capacity.total ?? null,
         redeemed: codeStats.redeemed,
         codes: codeStats.total,
         anthemEntries: anthemRows.length,

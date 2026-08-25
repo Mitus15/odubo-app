@@ -27,10 +27,20 @@ export const EDITABLE_TEXT_FIELDS = ["title", "theme", "venue"] as const;
  * public "X of Y left" counter and the ceiling on codes issued, so a fat-finger
  * (0, or 7500) changes what the poster claims and what the door enforces.
  */
-export const MIN_CAPACITY = 1;
+/** 0 is the sentinel for "no cap" — see UNCAPPED. */
+export const MIN_CAPACITY = 0;
+/** Capacity 0 means tickets are unlimited (`getPassCapacity` → unlimited). */
+export const UNCAPPED = 0;
 export const MAX_CAPACITY = 2000;
 
-/** Parse a capacity from form/JSON input. Returns null when it isn't usable. */
+/**
+ * Parse a capacity from form/JSON input. Returns null when it isn't usable.
+ *
+ * **0 is legal and means uncapped.** It used to be rejected, because back when
+ * capacity was always a real number a stray 0 rendered as "sold out". That is
+ * no longer how it reads: `getPassCapacity` turns 0 into an `unlimited` result
+ * whose counts are null, so no scarcity line can be built from it at all.
+ */
 export function parseCapacity(input: unknown): number | null {
   if (input === null || input === undefined || input === "") return null;
   const n = typeof input === "number" ? input : Number(String(input).trim());
@@ -55,9 +65,9 @@ export async function getEventOverrides(eventId: string): Promise<Partial<EventD
   if (row.title) out.title = row.title;
   if (row.theme) out.theme = row.theme;
   if (row.venue) out.venue = row.venue;
-  // Validated on the way out as well as in: a value written before the bounds
-  // existed, or edited straight in the database, must not become a live
-  // capacity of 0 that reads as "sold out" on the poster.
+  // Validated on the way out as well as in, so a value edited straight in the
+  // database can't put an out-of-range number on the poster. 0 passes validation
+  // deliberately — it is the uncapped sentinel, not a sold-out room.
   const capacity = parseCapacity(row.capacity);
   if (capacity !== null) out.capacity = capacity;
   return out;

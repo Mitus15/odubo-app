@@ -19,8 +19,21 @@ import { getPassSettings } from "./settings";
  *   NEXT_PUBLIC_LOOP_PASS_CHECKOUT_URL    → Get Pass button target
  */
 
-/** Passes sold / remaining for the scarcity counter. */
-export type CapacityInfo = { total: number; sold: number; remaining: number };
+/**
+ * Passes sold / remaining for the scarcity counter.
+ *
+ * Deliberately a discriminated union rather than a `total: number` with 0
+ * meaning "no cap". Scarcity copy is the easiest thing in this app to get
+ * accidentally wrong — an unlimited room read through a numeric `remaining`
+ * silently renders "0 left" and "the room is full". Forcing every caller to
+ * branch on `unlimited` makes the compiler find the sold-out checks instead of
+ * a guest finding them.
+ *
+ * Unlimited is configured by setting the event's capacity to 0 or less.
+ */
+export type CapacityInfo =
+  | { unlimited: true; sold: number; total: null; remaining: null }
+  | { unlimited: false; sold: number; total: number; remaining: number };
 
 /* ---------------------------------------------------------------- webhook */
 
@@ -142,5 +155,6 @@ export async function getPassCapacity(): Promise<CapacityInfo> {
   );
   const sold = row?.n ?? 0;
   const total = event.capacity;
-  return { total, sold, remaining: Math.max(0, total - sold) };
+  if (total <= 0) return { unlimited: true, sold, total: null, remaining: null };
+  return { unlimited: false, total, sold, remaining: Math.max(0, total - sold) };
 }
