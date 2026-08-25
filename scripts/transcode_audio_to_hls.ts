@@ -1,8 +1,9 @@
 // Load env first
 import 'dotenv/config';
 
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { queryDatabase, executeQuery } from '@/lib/db';
+import { MEDIA_PROXY_PREFIX } from '@/lib/release/audioSource';
 import path from 'node:path';
 import os from 'node:os';
 import fs from 'node:fs/promises';
@@ -34,7 +35,6 @@ function ensure(value: string | undefined, name: string): string {
   return value;
 }
 
-const R2_PUBLIC = ensure(process.env.CLOUDFLARE_R2_PUBLIC_URL, 'CLOUDFLARE_R2_PUBLIC_URL');
 const R2_BUCKET = ensure(process.env.CLOUDFLARE_R2_BUCKET_NAME, 'CLOUDFLARE_R2_BUCKET_NAME');
 const R2_ENDPOINT = ensure(process.env.CLOUDFLARE_R2_ENDPOINT, 'CLOUDFLARE_R2_ENDPOINT');
 const R2_ACCESS_KEY = ensure(process.env.CLOUDFLARE_R2_ACCESS_KEY_ID, 'CLOUDFLARE_R2_ACCESS_KEY_ID');
@@ -46,17 +46,40 @@ const s3 = new S3Client({
   credentials: { accessKeyId: R2_ACCESS_KEY, secretAccessKey: R2_SECRET_KEY },
 });
 
+/** See the twin of this in transcode_audio_to_web.ts. */
+function r2KeyFromAudioUrl(url: string): string | null {
+  if (url.startsWith(MEDIA_PROXY_PREFIX)) return url.slice(MEDIA_PROXY_PREFIX.length).split('?')[0];
+  const viaProxy = url.match(/^https?:\/\/[^/]+\/api\/media\/audio\/(.+)$/);
+  if (viaProxy) return viaProxy[1].split('?')[0];
+  const viaPublic = url.match(/^https?:\/\/[^/]+\/(.+)$/);
+  if (viaPublic && /media\.odubo\.studio/.test(url)) return viaPublic[1].split('?')[0];
+  return null;
+}
+
+/**
+ * Prefer R2 directly: the public host is dead and the proxy path is relative,
+ * so HTTP only works for genuinely external sources.
+ */
 async function downloadToTemp(url: string): Promise<string> {
+  const tmpFile = path.join(os.tmpdir(), `odubo_src_${Date.now()}`);
+
+  const key = r2KeyFromAudioUrl(url);
+  if (key) {
+    const obj = await s3.send(new GetObjectCommand({ Bucket: R2_BUCKET, Key: key }));
+    const bytes = await obj.Body!.transformToByteArray();
+    await fs.writeFile(tmpFile, bytes);
+    return tmpFile;
+  }
+
   const res = await fetch(url);
   if (!res.ok || !res.body) throw new Error(`Failed to download source: ${res.status}`);
-  const tmpFile = path.join(os.tmpdir(), `odubo_src_${Date.now()}`);
   await fs.writeFile(tmpFile, new Uint8Array(await res.arrayBuffer()));
   return tmpFile;
 }
 
 function toHlsKeyFromUrl(url: string): { baseDirKey: string; masterKey: string; webBaseName: string; webDir: string; masterUrl: string } {
-  // url: https://media.domain/dir/name.web.m4a
-  const key = url.replace(/^https?:\/\/[^/]+\//, '');
+  // Accepts the proxy path, the old public-host URL, or a bare key.
+  const key = r2KeyFromAudioUrl(url) ?? url.replace(/^https?:\/\/[^/]+\//, '');
   const parsed = path.parse(key); // { dir, name, ext }
   const nameNoExt = parsed.name; // could be name.web
   const baseName = nameNoExt.endsWith('.web') ? nameNoExt.slice(0, -4) : nameNoExt;
@@ -64,7 +87,11 @@ function toHlsKeyFromUrl(url: string): { baseDirKey: string; masterKey: string; 
   const webDir = path.join(parsed.dir, `${webBaseName}.hls`).replace(/\\/g, '/');
   const baseDirKey = webDir; // directory to hold segments and master
   const masterKey = path.join(webDir, 'master.m3u8').replace(/\\/g, '/');
-  const masterUrl = `${R2_PUBLIC}/${masterKey}`;
+  // Only ever logged — hls_url is derived from audio_url at read time
+  // (deriveHlsUrl in src/lib/release/audioSource.ts), never stored. Kept
+  // relative for the same reason the web transcode is: no dead host, no
+  // baked-in domain.
+  const masterUrl = `${MEDIA_PROXY_PREFIX}${masterKey}`;
   return { baseDirKey, masterKey, webBaseName, webDir, masterUrl };
 }
 

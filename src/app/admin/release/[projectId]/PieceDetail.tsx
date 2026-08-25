@@ -7,6 +7,7 @@ import DocsPanel from '../components/DocsPanel';
 import FileRow from '../components/FileRow';
 import UploadDropzone from '../components/UploadDropzone';
 import { Button, Chip, EmptyState, Panel, SectionTitle, formatDuration } from '../components/ui';
+import PreviewLadder from '../components/PreviewLadder';
 import type { TrackRow } from './types';
 
 export default function PieceDetail({
@@ -28,6 +29,7 @@ export default function PieceDetail({
   onClose: () => void;
 }) {
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   // Newest first is what the API returns; keep it. The owner re-uploads
   // freely and expects the most recent bounce at the top.
@@ -63,6 +65,16 @@ export default function PieceDetail({
       </div>
 
       {error && <p className="text-red-300 text-xs mb-3">{error}</p>}
+      {notice && <p className="text-amber-300 text-xs mb-3">{notice}</p>}
+
+      {track && (
+        <div className="mb-4">
+          <PreviewLadder
+            track={track}
+            shippedFile={ready.find((f) => f.r2_key === shippedKey) ?? null}
+          />
+        </div>
+      )}
 
       <UploadDropzone
         projectId={projectId}
@@ -84,8 +96,10 @@ export default function PieceDetail({
                   key={f.id}
                   file={f}
                   isShipped={!!shippedKey && shippedKey === f.r2_key}
+                  canShip={!!track}
                   onChanged={onChanged}
                   onError={setError}
+                  onNotice={setNotice}
                 />
               ))}
             </ul>

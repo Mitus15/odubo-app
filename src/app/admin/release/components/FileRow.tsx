@@ -15,17 +15,51 @@ export default function FileRow({
   file,
   pieces,
   isShipped,
+  canShip,
   onChanged,
   onError,
+  onNotice,
 }: {
   file: WarehouseFile;
   /** When present, the file can be moved to another piece. */
   pieces?: WarehousePiece[];
   isShipped?: boolean;
+  /** Set on a song piece: this file can be flagged as the one that ships. */
+  canShip?: boolean;
   onChanged: () => void | Promise<void>;
   onError: (message: string) => void;
+  onNotice?: (message: string) => void;
 }) {
   const [busy, setBusy] = useState(false);
+
+  const ship = async () => {
+    setBusy(true);
+    try {
+      const out = await apiSend<{ warning: string | null; previewUpdated: boolean }>(
+        `/api/admin/release/pieces/${file.piece_id}/ship`,
+        'POST',
+        { fileId: file.id }
+      );
+      if (out.warning) onNotice?.(out.warning);
+      await onChanged();
+    } catch (err) {
+      onError((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const unship = async () => {
+    setBusy(true);
+    try {
+      await apiSend(`/api/admin/release/pieces/${file.piece_id}/ship`, 'DELETE');
+      await onChanged();
+    } catch (err) {
+      onError((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const patch = async (body: Record<string, unknown>) => {
     setBusy(true);
@@ -86,6 +120,21 @@ export default function FileRow({
         </div>
 
         <div className="shrink-0 flex items-center gap-1.5">
+          {canShip &&
+            (isShipped ? (
+              <Button onClick={unship} disabled={busy} title="Stop delivering this file">
+                Unship
+              </Button>
+            ) : (
+              <Button
+                onClick={ship}
+                disabled={busy || file.status !== 'ready'}
+                variant="primary"
+                title="Deliver this file, and let the preview play it"
+              >
+                Ship this
+              </Button>
+            ))}
           <Button onClick={open} disabled={busy || file.status !== 'ready'}>
             Open
           </Button>
