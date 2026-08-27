@@ -29,7 +29,7 @@ contacted).
 | Role | Who | Status | Notes |
 |---|---|---|---|
 | Host / MC | **Mani (owner)** | ✅ **Confirmed** | Opening address, 7:00 |
-| DJ | **Amen** | ✅ **Confirmed** | Plays backing "skeleton" tracks for instruments the band doesn't have live — see the band note below |
+| DJ | **Amen** | ✅ **Locked in** (2026-08-27) | Plays backing "skeleton" tracks for instruments the band doesn't have live — see the band note below. **3 follow-ups owed to him — see below** |
 | Band — guitar | **Caleb** | ✅ **Confirmed** | |
 | Band — bass | **Berlin** | ✅ **Confirmed** | |
 | Band — drums | **Taddie** | ✅ **Confirmed** | Spelled with an "-ie" ending, per the owner |
@@ -98,6 +98,27 @@ turns out to genuinely need a specialist:** the same person doing sound —
 **Lobo** — would do both, rather than bringing in someone new. That decision
 rides on the sound tech quote (see worklist §8b) — get that answer, then
 decide if lighting needs its own line at all.
+
+### Owed to Amen (DJ) — locked in 2026-08-27
+
+Three follow-ups the owner flagged for himself the day Amen was confirmed:
+
+- [ ] **Send him the album.** Not just the finished mixes — his job is playing
+      backing tracks for whatever the live band doesn't cover, so he needs
+      whatever stems or backing versions actually let him fill those gaps.
+- [ ] **Send him the marketing material** — posters, flyer, story/feed assets,
+      so he can post and share.
+- [ ] **Add him to the poster.** ⚠️ **This is a design decision, not a text
+      edit.** The poster was deliberately stripped to four detail rows (album
+      credit / date+doors / venue / dress code+price) and carries **no
+      performer credits at all** right now. Adding "DJ AMEN" means deciding
+      where performer credits live on the piece — and whether the band gets
+      the same treatment, which is still blocked on the band not having a name
+      yet. Settle the hierarchy once, then add everyone at the same time,
+      rather than bolting on one name now and rearranging later.
+
+A one-time reminder was scheduled for 2026-08-27 18:00 covering all three;
+this list is the durable copy.
 
 ### The band, and the size question it raises
 

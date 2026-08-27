@@ -22,6 +22,10 @@ Companion docs: [budget](loop-soul-volume-1-budget.md) ·
 **Also running this week, no hard date:** team recruitment, sound/lighting
 quotes started, budget lines (see budget doc) getting real numbers.
 
+**Owed to DJ Amen** (locked in Aug 27) — send him the album (stems/backing
+versions, not just mixes) and the marketing material, and settle how
+performer credits appear on the poster. See budget doc.
+
 **Proposed (pending confirmation with Immaculate — see budget doc):**
 pre-event street-interview content in the same format as the night-of
 segment ("what are you looking forward to"), shot through weeks 1–3 as part
