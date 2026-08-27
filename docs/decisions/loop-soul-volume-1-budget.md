@@ -37,13 +37,67 @@ contacted).
 | On-site interviewer / social content | Immaculate *(candidate)* | **To be determined** | Not yet contacted/onboarded — see detail below |
 | Marketing partner | Abdullah *(candidate)* | **To be determined** | Not yet contacted/onboarded — see detail below |
 | Door / check-in staff | Candidates: Abdullah, OC (also heard as "OSI"), Gherline/Gurney | **Still deciding — not assigned** | Names as dictated; spellings unconfirmed. See detail below |
-| Photographer / videographer | Possibly Immaculate | **Open, unresolved** | Only frees up if she isn't on door duty; may clash with her holding a mic for interviews at the same time — see detail below |
-| Event lead / floor manager | — | **Open** | Runs the room on the night |
+| Photographer / videographer | Candidates: David, Donish/Mohammed, possibly Immaculate | **Still deciding** | Cost-driven — see detail below |
+| Event lead / floor manager | **Mani (owner)** | ✅ **Confirmed** | "I can be the event leader, no problem" — see detail below for the assistant question |
 | App steward | — | **Open** | Owns the door/code flow live |
+| Event leader's assistant | — | **Open** | Tyler considered — not available. Micah considered — redirected to album work instead (see below) |
 | Team captains / dancers | *(cut)* | **Not needed for Vol 1** | Owner: "now it's a listening event... I don't think that's necessary." Falls together with Danceyokey being parked — both were built around a dance-floor recruitment model this volume doesn't use |
-| Sound tech | — | **Open** | Two zones, plus the band-size/DJ question below — both feed the spec this person needs |
-| Lighting | — | **Open** | Courtyard needs **evening** lighting — album plays at 8pm, after sunset |
-| Barbecue / food | — | **Open** | Attendees buy food — who's running the grill? |
+| Sound tech | Candidate: **Lobo** | **To be determined** | Owner: "he said he used to do that." Two zones, plus the band-size/DJ question below — both feed the spec |
+| Lighting | Owner (default) / Lobo (if a dedicated hire turns out to be required) | **Leaning DIY** | Courtyard needs **evening** lighting — album plays at 8pm, after sunset. See detail below |
+| Barbecue / food | **Tirth** (spelled T-I-R-T-H) | ✅ **Confirmed** | Wording as given was "run the barbecue lighting" — likely just "run the barbecue," with "lighting" bleeding in from the next topic. Confirm scope |
+| Social media lead (posting, event spread, app tutorials) | Candidate: **Esther** | **To be determined** | Availability unknown; **overlaps with Immaculate's proposed scope** — owner flagged this himself, unresolved. See detail below |
+| Album mix/master/finalize helper | **Micah** | ✅ **Confirmed** | Not event-day — helps finalize the album and songs. Ties to worklist item 9 |
+
+### Event leadership — settled, one open seat
+
+The owner is event lead: *"I can be the event leader, no problem."* A
+different name (heard across the recording as "Hiroshima" / "fluochema" /
+finally "Loshima" — clearly one person, transcription mangled it three ways;
+**spelling needs confirming directly**) was floated for the role first, on the
+condition she's available ("if she's down"). That's superseded now that the
+owner's taking it himself — but nothing here says Loshima drops out entirely,
+only that she isn't needed *for this specific role*. Worth a direct
+conversation rather than assuming either way.
+
+An assistant was considered: **Tyler** would have fit but isn't available.
+**Micah** was considered next and explicitly ruled out for it — *"No, no,
+no — that'll be the best use of him... I do need somebody to help me mix and
+master and test... finalize the album itself and the songs."* Micah's role is
+the album, not the event floor. **The assistant seat is still open.**
+
+### Photographer / videographer — cost is the deciding factor
+
+Named candidates: **David** (worked with before — "calling him again"), and
+as a lower-cost alternative, **Donish** (also heard as "Mohammed" — unclear if
+one person or two; needs confirming), or **Immaculate**, if she isn't needed
+for door duty or interviews. The owner's own framing: *"I just can't pay
+people for all that money doing all that"* — this is a budget decision as much
+as a casting one. Cheapest-viable-option-first, not name-first.
+
+### Social media lead — the same overlap the owner flagged out loud
+
+**Esther** came up for a role distinct from Immaculate's: *posting*,
+*spreading the event*, and **app tutorials** (how guests use it, presumably
+also the door/host side). Availability is unknown — "I don't know if Esther
+will be down." The owner then caught the overlap himself: *"Although that
+could be Immaculate's role."* It genuinely could be — Immaculate's proposed
+scope already includes pre-event content and posting. **Two ways this
+resolves, neither picked here:** Esther takes social/tutorials as her own lane
+while Immaculate stays focused on street interviews + capture, or Immaculate's
+scope absorbs both and Esther isn't needed. Needs deciding once both women's
+availability is actually known — deciding it before that just guesses twice.
+
+### Lighting — DIY by default, Lobo if it turns out to need a specialist
+
+The owner: *"There's nobody that I trust to do that really... I can set up
+lights and hopefully they will just automatically do their thing... the same
+kind of things a DJ would set up is what I would set up."* Read plainly: the
+default plan is the owner self-installs automated/programmable fixtures, no
+dedicated lighting hire. **The fallback, if the courtyard's evening lighting
+turns out to genuinely need a specialist:** the same person doing sound —
+**Lobo** — would do both, rather than bringing in someone new. That decision
+rides on the sound tech quote (see worklist §8b) — get that answer, then
+decide if lighting needs its own line at all.
 
 ### The band, and the size question it raises
 

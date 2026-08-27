@@ -184,7 +184,7 @@ the Storefront API; Odubo store correctly excludes the pass (11 products);
 
 | # | Item | By | State |
 |---|---|---|---|
-| 9 | Mix and master (possibly with Micah, one session) | Sept 26 | Owner. The upload path now exists (Release floor) |
+| 9 | Mix, master, test and finalize the album | Sept 26 | Owner + **Micah** (confirmed 2026-08-26 — not a one-session thing, he's helping finalize the whole album). The upload path now exists (Release floor) |
 | 10 | Finish "1984" | Sept 11 | Owner |
 | 11 | Stem player | Sept 11 | **Same build as 14** |
 | 17 | Lead single early on the app | — | Depends on 9 |
