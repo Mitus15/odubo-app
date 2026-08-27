@@ -20,10 +20,9 @@ plus whatever cash the owner puts in, not on ticket income.
 | Role | Who | Status | Notes |
 |---|---|---|---|
 | **On-site interviewer / social content** | **Immaculate** | ✅ **In** | Night-of street-style interviews — see detail below |
-| **Creative / experience lead** (marketing + web) | **Abdullah** | 🤔 **Considering** | Marketing materials + `/loop` engagement — see detail below |
 | Event lead / floor manager | — | **Open** | Runs the room on the night |
 | App steward | — | **Open** | Owns the door/code flow live |
-| Marketing partner | — | **Open** | |
+| **Marketing partner** | **Abdullah** *(considering)* | 🤔 **Considering** | Not generic marketing — specifically engagement/interaction design, see detail below |
 | Band | — | **Open** | Needs **≥1 full rehearsal day** before Sept 26 |
 | Host / MC | — | **Open** | Opening address, 7:00 |
 | DJ | — | **Open** | Referenced as "DJ Cornelius" in earlier drafts — confirm real name |
@@ -74,22 +73,33 @@ Confirm with her whether that's the scope she's up for before it's locked.
 
 ### Role detail — Abdullah
 
-**Being considered, not yet confirmed** — the owner's own framing. The idea:
-a creative/experience role on the marketing and engagement side — specifically
-getting people to *interact* with the marketing materials and the `/loop`
-page, rather than just see them. "Being the pioneer of that."
+**He fills the Marketing partner slot** already on this list (2026-08-26) —
+not a separate, additional hire. Re-reading what was actually described:
+"a creative collaborator... the marketing side, the experience side...
+getting people to interact with the marketing materials and the web page...
+being the pioneer of that." That IS the marketing partner brief; it was just
+never written with this much specificity before he came up as the name for
+it. Still marked **considering**, matching the owner's own hedge — the fit is
+identified, the person isn't locked yet.
 
-The clearest place this maps to something concrete on the calendar is
-**Sept 11, the TRU barbecue** — the one pre-event moment where people
-physically encounter marketing material (the flyer, the Recoolman mask) and
-could be pointed at `/loop` in person. If this is the direction, Abdullah's
-role would sit alongside Immaculate's proposed pre-event content, not replace
-it — one drives the on-the-ground interaction, the other captures it.
+What makes his version of the role specific, and worth keeping distinct from
+a generic "runs the marketing" description: the mandate isn't *producing*
+more materials, it's making people **act on** the ones that already exist —
+scan the poster, actually open `/loop`, actually engage past the first
+screen. Interaction design over content volume. "Pioneer of that" reads as:
+this pattern doesn't exist yet in what's been built, and he'd be the first
+to establish it.
 
-**Open question, not answered here:** is this a defined role (e.g. "campus
-engagement lead") or a looser creative-collaborator arrangement? Worth
-settling before it goes from "considering" to a row that has a cost against
-it.
+The clearest place this lands on the calendar is **Sept 11, the TRU
+barbecue** — the one pre-event moment where people physically encounter the
+marketing (the flyer, the Recoolman mask) and could be walked into `/loop` in
+person rather than left to scan a QR alone. If confirmed, his role sits
+alongside Immaculate's proposed pre-event content rather than overlapping it:
+he drives the on-the-ground interaction, she captures it.
+
+**Open question, not answered here:** whether this becomes a defined title
+(e.g. marketing partner, full stop) or stays a looser creative-collaborator
+arrangement. Worth settling before "considering" becomes a cost line.
 
 ---
 
