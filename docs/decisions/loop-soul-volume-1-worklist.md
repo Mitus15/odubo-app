@@ -1,9 +1,12 @@
 # Volume 1 — the worklist
 
 **The single place to check "where are we and what's next."** Updated
-**2026-08-24**. Companion to `loop-soul-volume-1-plan.md` (the strategy) and
-[loop-soul-is-the-album.md](loop-soul-is-the-album.md) (what this all is) —
-this is the running state.
+**2026-08-24**. Companion to `loop-soul-volume-1-plan.md` (the strategy),
+[loop-soul-is-the-album.md](loop-soul-is-the-album.md) (what this all is),
+[loop-soul-volume-1-budget.md](loop-soul-volume-1-budget.md) (personnel + cost
+tracker, started 2026-08-26), and
+[loop-soul-volume-1-timeline.md](loop-soul-volume-1-timeline.md) (day-by-day
+Aug 26 → Sept 26) — this is the running state.
 
 ---
 
@@ -11,7 +14,7 @@ this is the running state.
 
 | | |
 |---|---|
-| **The date** | **Saturday 26 September 2026**, doors 9pm, Scott's Inn, Kamloops |
+| **The date** | **Saturday 26 September 2026**, doors 6:30pm, Scott's Inn, Kamloops |
 | **Hard cap** | **Saturday 3 October 2026** |
 | Why | Rocky Mountaineer stops staying at Scott's **Tue 13 Oct**. The Saturday before that is **10 Oct**; a week earlier is **3 Oct**. |
 | Slack | Sept 26 leaves **one spare weekend** — Oct 3 |
