@@ -55,13 +55,18 @@ compressed, and they're the ones most likely to become the reason a date moves.
 
 ## Owner's list (lead times — start these first)
 
-- [ ] **Band** — booked, plus **at least one full rehearsal day**
-- [ ] **Team captains** — recruit dancers; each films a filter video that
-      doubles as promo *and* team recruitment
+- [ ] **Band** — lineup named 2026-08-26: Caleb (guitar), Berlin (bass),
+      Taddie (drums), Elijah (sax, tentative), DJ Amen on backing tracks for
+      the rest. Still needed: **at least one full rehearsal day** before
+      Sept 26. See [budget doc](loop-soul-volume-1-budget.md) for the
+      band-size note
+- ~~**Team captains**~~ — **cut for Vol 1** (2026-08-26): "now it's a
+      listening event... not necessary" (owner). Falls with Teams below and
+      with Danceyokey being parked — all three were built around a dance-floor
+      recruitment model this volume doesn't use
 - [ ] **Crew** — event lead / floor manager, app steward, marketing partner
 - [ ] **Print order** — posters are designed and approved; the run isn't ordered
-- [ ] **Decisions**: confirm Sept 12 · announcement date · student pricing and
-      promoter code batches · who's paid · wristband physical, digital, or both
+- [ ] **Decisions**: announcement date · who's paid · wristband physical, digital, or both — the date itself is locked at **Sept 26**, this list item is stale from before that moved
 
 ## Documents to draft together
 
@@ -82,8 +87,7 @@ keep them in one folder that can be sent out as-is. Folder:
 - [ ] Nothing else blocking, once the above ships
 
 **Before the night**
-- [ ] **Teams** — assigned on arrival, opt-in persistence, points, per-team
-      raffle. Captain recruitment depends on this existing.
+- ~~**Teams**~~ — **cut for Vol 1**, same reasoning as team captains above
 - [ ] **Digital pass artifact** — QR, printable, saveable PNG, wallet
 - [ ] **Selfie-to-start-your-gallery** onboarding
 - [ ] **Door kit rehearsal** — host and door on real phones
