@@ -19,6 +19,8 @@ plus whatever cash the owner puts in, not on ticket income.
 
 | Role | Who | Status | Notes |
 |---|---|---|---|
+| **On-site interviewer / social content** | **Immaculate** | ✅ **In** | Night-of street-style interviews — see detail below |
+| **Creative / experience lead** (marketing + web) | **Abdullah** | 🤔 **Considering** | Marketing materials + `/loop` engagement — see detail below |
 | Event lead / floor manager | — | **Open** | Runs the room on the night |
 | App steward | — | **Open** | Owns the door/code flow live |
 | Marketing partner | — | **Open** | |
@@ -29,11 +31,65 @@ plus whatever cash the owner puts in, not on ticket income.
 | Door / check-in staff | — | **Open** | Unlimited tickets means volume at the door — plan for it |
 | Sound tech | — | **Open** | Two zones (courtyard + entertainment room) — see worklist §8b |
 | Lighting | — | **Open** | Courtyard needs **evening** lighting — album plays at 8pm, after sunset |
-| Photographer / videographer | — | — | Or: the filter + attendee capture *is* the coverage — decide which |
+| Photographer / videographer | — | — | Overlaps with Immaculate's brief below — decide if it's the same person or a second one |
 | Barbecue / food | — | **Open** | Attendees buy food — who's running the grill? |
 
 **Confirm:** is anyone on this list already informally attached, or is it a
 clean slate? The worklist's "build the team" item was due Sept 5.
+
+### Role detail — Immaculate
+
+**Confirmed (2026-08-26).** The core job: roaming the room with a mic in the
+back stretch of the night — the dance floor / wind-down window, 9:15–10:30 —
+doing short street-style interviews. Two questions per person, asked in this
+order:
+
+1. **"What did you think about the album?"** — open-ended on purpose, not
+   "did you like it." The point is to catch a real reaction, not a yes/no.
+2. **"What are you wearing?"** — ties directly to the 1984 dress code; doubles
+   as fashion-floor content.
+
+Filmed, and cut for social. This is the same **witness/curation** idea the
+Wall and the cover contest already run on — the room's own reaction becomes
+part of the record's story, not just a marketing recap after the fact.
+
+**Note for later, not now:** the owner connected this to people eventually
+giving feedback on the album/stem-player experience too. That's the same
+audience-shapes-the-record thread as the parked anthem's future job (the
+room voting on the tracklist — see `loop-soul-is-the-album.md`). Worth
+keeping these two in the same conversation when that gets built, but nothing
+to build for either right now.
+
+**Proposed expanded scope (not yet confirmed with her — a suggestion based on
+the timeline, not a decision):** a single-person "interviewer" role for one
+night is a lot of setup for one use. The same format works as **pre-event
+content** during the Aug 26 → Sept 11 push — short "what are you looking
+forward to" clips in the lead-up, in the same street-interview style, so the
+night-of segment isn't the first time anyone's seen the format. If that
+lands, she'd also be the natural person to **edit and publish** the night-of
+footage afterward, since she shot it and knows what's usable. That would make
+her role: pre-event content (weeks 1–3) → night-of interviews (Sept 26) →
+post-event edit (the week after, alongside the digital magazine issue).
+Confirm with her whether that's the scope she's up for before it's locked.
+
+### Role detail — Abdullah
+
+**Being considered, not yet confirmed** — the owner's own framing. The idea:
+a creative/experience role on the marketing and engagement side — specifically
+getting people to *interact* with the marketing materials and the `/loop`
+page, rather than just see them. "Being the pioneer of that."
+
+The clearest place this maps to something concrete on the calendar is
+**Sept 11, the TRU barbecue** — the one pre-event moment where people
+physically encounter marketing material (the flyer, the Recoolman mask) and
+could be pointed at `/loop` in person. If this is the direction, Abdullah's
+role would sit alongside Immaculate's proposed pre-event content, not replace
+it — one drives the on-the-ground interaction, the other captures it.
+
+**Open question, not answered here:** is this a defined role (e.g. "campus
+engagement lead") or a looser creative-collaborator arrangement? Worth
+settling before it goes from "considering" to a row that has a cost against
+it.
 
 ---
 

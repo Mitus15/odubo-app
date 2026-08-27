@@ -22,6 +22,11 @@ Companion docs: [budget](loop-soul-volume-1-budget.md) ·
 **Also running this week, no hard date:** team recruitment, sound/lighting
 quotes started, budget lines (see budget doc) getting real numbers.
 
+**Proposed (pending confirmation with Immaculate — see budget doc):**
+pre-event street-interview content in the same format as the night-of
+segment ("what are you looking forward to"), shot through weeks 1–3 as part
+of the social push.
+
 ## Week 2 — Sept 2 → Sept 8
 
 | Date | Day | What's due | Owner |
@@ -34,7 +39,7 @@ quotes started, budget lines (see budget doc) getting real numbers.
 | Date | Day | What's due | Owner |
 |---|---|---|---|
 | ~Sept 10 | Thu | **"1984" finished** — owner's original target for the barbecue | Owner |
-| **Sept 11** | **Fri** | **TRU Back to School Barbecue.** Flyers handed out in the Recoolman mask. Promo opportunity, not a launch — no booth build assumed | Owner |
+| **Sept 11** | **Fri** | **TRU Back to School Barbecue.** Flyers handed out in the Recoolman mask. Promo opportunity, not a launch — no booth build assumed. *(If Abdullah's role is confirmed — see budget doc — this is its most natural first moment: the one pre-event point where people physically encounter the marketing material.)* | Owner |
 
 ⚠️ If the domain slips past ~Sept 1, the fallback flyer carries the
 `@loopsoul.ca` handle with no QR rather than missing the barbecue.
@@ -69,13 +74,15 @@ weeks 1–3 (band rehearsal day, print delays, sound/lighting confirmation).
 | **8:00** | **The Album** — courtyard, outdoors |
 | 9:00 | "1984" — live, entertainment room, recorded for the release |
 | 9:15 | The Loop Soul Line |
-| 9:30 | The Dance Floor |
+| 9:15–10:30 | Dance floor / wind-down — **Immaculate's interview window** (see budget doc) |
 | **10:30** | **Out.** Hard stop |
 
 ## After
 
 - Magazine: **digital issue the following week**, physical **the week after that**
 - Album cover contest winner announced; $50 + $5-per-feature payouts processed
+- **Interview footage edited and published** (proposed: same person who shot
+  it — see budget doc), alongside the digital magazine issue
 - Mix/master, if not finished by the 26th, is not blocking the event — the
   night is the first *listen*, not the release
 
