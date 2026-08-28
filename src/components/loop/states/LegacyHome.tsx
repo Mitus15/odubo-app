@@ -2,6 +2,7 @@ import Link from "next/link";
 import ArcedTagline from "@/components/loop/brand/ArcedTagline";
 import Lookbook from "@/components/loop/gathering/Lookbook";
 import PortalGate from "@/components/loop/portal/PortalGate";
+import BallotSheet from "@/components/loop/ballots/BallotSheet";
 import WallGallery from "@/components/loop/wall/WallGallery";
 import { getCurrentEvent } from "@/lib/loop/hub";
 import { currentVoterId } from "@/lib/loop/anthem-server";
@@ -56,6 +57,17 @@ export async function LegacyHome() {
             One issue per volume — the anthem, the iconic moments, the night that was.
           </div>
         </Link>
+      </section>
+
+      <section className="mt-12 w-full max-w-md text-left">
+        <h2 className="text-xs uppercase tracking-[0.3em] opacity-70">The Ballots</h2>
+        <p className="mt-1 text-sm opacity-70">
+          The room is still deciding — the running order, and the cover.
+        </p>
+        <div className="mt-4 grid gap-6">
+          <BallotSheet kind="tracklist" />
+          <BallotSheet kind="cover" />
+        </div>
       </section>
 
       <section className="mt-12 w-full max-w-md text-left">

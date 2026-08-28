@@ -7,9 +7,10 @@ import ModuleSheet from "@/components/loop/shell/ModuleSheet";
 import RunOfShow from "@/components/loop/gathering/RunOfShow";
 import DanceyokeyPanel from "@/components/loop/danceyokey/DanceyokeyPanel";
 import { DANCEYOKEY_ENABLED } from "@/lib/loop/content";
+import BallotSheet from "@/components/loop/ballots/BallotSheet";
 import type { RunOfShowItem } from "@/lib/loop/content";
 
-type Surface = "camera" | "wall" | "danceyokey" | "program" | null;
+type Surface = "camera" | "wall" | "danceyokey" | "program" | "tracklist" | "cover" | null;
 
 /**
  * STATE 2 — the in-room home for pass-holders. A short stack of what's
@@ -89,6 +90,38 @@ export function InRoom({
             </span>
           </button>
 
+          <button
+            type="button"
+            onClick={() => setSurface("tracklist")}
+            className="loop-panel flex items-center justify-between rounded-3xl px-6 py-5 text-left transition-transform active:scale-[0.98]"
+          >
+            <span>
+              <span className="block text-xl font-extrabold">The Tracklist</span>
+              <span className="block text-sm opacity-75">
+                You heard it — now rank it. The room orders the record
+              </span>
+            </span>
+            <span aria-hidden className="text-2xl">
+              ↕
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setSurface("cover")}
+            className="loop-panel flex items-center justify-between rounded-3xl px-6 py-5 text-left transition-transform active:scale-[0.98]"
+          >
+            <span>
+              <span className="block text-xl font-extrabold">The Cover</span>
+              <span className="block text-sm opacity-75">
+                Vote the album&apos;s cover out of the night&apos;s shots
+              </span>
+            </span>
+            <span aria-hidden className="text-2xl">
+              ✦
+            </span>
+          </button>
+
           {DANCEYOKEY_ENABLED && (
             <button
               type="button"
@@ -124,6 +157,18 @@ export function InRoom({
       {surface === "wall" && (
         <ModuleSheet title="The Wall" onClose={() => setSurface(null)}>
           <WallGallery key={wallBump} canPost />
+        </ModuleSheet>
+      )}
+
+      {surface === "tracklist" && (
+        <ModuleSheet title="The Tracklist" onClose={() => setSurface(null)}>
+          <BallotSheet kind="tracklist" />
+        </ModuleSheet>
+      )}
+
+      {surface === "cover" && (
+        <ModuleSheet title="The Cover" onClose={() => setSurface(null)}>
+          <BallotSheet kind="cover" />
         </ModuleSheet>
       )}
 

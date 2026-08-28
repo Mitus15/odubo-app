@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import CameraSheet from "./CameraSheet";
 import WallGallery from "@/components/loop/wall/WallGallery";
 
@@ -17,6 +17,14 @@ import WallGallery from "@/components/loop/wall/WallGallery";
  */
 export function PoseStudioShell({ canPost = false }: { canPost?: boolean }) {
   const [cameraOpen, setCameraOpen] = useState(false);
+  const [studio, setStudio] = useState(false);
+
+  // `?studio=1` shoots promo: full vertical HD, 60s clips. Read on the client
+  // so the page itself stays static for guests, and deliberately NOT a visible
+  // toggle — a guest who finds it would only get a slower camera.
+  useEffect(() => {
+    setStudio(new URLSearchParams(window.location.search).get("studio") === "1");
+  }, []);
 
   return (
     <main className="mx-auto flex min-h-[100dvh] max-w-md flex-col gap-5 px-5 py-8">
@@ -34,7 +42,9 @@ export function PoseStudioShell({ canPost = false }: { canPost?: boolean }) {
       >
         <span>
           <span className="block text-xl font-extrabold">Open the camera</span>
-          <span className="block text-sm opacity-75">Photo or 15s clip</span>
+          <span className="block text-sm opacity-75">
+            {studio ? "Studio · photo or 60s clip, full HD" : "Photo or 15s clip"}
+          </span>
         </span>
         <span aria-hidden className="text-2xl">
           ◉
@@ -54,7 +64,7 @@ export function PoseStudioShell({ canPost = false }: { canPost?: boolean }) {
       </section>
 
       {cameraOpen && (
-        <CameraSheet canPost={canPost} onClose={() => setCameraOpen(false)} />
+        <CameraSheet canPost={canPost} studio={studio} onClose={() => setCameraOpen(false)} />
       )}
     </main>
   );

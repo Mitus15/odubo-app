@@ -18,6 +18,7 @@ import DoorsToggle from "./DoorsToggle";
 import EventCodes from "./EventCodes";
 import JournalEditor from "./JournalEditor";
 import PassSettings from "./PassSettings";
+import BallotControls from "./BallotControls";
 import WallModeration from "./WallModeration";
 
 /**
@@ -153,6 +154,16 @@ export default async function AdminPage() {
           buyer an event code automatically — the code is the ticket.
         </p>
         <PassSettings />
+      </section>
+
+      <section className="mt-12">
+        <h2 className="text-lg font-extrabold">The ballots</h2>
+        <p className="mt-1 text-sm opacity-70">
+          The tracklist vote and the cover vote — the room&apos;s say in the record.
+        </p>
+        <div className="mt-4">
+          <BallotControls />
+        </div>
       </section>
 
       <section className="mt-12">

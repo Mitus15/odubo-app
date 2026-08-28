@@ -29,8 +29,8 @@ export function CoverContest() {
             "The room's gallery. Everyone in the room can see it, and everyone in the room keeps it.",
           ],
           [
-            "One becomes the cover",
-            "The winning frame is the album's cover art, credited to whoever took it.",
+            "The room votes",
+            "The standout shots are shortlisted, and everyone in the room votes. The winning frame becomes the album's cover art, credited to whoever took it.",
           ],
         ].map(([title, body]) => (
           <li key={title} className="ml-5">

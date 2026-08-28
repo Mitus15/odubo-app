@@ -12,7 +12,27 @@ import { postToWall, savedWallName, rememberWallName } from "@/lib/loop/wall/cli
 type Mode = "photo" | "video";
 type Phase = "starting" | "live" | "working" | "result";
 
+/** Guest clips stay short — a moment, not a film, and 15s keeps mid-range
+ *  phones comfortable on the night. Studio mode is for the owner shooting
+ *  promo, where length and fidelity matter more than device headroom. */
 const MAX_CLIP_S = 15;
+const STUDIO_MAX_CLIP_S = 60;
+
+/** Render height cap. 720 protects frame rate on a guest's phone; a vertical
+ *  1080-wide phone recording at 720 CAP lands ~405x720, a quarter of the
+ *  1080x1920 a reel wants. Studio mode lifts it to full vertical HD. */
+const GUEST_MAX_HEIGHT = 720;
+const STUDIO_MAX_HEIGHT = 1920;
+
+/** Name the download after what was ACTUALLY recorded. The recorder picks the
+ *  first supported type from a preference list that starts with mp4/h264 — so
+ *  on iOS Safari this produced an MP4 named ".webm", which some apps reject
+ *  outright and others silently mis-handle. */
+function extensionFor(blob: Blob, kind: "image" | "video"): string {
+  if (kind === "image") return "jpg";
+  if (blob.type.includes("mp4")) return "mp4";
+  return "webm";
+}
 
 /**
  * The camera, full-bleed — the viewfinder IS the screen and the controls float
@@ -28,12 +48,18 @@ export function CameraSheet({
   onClose,
   canPost = false,
   onPosted,
+  studio = false,
 }: {
   onClose: () => void;
   /** Pass-holders in the live room can post to the Wall. */
   canPost?: boolean;
   onPosted?: () => void;
+  /** Shooting promo rather than attending: full vertical HD and longer clips.
+   *  Costs frame rate, so it is opt-in and never the guest default. */
+  studio?: boolean;
 }) {
+  const maxClipS = studio ? STUDIO_MAX_CLIP_S : MAX_CLIP_S;
+  const maxHeight = studio ? STUDIO_MAX_HEIGHT : GUEST_MAX_HEIGHT;
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -94,7 +120,7 @@ export function CameraSheet({
           if (!videoRef.current || !canvasRef.current) return;
           const engine = new PoseVideoEngine(videoRef.current, canvasRef.current);
           engineRef.current = engine;
-          await engine.start({ kind: "camera", facing: f }, { filter: filtered });
+          await engine.start({ kind: "camera", facing: f }, { filter: filtered, maxHeight });
           if (m === "photo") preloadSegmenter();
         }
         setPhase("live");
@@ -102,7 +128,7 @@ export function CameraSheet({
         setError((e as Error).message);
       }
     },
-    [teardown],
+    [teardown, maxHeight],
   );
 
   useEffect(() => {
@@ -176,7 +202,7 @@ export function CameraSheet({
       return;
     }
     setRecording(true);
-    capTimer.current = window.setTimeout(() => void toggleRecord(), MAX_CLIP_S * 1000);
+    capTimer.current = window.setTimeout(() => void toggleRecord(), maxClipS * 1000);
   }
 
   async function flip() {
@@ -199,7 +225,7 @@ export function CameraSheet({
     try {
       rememberWallName(name);
       await postToWall(resultBlob, {
-        fileName: resultKind === "video" ? "loop-soul.webm" : "loop-soul.jpg",
+        fileName: `loop-soul.${extensionFor(resultBlob, resultKind)}`,
         userName: name.trim() || null,
       });
       setPosting("posted");
@@ -220,7 +246,7 @@ export function CameraSheet({
     if (resultUrl) {
       const a = document.createElement("a");
       a.href = resultUrl;
-      a.download = `loop-soul-${Date.now()}.${resultKind === "video" ? "webm" : "jpg"}`;
+      a.download = `loop-soul-${Date.now()}.${extensionFor(resultBlob, resultKind)}`;
       a.click();
     }
   }
@@ -305,7 +331,7 @@ export function CameraSheet({
         <div className="absolute left-1/2 top-24 flex -translate-x-1/2 items-center gap-2 rounded-full bg-ink/70 px-4 py-1.5 backdrop-blur">
           <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-red-500" />
           <span className="text-[11px] font-bold uppercase tracking-widest text-bone">
-            Rec · max {MAX_CLIP_S}s
+            Rec · max {maxClipS}s
           </span>
         </div>
       )}
@@ -340,7 +366,7 @@ export function CameraSheet({
                   className="rounded-full bg-sand py-4 text-base font-bold text-ink transition-transform active:scale-95 disabled:opacity-70"
                 >
                   {posting === "posted"
-                    ? "On the Wall ✦"
+                    ? "On the Wall ✦ — you're in the cover contest"
                     : posting === "posting"
                       ? "Posting…"
                       : "Post to the Wall"}
