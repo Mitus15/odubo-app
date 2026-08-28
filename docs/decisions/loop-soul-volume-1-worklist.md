@@ -155,7 +155,7 @@ second page.
 |---|---|---|---|
 | 1 | Build the team — contact, meet, assign | Sept 5 | Owner |
 | 2 | Budget — what you have vs what it costs | **tomorrow** | Owner. Everything print/sound/lighting hangs off it |
-| 3 | **Get a new domain** | **~Sept 1** | Owner. Blocks the flyer print run — see below |
+| 3 | **Get a new domain** | **Sept 5** (moved from ~Sept 1, funds) | Owner. No longer blocks the flyer run — print with the vercel.app QR, see the print lock below |
 | 4 | Wire the domain (Shopify · Cloudflare · Vercel) | after 3 | Vercel already has `odubo.studio` verified; only DNS is dead. **The Shopify `orders/paid` webhook points at the vercel.app host and must be re-registered** |
 | 5 | Shopify maintenance | ✅ **audited 2026-08-24** | Findings below |
 
@@ -231,13 +231,17 @@ Digital and print are on different clocks, and only one is blocked:
 
 - **Digital (feed/story) is not blocked.** Link-in-bio context; regenerate any
   time.
-- **Flyers are blocked on the domain.** ~1 week at the shop for Sept 11 means
-  the order goes **~Sept 3**, so the domain must exist by **~Sept 1**. A QR
-  cannot be corrected once printed — `npm run loop:posters` now **refuses** to
-  render without `loop_settings.public_base_url` rather than bake in a host we
-  might not own.
-- Fallback if the domain slips: a flyer carrying `@loopsoul.ca` and no QR. Never
-  goes stale, but loses scan-to-register.
+- **Flyers vs the domain — resolved 2026-08-27.** The domain moved to **Sept 5**
+  (funds), which lands *after* the ~Sept 4 print deadline for Sept 11. **Print
+  with the vercel.app QR anyway:** a Vercel project keeps its `*.vercel.app`
+  URL permanently even after a custom domain is added, so that QR will not
+  break when `loopsoul.ca` arrives. Less pretty, permanently functional, and
+  it unblocks the flyers without waiting for money.
+- A QR still cannot be corrected once printed — `npm run loop:posters`
+  **refuses** to render without `loop_settings.public_base_url`, so set it to
+  the vercel.app origin before generating print files.
+- Other fallback: a flyer carrying `@loopsoul.ca` and no QR. Never goes stale,
+  but loses scan-to-register.
 
 ## Item 22 — parked on purpose
 

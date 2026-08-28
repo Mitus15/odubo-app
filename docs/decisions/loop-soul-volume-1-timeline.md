@@ -17,7 +17,7 @@ Companion docs: [budget](loop-soul-volume-1-budget.md) ·
 | Date | Day | What's due | Owner |
 |---|---|---|---|
 | Aug 26 | Wed | *(today)* Tracking starts; social push window opens (runs to Sept 11) | — |
-| ~Sept 1 | Tue | **Domain registered.** Blocks the flyer's QR — the kit refuses to print without it | Owner |
+| ~~Sept 1~~ → **Sept 5** | Sat | **Domain registered.** Delayed to Sept 5 (funds). ⚠️ **This lands AFTER the ~Sept 4 flyer print deadline** — see the conflict note below | Owner |
 
 **Also running this week, no hard date:** team recruitment, sound/lighting
 quotes started, budget lines (see budget doc) getting real numbers.
@@ -35,7 +35,7 @@ of the social push.
 
 | Date | Day | What's due | Owner |
 |---|---|---|---|
-| ~Sept 3 | Thu | **Flyer print order placed.** ~1 week turnaround for Sept 11 — this is the date that actually can't slip once the domain lands | Owner |
+| ~Sept 3–4 | Wed–Thu | **Flyer print order placed.** ~1 week turnaround for Sept 11. **Now precedes the domain** — see the conflict note | Owner |
 | Sept 5 | Sat | **Team built** — contact, meet, assign roles (event lead, app steward, marketing partner, band, dancers/captains) | Owner |
 
 ## Week 3 — Sept 9 → Sept 11
@@ -45,8 +45,21 @@ of the social push.
 | ~Sept 10 | Thu | **"1984" finished** — owner's original target for the barbecue | Owner |
 | **Sept 11** | **Fri** | **TRU Back to School Barbecue.** Flyers handed out in the Recoolman mask. Promo opportunity, not a launch — no booth build assumed. *(If Abdullah's role is confirmed — see budget doc — this is its most natural first moment: the one pre-event point where people physically encounter the marketing material.)* | Owner |
 
-⚠️ If the domain slips past ~Sept 1, the fallback flyer carries the
-`@loopsoul.ca` handle with no QR rather than missing the barbecue.
+### ⚠️ The domain/print conflict (2026-08-27)
+
+The domain moves to **Sept 5** for funding reasons. Flyers need ~1 week at the
+shop for Sept 11, so the order goes **~Sept 4** — *the day before the domain
+exists*. A `loopsoul.ca` QR cannot make the barbecue.
+
+**Recommended way through: print now with the vercel.app QR.** A Vercel
+project keeps its `*.vercel.app` URL permanently, even after a custom domain
+is added later — so a QR printed today does **not** break when
+`loopsoul.ca` lands. It stays working forever; it's only less pretty. That
+unblocks the flyers entirely without waiting for money.
+
+Alternatives if that's unacceptable aesthetically: flyer with the
+`@loopsoul.ca` handle and no QR (never stale, but loses scan-to-register), or
+skip printed flyers and work the barbecue off a phone screen.
 
 ## Week 4 — Sept 12 → Sept 18
 
