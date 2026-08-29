@@ -5,7 +5,9 @@ import MediaGrid from "@/components/loop/media/MediaGrid";
 import MediaViewer, { type ViewerAction } from "@/components/loop/media/MediaViewer";
 import type { MediaItem } from "@/lib/loop/media/types";
 import { deleteItem, listItems } from "@/lib/loop/pose/gallery";
+import { extensionFor } from "@/lib/loop/media/filename";
 import {
+  fetchMyWall,
   fetchWall,
   normalizeForWall,
   postToWall,
@@ -88,23 +90,50 @@ export function WallGallery({
     };
   }, [refresh, deviceOnly]);
 
-  /** Load this device's saved shots (object URLs revoked on refresh/unmount). */
+  /**
+   * "Yours" = this device's saved shots PLUS everything credited to you on the
+   * server.
+   *
+   * The device gallery alone loses your entries the moment you clear storage
+   * or change phone, even though the shots themselves are safe on the Wall and
+   * the credit ledger knows they are yours. Posted shots are saved locally too,
+   * so the same shot can appear on both sides — the local copy wins, because it
+   * is the one that still works offline and can be deleted from here.
+   */
   const loadMine = useCallback(async () => {
-    const items = await listItems();
+    const [items, credited] = await Promise.all([
+      listItems(),
+      fetchMyWall({ limit: 60 }).catch(() => [] as WallPhotoDto[]),
+    ]);
     localUrls.current.forEach((u) => URL.revokeObjectURL(u));
     localUrls.current = [];
-    setMine(
-      items.map((it) => {
-        const url = URL.createObjectURL(it.blob);
-        localUrls.current.push(url);
-        return {
-          id: it.id,
-          src: url,
-          kind: it.kind === "video" ? "video" : "image",
-          local: true,
-        } satisfies MediaItem;
-      }),
+
+    const local = items.map((it) => {
+      const url = URL.createObjectURL(it.blob);
+      localUrls.current.push(url);
+      return {
+        id: it.id,
+        src: url,
+        kind: it.kind === "video" ? "video" : "image",
+        local: true,
+      } satisfies MediaItem;
+    });
+
+    const remote = credited.map(
+      (p) =>
+        ({
+          id: p.uid,
+          src: p.r2_url,
+          kind: p.media_type === "video" ? "video" : "image",
+          author: p.user_name,
+          caption: p.caption,
+          featured: p.featured === 1,
+          moderated: p.moderated,
+          rowId: p.id,
+        }) satisfies MediaItem,
     );
+
+    setMine([...local, ...remote]);
   }, []);
 
   useEffect(() => {
@@ -174,9 +203,15 @@ export function WallGallery({
 
   async function share(item: MediaItem) {
     if (item.local) {
+      // Name the file after what it actually IS. Hardcoding the extension from
+      // the media kind produced ".webm" for the MP4s Safari records — the same
+      // bug fixed in CameraSheet, which this path missed.
       const a = document.createElement("a");
       a.href = item.src;
-      a.download = `loop-soul.${item.kind === "video" ? "webm" : "jpg"}`;
+      const blob = await fetch(item.src)
+        .then((r) => r.blob())
+        .catch(() => null);
+      a.download = `loop-soul.${blob ? extensionFor(blob, item.kind) : item.kind === "video" ? "mp4" : "jpg"}`;
       a.click();
       return;
     }
@@ -199,12 +234,17 @@ export function WallGallery({
 
   const viewerActions: ViewerAction[] = [
     { label: tab === "yours" ? "Save" : "Share", onClick: share, primary: true },
+    // Delete removes the ON-DEVICE copy only. A shot already on the Wall is a
+    // contest entry the room can see; taking it down is a moderation decision,
+    // not a gallery one.
     ...(tab === "yours"
       ? [
           {
             label: "Delete",
             danger: true,
+            hidden: (item: MediaItem) => !item.local,
             onClick: async (item: MediaItem) => {
+              if (!item.local) return;
               await deleteItem(item.id);
               await loadMine();
               setViewer(null);
@@ -285,7 +325,7 @@ export function WallGallery({
         onOpen={setViewer}
         empty={
           tab === "yours"
-            ? "Nothing saved on this device yet. Shots you keep land here."
+            ? "Nothing yet. Shots you keep or post to the Wall land here."
             : featuredOnly
               ? "Iconic Moments are being curated — check back."
               : canPost

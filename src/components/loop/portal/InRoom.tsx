@@ -8,9 +8,18 @@ import RunOfShow from "@/components/loop/gathering/RunOfShow";
 import DanceyokeyPanel from "@/components/loop/danceyokey/DanceyokeyPanel";
 import { DANCEYOKEY_ENABLED } from "@/lib/loop/content";
 import BallotSheet from "@/components/loop/ballots/BallotSheet";
+import CoverContest from "@/components/loop/gathering/CoverContest";
 import type { RunOfShowItem } from "@/lib/loop/content";
 
-type Surface = "camera" | "wall" | "danceyokey" | "program" | "tracklist" | "cover" | null;
+type Surface =
+  | "camera"
+  | "wall"
+  | "danceyokey"
+  | "program"
+  | "tracklist"
+  | "cover"
+  | "contest"
+  | null;
 
 /**
  * STATE 2 — the in-room home for pass-holders. A short stack of what's
@@ -66,12 +75,23 @@ export function InRoom({
             <span>
               <span className="block text-xl font-extrabold">Camera</span>
               <span className="block text-sm opacity-75">
-                Strike a pose — we&apos;ll Loop Soul it
+                Strike a pose — every shot enters the cover contest
               </span>
             </span>
             <span aria-hidden className="text-2xl">
               ◉
             </span>
+          </button>
+
+          {/* The terms lived only on the pre-event poster, so everyone
+              actually shooting entries did so without ever seeing what the
+              contest pays or how it is judged. */}
+          <button
+            type="button"
+            onClick={() => setSurface("contest")}
+            className="loop-muted -mt-1 text-left text-xs font-bold uppercase tracking-[0.2em] underline underline-offset-4"
+          >
+            How the cover contest works
           </button>
 
           <button
@@ -157,6 +177,12 @@ export function InRoom({
       {surface === "wall" && (
         <ModuleSheet title="The Wall" onClose={() => setSurface(null)}>
           <WallGallery key={wallBump} canPost />
+        </ModuleSheet>
+      )}
+
+      {surface === "contest" && (
+        <ModuleSheet title="The Cover Contest" onClose={() => setSurface(null)}>
+          <CoverContest showCta={false} />
         </ModuleSheet>
       )}
 

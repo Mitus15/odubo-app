@@ -190,6 +190,17 @@ export function GatheringPoster({
               {m.label}
             </button>
           ))}
+          {/* A LINK, not a sheet — the camera needs the whole screen, and it
+              is the one thing here you can actually DO before the night. It
+              was previously reachable only from inside the Cover Contest
+              sheet, which meant almost nobody found the filter at all. Last
+              child of an odd-length grid, so it spans full width. */}
+          <Link
+            href="/loop/pose"
+            className="rounded-2xl border border-ink/20 py-3 text-center text-xs font-bold uppercase tracking-wide transition-colors hover:bg-ink/10"
+          >
+            Try the Filter ◉
+          </Link>
         </nav>
       </div>
 

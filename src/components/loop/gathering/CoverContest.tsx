@@ -11,7 +11,7 @@ import Link from "next/link";
  * Numbers are stated plainly and on purpose. A contest that names its payment
  * reads as an offer; one that doesn't reads as free labour.
  */
-export function CoverContest() {
+export function CoverContest({ showCta = true }: { showCta?: boolean } = {}) {
   return (
     <section className="w-full space-y-5">
       <p className="text-sm opacity-80">
@@ -42,7 +42,7 @@ export function CoverContest() {
       </ol>
 
       <div className="rounded-2xl border border-ink/20 p-4">
-        <div className="text-[11px] font-semibold uppercase tracking-[0.25em] opacity-60">
+        <div className="loop-muted text-[11px] font-semibold uppercase tracking-[0.25em]">
           What it pays
         </div>
         <dl className="mt-2 space-y-1 text-sm">
@@ -60,12 +60,17 @@ export function CoverContest() {
         </p>
       </div>
 
-      <Link
-        href="/loop/pose"
-        className="block w-full rounded-full bg-ink py-3 text-center text-sm font-bold text-sand"
-      >
-        Try the filter
-      </Link>
+      {/* Hidden in the room, where the Camera button sits directly above this
+          sheet — sending someone to another page for the thing they already
+          have would be a step backwards, not a call to action. */}
+      {showCta && (
+        <Link
+          href="/loop/pose"
+          className="block w-full rounded-full bg-ink py-3 text-center text-sm font-bold text-sand"
+        >
+          Try the filter
+        </Link>
+      )}
     </section>
   );
 }

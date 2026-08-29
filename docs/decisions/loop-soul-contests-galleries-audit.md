@@ -8,7 +8,19 @@ UX sound. Findings are ordered by how much they'd hurt on the night.
 
 ## 1. Production readiness
 
-### 🔴 The cover contest has no backend at all
+### ~~🔴 The cover contest has no backend at all~~ — RESOLVED
+
+> **Correction, 2026-08-29.** This finding was true when written and was fixed
+> by the very next commit (`fcc9dd0`), which shipped `src/lib/loop/ballots.ts`,
+> the ballot API, `BallotSheet`, admin open/close controls and the "you're in
+> the cover contest" confirmation. The audit was stale by one commit; leaving
+> the claim standing would have had someone rebuild what already exists.
+>
+> What actually remains open is narrower: **no winner display and no payout
+> tracking**. The leaderboard is the outcome by design, but nothing announces
+> or freezes a winner.
+
+The original finding, for the record:
 
 The Cover Contest sheet on `/loop` explains the contest well — how it works,
 that the winner becomes the album's cover, that it pays **$50** (and $5 per
@@ -17,8 +29,6 @@ marker, no way for a guest to know they're entered, no selection mechanism,
 and no winner display. Searching the API and lib layers for contest/winner
 logic returns only Danceyokey's raffle and the anthem's bracket — both parked.
 
-As it stands, the contest is a promise on a page.
-
 **The fix is mostly reuse, not building.** `gallery_photos.featured` already
 exists, is already toggled from `/loop/admin` (the ✦ action), and already
 drives the Journal's Iconic Moments. That is precisely the curation primitive
@@ -26,7 +36,7 @@ a cover contest needs — a way to mark standout shots and surface them. What's
 missing on top of it is small: a "you're entered" acknowledgement at capture
 time, and a place to show the winner afterward.
 
-### 🟠 `/loop/pose` is effectively unlisted
+### ~~🟠 `/loop/pose` is effectively unlisted~~ — RESOLVED 2026-08-29
 
 The camera and filter — the thing that *makes* contest entries — is reachable
 only by typing the URL, or through the "Try the filter" button inside the
@@ -34,13 +44,23 @@ Cover Contest sheet. It isn't in any nav. Before the night that's the main way
 someone could try the filter and get excited about it, and almost nobody will
 find it.
 
-### 🟠 Camera failures show raw browser errors
+> **Fixed 2026-08-29.** "Try the Filter" is now a full-width row on the
+> Gathering poster — the surface a QR scan lands on. The in-room Camera tile
+> also names what a shot is for, and the contest terms open from inside the
+> room (they previously rendered only on the pre-event poster, so everyone
+> actually shooting entries never saw what the contest paid).
+
+### ~~🟠 Camera failures show raw browser errors~~ — RESOLVED 2026-08-29
 
 `CameraSheet` surfaces `(e as Error).message` straight to the guest. A denied
 camera permission renders as a browser-technical string with no guidance and
 no recovery path. On the night, permission denial will be the single most
 common failure, hitting people standing in a dark courtyard trying to
 participate. It needs a human message and a "how to fix it" line.
+
+> **Fixed 2026-08-29.** The banner now carries a recovery line and a **Try
+> again** button, and `camera.ts` maps `NotReadableError` ("in use by another
+> app") too. Verified in the browser against a machine with no camera.
 
 ### 🟢 The galleries themselves work
 
@@ -112,7 +132,7 @@ The fix is nearly mechanical: swap `opacity-50/60` on text for `.loop-muted`,
 which already exists and already passes. Note two of these are in
 `CoverContest.tsx`, written in this session — the rule was broken here too.
 
-### 🟠 The photo lightbox isn't announced as a dialog
+### ~~🟠 The photo lightbox isn't announced as a dialog~~ — RESOLVED 2026-08-29
 
 `MediaViewer` and `ModuleSheet` have **no `role="dialog"`, no `aria-modal`,
 and no focus trapping** — while `GetPassModal`, `LoopBag` and `AddToBagSheet`
@@ -141,12 +161,22 @@ The bones are there; the semantics are missing.
 
 ## Suggested order
 
-1. **Reword the pass email promise** — minutes, and stops an active lie.
+1. ~~**Reword the pass email promise**~~ — still open.
 2. **Swap the opacity washes for `.loop-muted`** — near-mechanical, fixes a
-   real WCAG failure and honours the existing rule.
-3. **Build the share page** — the highest-leverage item for growth; turns the
-   product's best moment from a dead end into a funnel.
-4. **Wire the contest onto `featured`** — mostly reuse.
-5. **Humanise camera errors** and **link `/loop/pose`** — small, high value on
-   the night.
-6. **Dialog semantics** on `MediaViewer` / `ModuleSheet`.
+   real WCAG failure and honours the existing rule. *Partially done: the
+   instances in the files touched on 2026-08-29 are fixed; the app-wide sweep
+   remains.*
+3. **Build the share page** — **now the highest-leverage item left.** A shared
+   shot still dead-ends on a bare JPEG at an API URL.
+4. ~~**Wire the contest onto `featured`**~~ — done in `fcc9dd0`.
+5. ~~**Humanise camera errors** and **link `/loop/pose`**~~ — done 2026-08-29.
+6. ~~**Dialog semantics** on `MediaViewer` / `ModuleSheet`~~ — done 2026-08-29.
+
+### Still open after 2026-08-29
+
+- The **share page** (item 3) — the biggest remaining growth gap.
+- The **pass email promise** (item 1).
+- The **app-wide opacity sweep** (item 2).
+- **Winner display and payout tracking** for the contest.
+- The whole camera path is **unverified on real hardware** — see
+  `loop-pose-studio-takes.md`.

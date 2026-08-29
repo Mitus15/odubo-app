@@ -10,6 +10,9 @@ export type ViewerAction = {
   primary?: boolean;
   /** Renders in the destructive tone with a confirm tap. */
   danger?: boolean;
+  /** Hide this action for a given item — e.g. Delete, which only makes sense
+   *  for an on-device copy. */
+  hidden?: (item: MediaItem) => boolean;
 };
 
 /**
@@ -33,15 +36,47 @@ export function MediaViewer({
 }) {
   const item = items[index];
   const touchStart = useRef<number | null>(null);
+  const panelRef = useRef<HTMLDivElement | null>(null);
   const [confirming, setConfirming] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  // Lock the page behind the viewer.
+  /**
+   * Lock the page behind the viewer, and keep FOCUS inside it too.
+   *
+   * Escape and arrow keys were already handled, but without a focus trap a
+   * keyboard or screen-reader user tabs straight out of an open lightbox into
+   * the page underneath it — which is still there, still scrollable by focus,
+   * and gives no way back. The store's modals all did this; the gallery guests
+   * actually use on the night did not.
+   */
   useEffect(() => {
     const prev = document.body.style.overflow;
+    const previouslyFocused = document.activeElement as HTMLElement | null;
     document.body.style.overflow = "hidden";
+    panelRef.current?.focus();
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Tab" || !panelRef.current) return;
+      const focusable = panelRef.current.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+      );
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+
     return () => {
       document.body.style.overflow = prev;
+      document.removeEventListener("keydown", onKeyDown);
+      previouslyFocused?.focus?.();
     };
   }, []);
 
@@ -86,7 +121,12 @@ export function MediaViewer({
 
   return (
     <div
-      className="fixed inset-0 z-[70] flex flex-col bg-ink/95 backdrop-blur-md"
+      ref={panelRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label={item.caption ?? "Loop Soul shot"}
+      tabIndex={-1}
+      className="fixed inset-0 z-[70] flex flex-col bg-ink/95 outline-none backdrop-blur-md"
       onTouchStart={(e) => (touchStart.current = e.touches[0].clientX)}
       onTouchEnd={onTouchEnd}
     >
@@ -145,7 +185,7 @@ export function MediaViewer({
         </button>
 
         <div className="flex flex-1 gap-2">
-          {actions.map((action) => {
+          {actions.filter((a) => !a.hidden?.(item)).map((action) => {
             const isConfirming = confirming === action.label;
             return (
               <button

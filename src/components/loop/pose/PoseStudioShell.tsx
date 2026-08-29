@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import CameraSheet from "./CameraSheet";
 import WallGallery from "@/components/loop/wall/WallGallery";
+import { CLIP_LIMITS, clipLimitS } from "@/lib/loop/pose/limits";
 
 /**
  * Pose Studio, standalone (`/loop/pose`) — the public camera page, outside the
@@ -15,16 +16,23 @@ import WallGallery from "@/components/loop/wall/WallGallery";
  * Hardcoding it off meant the only way to exercise camera → Wall was to flip
  * the event phase to `live`, which changes what every visitor to /loop sees.
  */
-export function PoseStudioShell({ canPost = false }: { canPost?: boolean }) {
+export function PoseStudioShell({
+  canPost = false,
+  isAdmin = false,
+}: {
+  canPost?: boolean;
+  /**
+   * Shows the studio switch. A CAPABILITY HINT, NOT A SECURITY BOUNDARY —
+   * anyone can flip the React state below in devtools, and the worst they get
+   * is a slower camera and a large file on their own phone. Never hang
+   * anything that matters off this prop.
+   */
+  isAdmin?: boolean;
+}) {
   const [cameraOpen, setCameraOpen] = useState(false);
   const [studio, setStudio] = useState(false);
 
-  // `?studio=1` shoots promo: full vertical HD, 60s clips. Read on the client
-  // so the page itself stays static for guests, and deliberately NOT a visible
-  // toggle — a guest who finds it would only get a slower camera.
-  useEffect(() => {
-    setStudio(new URLSearchParams(window.location.search).get("studio") === "1");
-  }, []);
+  const guestLimit = clipLimitS(false, true);
 
   return (
     <main className="mx-auto flex min-h-[100dvh] max-w-md flex-col gap-5 px-5 py-8">
@@ -35,6 +43,30 @@ export function PoseStudioShell({ canPost = false }: { canPost?: boolean }) {
         </p>
       </header>
 
+      {isAdmin && (
+        <button
+          type="button"
+          role="switch"
+          aria-checked={studio}
+          onClick={() => setStudio((v) => !v)}
+          className={`flex items-center justify-between rounded-2xl border px-5 py-3 text-left transition-colors ${
+            studio
+              ? "border-transparent bg-[var(--foreground)] text-[var(--background)]"
+              : "border-[color-mix(in_srgb,var(--foreground)_25%,transparent)]"
+          }`}
+        >
+          <span>
+            <span className="block text-sm font-extrabold">Studio mode</span>
+            <span className="block text-xs opacity-75">
+              Full HD, {CLIP_LIMITS.studioRaw / 60}-minute raw takes with sound
+            </span>
+          </span>
+          <span aria-hidden className="text-xs font-bold uppercase tracking-widest">
+            {studio ? "On" : "Off"}
+          </span>
+        </button>
+      )}
+
       <button
         type="button"
         onClick={() => setCameraOpen(true)}
@@ -43,7 +75,11 @@ export function PoseStudioShell({ canPost = false }: { canPost?: boolean }) {
         <span>
           <span className="block text-xl font-extrabold">Open the camera</span>
           <span className="block text-sm opacity-75">
-            {studio ? "Studio · photo or 60s clip, full HD" : "Photo or 15s clip"}
+            {studio
+              ? `Studio · photo, ${clipLimitS(true, true)}s filtered or ${
+                  CLIP_LIMITS.studioRaw / 60
+                } min raw`
+              : `Photo or ${guestLimit}s clip`}
           </span>
         </span>
         <span aria-hidden className="text-2xl">
@@ -64,7 +100,16 @@ export function PoseStudioShell({ canPost = false }: { canPost?: boolean }) {
       </section>
 
       {cameraOpen && (
-        <CameraSheet canPost={canPost} studio={studio} onClose={() => setCameraOpen(false)} />
+        // Keyed on `studio`: toggling it changes the requested capture
+        // resolution, whether the engine runs at all, and whether a mic is
+        // asked for. A clean remount removes a whole class of stale-stream
+        // bugs rather than trying to reconcile them.
+        <CameraSheet
+          key={studio ? "studio" : "guest"}
+          canPost={canPost}
+          studio={studio}
+          onClose={() => setCameraOpen(false)}
+        />
       )}
     </main>
   );

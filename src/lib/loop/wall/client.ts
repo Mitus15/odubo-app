@@ -14,6 +14,20 @@ export type WallPhotoDto = {
   created_at: string;
 };
 
+/**
+ * Your own shots from the server — the credit ledger, not this device. Returns
+ * an empty list for a device that never redeemed a code, so callers can merge
+ * unconditionally.
+ */
+export async function fetchMyWall(opts: { limit?: number } = {}): Promise<WallPhotoDto[]> {
+  const params = new URLSearchParams();
+  if (opts.limit) params.set("limit", String(opts.limit));
+  const res = await fetch(`/api/loop/gallery/mine?${params}`, { cache: "no-store" });
+  if (!res.ok) return [];
+  const data = (await res.json()) as { photos?: WallPhotoDto[] };
+  return data.photos ?? [];
+}
+
 export async function fetchWall(opts: {
   offset?: number;
   limit?: number;

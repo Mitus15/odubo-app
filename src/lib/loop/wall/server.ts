@@ -115,6 +115,39 @@ export async function listWallPhotos(opts: ListOptions): Promise<WallPhoto[]> {
   return rows.map((r) => ({ ...r, r2_url: publicUrlFor(r.r2_key) }));
 }
 
+/**
+ * The shots THIS attendee took, from the credit ledger rather than the device.
+ *
+ * `loop_media_credits` is written on every post and keyed to the attendee, who
+ * survives a cleared browser and a new phone (the checkout email is the
+ * recovery key). Without this, "your shots" is IndexedDB only — so clearing
+ * storage loses your view of your own contest entries even though the entries
+ * themselves are perfectly safe on the Wall.
+ *
+ * Hidden rows are excluded exactly as they are on the public Wall: the author
+ * seeing a shot the room can't would only surface a moderation decision.
+ */
+export async function listCreditedPhotos(opts: {
+  attendeeId: string;
+  galleryId: number;
+  limit: number;
+  offset: number;
+}): Promise<WallPhoto[]> {
+  const rows = await queryDatabase<Omit<WallPhoto, "r2_url">>(
+    `SELECT p.id, p.uid, p.r2_key, p.user_name, p.caption, p.media_type,
+            p.moderated, p.featured, p.created_at
+       FROM loop_media_credits c
+       JOIN gallery_photos p ON p.uid = c.photo_uid
+      WHERE c.attendee_id = ?1
+        AND p.gallery_id = ?2
+        AND (p.moderated != 2 OR p.moderated IS NULL)
+      ORDER BY p.created_at DESC, p.id DESC
+      LIMIT ?3 OFFSET ?4`,
+    [opts.attendeeId, opts.galleryId, opts.limit, opts.offset],
+  );
+  return rows.map((r) => ({ ...r, r2_url: publicUrlFor(r.r2_key) }));
+}
+
 export async function insertWallPhoto(input: {
   galleryId: number;
   uid: string;

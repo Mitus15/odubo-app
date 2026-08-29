@@ -13,7 +13,14 @@
  * over — with hysteresis so the modes never flap mid-take.
  */
 
-import { startCamera, stopStream, waitForVideoReady, type CameraFacing } from "@/lib/loop/capture/camera";
+import {
+  startCamera,
+  stopStream,
+  waitForVideoReady,
+  type CameraFacing,
+  type GrantedSettings,
+} from "@/lib/loop/capture/camera";
+import { Take, canRecord as recorderAvailable, pickRecordType } from "./recorder";
 import { GLStylizer, type GLParams } from "./gl-stylize";
 import { segmentVideoFrame, resetVideoMask, preloadVideoSegmenter, type VideoMask } from "./segment";
 import { VECTOR_DEFAULTS } from "./palette";
@@ -36,6 +43,15 @@ export type EngineParams = GLParams & {
   smoothing?: number;
   /** Cap the render height (px) for performance. Default 720. */
   maxHeight?: number;
+  /** Long edge to REQUEST from the camera. Without it the browser hands back
+   *  its default (640x480), which `maxHeight` can only ever cap, never raise. */
+  captureLongEdge?: number;
+  captureFps?: number;
+  /** Ask for a mic track, muxed into the recording. */
+  audio?: boolean;
+  /** Encoder bitrate for a take from this engine. */
+  videoBitsPerSecond?: number;
+  audioBitsPerSecond?: number;
   /** Segment every Nth frame (reuse the mask between). Default 1. */
   segEveryN?: number;
   /**
@@ -57,19 +73,6 @@ const VIDEO_OPTS = {
   simplifyEpsVideo: VECTOR_DEFAULTS.simplifyEpsVideo,
   toneWorkResVideo: VECTOR_DEFAULTS.toneWorkResVideo,
 } as const;
-
-/** Preferred recording mime types, best-first; picks the first supported. */
-const REC_TYPES = [
-  "video/mp4;codecs=h264",
-  "video/webm;codecs=vp9",
-  "video/webm;codecs=vp8",
-  "video/webm",
-];
-
-export function pickRecordType(): string | null {
-  if (typeof MediaRecorder === "undefined" || !MediaRecorder.isTypeSupported) return null;
-  return REC_TYPES.find((t) => MediaRecorder.isTypeSupported(t)) ?? null;
-}
 
 export class PoseVideoEngine {
   private ctx: CanvasRenderingContext2D | null = null;
@@ -94,9 +97,13 @@ export class PoseVideoEngine {
   private badFrames = 0;
   private goodFrames = 0;
 
-  private recorder: MediaRecorder | null = null;
-  private chunks: Blob[] = [];
-  private recType = "";
+  private take: Take | null = null;
+
+  /** What the camera actually granted — null for a file source. Read by the
+   *  studio readout, which is the only way to know a constraint took. */
+  granted: GrantedSettings | null = null;
+  /** Set when audio was asked for and not delivered. */
+  audioNote: string | null = null;
 
   /** Fired once when a file source reaches its end (used by upload processing). */
   onEnded: (() => void) | null = null;
@@ -120,7 +127,15 @@ export class PoseVideoEngine {
     preloadVideoSegmenter();
 
     if (source.kind === "camera") {
-      this.stream = await startCamera(this.video, source.facing);
+      const started = await startCamera(this.video, {
+        facing: source.facing,
+        targetLongEdge: params.captureLongEdge,
+        targetFps: params.captureFps,
+        audio: params.audio,
+      });
+      this.stream = started.stream;
+      this.granted = started.granted;
+      this.audioNote = started.audioNote;
       this.mirror = source.facing === "user";
       this.video.loop = true;
     } else {
@@ -307,45 +322,57 @@ export class PoseVideoEngine {
   /* ── recording ── */
 
   canRecord(): boolean {
-    return pickRecordType() !== null;
+    return recorderAvailable();
   }
 
-  startRecording(fps = 30): boolean {
-    const type = pickRecordType();
-    if (!type || this.recorder) return false;
-    const stream = this.canvas.captureStream(fps);
-    this.chunks = [];
-    this.recType = type;
-    this.recorder = new MediaRecorder(stream, { mimeType: type, videoBitsPerSecond: 6_000_000 });
-    this.recorder.ondataavailable = (e) => { if (e.data.size) this.chunks.push(e.data); };
-    this.recorder.start(100);
-    return true;
+  /** The mime the recorder would choose right now — shown in the studio
+   *  readout before a frame is recorded. */
+  plannedRecordType(): string | null {
+    return pickRecordType(this.hasAudio());
   }
 
-  stopRecording(): Promise<Blob | null> {
-    const rec = this.recorder;
-    if (!rec) return Promise.resolve(null);
-    return new Promise((resolve) => {
-      rec.onstop = () => {
-        const blob = this.chunks.length ? new Blob(this.chunks, { type: this.recType }) : null;
-        this.chunks = [];
-        this.recorder = null;
-        resolve(blob);
-      };
-      rec.stop();
+  hasAudio(): boolean {
+    return (this.stream?.getAudioTracks().length ?? 0) > 0;
+  }
+
+  /**
+   * Record the canvas — so the filtered look is what lands in the file.
+   *
+   * The mic track, when there is one, is added to the SAME output stream so
+   * the recorder muxes it. Note this is the canvas path only: rAF timestamps
+   * and the audio clock drift apart over a long take, which is one of the
+   * reasons the long raw take bypasses this entirely.
+   */
+  startRecording(fps = 30, onError?: (e: Error) => void): boolean {
+    if (this.take) return false;
+    const out = this.canvas.captureStream(fps);
+    const mic = this.stream?.getAudioTracks()[0];
+    if (mic) out.addTrack(mic);
+    this.take = Take.start(out, {
+      videoBitsPerSecond: this.params.videoBitsPerSecond,
+      audioBitsPerSecond: this.params.audioBitsPerSecond,
+      onError,
     });
+    return this.take !== null;
+  }
+
+  async stopRecording(): Promise<Blob | null> {
+    const take = this.take;
+    if (!take) return null;
+    this.take = null;
+    return take.stop();
   }
 
   isRecording(): boolean {
-    return this.recorder?.state === "recording";
+    return this.take?.active ?? false;
   }
 
   stop(): void {
     this.running = false;
     if (this.raf) cancelAnimationFrame(this.raf);
     this.raf = 0;
-    try { this.recorder?.stop(); } catch { /* noop */ }
-    this.recorder = null;
+    void this.take?.stop();
+    this.take = null;
     stopStream(this.stream, this.video);
     this.stream = null;
     this.video.onended = null;
