@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Album, Track } from '@/types/music';
 import { useMusicPlayer } from '@/contexts/MusicPlayerContext';
+import VinylMiniPlayer from '@/components/player/VinylMiniPlayer';
 
 interface AlbumPlayerProps {
   album: Album;
@@ -53,6 +54,26 @@ export default function AlbumPlayer({ album, tracks }: AlbumPlayerProps) {
 
   return (
     <div className="flex flex-col gap-4">
+      {/*
+        The transport, docked.
+
+        The album page had no playback control of any kind: pressing Play
+        started the record and then there was no way to pause it, scrub it, or
+        even see which song was on — the tracklist highlight was the only clue.
+        The modal that does all of that was already mounted globally in
+        PlayerRoot, but the only thing that opens it, VinylMiniPlayer, was
+        mounted solely on the store and clips surfaces.
+
+        Fixed rather than inline so it stays reachable while scrolling a
+        14-track list, and offset from the left edge to clear the draggable
+        logo button. It renders nothing until a track is loaded.
+      */}
+      {isClient && state.currentTrack && (
+        <div className="fixed bottom-5 left-20 z-40 rounded-full bg-[#1c1a19]/90 backdrop-blur-md border border-[#502d26]/60 px-3 py-2 shadow-lg shadow-black/40">
+          <VinylMiniPlayer />
+        </div>
+      )}
+
       {/* Controls */}
       <div className="flex items-center gap-2">
         <button

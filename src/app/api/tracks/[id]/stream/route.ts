@@ -82,9 +82,21 @@ async function handleProxy(req: NextRequest, id: string, headOnly = false) {
     
     console.log(`Proxying audio request to: ${sourceUrl}`);
 
-    // Make request to upstream server (R2/CDN)
+    // A HEAD is asked for upstream as a one-byte GET, NOT as a HEAD.
+    //
+    // sourceUrl resolves to a PRESIGNED R2 URL, and a presigned URL is signed
+    // for one specific method: sending HEAD to a GET signature fails
+    // validation and R2 answers 403. The player probes every track with HEAD
+    // before playing ("Testing stream accessibility"), so this made the whole
+    // album unplayable while a plain GET returned perfectly good audio.
+    //
+    // `Range: bytes=0-0` gets the real content type and total length out of
+    // the 206's Content-Range without transferring the file.
+    const probing = headOnly && !range;
+    if (probing) upstreamHeaders['Range'] = 'bytes=0-0';
+
     const upstream = await fetch(sourceUrl, {
-      method: headOnly ? 'HEAD' : 'GET',
+      method: 'GET',
       headers: upstreamHeaders,
       redirect: 'follow',
       // Disable Next.js fetch caching to avoid stale/opaque failures
@@ -155,6 +167,19 @@ async function handleProxy(req: NextRequest, id: string, headOnly = false) {
     console.log(`Streaming response: ${status} for track ${id} (${range ? 'range' : 'full'})`);
 
     if (headOnly) {
+      // Undo the probe range: a HEAD must describe the WHOLE resource, so
+      // report the total size from Content-Range rather than the 1 byte that
+      // was actually fetched, and answer 200 rather than 206.
+      if (probing) {
+        const total = upstream.headers.get('content-range')?.split('/')[1];
+        if (total && /^\d+$/.test(total)) responseHeaders.set('content-length', total);
+        else responseHeaders.delete('content-length');
+        responseHeaders.delete('content-range');
+        responseHeaders.set('accept-ranges', 'bytes');
+        // Cancel the body we asked for but do not want.
+        void upstream.body?.cancel().catch(() => {});
+        return new NextResponse(null, { status: 200, headers: responseHeaders });
+      }
       return new NextResponse(null, { status, headers: responseHeaders });
     }
 

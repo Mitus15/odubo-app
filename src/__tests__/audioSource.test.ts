@@ -138,10 +138,13 @@ describe('deriveHlsUrl', () => {
     );
   });
 
-  it('works for a raw master with no .web suffix', () => {
-    expect(deriveHlsUrl('/api/media/audio/warehouse/p/master/1-song.wav')).toBe(
-      '/api/media/audio/warehouse/p/master/1-song.hls/master.m3u8'
-    );
+  it('refuses to invent a manifest for a file with no .web marker', () => {
+    // Only transcode_audio_to_hls writes a .hls/ directory, and only beside a
+    // .web.<ext> file. Deriving a URL for anything else advertises a manifest
+    // that 404s — and the player treats that as a fatal hls.js error rather
+    // than falling through, so the track never starts.
+    expect(deriveHlsUrl('/api/media/audio/warehouse/p/master/1-song.wav')).toBeNull();
+    expect(deriveHlsUrl('/api/media/audio/warehouse/p/commercial/1788-welcome.m4a')).toBeNull();
   });
 
   it('returns null when there is nothing to derive', () => {

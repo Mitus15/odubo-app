@@ -170,7 +170,16 @@ export function deriveHlsUrl(audioUrl: string | null | undefined): string | null
     if (!file) return null;
     const dot = file.lastIndexOf('.');
     const nameNoExt = dot > 0 ? file.slice(0, dot) : file;
-    const baseName = nameNoExt.endsWith('.web') ? nameNoExt.slice(0, -4) : nameNoExt;
+
+    // A `.hls/` directory is only ever written by transcode_audio_to_hls.ts,
+    // and only beside a `.web.<ext>` file produced by transcode_audio_to_web.
+    // Without that marker there is no manifest, and guessing one costs every
+    // track a failed request before it falls back to the progressive stream —
+    // which is exactly what made the whole album fail to start: the player
+    // treats a 404 manifest as a fatal hls.js error.
+    if (!nameNoExt.endsWith('.web')) return null;
+
+    const baseName = nameNoExt.slice(0, -4);
     if (!baseName) return null;
     return `${dir}/${baseName}.hls/master.m3u8`;
   };
