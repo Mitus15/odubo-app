@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { queryDatabase, executeQuery } from '@/lib/db';
+import { requireAdmin } from '@/lib/api/requireAdmin';
 
 // GET /api/command-center/video-releases - List all video releases
 export async function GET(request: NextRequest) {
   try {
+    const gate = await requireAdmin(request);
+    if (gate.error) return gate.error;
+
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
     const videoType = searchParams.get('videoType');
@@ -97,6 +101,9 @@ export async function GET(request: NextRequest) {
 // POST /api/command-center/video-releases - Create a new video release
 export async function POST(request: NextRequest) {
   try {
+    const gate = await requireAdmin(request);
+    if (gate.error) return gate.error;
+
     const body = await request.json();
 
     const {

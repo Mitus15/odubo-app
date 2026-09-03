@@ -3,6 +3,7 @@ import type { NextRequest } from 'next/server';
 import { COUNTRY_COOKIE, normalizeCountry } from '@/lib/store/money';
 import { VOTER_COOKIE, verifyVoter, mintVoter } from '@/lib/loop/anthem-identity';
 import { ADMIN_COOKIE as LOOP_ADMIN_COOKIE, verifyAdminSession as verifyLoopAdminSession } from '@/lib/loop/admin-auth';
+import { verifyUserFromRequest, isAdminUser } from '@/lib/auth';
 
 /**
  * Subdomain routing
@@ -144,11 +145,41 @@ async function handleLoopSoul(request: NextRequest): Promise<NextResponse | null
   return res;
 }
 
+
+/**
+ * Command Center API gate.
+ *
+ * /api/command-center/** reads and writes the distribution release tables —
+ * the album's UPCs, ISRCs and DSP targets. Every one of those routes shipped
+ * with no auth at all, so POST/PATCH/DELETE were open to the internet.
+ *
+ * The routes now gate themselves with requireAdmin(); this is belt-and-braces
+ * at the edge so a newly added handler cannot reintroduce the hole by
+ * forgetting the in-route check. Signature-verifying, not payload-decoding.
+ *
+ * Returns null for every other path.
+ */
+async function handleCommandCenterApi(request: NextRequest): Promise<NextResponse | null> {
+  if (!request.nextUrl.pathname.startsWith('/api/command-center/')) return null;
+
+  const user = await verifyUserFromRequest(request);
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  if (!isAdminUser(user)) {
+    return NextResponse.json({ error: 'Forbidden: Admins only' }, { status: 403 });
+  }
+  return null;
+}
+
 /**
  * Middleware - subdomain routing + Loop Soul surface
  * Clerk has been removed in favor of JWT-based auth for admin
  */
 export default async function middleware(request: NextRequest) {
+  const denied = await handleCommandCenterApi(request);
+  if (denied) return denied;
+
   const response =
     (await handleLoopSoul(request)) ??
     handleSubdomainRouting(request) ??

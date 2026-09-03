@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import { queryDatabase } from '@/lib/db';
+import { resolveAudioSource } from '@/lib/release/audioSource';
 
 export const runtime = 'edge';
 
@@ -43,6 +44,20 @@ async function handleProxy(req: NextRequest, id: string, headOnly = false) {
       console.error(`No audio URL for track: ${id} (${title})`);
       return NextResponse.json({ error: 'Audio file not available' }, { status: 404 });
     }
+
+    // Two things the stored value cannot do on its own: a root-relative path
+    // (what shipping a master writes) is unfetchable from the edge, and every
+    // URL the transcode CLI has ever written points at media.odubo.studio,
+    // which no longer resolves. Both are handled in one pure step.
+    const resolved = resolveAudioSource(audioUrl, req.nextUrl.origin);
+    if (!resolved.url) {
+      console.error(`Track ${id} (${title}) has an unplayable audio_url: ${audioUrl}`);
+      return NextResponse.json({ error: 'Audio file not available' }, { status: 404 });
+    }
+    const sourceUrl = resolved.url;
+    if (resolved.rewritten) {
+      console.warn(`Track ${id}: rewrote a dead media host to the R2 proxy`);
+    }
     
     // Allow streaming as long as an audio URL exists, even if status is not "ready".
     // Some ingestion pipelines mark items as pending while the file is already accessible.
@@ -65,10 +80,10 @@ async function handleProxy(req: NextRequest, id: string, headOnly = false) {
     upstreamHeaders['User-Agent'] = 'Odubo-Music-Streamer/2.0';
     upstreamHeaders['Accept-Encoding'] = 'identity'; // Prevent compression for audio streaming
     
-    console.log(`Proxying audio request to: ${audioUrl}`);
+    console.log(`Proxying audio request to: ${sourceUrl}`);
 
     // Make request to upstream server (R2/CDN)
-    const upstream = await fetch(audioUrl, {
+    const upstream = await fetch(sourceUrl, {
       method: headOnly ? 'HEAD' : 'GET',
       headers: upstreamHeaders,
       redirect: 'follow',
@@ -77,7 +92,7 @@ async function handleProxy(req: NextRequest, id: string, headOnly = false) {
     });
 
     if (!upstream.ok) {
-      console.error(`Upstream request failed: ${upstream.status} ${upstream.statusText} for ${audioUrl}`);
+      console.error(`Upstream request failed: ${upstream.status} ${upstream.statusText} for ${sourceUrl}`);
       return new NextResponse(null, { status: upstream.status, headers: new Headers({ 'x-upstream-error': String(upstream.status) }) });
     }
 
@@ -124,7 +139,7 @@ async function handleProxy(req: NextRequest, id: string, headOnly = false) {
     const existingContentType = responseHeaders.get('content-type') || '';
     if (!existingContentType.toLowerCase().startsWith('audio/')) {
       // Fallback content type detection from URL extension
-      const contentType = detectAudioContentType(audioUrl);
+      const contentType = detectAudioContentType(sourceUrl);
       if (contentType) {
         responseHeaders.set('content-type', contentType);
       } else if (existingContentType) {

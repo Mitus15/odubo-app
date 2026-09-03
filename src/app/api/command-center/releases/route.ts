@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { queryDatabase, executeQuery } from '@/lib/db';
+import { requireAdmin } from '@/lib/api/requireAdmin';
 
 // GET /api/command-center/releases - List all releases
 export async function GET(request: NextRequest) {
   try {
+    const gate = await requireAdmin(request);
+    if (gate.error) return gate.error;
+
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
     const page = parseInt(searchParams.get('page') || '1');
@@ -84,6 +88,9 @@ export async function GET(request: NextRequest) {
 // POST /api/command-center/releases - Create a new release
 export async function POST(request: NextRequest) {
   try {
+    const gate = await requireAdmin(request);
+    if (gate.error) return gate.error;
+
     const body = await request.json();
 
     const {

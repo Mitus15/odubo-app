@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback } from 'react';
 // Map child sections to their parent sections
 const SECTION_PARENT_MAP: Record<string, string> = {
   // CMS
+  'release': 'cms',
   'music-library': 'cms',
   'video-library': 'cms',
   'moments': 'cms',
