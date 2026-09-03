@@ -9,6 +9,7 @@ import PieceGrid from './PieceGrid';
 import PieceDetail from './PieceDetail';
 import InboxPanel from './InboxPanel';
 import DocsPanel from '../components/DocsPanel';
+import DeliveryGrid from './DeliveryGrid';
 import type { ProjectFloorData } from './types';
 
 export default function ProjectFloorClient({ projectId }: { projectId: string }) {
@@ -212,6 +213,11 @@ export default function ProjectFloorClient({ projectId }: { projectId: string })
             pieces={pieces}
             onChanged={load}
           />
+        </section>
+
+        {/* ---- the delivery sheet ---- */}
+        <section className="mb-8">
+          <DeliveryGrid projectId={projectId} />
         </section>
 
         {/* ---- the writing ---- */}
