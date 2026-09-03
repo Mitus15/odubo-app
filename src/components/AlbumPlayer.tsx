@@ -4,11 +4,15 @@ import { useState, useEffect } from 'react';
 import { Album, Track } from '@/types/music';
 import { useMusicPlayer } from '@/contexts/MusicPlayerContext';
 import VinylMiniPlayer from '@/components/player/VinylMiniPlayer';
+import FieldPlayer from '@/components/field/FieldPlayer';
 
 interface AlbumPlayerProps {
   album: Album;
   tracks: Track[];
 }
+
+/** Songs with a stem pack published under warehouse/field/. */
+const FIELD_SONGS = new Set(['News Peak']);
 
 export default function AlbumPlayer({ album, tracks }: AlbumPlayerProps) {
   const { state, playTrack, playAlbum, addToQueue, toggleShuffle, playFromQueue } = useMusicPlayer();
@@ -72,6 +76,18 @@ export default function AlbumPlayer({ album, tracks }: AlbumPlayerProps) {
         <div className="fixed bottom-5 left-20 z-40 rounded-full bg-[#1c1a19]/90 backdrop-blur-md border border-[#502d26]/60 px-3 py-2 shadow-lg shadow-black/40">
           <VinylMiniPlayer />
         </div>
+      )}
+
+      {/*
+        The field, for the songs that have a stem pack.
+
+        Only News Peak is packed today — it is the test bed, and 1984 is the
+        one that ships. Keyed off the title rather than a flag because there is
+        no column for this yet; when the second song is packed, that is the
+        moment to give it one rather than extend a list.
+      */}
+      {isClient && tracks.some((t) => FIELD_SONGS.has(t.title)) && (
+        <FieldPlayer title={tracks.find((t) => FIELD_SONGS.has(t.title))!.title} />
       )}
 
       {/* Controls */}
