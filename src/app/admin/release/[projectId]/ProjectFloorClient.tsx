@@ -11,6 +11,7 @@ import InboxPanel from './InboxPanel';
 import DocsPanel from '../components/DocsPanel';
 import DeliveryGrid from './DeliveryGrid';
 import FolderIngest from './FolderIngest';
+import ReconcilePanel from './ReconcilePanel';
 import type { ProjectFloorData } from './types';
 
 export default function ProjectFloorClient({ projectId }: { projectId: string }) {
@@ -214,6 +215,11 @@ export default function ProjectFloorClient({ projectId }: { projectId: string })
             pieces={pieces}
             onChanged={load}
           />
+        </section>
+
+        {/* ---- name sync ---- */}
+        <section className="mb-8">
+          <ReconcilePanel projectId={projectId} tracks={tracks} onChanged={load} />
         </section>
 
         {/* ---- folder ingest ---- */}
