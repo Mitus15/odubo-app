@@ -10,6 +10,7 @@ import PieceDetail from './PieceDetail';
 import InboxPanel from './InboxPanel';
 import DocsPanel from '../components/DocsPanel';
 import DeliveryGrid from './DeliveryGrid';
+import FolderIngest from './FolderIngest';
 import type { ProjectFloorData } from './types';
 
 export default function ProjectFloorClient({ projectId }: { projectId: string }) {
@@ -213,6 +214,11 @@ export default function ProjectFloorClient({ projectId }: { projectId: string })
             pieces={pieces}
             onChanged={load}
           />
+        </section>
+
+        {/* ---- folder ingest ---- */}
+        <section className="mb-8">
+          <FolderIngest projectId={projectId} tracks={tracks} onDone={load} />
         </section>
 
         {/* ---- the delivery sheet ---- */}
