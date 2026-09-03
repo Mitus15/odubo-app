@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValue, useTransform, animate, type Variants } from 'framer-motion';
 import { useUnifiedMedia } from '@/contexts/UnifiedMediaContext';
 import { useOmniShop } from '@/contexts/OmniShopContext';
 import { useStore } from '@/contexts/StoreContext';
@@ -327,11 +327,30 @@ export default function ExpandableLogoMenu({
     });
   }, [collapse, closeAllModals, openStore]);
 
+  /**
+   * Go to the record.
+   *
+   * A plain navigation rather than a modal: the album page owns a real
+   * transport and the stem field, neither of which belongs in an overlay
+   * floating above the clips feed.
+   *
+   * Points at /music, never at an album id — the route decides which album,
+   * so this button does not need editing when the next one lands.
+   */
+  const handleMusic = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    collapse();
+    requestAnimationFrame(() => {
+      closeAllModals();
+      window.location.href = '/music';
+    });
+  }, [collapse, closeAllModals]);
+
   // ============================================================================
   // Animation Variants (memoized for performance)
   // ============================================================================
 
-  const menuVariants = useMemo(() => ({
+  const menuVariants = useMemo<Variants>(() => ({
     collapsed: {
       transition: {
         staggerChildren: 0.025, // Slightly faster stagger on close
@@ -349,7 +368,7 @@ export default function ExpandableLogoMenu({
   }), []);
 
   // Optimized: Use tween instead of spring for menu items (faster calculations)
-  const itemVariants = useMemo(() => ({
+  const itemVariants = useMemo<Variants>(() => ({
     collapsed: {
       opacity: 0,
       scale: 0.95,
@@ -373,7 +392,7 @@ export default function ExpandableLogoMenu({
   }), []);
 
   // Optimized: faster spring with lower mass, smoother close
-  const logoVariants = useMemo(() => ({
+  const logoVariants = useMemo<Variants>(() => ({
     collapsed: {
       rotate: 0,
       scale: 1,
@@ -396,7 +415,7 @@ export default function ExpandableLogoMenu({
     },
   }), []);
 
-  const connectingLineVariants = useMemo(() => ({
+  const connectingLineVariants = useMemo<Variants>(() => ({
     collapsed: {
       opacity: 0,
       scaleY: 0,
@@ -507,6 +526,31 @@ export default function ExpandableLogoMenu({
                   flexDirection: menuDirection === 'up' ? 'column-reverse' : 'column',
                 }}
               >
+              {/* Music — the album, its player and the stem field. */}
+              <motion.div variants={itemVariants} className="relative">
+                <button
+                  onClick={handleMusic}
+                  className="holo-button"
+                  aria-label="Music"
+                  style={{ touchAction: 'manipulation' }}
+                >
+                  <svg
+                    className="w-5 h-5"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M9 18V5l12-2v13" />
+                    <circle cx="6" cy="18" r="3" />
+                    <circle cx="18" cy="16" r="3" />
+                  </svg>
+                </button>
+              </motion.div>
+
               {/* Shop button with odubo studio logo - conditionally rendered */}
               {!checkingStoreAccess && storeAccessible && (
                 <motion.div
