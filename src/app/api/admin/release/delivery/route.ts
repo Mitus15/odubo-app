@@ -221,6 +221,28 @@ export async function PATCH(req: NextRequest) {
       }
     }
 
+    // ---- keep the album's running order in step ------------------------
+    // Delivery and preview are allowed to disagree about the AUDIO (an AIFF
+    // ships fine and no browser plays it) but never about the ORDER: a record
+    // that streams in a different sequence than it ships is simply wrong.
+    // Propagated through internal_track_id, which this route cannot itself
+    // write — so it can only ever follow a link the ship endpoint made.
+    let previewReordered = 0;
+    for (const row of body.tracks ?? []) {
+      if (!Object.hasOwn(row, 'track_number')) continue;
+      const id = typeof row.id === 'string' ? row.id : null;
+      if (!id || !existingIds.has(id)) continue;
+      const number = normalize('track_number', row.track_number);
+      if (number === null) continue;
+      await executeQuery(
+        `UPDATE tracks SET track_number = ?, updated_at = datetime('now')
+          WHERE id = (SELECT internal_track_id FROM distribution_release_tracks
+                       WHERE id = ? AND internal_track_id IS NOT NULL)`,
+        [number, id]
+      );
+      previewReordered++;
+    }
+
     for (const id of body.deleteTrackIds ?? []) {
       if (!existingIds.has(id)) continue;
       await executeQuery(
@@ -242,7 +264,7 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({
       release: releaseRows?.[0] ?? null,
       tracks: trackRows ?? [],
-      changed: { releaseUpdated, tracksUpdated, tracksInserted, tracksDeleted },
+      changed: { releaseUpdated, tracksUpdated, tracksInserted, tracksDeleted, previewReordered },
     });
   } catch (error) {
     console.error('Save delivery sheet failed:', error);

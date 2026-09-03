@@ -94,6 +94,47 @@ export default function DeliveryGrid({ projectId }: { projectId: string }) {
     setDirty(true);
   };
 
+  /**
+   * Move a song up or down the record.
+   *
+   * Renumbers EVERY row 1..n afterwards rather than swapping two numbers.
+   * Swapping preserves whatever gaps or duplicates were already there, and a
+   * gap means a missing song on the distributor's sheet — validation blocks
+   * on it, so the control that sets the order has to leave it clean.
+   */
+  const move = (id: string, direction: -1 | 1) => {
+    setData((d) => {
+      if (!d) return d;
+      const ordered = [...d.tracks].sort(
+        (a, b) => (a.track_number ?? 0) - (b.track_number ?? 0)
+      );
+      const from = ordered.findIndex((t) => t.id === id);
+      const to = from + direction;
+      if (from < 0 || to < 0 || to >= ordered.length) return d;
+      const [moved] = ordered.splice(from, 1);
+      ordered.splice(to, 0, moved);
+      return { ...d, tracks: ordered.map((t, i) => ({ ...t, track_number: i + 1 })) };
+    });
+    setDirty(true);
+  };
+
+  /** Type a position directly — useful when a song moves a long way. */
+  const moveTo = (id: string, position: number) => {
+    setData((d) => {
+      if (!d) return d;
+      const ordered = [...d.tracks].sort(
+        (a, b) => (a.track_number ?? 0) - (b.track_number ?? 0)
+      );
+      const from = ordered.findIndex((t) => t.id === id);
+      const to = Math.max(0, Math.min(ordered.length - 1, position - 1));
+      if (from < 0 || from === to) return d;
+      const [moved] = ordered.splice(from, 1);
+      ordered.splice(to, 0, moved);
+      return { ...d, tracks: ordered.map((t, i) => ({ ...t, track_number: i + 1 })) };
+    });
+    setDirty(true);
+  };
+
   const setTrack = (id: string, field: keyof CsvTrack, value: string | number | null) => {
     setData((d) =>
       d ? { ...d, tracks: d.tracks.map((t) => (t.id === id ? { ...t, [field]: value } : t)) } : d
@@ -180,6 +221,9 @@ export default function DeliveryGrid({ projectId }: { projectId: string }) {
   }
 
   const r = data.release;
+  const ordered = [...data.tracks].sort(
+    (a, b) => (a.track_number ?? 0) - (b.track_number ?? 0)
+  );
   const releaseErrors = new Set(
     (validation?.issues ?? []).filter((i) => i.severity === 'error' && !i.trackId).map((i) => i.field)
   );
@@ -258,7 +302,7 @@ export default function DeliveryGrid({ projectId }: { projectId: string }) {
           <table className="w-full min-w-[900px] text-xs">
             <thead>
               <tr className="border-b border-[#502d26]/60 text-[10px] uppercase tracking-wide text-[#726d6c]">
-                <th className="px-3 py-2 text-left w-12">#</th>
+                <th className="px-2 py-2 text-left w-24" title="Reorder with the arrows, or type a position">#</th>
                 <th className="px-3 py-2 text-left">Title</th>
                 <th className="px-3 py-2 text-left w-40">Artist</th>
                 <th className="px-3 py-2 text-left w-36">ISRC</th>
@@ -268,15 +312,38 @@ export default function DeliveryGrid({ projectId }: { projectId: string }) {
               </tr>
             </thead>
             <tbody>
-              {data.tracks.map((t) => (
+              {ordered.map((t, index) => (
                 <tr key={t.id} className="border-b border-[#502d26]/30 last:border-0">
-                  <td className="px-3 py-1.5">
-                    <Cell
-                      value={String(t.track_number ?? '')}
-                      onChange={(v) => setTrack(t.id, 'track_number', v === '' ? null : Number(v))}
-                      align="right"
-                      invalid={bad(t.id, 'track_number')}
-                    />
+                  <td className="px-2 py-1.5">
+                    <div className="flex items-center gap-1">
+                      <Cell
+                        value={String(t.track_number ?? '')}
+                        onChange={(v) => v !== '' && moveTo(t.id, Number(v))}
+                        align="right"
+                        width="2.6rem"
+                        invalid={bad(t.id, 'track_number')}
+                      />
+                      <div className="flex flex-col leading-none">
+                        <button
+                          type="button"
+                          onClick={() => move(t.id, -1)}
+                          disabled={index === 0}
+                          title="Move up"
+                          className="text-[#726d6c] hover:text-[#ede8df] disabled:opacity-25 disabled:hover:text-[#726d6c] text-[9px] px-1"
+                        >
+                          ▲
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => move(t.id, 1)}
+                          disabled={index === ordered.length - 1}
+                          title="Move down"
+                          className="text-[#726d6c] hover:text-[#ede8df] disabled:opacity-25 disabled:hover:text-[#726d6c] text-[9px] px-1"
+                        >
+                          ▼
+                        </button>
+                      </div>
+                    </div>
                   </td>
                   <td className="px-3 py-1.5">
                     <Cell value={t.title ?? ''} onChange={(v) => setTrack(t.id, 'title', v)} invalid={bad(t.id, 'title')} />
