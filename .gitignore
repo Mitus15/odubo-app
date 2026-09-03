@@ -51,7 +51,7 @@ worker/node_modules/
 assets/blender/
 
 # Projects & Spinoffs
-projects/
+/projects/
 
 # clerk configuration (can include secrets)
 /.clerk/
