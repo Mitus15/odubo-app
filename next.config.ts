@@ -6,6 +6,15 @@ import type { NextConfig } from "next";
 // `next dev` a workerd boot. Cloudflare itself stays: D1, R2 and Stream are
 // still the data layer, and wrangler still runs migrations.
 
+/**
+ * The bare hostname of this account's R2 S3 endpoint, e.g.
+ * "<account>.r2.cloudflarestorage.com". Undefined in environments that do not
+ * talk to R2, in which case no pattern is added at all.
+ */
+const r2Host = (process.env.CLOUDFLARE_R2_ENDPOINT || process.env.R2_ENDPOINT || '')
+  .replace(/^https?:\/\//, '')
+  .replace(/\/.*$/, '') || undefined;
+
 const nextConfig: NextConfig = {
   reactStrictMode: false,
   typescript: {
@@ -56,7 +65,20 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**',
       },
-      // Wildcards are not supported in hostname; add explicit pattern for your account if needed
+      // The R2 S3 endpoint for THIS account.
+      //
+      // /api/media/audio/<key> answers with a 302 to a presigned R2 URL, and
+      // next/image follows that redirect server-side. Without the final host
+      // allowed here the optimizer refuses it and returns 500 — which is not
+      // a broken image, it is a broken PAGE, and the only symptom is a
+      // missing cover.
+      //
+      // Read from env rather than hardcoded: the account hash is not a
+      // constant, and a wrong literal here fails only at runtime, in
+      // production, on the one asset everybody looks at first.
+      ...(r2Host
+        ? [{ protocol: 'https' as const, hostname: r2Host, port: '', pathname: '/**' }]
+        : []),
     ],
   },
   serverExternalPackages: ['@aws-sdk/client-s3'],

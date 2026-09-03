@@ -20,6 +20,30 @@ import { isServableKey } from '@/lib/release/audioSource';
 
 export const runtime = 'nodejs';
 
+/** Extensions served as bytes rather than a redirect. */
+const IMAGE_TYPES: Record<string, string> = {
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  webp: 'image/webp',
+  gif: 'image/gif',
+  avif: 'image/avif',
+};
+
+function extensionOfKey(key: string): string {
+  const name = key.split('/').pop() ?? '';
+  const dot = name.lastIndexOf('.');
+  return dot > 0 ? name.slice(dot + 1).toLowerCase() : '';
+}
+
+function isImageKey(key: string): boolean {
+  return extensionOfKey(key) in IMAGE_TYPES;
+}
+
+function contentTypeFor(key: string): string {
+  return IMAGE_TYPES[extensionOfKey(key)] ?? 'application/octet-stream';
+}
+
 export async function GET(
   req: NextRequest,
   ctx: { params: Promise<{ key: string[] }> }
@@ -38,13 +62,36 @@ export async function GET(
       expiresIn: 3600,
     });
 
-    // 302 rather than piping the bytes: a master is hundreds of megabytes and
-    // the browser should range-request R2 directly. The redirect is cached
-    // well inside the presign's validity.
-    return NextResponse.redirect(url, {
-      status: 302,
-      headers: { 'Cache-Control': 'private, max-age=900' },
+    // Images are PIPED; audio is REDIRECTED. The split is not arbitrary.
+    //
+    // A master is hundreds of megabytes, so the browser should range-request
+    // R2 directly and a 302 is exactly right. But next/image fetches this URL
+    // server-side and does NOT follow the redirect — it reads the empty
+    // redirect body and hands sharp nothing, which surfaces as
+    // "Input Buffer is empty" and a 500 from the optimizer. Not a broken
+    // image: a broken page, whose only symptom is a missing cover.
+    //
+    // Cover art is a couple of megabytes and is fetched once and then cached
+    // by the optimizer, so piping it through the Function costs nothing.
+    if (!isImageKey(key)) {
+      return NextResponse.redirect(url, {
+        status: 302,
+        headers: { 'Cache-Control': 'private, max-age=900' },
+      });
+    }
+
+    const upstream = await fetch(url, { cache: 'no-store' });
+    if (!upstream.ok || !upstream.body) {
+      console.error(`[media:image] upstream ${upstream.status} for ${key}`);
+      return NextResponse.json({ error: 'Media unavailable' }, { status: 502 });
+    }
+    const headers = new Headers({
+      'Content-Type': upstream.headers.get('content-type') ?? contentTypeFor(key),
+      'Cache-Control': 'public, max-age=31536000, immutable',
     });
+    const length = upstream.headers.get('content-length');
+    if (length) headers.set('Content-Length', length);
+    return new NextResponse(upstream.body, { status: 200, headers });
   } catch (err) {
     console.error('[media:audio] presign failed:', err);
     return NextResponse.json({ error: 'Media unavailable' }, { status: 502 });
