@@ -211,3 +211,32 @@ describe('squash', () => {
     expect(squash('The Mind Pt. 2')).toBe('themindpt2');
   });
 });
+
+describe('artwork sitting at the album root', () => {
+  it('reads the cover from the filename when no folder says so', () => {
+    // The real album folder has cover-art.png at the top level, with no
+    // "cover art/" directory to classify it.
+    const plan = planFolder(['cover-art.png'], TRACKS);
+    const file = plan.files[0];
+    expect(file.pieceKind).toBe('cover');
+    expect(file.fileClass).toBe('commercial');
+  });
+
+  it('routes a root-level sleeve PSD to packaging as working art', () => {
+    const plan = planFolder(['vinyl-sleeve.psd'], TRACKS);
+    expect(plan.files[0].pieceKind).toBe('packaging');
+    expect(plan.files[0].fileClass).toBe('working');
+  });
+
+  it('still lets a folder overrule the filename', () => {
+    // A file called "cover.wav" inside masters/ is audio, not artwork.
+    const plan = planFolder(['News Peak/masters/cover.wav'], TRACKS);
+    expect(plan.files[0].pieceKind).toBe('track-master');
+    expect(plan.files[0].fileCategory).toBe('audio-master');
+  });
+
+  it('does not mistake an ordinary photo for the cover', () => {
+    const plan = planFolder(['studio-day.jpg'], TRACKS);
+    expect(plan.files[0].pieceKind).toBe('other');
+  });
+});

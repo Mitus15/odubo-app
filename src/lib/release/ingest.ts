@@ -259,8 +259,27 @@ function classify(path: string, extension: string): Classification | null {
       break;
   }
 
-  // No category folder — fall back to the file type alone. Deliberately
-  // conservative: nothing reached this way is ever auto-shipped.
+  // No category folder. Before falling back to the file type, read the
+  // FILENAME for the same keywords — `cover-art.png` sitting at the album
+  // root is unmistakably the cover, and dropping it into a generic bucket
+  // means the owner has to re-file the one image that matters most.
+  // Filename evidence is only ever consulted here, never over a folder.
+  const stem = (path.split('/').pop() ?? '').toLowerCase();
+  if (isImage || isSource) {
+    const named = classifySegment(stem);
+    if (named === 'cover' || named === 'packaging') {
+      return {
+        pieceKind: named,
+        fileClass: isSource ? 'working' : 'commercial',
+        fileCategory: isSource ? 'artwork-source' : 'preview-image',
+        shipCandidate: false,
+        note: `named "${stem}" — ${named === 'cover' ? 'cover art' : 'packaging'}`,
+      };
+    }
+  }
+
+  // Fall back to the file type alone. Deliberately conservative: nothing
+  // reached this way is ever auto-shipped.
   if (isAudio) {
     return {
       pieceKind: 'track-master',
