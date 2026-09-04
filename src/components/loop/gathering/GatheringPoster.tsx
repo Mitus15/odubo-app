@@ -158,13 +158,18 @@ export function GatheringPoster({
             An Album by Mani Odubo
           </div>
           <div className="relative min-h-0 w-full flex-1">
+            {/* The crowd — the poster kit's primary figure (BRAND_FIGURES[0]),
+                so the page behind the QR opens with the same cast as the print.
+                It's a wide strip, so it centres in the air between the credit
+                and the date block rather than top-hugging like the old
+                portrait figure did. */}
             <Image
-              src="/loop/figures/dance.png"
+              src="/loop/figures/crowd.png"
               alt="Loop Soul dancers in silhouette"
               fill
               priority
               unoptimized
-              className="object-contain object-top"
+              className="object-contain object-center"
             />
           </div>
         </div>
