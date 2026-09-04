@@ -31,6 +31,14 @@ export async function GatheringHome({ event }: { event: LoopEvent }) {
     month: "short",
     day: "numeric",
   });
+  // The long form for the info section below the poster — a guest planning
+  // their Saturday wants the weekday, not just "Sep 26".
+  const fullDateLabel = when.toLocaleDateString("en-CA", {
+    timeZone: "America/Vancouver",
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
   const timeLabel = when.toLocaleTimeString("en-CA", {
     timeZone: "America/Vancouver",
     hour: "numeric",
@@ -47,6 +55,7 @@ export async function GatheringHome({ event }: { event: LoopEvent }) {
       price={passSettings.price}
       currency={passSettings.currency}
       dateLabel={dateLabel}
+      fullDateLabel={fullDateLabel}
       timeLabel={timeLabel}
       journalPublished={journalPublished}
     />
