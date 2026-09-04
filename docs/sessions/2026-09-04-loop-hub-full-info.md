@@ -63,3 +63,25 @@ back.
 This worktree has no `node_modules`; a symlink to the main repo's was added
 (untracked). Turbopack refuses it ("Next.js package not found") — run webpack
 dev instead: `node node_modules/next/dist/bin/next dev -p <port>`.
+
+---
+
+## Second pass, same day — the playbill (owner-directed)
+
+Owner feedback: Come Dance was awkward and is not the album's name (→ under
+the image); the credit is the centrepiece; sell first (Amen the DJ, the
+livestreamed dancefloor, the album live, games); show don't tell, **no
+paragraphs, no card bubbles** — tappable text, distinct shapes only.
+
+Rebuilt `GatheringPoster` as a playbill: hero (crowd → Come Dance → AN ALBUM
+BY MANI ODUBO big) → On the Bill (billing stack + essentials strip) → The
+Night (timeline rail from D1 run_of_show — which the owner rewrote to three
+movements with Amen on every slot and "after party TBA") → The Record (live
+track count via new `getAlbumFacts()` in GatheringHome; hear 1984 / shoot the
+cover rows) → The Circle (register → be there → keep it all) → Doors (index
+rows). One drawn shape: the pass button. Owner's design rules captured in
+memory as `owner-design-language`.
+
+Facts that changed today, in code: **no band — Mani Odubo & Amen the DJ**;
+front-door line reads "Lounge 6:30"; the dancefloor **livestream is promised
+on the bill but not built**; D1 album currently carries **14 tracks**.
