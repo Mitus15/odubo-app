@@ -27,7 +27,7 @@ export async function generateMetadata({ params }: { params: Promise<{ handle: s
   const product = res.product;
   return generateProductMetadata({
     title: product.title,
-    description: product.description || `Shop ${product.title} at Odubo Studio`,
+    description: product.seoDescription || product.description || `Shop ${product.title} at Odubo Studio`,
     handle: product.handle,
     image: product.images[0],
     price: String(product.price),
@@ -48,6 +48,9 @@ async function fetchProduct(handle: string, country?: string) {
     title: p.title,
     handle: p.handle,
     description: p.description,
+    descriptionHtml: p.descriptionHtml || '',
+    seoDescription: p.seoDescription || null,
+    vendor: p.vendor,
     images: p.images.map(url => ({ src: url })),
     options: (p as any).options || [],
     variants: p.variants.map((v: any) => ({
@@ -74,12 +77,12 @@ function generateProductJsonLd(product: NonNullable<Awaited<ReturnType<typeof fe
     '@context': 'https://schema.org',
     '@type': 'Product',
     name: product.title,
-    description: product.description || `Shop ${product.title} at Odubo Studio`,
+    description: product.seoDescription || product.description || `Shop ${product.title} at Odubo Studio`,
     image: product.images.map(img => img.src),
     url: `${baseUrl}/store/product/${product.handle}`,
     brand: {
       '@type': 'Brand',
-      name: 'Odubo',
+      name: product.vendor || 'Odubo Studio',
     },
     offers: {
       '@type': 'Offer',

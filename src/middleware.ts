@@ -7,18 +7,30 @@ import { verifyUserFromRequest, isAdminUser } from '@/lib/auth';
 
 /**
  * Subdomain routing
- * - admin.odubo.studio → serves /admin routes at root
- * - moments.odubo.studio → serves /moments routes at root
- * - odubo.studio/admin → redirects to admin.odubo.studio
- * - odubo.studio/moments → redirects to moments.odubo.studio
+ * - admin.<apex> → serves /admin routes at root
+ * - moments.<apex> → serves /moments routes at root
+ * - <apex>/admin → redirects to admin.<apex>
+ * - <apex>/moments → redirects to moments.<apex>
+ *
+ * The apex is resolved from the incoming host rather than hardcoded, so the
+ * redirects follow the visitor onto whichever production domain they arrived on.
+ * `odubostudio.com` does NOT contain the substring `odubo.studio`, so the old
+ * `includes()` check silently reported "not production" on the live domain.
  */
+const PRODUCTION_APEXES = ['odubostudio.com', 'odubo.studio'];
+
+function productionApex(hostname: string): string | null {
+  const host = (hostname.split(':')[0] || '').toLowerCase();
+  return PRODUCTION_APEXES.find((apex) => host === apex || host.endsWith(`.${apex}`)) ?? null;
+}
 function handleSubdomainRouting(request: NextRequest): NextResponse | null {
   const url = request.nextUrl.clone();
   const hostname = request.headers.get('host') || '';
 
   const isAdminSubdomain = hostname.startsWith('admin.');
   const isMomentsSubdomain = hostname.startsWith('moments.');
-  const isProduction = hostname.includes('odubo.studio');
+  const apex = productionApex(hostname);
+  const isProduction = apex !== null;
 
   if (isAdminSubdomain) {
     if (
@@ -35,7 +47,7 @@ function handleSubdomainRouting(request: NextRequest): NextResponse | null {
       url.pathname.startsWith('/reset-password')
     ) {
       if (isProduction) {
-        const loginUrl = new URL(url.pathname, `https://odubo.studio`);
+        const loginUrl = new URL(url.pathname, `https://${apex}`);
         loginUrl.search = url.search;
         return NextResponse.redirect(loginUrl);
       }
@@ -70,14 +82,14 @@ function handleSubdomainRouting(request: NextRequest): NextResponse | null {
 
   if (isProduction && url.pathname.startsWith('/admin')) {
     const adminPath = url.pathname.replace(/^\/admin/, '') || '/';
-    const adminUrl = new URL(adminPath, `https://admin.odubo.studio`);
+    const adminUrl = new URL(adminPath, `https://admin.${apex}`);
     adminUrl.search = url.search;
     return NextResponse.redirect(adminUrl);
   }
 
   if (isProduction && url.pathname.startsWith('/moments')) {
     const momentsPath = url.pathname.replace(/^\/moments/, '') || '/';
-    const momentsUrl = new URL(momentsPath, `https://moments.odubo.studio`);
+    const momentsUrl = new URL(momentsPath, `https://moments.${apex}`);
     momentsUrl.search = url.search;
     return NextResponse.redirect(momentsUrl);
   }

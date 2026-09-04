@@ -1,0 +1,4725 @@
+[
+  {
+    "id": "gid://shopify/Product/9295583379669",
+    "handle": "performance-longsleeve-t-shirt-2",
+    "title": "Performance Longsleeve T-Shirt",
+    "status": "ACTIVE",
+    "productType": "",
+    "vendor": "ODMPOD",
+    "tags": [],
+    "createdAt": "2026-03-07T03:11:15Z",
+    "updatedAt": "2026-08-28T23:35:21Z",
+    "publishedAt": "2026-03-07T03:11:31Z",
+    "totalInventory": 0,
+    "hasOnlyDefaultVariant": false,
+    "onlineStoreUrl": "https://odubostudio.myshopify.com/products/performance-longsleeve-t-shirt-2",
+    "description": "Care Instructions:Machine wash at 30°C (gentle cycle); Do not bleach; Tumble dry low; Iron at low temperature, avoid ironing on print; Do not dry clean Size Chart S M L XL 2XL inch cm inch cm inch cm inch cm inch cm Chest 15.9 40.5 16.7 42.5 17.5 44.5 18.3 46.5 19.1 48.5 Length 23.6 60 24.4 62 25.2 64 26.0 66 26.8 68 Shoulder 26.2 66.5 26.8 68 27.4 69.5 28.0 71 28.5 72.5 gid://shopify/Product/9295583379669",
+    "seo": {
+      "title": null,
+      "description": null
+    },
+    "featuredImage": {
+      "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/80d0eb9871074ad8a1e100d0f25b5178.png?v=1772853080",
+      "altText": null
+    },
+    "images": {
+      "edges": [
+        {
+          "node": {
+            "id": "gid://shopify/ProductImage/50418585600213",
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/80d0eb9871074ad8a1e100d0f25b5178.png?v=1772853080",
+            "altText": "",
+            "width": 1400,
+            "height": 1400
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductImage/50418585632981",
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/8e0cfda9f6034b4aa09d6d0a2a43cfbd.png?v=1772853080",
+            "altText": "",
+            "width": 1400,
+            "height": 1400
+          }
+        }
+      ]
+    },
+    "options": [
+      {
+        "name": "color",
+        "values": [
+          "Black"
+        ]
+      },
+      {
+        "name": "size",
+        "values": [
+          "S",
+          "M",
+          "L",
+          "XL",
+          "2XL"
+        ]
+      }
+    ],
+    "collections": {
+      "edges": [
+        {
+          "node": {
+            "handle": "clothes",
+            "title": "Clothes"
+          }
+        }
+      ]
+    },
+    "resourcePublicationsCount": {
+      "count": 6
+    },
+    "variants": {
+      "edges": [
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360591175893",
+            "title": "Black / S",
+            "sku": "260307PODRZ2649#001",
+            "price": "35.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/80d0eb9871074ad8a1e100d0f25b5178.png?v=1772853080"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.2,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360591208661",
+            "title": "Black / M",
+            "sku": "260307PODRZ2649#002",
+            "price": "35.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/80d0eb9871074ad8a1e100d0f25b5178.png?v=1772853080"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.2,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360591241429",
+            "title": "Black / L",
+            "sku": "260307PODRZ2649#003",
+            "price": "35.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/80d0eb9871074ad8a1e100d0f25b5178.png?v=1772853080"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.2,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360591274197",
+            "title": "Black / XL",
+            "sku": "260307PODRZ2649#004",
+            "price": "35.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/80d0eb9871074ad8a1e100d0f25b5178.png?v=1772853080"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.2,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360591306965",
+            "title": "Black / 2XL",
+            "sku": "260307PODRZ2649#005",
+            "price": "35.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/80d0eb9871074ad8a1e100d0f25b5178.png?v=1772853080"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.2,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "gid://shopify/Product/9295594717397",
+    "handle": "performance-long-sleeve-t-shirt-1",
+    "title": "Performance Long Sleeve T-Shirt",
+    "status": "ACTIVE",
+    "productType": "",
+    "vendor": "ODMPOD",
+    "tags": [],
+    "createdAt": "2026-03-07T03:16:00Z",
+    "updatedAt": "2026-08-28T23:35:21Z",
+    "publishedAt": "2026-03-07T03:16:16Z",
+    "totalInventory": 0,
+    "hasOnlyDefaultVariant": false,
+    "onlineStoreUrl": "https://odubostudio.myshopify.com/products/performance-long-sleeve-t-shirt-1",
+    "description": "Care Instructions:Machine wash at 30°C (gentle cycle); Do not bleach; Tumble dry low; Iron at low temperature, avoid ironing on print; Do not dry clean Size Chart S M L XL 2XL inch cm inch cm inch cm inch cm inch cm Chest 15.9 40.5 16.7 42.5 17.5 44.5 18.3 46.5 19.1 48.5 Length 23.6 60 24.4 62 25.2 64 26.0 66 26.8 68 Shoulder 26.2 66.5 26.8 68 27.4 69.5 28.0 71 28.5 72.5 gid://shopify/Product/9295594717397",
+    "seo": {
+      "title": null,
+      "description": null
+    },
+    "featuredImage": {
+      "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/f54b233dfaad49c08b7b6252aefce0fe.png?v=1772853365",
+      "altText": null
+    },
+    "images": {
+      "edges": [
+        {
+          "node": {
+            "id": "gid://shopify/ProductImage/50418594840789",
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/f54b233dfaad49c08b7b6252aefce0fe.png?v=1772853365",
+            "altText": "",
+            "width": 1400,
+            "height": 1400
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductImage/50418594873557",
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/1d4a9cb79543445b99f2875eb118dd8f.png?v=1772853365",
+            "altText": "",
+            "width": 1400,
+            "height": 1400
+          }
+        }
+      ]
+    },
+    "options": [
+      {
+        "name": "color",
+        "values": [
+          "Black"
+        ]
+      },
+      {
+        "name": "size",
+        "values": [
+          "S",
+          "M",
+          "L",
+          "XL",
+          "2XL"
+        ]
+      }
+    ],
+    "collections": {
+      "edges": [
+        {
+          "node": {
+            "handle": "clothes",
+            "title": "Clothes"
+          }
+        },
+        {
+          "node": {
+            "handle": "catching-light",
+            "title": "Catching Light"
+          }
+        }
+      ]
+    },
+    "resourcePublicationsCount": {
+      "count": 6
+    },
+    "variants": {
+      "edges": [
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360606085333",
+            "title": "Black / S",
+            "sku": "260307PODRZ2662#001",
+            "price": "35.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/f54b233dfaad49c08b7b6252aefce0fe.png?v=1772853365"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.2,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360606118101",
+            "title": "Black / M",
+            "sku": "260307PODRZ2662#002",
+            "price": "35.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/f54b233dfaad49c08b7b6252aefce0fe.png?v=1772853365"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.2,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360606150869",
+            "title": "Black / L",
+            "sku": "260307PODRZ2662#003",
+            "price": "35.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/f54b233dfaad49c08b7b6252aefce0fe.png?v=1772853365"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.2,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360606183637",
+            "title": "Black / XL",
+            "sku": "260307PODRZ2662#004",
+            "price": "35.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/f54b233dfaad49c08b7b6252aefce0fe.png?v=1772853365"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.2,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360606216405",
+            "title": "Black / 2XL",
+            "sku": "260307PODRZ2662#005",
+            "price": "35.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/f54b233dfaad49c08b7b6252aefce0fe.png?v=1772853365"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.2,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "gid://shopify/Product/9295605465301",
+    "handle": "catching-light-hoodie-2",
+    "title": "Bold Hoodie",
+    "status": "ACTIVE",
+    "productType": "",
+    "vendor": "ODMPOD",
+    "tags": [],
+    "createdAt": "2026-03-07T03:20:30Z",
+    "updatedAt": "2026-08-28T23:35:21Z",
+    "publishedAt": "2026-03-07T03:20:46Z",
+    "totalInventory": 0,
+    "hasOnlyDefaultVariant": false,
+    "onlineStoreUrl": "https://odubostudio.myshopify.com/products/catching-light-hoodie-2",
+    "description": "Care Instructions:Machine wash at 30°C (gentle cycle); Do not bleach; Tumble dry low; Iron at low temperature, avoid ironing on print; Do not dry clean Size Chart S M L XL 2XL inch cm inch cm inch cm inch cm inch cm Chest 26.0 66 26.8 68 27.6 70 28.3 72 29.1 74 Length 27.6 70 28.3 72 29.1 74 29.9 76 30.7 78 Shoulder 25.6 65 26.4 67 27.2 69 28.0 71 28.7 73 Sleeve length 21.1 53.5 21.5 54.5 21.9 55.5 22.2 56.5 22.6 57.5 gid://shopify/Product/9295605465301",
+    "seo": {
+      "title": null,
+      "description": null
+    },
+    "featuredImage": {
+      "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/ca248c1562914cf3b69d8bce7d063fae.png?v=1772853635",
+      "altText": null
+    },
+    "images": {
+      "edges": [
+        {
+          "node": {
+            "id": "gid://shopify/ProductImage/50418601951445",
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/ca248c1562914cf3b69d8bce7d063fae.png?v=1772853635",
+            "altText": "",
+            "width": 1400,
+            "height": 1400
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductImage/50418601984213",
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/1c6cf47485f8416cb575ff9b15574fba.png?v=1772853635",
+            "altText": "",
+            "width": 1400,
+            "height": 1400
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductImage/50418602016981",
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/5b033cbc2ba4415f85bba6f190ddffe2.png?v=1772853635",
+            "altText": "",
+            "width": 1400,
+            "height": 1400
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductImage/50418602049749",
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/3c5ed062202b440dab31a727728750c6.png?v=1772853635",
+            "altText": "",
+            "width": 1400,
+            "height": 1400
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductImage/50418602082517",
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/cb28f9688fa046b7a9ce8bc797b17a15.png?v=1772853635",
+            "altText": "",
+            "width": 1400,
+            "height": 1400
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductImage/50418602115285",
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/511bbb71134b4f7fb38d032b29ec6bc1.png?v=1772853636",
+            "altText": "",
+            "width": 1400,
+            "height": 1400
+          }
+        }
+      ]
+    },
+    "options": [
+      {
+        "name": "color",
+        "values": [
+          "Black",
+          "White",
+          "Gray Apricot"
+        ]
+      },
+      {
+        "name": "size",
+        "values": [
+          "S",
+          "M",
+          "L",
+          "XL",
+          "2XL"
+        ]
+      }
+    ],
+    "collections": {
+      "edges": [
+        {
+          "node": {
+            "handle": "clothes",
+            "title": "Clothes"
+          }
+        }
+      ]
+    },
+    "resourcePublicationsCount": {
+      "count": 6
+    },
+    "variants": {
+      "edges": [
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360618406101",
+            "title": "Black / S",
+            "sku": "260307PODRB2671#001",
+            "price": "70.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/ca248c1562914cf3b69d8bce7d063fae.png?v=1772853635"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.9,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360618438869",
+            "title": "Black / M",
+            "sku": "260307PODRB2671#002",
+            "price": "70.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/ca248c1562914cf3b69d8bce7d063fae.png?v=1772853635"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.9,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360618471637",
+            "title": "Black / L",
+            "sku": "260307PODRB2671#003",
+            "price": "70.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/ca248c1562914cf3b69d8bce7d063fae.png?v=1772853635"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.9,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360618504405",
+            "title": "Black / XL",
+            "sku": "260307PODRB2671#004",
+            "price": "70.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/ca248c1562914cf3b69d8bce7d063fae.png?v=1772853635"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.9,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360618537173",
+            "title": "Black / 2XL",
+            "sku": "260307PODRB2671#005",
+            "price": "70.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/ca248c1562914cf3b69d8bce7d063fae.png?v=1772853635"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.9,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360618569941",
+            "title": "White / S",
+            "sku": "260307PODRB2671#006",
+            "price": "70.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/5b033cbc2ba4415f85bba6f190ddffe2.png?v=1772853635"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.9,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360618602709",
+            "title": "White / M",
+            "sku": "260307PODRB2671#007",
+            "price": "70.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/5b033cbc2ba4415f85bba6f190ddffe2.png?v=1772853635"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.9,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360618635477",
+            "title": "White / L",
+            "sku": "260307PODRB2671#008",
+            "price": "70.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/5b033cbc2ba4415f85bba6f190ddffe2.png?v=1772853635"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.9,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360618668245",
+            "title": "White / XL",
+            "sku": "260307PODRB2671#009",
+            "price": "70.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/5b033cbc2ba4415f85bba6f190ddffe2.png?v=1772853635"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.9,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360618701013",
+            "title": "White / 2XL",
+            "sku": "260307PODRB2671#010",
+            "price": "70.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/5b033cbc2ba4415f85bba6f190ddffe2.png?v=1772853635"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.9,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360618733781",
+            "title": "Gray Apricot / S",
+            "sku": "260307PODRB2671#011",
+            "price": "70.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/cb28f9688fa046b7a9ce8bc797b17a15.png?v=1772853635"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.9,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360618766549",
+            "title": "Gray Apricot / M",
+            "sku": "260307PODRB2671#012",
+            "price": "70.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/cb28f9688fa046b7a9ce8bc797b17a15.png?v=1772853635"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.9,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360618799317",
+            "title": "Gray Apricot / L",
+            "sku": "260307PODRB2671#013",
+            "price": "70.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/cb28f9688fa046b7a9ce8bc797b17a15.png?v=1772853635"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.9,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360618832085",
+            "title": "Gray Apricot / XL",
+            "sku": "260307PODRB2671#014",
+            "price": "70.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/cb28f9688fa046b7a9ce8bc797b17a15.png?v=1772853635"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.9,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360618864853",
+            "title": "Gray Apricot / 2XL",
+            "sku": "260307PODRB2671#015",
+            "price": "70.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/cb28f9688fa046b7a9ce8bc797b17a15.png?v=1772853635"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.9,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "gid://shopify/Product/9295610904789",
+    "handle": "catching-light-hoodie-3",
+    "title": "Catching Light Hoodie",
+    "status": "ACTIVE",
+    "productType": "",
+    "vendor": "ODMPOD",
+    "tags": [],
+    "createdAt": "2026-03-07T03:22:45Z",
+    "updatedAt": "2026-08-28T23:35:22Z",
+    "publishedAt": "2026-03-07T03:23:01Z",
+    "totalInventory": 0,
+    "hasOnlyDefaultVariant": false,
+    "onlineStoreUrl": "https://odubostudio.myshopify.com/products/catching-light-hoodie-3",
+    "description": "Care Instructions:Machine wash at 30°C (gentle cycle); Do not bleach; Tumble dry low; Iron at low temperature, avoid ironing on print; Do not dry clean. Size Chart S M L XL 2XL inch cm inch cm inch cm inch cm inch cm Chest 26.0 66 26.8 68 27.6 70 28.3 72 29.1 74 Length 27.6 70 28.3 72 29.1 74 29.9 76 30.7 78 Shoulder 25.6 65 26.4 67 27.2 69 28.0 71 28.7 73 Sleeve length 21.1 53.5 21.5 54.5 21.9 55.5 22.2 56.5 22.6 57.5 gid://shopify/Product/9295610904789",
+    "seo": {
+      "title": null,
+      "description": null
+    },
+    "featuredImage": {
+      "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/b2279aefdcda47c1bd59a7362df2991f.png?v=1772853771",
+      "altText": null
+    },
+    "images": {
+      "edges": [
+        {
+          "node": {
+            "id": "gid://shopify/ProductImage/50418603917525",
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/b2279aefdcda47c1bd59a7362df2991f.png?v=1772853771",
+            "altText": "",
+            "width": 1400,
+            "height": 1400
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductImage/50418603950293",
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/ee4d03048b664fde8b3ace8317c4f80d.png?v=1772853770",
+            "altText": "",
+            "width": 1400,
+            "height": 1400
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductImage/50418603983061",
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/8bef704622764bda9bc087b41a667dd3.png?v=1772853770",
+            "altText": "",
+            "width": 1400,
+            "height": 1400
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductImage/50418604015829",
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/4268c69b76304c54a6d93d3166ea8780.png?v=1772853771",
+            "altText": "",
+            "width": 1400,
+            "height": 1400
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductImage/50418604048597",
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/140ed4362ec74d42b5b00a90b2913828.png?v=1772853770",
+            "altText": "",
+            "width": 1400,
+            "height": 1400
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductImage/50418604081365",
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/8150c9fd7f1a48b894af96b8fa39cd2b.png?v=1772853771",
+            "altText": "",
+            "width": 1400,
+            "height": 1400
+          }
+        }
+      ]
+    },
+    "options": [
+      {
+        "name": "color",
+        "values": [
+          "Black",
+          "White",
+          "Gray Apricot"
+        ]
+      },
+      {
+        "name": "size",
+        "values": [
+          "S",
+          "M",
+          "L",
+          "XL",
+          "2XL"
+        ]
+      }
+    ],
+    "collections": {
+      "edges": [
+        {
+          "node": {
+            "handle": "clothes",
+            "title": "Clothes"
+          }
+        },
+        {
+          "node": {
+            "handle": "catching-light",
+            "title": "Catching Light"
+          }
+        }
+      ]
+    },
+    "resourcePublicationsCount": {
+      "count": 6
+    },
+    "variants": {
+      "edges": [
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360625615061",
+            "title": "Black / S",
+            "sku": "260307PODRB2679#001",
+            "price": "70.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/b2279aefdcda47c1bd59a7362df2991f.png?v=1772853771"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.9,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360625647829",
+            "title": "Black / M",
+            "sku": "260307PODRB2679#002",
+            "price": "70.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/b2279aefdcda47c1bd59a7362df2991f.png?v=1772853771"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.9,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360625680597",
+            "title": "Black / L",
+            "sku": "260307PODRB2679#003",
+            "price": "70.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/b2279aefdcda47c1bd59a7362df2991f.png?v=1772853771"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.9,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360625713365",
+            "title": "Black / XL",
+            "sku": "260307PODRB2679#004",
+            "price": "70.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/b2279aefdcda47c1bd59a7362df2991f.png?v=1772853771"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.9,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360625746133",
+            "title": "Black / 2XL",
+            "sku": "260307PODRB2679#005",
+            "price": "70.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/b2279aefdcda47c1bd59a7362df2991f.png?v=1772853771"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.9,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360625778901",
+            "title": "White / S",
+            "sku": "260307PODRB2679#006",
+            "price": "70.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/8bef704622764bda9bc087b41a667dd3.png?v=1772853770"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.9,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360625811669",
+            "title": "White / M",
+            "sku": "260307PODRB2679#007",
+            "price": "70.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/8bef704622764bda9bc087b41a667dd3.png?v=1772853770"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.9,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360625844437",
+            "title": "White / L",
+            "sku": "260307PODRB2679#008",
+            "price": "70.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/8bef704622764bda9bc087b41a667dd3.png?v=1772853770"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.9,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360625877205",
+            "title": "White / XL",
+            "sku": "260307PODRB2679#009",
+            "price": "70.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/8bef704622764bda9bc087b41a667dd3.png?v=1772853770"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.9,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360625909973",
+            "title": "White / 2XL",
+            "sku": "260307PODRB2679#010",
+            "price": "70.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/8bef704622764bda9bc087b41a667dd3.png?v=1772853770"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.9,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360625942741",
+            "title": "Gray Apricot / S",
+            "sku": "260307PODRB2679#011",
+            "price": "70.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/140ed4362ec74d42b5b00a90b2913828.png?v=1772853770"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.9,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360625975509",
+            "title": "Gray Apricot / M",
+            "sku": "260307PODRB2679#012",
+            "price": "70.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/140ed4362ec74d42b5b00a90b2913828.png?v=1772853770"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.9,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360626008277",
+            "title": "Gray Apricot / L",
+            "sku": "260307PODRB2679#013",
+            "price": "70.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/140ed4362ec74d42b5b00a90b2913828.png?v=1772853770"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.9,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360626041045",
+            "title": "Gray Apricot / XL",
+            "sku": "260307PODRB2679#014",
+            "price": "70.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/140ed4362ec74d42b5b00a90b2913828.png?v=1772853770"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.9,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360626073813",
+            "title": "Gray Apricot / 2XL",
+            "sku": "260307PODRB2679#015",
+            "price": "70.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/140ed4362ec74d42b5b00a90b2913828.png?v=1772853770"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.9,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "gid://shopify/Product/9295616409813",
+    "handle": "barrel-dress-pant",
+    "title": "Barrel Dress Pant",
+    "status": "ACTIVE",
+    "productType": "",
+    "vendor": "ODMPOD",
+    "tags": [],
+    "createdAt": "2026-03-07T03:25:00Z",
+    "updatedAt": "2026-08-28T23:35:22Z",
+    "publishedAt": "2026-03-07T03:25:16Z",
+    "totalInventory": 0,
+    "hasOnlyDefaultVariant": false,
+    "onlineStoreUrl": "https://odubostudio.myshopify.com/products/barrel-dress-pant",
+    "description": "Care Instructions:Machine wash at 30°C (gentle cycle); Do not bleach; Tumble dry low; Iron at low temperature, avoid ironing on print; Do not dry clean Size Chart S M L XL inch cm inch cm inch cm inch cm Length 39.8 101 40.6 103 41.3 105 42.1 107 Waist 14.6 37 15.4 39 16.1 41 16.9 43 Hip 22.2 56.5 23.0 58.5 23.8 60.5 24.6 62.5 gid://shopify/Product/9295616409813",
+    "seo": {
+      "title": null,
+      "description": null
+    },
+    "featuredImage": {
+      "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/d1c68c873ace41b0945a7b315788ce28.png?v=1772853905",
+      "altText": null
+    },
+    "images": {
+      "edges": [
+        {
+          "node": {
+            "id": "gid://shopify/ProductImage/50418605097173",
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/d1c68c873ace41b0945a7b315788ce28.png?v=1772853905",
+            "altText": "",
+            "width": 1400,
+            "height": 1400
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductImage/50418605129941",
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/bc3c2da5dfa34117aa831abd24875073.png?v=1772853905",
+            "altText": "",
+            "width": 1400,
+            "height": 1400
+          }
+        }
+      ]
+    },
+    "options": [
+      {
+        "name": "color",
+        "values": [
+          "Black"
+        ]
+      },
+      {
+        "name": "size",
+        "values": [
+          "S",
+          "M",
+          "L",
+          "XL"
+        ]
+      }
+    ],
+    "collections": {
+      "edges": [
+        {
+          "node": {
+            "handle": "clothes",
+            "title": "Clothes"
+          }
+        }
+      ]
+    },
+    "resourcePublicationsCount": {
+      "count": 6
+    },
+    "variants": {
+      "edges": [
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360632234197",
+            "title": "Black / S",
+            "sku": "260307PODPX2684#001",
+            "price": "50.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/d1c68c873ace41b0945a7b315788ce28.png?v=1772853905"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.6,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360632266965",
+            "title": "Black / M",
+            "sku": "260307PODPX2684#002",
+            "price": "50.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/d1c68c873ace41b0945a7b315788ce28.png?v=1772853905"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.6,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360632299733",
+            "title": "Black / L",
+            "sku": "260307PODPX2684#003",
+            "price": "50.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/d1c68c873ace41b0945a7b315788ce28.png?v=1772853905"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.6,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360632332501",
+            "title": "Black / XL",
+            "sku": "260307PODPX2684#004",
+            "price": "50.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/d1c68c873ace41b0945a7b315788ce28.png?v=1772853905"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.6,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "gid://shopify/Product/9295623028949",
+    "handle": "jeans-n1",
+    "title": "Jeans N°1",
+    "status": "ACTIVE",
+    "productType": "",
+    "vendor": "ODMPOD",
+    "tags": [],
+    "createdAt": "2026-03-07T03:27:45Z",
+    "updatedAt": "2026-08-28T23:35:22Z",
+    "publishedAt": "2026-03-07T03:28:01Z",
+    "totalInventory": 0,
+    "hasOnlyDefaultVariant": false,
+    "onlineStoreUrl": "https://odubostudio.myshopify.com/products/jeans-n1",
+    "description": "Care Instructions:Machine wash at 30°C (gentle cycle); Do not bleach; Tumble dry low; Iron at low temperature, avoid ironing on print; Do not dry clean Size Chart S M L XL 2XL inch cm inch cm inch cm inch cm inch cm Length 40.9 104 41.3 105 41.7 106 42.1 107 42.5 108 Waist 15.0 38 15.7 40 16.5 42 17.3 44 18.1 46 Hip 19.9 50.5 20.7 52.5 21.5 54.5 22.2 56.5 23.0 58.5 gid://shopify/Product/9295623028949",
+    "seo": {
+      "title": null,
+      "description": null
+    },
+    "featuredImage": {
+      "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/fd150f4219064af789eae288d093335a.png?v=1772854071",
+      "altText": null
+    },
+    "images": {
+      "edges": [
+        {
+          "node": {
+            "id": "gid://shopify/ProductImage/50418608210133",
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/fd150f4219064af789eae288d093335a.png?v=1772854071",
+            "altText": "",
+            "width": 1400,
+            "height": 1400
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductImage/50418608242901",
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/f53360c9442944d792e8b8a8e288794b.png?v=1772854085",
+            "altText": "",
+            "width": 1400,
+            "height": 1400
+          }
+        }
+      ]
+    },
+    "options": [
+      {
+        "name": "color",
+        "values": [
+          "Blue"
+        ]
+      },
+      {
+        "name": "size",
+        "values": [
+          "S",
+          "M",
+          "L",
+          "XL",
+          "2XL"
+        ]
+      }
+    ],
+    "collections": {
+      "edges": [
+        {
+          "node": {
+            "handle": "clothes",
+            "title": "Clothes"
+          }
+        }
+      ]
+    },
+    "resourcePublicationsCount": {
+      "count": 6
+    },
+    "variants": {
+      "edges": [
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360639246549",
+            "title": "Blue / S",
+            "sku": "260307PODSX2694#001",
+            "price": "70.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/fd150f4219064af789eae288d093335a.png?v=1772854071"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.68,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360639279317",
+            "title": "Blue / M",
+            "sku": "260307PODSX2694#002",
+            "price": "70.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/fd150f4219064af789eae288d093335a.png?v=1772854071"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.68,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360639312085",
+            "title": "Blue / L",
+            "sku": "260307PODSX2694#003",
+            "price": "70.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/fd150f4219064af789eae288d093335a.png?v=1772854071"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.68,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360639344853",
+            "title": "Blue / XL",
+            "sku": "260307PODSX2694#004",
+            "price": "70.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/fd150f4219064af789eae288d093335a.png?v=1772854071"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.68,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360639377621",
+            "title": "Blue / 2XL",
+            "sku": "260307PODSX2694#005",
+            "price": "70.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/fd150f4219064af789eae288d093335a.png?v=1772854071"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.68,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "gid://shopify/Product/9295639642325",
+    "handle": "belted-barrel-chino-pant",
+    "title": "Belted Barrel Chino Pant",
+    "status": "ACTIVE",
+    "productType": "",
+    "vendor": "ODMPOD",
+    "tags": [],
+    "createdAt": "2026-03-07T03:34:46Z",
+    "updatedAt": "2026-08-28T23:35:22Z",
+    "publishedAt": "2026-03-07T03:35:01Z",
+    "totalInventory": 0,
+    "hasOnlyDefaultVariant": false,
+    "onlineStoreUrl": "https://odubostudio.myshopify.com/products/belted-barrel-chino-pant",
+    "description": "Care Instructions:Machine wash at 30°C (gentle cycle); Do not bleach; Tumble dry low; Iron at low temperature, avoid ironing on print; Do not dry clean Size Chart S M L XL inch cm inch cm inch cm inch cm Length 40.0 101.5 40.6 103 41.1 104.5 41.7 106 Waist 14.2 36 15.0 38 15.7 40 16.5 42 Hip 19.3 49 20.1 51 20.9 53 21.7 55 gid://shopify/Product/9295639642325",
+    "seo": {
+      "title": null,
+      "description": null
+    },
+    "featuredImage": {
+      "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/575a589d28ee44bfb659db6795fbd667.png?v=1772854491",
+      "altText": null
+    },
+    "images": {
+      "edges": [
+        {
+          "node": {
+            "id": "gid://shopify/ProductImage/50418615746773",
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/575a589d28ee44bfb659db6795fbd667.png?v=1772854491",
+            "altText": "",
+            "width": 1400,
+            "height": 1400
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductImage/50418615779541",
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/9ad16ffac13e4228a86df660876762e9.png?v=1772854491",
+            "altText": "",
+            "width": 1400,
+            "height": 1400
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductImage/50418615812309",
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/01028e0a98ad4816b8c14cfa1de60464.png?v=1772854491",
+            "altText": "",
+            "width": 1400,
+            "height": 1400
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductImage/50418615845077",
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/5ac82454b8464600a417db1923d7e5b0.png?v=1772854491",
+            "altText": "",
+            "width": 1400,
+            "height": 1400
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductImage/50418615877845",
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/1e81b2f92e7747a2b045d6ddb15c3fd8.png?v=1772854491",
+            "altText": "",
+            "width": 1400,
+            "height": 1400
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductImage/50418615910613",
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/227f0d03e5e5439982bb4ef3aaf89dc8.png?v=1772854491",
+            "altText": "",
+            "width": 1400,
+            "height": 1400
+          }
+        }
+      ]
+    },
+    "options": [
+      {
+        "name": "color",
+        "values": [
+          "Black",
+          "Beige",
+          "Khaki"
+        ]
+      },
+      {
+        "name": "size",
+        "values": [
+          "S",
+          "M",
+          "L",
+          "XL"
+        ]
+      }
+    ],
+    "collections": {
+      "edges": [
+        {
+          "node": {
+            "handle": "clothes",
+            "title": "Clothes"
+          }
+        }
+      ]
+    },
+    "resourcePublicationsCount": {
+      "count": 6
+    },
+    "variants": {
+      "edges": [
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360656351445",
+            "title": "Black / S",
+            "sku": "260307PODBI2721#001",
+            "price": "55.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/575a589d28ee44bfb659db6795fbd667.png?v=1772854491"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.74,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360656384213",
+            "title": "Black / M",
+            "sku": "260307PODBI2721#002",
+            "price": "55.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/575a589d28ee44bfb659db6795fbd667.png?v=1772854491"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.74,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360656416981",
+            "title": "Black / L",
+            "sku": "260307PODBI2721#003",
+            "price": "55.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/575a589d28ee44bfb659db6795fbd667.png?v=1772854491"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.74,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360656449749",
+            "title": "Black / XL",
+            "sku": "260307PODBI2721#004",
+            "price": "55.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/575a589d28ee44bfb659db6795fbd667.png?v=1772854491"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.74,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360656482517",
+            "title": "Beige / S",
+            "sku": "260307PODBI2721#005",
+            "price": "55.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/01028e0a98ad4816b8c14cfa1de60464.png?v=1772854491"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.74,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360656515285",
+            "title": "Beige / M",
+            "sku": "260307PODBI2721#006",
+            "price": "55.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/01028e0a98ad4816b8c14cfa1de60464.png?v=1772854491"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.74,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360656548053",
+            "title": "Beige / L",
+            "sku": "260307PODBI2721#007",
+            "price": "55.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/01028e0a98ad4816b8c14cfa1de60464.png?v=1772854491"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.74,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360656580821",
+            "title": "Beige / XL",
+            "sku": "260307PODBI2721#008",
+            "price": "55.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/01028e0a98ad4816b8c14cfa1de60464.png?v=1772854491"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.74,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360656613589",
+            "title": "Khaki / S",
+            "sku": "260307PODBI2721#009",
+            "price": "55.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/1e81b2f92e7747a2b045d6ddb15c3fd8.png?v=1772854491"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.74,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360656646357",
+            "title": "Khaki / M",
+            "sku": "260307PODBI2721#010",
+            "price": "55.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/1e81b2f92e7747a2b045d6ddb15c3fd8.png?v=1772854491"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.74,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360656679125",
+            "title": "Khaki / L",
+            "sku": "260307PODBI2721#011",
+            "price": "55.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/1e81b2f92e7747a2b045d6ddb15c3fd8.png?v=1772854491"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.74,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360656711893",
+            "title": "Khaki / XL",
+            "sku": "260307PODBI2721#012",
+            "price": "55.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/1e81b2f92e7747a2b045d6ddb15c3fd8.png?v=1772854491"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.74,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "gid://shopify/Product/9295653863637",
+    "handle": "catching-light-long-t-shirt",
+    "title": "Catching Light Long T-Shirt",
+    "status": "ACTIVE",
+    "productType": "",
+    "vendor": "ODMPOD",
+    "tags": [],
+    "createdAt": "2026-03-07T03:40:45Z",
+    "updatedAt": "2026-08-28T23:35:22Z",
+    "publishedAt": "2026-03-07T03:41:01Z",
+    "totalInventory": 0,
+    "hasOnlyDefaultVariant": false,
+    "onlineStoreUrl": "https://odubostudio.myshopify.com/products/catching-light-long-t-shirt",
+    "description": "Care Instructions:Machine wash at 30°C (gentle cycle); Do not bleach; Tumble dry low; Iron at low temperature, avoid ironing on print; Do not dry clean Size Chart S M L XL 2XL inch cm inch cm inch cm inch cm inch cm Chest 21.3 54 22.0 56 22.8 58 23.6 60 24.4 62 Length 27.6 70 28.3 72 29.1 74 29.9 76 30.3 77 Shoulder 20.5 52 21.3 54 22.0 56 22.8 58 23.6 60 Sleeve length 22.0 56 22.4 57 22.8 58 23.2 59 23.6 60 gid://shopify/Product/9295653863637",
+    "seo": {
+      "title": null,
+      "description": null
+    },
+    "featuredImage": {
+      "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/57728ed408704bb2a99ca695c02c30db.png?v=1772854850",
+      "altText": null
+    },
+    "images": {
+      "edges": [
+        {
+          "node": {
+            "id": "gid://shopify/ProductImage/50418616860885",
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/57728ed408704bb2a99ca695c02c30db.png?v=1772854850",
+            "altText": "",
+            "width": 1400,
+            "height": 1400
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductImage/50418616893653",
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/1872594ee556456d8eda234694a50a3b.png?v=1772854850",
+            "altText": "",
+            "width": 1400,
+            "height": 1400
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductImage/50418616926421",
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/87cdbf9ec8a8446c83bdeab5479f234c.png?v=1772854850",
+            "altText": "",
+            "width": 1400,
+            "height": 1400
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductImage/50418616959189",
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/ff36d0675ec3423ca224452644847563.png?v=1772854850",
+            "altText": "",
+            "width": 1400,
+            "height": 1400
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductImage/50418616991957",
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/58f8d2bbe2a74c07a396c2153a9274fe.png?v=1772854850",
+            "altText": "",
+            "width": 1400,
+            "height": 1400
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductImage/50418617024725",
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/8e6a681807b74b06bdfdf56ec3e1c7ff.png?v=1772854850",
+            "altText": "",
+            "width": 1400,
+            "height": 1400
+          }
+        }
+      ]
+    },
+    "options": [
+      {
+        "name": "color",
+        "values": [
+          "Black",
+          "White",
+          "Khaki"
+        ]
+      },
+      {
+        "name": "size",
+        "values": [
+          "S",
+          "M",
+          "L",
+          "XL",
+          "2XL"
+        ]
+      }
+    ],
+    "collections": {
+      "edges": [
+        {
+          "node": {
+            "handle": "clothes",
+            "title": "Clothes"
+          }
+        },
+        {
+          "node": {
+            "handle": "catching-light",
+            "title": "Catching Light"
+          }
+        }
+      ]
+    },
+    "resourcePublicationsCount": {
+      "count": 6
+    },
+    "variants": {
+      "edges": [
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360675881173",
+            "title": "Black / S",
+            "sku": "260307PODPR2742#001",
+            "price": "50.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/57728ed408704bb2a99ca695c02c30db.png?v=1772854850"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.49,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360675913941",
+            "title": "Black / M",
+            "sku": "260307PODPR2742#002",
+            "price": "50.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/57728ed408704bb2a99ca695c02c30db.png?v=1772854850"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.49,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360675946709",
+            "title": "Black / L",
+            "sku": "260307PODPR2742#003",
+            "price": "50.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/57728ed408704bb2a99ca695c02c30db.png?v=1772854850"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.49,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360675979477",
+            "title": "Black / XL",
+            "sku": "260307PODPR2742#004",
+            "price": "50.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/57728ed408704bb2a99ca695c02c30db.png?v=1772854850"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.49,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360676012245",
+            "title": "Black / 2XL",
+            "sku": "260307PODPR2742#005",
+            "price": "50.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/57728ed408704bb2a99ca695c02c30db.png?v=1772854850"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.49,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360676045013",
+            "title": "White / S",
+            "sku": "260307PODPR2742#006",
+            "price": "50.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/87cdbf9ec8a8446c83bdeab5479f234c.png?v=1772854850"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.49,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360676077781",
+            "title": "White / M",
+            "sku": "260307PODPR2742#007",
+            "price": "50.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/87cdbf9ec8a8446c83bdeab5479f234c.png?v=1772854850"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.49,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360676110549",
+            "title": "White / L",
+            "sku": "260307PODPR2742#008",
+            "price": "50.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/87cdbf9ec8a8446c83bdeab5479f234c.png?v=1772854850"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.49,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360676143317",
+            "title": "White / XL",
+            "sku": "260307PODPR2742#009",
+            "price": "50.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/87cdbf9ec8a8446c83bdeab5479f234c.png?v=1772854850"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.49,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360676176085",
+            "title": "White / 2XL",
+            "sku": "260307PODPR2742#010",
+            "price": "50.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/87cdbf9ec8a8446c83bdeab5479f234c.png?v=1772854850"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.49,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360676208853",
+            "title": "Khaki / S",
+            "sku": "260307PODPR2742#011",
+            "price": "50.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/58f8d2bbe2a74c07a396c2153a9274fe.png?v=1772854850"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.49,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360676241621",
+            "title": "Khaki / M",
+            "sku": "260307PODPR2742#012",
+            "price": "50.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/58f8d2bbe2a74c07a396c2153a9274fe.png?v=1772854850"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.49,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360676274389",
+            "title": "Khaki / L",
+            "sku": "260307PODPR2742#013",
+            "price": "50.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/58f8d2bbe2a74c07a396c2153a9274fe.png?v=1772854850"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.49,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360676307157",
+            "title": "Khaki / XL",
+            "sku": "260307PODPR2742#014",
+            "price": "50.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/58f8d2bbe2a74c07a396c2153a9274fe.png?v=1772854850"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.49,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360676339925",
+            "title": "Khaki / 2XL",
+            "sku": "260307PODPR2742#015",
+            "price": "50.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/58f8d2bbe2a74c07a396c2153a9274fe.png?v=1772854850"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.49,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "gid://shopify/Product/9295655731413",
+    "handle": "long-t-shirt-1",
+    "title": "Long T-Shirt",
+    "status": "ACTIVE",
+    "productType": "",
+    "vendor": "ODMPOD",
+    "tags": [],
+    "createdAt": "2026-03-07T03:41:30Z",
+    "updatedAt": "2026-08-28T23:35:23Z",
+    "publishedAt": "2026-03-07T03:41:46Z",
+    "totalInventory": 0,
+    "hasOnlyDefaultVariant": false,
+    "onlineStoreUrl": "https://odubostudio.myshopify.com/products/long-t-shirt-1",
+    "description": "Care Instructions:Machine wash at 30°C (gentle cycle); Do not bleach; Tumble dry low; Iron at low temperature, avoid ironing on print; Do not dry clean Size Chart S M L XL 2XL inch cm inch cm inch cm inch cm inch cm Chest 21.3 54 22.0 56 22.8 58 23.6 60 24.4 62 Length 27.6 70 28.3 72 29.1 74 29.9 76 30.3 77 Shoulder 20.5 52 21.3 54 22.0 56 22.8 58 23.6 60 Sleeve length 22.0 56 22.4 57 22.8 58 23.2 59 23.6 60 gid://shopify/Product/9295655731413",
+    "seo": {
+      "title": null,
+      "description": null
+    },
+    "featuredImage": {
+      "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/590080aebb1a4bf3a30b7db198df314a.png?v=1772854895",
+      "altText": null
+    },
+    "images": {
+      "edges": [
+        {
+          "node": {
+            "id": "gid://shopify/ProductImage/50418617090261",
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/590080aebb1a4bf3a30b7db198df314a.png?v=1772854895",
+            "altText": "",
+            "width": 1400,
+            "height": 1400
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductImage/50418617123029",
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/171cdaee97cc46ecb80e212b243b968f.png?v=1772854895",
+            "altText": "",
+            "width": 1400,
+            "height": 1400
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductImage/50418617155797",
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/344834c82a564afda29fe016a085a054.png?v=1772854895",
+            "altText": "",
+            "width": 1400,
+            "height": 1400
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductImage/50418617188565",
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/139d66c222b144589a9b5de6220f0cee.png?v=1772854895",
+            "altText": "",
+            "width": 1400,
+            "height": 1400
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductImage/50418617221333",
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/ea36564be9f04e63a90b9ceaf702fb1a.png?v=1772854896",
+            "altText": "",
+            "width": 1400,
+            "height": 1400
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductImage/50418617254101",
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/f1ce1213a8474423ae6a0f7b9ba48eec.png?v=1772854895",
+            "altText": "",
+            "width": 1400,
+            "height": 1400
+          }
+        }
+      ]
+    },
+    "options": [
+      {
+        "name": "color",
+        "values": [
+          "Black",
+          "White",
+          "Khaki"
+        ]
+      },
+      {
+        "name": "size",
+        "values": [
+          "S",
+          "M",
+          "L",
+          "XL",
+          "2XL"
+        ]
+      }
+    ],
+    "collections": {
+      "edges": [
+        {
+          "node": {
+            "handle": "clothes",
+            "title": "Clothes"
+          }
+        }
+      ]
+    },
+    "resourcePublicationsCount": {
+      "count": 6
+    },
+    "variants": {
+      "edges": [
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360678568149",
+            "title": "Black / S",
+            "sku": "260307PODPR2751#001",
+            "price": "50.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/590080aebb1a4bf3a30b7db198df314a.png?v=1772854895"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.49,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360678600917",
+            "title": "Black / M",
+            "sku": "260307PODPR2751#002",
+            "price": "50.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/590080aebb1a4bf3a30b7db198df314a.png?v=1772854895"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.49,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360678633685",
+            "title": "Black / L",
+            "sku": "260307PODPR2751#003",
+            "price": "50.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/590080aebb1a4bf3a30b7db198df314a.png?v=1772854895"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.49,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360678666453",
+            "title": "Black / XL",
+            "sku": "260307PODPR2751#004",
+            "price": "50.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/590080aebb1a4bf3a30b7db198df314a.png?v=1772854895"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.49,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360678699221",
+            "title": "Black / 2XL",
+            "sku": "260307PODPR2751#005",
+            "price": "50.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/590080aebb1a4bf3a30b7db198df314a.png?v=1772854895"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.49,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360678731989",
+            "title": "White / S",
+            "sku": "260307PODPR2751#006",
+            "price": "50.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/344834c82a564afda29fe016a085a054.png?v=1772854895"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.49,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360678764757",
+            "title": "White / M",
+            "sku": "260307PODPR2751#007",
+            "price": "50.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/344834c82a564afda29fe016a085a054.png?v=1772854895"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.49,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360678797525",
+            "title": "White / L",
+            "sku": "260307PODPR2751#008",
+            "price": "50.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/344834c82a564afda29fe016a085a054.png?v=1772854895"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.49,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360678830293",
+            "title": "White / XL",
+            "sku": "260307PODPR2751#009",
+            "price": "50.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/344834c82a564afda29fe016a085a054.png?v=1772854895"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.49,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360678863061",
+            "title": "White / 2XL",
+            "sku": "260307PODPR2751#010",
+            "price": "50.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/344834c82a564afda29fe016a085a054.png?v=1772854895"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.49,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360678895829",
+            "title": "Khaki / S",
+            "sku": "260307PODPR2751#011",
+            "price": "50.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/ea36564be9f04e63a90b9ceaf702fb1a.png?v=1772854896"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.49,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360678928597",
+            "title": "Khaki / M",
+            "sku": "260307PODPR2751#012",
+            "price": "50.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/ea36564be9f04e63a90b9ceaf702fb1a.png?v=1772854896"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.49,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360678961365",
+            "title": "Khaki / L",
+            "sku": "260307PODPR2751#013",
+            "price": "50.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/ea36564be9f04e63a90b9ceaf702fb1a.png?v=1772854896"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.49,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360678994133",
+            "title": "Khaki / XL",
+            "sku": "260307PODPR2751#014",
+            "price": "50.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/ea36564be9f04e63a90b9ceaf702fb1a.png?v=1772854896"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.49,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360679026901",
+            "title": "Khaki / 2XL",
+            "sku": "260307PODPR2751#015",
+            "price": "50.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/ea36564be9f04e63a90b9ceaf702fb1a.png?v=1772854896"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.49,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "gid://shopify/Product/9295664906453",
+    "handle": "vintage-washed-zip-up-hooded-tank-top-1",
+    "title": "Saint Vest Hoodie",
+    "status": "ARCHIVED",
+    "productType": "",
+    "vendor": "ODMPOD",
+    "tags": [],
+    "createdAt": "2026-03-07T03:45:15Z",
+    "updatedAt": "2026-07-22T03:30:34Z",
+    "publishedAt": null,
+    "totalInventory": 0,
+    "hasOnlyDefaultVariant": false,
+    "onlineStoreUrl": null,
+    "description": "Care Instructions:Machine wash at 30°C (gentle cycle); Do not bleach; Tumble dry low; Iron at low temperature, avoid ironing on print; Do not dry clean Size Chart S M L XL 2XL 3XL inch cm inch cm inch cm inch cm inch cm inch cm Chest 22.4 57 23.2 59 24.0 61 24.8 63 25.6 65 26.4 67 Length 26.0 66 26.8 68 27.6 70 28.3 72 29.1 74 29.9 76 Shoulder 21.1 53.5 21.7 55 22.2 56.5 22.8 58 23.4 59.5 24.0 61 gid://shopify/Product/9295664906453",
+    "seo": {
+      "title": null,
+      "description": null
+    },
+    "featuredImage": {
+      "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/51798c11e7204696897f7bb8a14c04ff.png?v=1772855121",
+      "altText": null
+    },
+    "images": {
+      "edges": [
+        {
+          "node": {
+            "id": "gid://shopify/ProductImage/50418623250645",
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/51798c11e7204696897f7bb8a14c04ff.png?v=1772855121",
+            "altText": "",
+            "width": 1400,
+            "height": 1400
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductImage/50418623283413",
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/66e0098e874d449e9dc94f539721eca5.png?v=1772855120",
+            "altText": "",
+            "width": 1400,
+            "height": 1400
+          }
+        }
+      ]
+    },
+    "options": [
+      {
+        "name": "color",
+        "values": [
+          "Black"
+        ]
+      },
+      {
+        "name": "size",
+        "values": [
+          "S",
+          "M",
+          "L",
+          "XL",
+          "2XL"
+        ]
+      }
+    ],
+    "collections": {
+      "edges": [
+        {
+          "node": {
+            "handle": "clothes",
+            "title": "Clothes"
+          }
+        }
+      ]
+    },
+    "resourcePublicationsCount": {
+      "count": 0
+    },
+    "variants": {
+      "edges": [
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360689545429",
+            "title": "Black / S",
+            "sku": "260307PODPT2757#001",
+            "price": "70.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/51798c11e7204696897f7bb8a14c04ff.png?v=1772855121"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.36,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360689578197",
+            "title": "Black / M",
+            "sku": "260307PODPT2757#002",
+            "price": "70.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/51798c11e7204696897f7bb8a14c04ff.png?v=1772855121"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.36,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360689610965",
+            "title": "Black / L",
+            "sku": "260307PODPT2757#003",
+            "price": "70.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/51798c11e7204696897f7bb8a14c04ff.png?v=1772855121"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.36,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360689643733",
+            "title": "Black / XL",
+            "sku": "260307PODPT2757#004",
+            "price": "70.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/51798c11e7204696897f7bb8a14c04ff.png?v=1772855121"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.36,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360689676501",
+            "title": "Black / 2XL",
+            "sku": "260307PODPT2757#005",
+            "price": "70.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/51798c11e7204696897f7bb8a14c04ff.png?v=1772855121"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.36,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "gid://shopify/Product/9295667921109",
+    "handle": "spray-one-piece-t-shirt-1",
+    "title": "Spray One-Piece T-Shirt",
+    "status": "ACTIVE",
+    "productType": "",
+    "vendor": "ODMPOD",
+    "tags": [],
+    "createdAt": "2026-03-07T03:46:30Z",
+    "updatedAt": "2026-08-28T23:35:23Z",
+    "publishedAt": "2026-03-07T03:46:46Z",
+    "totalInventory": 0,
+    "hasOnlyDefaultVariant": false,
+    "onlineStoreUrl": "https://odubostudio.myshopify.com/products/spray-one-piece-t-shirt-1",
+    "description": "Care Instructions:Machine wash at 30°C (gentle cycle); Do not bleach; Tumble dry low; Iron at low temperature, avoid ironing on print; Do not dry clean Size Chart XS S M L XL 2XL inch cm inch cm inch cm inch cm inch cm inch cm Chest 28.0 71 28.7 73 29.9 76 31.5 80 33.5 85 35.4 90 Sleeve Length 17.7 45 18.1 46 18.5 47 18.9 48 19.3 49 19.7 50 Length 25.2 64 26.0 66 26.8 68 27.6 70 28.3 72 29.1 74 gid://shopify/Product/9295667921109",
+    "seo": {
+      "title": null,
+      "description": null
+    },
+    "featuredImage": {
+      "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/1c4a9e18e17c4b6f9df1f0f446a1bf0e.png?v=1772855195",
+      "altText": null
+    },
+    "images": {
+      "edges": [
+        {
+          "node": {
+            "id": "gid://shopify/ProductImage/50418624102613",
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/1c4a9e18e17c4b6f9df1f0f446a1bf0e.png?v=1772855195",
+            "altText": "",
+            "width": 1400,
+            "height": 1400
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductImage/50418624135381",
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/84bdded9d53e44b98f8d499608765065.png?v=1772855195",
+            "altText": "",
+            "width": 1400,
+            "height": 1400
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductImage/50418624168149",
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/a12549664b734a82915febb464528a77.png?v=1772855195",
+            "altText": "",
+            "width": 1400,
+            "height": 1400
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductImage/50418624200917",
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/a89ad216a1af44bf88e32e8899a732f7.png?v=1772855195",
+            "altText": "",
+            "width": 1400,
+            "height": 1400
+          }
+        }
+      ]
+    },
+    "options": [
+      {
+        "name": "color",
+        "values": [
+          "Black",
+          "White"
+        ]
+      },
+      {
+        "name": "size",
+        "values": [
+          "XS",
+          "S",
+          "M",
+          "L",
+          "XL",
+          "2XL"
+        ]
+      }
+    ],
+    "collections": {
+      "edges": [
+        {
+          "node": {
+            "handle": "clothes",
+            "title": "Clothes"
+          }
+        }
+      ]
+    },
+    "resourcePublicationsCount": {
+      "count": 6
+    },
+    "variants": {
+      "edges": [
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360693838037",
+            "title": "Black / XS",
+            "sku": "260307PODPQ2759#001",
+            "price": "50.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/1c4a9e18e17c4b6f9df1f0f446a1bf0e.png?v=1772855195"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.46,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360693870805",
+            "title": "Black / S",
+            "sku": "260307PODPQ2759#002",
+            "price": "50.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/1c4a9e18e17c4b6f9df1f0f446a1bf0e.png?v=1772855195"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.46,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360693903573",
+            "title": "Black / M",
+            "sku": "260307PODPQ2759#003",
+            "price": "50.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/1c4a9e18e17c4b6f9df1f0f446a1bf0e.png?v=1772855195"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.46,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360693936341",
+            "title": "Black / L",
+            "sku": "260307PODPQ2759#004",
+            "price": "50.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/1c4a9e18e17c4b6f9df1f0f446a1bf0e.png?v=1772855195"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.46,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360693969109",
+            "title": "Black / XL",
+            "sku": "260307PODPQ2759#005",
+            "price": "50.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/1c4a9e18e17c4b6f9df1f0f446a1bf0e.png?v=1772855195"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.46,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360694001877",
+            "title": "Black / 2XL",
+            "sku": "260307PODPQ2759#006",
+            "price": "50.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/1c4a9e18e17c4b6f9df1f0f446a1bf0e.png?v=1772855195"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.46,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360694034645",
+            "title": "White / XS",
+            "sku": "260307PODPQ2759#007",
+            "price": "50.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/a12549664b734a82915febb464528a77.png?v=1772855195"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.46,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360694067413",
+            "title": "White / S",
+            "sku": "260307PODPQ2759#008",
+            "price": "50.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/a12549664b734a82915febb464528a77.png?v=1772855195"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.46,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360694100181",
+            "title": "White / M",
+            "sku": "260307PODPQ2759#009",
+            "price": "50.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/a12549664b734a82915febb464528a77.png?v=1772855195"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.46,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360694132949",
+            "title": "White / L",
+            "sku": "260307PODPQ2759#010",
+            "price": "50.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/a12549664b734a82915febb464528a77.png?v=1772855195"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.46,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360694165717",
+            "title": "White / XL",
+            "sku": "260307PODPQ2759#011",
+            "price": "50.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/a12549664b734a82915febb464528a77.png?v=1772855195"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.46,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360694198485",
+            "title": "White / 2XL",
+            "sku": "260307PODPQ2759#012",
+            "price": "50.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/a12549664b734a82915febb464528a77.png?v=1772855195"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.46,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "gid://shopify/Product/9295673983189",
+    "handle": "logo-oversized-mock-neck-t-shirt",
+    "title": "Logo Mock Neck T-shirt",
+    "status": "ARCHIVED",
+    "productType": "",
+    "vendor": "ODMPOD",
+    "tags": [],
+    "createdAt": "2026-03-07T03:49:00Z",
+    "updatedAt": "2026-07-22T03:30:40Z",
+    "publishedAt": null,
+    "totalInventory": 0,
+    "hasOnlyDefaultVariant": false,
+    "onlineStoreUrl": null,
+    "description": "Care Instructions:Machine wash at 30°C (gentle cycle); Do not bleach; Tumble dry low; Iron at low temperature, avoid ironing on print; Do not dry clean Size Chart M L XL 2XL inch cm inch cm inch cm inch cm Chest 26.0 66 26.8 68 27.6 70 28.3 72 Length 28.0 71 28.7 73 29.5 75 30.3 77 Shoulder 25.2 64 26.0 66 26.8 68 27.6 70 Sleeve length 10.6 27 11.0 28 11.4 29 11.8 30 gid://shopify/Product/9295673983189",
+    "seo": {
+      "title": null,
+      "description": null
+    },
+    "featuredImage": {
+      "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/72dac54cb3714ce6bd16afd960188da7.png?v=1772855348",
+      "altText": null
+    },
+    "images": {
+      "edges": [
+        {
+          "node": {
+            "id": "gid://shopify/ProductImage/50418625773781",
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/72dac54cb3714ce6bd16afd960188da7.png?v=1772855348",
+            "altText": "",
+            "width": 1400,
+            "height": 1400
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductImage/50418625806549",
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/a5e06b452184469d95b2164660adfe2b.png?v=1772855346",
+            "altText": "",
+            "width": 1400,
+            "height": 1400
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductImage/50418625839317",
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/ef754d63fbd049a18a9920e9d7eb06f5.png?v=1772855346",
+            "altText": "",
+            "width": 1400,
+            "height": 1400
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductImage/50418625872085",
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/b67bbebd9286426ebe2822048badc27c.png?v=1772855346",
+            "altText": "",
+            "width": 1400,
+            "height": 1400
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductImage/50418625904853",
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/421f8096dec64130a21ea8106412af54.png?v=1772855345",
+            "altText": "",
+            "width": 1400,
+            "height": 1400
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductImage/50418625937621",
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/230617d4c6744c10bb8f583940ff89c6.png?v=1772855345",
+            "altText": "",
+            "width": 1400,
+            "height": 1400
+          }
+        }
+      ]
+    },
+    "options": [
+      {
+        "name": "color",
+        "values": [
+          "Black",
+          "Gray Camel",
+          "White"
+        ]
+      },
+      {
+        "name": "size",
+        "values": [
+          "M",
+          "L",
+          "XL",
+          "2XL"
+        ]
+      }
+    ],
+    "collections": {
+      "edges": [
+        {
+          "node": {
+            "handle": "clothes",
+            "title": "Clothes"
+          }
+        }
+      ]
+    },
+    "resourcePublicationsCount": {
+      "count": 0
+    },
+    "variants": {
+      "edges": [
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360700752085",
+            "title": "Black / M",
+            "sku": "260307PODPQ2768#001",
+            "price": "55.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/72dac54cb3714ce6bd16afd960188da7.png?v=1772855348"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.48,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360700784853",
+            "title": "Black / L",
+            "sku": "260307PODPQ2768#002",
+            "price": "55.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/72dac54cb3714ce6bd16afd960188da7.png?v=1772855348"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.48,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360700817621",
+            "title": "Black / XL",
+            "sku": "260307PODPQ2768#003",
+            "price": "55.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/72dac54cb3714ce6bd16afd960188da7.png?v=1772855348"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.48,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360700850389",
+            "title": "Black / 2XL",
+            "sku": "260307PODPQ2768#004",
+            "price": "55.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/72dac54cb3714ce6bd16afd960188da7.png?v=1772855348"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.48,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360700883157",
+            "title": "Gray Camel / M",
+            "sku": "260307PODPQ2768#005",
+            "price": "55.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/ef754d63fbd049a18a9920e9d7eb06f5.png?v=1772855346"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.48,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360700915925",
+            "title": "Gray Camel / L",
+            "sku": "260307PODPQ2768#006",
+            "price": "55.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/ef754d63fbd049a18a9920e9d7eb06f5.png?v=1772855346"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.48,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360700948693",
+            "title": "Gray Camel / XL",
+            "sku": "260307PODPQ2768#007",
+            "price": "55.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/ef754d63fbd049a18a9920e9d7eb06f5.png?v=1772855346"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.48,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360700981461",
+            "title": "Gray Camel / 2XL",
+            "sku": "260307PODPQ2768#008",
+            "price": "55.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/ef754d63fbd049a18a9920e9d7eb06f5.png?v=1772855346"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.48,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360701014229",
+            "title": "White / M",
+            "sku": "260307PODPQ2768#009",
+            "price": "55.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/421f8096dec64130a21ea8106412af54.png?v=1772855345"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.48,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360701046997",
+            "title": "White / L",
+            "sku": "260307PODPQ2768#010",
+            "price": "55.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/421f8096dec64130a21ea8106412af54.png?v=1772855345"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.48,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360701079765",
+            "title": "White / XL",
+            "sku": "260307PODPQ2768#011",
+            "price": "55.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/421f8096dec64130a21ea8106412af54.png?v=1772855345"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.48,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53360701112533",
+            "title": "White / 2XL",
+            "sku": "260307PODPQ2768#012",
+            "price": "55.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/421f8096dec64130a21ea8106412af54.png?v=1772855345"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.48,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "gid://shopify/Product/9296818176213",
+    "handle": "manteau-de-vin",
+    "title": "Manteau de Vin",
+    "status": "ACTIVE",
+    "productType": "",
+    "vendor": "ODMPOD",
+    "tags": [],
+    "createdAt": "2026-03-08T01:15:00Z",
+    "updatedAt": "2026-08-28T23:35:23Z",
+    "publishedAt": "2026-03-08T01:15:16Z",
+    "totalInventory": 0,
+    "hasOnlyDefaultVariant": false,
+    "onlineStoreUrl": "https://odubostudio.myshopify.com/products/manteau-de-vin",
+    "description": "Care Instructions:Machine wash at 30°C (gentle cycle); Do not bleach; Tumble dry low; Iron at low temperature, avoid ironing on print; Do not dry clean Size Chart XS S M L XL 2XL inch cm inch cm inch cm inch cm inch cm inch cm Chest 20.7 52.5 21.5 54.5 22.2 56.5 23.0 58.5 23.8 60.5 24.6 62.5 Length 26.0 66 26.8 68 27.6 70 28.3 72 29.1 74 29.9 76 Shoulder 19.6 49.8 20.2 51.4 20.9 53 21.5 54.6 22.1 56.2 22.8 57.8 Sleeve length 21.0 53.4 21.3 54.2 21.7 55 22.0 55.8 22.3 56.6 22.6 57.4 gid://shopify/Product/9296818176213",
+    "seo": {
+      "title": null,
+      "description": null
+    },
+    "featuredImage": {
+      "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/562e5470389b4c9589686592c7a4588d.png?v=1772932506",
+      "altText": null
+    },
+    "images": {
+      "edges": [
+        {
+          "node": {
+            "id": "gid://shopify/ProductImage/50423491395797",
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/562e5470389b4c9589686592c7a4588d.png?v=1772932506",
+            "altText": "",
+            "width": 1400,
+            "height": 1400
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductImage/50423491428565",
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/0e0a5c1752a847ad88bbcfb9fa687972.png?v=1772932506",
+            "altText": "",
+            "width": 1400,
+            "height": 1400
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductImage/50423491461333",
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/156aba0b80214d53ab44a14796637c1c.png?v=1772932506",
+            "altText": "",
+            "width": 1400,
+            "height": 1400
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductImage/50423491494101",
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/07788367d32242eaa1cb682911047a27.png?v=1772932506",
+            "altText": "",
+            "width": 1400,
+            "height": 1400
+          }
+        }
+      ]
+    },
+    "options": [
+      {
+        "name": "color",
+        "values": [
+          "Wine Red",
+          "Black"
+        ]
+      },
+      {
+        "name": "size",
+        "values": [
+          "XS",
+          "S",
+          "M",
+          "L",
+          "XL",
+          "2XL"
+        ]
+      }
+    ],
+    "collections": {
+      "edges": [
+        {
+          "node": {
+            "handle": "clothes",
+            "title": "Clothes"
+          }
+        }
+      ]
+    },
+    "resourcePublicationsCount": {
+      "count": 6
+    },
+    "variants": {
+      "edges": [
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53364056260821",
+            "title": "Wine Red / XS",
+            "sku": "260308PODQX2045#001",
+            "price": "85.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/562e5470389b4c9589686592c7a4588d.png?v=1772932506"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.7,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53364056293589",
+            "title": "Wine Red / S",
+            "sku": "260308PODQX2045#002",
+            "price": "85.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/562e5470389b4c9589686592c7a4588d.png?v=1772932506"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.7,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53364056326357",
+            "title": "Wine Red / M",
+            "sku": "260308PODQX2045#003",
+            "price": "85.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/562e5470389b4c9589686592c7a4588d.png?v=1772932506"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.7,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53364056359125",
+            "title": "Wine Red / L",
+            "sku": "260308PODQX2045#004",
+            "price": "85.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/562e5470389b4c9589686592c7a4588d.png?v=1772932506"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.7,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53364056391893",
+            "title": "Wine Red / XL",
+            "sku": "260308PODQX2045#005",
+            "price": "85.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/562e5470389b4c9589686592c7a4588d.png?v=1772932506"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.7,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53364056424661",
+            "title": "Wine Red / 2XL",
+            "sku": "260308PODQX2045#006",
+            "price": "85.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/562e5470389b4c9589686592c7a4588d.png?v=1772932506"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.7,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53364056457429",
+            "title": "Black / XS",
+            "sku": "260308PODQX2045#007",
+            "price": "85.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/156aba0b80214d53ab44a14796637c1c.png?v=1772932506"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.7,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53364056490197",
+            "title": "Black / S",
+            "sku": "260308PODQX2045#008",
+            "price": "85.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/156aba0b80214d53ab44a14796637c1c.png?v=1772932506"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.7,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53364056522965",
+            "title": "Black / M",
+            "sku": "260308PODQX2045#009",
+            "price": "85.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/156aba0b80214d53ab44a14796637c1c.png?v=1772932506"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.7,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53364056555733",
+            "title": "Black / L",
+            "sku": "260308PODQX2045#010",
+            "price": "85.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/156aba0b80214d53ab44a14796637c1c.png?v=1772932506"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.7,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53364056588501",
+            "title": "Black / XL",
+            "sku": "260308PODQX2045#011",
+            "price": "85.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/156aba0b80214d53ab44a14796637c1c.png?v=1772932506"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.7,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        },
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/53364056621269",
+            "title": "Black / 2XL",
+            "sku": "260308PODQX2045#012",
+            "price": "85.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 9999999,
+            "inventoryPolicy": "CONTINUE",
+            "image": {
+              "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/156aba0b80214d53ab44a14796637c1c.png?v=1772932506"
+            },
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": true,
+              "measurement": {
+                "weight": {
+                  "value": 0.7,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "gid://shopify/Product/9530389397717",
+    "handle": "loop-soul-volume-1-pass",
+    "title": "Loop Soul — Volume 1 Pass",
+    "status": "ACTIVE",
+    "productType": "Event Pass",
+    "vendor": "Odubo",
+    "tags": [
+      "loop-pass"
+    ],
+    "createdAt": "2026-08-11T12:15:08Z",
+    "updatedAt": "2026-08-28T23:35:23Z",
+    "publishedAt": "2026-08-11T12:15:33Z",
+    "totalInventory": 0,
+    "hasOnlyDefaultVariant": true,
+    "onlineStoreUrl": "https://odubostudio.myshopify.com/products/loop-soul-volume-1-pass",
+    "description": "One pass to Loop Soul Volume 1 — the room, the Wall, the anthem. Your event code arrives by email after purchase; it is your ticket at the door and your key to the in-room experience.",
+    "seo": {
+      "title": null,
+      "description": null
+    },
+    "featuredImage": {
+      "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/loop-soul-v1-pass-square.png?v=1786507096",
+      "altText": "Loop Soul Volume 1 pass — admits one"
+    },
+    "images": {
+      "edges": [
+        {
+          "node": {
+            "id": "gid://shopify/ProductImage/52428456624341",
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/loop-soul-v1-pass-square.png?v=1786507096",
+            "altText": "Loop Soul Volume 1 pass — admits one",
+            "width": 2000,
+            "height": 2000
+          }
+        }
+      ]
+    },
+    "options": [
+      {
+        "name": "Title",
+        "values": [
+          "Default Title"
+        ]
+      }
+    ],
+    "collections": {
+      "edges": [
+        {
+          "node": {
+            "handle": "loop-soul",
+            "title": "Loop Soul"
+          }
+        }
+      ]
+    },
+    "resourcePublicationsCount": {
+      "count": 4
+    },
+    "variants": {
+      "edges": [
+        {
+          "node": {
+            "id": "gid://shopify/ProductVariant/54476588974293",
+            "title": "Default Title",
+            "sku": "LOOP-PASS-VOL1",
+            "price": "5.00",
+            "compareAtPrice": null,
+            "availableForSale": true,
+            "inventoryQuantity": 75,
+            "inventoryPolicy": "DENY",
+            "image": null,
+            "inventoryItem": {
+              "tracked": false,
+              "requiresShipping": false,
+              "measurement": {
+                "weight": {
+                  "value": 0,
+                  "unit": "KILOGRAMS"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+]

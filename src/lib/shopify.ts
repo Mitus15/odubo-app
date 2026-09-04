@@ -6,6 +6,10 @@ export interface ShopifyProduct {
   title: string;
   handle: string;
   description: string;
+  /** Only populated by getShopifyProduct(); the list query omits it. */
+  descriptionHtml?: string;
+  seoTitle?: string | null;
+  seoDescription?: string | null;
   vendor: string;
   category: string;
   status: string;
@@ -158,6 +162,11 @@ export async function getShopifyProduct(handle: string, country?: string): Promi
           title
           handle
           description
+          descriptionHtml
+          seo {
+            title
+            description
+          }
           vendor
           productType
           availableForSale
@@ -235,6 +244,9 @@ export async function getShopifyProduct(handle: string, country?: string): Promi
       title: p.title,
       handle: p.handle,
       description: p.description,
+      descriptionHtml: p.descriptionHtml || '',
+      seoTitle: p.seo?.title || null,
+      seoDescription: p.seo?.description || null,
       vendor: p.vendor,
       category: p.productType,
       status: p.availableForSale ? 'active' : 'archived',

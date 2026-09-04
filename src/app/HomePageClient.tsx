@@ -169,9 +169,13 @@ export default function HomePageClient({
           break;
         case 'moments':
           // Redirect to moments subdomain instead of opening modal
-          const isProduction = window.location.hostname.includes('odubo.studio');
-          if (isProduction) {
-            window.location.href = 'https://moments.odubo.studio';
+          // `odubostudio.com` does not contain `odubo.studio`, so a substring
+          // check reports "not production" on the live domain. Match the apex.
+          const apex = ['odubostudio.com', 'odubo.studio'].find(
+            (a) => window.location.hostname === a || window.location.hostname.endsWith(`.${a}`)
+          );
+          if (apex) {
+            window.location.href = `https://moments.${apex}`;
           } else {
             window.location.href = '/moments';
           }

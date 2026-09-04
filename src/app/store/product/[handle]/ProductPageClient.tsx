@@ -14,6 +14,8 @@ interface ShopifyProduct {
   title: string;
   handle: string;
   description?: string;
+  descriptionHtml?: string;
+  vendor?: string;
   images?: { src: string }[];
   options?: { name: string; values: string[] }[];
   variants?: { 
@@ -218,9 +220,16 @@ export default function ProductPageClient({ product }: ProductPageClientProps) {
                 </div>
               )}
 
-              <div className="prose prose-invert prose-sm text-[#b2a491] mb-10 max-w-md font-light leading-relaxed">
-                {product?.description || 'No description available.'}
-              </div>
+              {product?.descriptionHtml ? (
+                <div
+                  className="prose prose-invert prose-sm text-[#b2a491] mb-10 max-w-md font-light leading-relaxed"
+                  dangerouslySetInnerHTML={{ __html: product.descriptionHtml }}
+                />
+              ) : (
+                <div className="prose prose-invert prose-sm text-[#b2a491] mb-10 max-w-md font-light leading-relaxed">
+                  {product?.description || 'No description available.'}
+                </div>
+              )}
 
               {/* Options */}
               {product?.options && product.options.length > 0 && (

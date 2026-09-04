@@ -2,7 +2,7 @@ import { MetadataRoute } from 'next';
 import { getShopifyProducts } from '@/lib/shopify';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://odubo.studio';
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.odubostudio.com';
   const currentDate = new Date().toISOString();
 
   // Static pages - core site structure

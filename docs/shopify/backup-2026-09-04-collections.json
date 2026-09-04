@@ -1,0 +1,98 @@
+[
+  {
+    "id": "gid://shopify/Collection/487127548117",
+    "handle": "frontpage",
+    "title": "Home page",
+    "productsCount": {
+      "count": 0
+    },
+    "ruleSet": null,
+    "sortOrder": "BEST_SELLING",
+    "descriptionHtml": "",
+    "image": null,
+    "seo": {
+      "title": null,
+      "description": null
+    }
+  },
+  {
+    "id": "gid://shopify/Collection/487450575061",
+    "handle": "clothes",
+    "title": "Clothes",
+    "productsCount": {
+      "count": 13
+    },
+    "ruleSet": {
+      "rules": [
+        {
+          "column": "PRODUCT_CATEGORY_ID_WITH_DESCENDANTS",
+          "relation": "EQUALS",
+          "condition": "gid://shopify/TaxonomyCategory/aa"
+        }
+      ]
+    },
+    "sortOrder": "BEST_SELLING",
+    "descriptionHtml": "",
+    "image": null,
+    "seo": {
+      "title": null,
+      "description": null
+    }
+  },
+  {
+    "id": "gid://shopify/Collection/488077852885",
+    "handle": "items",
+    "title": "Items",
+    "productsCount": {
+      "count": 0
+    },
+    "ruleSet": {
+      "rules": [
+        {
+          "column": "PRODUCT_CATEGORY_ID_WITH_DESCENDANTS",
+          "relation": "NOT_EQUALS",
+          "condition": "gid://shopify/TaxonomyCategory/aa"
+        }
+      ]
+    },
+    "sortOrder": "BEST_SELLING",
+    "descriptionHtml": "",
+    "image": null,
+    "seo": {
+      "title": null,
+      "description": null
+    }
+  },
+  {
+    "id": "gid://shopify/Collection/508896477397",
+    "handle": "catching-light",
+    "title": "Catching Light",
+    "productsCount": {
+      "count": 3
+    },
+    "ruleSet": null,
+    "sortOrder": "BEST_SELLING",
+    "descriptionHtml": "",
+    "image": null,
+    "seo": {
+      "title": null,
+      "description": null
+    }
+  },
+  {
+    "id": "gid://shopify/Collection/525509591253",
+    "handle": "loop-soul",
+    "title": "Loop Soul",
+    "productsCount": {
+      "count": 1
+    },
+    "ruleSet": null,
+    "sortOrder": "BEST_SELLING",
+    "descriptionHtml": "<p>Passes and pieces for the Loop Soul series at Scott’s Inn, Kamloops.</p>",
+    "image": null,
+    "seo": {
+      "title": null,
+      "description": null
+    }
+  }
+]
