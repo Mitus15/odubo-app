@@ -118,6 +118,15 @@ export function GatheringPoster({
       ? "Register · Free"
       : `Get Pass · ${priceLabel}`;
 
+  // "Lounge 6:30 · Album 8 · Dancefloor 9" — the opening three movements of
+  // the REAL run-of-show, so the hero can never disagree with the programme.
+  // ":00" drops the way the artwork line reads; "The " drops from titles.
+  const programmeStrip =
+    runOfShow
+      .slice(0, 3)
+      .map((i) => `${i.title.replace(/^The\s+/i, "")} ${i.time.replace(/:00$/, "")}`)
+      .join(" · ") || `Lounge ${timeLabel}`;
+
   /** Typeset index row — a tappable line of the bill, not a card. */
   const rowClass =
     "flex w-full items-baseline justify-between gap-4 border-t border-ink/15 py-3.5 text-left transition-colors hover:bg-ink/5";
@@ -128,10 +137,18 @@ export function GatheringPoster({
     <div className="relative mx-auto max-w-md px-5">
       {/* ── The poster: one full viewport ─────────────────────────────────── */}
       <section className="flex h-[100dvh] flex-col pb-4 pt-5">
-        {/* The wordmark alone up top — it names the event; the date identifies
-            the night (volume/theme left the masthead on 2026-08-25). */}
-        <header className="flex items-start justify-end">
+        {/* The masthead reads as one piece: loop∞Soul, and directly beneath it,
+            in the poster script, whose it is — so the name above the credit is
+            unmistakably the ALBUM's name, not just an event mark. Same script
+            treatment as the Journal masthead. */}
+        <header className="flex flex-col items-end">
           <Logo width={116} />
+          <div
+            className="pr-1 text-2xl leading-tight text-ink"
+            style={{ fontFamily: "var(--font-script)" }}
+          >
+            an album by Mani Odubo
+          </div>
         </header>
 
         {/* The crowd gets the room's upper air; the words happen under it. */}
@@ -148,22 +165,11 @@ export function GatheringPoster({
 
         <div className="flex flex-col items-center gap-3 pt-3">
           {/* The slogan sits UNDER the dancers — it's what they're saying, not
-              a headline (it is not the album's name). Straight, never arced;
-              mixed case on purpose — the one line that invites. */}
-          <div className="loop-display text-2xl font-bold tracking-tight text-ink">
+              a headline (it is not the album's name; the masthead carries
+              that). Straight, never arced; mixed case on purpose — the one
+              line that invites. */}
+          <div className="loop-display text-4xl font-bold tracking-tight text-ink">
             Come Dance
-          </div>
-
-          {/* THE CENTREPIECE — the printed poster's big line, given the big
-              type here too. The wordmark says Loop Soul; this says what Loop
-              Soul is. */}
-          <div className="text-center">
-            <div className="text-[10px] font-bold uppercase tracking-[0.4em] text-ink/60">
-              An Album By
-            </div>
-            <div className="loop-display text-4xl font-bold uppercase leading-none tracking-tight text-ink">
-              Mani Odubo
-            </div>
           </div>
 
           <div className="text-center">
@@ -180,7 +186,17 @@ export function GatheringPoster({
               </div>
             )}
             <div className="loop-muted mt-1 text-[11px] font-semibold uppercase tracking-[0.18em]">
-              {dateLabel} · Lounge {timeLabel} · {venueShort}
+              {dateLabel} · {venueShort}
+            </div>
+            {/* The shape of the night, in the open — the strip is DERIVED from
+                the same run-of-show the rail and the sheet render, never a
+                second copy of a time (the stale-9PM studio bug came from a
+                time fact living in two places). */}
+            <div className="mt-1 text-xs font-bold uppercase tracking-[0.18em] text-ink">
+              {programmeStrip}
+            </div>
+            <div className="loop-muted mt-1 text-[11px] font-semibold uppercase tracking-[0.18em]">
+              Dress code · {event.theme}
             </div>
           </div>
 
