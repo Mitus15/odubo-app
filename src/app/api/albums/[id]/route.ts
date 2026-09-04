@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+
+import { requireAdmin } from '@/lib/api/requireAdmin';
 export const runtime = 'edge';
 import { queryDatabase, executeQuery } from '@/lib/db';
 
@@ -44,6 +46,13 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Writes to the catalogue are admin-only. This route previously had no
+    // check at all, which let anyone repoint a track's audio or change its
+    // status. requireAdmin uses verifyUserFromRequest (jose), NOT the unsigned
+    // getUserFromRequest decoder used elsewhere in this codebase.
+    const gate = await requireAdmin(req);
+    if (gate.error) return gate.error;
+
     const { id } = await params;
     const formData = await req.formData();
     
@@ -151,6 +160,13 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Writes to the catalogue are admin-only. This route previously had no
+    // check at all, which let anyone repoint a track's audio or change its
+    // status. requireAdmin uses verifyUserFromRequest (jose), NOT the unsigned
+    // getUserFromRequest decoder used elsewhere in this codebase.
+    const gate = await requireAdmin(req);
+    if (gate.error) return gate.error;
+
     const { id } = await params;
     const body = await req.json() as { status?: string; [key: string]: any };
     
@@ -191,6 +207,13 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Writes to the catalogue are admin-only. This route previously had no
+    // check at all, which let anyone repoint a track's audio or change its
+    // status. requireAdmin uses verifyUserFromRequest (jose), NOT the unsigned
+    // getUserFromRequest decoder used elsewhere in this codebase.
+    const gate = await requireAdmin(req);
+    if (gate.error) return gate.error;
+
     const { id } = await params;
     
     // Delete tracks first (foreign key constraint)

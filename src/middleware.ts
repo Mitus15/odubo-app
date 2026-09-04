@@ -173,11 +173,49 @@ async function handleCommandCenterApi(request: NextRequest): Promise<NextRespons
 }
 
 /**
+ * Admin gate for WRITES to the music catalogue.
+ *
+ * `PATCH /api/tracks/[id]`, the bulk track routes and `/api/albums/[id]` had
+ * no authentication at all — anyone on the internet could repoint a track's
+ * `audio_url` at their own file, or flip `status` to published. Several
+ * sibling routes did check, but via `getUserFromRequest`, which decodes a JWT
+ * without verifying its signature and so accepts a forged `is_admin`.
+ *
+ * This is an edge backstop in the same spirit as handleCommandCenterApi: the
+ * in-route checks are the real gate, and this ensures a newly added handler
+ * cannot reintroduce the hole by forgetting one.
+ *
+ * READS stay open. The public album page and the player need them, and the
+ * payloads are separately filtered for entitlement.
+ */
+const CATALOGUE_WRITE_PREFIXES = ['/api/tracks', '/api/albums'];
+const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+
+async function handleCatalogueWrites(request: NextRequest): Promise<NextResponse | null> {
+  if (SAFE_METHODS.has(request.method)) return null;
+
+  const { pathname } = request.nextUrl;
+  const isCatalogue = CATALOGUE_WRITE_PREFIXES.some(
+    (p) => pathname === p || pathname.startsWith(`${p}/`)
+  );
+  if (!isCatalogue) return null;
+
+  const user = await verifyUserFromRequest(request);
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  if (!isAdminUser(user)) {
+    return NextResponse.json({ error: 'Forbidden: Admins only' }, { status: 403 });
+  }
+  return null;
+}
+
+/**
  * Middleware - subdomain routing + Loop Soul surface
  * Clerk has been removed in favor of JWT-based auth for admin
  */
 export default async function middleware(request: NextRequest) {
-  const denied = await handleCommandCenterApi(request);
+  const denied = (await handleCommandCenterApi(request)) ?? (await handleCatalogueWrites(request));
   if (denied) return denied;
 
   const response =

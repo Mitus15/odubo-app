@@ -1,9 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
+
+import { requireAdmin } from '@/lib/api/requireAdmin';
 export const runtime = 'edge';
 import { executeQuery } from '@/lib/db';
 
 export async function DELETE(req: NextRequest) {
   try {
+    // Writes to the catalogue are admin-only. This route previously had no
+    // check at all, which let anyone repoint a track's audio or change its
+    // status. requireAdmin uses verifyUserFromRequest (jose), NOT the unsigned
+    // getUserFromRequest decoder used elsewhere in this codebase.
+    const gate = await requireAdmin(req);
+    if (gate.error) return gate.error;
+
     const body = await req.json() as { ids: string[] };
     
     if (!body.ids || !Array.isArray(body.ids) || body.ids.length === 0) {
