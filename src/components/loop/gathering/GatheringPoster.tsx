@@ -23,44 +23,34 @@ type Capacity =
   | { unlimited: false; sold: number; total: number; remaining: number };
 type ModuleKey = "anthem" | "night" | "cover";
 
-const MODULES: { key: ModuleKey; label: string; title: string; blurb: string }[] = [
+/** Sheet config only — the launchers are typeset rows in the index below. */
+const MODULES: { key: ModuleKey; title: string }[] = [
   // Advertising a module that does nothing is worse than not showing it, so
   // the anthem drops out entirely while it is parked (see ANTHEM_ENABLED).
-  ...(ANTHEM_ENABLED
-    ? [
-        {
-          key: "anthem" as const,
-          label: "Soul Anthem",
-          title: "Soul Loop Anthem",
-          blurb: "The tournament.",
-        },
-      ]
-    : []),
-  // Label vs title on purpose: someone scanning the poster is looking for "the
-  // programme", so the button says that; the sheet keeps the brand's own name
-  // for the night. The Night has always rendered RUN_OF_SHOW — it was the
-  // programme all along, just not findable by that word.
-  { key: "night", label: "The Programme", title: "The Night", blurb: "The night, hour by hour." },
-  {
-    key: "cover",
-    label: "Cover Contest",
-    title: "The Cover Contest",
-    blurb: "Shoot the album cover. $50 if it wins.",
-  },
+  ...(ANTHEM_ENABLED ? [{ key: "anthem" as const, title: "Soul Loop Anthem" }] : []),
+  { key: "night", title: "The Night" },
+  { key: "cover", title: "The Cover Contest" },
   // Danceyokey is NOT part of Volume 1 (owner, 2026-08-25). The floor moment
   // this volume has is the Loop Soul Line, which lives in the programme rather
   // than needing a module of its own — there is nothing to sign up for.
   // The host console at /loop/admin/danceyokey is untouched for later volumes.
 ];
 
+/** Section label — the playbill's only heading device. The content lines get
+ *  the size; the label just says which part of the bill you're reading. */
+function Eyebrow({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="text-[10px] font-bold uppercase tracking-[0.35em] text-ink/50">{children}</div>
+  );
+}
+
 /**
- * STATE 1 — The Gathering. This is the page behind the printed poster's QR
- * ("SCAN FOR MORE"), so it opens as that poster — the wordmark, the slogan,
- * the album credit and the figure filling the first viewport — and then it
- * scrolls: everything the poster only had room to hint at, in full, plus every
- * door a guest might need (the pass, the programme, the contest, the store,
- * the lead single, their code). The poster is the cover; the page is the
- * record sleeve's back.
+ * STATE 1 — The Gathering, set as a PLAYBILL. This is the page behind the
+ * printed poster's QR, so it opens as the poster (wordmark, crowd, slogan,
+ * the album credit as the centrepiece) and then reads the way a bill does:
+ * who's on, the night in order, the record, the circle, the doors. Lines and
+ * rules, not cards — everything is type you can tap, and the only drawn shape
+ * on the page is the pass button.
  */
 export function GatheringPoster({
   event,
@@ -71,9 +61,9 @@ export function GatheringPoster({
   price = null,
   currency = null,
   dateLabel,
-  fullDateLabel,
   timeLabel,
   journalPublished = false,
+  album = null,
 }: {
   event: LoopEvent;
   capacity: Capacity;
@@ -86,11 +76,11 @@ export function GatheringPoster({
   currency?: string | null;
   /** Server-formatted so the venue's timezone is authoritative. */
   dateLabel: string;
-  /** The long form ("Saturday, September 26") for the info section. */
-  fullDateLabel: string;
   timeLabel: string;
   /** A published Loop Journal issue makes last volume the pre-phase hype reel. */
   journalPublished?: boolean;
+  /** The real record, read from the warehouse — null hides the count line. */
+  album?: { trackCount: number } | null;
 }) {
   const [active, setActive] = useState<ModuleKey | null>(null);
   const [passOpen, setPassOpen] = useState(false);
@@ -128,57 +118,54 @@ export function GatheringPoster({
       ? "Register · Free"
       : `Get Pass · ${priceLabel}`;
 
+  /** Typeset index row — a tappable line of the bill, not a card. */
+  const rowClass =
+    "flex w-full items-baseline justify-between gap-4 border-t border-ink/15 py-3.5 text-left transition-colors hover:bg-ink/5";
+  const rowLabel = "text-sm font-bold uppercase tracking-wide text-ink";
+  const rowNote = "loop-muted shrink-0 text-[10px] font-semibold uppercase tracking-[0.2em]";
+
   return (
     <div className="relative mx-auto max-w-md px-5">
-      {/* ── The poster: one full viewport, exactly as before ─────────────── */}
+      {/* ── The poster: one full viewport ─────────────────────────────────── */}
       <section className="flex h-[100dvh] flex-col pb-4 pt-5">
-        {/* Header: the wordmark alone. The volume/theme block was removed on
-            2026-08-25 — the album is the identity, and leading with an edition
-            number made the night look like an instalment of something you'd
-            missed the start of. The theme survives where it does work: the dress
-            code, and the programme. */}
+        {/* The wordmark alone up top — it names the event; the date identifies
+            the night (volume/theme left the masthead on 2026-08-25). */}
         <header className="flex items-start justify-end">
           <Logo width={116} />
         </header>
 
-        {/* Tagline + credit + silhouette hero. Figure top-anchored so it sits
-            right under the credit (no floating gap); the slack collects below. */}
-        <div className="flex min-h-0 flex-1 flex-col items-center gap-2">
-          {/* The slogan — straight, never arced: the arc asks, straight type
-              states (docs/decisions/loop-soul-brand-language.md). Mixed case is
-              deliberate — the one line on the piece that invites rather than
-              announces. */}
-          <div className="loop-display text-4xl font-bold tracking-tight text-ink">
-            Come Dance
-          </div>
-          {/* The printed poster's big line, word for word (see
-              docs/decisions/loop-soul-is-the-album.md) — the page a QR scan
-              lands on must say what the wall said. */}
-          <div className="text-[11px] font-bold uppercase tracking-[0.3em] text-ink">
-            An Album by Mani Odubo
-          </div>
-          <div className="relative min-h-0 w-full flex-1">
-            {/* The crowd — the poster kit's primary figure (BRAND_FIGURES[0]),
-                so the page behind the QR opens with the same cast as the print.
-                It's a wide strip, so it centres in the air between the credit
-                and the date block rather than top-hugging like the old
-                portrait figure did. */}
-            <Image
-              src="/loop/figures/crowd.png"
-              alt="Loop Soul dancers in silhouette"
-              fill
-              priority
-              unoptimized
-              className="object-contain object-center"
-            />
-          </div>
+        {/* The crowd gets the room's upper air; the words happen under it. */}
+        <div className="relative mt-2 min-h-0 w-full flex-1">
+          <Image
+            src="/loop/figures/crowd.png"
+            alt="Loop Soul dancers in silhouette"
+            fill
+            priority
+            unoptimized
+            className="object-contain object-center"
+          />
         </div>
 
-        {/* When and where, in the open — before anyone has to tap anything. The
-            PRICE is deliberately not here: it is on the button directly below,
-            and printing it twice in the same eyeful just read as a stutter. The
-            scarcity count only appears when there is a cap to count against. */}
-        <div className="flex flex-col items-center gap-3">
+        <div className="flex flex-col items-center gap-3 pt-3">
+          {/* The slogan sits UNDER the dancers — it's what they're saying, not
+              a headline (it is not the album's name). Straight, never arced;
+              mixed case on purpose — the one line that invites. */}
+          <div className="loop-display text-2xl font-bold tracking-tight text-ink">
+            Come Dance
+          </div>
+
+          {/* THE CENTREPIECE — the printed poster's big line, given the big
+              type here too. The wordmark says Loop Soul; this says what Loop
+              Soul is. */}
+          <div className="text-center">
+            <div className="text-[10px] font-bold uppercase tracking-[0.4em] text-ink/60">
+              An Album By
+            </div>
+            <div className="loop-display text-4xl font-bold uppercase leading-none tracking-tight text-ink">
+              Mani Odubo
+            </div>
+          </div>
+
           <div className="text-center">
             {(soldOut || !capacity.unlimited) && (
               <div className="text-sm font-bold uppercase tracking-widest">
@@ -193,9 +180,11 @@ export function GatheringPoster({
               </div>
             )}
             <div className="loop-muted mt-1 text-[11px] font-semibold uppercase tracking-[0.18em]">
-              {dateLabel} · Doors {timeLabel} · {venueShort}
+              {dateLabel} · Lounge {timeLabel} · {venueShort}
             </div>
           </div>
+
+          {/* The one drawn shape on the page — the ask. */}
           <button
             type="button"
             onClick={() => setPassOpen(true)}
@@ -213,152 +202,220 @@ export function GatheringPoster({
             </button>
           )}
 
-          {/* The invitation to scroll — the poster used to be the whole page,
-              so the page has to say there is more of it now. An anchor, not
-              JS: smooth scrolling comes from CSS and works without hydration. */}
           <a
-            href="#the-night"
+            href="#the-bill"
             onClick={(e) => {
               // The document doesn't scroll — <main> does (root layout), so
               // smooth-scroll the target into view rather than relying on
               // html's scroll-behavior. The href stays as the no-JS fallback.
               e.preventDefault();
-              document.getElementById("the-night")?.scrollIntoView({ behavior: "smooth" });
+              document.getElementById("the-bill")?.scrollIntoView({ behavior: "smooth" });
             }}
             className="loop-muted pt-1 text-[10px] font-bold uppercase tracking-[0.3em]"
           >
-            The full night ↓
+            On the bill ↓
           </a>
         </div>
       </section>
 
-      {/* ── The night, in full — the poster's fine print, given room ──────── */}
-      <section id="the-night" className="flex scroll-mt-6 flex-col gap-4 pb-2 pt-6">
-        <h2 className="loop-display text-3xl font-bold tracking-tight text-ink">The Night</h2>
-        <p className="text-sm leading-relaxed text-ink/85">
-          Loop Soul is an album. This night is the first time it&apos;s played anywhere —{" "}
-          <span className="font-semibold">Mani Odubo performs the record front to back with the
-          band, outdoors in the courtyard</span>, and the whole set is recorded for the release.
-          The people in the room are the album&apos;s first audience.
-        </p>
-
-        <dl className="flex flex-col divide-y divide-ink/15 rounded-2xl border border-ink/20">
-          {(
-            [
-              ["When", `${fullDateLabel} · Doors ${timeLabel} · The album at 8`],
-              ["Where", `${event.venue} — the courtyard, under the open sky`],
-              // The theme lives here now — as an instruction, where it works,
-              // not as an edition number on the masthead.
-              ["Dress code", `${event.theme}. Come dressed for the year.`],
-              ["Entry", `${isFree ? "Free" : priceLabel} · 19+ · one pass admits one`],
-              ["The table", "Barbecue through the night."],
-              [
-                "Your code",
-                "Registering emails you an event code — your ticket at the door, and your key to the room's app on the night.",
-              ],
-            ] as [string, string][]
-          ).map(([term, detail]) => (
-            <div key={term} className="flex gap-4 px-4 py-3">
-              <dt className="w-24 shrink-0 text-[10px] font-bold uppercase leading-5 tracking-[0.2em] text-ink/60">
-                {term}
-              </dt>
-              <dd className="text-sm leading-5 text-ink/90">{detail}</dd>
+      {/* ── THE BILL — why this ticket, in billing order ──────────────────── */}
+      <section id="the-bill" className="flex scroll-mt-6 flex-col gap-3 pt-8">
+        <Eyebrow>On the Bill</Eyebrow>
+        <div className="flex flex-col divide-y divide-ink/15 text-center">
+          {/* Top billing: the record itself, and the fact that being in the
+              room puts you on it — the strongest line the night has. */}
+          <div className="py-5">
+            <div className="loop-display text-3xl font-bold uppercase leading-tight tracking-tight text-ink">
+              The Album,
+              <br />
+              Live in Full
             </div>
-          ))}
-        </dl>
+            <div className="loop-muted mt-2 text-[10px] font-semibold uppercase tracking-[0.25em]">
+              Recorded in the room — the crowd is on the record
+            </div>
+          </div>
 
-        {/* Registration closing on the night is the campaign's real urgency —
-            truer than any scarcity counter (docs/decisions/loop-soul-is-the-album.md). */}
-        <p className="text-xs leading-relaxed text-ink/70">
-          One more thing: registration closes on the night and never reopens. Everyone inside
-          keeps the record, the gallery, the cover contest and the vote on the tracklist — the
-          circle is whoever was there.
-        </p>
+          <div className="py-5">
+            <div className="loop-display text-3xl font-bold uppercase leading-tight tracking-tight text-ink">
+              Amen
+            </div>
+            <div className="loop-muted mt-2 text-[10px] font-semibold uppercase tracking-[0.25em]">
+              On the decks, door to lights
+            </div>
+          </div>
+
+          <div className="py-5">
+            <div className="loop-display text-2xl font-bold uppercase leading-tight tracking-tight text-ink">
+              The Floor,
+              <br />
+              Livestreamed
+            </div>
+            <div className="loop-muted mt-2 text-[10px] font-semibold uppercase tracking-[0.25em]">
+              All night, live to everywhere
+            </div>
+          </div>
+
+          <div className="py-5">
+            {/* Broken by hand — "The Loop Soul Line" must never split mid-name. */}
+            <div className="loop-display text-lg font-bold uppercase leading-snug tracking-wide text-ink">
+              Games · Barbecue
+              <br />
+              The Loop Soul Line
+            </div>
+          </div>
+        </div>
+
+        {/* The essentials strip — the poster's fine print in one line. */}
+        <div className="border-y-2 border-ink py-2.5 text-center text-[11px] font-bold uppercase tracking-[0.2em] text-ink">
+          Dress Code {event.theme} · {isFree ? "Free" : priceLabel} · 19+ · Outdoors
+        </div>
       </section>
 
-      {/* ── Every door a guest might need ─────────────────────────────────── */}
-      <section className="flex flex-col gap-2 pb-6 pt-6">
-        <h2 className="loop-display pb-2 text-3xl font-bold tracking-tight text-ink">
-          Step Inside
-        </h2>
-
-        {/* The lead single first — 1984 is the theme and the dress code, and
-            hearing it is the best argument for the night. /music resolves to
-            the newest album so this link never learns an id; the album player
-            there also carries the stem field — the record you can mix. */}
-        <Link
-          href="/music"
-          className="flex flex-col gap-1 rounded-2xl bg-ink px-5 py-4 text-sand transition-transform active:scale-[0.98]"
+      {/* ── THE NIGHT — the real programme, as a rail ─────────────────────── */}
+      <section className="flex flex-col gap-4 pt-10">
+        <Eyebrow>The Night</Eyebrow>
+        <div className="flex flex-col">
+          {runOfShow.map((item, i) => (
+            <div key={item.id} className="grid grid-cols-[3.25rem_1fr] gap-x-4">
+              <div className="pt-0.5 text-right text-sm font-bold tabular-nums text-ink">
+                {item.time}
+              </div>
+              <div
+                className={`relative border-l-2 border-ink pl-4 ${
+                  i === runOfShow.length - 1 ? "pb-1" : "pb-6"
+                }`}
+              >
+                {/* Square markers, like a printed programme's pips. */}
+                <span aria-hidden className="absolute -left-[5px] top-[7px] h-2 w-2 bg-ink" />
+                <div className="loop-display text-lg font-bold uppercase leading-tight tracking-wide text-ink">
+                  {item.title}
+                </div>
+                {item.performer && (
+                  <div className="loop-muted mt-0.5 text-[10px] font-semibold uppercase tracking-[0.2em]">
+                    {item.performer}
+                    {item.role ? ` — ${item.role}` : ""}
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={() => setActive("night")}
+          className="self-start text-xs font-bold uppercase tracking-[0.2em] text-ink underline underline-offset-4"
         >
-          <span className="text-[10px] font-bold uppercase tracking-[0.3em] opacity-70">
-            The Lead Single
-          </span>
-          <span className="loop-display text-2xl font-bold tracking-tight">1984</span>
-          <span className="text-xs leading-relaxed opacity-80">
-            Hear it on the album player — where the record also opens as a stem field you mix
-            yourself. Listen ↗
-          </span>
-        </Link>
+          The full programme →
+        </button>
+      </section>
 
-        {/* Module launchers — same sheets as always, now with a line of why. */}
-        {MODULES.map((m) => (
-          <button
-            key={m.key}
-            type="button"
-            onClick={() => setActive(m.key)}
-            className="flex flex-col gap-0.5 rounded-2xl border border-ink/20 px-5 py-4 text-left transition-colors hover:bg-ink/10"
-          >
-            <span className="text-sm font-bold uppercase tracking-wide text-ink">{m.label}</span>
-            <span className="text-xs text-ink/70">{m.blurb}</span>
-          </button>
-        ))}
-
-        <Link
-          href="/loop/store"
-          className="flex flex-col gap-0.5 rounded-2xl border border-ink/20 px-5 py-4 transition-colors hover:bg-ink/10"
-        >
-          <span className="text-sm font-bold uppercase tracking-wide text-ink">The Store</span>
-          <span className="text-xs text-ink/70">Passes and pieces — wear the year. ↗</span>
-        </Link>
-
-        <Link
-          href="/loop/code"
-          className="flex flex-col gap-0.5 rounded-2xl border border-ink/20 px-5 py-4 transition-colors hover:bg-ink/10"
-        >
-          <span className="text-sm font-bold uppercase tracking-wide text-ink">
-            Find Your Code
-          </span>
-          <span className="text-xs text-ink/70">
-            Already registered? Look up your event code by email. ↗
-          </span>
-        </Link>
-
-        {journalPublished && (
-          <Link
-            href="/loop/journal"
-            className="flex flex-col gap-0.5 rounded-2xl border border-ink/20 px-5 py-4 transition-colors hover:bg-ink/10"
-          >
-            <span className="text-sm font-bold uppercase tracking-wide text-ink">The Journal</span>
-            <span className="text-xs text-ink/70">The magazine of the last volume. ↗</span>
+      {/* ── THE RECORD — shown, not described ─────────────────────────────── */}
+      <section className="flex flex-col gap-3 pt-10">
+        <Eyebrow>The Record</Eyebrow>
+        <div>
+          <div className="loop-display text-3xl font-bold uppercase leading-none tracking-tight text-ink">
+            Loop Soul
+          </div>
+          <div className="loop-muted mt-1.5 text-[10px] font-semibold uppercase tracking-[0.25em]">
+            {album ? `${album.trackCount} tracks · ` : ""}Mani Odubo · first played this night
+          </div>
+        </div>
+        {/* Two ways in, as lines you tap — hear it, or put your shot on it.
+            /music resolves the newest album so this never learns an id; the
+            player there also opens the record as a stem field you mix. */}
+        <div className="flex flex-col">
+          <Link href="/music" className={rowClass}>
+            <span className={rowLabel}>Hear 1984, the lead single</span>
+            <span className={rowNote}>Listen ↗</span>
           </Link>
-        )}
+          <button type="button" onClick={() => setActive("cover")} className={`${rowClass} border-b`}>
+            <span className={rowLabel}>Shoot the album cover</span>
+            <span className={rowNote}>Win $50 →</span>
+          </button>
+        </div>
+      </section>
 
-        <Link
-          href="/loop/legacy"
-          className="flex flex-col gap-0.5 rounded-2xl border border-ink/20 px-5 py-4 transition-colors hover:bg-ink/10"
-        >
-          <span className="text-sm font-bold uppercase tracking-wide text-ink">
-            Loop Soul Legacy
-          </span>
-          <span className="text-xs text-ink/70">Where every volume lives afterwards. ↗</span>
-        </Link>
+      {/* ── THE CIRCLE — the offer as a flow, not a paragraph ─────────────── */}
+      <section className="flex flex-col gap-4 pt-10">
+        <Eyebrow>The Circle</Eyebrow>
+        <div className="grid grid-cols-[1fr_auto_1fr_auto_1fr] items-start gap-2">
+          <div className="text-center">
+            <div className="loop-display text-sm font-bold uppercase tracking-wide text-ink">
+              Register
+            </div>
+            <div className="loop-muted mt-1 text-[9px] font-semibold uppercase leading-relaxed tracking-[0.15em]">
+              {isFree ? "free · admits one" : `${priceLabel} · admits one`}
+            </div>
+          </div>
+          <div aria-hidden className="pt-0.5 text-sm font-bold text-ink/40">
+            →
+          </div>
+          <div className="text-center">
+            <div className="loop-display text-sm font-bold uppercase tracking-wide text-ink">
+              Be There
+            </div>
+            <div className="loop-muted mt-1 text-[9px] font-semibold uppercase leading-relaxed tracking-[0.15em]">
+              {dateLabel}
+            </div>
+          </div>
+          <div aria-hidden className="pt-0.5 text-sm font-bold text-ink/40">
+            →
+          </div>
+          <div className="text-center">
+            <div className="loop-display text-sm font-bold uppercase tracking-wide text-ink">
+              Keep It All
+            </div>
+            <div className="loop-muted mt-1 text-[9px] font-semibold uppercase leading-relaxed tracking-[0.15em]">
+              the record · the gallery · the vote
+            </div>
+          </div>
+        </div>
+        {/* Registration closing on the night is the campaign's real urgency —
+            truer than any scarcity counter (docs/decisions/loop-soul-is-the-album.md). */}
+        <div className="text-center text-[11px] font-bold uppercase tracking-[0.2em] text-ink">
+          The door closes on the night — for good
+        </div>
+      </section>
 
-        {/* The ask, restated where the reading ends — nobody should have to
-            scroll back up to say yes. */}
+      {/* ── DOORS — the index. Typeset rows, whole line tappable ──────────── */}
+      <section className="flex flex-col gap-3 pb-8 pt-10">
+        <Eyebrow>Doors</Eyebrow>
+        <div className="flex flex-col">
+          <button type="button" onClick={() => setActive("night")} className={rowClass}>
+            <span className={rowLabel}>The Programme</span>
+            <span className={rowNote}>→</span>
+          </button>
+          {ANTHEM_ENABLED && (
+            <button type="button" onClick={() => setActive("anthem")} className={rowClass}>
+              <span className={rowLabel}>Soul Anthem</span>
+              <span className={rowNote}>→</span>
+            </button>
+          )}
+          <Link href="/loop/store" className={rowClass}>
+            <span className={rowLabel}>The Store</span>
+            <span className={rowNote}>Passes &amp; pieces ↗</span>
+          </Link>
+          <Link href="/loop/code" className={rowClass}>
+            <span className={rowLabel}>Find Your Code</span>
+            <span className={rowNote}>↗</span>
+          </Link>
+          {journalPublished && (
+            <Link href="/loop/journal" className={rowClass}>
+              <span className={rowLabel}>The Journal</span>
+              <span className={rowNote}>↗</span>
+            </Link>
+          )}
+          <Link href="/loop/legacy" className={`${rowClass} border-b`}>
+            <span className={rowLabel}>Legacy</span>
+            <span className={rowNote}>↗</span>
+          </Link>
+        </div>
+
+        {/* The ask, restated where the reading ends. */}
         <button
           type="button"
           onClick={() => setPassOpen(true)}
-          className="mt-3 w-full rounded-full bg-ink py-4 text-base font-bold text-sand transition-transform active:scale-95"
+          className="mt-2 w-full rounded-full bg-ink py-4 text-base font-bold text-sand transition-transform active:scale-95"
         >
           {passCta}
         </button>
