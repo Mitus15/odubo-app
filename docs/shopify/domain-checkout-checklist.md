@@ -58,6 +58,13 @@ Shopify admin → **Online Store → Navigation → URL Redirects → Import** �
 An event pass for one night in Kamloops is syndicated to shopping channels. Those
 channels aren't visible to this token. Shopify admin → the product → **Publishing**.
 
+## 5b. Printed QR codes may point at the dead domain
+
+The poster kit refuses to guess a host and reads `loop_settings.public_base_url`. If that
+setting still holds `odubo.studio`, every QR already printed — and every one printed next —
+resolves to nothing. Check it at **/loop/admin/studio → Pass sales → public base URL** and
+set it to `https://www.odubostudio.com` before any further print run.
+
 ## 6. Store name
 
 Still **"B.A.A.D by Odubo"**. If B.A.A.D is the clothing brand and Odubo Studio is the

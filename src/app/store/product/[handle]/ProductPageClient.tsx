@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import { brandLockup } from '@/lib/store/brands';
 import ScreenLayout from '@/components/ui/ScreenLayout';
 import ScrollContainer from '@/components/ui/ScrollContainer';
 import { usePageAnalytics } from '@/hooks/usePageAnalytics';
@@ -212,7 +213,7 @@ export default function ProductPageClient({ product }: ProductPageClientProps) {
             {/* Details */}
             <div className="flex flex-col justify-center">
               <h1 className="text-3xl sm:text-4xl font-medium text-[#ede8df] mb-2 tracking-wide drop-shadow-[0_2px_12px_rgba(132,60,45,0.35)]">{product?.title || 'Product'}</h1>
-              <p className="text-[10px] uppercase tracking-[0.22em] text-[#b2a491] mb-4">Odubo Studio · Fashion</p>
+              <p className="text-[10px] uppercase tracking-[0.22em] text-[#b2a491] mb-4">{brandLockup(product?.vendor)}</p>
               
               {selectedVariant && (
                 <div className="text-xl text-[#b2a491] font-light tracking-widest mb-8">

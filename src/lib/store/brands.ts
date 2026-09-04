@@ -37,3 +37,24 @@ export function excludeTagsClause(tags: readonly string[] = ODUBO_EXCLUDED_TAGS)
   if (tags.length === 0) return undefined;
   return tags.map((t) => `tag_not:${t}`).join(' AND ');
 }
+
+/** The house the brands belong to. Shown wherever a brand is named. */
+export const PARENT_BRAND = 'Odubo Studio';
+
+/**
+ * How a product's brand reads wherever both names appear: "B.A.A.D by Odubo
+ * Studio".
+ *
+ * Shopify's `vendor` field holds the brand ALONE — shopping feeds want a bare
+ * brand token, so "B.A.A.D" is what belongs there. This is the reading version
+ * of the same fact, so the relationship is stated identically on every surface
+ * instead of being retyped per component.
+ *
+ * A product whose vendor already IS the parent — the Loop Soul pass, which
+ * Odubo Studio sells directly — says the name once rather than twice.
+ */
+export function brandLockup(vendor?: string | null): string {
+  const v = (vendor || '').trim();
+  if (!v || v === PARENT_BRAND) return PARENT_BRAND;
+  return `${v} by ${PARENT_BRAND}`;
+}
