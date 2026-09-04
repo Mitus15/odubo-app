@@ -137,19 +137,18 @@ export function GatheringPoster({
     <div className="relative mx-auto max-w-md px-5">
       {/* ── The poster: one full viewport ─────────────────────────────────── */}
       <section className="flex h-[100dvh] flex-col pb-4 pt-5">
-        {/* The masthead reads as one piece: loop∞Soul, and directly beneath it,
-            in the poster script, whose it is — so the name above the credit is
-            unmistakably the ALBUM's name, not just an event mark. Same script
-            treatment as the Journal masthead. */}
-        <header className="flex flex-col items-end">
+        <header className="flex items-start justify-end">
           <Logo width={116} />
-          <div
-            className="pr-1 text-2xl leading-tight text-ink"
-            style={{ fontFamily: "var(--font-script)" }}
-          >
-            an album by Mani Odubo
-          </div>
         </header>
+
+        {/* The album credit EXACTLY as the poster engine sets it (layout.ts §5,
+            "the big line under the header"): Jost 500, caps, 0.34em tracking,
+            centered, 85% ink. Under the wordmark it does the naming — Loop
+            Soul is the album. The -mr cancels the trailing letter-space so the
+            line centres true, the way the engine's glyph layout does. */}
+        <div className="loop-display pt-5 text-center text-[15px] font-medium uppercase tracking-[0.34em] text-ink/85">
+          <span className="-mr-[0.34em]">An Album by Mani Odubo</span>
+        </div>
 
         {/* The crowd gets the room's upper air; the words happen under it. */}
         <div className="relative mt-2 min-h-0 w-full flex-1">
