@@ -38,34 +38,32 @@ odubostudio.myshopify.com/account
   -> 302 shopify.com/authentication/75208425685/oauth/authorize   (real login)
 ```
 
-## 2. Branded checkout — `shop.odubostudio.com` (waiting on a certificate)
+## 2. Branded checkout — DONE 2026-09-05
 
-State as of 2026-09-05: all four domains show **Connected** in Shopify, DNS is correct,
-and `shop.odubostudio.com` is **primary**.
+`shop.odubostudio.com` is primary, its certificate is issued, and checkout is served on
+it. Verified end to end with a real cart:
 
-**"Connected" in the Shopify domains list does NOT mean the TLS certificate exists.**
-It only means DNS resolves to Shopify. The two are separate steps, and only the second
-one determines whether anybody can pay. This bit twice in one session:
+```
+primary domain : shop.odubostudio.com
+checkout host  : shop.odubostudio.com     (was odubostudio.myshopify.com)
+cart total     : 70.0 CAD
+customer GET   : 302, ssl_verify_result=0
+```
 
-| host | DNS | certificate |
+| host | http | tls |
 |---|---|---|
-| `accounts.odubostudio.com` | ok | issued ~5 min after DNS |
-| `shop.odubostudio.com` | ok | **still not issued 12+ min later** |
+| `www.odubostudio.com/store` | 200 | valid |
+| `shop.odubostudio.com` | 200 | valid |
+| `accounts.odubostudio.com` | 301 | valid |
+| `odubostudio.myshopify.com` | 301 -> shop.odubostudio.com | valid |
 
-Because primary decides the host `checkoutUrl` is issued on, making a domain primary
-before its certificate exists takes checkout down — browsing keeps working, so nothing
-looks wrong until someone tries to pay.
+The certificate took roughly 25 minutes after DNS, against about 5 for `accounts.` —
+so a slow issue is not necessarily a stuck one. During that window `shop.` was already
+primary and checkout was down; see the rule below, which is the thing to remember.
 
-**The rule: never set a domain primary until `curl -I https://<host>` returns
-`ssl_verify_result=0`.** The admin UI will not tell you this.
-
-Owner's call (2026-09-05): leave `shop.` primary and let it heal itself when the
-certificate lands, since the store is not being promoted yet. Note the storefront is
-NOT gated — `www.odubostudio.com/store` returns 200 to anonymous visitors with live
-product data — so avoid sharing the link until the certificate is issued.
-
-To restore checkout immediately at any point, set `odubostudio.myshopify.com` (or
-`accounts.odubostudio.com`) as primary; both serve valid TLS.
+**Never set a domain primary until `curl -sI https://<host> -w '%{ssl_verify_result}'`
+returns 0.** Shopify's "Connected" badge reports DNS only, not the certificate, and the
+gap between the two is a live checkout outage that browsing does not reveal.
 
 ## 3. Currency is ambiguous
 
