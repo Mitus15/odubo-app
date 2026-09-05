@@ -29,22 +29,51 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing webhook topic' }, { status: 400 });
     }
 
-    // Verify HMAC signature (optional but recommended)
-    const webhookSecret = process.env.SHOPIFY_WEBHOOK_SECRET;
-    if (webhookSecret && hmac) {
-      const body = await request.text();
-      const isValid = await verifyWebhook(body, hmac, webhookSecret);
-      if (!isValid) {
-        console.error('[Webhook] Invalid HMAC signature');
-        return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+    // Verify the HMAC signature.
+    //
+    // These payloads become rows in commerce_orders — the numbers the finance
+    // dashboard reports on. An unverified endpoint lets anyone POST invented
+    // revenue straight into the books, so production fails closed: no secret,
+    // no processing.
+    //
+    // Which secret depends on how the webhook was registered. Ones created
+    // through the Admin API are signed with the registering app's API secret
+    // key; ones added by hand under Settings → Notifications use the
+    // store-wide notification secret. Both are accepted so either route works.
+    const secrets = [
+      process.env.SHOPIFY_WEBHOOK_SECRET,
+      process.env.SHOPIFY_ADMIN_API_SECRET,
+    ].filter((v): v is string => Boolean(v));
+
+    if (secrets.length === 0) {
+      if (process.env.NODE_ENV === 'production') {
+        console.error('[Webhook] No webhook secret configured — refusing unverified payload');
+        return NextResponse.json({ error: 'Webhook verification not configured' }, { status: 500 });
       }
-      // Parse body after verification
-      const payload = JSON.parse(body);
+      console.warn('[Webhook] No secret set — skipping verification (development only)');
+      const payload = await request.json();
       return await handleWebhook(topic, payload, shopDomain);
     }
 
-    // If no secret configured, parse body directly
-    const payload = await request.json();
+    if (!hmac) {
+      console.error('[Webhook] Missing HMAC header');
+      return NextResponse.json({ error: 'Missing signature' }, { status: 401 });
+    }
+
+    const body = await request.text();
+    let verified = false;
+    for (const secret of secrets) {
+      if (await verifyWebhook(body, hmac, secret)) {
+        verified = true;
+        break;
+      }
+    }
+    if (!verified) {
+      console.error('[Webhook] Invalid HMAC signature');
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+    }
+
+    const payload = JSON.parse(body);
     return await handleWebhook(topic, payload, shopDomain);
   } catch (error) {
     console.error('[Webhook] Error:', error);

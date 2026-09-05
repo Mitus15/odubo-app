@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { queryDatabase, executeQuery } from '@/lib/db';
+import { verifyUserFromRequest, isAdminUser } from '@/lib/auth';
 import {
   fetchOrders,
   toCents,
@@ -29,9 +30,36 @@ export const runtime = 'edge';
  * - full=true: Force full sync instead of incremental
  * - limit=N: Limit number of orders to sync (for testing)
  */
+/**
+ * Who may trigger a sync.
+ *
+ * This route calls the Shopify Admin API and writes to D1, so leaving it open
+ * lets anyone on the internet burn the store's API rate limit and churn the
+ * commerce tables. Two callers are legitimate:
+ *
+ *   1. Vercel Cron, which sends `Authorization: Bearer $CRON_SECRET`.
+ *   2. An admin pressing "Sync now" in the commerce dashboard, carrying the
+ *      normal admin session cookie.
+ *
+ * If CRON_SECRET is unset the scheduled caller cannot be verified, so only the
+ * admin path is accepted — it fails closed rather than falling back to open.
+ */
+async function isAuthorized(request: NextRequest): Promise<boolean> {
+  const secret = process.env.CRON_SECRET;
+  if (secret) {
+    const header = request.headers.get('authorization') || '';
+    if (header === `Bearer ${secret}`) return true;
+  }
+  return isAdminUser(await verifyUserFromRequest(request));
+}
+
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
   let syncLogId: number | null = null;
+
+  if (!(await isAuthorized(request))) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
 
   try {
     // Check if Admin API is configured
