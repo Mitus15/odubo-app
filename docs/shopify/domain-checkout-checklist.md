@@ -38,26 +38,34 @@ odubostudio.myshopify.com/account
   -> 302 shopify.com/authentication/75208425685/oauth/authorize   (real login)
 ```
 
-## 2. Branded checkout — `shop.odubostudio.com` (in progress)
+## 2. Branded checkout — `shop.odubostudio.com` (waiting on a certificate)
 
-Both subdomains are connected in Shopify and their DNS is live:
+State as of 2026-09-05: all four domains show **Connected** in Shopify, DNS is correct,
+and `shop.odubostudio.com` is **primary**.
 
-| host | CNAME | resolves to |
+**"Connected" in the Shopify domains list does NOT mean the TLS certificate exists.**
+It only means DNS resolves to Shopify. The two are separate steps, and only the second
+one determines whether anybody can pay. This bit twice in one session:
+
+| host | DNS | certificate |
 |---|---|---|
-| `shop.odubostudio.com` | `shops.myshopify.com` | 23.227.38.74 (Shopify) |
-| `accounts.odubostudio.com` | `shops.myshopify.com` | 23.227.38.74 (Shopify) |
+| `accounts.odubostudio.com` | ok | issued ~5 min after DNS |
+| `shop.odubostudio.com` | ok | **still not issued 12+ min later** |
 
-CAA on `odubostudio.com` allows `letsencrypt.org`, which is what Shopify issues through,
-so certificates will provision. **Remaining step: once Shopify shows both Connected, set
-`shop.odubostudio.com` as primary** so `checkoutUrl` is issued on it instead of
-`odubostudio.myshopify.com`.
+Because primary decides the host `checkoutUrl` is issued on, making a domain primary
+before its certificate exists takes checkout down — browsing keeps working, so nothing
+looks wrong until someone tries to pay.
 
-Do NOT point Settings → Customer accounts at `accounts.odubostudio.com` until it shows
-Connected — pointing it at a host with no Shopify certificate re-creates the exact
-outage fixed in item 1. The hosted flow works in the meantime.
+**The rule: never set a domain primary until `curl -I https://<host>` returns
+`ssl_verify_result=0`.** The admin UI will not tell you this.
 
-Caveat: a returning Shop Pay customer is still bounced to `shop.app` by Shopify's
-universal redirect — that is Shopify's, not configurable.
+Owner's call (2026-09-05): leave `shop.` primary and let it heal itself when the
+certificate lands, since the store is not being promoted yet. Note the storefront is
+NOT gated — `www.odubostudio.com/store` returns 200 to anonymous visitors with live
+product data — so avoid sharing the link until the certificate is issued.
+
+To restore checkout immediately at any point, set `odubostudio.myshopify.com` (or
+`accounts.odubostudio.com`) as primary; both serve valid TLS.
 
 ## 3. Currency is ambiguous
 
