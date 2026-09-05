@@ -18,23 +18,43 @@ None of it is reachable from the Admin API token this project holds.
 Vercel. An explicit record for a subdomain overrides the wildcard, which is how the
 Shopify subdomain below will work.
 
-## 1. Customer accounts are broken (highest priority)
+## 1. Customer accounts — FIXED 2026-09-05
 
-`https://odubostudio.myshopify.com/account` 302s to `https://account.odubo.studio/`,
-which does not resolve. Customers reach this from Shopify's own order-confirmation
-emails, so it breaks the post-purchase path, not just a link on the site.
+Was: `odubostudio.myshopify.com/account` 302'd to `https://account.odubo.studio/`, which
+had no DNS. Shopify's own hosted account URL redirected there too, so there was no working
+account path at all — and customers reach it from Shopify's order-confirmation emails.
 
-Shopify admin → **Settings → Customer accounts** → change the account domain off
-`account.odubo.studio`. Either use Shopify's default hosted accounts, or point it at
-`account.odubostudio.com` and add that as a domain in Shopify.
+Cause: the apex `odubo.studio` had been removed from Shopify, but the two subdomains
+Shopify auto-provisions alongside a custom domain — `account.odubo.studio` and
+`checkout.odubo.studio` — were left attached, and the customer-accounts setting still
+pointed at one of them.
 
-## 2. Branded checkout — `shop.odubostudio.com`
+Fixed by removing both stale domains. Accounts now fall through to Shopify's hosted
+flow, verified end to end:
 
-1. Shopify admin → **Settings → Domains → Connect existing domain** → `shop.odubostudio.com`
-2. Vercel → project → **Domains → DNS records** for `odubostudio.com`, add:
-   `CNAME  shop  →  shops.myshopify.com`
-   (an explicit record beats the wildcard already on the zone)
-3. Wait for Shopify to verify, then **set it as primary** so `checkoutUrl` is issued on it.
+```
+odubostudio.myshopify.com/account
+  -> 302 shopify.com/75208425685/account
+  -> 302 shopify.com/authentication/75208425685/oauth/authorize   (real login)
+```
+
+## 2. Branded checkout — `shop.odubostudio.com` (in progress)
+
+Both subdomains are connected in Shopify and their DNS is live:
+
+| host | CNAME | resolves to |
+|---|---|---|
+| `shop.odubostudio.com` | `shops.myshopify.com` | 23.227.38.74 (Shopify) |
+| `accounts.odubostudio.com` | `shops.myshopify.com` | 23.227.38.74 (Shopify) |
+
+CAA on `odubostudio.com` allows `letsencrypt.org`, which is what Shopify issues through,
+so certificates will provision. **Remaining step: once Shopify shows both Connected, set
+`shop.odubostudio.com` as primary** so `checkoutUrl` is issued on it instead of
+`odubostudio.myshopify.com`.
+
+Do NOT point Settings → Customer accounts at `accounts.odubostudio.com` until it shows
+Connected — pointing it at a host with no Shopify certificate re-creates the exact
+outage fixed in item 1. The hosted flow works in the meantime.
 
 Caveat: a returning Shop Pay customer is still bounced to `shop.app` by Shopify's
 universal redirect — that is Shopify's, not configurable.
