@@ -132,3 +132,47 @@ that one destination.
 
 `media.odubo.studio` (R2 public URL) is also left alone — it was already NXDOMAIN and
 media is served via presigned GETs.
+
+
+---
+
+# 2026-09-05 (later) — remaining list worked through
+
+## Done from here
+
+- `loop_settings.public_base_url` set to `https://www.odubostudio.com`. It had never been
+  set at all, which means no dead QR was ever printed — the poster kit refuses to guess a
+  host rather than baking in a wrong one. The Poster Studio now has a correct default.
+- `loop_settings.pass_checkout_url` moved off `odubostudio.myshopify.com` onto
+  `https://shop.odubostudio.com/cart/54476588974293:1`. Verified 302 with valid TLS. The
+  old link still worked by redirect; this removes the hop.
+
+## Confirmed impossible with this token — not skipped, tried and refused
+
+| item | attempt | result |
+|---|---|---|
+| URL redirects | `urlRedirectCreate` | `ACCESS_DENIED — write_online_store_navigation required` |
+| Currency format | `PUT /admin/api/2024-07/shop.json` | `406` — shop resource is read-only |
+| Store name | same | `406` |
+| Pass off Meta / Copilot | `publishableUnpublish` | **returned success, changed nothing** |
+
+That last one is worth remembering: Shopify accepted the mutation with no `userErrors`
+and the pass is still published to both. An app cannot unpublish a resource from another
+app's channel, and it fails silently rather than erroring — so the mutation result cannot
+be trusted here. Always re-read the publications afterwards.
+
+## Owner actions, in order of value
+
+1. **`SHOPIFY_ADMIN_API_SECRET` in Vercel production.** Until this is set the webhook
+   receiver answers 500 and no order reaches `commerce_orders`. There is no Vercel
+   credential in this environment and `vercel login` is interactive, so it cannot be done
+   from here. Alternative if preferred: the route can be extended to read the secret from
+   `loop_settings` in D1, which needs no Vercel access — `pass_webhook_secret` already
+   lives there, so the pattern exists.
+2. **Add `write_online_store_navigation`** to the custom app's Admin API scopes
+   (Settings → Apps → Develop apps → Configuration). With it, the nine redirects in
+   `url-redirects.csv` can be created from here instead of imported by hand.
+   Adding `read_customers` at the same time unblocks CRM enrichment later.
+3. Currency formatting → `${{amount}} CAD` (Settings → Store details).
+4. Store name → Odubo Studio (Settings → Store details).
+5. Pass → Publishing → untick Meta and Microsoft Copilot.
