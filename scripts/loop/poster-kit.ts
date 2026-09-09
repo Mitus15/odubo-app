@@ -55,6 +55,7 @@ const VOLUMES: Record<string, EventDetails & { venueShort: string }> = {
     venueShort: "SCOTT'S INN · KAMLOOPS",
     note: "DRESS CODE · 1984",
     record: "AN ALBUM BY MANI ODUBO",
+    feature: "WITH AMEN THE DJ",
   },
   2: {
     date: "DATE TBD",

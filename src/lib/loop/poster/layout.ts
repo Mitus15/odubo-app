@@ -135,6 +135,13 @@ export type EventDetails = {
    *  its name from a track, but that is a habit, not a rule, so the engine is
    *  never taught about the tracklist. */
   record?: string;
+  /** The feature credit, set under the record line at roughly two thirds its
+   *  size — "WITH AMEN THE DJ". A separate field rather than more free text in
+   *  `record` because the two are not peers: the record line names whose album
+   *  it is, and this names who else is on the night. Folding them into one
+   *  string would make them one weight, which is the thing a feature credit is
+   *  specifically not. Optional; costs no vertical space when absent. */
+  feature?: string;
 };
 
 export type EventPosterSpec = {
@@ -343,7 +350,7 @@ export function layoutEventPoster(spec: EventPosterSpec, deps: LayoutDeps): Layo
     // fixed rows don't leave the hero its minimum band — so instead of
     // refusing, every gap is shaved by ONE factor, computed exactly from the
     // deficit. Roomy formats get air = 1 and lay out identically to before.
-    const GAP = { vol: 250, hero: 90, slogan: 200, triad: 96, details: 80, price: 150 } as const;
+    const GAP = { vol: 250, feature: 78, hero: 90, slogan: 200, triad: 96, details: 80, price: 150 } as const;
     const heroFloor = R(600 * S);
     // Every present detail row owns its drop here AND decrements the cursor by
     // the same amount below — the two must agree or the hero band is sized
@@ -352,15 +359,27 @@ export function layoutEventPoster(spec: EventPosterSpec, deps: LayoutDeps): Layo
       (d && (d.note || d.price) ? R(64 * S) : 0) +
       (d?.venue ? R(72 * S) : 0) +
       (d && (d.date || d.doors) ? dateSize : 0);
+    const featureLine = d?.feature ?? null;
+    const featureSize = R(34 * S);
     const airPx =
-      (GAP.vol + GAP.hero + GAP.slogan + GAP.details + GAP.price + (showTriad ? GAP.triad : 0)) * S;
+      (GAP.vol +
+        GAP.hero +
+        GAP.slogan +
+        GAP.details +
+        GAP.price +
+        (showTriad ? GAP.triad : 0) +
+        (featureLine ? GAP.feature : 0)) *
+      S;
     const heroMaxAt = (air: number) =>
       creditLabelY -
       R(GAP.price * S * air) -
       fixedDetailDrop -
       R(GAP.details * S * air) -
       (R(GAP.slogan * S * air) + sloganSize + (showTriad ? R(GAP.triad * S * air) + triadSize : 0)) -
-      (headBottom + R(GAP.vol * S * air) + R(GAP.hero * S * air));
+      (headBottom +
+        R(GAP.vol * S * air) +
+        (featureLine ? R(GAP.feature * S * air) : 0) +
+        R(GAP.hero * S * air));
     const deficit = heroFloor - heroMaxAt(1);
     // +6 overshoot: six gaps round independently, each can round against us.
     const air = deficit <= 0 ? 1 : Math.max(0.55, 1 - (deficit + 6) / airPx);
@@ -376,6 +395,19 @@ export function layoutEventPoster(spec: EventPosterSpec, deps: LayoutDeps): Layo
         W - pad * 2,
       );
       ops.push(line(albumLine, { x: W / 2, y: volY, size: albumSize, track: 0.34, opacity: 0.85 }));
+    }
+
+    // 5b. The feature credit, under the record line and subordinate to it.
+    const featureY = featureLine ? volY + a(GAP.feature) : volY;
+    if (featureLine) {
+      assertFits(
+        "the feature line",
+        measure(featureLine, { size: featureSize, track: 0.3 }),
+        W - pad * 2,
+      );
+      ops.push(
+        line(featureLine, { x: W / 2, y: featureY, size: featureSize, track: 0.3, opacity: 0.62 }),
+      );
     }
 
     // 6. Detail lines, bottom-anchored above the credits — only present rows
@@ -403,7 +435,7 @@ export function layoutEventPoster(spec: EventPosterSpec, deps: LayoutDeps): Layo
     // headroom for custom lines), though the baseline below hangs off cap
     // height alone.
     const typeBlockH = a(GAP.slogan) + sloganSize + (showTriad ? a(GAP.triad) + triadSize : 0);
-    const heroTop = volY + a(GAP.hero);
+    const heroTop = featureY + a(GAP.hero);
     const heroMaxH = cursorY - a(GAP.details) - typeBlockH - heroTop;
     const heroMaxW = W - R(110 * S) * 2;
     assertFits("the hero band", heroFloor, heroMaxH);
