@@ -283,43 +283,46 @@ export default function GDPRConsent({ onConsentChange }: GDPRConsentProps) {
   }
 
   // Small, clean consent banner - positioned in center of page
+  // A BAR, not a wall.
+  //
+  // This used to be a full-screen blurred modal, which meant every first-time
+  // visitor — including every stranger scanning the flyer for the single — hit
+  // a cookie dialog before they reached anything they came for. Consent for
+  // analytics does not require blocking the page, and the choices below are
+  // unchanged: the same Accept All / Necessary Only / Customize, just no longer
+  // standing in front of the thing the paper promised.
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="glass-surface border border-white/10 rounded-xl shadow-lg p-6 max-w-sm">
-        <div className="text-center space-y-4">
-          <div className="text-3xl">🍪</div>
-          <h3 className="text-lg font-semibold text-[#ede8df]">We use cookies</h3>
-          <p className="text-sm text-stone-300 leading-relaxed">
-            To enhance your experience and analyze site usage
-          </p>
-          
-          <div className="space-y-3">
-            <button
-              onClick={handleAcceptAll}
-              className="w-full px-4 py-2 text-sm bg-[#843c2d] text-white rounded-lg hover:bg-[#6f2f23] transition-colors"
-            >
-              Accept All
-            </button>
-            <button
-              onClick={handleAcceptNecessary}
-              className="w-full px-4 py-2 text-sm text-stone-300 border border-white/20 rounded-lg hover:bg-white/5 transition-colors"
-            >
-              Necessary Only
-            </button>
-            <button
-              onClick={openPreferences}
-              className="w-full px-4 py-2 text-sm text-stone-300 border border-white/20 rounded-lg hover:bg-white/5 transition-colors"
-            >
-              Customize
-            </button>
-          </div>
-          
-          <a 
-            href="/legal/privacy" 
-            className="block text-xs text-stone-400 hover:text-[#d2a79a] transition-colors"
-          >
+    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 p-3 sm:p-4">
+      {/* Explicitly dark rather than a translucent glass surface: this bar
+          renders on every page, and the Loop pages are sand — light type on
+          glass over sand is unreadable. A solid ground reads on both. */}
+      <div className="pointer-events-auto mx-auto flex max-w-3xl flex-col gap-3 rounded-xl border border-white/10 bg-[#1a1210]/95 p-4 shadow-lg backdrop-blur-sm sm:flex-row sm:items-center sm:gap-4">
+        <p className="flex-1 text-xs leading-relaxed text-stone-200">
+          We use cookies to understand how the site is used.{' '}
+          <a href="/legal/privacy" className="underline underline-offset-2 hover:text-[#d2a79a]">
             Privacy Policy
           </a>
+        </p>
+
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            onClick={openPreferences}
+            className="px-3 py-2 text-xs text-stone-300 transition-colors hover:text-white"
+          >
+            Customize
+          </button>
+          <button
+            onClick={handleAcceptNecessary}
+            className="rounded-lg border border-white/20 px-3 py-2 text-xs text-stone-200 transition-colors hover:bg-white/5"
+          >
+            Necessary only
+          </button>
+          <button
+            onClick={handleAcceptAll}
+            className="rounded-lg bg-[#843c2d] px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-[#6f2f23]"
+          >
+            Accept
+          </button>
         </div>
       </div>
     </div>

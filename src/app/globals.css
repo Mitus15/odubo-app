@@ -2277,3 +2277,37 @@ h6,
     transition-duration: 0.001ms !important;
   }
 }
+
+/* ── The single's playing state ───────────────────────────────────────────
+   Motion only, never amplitude. The audio is served through a redirect to R2,
+   which returns no access-control-allow-origin, so a Web Audio AnalyserNode
+   would read silence — and routing a tainted element through the graph can
+   mute playback outright. Given the choice between a visual that reacts to the
+   waveform and a song that definitely plays, the song wins. Everything moving
+   here is either real progress (the ring, drawn from currentTime) or honest
+   ornament that never claims to be the sound.                              */
+@keyframes loop-ripple {
+  0%   { transform: scale(1);    opacity: 0.28; }
+  70%  { opacity: 0; }
+  100% { transform: scale(1.38); opacity: 0; }
+}
+
+@keyframes loop-breathe {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.018); }
+}
+
+.loop-ripple {
+  animation: loop-ripple 3.4s cubic-bezier(0.22, 0.61, 0.36, 1) infinite;
+}
+
+.loop-breathe {
+  animation: loop-breathe 3.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loop-ripple,
+  .loop-breathe {
+    animation: none;
+  }
+}

@@ -98,7 +98,9 @@ export function TheSingle({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "visit", code: from, visitor: v }),
     })
-      .then((r) => (r.ok ? (r.json() as Promise<{ name: string | null }>) : null))
+      .then((r) =>
+        r.ok ? (r.json() as Promise<{ name: string | null }>) : null,
+      )
       .then((d) => d?.name && setSender(d.name))
       .catch(() => {
         /* attribution is a nicety; never let it break the page */
@@ -120,7 +122,10 @@ export function TheSingle({
     if (a.paused) {
       // Called straight out of the click handler — never awaited behind a
       // readyState check, which is what breaks playback on mobile Safari.
-      void a.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
+      void a
+        .play()
+        .then(() => setPlaying(true))
+        .catch(() => setPlaying(false));
     } else {
       a.pause();
       setPlaying(false);
@@ -209,54 +214,130 @@ export function TheSingle({
         )}
 
         {single.coverUrl && (
-          <div className="relative mx-auto aspect-square w-full max-w-[260px] overflow-hidden rounded-2xl">
-            <Image src={single.coverUrl} alt={`${single.albumTitle} cover`} fill unoptimized className="object-cover" />
+          <div className="relative mx-auto aspect-square w-full max-w-[260px]">
+            {/* Ripples behind the cover while it plays — staggered so the
+                rings never leave in step. Ink on sand, nothing new in the
+                palette. */}
+            {playing && (
+              <>
+                {[0, 1, 2].map((i) => (
+                  <span
+                    key={i}
+                    aria-hidden="true"
+                    className="loop-ripple absolute inset-0 rounded-2xl border border-ink"
+                    style={{ animationDelay: `${i * 1.13}s` }}
+                  />
+                ))}
+              </>
+            )}
+            <div
+              className={`relative h-full w-full overflow-hidden rounded-2xl ${playing ? "loop-breathe" : ""}`}
+            >
+              <Image
+                src={single.coverUrl}
+                alt={`${single.albumTitle} cover`}
+                fill
+                unoptimized
+                className="object-cover"
+              />
+            </div>
           </div>
         )}
 
         <div className="mt-6 text-center">
-          <div className="loop-muted text-[11px] font-bold uppercase tracking-[0.3em]">The single</div>
-          <h1 className="loop-display mt-1 text-5xl font-bold tracking-tight">{single.title}</h1>
+          <div className="loop-muted text-[11px] font-bold uppercase tracking-[0.3em]">
+            The single
+          </div>
+          <h1 className="loop-display mt-1 text-5xl font-bold tracking-tight">
+            {single.title}
+          </h1>
           <div className="loop-muted mt-2 text-[11px] font-semibold uppercase tracking-[0.18em]">
             {single.artistName} · from {single.albumTitle}
           </div>
         </div>
 
-        {/* The exchange, stated plainly. */}
-        <p className="mx-auto mt-5 max-w-[19rem] text-center text-sm leading-relaxed opacity-75">
-          {heard
-            ? "That one's yours to keep. No email, no account — you already paid for it."
-            : `${single.durationLabel || "A few minutes"} of your day. That's the whole price.`}
-        </p>
+        {/* Nothing is said before the song. Doing arithmetic on someone's day
+            in order to call it a price is a pitch, and a pitch is the one
+            thing a gift cannot survive. Afterwards it is worth saying plainly
+            that they keep it, because that is genuinely unusual. */}
+        {heard && (
+          <p className="mx-auto mt-5 max-w-[19rem] text-center text-sm leading-relaxed opacity-75">
+            Yours to keep. No email, no account.
+          </p>
+        )}
 
         {/* The play control — the largest thing on the screen, by a distance. */}
         <div className="mt-7 flex flex-col items-center">
-          <button
-            type="button"
-            onClick={toggle}
-            aria-label={playing ? "Pause" : "Play"}
-            className="flex h-24 w-24 items-center justify-center rounded-full bg-ink text-sand transition-transform active:scale-95"
-          >
-            {playing ? (
-              <svg width="30" height="34" viewBox="0 0 30 34" aria-hidden="true">
-                <rect x="2" y="2" width="9" height="30" fill="currentColor" />
-                <rect x="19" y="2" width="9" height="30" fill="currentColor" />
-              </svg>
-            ) : (
-              <svg width="32" height="34" viewBox="0 0 32 34" aria-hidden="true">
-                <path d="M4 2 L30 17 L4 32 Z" fill="currentColor" />
-              </svg>
-            )}
-          </button>
+          <div className="relative flex items-center justify-center">
+            {/* The ring is real: it is currentTime, not decoration. It is also
+              the only honest reactivity available here — see globals.css. */}
+            <svg
+              className="pointer-events-none absolute -rotate-90"
+              width="124"
+              height="124"
+              viewBox="0 0 124 124"
+              aria-hidden="true"
+            >
+              <circle
+                cx="62"
+                cy="62"
+                r="57"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                className="text-ink/15"
+              />
+              <circle
+                cx="62"
+                cy="62"
+                r="57"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                className="text-ink transition-[stroke-dashoffset] duration-300"
+                strokeDasharray={2 * Math.PI * 57}
+                strokeDashoffset={2 * Math.PI * 57 * (1 - pct / 100)}
+              />
+            </svg>
+            <button
+              type="button"
+              onClick={toggle}
+              aria-label={playing ? "Pause" : "Play"}
+              className="relative flex h-24 w-24 items-center justify-center rounded-full bg-ink text-sand transition-transform active:scale-95"
+            >
+              {playing ? (
+                <svg
+                  width="30"
+                  height="34"
+                  viewBox="0 0 30 34"
+                  aria-hidden="true"
+                >
+                  <rect x="2" y="2" width="9" height="30" fill="currentColor" />
+                  <rect
+                    x="19"
+                    y="2"
+                    width="9"
+                    height="30"
+                    fill="currentColor"
+                  />
+                </svg>
+              ) : (
+                <svg
+                  width="32"
+                  height="34"
+                  viewBox="0 0 32 34"
+                  aria-hidden="true"
+                >
+                  <path d="M4 2 L30 17 L4 32 Z" fill="currentColor" />
+                </svg>
+              )}
+            </button>
+          </div>
 
-          <div className="mt-5 w-full">
-            <div className="h-[3px] w-full overflow-hidden rounded-full bg-ink/15">
-              <div className="h-full bg-ink transition-[width] duration-300" style={{ width: `${pct}%` }} />
-            </div>
-            <div className="loop-muted mt-2 flex justify-between text-[10px] font-semibold tabular-nums tracking-widest">
-              <span>{clock(t)}</span>
-              <span>{single.durationLabel || clock(duration)}</span>
-            </div>
+          <div className="loop-muted mt-4 flex w-full justify-between text-[10px] font-semibold tabular-nums tracking-widest">
+            <span>{clock(t)}</span>
+            <span>{single.durationLabel || clock(duration)}</span>
           </div>
         </div>
 
@@ -292,21 +373,25 @@ export function TheSingle({
               >
                 <span>
                   <span className="block text-sm font-bold">Keep it</span>
-                  <span className="loop-muted block text-[11px]">Put Loop Soul on your home screen</span>
+                  <span className="loop-muted block text-[11px]">
+                    Put Loop Soul on your home screen
+                  </span>
                 </span>
                 <span className="opacity-40">↓</span>
               </button>
               {iosHelp && (
                 <p className="loop-muted mt-2 px-5 text-[11px] leading-relaxed">
-                  Tap the <strong>Share</strong> button in your browser bar, scroll down, then choose{" "}
-                  <strong>Add to Home Screen</strong>.
+                  Tap the <strong>Share</strong> button in your browser bar,
+                  scroll down, then choose <strong>Add to Home Screen</strong>.
                 </p>
               )}
             </div>
           )}
 
           {/* 2 · pass it on */}
-          <div className={`rounded-2xl border px-5 py-4 transition-colors ${heard ? "border-ink/40 bg-ink/5" : "border-ink/20"}`}>
+          <div
+            className={`rounded-2xl border px-5 py-4 transition-colors ${heard ? "border-ink/40 bg-ink/5" : "border-ink/20"}`}
+          >
             <div className="text-sm font-bold">Pass it on</div>
             <div className="loop-muted mt-0.5 text-[11px]">
               {code
@@ -333,7 +418,13 @@ export function TheSingle({
                 disabled={minting || (!code && !name.trim())}
                 className="shrink-0 rounded-full bg-ink px-5 py-2.5 text-sm font-bold text-sand transition-transform active:scale-95 disabled:opacity-35"
               >
-                {copied ? "Copied" : minting ? "…" : code ? "Share" : "Get link"}
+                {copied
+                  ? "Copied"
+                  : minting
+                    ? "…"
+                    : code
+                      ? "Share"
+                      : "Get link"}
               </button>
             </div>
           </div>
@@ -345,7 +436,9 @@ export function TheSingle({
             className="flex w-full items-center justify-between rounded-2xl bg-ink px-5 py-4 text-left text-sand transition-transform active:scale-95"
           >
             <span>
-              <span className="block text-sm font-bold">Hear the rest of it live</span>
+              <span className="block text-sm font-bold">
+                Hear the rest of it live
+              </span>
               <span className="block text-[11px] opacity-70">
                 All 14, played front to back · Sept 26
               </span>
@@ -355,8 +448,8 @@ export function TheSingle({
         </div>
 
         <p className="loop-muted mx-auto mt-6 max-w-[19rem] text-center text-[11px] leading-relaxed">
-          The album isn&apos;t streaming anywhere yet. September 26th is the first time
-          anyone hears it — your ticket is your copy when it lands.
+          This album isn&apos;t streaming anywhere. September 26th is its first
+          exhibition.
         </p>
       </div>
     </motion.div>

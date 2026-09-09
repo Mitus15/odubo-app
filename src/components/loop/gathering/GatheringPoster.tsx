@@ -140,12 +140,20 @@ export function GatheringPoster({
       {/* Tagline + silhouette hero. Figure top-anchored so it sits right under
           the tagline (no floating gap); the slack collects below the figure. */}
       <div className="flex min-h-0 flex-1 flex-col items-center gap-2">
-        {/* The slogan — straight, never arced: the arc asks, straight type
-            states (docs/decisions/loop-soul-brand-language.md). Mixed case is
-            deliberate — the one line on the piece that invites rather than
-            announces. */}
-        <div className="loop-display text-4xl font-bold tracking-tight text-ink">
-          Come Dance
+        {/* Was the slogan ("Come Dance"). The landing line now states what the
+            night IS rather than inviting to it — the invitation still does its
+            work on the printed piece and on the pass button below, but the
+            first line someone reads after scanning should tell them what they
+            have found. Set as one sentence over two lines because it is one
+            sentence: the credit is small and tracked, the name carries the
+            weight, which is the same hierarchy the poster uses. */}
+        <div className="flex flex-col items-center gap-1">
+          <div className="loop-muted text-[11px] font-bold uppercase tracking-[0.3em]">
+            An album by
+          </div>
+          <div className="loop-display text-4xl font-bold tracking-tight text-ink">
+            Mani Odubo
+          </div>
         </div>
         <div className="relative min-h-0 w-full flex-1">
           <Image
