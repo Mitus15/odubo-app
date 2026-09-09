@@ -1,30 +1,29 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import Image from "next/image";
 import { usePWA } from "@/components/PWAProvider";
+import SinglePlayer from "@/components/loop/gathering/SinglePlayer";
 import type { FeaturedSingle } from "@/lib/loop/single";
 
 /**
  * THE SINGLE — what the flyer's QR promises.
  *
- * The gift is UNCONDITIONAL. Nothing here is gated behind an install, a share,
- * an email or a name: a stranger who scans a piece of paper at a barbecue gets
- * the song, and gets it on the first tap. Every gate we could put in front of
- * it would be paid for in the only currency that matters at this stage, which
- * is people who bothered.
+ * The gift is UNCONDITIONAL. Nothing is gated behind an install, a share, an
+ * email or a name: a stranger who scans a piece of paper at a barbecue gets the
+ * song on the first tap. Every gate we could put in front of it would be paid
+ * for in the only currency that matters at this stage, which is people who
+ * bothered.
  *
  * One tap, not zero — browsers refuse to start audible playback without a
- * gesture (docs: CLAUDE.md, "Browser Autoplay Policies"), and a silently
- * autoplaying muted song is worse than a button. So the button is enormous,
- * the audio is preloaded, and the tap is the only thing between the scan and
- * the record.
+ * gesture (CLAUDE.md, "Browser Autoplay Policies"), and a silently autoplaying
+ * muted song is worse than a button.
  *
- * The three doors under it run in order of what they cost the listener:
- * keep it (free), pass it on (a name), come hear the rest (a ticket). The
- * ticket is last on purpose — asking for money before the song has proved
- * itself is how you get one listen and no room.
+ * Laid out as full-height snap sections rather than one long scroll. A page
+ * that stops where it is told reads as composed; a page that halts halfway
+ * through a heading reads as a document someone forgot to finish. The
+ * three-screen order is also an argument: the song, then what you keep, then
+ * what it costs to hear the rest.
  */
 
 const SEEN_KEY = "loop.single.seen";
@@ -48,10 +47,8 @@ function visitorId(): string {
   }
 }
 
-function clock(s: number): string {
-  if (!Number.isFinite(s) || s < 0) return "0:00";
-  return `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
-}
+const SECTION =
+  "snap-start mx-auto flex min-h-[100dvh] w-full max-w-md flex-col justify-center px-6 py-10";
 
 export function TheSingle({
   single,
@@ -64,10 +61,7 @@ export function TheSingle({
   onGetPass: () => void;
   onCoverContest: () => void;
 }) {
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [playing, setPlaying] = useState(false);
-  const [t, setT] = useState(0);
-  const [heard, setHeard] = useState(false); // got far enough in to have an opinion
+  const [heard, setHeard] = useState(false);
   const [sender, setSender] = useState<string | null>(null);
 
   const { isStandalone, isInstallable, promptInstall } = usePWA();
@@ -78,8 +72,6 @@ export function TheSingle({
   const [reached, setReached] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
   const [minting, setMinting] = useState(false);
-
-  const duration = single.duration || audioRef.current?.duration || 0;
 
   /* ── who sent them here ─────────────────────────────────────────────── */
   useEffect(() => {
@@ -118,20 +110,13 @@ export function TheSingle({
       .catch(() => {});
   }, [code]);
 
-  const toggle = useCallback(() => {
-    const a = audioRef.current;
-    if (!a) return;
-    if (a.paused) {
-      // Called straight out of the click handler — never awaited behind a
-      // readyState check, which is what breaks playback on mobile Safari.
-      void a
-        .play()
-        .then(() => setPlaying(true))
-        .catch(() => setPlaying(false));
-    } else {
-      a.pause();
-      setPlaying(false);
-    }
+  /* ── the overlay owns the page while it is open ─────────────────────── */
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
   }, []);
 
   const share = useCallback(async () => {
@@ -188,214 +173,75 @@ export function TheSingle({
     setIosHelp((v) => !v);
   }, [isInstallable, promptInstall]);
 
-  const pct = duration > 0 ? Math.min(100, (t / duration) * 100) : 0;
+  const onHeard = useCallback(() => setHeard(true), []);
 
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-sand text-ink"
+      className="fixed inset-0 z-50 snap-y snap-mandatory overflow-y-scroll overscroll-contain bg-sand text-ink [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
-      <div className="mx-auto flex min-h-full max-w-md flex-col px-6 pb-10 pt-5">
-        <div className="flex justify-end">
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            className="-mr-2 p-2 text-2xl leading-none opacity-50 transition-opacity hover:opacity-100"
-          >
-            ×
-          </button>
-        </div>
+      {/* Outside the scroller so it survives every section. */}
+      <button
+        type="button"
+        onClick={onClose}
+        aria-label="Close"
+        className="fixed right-2 top-2 z-10 flex h-11 w-11 items-center justify-center text-2xl leading-none opacity-50 transition-opacity hover:opacity-100"
+      >
+        ×
+      </button>
 
+      {/* ── 1 · the song ─────────────────────────────────────────────── */}
+      <section className={SECTION}>
         {sender && (
-          <div className="loop-muted mb-3 text-center text-[11px] font-bold uppercase tracking-[0.2em]">
+          <div className="loop-muted mb-4 text-center text-[11px] font-bold uppercase tracking-[0.2em]">
             {sender} sent you this
           </div>
         )}
-
-        {single.coverUrl && (
-          <div className="relative mx-auto aspect-square w-full max-w-[260px]">
-            {/* Ripples behind the cover while it plays — staggered so the
-                rings never leave in step. Ink on sand, nothing new in the
-                palette. */}
-            {playing && (
-              <>
-                {[0, 1, 2].map((i) => (
-                  <span
-                    key={i}
-                    aria-hidden="true"
-                    className="loop-ripple absolute inset-0 rounded-2xl border border-ink"
-                    style={{ animationDelay: `${i * 1.13}s` }}
-                  />
-                ))}
-              </>
-            )}
-            <div
-              className={`relative h-full w-full overflow-hidden rounded-2xl ${playing ? "loop-breathe" : ""}`}
-            >
-              <Image
-                src={single.coverUrl}
-                alt={`${single.albumTitle} cover`}
-                fill
-                unoptimized
-                className="object-cover"
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Said here because the artwork is the argument: the one person
-            primed to hear that a cover is not the only cover is the person
-            currently looking at one. Tappable text, not a card. */}
-        {single.coverUrl && (
-          <button
-            type="button"
-            onClick={onCoverContest}
-            className="loop-muted mx-auto mt-3 block max-w-[17rem] text-center text-[11px] leading-relaxed underline decoration-ink/30 underline-offset-4"
-          >
-            This cover is mine. On the 26th the room picks the official one.
-          </button>
-        )}
-
-        <div className="mt-6 text-center">
-          <div className="loop-muted text-[11px] font-bold uppercase tracking-[0.3em]">
-            The single
-          </div>
-          <h1 className="loop-display mt-1 text-5xl font-bold tracking-tight">
-            {single.title}
-          </h1>
-          <div className="loop-muted mt-2 text-[11px] font-semibold uppercase tracking-[0.18em]">
-            {single.artistName} · from {single.albumTitle}
-          </div>
-        </div>
-
-        {/* Nothing is said before the song. Doing arithmetic on someone's day
-            in order to call it a price is a pitch, and a pitch is the one
-            thing a gift cannot survive. Afterwards it is worth saying plainly
-            that they keep it, because that is genuinely unusual. */}
-        {heard && (
-          <p className="mx-auto mt-5 max-w-[19rem] text-center text-sm leading-relaxed opacity-75">
-            Yours to keep. No email, no account.
-          </p>
-        )}
-
-        {/* The play control — the largest thing on the screen, by a distance. */}
-        <div className="mt-7 flex flex-col items-center">
-          <div className="relative flex items-center justify-center">
-            {/* The ring is real: it is currentTime, not decoration. It is also
-              the only honest reactivity available here — see globals.css. */}
-            <svg
-              className="pointer-events-none absolute -rotate-90"
-              width="124"
-              height="124"
-              viewBox="0 0 124 124"
-              aria-hidden="true"
-            >
-              <circle
-                cx="62"
-                cy="62"
-                r="57"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                className="text-ink/15"
-              />
-              <circle
-                cx="62"
-                cy="62"
-                r="57"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                className="text-ink transition-[stroke-dashoffset] duration-300"
-                strokeDasharray={2 * Math.PI * 57}
-                strokeDashoffset={2 * Math.PI * 57 * (1 - pct / 100)}
-              />
-            </svg>
-            <button
-              type="button"
-              onClick={toggle}
-              aria-label={playing ? "Pause" : "Play"}
-              className="relative flex h-24 w-24 items-center justify-center rounded-full bg-ink text-sand transition-transform active:scale-95"
-            >
-              {playing ? (
-                <svg
-                  width="30"
-                  height="34"
-                  viewBox="0 0 30 34"
-                  aria-hidden="true"
-                >
-                  <rect x="2" y="2" width="9" height="30" fill="currentColor" />
-                  <rect
-                    x="19"
-                    y="2"
-                    width="9"
-                    height="30"
-                    fill="currentColor"
-                  />
-                </svg>
-              ) : (
-                <svg
-                  width="32"
-                  height="34"
-                  viewBox="0 0 32 34"
-                  aria-hidden="true"
-                >
-                  <path d="M4 2 L30 17 L4 32 Z" fill="currentColor" />
-                </svg>
-              )}
-            </button>
-          </div>
-
-          <div className="loop-muted mt-4 flex w-full justify-between text-[10px] font-semibold tabular-nums tracking-widest">
-            <span>{clock(t)}</span>
-            <span>{single.durationLabel || clock(duration)}</span>
-          </div>
-        </div>
-
-        <audio
-          ref={audioRef}
-          src={single.audioUrl}
-          preload="auto"
-          onTimeUpdate={(e) => {
-            const a = e.currentTarget;
-            setT(a.currentTime);
-            // Far enough in to have formed an opinion — that is when asking
-            // someone to pass it on stops being a demand and starts being a
-            // reasonable thing to ask.
-            if (a.currentTime > 30) setHeard(true);
-          }}
-          onEnded={() => {
-            setPlaying(false);
-            setHeard(true);
-          }}
-          onPlay={() => setPlaying(true)}
-          onPause={() => setPlaying(false)}
+        <SinglePlayer
+          single={single}
+          onHeard={onHeard}
+          onCoverContest={onCoverContest}
+          coverCaption="This cover is mine. On the 26th the room picks the official one."
         />
+        <div
+          aria-hidden="true"
+          className="loop-muted mt-8 text-center text-lg leading-none"
+        >
+          ↓
+        </div>
+      </section>
 
-        {/* ── the three doors ─────────────────────────────────────────── */}
-        <div className="mt-9 space-y-3">
-          {/* 1 · keep it */}
+      {/* ── 2 · what you keep ────────────────────────────────────────── */}
+      <section className={SECTION}>
+        <h2 className="loop-display text-3xl font-bold tracking-tight">
+          {heard ? "Yours to keep." : "It's yours."}
+        </h2>
+        <p className="loop-muted mt-2 text-sm leading-relaxed">
+          No email, no account. Two things you can do with it.
+        </p>
+
+        <div className="mt-8">
           {!isStandalone && (
-            <div>
+            <div className="border-t border-ink/15">
               <button
                 type="button"
                 onClick={keepIt}
-                className="flex w-full items-center justify-between rounded-2xl border border-ink/20 px-5 py-4 text-left transition-colors hover:bg-ink/5"
+                className="flex min-h-[44px] w-full items-center justify-between gap-4 py-5 text-left"
               >
                 <span>
-                  <span className="block text-sm font-bold">Keep it</span>
-                  <span className="loop-muted block text-[11px]">
-                    Get Loop Soul on your home screen
+                  <span className="block text-base font-bold">
+                    Get Loop Soul
+                  </span>
+                  <span className="loop-muted block text-[13px]">
+                    On your home screen
                   </span>
                 </span>
-                <span className="opacity-40">↓</span>
+                <span className="loop-muted shrink-0">↓</span>
               </button>
               {iosHelp && (
-                <p className="loop-muted mt-2 px-5 text-[11px] leading-relaxed">
+                <p className="loop-muted -mt-2 pb-5 text-[13px] leading-relaxed">
                   Tap the <strong>Share</strong> button in your browser bar,
                   scroll down, then choose <strong>Add to Home Screen</strong>.
                 </p>
@@ -403,12 +249,9 @@ export function TheSingle({
             </div>
           )}
 
-          {/* 2 · pass it on */}
-          <div
-            className={`rounded-2xl border px-5 py-4 transition-colors ${heard ? "border-ink/40 bg-ink/5" : "border-ink/20"}`}
-          >
-            <div className="text-sm font-bold">Loop someone in</div>
-            <div className="loop-muted mt-0.5 text-[11px]">
+          <div className="border-t border-ink/15 py-5">
+            <div className="text-base font-bold">Loop someone in</div>
+            <div className="loop-muted mt-1 text-[13px] leading-relaxed">
               {code
                 ? reached === null
                   ? "Your link is ready."
@@ -417,21 +260,21 @@ export function TheSingle({
                     : `${reached} ${reached === 1 ? "person has" : "people have"} heard it through you.`
                 : "Send it on with your name on it, not just a link."}
             </div>
-            <div className="mt-3 flex gap-2">
+            <div className="mt-4 flex gap-2">
               {!code && (
                 <input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Your first name"
                   maxLength={24}
-                  className="min-w-0 flex-1 rounded-full border border-ink/25 bg-transparent px-4 py-2.5 text-sm outline-none placeholder:opacity-40 focus:border-ink/60"
+                  className="min-w-0 flex-1 rounded-full border border-ink/25 bg-transparent px-4 py-3 text-sm outline-none placeholder:opacity-40 focus:border-ink/60"
                 />
               )}
               <button
                 type="button"
                 onClick={share}
                 disabled={minting || (!code && !name.trim())}
-                className="shrink-0 rounded-full bg-ink px-5 py-2.5 text-sm font-bold text-sand transition-transform active:scale-95 disabled:opacity-35"
+                className="shrink-0 rounded-full bg-ink px-6 py-3 text-sm font-bold text-sand transition-transform active:scale-95 disabled:opacity-35"
               >
                 {copied
                   ? "Copied"
@@ -443,32 +286,42 @@ export function TheSingle({
               </button>
             </div>
           </div>
-
-          {/* 3 · the rest of it, live */}
-          <button
-            type="button"
-            onClick={onGetPass}
-            className="flex w-full items-center justify-between rounded-2xl bg-ink px-5 py-4 text-left text-sand transition-transform active:scale-95"
-          >
-            <span>
-              <span className="block text-sm font-bold">
-                Hear the rest of it live
-              </span>
-              <span className="block text-[11px] opacity-70">
-                All 14, played front to back · Sept 26
-              </span>
-            </span>
-            <span className="opacity-60">→</span>
-          </button>
+          <div className="border-t border-ink/15" />
         </div>
+      </section>
 
-        <p className="loop-muted mx-auto mt-6 max-w-[19rem] text-center text-[11px] leading-relaxed">
+      {/* ── 3 · the rest of it ───────────────────────────────────────── */}
+      <section className={SECTION}>
+        <h2 className="loop-display text-3xl font-bold tracking-tight">
+          There are thirteen more.
+        </h2>
+        <p className="loop-muted mt-2 text-sm leading-relaxed">
+          Played front to back, once, in a courtyard.
+        </p>
+
+        <button
+          type="button"
+          onClick={onGetPass}
+          className="mt-8 flex w-full items-center justify-between rounded-2xl bg-ink px-6 py-5 text-left text-sand transition-transform active:scale-95"
+        >
+          <span>
+            <span className="block text-base font-bold">
+              Hear the rest of it live
+            </span>
+            <span className="block text-[13px] opacity-70">
+              All 14, front to back · Sept 26
+            </span>
+          </span>
+          <span className="opacity-60">→</span>
+        </button>
+
+        <p className="loop-muted mt-10 text-sm leading-relaxed">
           This album isn&apos;t streaming anywhere. September 26th is its first
           exhibition.
         </p>
-      </div>
+      </section>
     </motion.div>
   );
 }
 
-export default TheSingle;
+export default memo(TheSingle);

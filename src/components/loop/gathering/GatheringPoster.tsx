@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { AnimatePresence } from "framer-motion";
@@ -95,6 +95,19 @@ export function GatheringPoster({
   // poster with the song filed behind a button. Anyone who has already been
   // handed it lands on the poster instead, and a gifted link (?from=) always
   // opens it, because that visitor was sent for exactly one reason.
+  // Stable identities, so memo(TheSingle) actually holds: without these the
+  // 15-second capacity poll below would hand the overlay three new functions
+  // every tick and re-render the whole thing for nothing.
+  const closeSingle = useCallback(() => setSingleOpen(false), []);
+  const openCoverContest = useCallback(() => {
+    setSingleOpen(false);
+    setActive("cover");
+  }, []);
+  const openPassFromSingle = useCallback(() => {
+    setSingleOpen(false);
+    setPassOpen(true);
+  }, []);
+
   useEffect(() => {
     if (!single) return;
     try {
@@ -301,15 +314,9 @@ export function GatheringPoster({
         {single && singleOpen && (
           <TheSingle
             single={single}
-            onClose={() => setSingleOpen(false)}
-            onCoverContest={() => {
-              setSingleOpen(false);
-              setActive("cover");
-            }}
-            onGetPass={() => {
-              setSingleOpen(false);
-              setPassOpen(true);
-            }}
+            onClose={closeSingle}
+            onCoverContest={openCoverContest}
+            onGetPass={openPassFromSingle}
           />
         )}
       </AnimatePresence>

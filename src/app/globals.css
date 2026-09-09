@@ -2311,3 +2311,12 @@ h6,
     animation: none;
   }
 }
+
+/* A drag must not be smoothed. The ring animates its dash offset during
+   playback so the second-by-second advance doesn't look like a stutter, but
+   that same 300ms ease makes a finger feel like it is towing the playhead
+   through treacle — so the transition is switched off for the duration of the
+   gesture and restored the moment it ends. */
+.loop-ring[data-scrubbing] .loop-ring-progress {
+  transition: none;
+}
