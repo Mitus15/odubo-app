@@ -48,11 +48,11 @@ const deps: LayoutDeps = {
 
 const details: EventDetails = {
   volume: "VOLUME ONE",
-  theme: "1984",
+  theme: "80s",
   date: "SATURDAY SEPTEMBER 26",
   doors: "DOORS 6:30 · ALBUM AT 8",
   venue: "SCOTT'S INN & SUITES · KAMLOOPS",
-  note: "DRESS CODE · 1984",
+  note: "DRESS CODE · 80s",
   price: "$5",
   record: "AN ALBUM BY MANI ODUBO",
 };
@@ -274,7 +274,7 @@ describe("layoutTicket", () => {
       .filter((o) => o.kind === "glyphs")
       .map((o) => (o.kind === "glyphs" ? o.glyphs.map((g) => g.ch).join("") : ""));
     expect(texts).toContain("AN ALBUM BY MANI ODUBO");
-    expect(texts).toContain("DRESS CODE · 1984");
+    expect(texts).toContain("DRESS CODE · 80s");
     expect(texts).toContain("ADMITS ONE");
     expect(texts.some((t) => t.includes("VOLUME"))).toBe(false);
     assertNoOverlap(r.list.ops);

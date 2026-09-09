@@ -389,7 +389,7 @@ export function TheSingle({
                 <span>
                   <span className="block text-sm font-bold">Keep it</span>
                   <span className="loop-muted block text-[11px]">
-                    Put Loop Soul on your home screen
+                    Get Loop Soul on your home screen
                   </span>
                 </span>
                 <span className="opacity-40">↓</span>
@@ -407,7 +407,7 @@ export function TheSingle({
           <div
             className={`rounded-2xl border px-5 py-4 transition-colors ${heard ? "border-ink/40 bg-ink/5" : "border-ink/20"}`}
           >
-            <div className="text-sm font-bold">Pass it on</div>
+            <div className="text-sm font-bold">Loop someone in</div>
             <div className="loop-muted mt-0.5 text-[11px]">
               {code
                 ? reached === null
@@ -439,7 +439,7 @@ export function TheSingle({
                     ? "…"
                     : code
                       ? "Share"
-                      : "Get link"}
+                      : "Loop them in"}
               </button>
             </div>
           </div>

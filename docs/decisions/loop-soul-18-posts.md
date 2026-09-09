@@ -139,15 +139,15 @@ Deliberately not the whole thing.
 ### Mon Sept 22 — "1984"
 **Post:** anything from the song — a lyric on a still, a rehearsal snippet.
 
-> "1984" is the one we play live, with the band, at nine. It's also the dress
-> code.
+> "1984" is the one we play live, with the band, at nine. Come dressed for the
+> decade it's named after.
 >
 > Saturday. Scott's Inn, doors 6:30, $5.
 
 ### Tue Sept 23 — what to wear
 **Post:** a reference image or three, or just text on the tan.
 
-> Dress code is 1984. Interpret it however you want — nobody's turning anyone
+> Dress code is 80s. Interpret it however you want — nobody's turning anyone
 > away, but the room is going to look incredible if you play along.
 >
 > Saturday Sept 26 · doors 6:30 · $5 · Scott's Inn.

@@ -164,7 +164,7 @@ person, asked in this order:
 
 1. **"What did you think about the album?"** — open-ended on purpose, not
    "did you like it." The point is to catch a real reaction, not a yes/no.
-2. **"What are you wearing?"** — ties directly to the 1984 dress code; doubles
+2. **"What are you wearing?"** — ties directly to the 80s dress code; doubles
    as fashion-floor content.
 
 Filmed, and cut for social. This is the same **witness/curation** idea the

@@ -8,7 +8,7 @@ type Details = { title: string; theme: string; venue: string; capacity: string }
 
 const FIELDS: { key: "title" | "theme" | "venue"; label: string; hint: string }[] = [
   { key: "title", label: "Volume / Title", hint: "e.g. Volume 1" },
-  { key: "theme", label: "Theme", hint: "e.g. 1984 — shown big on the poster" },
+  { key: "theme", label: "Theme", hint: "e.g. 80s — the dress code, on the poster and the pass" },
   { key: "venue", label: "Venue", hint: "e.g. Scott's Inn, Kamloops" },
 ];
 

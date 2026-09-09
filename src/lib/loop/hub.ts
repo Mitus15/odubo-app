@@ -41,7 +41,7 @@ export type LoopEvent = {
 export const MOCK_CURRENT_EVENT: LoopEvent = {
   id: "vol-1",
   title: "Volume 1",
-  theme: "1984",
+  theme: "80s",
   venue: "Scott's Inn, Kamloops",
   // This is DOORS, not the start of the music — the front door renders it as
   // "Doors {time}" and the pass modal as "when". 6:30pm Vancouver (PDT,

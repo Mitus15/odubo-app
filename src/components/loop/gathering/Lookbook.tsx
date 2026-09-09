@@ -11,7 +11,7 @@ export function Lookbook() {
     <section className="w-full">
       <header className="mb-3 px-1">
         <h2 className="text-2xl font-extrabold">The Lookbook</h2>
-        <p className="text-sm opacity-70">Set the tone. Theme: 1984.</p>
+        <p className="text-sm opacity-70">Set the tone. Theme: 80s.</p>
       </header>
       <div className="-mx-6 flex snap-x snap-mandatory gap-4 overflow-x-auto px-6 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {LOOKBOOK.map((item) => (

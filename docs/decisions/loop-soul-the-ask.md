@@ -33,7 +33,7 @@ Saturday **September 26** · doors **6:30**, album at **8** · Scott's Inn &
 Suites, Kamloops · **$5** at the door · **19+** · out by 10:30 ·
 **odubostudio.com/loop**
 
-Dress code: **1984**.
+Dress code: **80s**.
 
 ---
 
@@ -83,7 +83,7 @@ word** — "can you make it?" beats "let me know."
 
 > Amazing. Saturday the 26th, Scott's Inn & Suites, doors at 6:30 — album
 > starts at 8 in the courtyard so don't come at 8. $5 cash or card at the door,
-> 19+. Dress code's 1984 if you want to play along.
+> 19+. Dress code's 80s if you want to play along.
 >
 > odubostudio.com/loop
 

@@ -41,14 +41,49 @@ export type AnthemTrack = {
 
 /** Eight tracks → Soul Loop Anthem bracket (quarters → semis → final). */
 export const ANTHEM_TRACKS: AnthemTrack[] = [
-  { id: "billie-jean", title: "Billie Jean", artist: "Michael Jackson", query: "Billie Jean Michael Jackson" },
-  { id: "flashlight", title: "Flashlight", artist: "Parliament", query: "Flashlight Parliament" },
-  { id: "september", title: "September", artist: "Earth, Wind & Fire", query: "September Earth Wind Fire" },
-  { id: "aint-nobody", title: "Ain't Nobody", artist: "Rufus & Chaka Khan", query: "Ain't Nobody Chaka Khan" },
+  {
+    id: "billie-jean",
+    title: "Billie Jean",
+    artist: "Michael Jackson",
+    query: "Billie Jean Michael Jackson",
+  },
+  {
+    id: "flashlight",
+    title: "Flashlight",
+    artist: "Parliament",
+    query: "Flashlight Parliament",
+  },
+  {
+    id: "september",
+    title: "September",
+    artist: "Earth, Wind & Fire",
+    query: "September Earth Wind Fire",
+  },
+  {
+    id: "aint-nobody",
+    title: "Ain't Nobody",
+    artist: "Rufus & Chaka Khan",
+    query: "Ain't Nobody Chaka Khan",
+  },
   { id: "le-freak", title: "Le Freak", artist: "Chic", query: "Le Freak Chic" },
-  { id: "got-to-be-real", title: "Got to Be Real", artist: "Cheryl Lynn", query: "Got to Be Real Cheryl Lynn" },
-  { id: "super-freak", title: "Super Freak", artist: "Rick James", query: "Super Freak Rick James" },
-  { id: "give-it-to-me", title: "Give It to Me Baby", artist: "Rick James", query: "Give It To Me Baby Rick James" },
+  {
+    id: "got-to-be-real",
+    title: "Got to Be Real",
+    artist: "Cheryl Lynn",
+    query: "Got to Be Real Cheryl Lynn",
+  },
+  {
+    id: "super-freak",
+    title: "Super Freak",
+    artist: "Rick James",
+    query: "Super Freak Rick James",
+  },
+  {
+    id: "give-it-to-me",
+    title: "Give It to Me Baby",
+    artist: "Rick James",
+    query: "Give It To Me Baby Rick James",
+  },
 ];
 
 /**
@@ -137,9 +172,39 @@ export type LookbookItem = {
 
 /** Poster concepts double as the visual mood board until curated outfit shots land. */
 export const LOOKBOOK: LookbookItem[] = [
-  { id: "spin", src: "/loop/posters/spin.png", label: "What are you spinning?" },
+  {
+    id: "spin",
+    src: "/loop/posters/spin.png",
+    label: "What are you spinning?",
+  },
   { id: "dance", src: "/loop/posters/dance.png", label: "What we dancin' to" },
-  { id: "listen", src: "/loop/posters/listen.png", label: "What are you listening to?" },
-  { id: "fashion", src: "/loop/posters/fashion.png", label: "What are you wearing?" },
+  {
+    id: "listen",
+    src: "/loop/posters/listen.png",
+    label: "What are you listening to?",
+  },
+  {
+    id: "fashion",
+    src: "/loop/posters/fashion.png",
+    label: "What are you wearing?",
+  },
   { id: "play", src: "/loop/posters/play.png", label: "What are you playing?" },
 ];
+
+/**
+ * The credit lines — who the record is by, and who else is on the night.
+ *
+ * One definition for the printed piece and the web front door. They used to
+ * live only in the poster kit, which meant the paper and the page could drift
+ * apart silently: the flyer is the thing a stranger holds while looking at the
+ * site, and the two disagreeing is the one error neither can correct.
+ *
+ * Upper case is applied by the piece, not stored here — the print engine
+ * upcases everything it sets, and the web page uses a CSS `uppercase` so the
+ * string stays readable in source and in a screen reader.
+ */
+export const EVENT_CREDITS = {
+  record: "An album by Mani Odubo",
+  /** Subordinate to `record` by design — see the poster engine's layout doc. */
+  feature: "With Amen the DJ",
+} as const;

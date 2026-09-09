@@ -25,6 +25,7 @@ import {
 } from "../../src/lib/loop/publicUrl";
 import { getSetting } from "../../src/lib/loop/loopSetting";
 import { priceLabel } from "../../src/lib/loop/priceLabel";
+import { EVENT_CREDITS } from "../../src/lib/loop/content";
 import type { AnthemState } from "../../src/lib/loop/anthem-server";
 import { prepareSharp, renderSharp, assertFontResolves } from "./poster-render-sharp";
 
@@ -53,9 +54,9 @@ const VOLUMES: Record<string, EventDetails & { venueShort: string }> = {
     doors: "DOORS 6:30 · ALBUM AT 8",
     venue: "SCOTT'S INN & SUITES · KAMLOOPS",
     venueShort: "SCOTT'S INN · KAMLOOPS",
-    note: "DRESS CODE · 1984",
-    record: "AN ALBUM BY MANI ODUBO",
-    feature: "WITH AMEN THE DJ",
+    note: "DRESS CODE · 80s",
+    record: EVENT_CREDITS.record.toUpperCase(),
+    feature: EVENT_CREDITS.feature.toUpperCase(),
   },
   2: {
     date: "DATE TBD",

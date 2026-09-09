@@ -132,7 +132,7 @@ export function PosterStudio({
       venue: eventDetails.venue,
       dateLabel: eventDetails.dateLabel,
       doors: "DOORS 9PM",
-      note: eventDetails.note ?? "DRESS CODE · 1984",
+      note: eventDetails.note ?? "DRESS CODE · 80s",
       price: eventDetails.price ?? "",
       record: "AN ALBUM BY MANI ODUBO",
     }),

@@ -7,7 +7,7 @@ import { AnimatePresence } from "framer-motion";
 import type { LoopEvent } from "@/lib/loop/hub";
 import type { AnthemState } from "@/lib/loop/anthem-server";
 import { priceLabel as formatPrice } from "@/lib/loop/priceLabel";
-import { ANTHEM_ENABLED } from "@/lib/loop/content";
+import { ANTHEM_ENABLED, EVENT_CREDITS } from "@/lib/loop/content";
 import CoverContest from "./CoverContest";
 import type { RunOfShowItem } from "@/lib/loop/content";
 import Logo from "@/components/loop/brand/Logo";
@@ -29,7 +29,13 @@ const MODULES: { key: ModuleKey; label: string; title: string }[] = [
   // Advertising a module that does nothing is worse than not showing it, so
   // the anthem drops out entirely while it is parked (see ANTHEM_ENABLED).
   ...(ANTHEM_ENABLED
-    ? [{ key: "anthem" as const, label: "Soul Anthem", title: "Soul Loop Anthem" }]
+    ? [
+        {
+          key: "anthem" as const,
+          label: "Soul Anthem",
+          title: "Soul Loop Anthem",
+        },
+      ]
     : []),
   // Label vs title on purpose: someone scanning the poster is looking for "the
   // programme", so the button says that; the sheet keeps the brand's own name
@@ -93,7 +99,8 @@ export function GatheringPoster({
     if (!single) return;
     try {
       const gifted = new URLSearchParams(window.location.search).has("from");
-      if (gifted || !localStorage.getItem("loop.single.seen")) setSingleOpen(true);
+      if (gifted || !localStorage.getItem("loop.single.seen"))
+        setSingleOpen(true);
     } catch {
       setSingleOpen(true);
     }
@@ -140,19 +147,26 @@ export function GatheringPoster({
       {/* Tagline + silhouette hero. Figure top-anchored so it sits right under
           the tagline (no floating gap); the slack collects below the figure. */}
       <div className="flex min-h-0 flex-1 flex-col items-center gap-2">
-        {/* Was the slogan ("Come Dance"). The landing line now states what the
-            night IS rather than inviting to it — the invitation still does its
-            work on the printed piece and on the pass button below, but the
-            first line someone reads after scanning should tell them what they
-            have found. Set as one sentence over two lines because it is one
-            sentence: the credit is small and tracked, the name carries the
-            weight, which is the same hierarchy the poster uses. */}
-        <div className="flex flex-col items-center gap-1">
-          <div className="loop-muted text-[11px] font-bold uppercase tracking-[0.3em]">
-            An album by
+        {/* The credit block, set exactly as the printed piece sets it — same
+            strings (EVENT_CREDITS), same face (Jost 500), same tracking, same
+            opacities, one line each. The earlier two-line lockup put the name
+            in bold display at 4xl, which is the opposite treatment: the poster
+            deliberately does NOT shout the name, it states the record in a
+            single wide-tracked run and hangs the feature credit beneath it at
+            about two thirds. A stranger holding the flyer while looking at the
+            page has to see one design, not two.
+
+            Sizes are clamped rather than fixed because the run cannot wrap:
+            20.78em of tracked capitals needs 312px at 15px and still fits a
+            320px phone at 12.8px. `pl-[…em]` cancels CSS's trailing
+            letter-space, which would otherwise push the centred line half a
+            track to the left of where the engine centres it. */}
+        <div className="flex w-full flex-col items-center">
+          <div className="loop-display whitespace-nowrap pl-[0.34em] text-center text-[clamp(12px,4vw,15px)] font-medium uppercase tracking-[0.34em] text-ink/85">
+            {EVENT_CREDITS.record}
           </div>
-          <div className="loop-display text-4xl font-bold tracking-tight text-ink">
-            Mani Odubo
+          <div className="loop-display mt-1.5 whitespace-nowrap pl-[0.3em] text-center text-[clamp(8px,2.7vw,10px)] font-medium uppercase tracking-[0.3em] text-ink/60">
+            {EVENT_CREDITS.feature}
           </div>
         </div>
         <div className="relative min-h-0 w-full flex-1">
@@ -179,8 +193,8 @@ export function GatheringPoster({
                 "Room is full"
               ) : (
                 <>
-                  <span className="tabular-nums">{capacity.remaining}</span> / {capacity.total}{" "}
-                  {isFree ? "spots left" : "passes left"}
+                  <span className="tabular-nums">{capacity.remaining}</span> /{" "}
+                  {capacity.total} {isFree ? "spots left" : "passes left"}
                 </>
               )}
             </div>
@@ -194,7 +208,11 @@ export function GatheringPoster({
           onClick={() => setPassOpen(true)}
           className="w-full rounded-full bg-ink py-4 text-base font-bold text-sand transition-transform active:scale-95"
         >
-          {soldOut ? "Join the Waitlist" : isFree ? "Register · Free" : `Get Pass · ${priceLabel}`}
+          {soldOut
+            ? "Join the Waitlist"
+            : isFree
+              ? "Register · Free"
+              : `Get Pass · ${priceLabel}`}
         </button>
         {!soldOut && (
           <button
@@ -216,7 +234,7 @@ export function GatheringPoster({
               onClick={() => setSingleOpen(true)}
               className="rounded-2xl border border-ink/20 py-3 text-xs font-bold uppercase tracking-wide transition-colors hover:bg-ink/10"
             >
-              Hear the Single
+              Play {single.title}
             </button>
           )}
           {MODULES.map((m) => (
@@ -235,7 +253,11 @@ export function GatheringPoster({
       {/* Footer: Odubo presents · Scott's is the venue partner + Legacy access */}
       <footer className="mt-5 flex flex-col items-center gap-1.5">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/loop/branding/odubo.svg" alt="Odubo — presenter" className="h-10 w-auto" />
+        <img
+          src="/loop/branding/odubo.svg"
+          alt="Odubo — presenter"
+          className="h-10 w-auto"
+        />
         <div className="text-[9px] font-semibold uppercase tracking-[0.3em] opacity-50">
           Venue partner · Scott&apos;s Inn &amp; Suites
         </div>
@@ -260,9 +282,16 @@ export function GatheringPoster({
       {/* Module overlay */}
       <AnimatePresence>
         {activeModule && (
-          <ModuleSheet title={activeModule.title} onClose={() => setActive(null)}>
-            {ANTHEM_ENABLED && active === "anthem" && <AnthemBracket initial={anthem} />}
-            {active === "night" && <RunOfShow items={runOfShow} showHeader={false} />}
+          <ModuleSheet
+            title={activeModule.title}
+            onClose={() => setActive(null)}
+          >
+            {ANTHEM_ENABLED && active === "anthem" && (
+              <AnthemBracket initial={anthem} />
+            )}
+            {active === "night" && (
+              <RunOfShow items={runOfShow} showHeader={false} />
+            )}
             {active === "cover" && <CoverContest />}
           </ModuleSheet>
         )}

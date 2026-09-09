@@ -56,36 +56,43 @@ export function GetPassModal({
   }, []);
 
   // Admin-set Shopify checkout link first, then the env fallback.
-  const checkoutUrl = checkoutUrlProp || process.env.NEXT_PUBLIC_LOOP_PASS_CHECKOUT_URL;
+  const checkoutUrl =
+    checkoutUrlProp || process.env.NEXT_PUBLIC_LOOP_PASS_CHECKOUT_URL;
   const soldOut = !capacity.unlimited && capacity.remaining <= 0;
   // Same formatter as the front door and the print kit — see priceLabel.ts.
   const priceLabel = formatPrice(price, currency);
   const isFree = priceLabel === "FREE ENTRY";
 
+  // Every line here has to be true at the door, in the app and on the night.
+  // The previous version promised the code "arrives by email", which it does
+  // not: there is no verified sending domain, so codes reach the owner and
+  // nobody else. The lookup at /loop/code was built precisely so entry never
+  // depends on delivery — so that is what this says now.
   const includes: [string, string][] = [
-    // No volume/edition number here either — see GatheringPoster. The dress
-    // code carries the theme, and it reads better as an instruction than as a
-    // label.
-    ["Entry for one", `One pass admits one guest. Dress code: ${theme}.`],
     [
-      "Your event code",
-      "Arrives by email right after you register. It's your ticket at the door and it unlocks the app on the night.",
+      "Entry for one",
+      `One pass, one guest. Doors ${timeLabel}, album at 8. Dress code: ${theme}.`,
     ],
     [
-      "The room, in the app",
-      "Pose Studio (the Loop Soul filter), The Wall — the room's live photo gallery — and the live program.",
+      "Your code",
+      "Issued the moment you pay, and always findable with your checkout email — it's your ticket at the door and your key to the room in the app.",
     ],
     // The record is the reason the night exists — see
     // docs/decisions/loop-soul-is-the-album.md.
     [
       "The record, first",
-      "Loop Soul is an album. Volume 1 is the first time it's played anywhere, and one track is recorded live in the room — you're on it.",
+      "Loop Soul is an album. The 26th is its first exhibition — all 14, front to back, one of them recorded live in the room with you on it.",
+    ],
+    // The cover is fluid (owner, 2026-09-08): his version is one version.
+    [
+      "The cover is fluid",
+      "The cover you've seen is Mani's. Shoot through the filter, put it on the Wall, and yours can be the one you hold. The room votes the official one.",
     ],
     // Registration closes at the event and never reopens: the people in the
     // room are the album's audience. This is the whole offer.
     [
       "In the circle, for good",
-      "Everyone in the room keeps the record, the community gallery, the cover contest and the vote on the tracklist. Registration closes on the night and doesn't reopen.",
+      "Registration closes on the night and doesn't reopen. Everyone in the room keeps the gallery, votes the tracklist and the cover, and is credited by name on every shot they took.",
     ],
     [
       "The Vault, after",
@@ -113,7 +120,9 @@ export function GetPassModal({
               {soldOut ? "The room is full" : "The Pass"}
             </h3>
             {!soldOut && (
-              <p className="mt-1 text-lg font-bold tabular-nums">{priceLabel}</p>
+              <p className="mt-1 text-lg font-bold tabular-nums">
+                {priceLabel}
+              </p>
             )}
           </div>
           <button
@@ -129,8 +138,8 @@ export function GetPassModal({
         <div className="flex-1 overflow-y-auto px-6 pb-4">
           {soldOut ? (
             <p className="text-sm leading-relaxed">
-              All {capacity.total} passes are gone. Join the waitlist and you&apos;ll be
-              first in line if one opens up — and for Volume 2.
+              All {capacity.total} passes are gone. Join the waitlist and
+              you&apos;ll be first in line if one opens up — and for Volume 2.
             </p>
           ) : (
             <>
@@ -141,7 +150,10 @@ export function GetPassModal({
                 </dt>
                 <dd className="font-semibold">
                   {dateLabel}
-                  <span className="loop-muted font-normal"> · doors {timeLabel}</span>
+                  <span className="loop-muted font-normal">
+                    {" "}
+                    · doors {timeLabel}
+                  </span>
                 </dd>
                 <dt className="loop-muted font-semibold uppercase tracking-widest text-[11px] leading-5">
                   Where
@@ -156,7 +168,9 @@ export function GetPassModal({
                   ) : (
                     <>
                       {capacity.total} passes ·{" "}
-                      <span className={capacity.remaining <= 10 ? "text-wine" : ""}>
+                      <span
+                        className={capacity.remaining <= 10 ? "text-wine" : ""}
+                      >
                         {capacity.remaining} left
                       </span>
                     </>
@@ -187,7 +201,10 @@ export function GetPassModal({
               <ol className="mt-3 grid gap-2 text-sm leading-relaxed">
                 {[
                   "Check out securely — card, Apple Pay, or Google Pay.",
-                  "Your event code lands in your email within a minute.",
+                  // Was "lands in your email within a minute" — the same
+                  // promise the includes list just stopped making. There is no
+                  // verified sending domain, so the lookup IS the delivery.
+                  "Look your code up here with the email you checked out with.",
                   "Show it at the door, then enter it in the app to unlock the room.",
                 ].map((step, i) => (
                   <li key={step} className="flex gap-3">
@@ -203,12 +220,16 @@ export function GetPassModal({
               </ol>
 
               <p className="loop-muted mt-5 text-xs leading-relaxed">
-                One code per pass, single use. Buying more than one? You&apos;ll get a
-                code for each — share one with every guest. Email not arrived?{" "}
-                <a href="/loop/code" className="font-bold underline underline-offset-2">
-                  Look it up with your checkout email
+                One code per pass, single use. Buying more than one? You&apos;ll
+                get a code for each — share one with every guest. Your codes
+                live at{" "}
+                <a
+                  href="/loop/code"
+                  className="font-bold underline underline-offset-2"
+                >
+                  odubostudio.com/loop/code
                 </a>{" "}
-                any time.
+                — look them up any time with your checkout email.
               </p>
             </>
           )}
@@ -224,10 +245,13 @@ export function GetPassModal({
                 rel="noopener noreferrer"
                 className="block w-full rounded-full bg-ink py-4 text-center text-base font-bold text-sand transition-transform active:scale-95"
               >
-                {isFree ? "Register · Free" : `Continue to checkout · ${priceLabel}`}
+                {isFree
+                  ? "Register · Free"
+                  : `Continue to checkout · ${priceLabel}`}
               </a>
               <p className="loop-muted mt-2 text-center text-[11px]">
-                Secure checkout on our store. You&apos;ll come back here with your code.
+                Secure checkout on our store. You&apos;ll come back here with
+                your code.
               </p>
             </>
           ) : (
