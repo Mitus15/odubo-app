@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import MediaGrid from "@/components/loop/media/MediaGrid";
-import MediaViewer, { type ViewerAction } from "@/components/loop/media/MediaViewer";
+import MediaViewer, {
+  type ViewerAction,
+} from "@/components/loop/media/MediaViewer";
 import type { MediaItem } from "@/lib/loop/media/types";
 import { deleteItem, listItems } from "@/lib/loop/pose/gallery";
 import {
@@ -43,7 +45,10 @@ export function WallGallery({
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [posting, setPosting] = useState<{ done: number; total: number } | null>(null);
+  const [posting, setPosting] = useState<{
+    done: number;
+    total: number;
+  } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [viewer, setViewer] = useState<number | null>(null);
@@ -61,7 +66,10 @@ export function WallGallery({
   }, []);
 
   const refresh = useCallback(async () => {
-    const { photos: page, hasMore: more } = await fetchWall({ limit: PAGE_SIZE, featuredOnly });
+    const { photos: page, hasMore: more } = await fetchWall({
+      limit: PAGE_SIZE,
+      featuredOnly,
+    });
     setWall((prev) => {
       const seen = new Set(page.map((p) => p.uid));
       return [...page, ...prev.filter((p) => !seen.has(p.uid))];
@@ -111,13 +119,18 @@ export function WallGallery({
     if (tab === "yours") void loadMine();
   }, [tab, loadMine]);
 
-  useEffect(() => () => localUrls.current.forEach((u) => URL.revokeObjectURL(u)), []);
+  useEffect(
+    () => () => localUrls.current.forEach((u) => URL.revokeObjectURL(u)),
+    [],
+  );
 
   const wallItems: MediaItem[] = wall.map((p) => ({
     id: p.uid,
     src: p.r2_url,
     kind: p.media_type === "video" ? "video" : "image",
-    author: p.user_name,
+    // The resolved credit, not the raw typed name — same answer the ballot and
+    // the Journal give, so a guest sees one attribution wherever they look.
+    author: p.credit ?? p.user_name,
     caption: p.caption,
     featured: p.featured === 1,
     moderated: p.moderated,
@@ -198,7 +211,11 @@ export function WallGallery({
   }
 
   const viewerActions: ViewerAction[] = [
-    { label: tab === "yours" ? "Save" : "Share", onClick: share, primary: true },
+    {
+      label: tab === "yours" ? "Save" : "Share",
+      onClick: share,
+      primary: true,
+    },
     ...(tab === "yours"
       ? [
           {
@@ -276,7 +293,9 @@ export function WallGallery({
       )}
 
       {error && (
-        <p className="loop-panel rounded-2xl px-4 py-3 text-center text-sm">{error}</p>
+        <p className="loop-panel rounded-2xl px-4 py-3 text-center text-sm">
+          {error}
+        </p>
       )}
 
       <MediaGrid

@@ -2,12 +2,25 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import LoopLoader from "@/components/loop/brand/LoopLoader";
-import { startCamera, stopStream, captureFrame, type CameraFacing } from "@/lib/loop/capture/camera";
+import {
+  startCamera,
+  stopStream,
+  captureFrame,
+  type CameraFacing,
+} from "@/lib/loop/capture/camera";
 import { segmentSubject, preloadSegmenter } from "@/lib/loop/pose/segment";
-import { stylizePoster, stampWatermark, toJpegBlob } from "@/lib/loop/pose/stylize";
+import {
+  stylizePoster,
+  stampWatermark,
+  toJpegBlob,
+} from "@/lib/loop/pose/stylize";
 import { PoseVideoEngine } from "@/lib/loop/pose/video-engine";
 import { saveItem } from "@/lib/loop/pose/gallery";
-import { postToWall, savedWallName, rememberWallName } from "@/lib/loop/wall/client";
+import {
+  postToWall,
+  savedWallName,
+  rememberWallName,
+} from "@/lib/loop/wall/client";
 
 type Mode = "photo" | "video";
 type Phase = "starting" | "live" | "working" | "result";
@@ -118,9 +131,15 @@ export function CameraSheet({
           streamRef.current = await startCamera(videoRef.current, f);
         } else {
           if (!videoRef.current || !canvasRef.current) return;
-          const engine = new PoseVideoEngine(videoRef.current, canvasRef.current);
+          const engine = new PoseVideoEngine(
+            videoRef.current,
+            canvasRef.current,
+          );
           engineRef.current = engine;
-          await engine.start({ kind: "camera", facing: f }, { filter: filtered, maxHeight });
+          await engine.start(
+            { kind: "camera", facing: f },
+            { filter: filtered, maxHeight },
+          );
           if (m === "photo") preloadSegmenter();
         }
         setPhase("live");
@@ -143,7 +162,11 @@ export function CameraSheet({
     };
   }, [teardown]);
 
-  function showResult(blob: Blob, kind: "image" | "video", original: Blob | null = null) {
+  function showResult(
+    blob: Blob,
+    kind: "image" | "video",
+    original: Blob | null = null,
+  ) {
     if (urlRef.current) URL.revokeObjectURL(urlRef.current);
     const url = URL.createObjectURL(blob);
     urlRef.current = url;
@@ -198,11 +221,16 @@ export function CameraSheet({
       return;
     }
     if (!engine.startRecording()) {
-      setError("Recording isn't supported here. Try Photo, or Chrome/Safari 16+.");
+      setError(
+        "Recording isn't supported here. Try Photo, or Chrome/Safari 16+.",
+      );
       return;
     }
     setRecording(true);
-    capTimer.current = window.setTimeout(() => void toggleRecord(), maxClipS * 1000);
+    capTimer.current = window.setTimeout(
+      () => void toggleRecord(),
+      maxClipS * 1000,
+    );
   }
 
   async function flip() {
@@ -230,7 +258,10 @@ export function CameraSheet({
       });
       setPosting("posted");
       // Keep a copy on the device too — with the original, when there is one.
-      void saveItem(resultBlob, resultKind, { filtered: filterOn, original: originalBlob });
+      void saveItem(resultBlob, resultKind, {
+        filtered: filterOn,
+        original: originalBlob,
+      });
       setSaved(true);
       onPosted?.();
     } catch (e) {
@@ -241,7 +272,10 @@ export function CameraSheet({
 
   async function keep() {
     if (!resultBlob || saved) return;
-    await saveItem(resultBlob, resultKind, { filtered: filterOn, original: originalBlob });
+    await saveItem(resultBlob, resultKind, {
+      filtered: filterOn,
+      original: originalBlob,
+    });
     setSaved(true);
     if (resultUrl) {
       const a = document.createElement("a");
@@ -279,14 +313,25 @@ export function CameraSheet({
             !rawPhotoPreview && phase !== "result" ? "" : "hidden"
           }`}
         />
-        {phase === "result" && resultUrl && (
-          resultKind === "video" ? (
-            <video src={resultUrl} className="h-full w-full object-contain" autoPlay loop playsInline muted />
+        {phase === "result" &&
+          resultUrl &&
+          (resultKind === "video" ? (
+            <video
+              src={resultUrl}
+              className="h-full w-full object-contain"
+              autoPlay
+              loop
+              playsInline
+              muted
+            />
           ) : (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={resultUrl} alt="Your Loop Soul shot" className="h-full w-full object-contain" />
-          )
-        )}
+            <img
+              src={resultUrl}
+              alt="Your Loop Soul shot"
+              className="h-full w-full object-contain"
+            />
+          ))}
       </div>
 
       {busy && (
@@ -354,7 +399,7 @@ export function CameraSheet({
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     onBlur={() => rememberWallName(name)}
-                    placeholder="Your name (optional)"
+                    placeholder="Your first name — goes on the credit"
                     maxLength={60}
                     className="rounded-full border border-bone/25 bg-ink/60 px-5 py-3 text-sm text-bone outline-none backdrop-blur placeholder:text-bone/40 focus:border-sand"
                   />
@@ -403,13 +448,21 @@ export function CameraSheet({
               // mid-process are genuinely unsafe.
               disabled={recording || phase === "working"}
               aria-pressed={filterOn}
-              aria-label={filterOn ? "Turn the Loop Soul filter off" : "Turn the Loop Soul filter on"}
+              aria-label={
+                filterOn
+                  ? "Turn the Loop Soul filter off"
+                  : "Turn the Loop Soul filter on"
+              }
               className={`flex h-14 w-14 flex-col items-center justify-center rounded-full text-[9px] font-bold uppercase tracking-widest backdrop-blur transition-colors disabled:opacity-40 ${
                 filterOn ? "bg-sand text-ink" : "bg-ink/60 text-bone/80"
               }`}
             >
-              <span aria-hidden className="text-base leading-none">∞</span>
-              <span className="mt-0.5 leading-none">{filterOn ? "On" : "Off"}</span>
+              <span aria-hidden className="text-base leading-none">
+                ∞
+              </span>
+              <span className="mt-0.5 leading-none">
+                {filterOn ? "On" : "Off"}
+              </span>
             </button>
             {mode === "photo" ? (
               <button

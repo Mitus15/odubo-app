@@ -2,6 +2,7 @@ import { executeQuery, queryDatabase, queryOne } from "@/lib/loop/db";
 import { isHolder } from "@/lib/loop/event-codes";
 import { getSetting, setSetting } from "@/lib/loop/loopSetting";
 import type { EventPhase } from "@/lib/loop/hub";
+import { CREDIT_EXPR, CREDIT_JOIN } from "@/lib/loop/identity";
 
 /**
  * The two member ballots — the tracklist vote and the album-cover vote — on
@@ -42,7 +43,8 @@ export const LOOP_SOUL_ALBUM_ID = "724666e5-66a8-4229-99ee-d5450076b749";
 /** The synthetic event id a ballot's votes are stored under. `#` cannot
  *  appear in a real event id (`vol-1`), so collision is structural, not
  *  conventional. */
-export const ballotScope = (eventId: string, kind: BallotKind) => `${eventId}#${kind}`;
+export const ballotScope = (eventId: string, kind: BallotKind) =>
+  `${eventId}#${kind}`;
 
 /* ── open/closed ─────────────────────────────────────────────────────────── */
 
@@ -53,7 +55,10 @@ export const ballotScope = (eventId: string, kind: BallotKind) => `${eventId}#${
  * The loop_settings override (`ballot_tracklist` / `ballot_cover` =
  * open|closed) lets admin force either state without a deploy.
  */
-export async function isBallotOpen(kind: BallotKind, phase: EventPhase): Promise<boolean> {
+export async function isBallotOpen(
+  kind: BallotKind,
+  phase: EventPhase,
+): Promise<boolean> {
   const override = await getSetting(`ballot_${kind}`);
   if (override === "open") return true;
   if (override === "closed") return false;
@@ -81,7 +86,7 @@ export type BallotOption = {
 };
 
 type TrackRow = { track_number: number; title: string };
-type FeaturedRow = { uid: string; r2_key: string; user_name: string | null };
+type FeaturedRow = { uid: string; r2_key: string; credit: string | null };
 type VoteRow = { candidate_id: string; n: number };
 
 async function voteTallies(scope: string, voterId: string) {
@@ -104,7 +109,10 @@ async function voteTallies(scope: string, voterId: string) {
 
 /** The 13 tracks, ranked by the room. Ties keep album order — stable, and the
  *  album's own sequence is the honest tiebreak. */
-async function tracklistOptions(scope: string, voterId: string): Promise<BallotOption[]> {
+async function tracklistOptions(
+  scope: string,
+  voterId: string,
+): Promise<BallotOption[]> {
   const [tracks, { counts, mine }] = await Promise.all([
     queryDatabase<TrackRow>(
       `SELECT track_number, title FROM tracks WHERE album_id = ?1 ORDER BY track_number`,
@@ -135,8 +143,13 @@ async function coverOptions(
 ): Promise<BallotOption[]> {
   const [shots, { counts, mine }] = await Promise.all([
     queryDatabase<FeaturedRow>(
-      `SELECT p.uid, p.r2_key, p.user_name
+      // Credit comes from the write-once ledger, not the name typed at upload.
+      // Reading `p.user_name` here meant the same photo could be credited one
+      // way on the ballot and another in the Journal — and the Journal's is the
+      // answer royalties are paid on. See CREDIT_EXPR in lib/loop/identity.
+      `SELECT p.uid, p.r2_key, ${CREDIT_EXPR} AS credit
          FROM gallery_photos p JOIN galleries g ON g.id = p.gallery_id
+         ${CREDIT_JOIN}
         WHERE g.code = ?1 AND p.featured = 1 AND p.moderated = 1
         ORDER BY p.id DESC`,
       // The Wall gallery's join code is the event id uppercased + "VOL" glue —
@@ -150,7 +163,7 @@ async function coverOptions(
       const id = `pic:${s.uid}`;
       return {
         id,
-        title: s.user_name ? `Shot by ${s.user_name}` : "Untitled shot",
+        title: s.credit ? `Shot by ${s.credit}` : "Untitled shot",
         subtitle: null,
         imageSrc: `/api/loop/gallery/media/${s.r2_key}`,
         votes: counts.get(id) ?? 0,
@@ -213,7 +226,11 @@ async function myVoteCount(scope: string, voterId: string): Promise<number> {
 /** Is this option actually on the ballot right now? Derived options mean the
  *  check is a live lookup, so a shot unfeatured after being voted for simply
  *  stops being votable — no cleanup pass needed. */
-async function optionExists(kind: BallotKind, eventId: string, id: string): Promise<boolean> {
+async function optionExists(
+  kind: BallotKind,
+  eventId: string,
+  id: string,
+): Promise<boolean> {
   if (kind === "tracklist") {
     const m = id.match(/^trk:(\d+)$/);
     if (!m) return false;
@@ -236,7 +253,10 @@ async function optionExists(kind: BallotKind, eventId: string, id: string): Prom
 
 export type ToggleResult =
   | { ok: true; voted: boolean; votesUsed: number; voteLimit: number }
-  | { ok: false; reason: "closed" | "not-holder" | "unknown-option" | "budget" };
+  | {
+      ok: false;
+      reason: "closed" | "not-holder" | "unknown-option" | "budget";
+    };
 
 /** Same toggle discipline as the anthem's upvotes: one vote per option,
  *  removable, budget enforced at add time. */
@@ -247,8 +267,10 @@ export async function toggleBallotVote(
   voterId: string,
   optionId: string,
 ): Promise<ToggleResult> {
-  if (!(await isBallotOpen(kind, phase))) return { ok: false, reason: "closed" };
-  if (!(await isHolder(eventId, voterId))) return { ok: false, reason: "not-holder" };
+  if (!(await isBallotOpen(kind, phase)))
+    return { ok: false, reason: "closed" };
+  if (!(await isHolder(eventId, voterId)))
+    return { ok: false, reason: "not-holder" };
   if (!(await optionExists(kind, eventId, optionId))) {
     return { ok: false, reason: "unknown-option" };
   }

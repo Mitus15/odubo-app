@@ -1,4 +1,10 @@
-import { queryDatabase, queryOne, executeQuery, type SqlParam } from "@/lib/loop/db";
+import {
+  queryDatabase,
+  queryOne,
+  executeQuery,
+  type SqlParam,
+} from "@/lib/loop/db";
+import { CREDIT_EXPR, CREDIT_JOIN } from "@/lib/loop/identity";
 import { toSlug } from "@/lib/storage/pathGenerators";
 import type { LoopEvent } from "@/lib/loop/hub";
 
@@ -31,7 +37,9 @@ export type LoopGallery = {
  * request (one SELECT on the hot path); the INSERT is race-safe via the UNIQUE
  * constraint on `galleries.code` + OR IGNORE.
  */
-export async function ensureLoopGallery(event: LoopEvent): Promise<LoopGallery> {
+export async function ensureLoopGallery(
+  event: LoopEvent,
+): Promise<LoopGallery> {
   const code = loopGalleryCode(event.id);
 
   const existing = await queryOne<{ id: number; code: string; title: string }>(
@@ -72,6 +80,13 @@ export type WallPhoto = {
   r2_key: string;
   r2_url: string;
   user_name: string | null;
+  /**
+   * Who took it, resolved. Prefers the durable attendee record over the name
+   * typed at upload, so the same shot is credited identically here, on the
+   * cover ballot and in the Journal — the last of which is what contributor
+   * royalties are paid on. Null only when nobody has ever given a name.
+   */
+  credit: string | null;
   caption: string | null;
   media_type: "photo" | "video";
   moderated: number | null;
@@ -99,16 +114,24 @@ type ListOptions = {
 };
 
 export async function listWallPhotos(opts: ListOptions): Promise<WallPhoto[]> {
-  const where: string[] = [`gallery_id = ?1`];
+  // Qualified with the table alias because the credit join below brings two
+  // more tables into scope — an unqualified `featured` would be ambiguous the
+  // moment either of them grows a column by that name.
+  const where: string[] = [`p.gallery_id = ?1`];
   const params: SqlParam[] = [opts.galleryId];
-  if (!opts.includeHidden) where.push(`(moderated != 2 OR moderated IS NULL)`);
-  if (opts.featuredOnly) where.push(`featured = 1`);
+  if (!opts.includeHidden)
+    where.push(`(p.moderated != 2 OR p.moderated IS NULL)`);
+  if (opts.featuredOnly) where.push(`p.featured = 1`);
 
+  // Credit resolved here rather than in the caller so the Wall, the ballot and
+  // the Journal all name the same person for the same shot.
   const rows = await queryDatabase<Omit<WallPhoto, "r2_url">>(
-    `SELECT id, uid, r2_key, user_name, caption, media_type, moderated, featured, created_at
-       FROM gallery_photos
+    `SELECT p.id, p.uid, p.r2_key, p.user_name, p.caption, p.media_type,
+            p.moderated, p.featured, p.created_at, ${CREDIT_EXPR} AS credit
+       FROM gallery_photos p
+       ${CREDIT_JOIN}
       WHERE ${where.join(" AND ")}
-      ORDER BY created_at DESC, id DESC
+      ORDER BY p.created_at DESC, p.id DESC
       LIMIT ?${params.length + 1} OFFSET ?${params.length + 2}`,
     [...params, opts.limit, opts.offset],
   );
@@ -138,10 +161,17 @@ export async function insertWallPhoto(input: {
       input.mediaType,
     ],
   );
+  // Same shape and the same credit expression as listWallPhotos: the row this
+  // hands straight back to the poster must not be the one row on the Wall
+  // missing its attribution. (The credit is written just after this returns,
+  // so on the very first read it resolves to the typed name — which is exactly
+  // what the durable record will say a moment later.)
   const row = await queryOne<Omit<WallPhoto, "r2_url">>(
-    `SELECT id, uid, r2_key, user_name, caption, media_type, moderated, featured, created_at
-       FROM gallery_photos
-      WHERE gallery_id = ?1 AND uid = ?2`,
+    `SELECT p.id, p.uid, p.r2_key, p.user_name, p.caption, p.media_type,
+            p.moderated, p.featured, p.created_at, ${CREDIT_EXPR} AS credit
+       FROM gallery_photos p
+       ${CREDIT_JOIN}
+      WHERE p.gallery_id = ?1 AND p.uid = ?2`,
     [input.galleryId, input.uid],
   );
   return row ? { ...row, r2_url: publicUrlFor(row.r2_key) } : null;

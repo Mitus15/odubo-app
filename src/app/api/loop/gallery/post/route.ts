@@ -5,7 +5,11 @@ import { currentVoterId } from "@/lib/loop/anthem-server";
 import { hasRoomAccess } from "@/lib/loop/doors";
 import { ADMIN_COOKIE, verifyAdminSession } from "@/lib/loop/admin-auth";
 import { ensureLoopGallery, insertWallPhoto } from "@/lib/loop/wall/server";
-import { attendeeForVoter, claimIdentity, creditMedia } from "@/lib/loop/identity";
+import {
+  claimIdentity,
+  creditMedia,
+  ensureAttendee,
+} from "@/lib/loop/identity";
 import { createStorageService } from "@/lib/storage/StorageService";
 import { gallery as galleryPaths } from "@/lib/storage/pathGenerators";
 import { rateLimit } from "@/lib/rateLimit";
@@ -55,14 +59,20 @@ export async function POST(req: NextRequest) {
     windowMs: 10 * 60 * 1000,
   });
   if (!limiter.allowed) {
-    return NextResponse.json({ error: "Easy — try again in a moment." }, { status: 429 });
+    return NextResponse.json(
+      { error: "Easy — try again in a moment." },
+      { status: 429 },
+    );
   }
 
   let form: FormData;
   try {
     form = await req.formData();
   } catch {
-    return NextResponse.json({ error: "Expected multipart form data" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Expected multipart form data" },
+      { status: 400 },
+    );
   }
 
   const file = form.get("file");
@@ -70,16 +80,28 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No file" }, { status: 400 });
   }
   if (file.size > MAX_BYTES) {
-    return NextResponse.json({ error: "File too large (30 MB max)" }, { status: 413 });
+    return NextResponse.json(
+      { error: "File too large (30 MB max)" },
+      { status: 413 },
+    );
   }
   const ext = EXT_BY_MIME[file.type];
   if (!ext) {
-    return NextResponse.json({ error: `Unsupported type: ${file.type || "unknown"}` }, { status: 415 });
+    return NextResponse.json(
+      { error: `Unsupported type: ${file.type || "unknown"}` },
+      { status: 415 },
+    );
   }
 
   const mediaType = file.type.startsWith("video/") ? "video" : "photo";
-  const userName = String(form.get("userName") ?? "").trim().slice(0, 60) || null;
-  const caption = String(form.get("caption") ?? "").trim().slice(0, 300) || null;
+  const userName =
+    String(form.get("userName") ?? "")
+      .trim()
+      .slice(0, 60) || null;
+  const caption =
+    String(form.get("caption") ?? "")
+      .trim()
+      .slice(0, 300) || null;
 
   const loopGallery = await ensureLoopGallery(event);
   const uid = crypto.randomUUID().slice(0, 8);
@@ -114,15 +136,28 @@ export async function POST(req: NextRequest) {
     mediaType,
   });
   if (!photo) {
-    return NextResponse.json({ error: "Saved the file but not the record — try again." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Saved the file but not the record — try again." },
+      { status: 500 },
+    );
   }
 
   // Credit the shot to its author — the row that later powers "your shots",
   // profiles, contributor credits and magazine royalties. Best-effort: a
   // credit failure must never lose the guest their photo.
   try {
-    const attendee = await attendeeForVoter(voterId);
-    if (attendee) {
+    // ensureAttendee, not attendeeForVoter. An attendee record was only ever
+    // minted on code redemption, so on a doors-open night — a free volume, a
+    // private party, the door run on trust, all of which doors/index.ts
+    // explicitly anticipates — a guest could post to the Wall and no credit
+    // row would ever be written. Their shot would land with a free-text name
+    // and the contest's promise that "credit is fixed at the moment the shot
+    // is taken" would quietly not hold for the people it mattered most to.
+    //
+    // Guarded on "anonymous" because ensureAttendee has no guard of its own:
+    // without this every cookie-less post would bind to one shared attendee.
+    if (voterId && voterId !== "anonymous") {
+      const attendee = await ensureAttendee(voterId);
       await creditMedia(uid, attendee.id, event.id);
       // The name typed on a post is the display name, if they've not set one.
       if (userName && !attendee.displayName) {

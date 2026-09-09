@@ -7,6 +7,8 @@ export type WallPhotoDto = {
   uid: string;
   r2_url: string;
   user_name: string | null;
+  /** Resolved attribution — see WallPhoto.credit on the server. */
+  credit: string | null;
   caption: string | null;
   media_type: "photo" | "video";
   moderated: number | null;
@@ -23,7 +25,9 @@ export async function fetchWall(opts: {
   if (opts.offset) params.set("offset", String(opts.offset));
   if (opts.limit) params.set("limit", String(opts.limit));
   if (opts.featuredOnly) params.set("featured", "1");
-  const res = await fetch(`/api/loop/gallery/list?${params}`, { cache: "no-store" });
+  const res = await fetch(`/api/loop/gallery/list?${params}`, {
+    cache: "no-store",
+  });
   if (!res.ok) throw new Error(`Couldn't load the Wall (${res.status})`);
   return res.json();
 }
@@ -64,16 +68,27 @@ export async function normalizeForWall(file: File | Blob): Promise<Blob> {
 
 export async function postToWall(
   media: Blob,
-  opts: { fileName?: string; userName?: string | null; caption?: string | null } = {},
+  opts: {
+    fileName?: string;
+    userName?: string | null;
+    caption?: string | null;
+  } = {},
 ): Promise<WallPhotoDto> {
   const form = new FormData();
   const name =
-    opts.fileName ?? (media.type.startsWith("video/") ? "loop-wall.webm" : "loop-wall.jpg");
-  form.set("file", new File([media], name, { type: media.type || "image/jpeg" }));
+    opts.fileName ??
+    (media.type.startsWith("video/") ? "loop-wall.webm" : "loop-wall.jpg");
+  form.set(
+    "file",
+    new File([media], name, { type: media.type || "image/jpeg" }),
+  );
   if (opts.userName) form.set("userName", opts.userName);
   if (opts.caption) form.set("caption", opts.caption);
 
-  const res = await fetch("/api/loop/gallery/post", { method: "POST", body: form });
+  const res = await fetch("/api/loop/gallery/post", {
+    method: "POST",
+    body: form,
+  });
   const data = await res.json().catch(() => null);
   if (!res.ok || !data?.success) {
     throw new Error(data?.error ?? `Couldn't post to the Wall (${res.status})`);
