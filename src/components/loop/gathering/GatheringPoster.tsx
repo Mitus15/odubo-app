@@ -273,6 +273,10 @@ export function GatheringPoster({
           <TheSingle
             single={single}
             onClose={() => setSingleOpen(false)}
+            onCoverContest={() => {
+              setSingleOpen(false);
+              setActive("cover");
+            }}
             onGetPass={() => {
               setSingleOpen(false);
               setPassOpen(true);

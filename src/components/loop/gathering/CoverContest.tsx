@@ -3,10 +3,17 @@ import Link from "next/link";
 /**
  * The Cover Contest — the reason the filter exists on the night.
  *
- * Everyone who comes shoots through the Loop Soul filter; those frames are the
- * entries, and the winning one becomes the album's cover. It is the clearest
- * expression of the closed circle: the people in the room make the record's
- * face, and they are paid for it.
+ * The cover is FLUID (owner, 2026-09-08). The artwork already shipping on the
+ * single is not a placeholder waiting to be replaced — it is the owner's
+ * version, and it stays his version. Anyone can hold their own. What the night
+ * decides is which one becomes OFFICIAL.
+ *
+ * That distinction matters to the copy: this module used to say the album
+ * "needs a cover", which stopped being true the moment the single rendered one
+ * and would have read as a contradiction to anyone who saw both. A record with
+ * many covers and one official cover has no such problem, and is a truer
+ * statement of the closed circle than a vacancy would have been — the people in
+ * the room are not filling a gap, they are entering a version.
  *
  * Numbers are stated plainly and on purpose. A contest that names its payment
  * reads as an offer; one that doesn't reads as free labour.
@@ -15,7 +22,8 @@ export function CoverContest() {
   return (
     <section className="w-full space-y-5">
       <p className="text-sm opacity-80">
-        Loop Soul needs a cover. It is going to be one of you.
+        The cover of this album is fluid. The one you have seen is mine — you
+        can hold your own. On the 26th the room decides which one is official.
       </p>
 
       <ol className="relative ml-2 space-y-4 border-l border-ink/20">
@@ -30,7 +38,7 @@ export function CoverContest() {
           ],
           [
             "The room votes",
-            "The standout shots are shortlisted, and everyone in the room votes. The winning frame becomes the album's cover art, credited to whoever took it.",
+            "The standout shots are shortlisted, and everyone in the room votes. The winning frame becomes the official cover, credited to whoever took it. Every other version stays valid — it just isn't the one on the record.",
           ],
         ].map(([title, body]) => (
           <li key={title} className="ml-5">
@@ -47,7 +55,7 @@ export function CoverContest() {
         </div>
         <dl className="mt-2 space-y-1 text-sm">
           <div className="flex items-baseline justify-between gap-3">
-            <dt>The cover</dt>
+            <dt>The official cover</dt>
             <dd className="font-black tabular-nums">$50</dd>
           </div>
           <div className="flex items-baseline justify-between gap-3">

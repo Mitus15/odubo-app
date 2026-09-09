@@ -57,10 +57,12 @@ export function TheSingle({
   single,
   onClose,
   onGetPass,
+  onCoverContest,
 }: {
   single: FeaturedSingle;
   onClose: () => void;
   onGetPass: () => void;
+  onCoverContest: () => void;
 }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [playing, setPlaying] = useState(false);
@@ -242,6 +244,19 @@ export function TheSingle({
               />
             </div>
           </div>
+        )}
+
+        {/* Said here because the artwork is the argument: the one person
+            primed to hear that a cover is not the only cover is the person
+            currently looking at one. Tappable text, not a card. */}
+        {single.coverUrl && (
+          <button
+            type="button"
+            onClick={onCoverContest}
+            className="loop-muted mx-auto mt-3 block max-w-[17rem] text-center text-[11px] leading-relaxed underline decoration-ink/30 underline-offset-4"
+          >
+            This cover is mine. On the 26th the room picks the official one.
+          </button>
         )}
 
         <div className="mt-6 text-center">
