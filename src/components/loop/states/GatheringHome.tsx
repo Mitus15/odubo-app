@@ -4,6 +4,7 @@ import { getPassCapacity } from "@/lib/loop/pass";
 import { getPassSettings } from "@/lib/loop/pass/settings";
 import { getRunOfShow } from "@/lib/loop/content-store";
 import { isJournalPublished } from "@/lib/loop/journal-server";
+import { getFeaturedSingle } from "@/lib/loop/single";
 import GatheringPoster from "@/components/loop/gathering/GatheringPoster";
 
 /**
@@ -15,12 +16,16 @@ import GatheringPoster from "@/components/loop/gathering/GatheringPoster";
  */
 export async function GatheringHome({ event }: { event: LoopEvent }) {
   const voterId = await currentVoterId();
-  const [anthem, capacity, runOfShow, passSettings, journalPublished] = await Promise.all([
+  const [anthem, capacity, runOfShow, passSettings, journalPublished, single] = await Promise.all([
     getAnthemState(event, voterId),
     getPassCapacity(),
     getRunOfShow(event.id),
     getPassSettings(),
     isJournalPublished(event.id),
+    // What the flyer's QR promises. Null only if the featured track is missing
+    // or unplayable, which getFeaturedSingle logs loudly rather than papering
+    // over with a substitute song.
+    getFeaturedSingle(),
   ]);
 
   // Formatted server-side so the venue's timezone is authoritative — not the
@@ -49,6 +54,7 @@ export async function GatheringHome({ event }: { event: LoopEvent }) {
       dateLabel={dateLabel}
       timeLabel={timeLabel}
       journalPublished={journalPublished}
+      single={single}
     />
   );
 }

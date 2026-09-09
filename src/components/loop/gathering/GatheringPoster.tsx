@@ -15,6 +15,8 @@ import ModuleSheet from "@/components/loop/shell/ModuleSheet";
 import AnthemBracket from "@/components/loop/anthem/AnthemBracket";
 import RunOfShow from "@/components/loop/gathering/RunOfShow";
 import GetPassModal from "@/components/loop/gathering/GetPassModal";
+import TheSingle from "@/components/loop/gathering/TheSingle";
+import type { FeaturedSingle } from "@/lib/loop/single";
 
 /** Mirrors CapacityInfo — unlimited carries null counts on purpose, so a
  *  scarcity line can't render "0 left" for a room with no cap. */
@@ -59,6 +61,7 @@ export function GatheringPoster({
   currency = null,
   dateLabel,
   timeLabel,
+  single = null,
   journalPublished = false,
 }: {
   event: LoopEvent;
@@ -73,11 +76,28 @@ export function GatheringPoster({
   /** Server-formatted so the venue's timezone is authoritative. */
   dateLabel: string;
   timeLabel: string;
+  /** The track behind the flyer's QR. Null when none is playable. */
+  single?: FeaturedSingle | null;
   /** A published Loop Journal issue makes last volume the pre-phase hype reel. */
   journalPublished?: boolean;
 }) {
   const [active, setActive] = useState<ModuleKey | null>(null);
   const [passOpen, setPassOpen] = useState(false);
+  const [singleOpen, setSingleOpen] = useState(false);
+
+  // The QR promises a song, so a first-time arrival gets the song — not a
+  // poster with the song filed behind a button. Anyone who has already been
+  // handed it lands on the poster instead, and a gifted link (?from=) always
+  // opens it, because that visitor was sent for exactly one reason.
+  useEffect(() => {
+    if (!single) return;
+    try {
+      const gifted = new URLSearchParams(window.location.search).has("from");
+      if (gifted || !localStorage.getItem("loop.single.seen")) setSingleOpen(true);
+    } catch {
+      setSingleOpen(true);
+    }
+  }, [single]);
   const [capacity, setCapacity] = useState<Capacity>(initialCapacity);
 
   // Keep the scarcity number fresh — it reads the real issued-code ledger.
@@ -180,6 +200,17 @@ export function GatheringPoster({
 
         {/* Module launchers */}
         <nav className="grid w-full grid-cols-2 gap-2 [&>*:last-child:nth-child(odd)]:col-span-2">
+          {/* First in the grid: it is the one thing the flyer actually
+              promised, so it outranks the programme and the contest. */}
+          {single && (
+            <button
+              type="button"
+              onClick={() => setSingleOpen(true)}
+              className="rounded-2xl border border-ink/20 py-3 text-xs font-bold uppercase tracking-wide transition-colors hover:bg-ink/10"
+            >
+              Hear the Single
+            </button>
+          )}
           {MODULES.map((m) => (
             <button
               key={m.key}
@@ -226,6 +257,19 @@ export function GatheringPoster({
             {active === "night" && <RunOfShow items={runOfShow} showHeader={false} />}
             {active === "cover" && <CoverContest />}
           </ModuleSheet>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {single && singleOpen && (
+          <TheSingle
+            single={single}
+            onClose={() => setSingleOpen(false)}
+            onGetPass={() => {
+              setSingleOpen(false);
+              setPassOpen(true);
+            }}
+          />
         )}
       </AnimatePresence>
 
