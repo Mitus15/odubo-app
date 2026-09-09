@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  DEFAULT_QR_CAPTION,
   layoutEventPoster,
   layoutTicket,
   layoutPassCard,
@@ -132,6 +133,15 @@ async function main() {
       : priceLabel(await getSetting("pass_price"), await getSetting("pass_currency"));
   console.log(`→ price line: ${ev.price}`);
 
+  // The line under the QR, on the same settings-first rule as the price: a
+  // printed call to action is the one thing on the sheet that decides whether
+  // the scan happens at all, so it must be changeable without a code edit.
+  const qrCaption =
+    typeof args.qrCaption === "string"
+      ? args.qrCaption
+      : ((await getSetting("poster_qr_caption")) ?? undefined);
+  console.log(`→ QR caption: ${qrCaption ?? `${DEFAULT_QR_CAPTION} (default)`}`);
+
   const HERE = path.dirname(fileURLToPath(import.meta.url));
   const out =
     typeof args.out === "string"
@@ -168,16 +178,26 @@ async function main() {
       for (const size of sizes) {
         const list = unwrap(
           `poster ${figure}/${size}`,
-          layoutEventPoster({ size, figureSrc: src, slogan, qrUrl: qrFor("event"), details: ev }, deps),
+          layoutEventPoster(
+            { size, figureSrc: src, slogan, qrUrl: qrFor("event"), qrCaption, details: ev },
+            deps,
+          ),
         );
         await write(
           `loop-soul-v${volume}-${figure}-${FILE_LABELS[size]}.png`,
           await renderSharp(list, prepared),
         );
-        if (bleed && size === "print") {
+        // Bleed for both print sizes. The flyer is the piece that actually
+        // goes to a shop in quantity, and its ground runs to the edge, so
+        // omitting it here was the reason a run had to be scaled and cropped.
+        const trimLine: Partial<Record<PosterSize, string>> = {
+          print: "TRIM 8 × 11 IN · BLEED ⅛ IN · 300 DPI",
+          flyer: "TRIM 5.5 × 8.5 IN · BLEED ⅛ IN · 300 DPI",
+        };
+        if (bleed && trimLine[size]) {
           await write(
-            `loop-soul-v${volume}-${figure}-print-bleed.png`,
-            await renderSharp(withBleed(list, "TRIM 8 × 11 IN · BLEED ⅛ IN · 300 DPI"), prepared),
+            `loop-soul-v${volume}-${figure}-${FILE_LABELS[size]}-bleed.png`,
+            await renderSharp(withBleed(list, trimLine[size]), prepared),
           );
         }
       }

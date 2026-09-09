@@ -88,13 +88,18 @@ export const qrSrc = (url: string) => `qr:${url}`;
 /**
  * The line under the QR on the event poster.
  *
- * "MORE" rather than "PASSES" because the poster deliberately no longer carries
- * the programme, the cover contest, the community gallery or the single — the
- * scan is the only route to any of them, and naming just one of them would sell
- * the rest short. The tournament piece has always passed its own caption; this
- * gives the event poster the same freedom.
+ * Was "MORE", on the reasoning that the scan is the only route to the
+ * programme, the cover contest, the gallery *and* the single, so naming one
+ * would sell the rest short. Revised 2026-09-08: "MORE" asks the reader to be
+ * curious, and a stranger holding a flyer at a barbecue is not. Naming the
+ * single trades breadth for a reason to lift the phone — the other
+ * destinations are still one tap away once they land, and they are worth
+ * nothing to someone who never scanned.
+ *
+ * Overridable per run (`--qrCaption=…`) and, failing that, read from the
+ * `poster_qr_caption` setting, so the line can change without a code edit.
  */
-export const DEFAULT_QR_CAPTION = "SCAN FOR MORE";
+export const DEFAULT_QR_CAPTION = "SCAN FOR THE SINGLE";
 
 export const POSTER_SIZES = {
   print: { w: 2400, h: 3300, label: "Print · 8×11in 300dpi" },
