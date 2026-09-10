@@ -260,14 +260,23 @@ export function GatheringPoster({
         {/* Module launchers */}
         <nav className="grid w-full grid-cols-2 gap-2 [&>*:last-child:nth-child(odd)]:col-span-2">
           {/* First in the grid: it is the one thing the flyer actually
-              promised, so it outranks the programme and the contest. */}
+              promised, so it outranks the programme and the contest.
+
+              It says "The Single" because that is the phrase the flyer's QR
+              caption uses — SCAN FOR THE SINGLE — and the phrase the sheet
+              behind it opens with. It read "Play 1984" before, which asked a
+              stranger to recognise a title they have never heard: the flyer
+              sent them for the single, and the page answered with a number.
+              The track is still named, after the middot, so the title is the
+              thing they leave knowing. Noun phrase, like The Programme and
+              Cover Contest beside it — the verb was the odd one out. */}
           {single && (
             <button
               type="button"
               onClick={() => setSingleOpen(true)}
-              className="rounded-2xl border border-ink/20 py-3 text-xs font-bold uppercase tracking-wide transition-colors hover:bg-ink/10"
+              className="rounded-2xl border border-ink/20 px-2 py-3 text-xs font-bold uppercase tracking-wide transition-colors hover:bg-ink/10"
             >
-              Play {single.title}
+              The Single · {single.title}
             </button>
           )}
           {MODULES.map((m) => (

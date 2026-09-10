@@ -282,3 +282,17 @@ to 143px, at 47% it holds 164px on a 390×844 and the page is still one screen.
 
 Come Dance stays off the page (owner): the slogan is an invitation, never the
 headline, and the album credit is the centrepiece.
+
+### The single's button says what the flyer says
+
+Owner: "Play 1984" should be the single, not the number. Three things agreed
+with him — the flyer's QR caption is **SCAN FOR THE SINGLE**, the sheet the
+button opens already opens with **THE SINGLE**, and its two siblings (The
+Programme, Cover Contest) are noun phrases while this was the lone verb. So a
+stranger who scanned a flyer for "the single" arrived and was offered a number
+they had never heard.
+
+Now **The Single · 1984** — the flyer's phrase first, the track still named
+after it so the title is the thing they leave knowing. Measured at 320px, the
+narrowest real phone: one line, 136px button, no overflow. The label stays
+driven by `single.title`, so it follows whatever track is featured.
