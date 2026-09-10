@@ -27,6 +27,15 @@
         "npx next dev -p 3113"
       ],
       "port": 3113
+    },
+    {
+      "name": "loop-pieces-preview",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "LOOP_FORCE_PHASE=pre npx next dev -p 3114"
+      ],
+      "port": 3114
     }
   ]
 }

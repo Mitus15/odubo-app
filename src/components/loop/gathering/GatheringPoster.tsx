@@ -17,6 +17,8 @@ import RunOfShow from "@/components/loop/gathering/RunOfShow";
 import GetPassModal from "@/components/loop/gathering/GetPassModal";
 import TheSingle from "@/components/loop/gathering/TheSingle";
 import type { FeaturedSingle } from "@/lib/loop/single";
+import type { ProductSummary } from "@/lib/store/types";
+import PiecesRail from "@/components/loop/store/PiecesRail";
 
 /** Mirrors CapacityInfo — unlimited carries null counts on purpose, so a
  *  scarcity line can't render "0 left" for a room with no cap. */
@@ -50,12 +52,14 @@ const MODULES: { key: ModuleKey; label: string; title: string }[] = [
 ];
 
 /**
- * STATE 1 — The Gathering, as a single non-scrolling POSTER:
+ * STATE 1 — The Gathering, as a single POSTER:
  *   • real Loop Soul logo (top-right)
  *   • silhouette hero + arced tagline         • Scott's Inn (bottom)
- *   • compact pass counter + Get Pass CTA     • modules that open/close
- * Everything else (Anthem, The Night) opens in a ModuleSheet over the poster,
- * so the base page itself never scrolls.
+ *   • compact pass counter + Get Pass CTA     • the Pieces rail (the shelf)
+ *   • modules that open/close
+ * Everything else (Anthem, The Night) opens in a ModuleSheet over the poster.
+ * The poster fills one viewport on any phone tall enough to hold it; on short
+ * ones it grows just past the fold rather than crush the figure.
  */
 export function GatheringPoster({
   event,
@@ -69,6 +73,7 @@ export function GatheringPoster({
   timeLabel,
   single = null,
   journalPublished = false,
+  pieces = [],
 }: {
   event: LoopEvent;
   capacity: Capacity;
@@ -86,6 +91,8 @@ export function GatheringPoster({
   single?: FeaturedSingle | null;
   /** A published Loop Journal issue makes last volume the pre-phase hype reel. */
   journalPublished?: boolean;
+  /** Merch from the loop-soul collection, pass excluded. Empty hides the rail. */
+  pieces?: ProductSummary[];
 }) {
   const [active, setActive] = useState<ModuleKey | null>(null);
   const [passOpen, setPassOpen] = useState(false);
@@ -147,7 +154,7 @@ export function GatheringPoster({
   const venueShort = event.venue.split(",")[0];
 
   return (
-    <div className="relative mx-auto flex h-[100dvh] max-w-md flex-col px-5 pb-5 pt-5">
+    <div className="relative mx-auto flex min-h-[100dvh] max-w-md flex-col px-5 pb-5 pt-5">
       {/* Header: the wordmark alone. The volume/theme block was removed on
           2026-08-25 — the album is the identity, and leading with an edition
           number made the night look like an instalment of something you'd
@@ -182,7 +189,11 @@ export function GatheringPoster({
             {EVENT_CREDITS.feature}
           </div>
         </div>
-        <div className="relative min-h-0 w-full flex-1">
+        {/* The figure takes the slack, but never less than a figure's worth:
+            with the Pieces rail on the page a 667px phone would otherwise
+            leave it a 35px sliver. Below that floor the poster grows past the
+            viewport and the root <main> scrolls the last few lines. */}
+        <div className="relative min-h-[140px] w-full flex-1">
           <Image
             src="/loop/figures/dance.png"
             alt="Loop Soul dancers in silhouette"
@@ -236,6 +247,11 @@ export function GatheringPoster({
             What&apos;s included
           </button>
         )}
+
+        {/* The shelf, right after the pass: the sell comes before the
+            navigation. Type and a hairline only — the pass button above stays
+            the one drawn shape on the poster. */}
+        <PiecesRail pieces={pieces} />
 
         {/* Module launchers */}
         <nav className="grid w-full grid-cols-2 gap-2 [&>*:last-child:nth-child(odd)]:col-span-2">
