@@ -56,3 +56,7 @@ assets/blender/
 # clerk configuration (can include secrets)
 /.clerk/
 portfolio-files/
+
+# scripts/shopify/cutout-photos.ts work files
+.cutouts/
+scripts/shopify/.liftsubject

@@ -167,13 +167,13 @@ export function LoopStore({
                 onClick={() => setAdding(p.handle)}
                 className="group block overflow-hidden rounded-xl border border-ink/10 bg-ink/[0.03] text-left transition-colors hover:bg-ink/[0.06] disabled:cursor-not-allowed"
               >
-                <div className="relative aspect-square overflow-hidden bg-ink/10">
+                <div className="relative aspect-square overflow-hidden">
                   {p.image?.url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={p.image.url}
                       alt={p.image.altText || p.title}
-                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                      className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-[1.03]"
                       loading="lazy"
                     />
                   ) : null}

@@ -114,3 +114,35 @@ under *Pieces*; `/store/product/script-tee` carries the SEO description, the
 - The `.env.local` copy and `node_modules` symlink in this worktree are untracked
   conveniences (both gitignored). `.claude/launch.json` gained `loop-pieces-preview`
   on port 3114 because 3112 belonged to another session.
+
+---
+
+## Same evening — the photos come off the white
+
+Owner: "the product photos need cut-out backgrounds." The supplier renders sit on
+flat white; on the sand poster and the near-black Odubo store a white square reads
+as a card, which is exactly the bubble the design rules forbid. The cream hoodies
+are within a few values of white, so a "remove white" pass would have eaten them.
+
+**Tool:** `scripts/shopify/liftsubject.swift` — macOS Vision's
+`VNGenerateForegroundInstanceMaskRequest` (the Photos "lift subject" engine),
+mask applied with `CIBlendWithMask` onto transparent, RGBA PNG out. No model
+download, no Python. `scripts/shopify/cutout-photos.ts <handle…> [--apply]`
+compiles it on first run, downloads each image, cuts it out, re-uploads with the
+same alt text, position and **variant links** (REST `POST /products/{id}/images`
+with `variant_ids` — `write_products` is the only media scope this token has),
+and only then deletes the original, so a failure half-way leaves more photos,
+never fewer. Work files go to `.cutouts/` (gitignored).
+
+Reviewed every edge on sand and on dark before applying — no halo on the
+white-on-white hoodie seams. Verified after from the Storefront: 10/10 images
+`png` with alpha reaching 0, alt text intact, every variant linked to its colour.
+
+Originals and cut-outs archived outside the repo at
+`~/Documents/Loop-soul-the-entertainment-room/tapstitch-2026-09-photos/`
+(`original/`, `cutout/`, a contact sheet, a README). Shopify's CDN copies of the
+originals are gone with the delete — that folder is the only copy.
+
+Code: `PiecesRail` and the `LoopStore` grid no longer paint a tint behind the
+image and use `object-contain`, so the garment sits on the field like everything
+else. `AddToBagSheet`/`LoopBag` thumbnails were left as they were.

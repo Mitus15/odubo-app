@@ -10,7 +10,9 @@ import LoopBag from "@/components/loop/store/LoopBag";
 
 /**
  * The shelf, on the front door. Four pieces from the `loop-soul` collection,
- * image only — the garment is its own name, the sheet says the rest. Tapping
+ * image only — the garment is its own name, the sheet says the rest. The
+ * photos are cut-outs (transparent PNG), so nothing is painted behind them:
+ * the garment sits on the sand like everything else on the poster. Tapping
  * one opens the same AddToBagSheet and bag `/loop/store` uses, over the same
  * `loop_soul_cart`, so a bag started here is the bag found there.
  *
@@ -63,13 +65,13 @@ export function PiecesRail({ pieces }: { pieces: ProductSummary[] }) {
               aria-label={`${p.title} · ${formatMoney(p.price, p.currency)}`}
               className="group block w-full text-left disabled:cursor-not-allowed"
             >
-              <div className="relative aspect-square overflow-hidden rounded-md bg-ink/10">
+              <div className="relative aspect-square overflow-hidden">
                 {p.image?.url ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={p.image.url}
                     alt={p.image.altText || p.title}
-                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                    className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-[1.03]"
                     loading="lazy"
                   />
                 ) : null}
