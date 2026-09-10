@@ -14,6 +14,7 @@ import {
   stampWatermark,
   toJpegBlob,
 } from "@/lib/loop/pose/stylize";
+import { composeCover } from "@/lib/loop/pose/cover";
 import { PoseVideoEngine } from "@/lib/loop/pose/video-engine";
 import { saveItem } from "@/lib/loop/pose/gallery";
 import {
@@ -78,6 +79,7 @@ export function CameraSheet({
   const streamRef = useRef<MediaStream | null>(null);
   const engineRef = useRef<PoseVideoEngine | null>(null);
   const urlRef = useRef<string | null>(null);
+  const coverUrlRef = useRef<string | null>(null);
   const capTimer = useRef<number | null>(null);
 
   const [mode, setMode] = useState<Mode>("photo");
@@ -88,6 +90,8 @@ export function CameraSheet({
   const [phase, setPhase] = useState<Phase>("starting");
   const [recording, setRecording] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [coverUrl, setCoverUrl] = useState<string | null>(null);
+  const [showCover, setShowCover] = useState(false);
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [resultBlob, setResultBlob] = useState<Blob | null>(null);
   const [resultKind, setResultKind] = useState<"image" | "video">("image");
@@ -166,10 +170,18 @@ export function CameraSheet({
     blob: Blob,
     kind: "image" | "video",
     original: Blob | null = null,
+    cover: Blob | null = null,
   ) {
     if (urlRef.current) URL.revokeObjectURL(urlRef.current);
+    if (coverUrlRef.current) URL.revokeObjectURL(coverUrlRef.current);
     const url = URL.createObjectURL(blob);
     urlRef.current = url;
+    // Shown FIRST when there is one: the contest is about the sleeve, and a
+    // poster-shaped photograph asks the viewer to imagine the thing on offer.
+    const cUrl = cover ? URL.createObjectURL(cover) : null;
+    coverUrlRef.current = cUrl;
+    setCoverUrl(cUrl);
+    setShowCover(Boolean(cUrl));
     setOriginalBlob(original);
     setResultBlob(blob);
     setResultUrl(url);
@@ -200,9 +212,21 @@ export function CameraSheet({
       const original = toJpegBlob(frame, 0.92);
       const mask = await segmentSubject(frame);
       stylizePoster(frame, mask);
+
+      // The sleeve is composed from the stylized frame BEFORE the poster's
+      // watermark goes on — composeCover places its own mark top-right, and
+      // stamping first would leave a second one in the corner of the crop.
+      let cover: Blob | null = null;
+      try {
+        cover = toJpegBlob(await composeCover(frame), 0.92);
+      } catch (e) {
+        // A missing sleeve is not worth losing the photograph over.
+        console.error("[loop:pose] could not compose the cover:", e);
+      }
+
       await stampWatermark(frame);
       teardown();
-      showResult(toJpegBlob(frame, 0.92), "image", original);
+      showResult(toJpegBlob(frame, 0.92), "image", original, cover);
     } catch (e) {
       setError((e as Error).message);
       setPhase("live");
@@ -327,11 +351,33 @@ export function CameraSheet({
           ) : (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={resultUrl}
-              alt="Your Loop Soul shot"
+              src={showCover && coverUrl ? coverUrl : resultUrl}
+              alt={
+                showCover && coverUrl
+                  ? "Your shot, as the album cover"
+                  : "Your Loop Soul shot"
+              }
               className="h-full w-full object-contain"
             />
           ))}
+
+        {/* The sleeve is the point, so it is what you land on. The full frame
+            is one tap away rather than gone — people want to see themselves,
+            not only the crop of themselves. */}
+        {phase === "result" && coverUrl && (
+          <div className="pointer-events-none absolute inset-x-0 top-0 flex flex-col items-center gap-2 pt-[max(env(safe-area-inset-top),1rem)]">
+            <p className="rounded-full bg-ink/70 px-4 py-1.5 text-[11px] font-bold uppercase tracking-[0.2em] text-sand backdrop-blur">
+              {showCover ? "Your album cover" : "Your shot"}
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowCover((v) => !v)}
+              className="pointer-events-auto rounded-full px-4 py-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-sand/80 underline underline-offset-4"
+            >
+              {showCover ? "See the full shot" : "See it as the cover"}
+            </button>
+          </div>
+        )}
       </div>
 
       {busy && (

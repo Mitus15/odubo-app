@@ -1,4 +1,14 @@
-import Link from "next/link";
+"use client";
+
+import { useState } from "react";
+import dynamic from "next/dynamic";
+
+// The camera pulls in the segmenter and the GL stylizer — a large payload that
+// nobody scanning a flyer should download before they have asked for a camera.
+const CameraSheet = dynamic(
+  () => import("@/components/loop/pose/CameraSheet"),
+  { ssr: false },
+);
 
 /**
  * The Cover Contest — the reason the filter exists on the night.
@@ -17,8 +27,17 @@ import Link from "next/link";
  *
  * Numbers are stated plainly and on purpose. A contest that names its payment
  * reads as an offer; one that doesn't reads as free labour.
+ *
+ * The camera opens HERE rather than sending people to /loop/pose. Entering the
+ * contest was a two-page journey off the front door, which is a lot to ask of
+ * someone who has had the idea explained to them ten seconds ago and is holding
+ * a piece of paper. Shooting has never needed a pass — only posting to the Wall
+ * does — so the filter is open to anyone who scanned the code, and the gate can
+ * go on later without moving the button.
  */
 export function CoverContest() {
+  const [cameraOpen, setCameraOpen] = useState(false);
+
   return (
     <section className="w-full space-y-5">
       <p className="text-sm opacity-80">
@@ -68,12 +87,20 @@ export function CoverContest() {
         </p>
       </div>
 
-      <Link
-        href="/loop/pose"
-        className="block w-full rounded-full bg-ink py-3 text-center text-sm font-bold text-sand"
+      <button
+        type="button"
+        onClick={() => setCameraOpen(true)}
+        className="block w-full rounded-full bg-ink py-4 text-center text-sm font-bold text-sand transition-transform active:scale-95"
       >
-        Try the filter
-      </Link>
+        Make your cover
+      </button>
+
+      <p className="loop-muted text-center text-[11px] leading-relaxed">
+        Nothing to sign up for. It all happens on your phone — you decide
+        afterwards whether it goes on the Wall.
+      </p>
+
+      {cameraOpen && <CameraSheet onClose={() => setCameraOpen(false)} />}
     </section>
   );
 }

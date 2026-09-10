@@ -139,5 +139,7 @@ export function coverCaption(cover: ResolvedCover): string {
       ? `The official cover · shot by ${cover.credit}`
       : "The official cover, chosen by the room.";
   }
-  return "This cover is mine. On the 26th the room picks the official one.";
+  // An invitation, not just a statement — this line is tappable and it is the
+  // shortest route from hearing the record to entering the contest.
+  return "This cover is mine. Make yours →";
 }
