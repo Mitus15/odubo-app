@@ -86,11 +86,11 @@ function ProductImage({ imageUrl, altText }: ProductImageProps) {
   }
 
   return (
-    <div className="w-full aspect-square rounded-lg overflow-hidden">
+    <div className="w-full aspect-square rounded-lg">
       <img
         src={imageUrl}
         alt={altText}
-        className="w-full h-full object-cover"
+        className="piece piece-still w-full h-full object-contain"
       />
     </div>
   );

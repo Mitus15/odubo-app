@@ -165,15 +165,15 @@ export function LoopStore({
                 type="button"
                 disabled={!p.available}
                 onClick={() => setAdding(p.handle)}
-                className="group block overflow-hidden rounded-xl border border-ink/10 bg-ink/[0.03] text-left transition-colors hover:bg-ink/[0.06] disabled:cursor-not-allowed"
+                className="group block text-left disabled:cursor-not-allowed"
               >
-                <div className="relative aspect-square overflow-hidden bg-ink/10">
+                <div className="relative aspect-square">
                   {p.image?.url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={p.image.url}
                       alt={p.image.altText || p.title}
-                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                      className="piece h-full w-full object-contain"
                       loading="lazy"
                     />
                   ) : null}
@@ -183,7 +183,7 @@ export function LoopStore({
                     </div>
                   )}
                 </div>
-                <div className="px-3 py-2.5">
+                <div className="pt-2.5">
                   <p className="truncate text-sm font-semibold">{p.title}</p>
                   <p className="mt-0.5 text-xs opacity-70">{formatMoney(p.price, p.currency)}</p>
                 </div>

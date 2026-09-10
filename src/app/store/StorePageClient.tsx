@@ -176,12 +176,12 @@ function ProductFeedModal({
           <div className="rounded-2xl sm:rounded-3xl glass-surface border border-white/10 bg-[#0f0b0b]/95 shadow-[0_30px_120px_rgba(0,0,0,0.45)] overflow-hidden">
             <div className="grid md:grid-cols-[1fr_1fr] gap-0">
               {/* Product Image */}
-              <div className="w-full bg-[#0f0b0b] flex items-center justify-center p-3 sm:p-5">
+              <div className="w-full flex items-center justify-center p-3 sm:p-5">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={(selectedVariant?.image || product.image || detail?.images?.[0]) ?? ''}
                   alt={product.title || ''}
-                  className="w-full max-h-[35vh] sm:max-h-[45vh] object-contain"
+                  className="piece piece-still w-full max-h-[35vh] sm:max-h-[45vh] object-contain"
                 />
               </div>
 
@@ -777,7 +777,7 @@ export default function StorePageClient({ isStoreOpen, isAdmin, initialProducts 
                 {filteredProducts.map((p, idx) => (
                   <div
                     key={p.id}
-                    className="group relative aspect-square rounded-lg overflow-hidden bg-[#0d0b0a]"
+                    className="group relative aspect-square rounded-lg"
                   >
                     {/* Main clickable area for product details */}
                     <button
@@ -792,7 +792,7 @@ export default function StorePageClient({ isStoreOpen, isAdmin, initialProducts 
                         <img
                           src={p.image}
                           alt={p.title}
-                          className="absolute inset-0 w-full h-full object-contain transition-transform duration-500 ease-out group-hover:scale-[1.03]"
+                          className="piece absolute inset-0 w-full h-full object-contain"
                         />
                       ) : (
                         <div className="absolute inset-0 flex items-center justify-center bg-[#1a1614]">

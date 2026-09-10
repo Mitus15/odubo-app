@@ -87,13 +87,13 @@ export function LoopBag({
             <ul className="space-y-4">
               {cart.items.map((item) => (
                 <li key={item.variantId} className="flex gap-3">
-                  <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-ink/10">
+                  <div className="h-20 w-20 shrink-0">
                     {item.image?.url && (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={item.image.url}
                         alt={item.image.altText || item.title}
-                        className="h-full w-full object-cover"
+                        className="piece piece-still h-full w-full object-contain"
                       />
                     )}
                   </div>

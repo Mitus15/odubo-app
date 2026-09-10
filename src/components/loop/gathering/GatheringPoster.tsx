@@ -160,44 +160,43 @@ export function GatheringPoster({
 
   return (
     <div className="relative mx-auto flex min-h-[100dvh] max-w-md flex-col px-5 pb-5 pt-5">
-      {/* Header: the wordmark alone. The volume/theme block was removed on
-          2026-08-25 — the album is the identity, and leading with an edition
-          number made the night look like an instalment of something you'd
-          missed the start of. The theme survives where it does work: the dress
-          code, and the programme. */}
-      <header className="flex items-start justify-end">
-        <Logo width={116} />
-      </header>
+      {/* The masthead is ONE centred lockup: the mark, then the credit hung
+          directly beneath it.
 
-      {/* Tagline + silhouette hero. Figure top-anchored so it sits right under
-          the tagline (no floating gap); the slack collects below the figure. */}
+          It used to be two objects on two axes — the wordmark pinned hard
+          right, the credit centred under it — so the eye went right, then
+          jumped back to the middle, and the two never read as one thing. Worse,
+          the corner mark was the smaller element, which inverted the hierarchy:
+          the byline looked like the headline and the record's own name looked
+          like a logo someone had parked in the corner.
+
+          Loop Soul IS the album's name, so the mark is the title and the credit
+          is its byline — a sleeve, not a letterhead. The credit keeps the
+          treatment the printed piece gives it (Jost 500, one wide-tracked run,
+          the feature at about two thirds beneath), so the page and the flyer
+          still state the record identically, and the name is stated rather than
+          shouted. The volume/theme block was removed on 2026-08-25 and stays
+          removed — leading with an edition number made the night look like an
+          instalment you had missed the start of. */}
       <div className="flex min-h-0 flex-1 flex-col items-center gap-2">
-        {/* The credit block, set exactly as the printed piece sets it — same
-            strings (EVENT_CREDITS), same face (Jost 500), same tracking, same
-            opacities, one line each. The earlier two-line lockup put the name
-            in bold display at 4xl, which is the opposite treatment: the poster
-            deliberately does NOT shout the name, it states the record in a
-            single wide-tracked run and hangs the feature credit beneath it at
-            about two thirds. A stranger holding the flyer while looking at the
-            page has to see one design, not two.
-
-            Sizes are clamped rather than fixed because the run cannot wrap:
-            20.78em of tracked capitals needs 312px at 15px and still fits a
-            320px phone at 12.8px. `pl-[…em]` cancels CSS's trailing
-            letter-space, which would otherwise push the centred line half a
-            track to the left of where the engine centres it. */}
         <div className="flex w-full flex-col items-center">
-          <div className="loop-display whitespace-nowrap pl-[0.34em] text-center text-[clamp(12px,4vw,15px)] font-medium uppercase tracking-[0.34em] text-ink/85">
+          {/* Sized as a share of the column so it holds its proportion from a
+              320px phone to the 448px cap, and trimmed until the dancers below
+              still read as a crowd rather than a strip — the mark leads, it
+              does not evict the picture. */}
+          <Logo className="w-[47%] max-w-[196px] min-w-[136px]" />
+          {/* Sizes are clamped rather than fixed because the run cannot wrap:
+              20.78em of tracked capitals needs 312px at 15px and still fits a
+              320px phone at 12.8px. `pl-[…em]` cancels CSS's trailing
+              letter-space, which would otherwise push the centred line half a
+              track left of where the engine centres it. */}
+          <div className="loop-display mt-3 whitespace-nowrap pl-[0.34em] text-center text-[clamp(12px,4vw,15px)] font-medium uppercase tracking-[0.34em] text-ink/85">
             {EVENT_CREDITS.record}
           </div>
           <div className="loop-display mt-1.5 whitespace-nowrap pl-[0.3em] text-center text-[clamp(8px,2.7vw,10px)] font-medium uppercase tracking-[0.3em] text-ink/60">
             {EVENT_CREDITS.feature}
           </div>
         </div>
-        {/* The figure takes the slack, but never less than a figure's worth:
-            with the Pieces rail on the page a 667px phone would otherwise
-            leave it a 35px sliver. Below that floor the poster grows past the
-            viewport and the root <main> scrolls the last few lines. */}
         <div className="relative min-h-[140px] w-full flex-1">
           <Image
             src="/loop/figures/dance.png"

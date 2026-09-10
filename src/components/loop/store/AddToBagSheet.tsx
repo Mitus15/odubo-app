@@ -128,7 +128,7 @@ export function AddToBagSheet({
               <img
                 src={variant?.image?.url || product.images[0].url}
                 alt={product.images[0].altText || product.title}
-                className="mt-4 aspect-square w-full rounded-2xl object-cover"
+                className="piece piece-still mt-4 aspect-square w-full object-contain"
               />
             )}
 

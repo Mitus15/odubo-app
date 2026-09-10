@@ -273,12 +273,12 @@ export default function QuickShopModal() {
               {product && !loading && !error && (
                 <div className="p-4 sm:p-6 text-[#ede8df] space-y-4">
                   {/* Product image */}
-                  <div className="w-full bg-[#0f0b0b] rounded-xl flex items-center justify-center p-3">
+                  <div className="w-full rounded-xl flex items-center justify-center p-3">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={selectedVariant?.image || product.images[0] || ''}
                       alt={product.title}
-                      className="w-full max-h-[30vh] object-contain"
+                      className="piece piece-still w-full max-h-[30vh] object-contain"
                     />
                   </div>
 

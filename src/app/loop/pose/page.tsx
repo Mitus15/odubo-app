@@ -2,6 +2,7 @@ import { getCurrentEvent } from "@/lib/loop/hub";
 import { currentVoterId } from "@/lib/loop/anthem-server";
 import { hasRoomAccess } from "@/lib/loop/doors";
 import PoseStudioShell from "@/components/loop/pose/PoseStudioShell";
+import HubNav from "@/components/loop/shell/HubNav";
 
 /**
  * Standalone Pose Studio (`/loop/pose`) — the camera and the filter, outside
@@ -20,5 +21,14 @@ export default async function PosePage() {
   const voterId = await currentVoterId();
   const canPost = await hasRoomAccess(event.id, voterId);
 
-  return <PoseStudioShell canPost={canPost} />;
+  // The nav is not decoration here: this page is reached from the Cover
+  // Contest, which is reached from a flyer's QR — a phone that lands here can
+  // have no back stack at all, and without the mark there was no way home and
+  // nothing saying whose camera this is.
+  return (
+    <>
+      <HubNav phaseLabel={event.phase === "live" ? "The Portal" : "The Gathering"} />
+      <PoseStudioShell canPost={canPost} />
+    </>
+  );
 }
