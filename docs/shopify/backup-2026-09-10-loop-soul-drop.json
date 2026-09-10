@@ -1,0 +1,777 @@
+[
+  {
+    "id": "gid://shopify/Product/9587274186965",
+    "title": "Unisex Heavyweight Slim Fit T-Shirt",
+    "handle": "unisex-heavyweight-slim-fit-t-shirt",
+    "status": "ACTIVE",
+    "vendor": "ODMPOD",
+    "productType": "",
+    "tags": [],
+    "descriptionHtml": "Elevate your daily rotation with the Unisex Heavyweight Slim Fit Crewneck T-Shirt. Crafted from premium knit cotton, this T-Shirt offers a substantial feel and a sleek H-Line silhouette. Its slim fit and classic crewneck design provide a modern, minimalist aesthetic, perfect for a refined casual lineup. The short sleeve and straight hem finish ensure a clean, versatile look. Designed for everyday comfort and style, this piece is also optimized for custom DTG and DTF decoration, making it an ideal base for unique brand expressions. A foundational garment for any Men's wardrobe, blending quality with understated cool.<h3>Features</h3><div>- Fit: Slim-fit</div><div>- Neckline: Round Neck / O-Neck</div><div>- Sleeve Style: Regular Sleeve</div><div>- Sleeve Length: Short Sleeve</div><div>- Season: Summer</div><div>- Style: Basics / Casual / Sporty</div><h3>Care Instructions</h3><div>- Machine wash at 30°C (gentle cycle)</div><div>- Do not bleach</div><div>- Tumble dry low</div><div>- Iron at low temperature, avoid ironing on print</div><div>- Do not dry clean</div><h3>Fabric</h3><div>- Material: 90% cotton, 10% spandex</div><div>- Fabric Weight: 280 gsm (8.3 oz)</div><div>- Thickness: Thin</div><div>- Breathability: Moderate</div><table id=\"size-guide\" style=\"width: 1024px;\"><tbody>\n<tr>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; background: #F8F8F8;\"></td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\" colspan=\"2\">S</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\" colspan=\"2\">M</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\" colspan=\"2\">L</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\" colspan=\"2\">XL</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\" colspan=\"2\">2XL</td>\n</tr>\n<tr>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; background: #F8F8F8;\"></td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">inch</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">cm</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">inch</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">cm</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">inch</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">cm</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">inch</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">cm</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">inch</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">cm</td>\n</tr>\n<tr>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px;\">Length</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">24.80</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">63</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">25.59</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">65</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">26.38</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">67</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">27.17</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">69</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">27.95</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">71</td>\n</tr>\n<tr>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px;\">Shoulder</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">16.54</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">42</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">17.13</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">43.5</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">17.72</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">45</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">18.31</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">46.5</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">18.90</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">48</td>\n</tr>\n<tr>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px;\">Chest</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">17.72</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">45</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">18.50</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">47</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">19.29</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">49</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">20.08</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">51</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">20.87</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">53</td>\n</tr>\n<tr>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px;\">Sleeve length</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">7.48</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">19</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">7.87</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">20</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">8.27</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">21</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">8.66</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">22</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">9.06</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">23</td>\n</tr>\n</tbody></table>",
+    "category": null,
+    "seo": {
+      "title": null,
+      "description": null
+    },
+    "collections": {
+      "nodes": []
+    },
+    "resourcePublicationsV2": {
+      "nodes": [
+        {
+          "isPublished": true,
+          "publication": {
+            "id": "gid://shopify/Publication/159053807829",
+            "name": "Online Store"
+          }
+        }
+      ]
+    },
+    "options": [
+      {
+        "name": "Color",
+        "values": [
+          "Apricot",
+          "Coffee"
+        ]
+      },
+      {
+        "name": "Size",
+        "values": [
+          "S",
+          "M",
+          "L",
+          "XL",
+          "2XL"
+        ]
+      }
+    ],
+    "variants": {
+      "nodes": [
+        {
+          "id": "gid://shopify/ProductVariant/54882451259605",
+          "title": "Apricot / S",
+          "price": "30.00",
+          "selectedOptions": [
+            {
+              "name": "Color",
+              "value": "Apricot"
+            },
+            {
+              "name": "Size",
+              "value": "S"
+            }
+          ],
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/a05de1ca87f84fe38e450ee743682c1e.png?v=1789014843"
+          }
+        },
+        {
+          "id": "gid://shopify/ProductVariant/54882451292373",
+          "title": "Apricot / M",
+          "price": "30.00",
+          "selectedOptions": [
+            {
+              "name": "Color",
+              "value": "Apricot"
+            },
+            {
+              "name": "Size",
+              "value": "M"
+            }
+          ],
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/a05de1ca87f84fe38e450ee743682c1e.png?v=1789014843"
+          }
+        },
+        {
+          "id": "gid://shopify/ProductVariant/54882451325141",
+          "title": "Apricot / L",
+          "price": "30.00",
+          "selectedOptions": [
+            {
+              "name": "Color",
+              "value": "Apricot"
+            },
+            {
+              "name": "Size",
+              "value": "L"
+            }
+          ],
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/a05de1ca87f84fe38e450ee743682c1e.png?v=1789014843"
+          }
+        },
+        {
+          "id": "gid://shopify/ProductVariant/54882451357909",
+          "title": "Apricot / XL",
+          "price": "30.00",
+          "selectedOptions": [
+            {
+              "name": "Color",
+              "value": "Apricot"
+            },
+            {
+              "name": "Size",
+              "value": "XL"
+            }
+          ],
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/a05de1ca87f84fe38e450ee743682c1e.png?v=1789014843"
+          }
+        },
+        {
+          "id": "gid://shopify/ProductVariant/54882451390677",
+          "title": "Apricot / 2XL",
+          "price": "30.00",
+          "selectedOptions": [
+            {
+              "name": "Color",
+              "value": "Apricot"
+            },
+            {
+              "name": "Size",
+              "value": "2XL"
+            }
+          ],
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/a05de1ca87f84fe38e450ee743682c1e.png?v=1789014843"
+          }
+        },
+        {
+          "id": "gid://shopify/ProductVariant/54882451423445",
+          "title": "Coffee / S",
+          "price": "30.00",
+          "selectedOptions": [
+            {
+              "name": "Color",
+              "value": "Coffee"
+            },
+            {
+              "name": "Size",
+              "value": "S"
+            }
+          ],
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/c697cc6f16cc4c0693dabb761ff89f5e.png?v=1789014843"
+          }
+        },
+        {
+          "id": "gid://shopify/ProductVariant/54882451456213",
+          "title": "Coffee / M",
+          "price": "30.00",
+          "selectedOptions": [
+            {
+              "name": "Color",
+              "value": "Coffee"
+            },
+            {
+              "name": "Size",
+              "value": "M"
+            }
+          ],
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/c697cc6f16cc4c0693dabb761ff89f5e.png?v=1789014843"
+          }
+        },
+        {
+          "id": "gid://shopify/ProductVariant/54882451488981",
+          "title": "Coffee / L",
+          "price": "30.00",
+          "selectedOptions": [
+            {
+              "name": "Color",
+              "value": "Coffee"
+            },
+            {
+              "name": "Size",
+              "value": "L"
+            }
+          ],
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/c697cc6f16cc4c0693dabb761ff89f5e.png?v=1789014843"
+          }
+        },
+        {
+          "id": "gid://shopify/ProductVariant/54882451521749",
+          "title": "Coffee / XL",
+          "price": "30.00",
+          "selectedOptions": [
+            {
+              "name": "Color",
+              "value": "Coffee"
+            },
+            {
+              "name": "Size",
+              "value": "XL"
+            }
+          ],
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/c697cc6f16cc4c0693dabb761ff89f5e.png?v=1789014843"
+          }
+        },
+        {
+          "id": "gid://shopify/ProductVariant/54882451554517",
+          "title": "Coffee / 2XL",
+          "price": "30.00",
+          "selectedOptions": [
+            {
+              "name": "Color",
+              "value": "Coffee"
+            },
+            {
+              "name": "Size",
+              "value": "2XL"
+            }
+          ],
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/c697cc6f16cc4c0693dabb761ff89f5e.png?v=1789014843"
+          }
+        }
+      ]
+    },
+    "media": {
+      "nodes": [
+        {
+          "id": "gid://shopify/MediaImage/42552129126613",
+          "alt": "",
+          "mediaContentType": "IMAGE",
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/c697cc6f16cc4c0693dabb761ff89f5e.png?v=1789014843"
+          }
+        },
+        {
+          "id": "gid://shopify/MediaImage/42552129159381",
+          "alt": "",
+          "mediaContentType": "IMAGE",
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/2521963ea70f4cfba9eab0d1a30c6e60.png?v=1789014843"
+          }
+        },
+        {
+          "id": "gid://shopify/MediaImage/42552129192149",
+          "alt": "",
+          "mediaContentType": "IMAGE",
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/a05de1ca87f84fe38e450ee743682c1e.png?v=1789014843"
+          }
+        },
+        {
+          "id": "gid://shopify/MediaImage/42552129224917",
+          "alt": "",
+          "mediaContentType": "IMAGE",
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/4ddc644752834c1492e2e25e93c87b4e.png?v=1789014843"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "gid://shopify/Product/9587272220885",
+    "title": "Curved Panel Raglan Hoodie",
+    "handle": "curved-panel-raglan-hoodie",
+    "status": "ACTIVE",
+    "vendor": "ODMPOD",
+    "productType": "",
+    "tags": [],
+    "descriptionHtml": "Tapstitch's Curved Panel Raglan Hoodie defines modern utility with sleek curved seams and hidden side zip pockets. Designed with ergonomic raglan sleeves and a unique curved back yoke, this pullover offers a sophisticated, structured silhouette. The clean, drawstring-free hood adds to its minimalist appeal. Serving as a high-end canvas for Custom Streetwear, this item is optimized for Custom DTG and DTF printing, ensuring a premium finish for your Dropshipping and Print-on-Demand collections.<h3>Features</h3><div>- Effects: Zipper / Pocket / Patchwork</div><div>- Fit: Oversized</div><div>- Neckline: Hooded</div><div>- Sleeve Style: Raglan Sleeve</div><div>- Sleeve Length: Long Sleeve</div><div>- Season: Spring / Autumn / Winter</div><div>- Style: Basics / Casual / Sporty / Street</div><h3>Care Instructions</h3><div>- Machine wash at 30°C (gentle cycle)</div><div>- Do not bleach</div><div>- Tumble dry low</div><div>- Iron at low temperature, avoid ironing on print</div><div>- Do not dry clean</div><h3>Fabric</h3><div>- Material: 68% polyester, 32% cotton</div><div>- Fabric Weight: 350 gsm (10.3 oz)</div><div>- Thickness: Thick</div><div>- Breathability: Moderate</div><table id=\"size-guide\" style=\"width: 1024px;\"><tbody>\n<tr>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; background: #F8F8F8;\"></td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\" colspan=\"2\">S</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\" colspan=\"2\">M</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\" colspan=\"2\">L</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\" colspan=\"2\">XL</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\" colspan=\"2\">2XL</td>\n</tr>\n<tr>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; background: #F8F8F8;\"></td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">inch</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">cm</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">inch</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">cm</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">inch</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">cm</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">inch</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">cm</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">inch</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">cm</td>\n</tr>\n<tr>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px;\">Length</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">24.02</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">61</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">24.80</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">63</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">25.59</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">65</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">26.38</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">67</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">27.17</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">69</td>\n</tr>\n<tr>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px;\">Chest</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">26.38</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">67</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">27.17</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">69</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">27.95</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">71</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">28.74</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">73</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">29.53</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">75</td>\n</tr>\n<tr>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px;\">Sleeve length</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">31.30</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">79.5</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">32.09</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">81.5</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">32.87</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">83.5</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">33.66</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">85.5</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">34.45</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">87.5</td>\n</tr>\n</tbody></table>",
+    "category": null,
+    "seo": {
+      "title": null,
+      "description": null
+    },
+    "collections": {
+      "nodes": []
+    },
+    "resourcePublicationsV2": {
+      "nodes": [
+        {
+          "isPublished": true,
+          "publication": {
+            "id": "gid://shopify/Publication/159053807829",
+            "name": "Online Store"
+          }
+        }
+      ]
+    },
+    "options": [
+      {
+        "name": "Color",
+        "values": [
+          "Apricot"
+        ]
+      },
+      {
+        "name": "Size",
+        "values": [
+          "S",
+          "M",
+          "L",
+          "XL",
+          "2XL"
+        ]
+      }
+    ],
+    "variants": {
+      "nodes": [
+        {
+          "id": "gid://shopify/ProductVariant/54882447360213",
+          "title": "Apricot / S",
+          "price": "70.00",
+          "selectedOptions": [
+            {
+              "name": "Color",
+              "value": "Apricot"
+            },
+            {
+              "name": "Size",
+              "value": "S"
+            }
+          ],
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/d5d85bda8ec249c181ccaca83fe31645.png?v=1789014798"
+          }
+        },
+        {
+          "id": "gid://shopify/ProductVariant/54882447392981",
+          "title": "Apricot / M",
+          "price": "70.00",
+          "selectedOptions": [
+            {
+              "name": "Color",
+              "value": "Apricot"
+            },
+            {
+              "name": "Size",
+              "value": "M"
+            }
+          ],
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/d5d85bda8ec249c181ccaca83fe31645.png?v=1789014798"
+          }
+        },
+        {
+          "id": "gid://shopify/ProductVariant/54882447425749",
+          "title": "Apricot / L",
+          "price": "70.00",
+          "selectedOptions": [
+            {
+              "name": "Color",
+              "value": "Apricot"
+            },
+            {
+              "name": "Size",
+              "value": "L"
+            }
+          ],
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/d5d85bda8ec249c181ccaca83fe31645.png?v=1789014798"
+          }
+        },
+        {
+          "id": "gid://shopify/ProductVariant/54882447458517",
+          "title": "Apricot / XL",
+          "price": "70.00",
+          "selectedOptions": [
+            {
+              "name": "Color",
+              "value": "Apricot"
+            },
+            {
+              "name": "Size",
+              "value": "XL"
+            }
+          ],
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/d5d85bda8ec249c181ccaca83fe31645.png?v=1789014798"
+          }
+        },
+        {
+          "id": "gid://shopify/ProductVariant/54882447491285",
+          "title": "Apricot / 2XL",
+          "price": "70.00",
+          "selectedOptions": [
+            {
+              "name": "Color",
+              "value": "Apricot"
+            },
+            {
+              "name": "Size",
+              "value": "2XL"
+            }
+          ],
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/d5d85bda8ec249c181ccaca83fe31645.png?v=1789014798"
+          }
+        }
+      ]
+    },
+    "media": {
+      "nodes": [
+        {
+          "id": "gid://shopify/MediaImage/42552116740309",
+          "alt": "",
+          "mediaContentType": "IMAGE",
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/d5d85bda8ec249c181ccaca83fe31645.png?v=1789014798"
+          }
+        },
+        {
+          "id": "gid://shopify/MediaImage/42552116773077",
+          "alt": "",
+          "mediaContentType": "IMAGE",
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/34d42a0e5f9f4022b917c4bdd304b19a.png?v=1789014798"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "gid://shopify/Product/9587271074005",
+    "title": "Heavyweight Raglan Sleeve Zip Hoodie",
+    "handle": "heavyweight-raglan-sleeve-zip-hoodie",
+    "status": "ACTIVE",
+    "vendor": "ODMPOD",
+    "productType": "",
+    "tags": [],
+    "descriptionHtml": "This athletic-inspired hoodie features raglan sleeves with a functional dual-zip design. The technical fabric blend ensures both comfort and performance-ready durability. Position this as a premium piece in athleisure collections, offering a sleek look that bridges sportswear and street style.<h3>Features</h3><div>- Effects: Zipper / Pocket</div><div>- Fit: Loose</div><div>- Neckline: Hooded</div><div>- Sleeve Style: Raglan Sleeve</div><div>- Sleeve Length: Long Sleeve</div><div>- Season: Winter</div><div>- Style: Basics / Casual / Preppy / Sporty</div><h3>Care Instructions</h3><div>- Machine wash at 30°C (gentle cycle)</div><div>- Do not bleach</div><div>- Tumble dry low</div><div>- Iron at low temperature, avoid ironing on print</div><div>- Do not dry clean</div><h3>Fabric</h3><div>- Material: Main Fabric: 48.9% polyester, 43.4% cotton,  7.7% spandex; Contrast Fabric: 95.6% polyester, 4.4% spandex</div><div>- Fabric Weight: 400 gsm (11.8 oz)</div><div>- Thickness: Thick</div><div>- Breathability: Moderate</div><table id=\"size-guide\" style=\"width: 1024px;\"><tbody>\n<tr>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; background: #F8F8F8;\"></td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\" colspan=\"2\">S</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\" colspan=\"2\">M</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\" colspan=\"2\">L</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\" colspan=\"2\">XL</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\" colspan=\"2\">2XL</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\" colspan=\"2\">3XL</td>\n</tr>\n<tr>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; background: #F8F8F8;\"></td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">inch</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">cm</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">inch</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">cm</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">inch</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">cm</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">inch</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">cm</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">inch</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">cm</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">inch</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">cm</td>\n</tr>\n<tr>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px;\">Length</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">26.18</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">66.5</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">26.97</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">68.5</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">27.76</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">70.5</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">28.54</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">72.5</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">29.33</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">74.5</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">30.12</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">76.5</td>\n</tr>\n<tr>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px;\">Chest</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">20.67</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">52.5</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">21.46</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">54.5</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">22.24</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">56.5</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">23.03</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">58.5</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">23.82</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">60.5</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">24.61</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">62.5</td>\n</tr>\n<tr>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px;\">Sleeve length</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">28.54</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">72.5</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">29.13</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">74</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">29.72</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">75.5</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">30.31</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">77</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">31.02</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">78.8</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">31.50</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">80</td>\n</tr>\n</tbody></table>",
+    "category": null,
+    "seo": {
+      "title": null,
+      "description": null
+    },
+    "collections": {
+      "nodes": []
+    },
+    "resourcePublicationsV2": {
+      "nodes": [
+        {
+          "isPublished": true,
+          "publication": {
+            "id": "gid://shopify/Publication/159053807829",
+            "name": "Online Store"
+          }
+        }
+      ]
+    },
+    "options": [
+      {
+        "name": "Color",
+        "values": [
+          "Apricot"
+        ]
+      },
+      {
+        "name": "Size",
+        "values": [
+          "S",
+          "M",
+          "L",
+          "XL",
+          "2XL",
+          "3XL"
+        ]
+      }
+    ],
+    "variants": {
+      "nodes": [
+        {
+          "id": "gid://shopify/ProductVariant/54882444509397",
+          "title": "Apricot / S",
+          "price": "60.00",
+          "selectedOptions": [
+            {
+              "name": "Color",
+              "value": "Apricot"
+            },
+            {
+              "name": "Size",
+              "value": "S"
+            }
+          ],
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/41c06133257a4dfa86f80d003610291e.png?v=1789014768"
+          }
+        },
+        {
+          "id": "gid://shopify/ProductVariant/54882444542165",
+          "title": "Apricot / M",
+          "price": "60.00",
+          "selectedOptions": [
+            {
+              "name": "Color",
+              "value": "Apricot"
+            },
+            {
+              "name": "Size",
+              "value": "M"
+            }
+          ],
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/41c06133257a4dfa86f80d003610291e.png?v=1789014768"
+          }
+        },
+        {
+          "id": "gid://shopify/ProductVariant/54882444574933",
+          "title": "Apricot / L",
+          "price": "60.00",
+          "selectedOptions": [
+            {
+              "name": "Color",
+              "value": "Apricot"
+            },
+            {
+              "name": "Size",
+              "value": "L"
+            }
+          ],
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/41c06133257a4dfa86f80d003610291e.png?v=1789014768"
+          }
+        },
+        {
+          "id": "gid://shopify/ProductVariant/54882444607701",
+          "title": "Apricot / XL",
+          "price": "60.00",
+          "selectedOptions": [
+            {
+              "name": "Color",
+              "value": "Apricot"
+            },
+            {
+              "name": "Size",
+              "value": "XL"
+            }
+          ],
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/41c06133257a4dfa86f80d003610291e.png?v=1789014768"
+          }
+        },
+        {
+          "id": "gid://shopify/ProductVariant/54882444640469",
+          "title": "Apricot / 2XL",
+          "price": "60.00",
+          "selectedOptions": [
+            {
+              "name": "Color",
+              "value": "Apricot"
+            },
+            {
+              "name": "Size",
+              "value": "2XL"
+            }
+          ],
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/41c06133257a4dfa86f80d003610291e.png?v=1789014768"
+          }
+        },
+        {
+          "id": "gid://shopify/ProductVariant/54882444673237",
+          "title": "Apricot / 3XL",
+          "price": "60.00",
+          "selectedOptions": [
+            {
+              "name": "Color",
+              "value": "Apricot"
+            },
+            {
+              "name": "Size",
+              "value": "3XL"
+            }
+          ],
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/41c06133257a4dfa86f80d003610291e.png?v=1789014768"
+          }
+        }
+      ]
+    },
+    "media": {
+      "nodes": [
+        {
+          "id": "gid://shopify/MediaImage/42552106189013",
+          "alt": "",
+          "mediaContentType": "IMAGE",
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/41c06133257a4dfa86f80d003610291e.png?v=1789014768"
+          }
+        },
+        {
+          "id": "gid://shopify/MediaImage/42552106221781",
+          "alt": "",
+          "mediaContentType": "IMAGE",
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/c330d9bc5b1143a1a395c68199af7c84.png?v=1789014768"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "gid://shopify/Product/9587266912469",
+    "title": "Men’s Vintage Wash Barrel Leg Jeans",
+    "handle": "mens-vintage-wash-barrel-leg-jeans",
+    "status": "ACTIVE",
+    "vendor": "ODMPOD",
+    "productType": "",
+    "tags": [],
+    "descriptionHtml": "<p>Elevate your daily rotation with these Men's barrel leg jeans, engineered from a heavy cotton blend woven fabric for structured durability. Featuring a distinctive loose fit that curves outward before tapering to a straight hem, this pair showcases a vintage wash and reverse wash treatment with crinkled details. A mid rise waistline, zip fly closure, and classic slash pockets complete the design, while the gradient washed effect adds a modern edge. Perfect for skateboarding, street dance, or everyday casual wear, these full length pants offer a bold silhouette that serves as a versatile custom base.</p><h3>Features</h3><p>- Effects: Washed</p><p>- Fit: Loose</p><p>- Season: Spring</p><p>- Style: Basics / Casual / Street / Vintage</p><h3>Care Instructions</h3><p>- Machine wash at 30°C (gentle cycle)</p><p>- Do not bleach</p><p>- Tumble dry low</p><p>- Iron at low temperature, avoid ironing on print</p><p>- Do not dry clean</p><h3>Fabric</h3><p>- Material: 80% cotton, 14% regenerated cellulose, 6% polyester</p><p>- Fabric Weight: 450 gsm (13.3 oz)</p><p>- Thickness: Thick</p><p>- Breathability: Moderate</p><table id=\"size-guide\" style=\"width: 1024px;\"><tbody>\n<tr>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; background: #F8F8F8;\"></td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\" colspan=\"2\">S</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\" colspan=\"2\">M</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\" colspan=\"2\">L</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\" colspan=\"2\">XL</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\" colspan=\"2\">2XL</td>\n</tr>\n<tr>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; background: #F8F8F8;\"></td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">inch</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">cm</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">inch</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">cm</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">inch</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">cm</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">inch</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">cm</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">inch</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">cm</td>\n</tr>\n<tr>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px;\">Length</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">41.73</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">106</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">42.13</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">107</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">42.52</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">108</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">42.91</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">109</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">43.31</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">110</td>\n</tr>\n<tr>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px;\">Waist</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">14.96</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">38</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">15.75</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">40</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">16.54</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">42</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">17.32</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">44</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">18.11</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">46</td>\n</tr>\n<tr>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px;\">Hip</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">21.06</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">53.5</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">21.85</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">55.5</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">22.64</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">57.5</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">23.43</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">59.5</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">24.21</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">61.5</td>\n</tr>\n</tbody></table><p><br></p>",
+    "category": null,
+    "seo": {
+      "title": null,
+      "description": null
+    },
+    "collections": {
+      "nodes": [
+        {
+          "id": "gid://shopify/Collection/525509591253",
+          "handle": "loop-soul"
+        }
+      ]
+    },
+    "resourcePublicationsV2": {
+      "nodes": [
+        {
+          "isPublished": true,
+          "publication": {
+            "id": "gid://shopify/Publication/159053807829",
+            "name": "Online Store"
+          }
+        }
+      ]
+    },
+    "options": [
+      {
+        "name": "Color",
+        "values": [
+          "Jeans Blue"
+        ]
+      },
+      {
+        "name": "Size",
+        "values": [
+          "S",
+          "M",
+          "L",
+          "XL",
+          "2XL"
+        ]
+      }
+    ],
+    "variants": {
+      "nodes": [
+        {
+          "id": "gid://shopify/ProductVariant/54882437890261",
+          "title": "Jeans Blue / S",
+          "price": "80.00",
+          "selectedOptions": [
+            {
+              "name": "Color",
+              "value": "Jeans Blue"
+            },
+            {
+              "name": "Size",
+              "value": "S"
+            }
+          ],
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/65c39dc69a7243c7bb6526d18ae408f6.png?v=1789014693"
+          }
+        },
+        {
+          "id": "gid://shopify/ProductVariant/54882437923029",
+          "title": "Jeans Blue / M",
+          "price": "80.00",
+          "selectedOptions": [
+            {
+              "name": "Color",
+              "value": "Jeans Blue"
+            },
+            {
+              "name": "Size",
+              "value": "M"
+            }
+          ],
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/65c39dc69a7243c7bb6526d18ae408f6.png?v=1789014693"
+          }
+        },
+        {
+          "id": "gid://shopify/ProductVariant/54882437955797",
+          "title": "Jeans Blue / L",
+          "price": "80.00",
+          "selectedOptions": [
+            {
+              "name": "Color",
+              "value": "Jeans Blue"
+            },
+            {
+              "name": "Size",
+              "value": "L"
+            }
+          ],
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/65c39dc69a7243c7bb6526d18ae408f6.png?v=1789014693"
+          }
+        },
+        {
+          "id": "gid://shopify/ProductVariant/54882437988565",
+          "title": "Jeans Blue / XL",
+          "price": "80.00",
+          "selectedOptions": [
+            {
+              "name": "Color",
+              "value": "Jeans Blue"
+            },
+            {
+              "name": "Size",
+              "value": "XL"
+            }
+          ],
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/65c39dc69a7243c7bb6526d18ae408f6.png?v=1789014693"
+          }
+        },
+        {
+          "id": "gid://shopify/ProductVariant/54882438021333",
+          "title": "Jeans Blue / 2XL",
+          "price": "80.00",
+          "selectedOptions": [
+            {
+              "name": "Color",
+              "value": "Jeans Blue"
+            },
+            {
+              "name": "Size",
+              "value": "2XL"
+            }
+          ],
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/65c39dc69a7243c7bb6526d18ae408f6.png?v=1789014693"
+          }
+        }
+      ]
+    },
+    "media": {
+      "nodes": [
+        {
+          "id": "gid://shopify/MediaImage/42552083710165",
+          "alt": "",
+          "mediaContentType": "IMAGE",
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/65c39dc69a7243c7bb6526d18ae408f6.png?v=1789014693"
+          }
+        },
+        {
+          "id": "gid://shopify/MediaImage/42552083742933",
+          "alt": "",
+          "mediaContentType": "IMAGE",
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/aaaf66ffe8924594a5c5824e19e4c5cb.png?v=1789014693"
+          }
+        }
+      ]
+    }
+  }
+]
