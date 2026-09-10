@@ -5,6 +5,7 @@ import { getPassSettings } from "@/lib/loop/pass/settings";
 import { getRunOfShow } from "@/lib/loop/content-store";
 import { isJournalPublished } from "@/lib/loop/journal-server";
 import { getFeaturedSingle } from "@/lib/loop/single";
+import { resolveCover, coverCaption } from "@/lib/loop/cover";
 import GatheringPoster from "@/components/loop/gathering/GatheringPoster";
 
 /**
@@ -16,7 +17,15 @@ import GatheringPoster from "@/components/loop/gathering/GatheringPoster";
  */
 export async function GatheringHome({ event }: { event: LoopEvent }) {
   const voterId = await currentVoterId();
-  const [anthem, capacity, runOfShow, passSettings, journalPublished, single] = await Promise.all([
+  const [
+    anthem,
+    capacity,
+    runOfShow,
+    passSettings,
+    journalPublished,
+    single,
+    cover,
+  ] = await Promise.all([
     getAnthemState(event, voterId),
     getPassCapacity(),
     getRunOfShow(event.id),
@@ -26,6 +35,8 @@ export async function GatheringHome({ event }: { event: LoopEvent }) {
     // or unplayable, which getFeaturedSingle logs loudly rather than papering
     // over with a substitute song.
     getFeaturedSingle(),
+    // Which cover THIS person sees — theirs, the room's, or the owner's.
+    resolveCover(event.id, voterId),
   ]);
 
   // Formatted server-side so the venue's timezone is authoritative — not the
@@ -55,6 +66,8 @@ export async function GatheringHome({ event }: { event: LoopEvent }) {
       timeLabel={timeLabel}
       journalPublished={journalPublished}
       single={single}
+      coverUrl={cover.url}
+      coverCaption={coverCaption(cover)}
     />
   );
 }

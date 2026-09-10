@@ -34,11 +34,14 @@ function clock(s: number): string {
 
 export function SinglePlayer({
   single,
+  coverUrl,
   onHeard,
   onCoverContest,
   coverCaption,
 }: {
   single: FeaturedSingle;
+  /** Resolved per visitor — NOT single.coverUrl, which is only the owner's. */
+  coverUrl: string | null;
   /** Fired once, when they are far enough in to have an opinion. */
   onHeard: () => void;
   onCoverContest: () => void;
@@ -180,7 +183,7 @@ export function SinglePlayer({
 
   return (
     <div className="flex w-full flex-col items-center">
-      {single.coverUrl && (
+      {coverUrl && (
         <div className="relative mx-auto aspect-square w-[min(62vw,240px)]">
           {playing && (
             <>
@@ -198,7 +201,7 @@ export function SinglePlayer({
             className={`relative h-full w-full overflow-hidden rounded-2xl ${playing ? "loop-breathe" : ""}`}
           >
             <Image
-              src={single.coverUrl}
+              src={coverUrl}
               alt={`${single.albumTitle} cover`}
               fill
               unoptimized
@@ -208,7 +211,7 @@ export function SinglePlayer({
         </div>
       )}
 
-      {single.coverUrl && (
+      {coverUrl && (
         <button
           type="button"
           onClick={onCoverContest}

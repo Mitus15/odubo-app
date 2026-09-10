@@ -4,6 +4,7 @@ import { memo, useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { usePWA } from "@/components/PWAProvider";
 import SinglePlayer from "@/components/loop/gathering/SinglePlayer";
+import ClaimRow from "@/components/loop/identity/ClaimRow";
 import type { FeaturedSingle } from "@/lib/loop/single";
 
 /**
@@ -52,11 +53,16 @@ const SECTION =
 
 export function TheSingle({
   single,
+  coverUrl,
+  coverCaption,
   onClose,
   onGetPass,
   onCoverContest,
 }: {
   single: FeaturedSingle;
+  /** Resolved per visitor: theirs, the room's, or the owner's. */
+  coverUrl: string | null;
+  coverCaption: string;
   onClose: () => void;
   onGetPass: () => void;
   onCoverContest: () => void;
@@ -201,9 +207,10 @@ export function TheSingle({
         )}
         <SinglePlayer
           single={single}
+          coverUrl={coverUrl}
           onHeard={onHeard}
           onCoverContest={onCoverContest}
-          coverCaption="This cover is mine. On the 26th the room picks the official one."
+          coverCaption={coverCaption}
         />
         <div
           aria-hidden="true"
@@ -319,6 +326,11 @@ export function TheSingle({
           This album isn&apos;t streaming anywhere. September 26th is its first
           exhibition.
         </p>
+      </section>
+
+      {/* ── 4 · you ──────────────────────────────────────────────────── */}
+      <section className={SECTION}>
+        <ClaimRow />
       </section>
     </motion.div>
   );

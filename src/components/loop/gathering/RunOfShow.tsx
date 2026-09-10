@@ -29,7 +29,9 @@ export function RunOfShow({
               <span className="absolute -left-[7px] mt-1.5 h-3 w-3 rounded-full bg-ink" />
               <div className="flex items-baseline justify-between gap-3">
                 <div className="flex min-w-0 items-baseline gap-3">
-                  <span className="shrink-0 text-sm font-black tabular-nums">{item.time}</span>
+                  <span className="shrink-0 text-sm font-black tabular-nums">
+                    {item.time}
+                  </span>
                   <span className="font-bold">{item.title}</span>
                 </div>
                 {item.instagram && (
@@ -44,7 +46,9 @@ export function RunOfShow({
                 )}
               </div>
               {meta && (
-                <div className="text-xs font-semibold uppercase tracking-wide opacity-60">{meta}</div>
+                <div className="text-xs font-semibold uppercase tracking-wide opacity-60">
+                  {meta}
+                </div>
               )}
               <p className="mt-0.5 text-sm opacity-70">{item.detail}</p>
             </li>

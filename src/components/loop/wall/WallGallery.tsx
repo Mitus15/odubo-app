@@ -210,12 +210,37 @@ export function WallGallery({
     }
   }
 
+  const [coverUid, setCoverUid] = useState<string | null>(null);
+
   const viewerActions: ViewerAction[] = [
     {
       label: tab === "yours" ? "Save" : "Share",
       onClick: share,
       primary: true,
     },
+    // Only Wall shots can be a cover — a "Keep" item lives on one device and
+    // nothing else could ever resolve it, so offering it there would be a
+    // button that quietly does nothing.
+    ...(tab === "yours"
+      ? []
+      : [
+          {
+            label: "Make this my cover",
+            onClick: async (item: MediaItem) => {
+              try {
+                const res = await fetch("/api/loop/cover", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ uid: item.id }),
+                });
+                if (!res.ok) return;
+                setCoverUid(item.id);
+              } catch {
+                /* the shot is still on the Wall; only the preference failed */
+              }
+            },
+          } satisfies ViewerAction,
+        ]),
     ...(tab === "yours"
       ? [
           {
@@ -338,6 +363,13 @@ export function WallGallery({
           onClose={() => setViewer(null)}
           actions={viewerActions}
         />
+      )}
+
+      {coverUid && (
+        <p className="loop-muted text-center text-[11px] leading-relaxed">
+          That shot is your album cover now — it&apos;s on the record when you
+          open Loop Soul.
+        </p>
       )}
     </div>
   );

@@ -68,6 +68,8 @@ export function GatheringPoster({
   dateLabel,
   timeLabel,
   single = null,
+  coverUrl = null,
+  coverCaption = "",
   journalPublished = false,
 }: {
   event: LoopEvent;
@@ -84,6 +86,9 @@ export function GatheringPoster({
   timeLabel: string;
   /** The track behind the flyer's QR. Null when none is playable. */
   single?: FeaturedSingle | null;
+  /** Resolved per visitor — see lib/loop/cover. */
+  coverUrl?: string | null;
+  coverCaption?: string;
   /** A published Loop Journal issue makes last volume the pre-phase hype reel. */
   journalPublished?: boolean;
 }) {
@@ -314,6 +319,8 @@ export function GatheringPoster({
         {single && singleOpen && (
           <TheSingle
             single={single}
+            coverUrl={coverUrl}
+            coverCaption={coverCaption}
             onClose={closeSingle}
             onCoverContest={openCoverContest}
             onGetPass={openPassFromSingle}
