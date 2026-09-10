@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPassCapacity } from "@/lib/loop/pass";
-import { getPassSettings, setPassSetting, type PassSettings } from "@/lib/loop/pass/settings";
+import {
+  getPassSettings,
+  setPassSetting,
+  type PassSettings,
+} from "@/lib/loop/pass/settings";
 
 /** Never echo the webhook signing secret to the client — presence only. */
 function publicSettings(s: PassSettings) {
@@ -10,7 +14,10 @@ function publicSettings(s: PassSettings) {
 
 /** Pass-sales configuration. Auth: middleware gates /api/loop/admin/*. */
 export async function GET() {
-  const [settings, capacity] = await Promise.all([getPassSettings(), getPassCapacity()]);
+  const [settings, capacity] = await Promise.all([
+    getPassSettings(),
+    getPassCapacity(),
+  ]);
   return NextResponse.json({ settings: publicSettings(settings), capacity });
 }
 
@@ -22,28 +29,54 @@ export async function POST(req: NextRequest) {
     mode?: string | null;
     price?: string | null;
     currency?: string | null;
+    webhookSecret?: string | null;
   } | null;
-  if (!body) return NextResponse.json({ error: "Invalid body" }, { status: 400 });
+  if (!body)
+    return NextResponse.json({ error: "Invalid body" }, { status: 400 });
 
   if (body.checkoutUrl !== undefined && body.checkoutUrl) {
     try {
       const u = new URL(body.checkoutUrl);
       if (u.protocol !== "https:") throw new Error("not https");
     } catch {
-      return NextResponse.json({ error: "Checkout link must be a full https:// URL" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Checkout link must be a full https:// URL" },
+        { status: 400 },
+      );
     }
   }
-  if (body.mode !== undefined && body.mode && !["mock", "shopify"].includes(body.mode)) {
+  if (
+    body.mode !== undefined &&
+    body.mode &&
+    !["mock", "shopify"].includes(body.mode)
+  ) {
     return NextResponse.json({ error: "Invalid mode" }, { status: 400 });
   }
 
-  if (body.checkoutUrl !== undefined) await setPassSetting("pass_checkout_url", body.checkoutUrl);
+  if (body.checkoutUrl !== undefined)
+    await setPassSetting("pass_checkout_url", body.checkoutUrl);
   if (body.sku !== undefined) await setPassSetting("pass_sku", body.sku);
-  if (body.productId !== undefined) await setPassSetting("pass_product_id", body.productId);
+  if (body.productId !== undefined)
+    await setPassSetting("pass_product_id", body.productId);
   if (body.mode !== undefined) await setPassSetting("pass_mode", body.mode);
   if (body.price !== undefined) await setPassSetting("pass_price", body.price);
-  if (body.currency !== undefined) await setPassSetting("pass_currency", body.currency);
+  if (body.currency !== undefined)
+    await setPassSetting("pass_currency", body.currency);
+  // Settable here so the signing secret can be fixed from the admin at 6pm on a
+  // Saturday rather than through a Vercel env var and a redeploy. Write-only:
+  // publicSettings never echoes it back, so the field is blank on reload and a
+  // blank submit is ignored rather than clearing it (an empty string deletes
+  // the setting — see setPassSetting).
+  if (body.webhookSecret)
+    await setPassSetting("pass_webhook_secret", body.webhookSecret);
 
-  const [settings, capacity] = await Promise.all([getPassSettings(), getPassCapacity()]);
-  return NextResponse.json({ success: true, settings: publicSettings(settings), capacity });
+  const [settings, capacity] = await Promise.all([
+    getPassSettings(),
+    getPassCapacity(),
+  ]);
+  return NextResponse.json({
+    success: true,
+    settings: publicSettings(settings),
+    capacity,
+  });
 }
