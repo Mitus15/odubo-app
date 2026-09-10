@@ -208,3 +208,33 @@ export const EVENT_CREDITS = {
   /** Subordinate to `record` by design — see the poster engine's layout doc. */
   feature: "With Amen the DJ",
 } as const;
+
+/**
+ * The recording notice.
+ *
+ * The night is filmed and recorded, and some of that is released — "1984" is
+ * performed live and recorded for the record, the room is photographed for the
+ * Journal, and footage goes out as promotion. People have to be told that
+ * BEFORE they pay, not discovered it when they see themselves in something.
+ *
+ * One constant, because a notice that appears in three places with three
+ * wordings is three different notices, and only one of them is the one you
+ * meant. It is deliberately plain: a wall of legalese is read by nobody and
+ * therefore protects nobody.
+ *
+ * `optOut` is not decoration. The house style renders guests faceless
+ * (docs/decisions/loop-soul-the-faceless.md), but facelessness is a privacy
+ * control, not a substitute for consent — a notice with no way to say no is a
+ * shield, not an offer.
+ */
+export const RECORDING_NOTICE = {
+  short: "Filmed and recorded. You may appear.",
+  headline: "This night is filmed and recorded",
+  body:
+    "The live performance is recorded for release, and the room is filmed and " +
+    "photographed all evening for the album, the magazine and future promotion. " +
+    "Coming in means you may appear in that footage, on camera or in a photograph, " +
+    "at any point in the night.",
+  optOut:
+    "If you would rather not appear, tell anyone on the door — we will keep you out of shot.",
+} as const;

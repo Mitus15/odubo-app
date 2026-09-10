@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { priceLabel as formatPrice } from "@/lib/loop/priceLabel";
+import { RECORDING_NOTICE } from "@/lib/loop/content";
 
 /** Mirrors CapacityInfo — unlimited carries null counts on purpose, so a
  *  scarcity line can't render "0 left" for a room with no cap. */
@@ -93,6 +94,11 @@ export function GetPassModal({
     [
       "In the circle, for good",
       "Registration closes on the night and doesn't reopen. Everyone in the room keeps the gallery, votes the tracklist and the cover, and is credited by name on every shot they took.",
+    ],
+    // Before money changes hands, not after. See RECORDING_NOTICE.
+    [
+      RECORDING_NOTICE.headline,
+      `${RECORDING_NOTICE.body} ${RECORDING_NOTICE.optOut}`,
     ],
     [
       "The Vault, after",
@@ -239,6 +245,9 @@ export function GetPassModal({
         <div className="border-t border-ink/15 px-6 pb-[max(env(safe-area-inset-bottom),1.25rem)] pt-4">
           {checkoutUrl && !soldOut ? (
             <>
+              <p className="loop-muted mb-3 text-center text-[11px] leading-relaxed">
+                {RECORDING_NOTICE.short} {RECORDING_NOTICE.optOut}
+              </p>
               <a
                 href={checkoutUrl}
                 target="_blank"

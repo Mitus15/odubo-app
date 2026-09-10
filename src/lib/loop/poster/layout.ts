@@ -37,11 +37,24 @@ import {
 /* ── ops ────────────────────────────────────────────────────────────────── */
 
 export type Glyph = { ch: string; x: number };
-export type ArcGlyph = { ch: string; x: number; y: number; /** radians */ rot: number };
+export type ArcGlyph = {
+  ch: string;
+  x: number;
+  y: number;
+  /** radians */ rot: number;
+};
 
 export type Op =
   | { kind: "rect"; x: number; y: number; w: number; h: number; fill: string }
-  | { kind: "image"; src: string; x: number; y: number; w: number; h: number; opacity?: number }
+  | {
+      kind: "image";
+      src: string;
+      x: number;
+      y: number;
+      w: number;
+      h: number;
+      opacity?: number;
+    }
   | {
       kind: "glyphs";
       glyphs: Glyph[];
@@ -71,7 +84,9 @@ export type Op =
     };
 
 export type DisplayList = { w: number; h: number; ops: Op[] };
-export type LayoutResult = { ok: true; list: DisplayList } | { ok: false; error: string };
+export type LayoutResult =
+  | { ok: true; list: DisplayList }
+  | { ok: false; error: string };
 
 export type ImageInfo = { w: number; h: number };
 export type LayoutDeps = { sizes: Record<string, ImageInfo> };
@@ -135,6 +150,11 @@ export type EventDetails = {
    *  its name from a track, but that is a habit, not a rule, so the engine is
    *  never taught about the tracklist. */
   record?: string;
+  /** The smallest line on the piece: that the night is filmed and recorded.
+   *  Printed because notice has to reach the person who never scans the code —
+   *  they are the one who finds out too late otherwise. Set below the price
+   *  row and deliberately quiet: it must be legible, not loud. */
+  notice?: string;
   /** The feature credit, set under the record line at roughly two thirds its
    *  size — "WITH AMEN THE DJ". A separate field rather than more free text in
    *  `record` because the two are not peers: the record line names whose album
@@ -173,7 +193,11 @@ export type TournamentPair = {
 };
 
 export type TournamentBand =
-  | { kind: "grid"; art: TournamentArt[]; /** 0 nominations → this figure instead of holes. */ emptyFigureSrc: string }
+  | {
+      kind: "grid";
+      art: TournamentArt[];
+      /** 0 nominations → this figure instead of holes. */ emptyFigureSrc: string;
+    }
   | { kind: "seeds"; art: TournamentArt[] }
   | { kind: "pairs"; pairs: TournamentPair[] }
   | { kind: "hero"; art: TournamentArt };
@@ -231,9 +255,19 @@ type LineOpts = {
  * counts) so centring maths and measurement always agree.
  */
 function line(text: string, opts: LineOpts): Op {
-  const { x, y, size, weight = 500, track = 0, anchor = "middle", opacity = 1, fill = INK } = opts;
+  const {
+    x,
+    y,
+    size,
+    weight = 500,
+    track = 0,
+    anchor = "middle",
+    opacity = 1,
+    fill = INK,
+  } = opts;
   const total = measure(text, { size, weight, track });
-  let cursor = anchor === "middle" ? x - total / 2 : anchor === "end" ? x - total : x;
+  let cursor =
+    anchor === "middle" ? x - total / 2 : anchor === "end" ? x - total : x;
   const glyphs: Glyph[] = [];
   for (const ch of text) {
     glyphs.push({ ch, x: cursor });
@@ -250,7 +284,8 @@ function fitSize(
   { fill = 0.92, max = 400, min = 24 } = {},
 ): number {
   let size = max;
-  while (size > min && measure(text, { size, ...opts }) > maxWidth * fill) size -= 2;
+  while (size > min && measure(text, { size, ...opts }) > maxWidth * fill)
+    size -= 2;
   return size;
 }
 
@@ -268,7 +303,9 @@ function assertFits(what: string, needed: number, budget: number): void {
 function need(deps: LayoutDeps, src: string): ImageInfo {
   const info = deps.sizes[src];
   if (!info || !info.w || !info.h) {
-    throw new LayoutError(`missing image dimensions for "${src}" — prepare() must resolve it first`);
+    throw new LayoutError(
+      `missing image dimensions for "${src}" — prepare() must resolve it first`,
+    );
   }
   return info;
 }
@@ -292,7 +329,10 @@ const R = Math.round;
  * every pixel left in the middle. Weights are the two shipped ones only —
  * lines the kit set at 600 sit at 500 here (the tracked small-caps voice).
  */
-export function layoutEventPoster(spec: EventPosterSpec, deps: LayoutDeps): LayoutResult {
+export function layoutEventPoster(
+  spec: EventPosterSpec,
+  deps: LayoutDeps,
+): LayoutResult {
   return run(() => {
     const { w: W, h: H } = POSTER_SIZES[spec.size];
     const S = W / 2400;
@@ -310,8 +350,22 @@ export function layoutEventPoster(spec: EventPosterSpec, deps: LayoutDeps): Layo
     const qrPx = R(300 * S);
     const headTop = pad;
     const headBottom = headTop + Math.max(wmH, qrPx + R(46 * S));
-    ops.push({ kind: "image", src: WORDMARK_SRC, x: pad, y: headTop, w: wmW, h: wmH });
-    ops.push({ kind: "image", src: qrSrc(spec.qrUrl), x: W - pad - qrPx, y: headTop, w: qrPx, h: qrPx });
+    ops.push({
+      kind: "image",
+      src: WORDMARK_SRC,
+      x: pad,
+      y: headTop,
+      w: wmW,
+      h: wmH,
+    });
+    ops.push({
+      kind: "image",
+      src: qrSrc(spec.qrUrl),
+      x: W - pad - qrPx,
+      y: headTop,
+      w: qrPx,
+      h: qrPx,
+    });
     ops.push(
       line(spec.qrCaption ?? DEFAULT_QR_CAPTION, {
         x: W - pad - qrPx / 2,
@@ -329,7 +383,12 @@ export function layoutEventPoster(spec: EventPosterSpec, deps: LayoutDeps): Layo
     // you had missed the start of. The theme still does its work where it
     // matters — the dress code line, and the programme behind the QR.
     const albumLine = d?.record ?? null;
-    const sloganSize = fitSize(slogan, W - pad * 2, { weight: 700, track: 0.02 }, { max: R(300 * S) });
+    const sloganSize = fitSize(
+      slogan,
+      W - pad * 2,
+      { weight: 700, track: 0.02 },
+      { max: R(300 * S) },
+    );
     const triadSize = R(46 * S);
     const dateSize = R(58 * S);
 
@@ -350,12 +409,21 @@ export function layoutEventPoster(spec: EventPosterSpec, deps: LayoutDeps): Layo
     // fixed rows don't leave the hero its minimum band — so instead of
     // refusing, every gap is shaved by ONE factor, computed exactly from the
     // deficit. Roomy formats get air = 1 and lay out identically to before.
-    const GAP = { vol: 250, feature: 78, hero: 90, slogan: 200, triad: 96, details: 80, price: 150 } as const;
+    const GAP = {
+      vol: 250,
+      feature: 78,
+      hero: 90,
+      slogan: 200,
+      triad: 96,
+      details: 80,
+      price: 150,
+    } as const;
     const heroFloor = R(600 * S);
     // Every present detail row owns its drop here AND decrements the cursor by
     // the same amount below — the two must agree or the hero band is sized
     // against a block it doesn't match.
     const fixedDetailDrop =
+      (d?.notice ? R(44 * S) : 0) +
       (d && (d.note || d.price) ? R(64 * S) : 0) +
       (d?.venue ? R(72 * S) : 0) +
       (d && (d.date || d.doors) ? dateSize : 0);
@@ -375,7 +443,9 @@ export function layoutEventPoster(spec: EventPosterSpec, deps: LayoutDeps): Layo
       R(GAP.price * S * air) -
       fixedDetailDrop -
       R(GAP.details * S * air) -
-      (R(GAP.slogan * S * air) + sloganSize + (showTriad ? R(GAP.triad * S * air) + triadSize : 0)) -
+      (R(GAP.slogan * S * air) +
+        sloganSize +
+        (showTriad ? R(GAP.triad * S * air) + triadSize : 0)) -
       (headBottom +
         R(GAP.vol * S * air) +
         (featureLine ? R(GAP.feature * S * air) : 0) +
@@ -394,7 +464,15 @@ export function layoutEventPoster(spec: EventPosterSpec, deps: LayoutDeps): Layo
         measure(albumLine, { size: albumSize, track: 0.34 }),
         W - pad * 2,
       );
-      ops.push(line(albumLine, { x: W / 2, y: volY, size: albumSize, track: 0.34, opacity: 0.85 }));
+      ops.push(
+        line(albumLine, {
+          x: W / 2,
+          y: volY,
+          size: albumSize,
+          track: 0.34,
+          opacity: 0.85,
+        }),
+      );
     }
 
     // 5b. The feature credit, under the record line and subordinate to it.
@@ -406,7 +484,13 @@ export function layoutEventPoster(spec: EventPosterSpec, deps: LayoutDeps): Layo
         W - pad * 2,
       );
       ops.push(
-        line(featureLine, { x: W / 2, y: featureY, size: featureSize, track: 0.3, opacity: 0.62 }),
+        line(featureLine, {
+          x: W / 2,
+          y: featureY,
+          size: featureSize,
+          track: 0.3,
+          opacity: 0.62,
+        }),
       );
     }
 
@@ -415,18 +499,61 @@ export function layoutEventPoster(spec: EventPosterSpec, deps: LayoutDeps): Layo
     // hero instead of leaving a hole.
     let cursorY = creditLabelY - a(GAP.price);
     const detailOps: Op[] = [];
-    const priceText = d && (d.note || d.price) ? [d.note, d.price].filter(Boolean).join("  ·  ") : null;
+    // Drawn first so it sits lowest on the sheet, under everything else.
+    if (d?.notice) {
+      detailOps.push(
+        line(d.notice, {
+          x: W / 2,
+          y: cursorY,
+          size: R(26 * S),
+          track: 0.18,
+          opacity: 0.5,
+        }),
+      );
+      cursorY -= R(44 * S);
+    }
+    const priceText =
+      d && (d.note || d.price)
+        ? [d.note, d.price].filter(Boolean).join("  ·  ")
+        : null;
     if (priceText) {
-      detailOps.push(line(priceText, { x: W / 2, y: cursorY, size: R(38 * S), track: 0.2, opacity: 0.7 }));
+      detailOps.push(
+        line(priceText, {
+          x: W / 2,
+          y: cursorY,
+          size: R(38 * S),
+          track: 0.2,
+          opacity: 0.7,
+        }),
+      );
       cursorY -= R(64 * S);
     }
     if (d?.venue) {
-      detailOps.push(line(d.venue, { x: W / 2, y: cursorY, size: R(42 * S), track: 0.16, opacity: 0.85 }));
+      detailOps.push(
+        line(d.venue, {
+          x: W / 2,
+          y: cursorY,
+          size: R(42 * S),
+          track: 0.16,
+          opacity: 0.85,
+        }),
+      );
       cursorY -= R(72 * S);
     }
-    const dateText = d && (d.date || d.doors) ? [d.date, d.doors].filter(Boolean).join("  ·  ") : null;
+    const dateText =
+      d && (d.date || d.doors)
+        ? [d.date, d.doors].filter(Boolean).join("  ·  ")
+        : null;
     if (dateText) {
-      detailOps.push(line(dateText, { x: W / 2, y: cursorY, size: dateSize, weight: 700, track: 0.06 }));
+      detailOps.push(
+        line(dateText, {
+          x: W / 2,
+          y: cursorY,
+          size: dateSize,
+          weight: 700,
+          track: 0.06,
+        }),
+      );
       cursorY -= dateSize;
     }
 
@@ -434,7 +561,8 @@ export function layoutEventPoster(spec: EventPosterSpec, deps: LayoutDeps): Layo
     // The type block reserves the FULL slogan size (cap height + descender
     // headroom for custom lines), though the baseline below hangs off cap
     // height alone.
-    const typeBlockH = a(GAP.slogan) + sloganSize + (showTriad ? a(GAP.triad) + triadSize : 0);
+    const typeBlockH =
+      a(GAP.slogan) + sloganSize + (showTriad ? a(GAP.triad) + triadSize : 0);
     const heroTop = featureY + a(GAP.hero);
     const heroMaxH = cursorY - a(GAP.details) - typeBlockH - heroTop;
     const heroMaxW = W - R(110 * S) * 2;
@@ -461,20 +589,55 @@ export function layoutEventPoster(spec: EventPosterSpec, deps: LayoutDeps): Layo
     // height below the gap so the letterforms START at heroBottom + gap —
     // baseline-minus-nothing is how the slogan's caps once dug 10px into the
     // hero image.
-    const sloganY = heroBottom + a(GAP.slogan) + Math.round(sloganSize * CAP_HEIGHT);
-    assertFits("the slogan", measure(slogan, { size: sloganSize, weight: 700, track: 0.02 }), W - pad * 2);
-    ops.push(line(slogan, { x: W / 2, y: sloganY, size: sloganSize, weight: 700, track: 0.02 }));
+    const sloganY =
+      heroBottom + a(GAP.slogan) + Math.round(sloganSize * CAP_HEIGHT);
+    assertFits(
+      "the slogan",
+      measure(slogan, { size: sloganSize, weight: 700, track: 0.02 }),
+      W - pad * 2,
+    );
+    ops.push(
+      line(slogan, {
+        x: W / 2,
+        y: sloganY,
+        size: sloganSize,
+        weight: 700,
+        track: 0.02,
+      }),
+    );
     if (showTriad) {
       ops.push(
-        line(TRIAD, { x: W / 2, y: sloganY + a(GAP.triad) + triadSize, size: triadSize, track: 0.42, opacity: 0.75 }),
+        line(TRIAD, {
+          x: W / 2,
+          y: sloganY + a(GAP.triad) + triadSize,
+          size: triadSize,
+          track: 0.42,
+          opacity: 0.75,
+        }),
       );
     }
 
     ops.push(...detailOps);
 
     // 9. Credits.
-    ops.push(line(CREDIT_PRESENTER, { x: W * 0.33, y: creditLabelY, size: R(24 * S), track: 0.3, opacity: 0.55 }));
-    ops.push(line(CREDIT_PARTNER, { x: W * 0.67, y: creditLabelY, size: R(24 * S), track: 0.3, opacity: 0.55 }));
+    ops.push(
+      line(CREDIT_PRESENTER, {
+        x: W * 0.33,
+        y: creditLabelY,
+        size: R(24 * S),
+        track: 0.3,
+        opacity: 0.55,
+      }),
+    );
+    ops.push(
+      line(CREDIT_PARTNER, {
+        x: W * 0.67,
+        y: creditLabelY,
+        size: R(24 * S),
+        track: 0.3,
+        opacity: 0.55,
+      }),
+    );
     ops.push({
       kind: "image",
       src: ODUBO_SRC,
@@ -519,7 +682,14 @@ export function layoutTicket(spec: TicketSpec, deps: LayoutDeps): LayoutResult {
     const wmW = R(340 * S);
     const wmH = R(wmW * (wm.h / wm.w));
     const wmTop = pad;
-    ops.push({ kind: "image", src: WORDMARK_SRC, x: pad, y: wmTop, w: wmW, h: wmH });
+    ops.push({
+      kind: "image",
+      src: WORDMARK_SRC,
+      x: pad,
+      y: wmTop,
+      w: wmW,
+      h: wmH,
+    });
 
     const od = need(deps, ODUBO_SRC);
     const sc = need(deps, SCOTTS_SRC);
@@ -527,8 +697,14 @@ export function layoutTicket(spec: TicketSpec, deps: LayoutDeps): LayoutResult {
     const odH = R(odW * (od.h / od.w));
     const scW = R(190 * S);
     const scH = R(scW * (sc.h / sc.w));
-    const odColW = Math.max(odW, measure(CREDIT_PRESENTER, { size: labelSize, track: labelTrack }));
-    const scColW = Math.max(scW, measure(CREDIT_PARTNER, { size: labelSize, track: labelTrack }));
+    const odColW = Math.max(
+      odW,
+      measure(CREDIT_PRESENTER, { size: labelSize, track: labelTrack }),
+    );
+    const scColW = Math.max(
+      scW,
+      measure(CREDIT_PARTNER, { size: labelSize, track: labelTrack }),
+    );
     const creditGap = R(60 * S);
     const creditRowW = odColW + creditGap + scColW;
     const creditLeft = stubX - pad - creditRowW;
@@ -537,21 +713,77 @@ export function layoutTicket(spec: TicketSpec, deps: LayoutDeps): LayoutResult {
     const creditLabelY = pad + R(22 * S);
     const creditTop = creditLabelY + R(18 * S);
     const creditRowH = Math.max(odH, scH);
-    assertFits("the ticket credit block", creditRowW, mainInnerW - wmW - R(80 * S));
-    ops.push(line(CREDIT_PRESENTER, { x: odCx, y: creditLabelY, size: labelSize, track: labelTrack, opacity: 0.55 }));
-    ops.push(line(CREDIT_PARTNER, { x: scCx, y: creditLabelY, size: labelSize, track: labelTrack, opacity: 0.55 }));
-    ops.push({ kind: "image", src: ODUBO_SRC, x: R(odCx - odW / 2), y: R(creditTop + (creditRowH - odH) / 2), w: odW, h: odH });
-    ops.push({ kind: "image", src: SCOTTS_SRC, x: R(scCx - scW / 2), y: R(creditTop + (creditRowH - scH) / 2), w: scW, h: scH, opacity: 0.85 });
+    assertFits(
+      "the ticket credit block",
+      creditRowW,
+      mainInnerW - wmW - R(80 * S),
+    );
+    ops.push(
+      line(CREDIT_PRESENTER, {
+        x: odCx,
+        y: creditLabelY,
+        size: labelSize,
+        track: labelTrack,
+        opacity: 0.55,
+      }),
+    );
+    ops.push(
+      line(CREDIT_PARTNER, {
+        x: scCx,
+        y: creditLabelY,
+        size: labelSize,
+        track: labelTrack,
+        opacity: 0.55,
+      }),
+    );
+    ops.push({
+      kind: "image",
+      src: ODUBO_SRC,
+      x: R(odCx - odW / 2),
+      y: R(creditTop + (creditRowH - odH) / 2),
+      w: odW,
+      h: odH,
+    });
+    ops.push({
+      kind: "image",
+      src: SCOTTS_SRC,
+      x: R(scCx - scW / 2),
+      y: R(creditTop + (creditRowH - scH) / 2),
+      w: scW,
+      h: scH,
+      opacity: 0.85,
+    });
 
     const rowABottom = Math.max(wmTop + wmH, creditTop + creditRowH);
 
     // Slogan spanning the main body.
-    const sloganSize = fitSize(SLOGAN, mainInnerW, { weight: 700, track: 0.02 }, { max: R(150 * S) });
+    const sloganSize = fitSize(
+      SLOGAN,
+      mainInnerW,
+      { weight: 700, track: 0.02 },
+      { max: R(150 * S) },
+    );
     const sloganY = rowABottom + R(120 * S);
     const triadSize = R(30 * S);
     const triadY = sloganY + R(58 * S);
-    ops.push(line(SLOGAN, { x: mainCx, y: sloganY, size: sloganSize, weight: 700, track: 0.02 }));
-    ops.push(line(TRIAD, { x: mainCx, y: triadY, size: triadSize, track: 0.4, opacity: 0.75 }));
+    ops.push(
+      line(SLOGAN, {
+        x: mainCx,
+        y: sloganY,
+        size: sloganSize,
+        weight: 700,
+        track: 0.02,
+      }),
+    );
+    ops.push(
+      line(TRIAD, {
+        x: mainCx,
+        y: triadY,
+        size: triadSize,
+        track: 0.4,
+        opacity: 0.75,
+      }),
+    );
 
     // The crowd — everything left under the type, standing on the bottom edge.
     const heroTop = triadY + R(50 * S);
@@ -561,7 +793,14 @@ export function layoutTicket(spec: TicketSpec, deps: LayoutDeps): LayoutResult {
     const heroScale = Math.min(mainInnerW / fig.w, heroMaxH / fig.h);
     const heroW = R(fig.w * heroScale);
     const heroH = R(fig.h * heroScale);
-    ops.push({ kind: "image", src: spec.figureSrc, x: R(mainCx - heroW / 2), y: H - heroH, w: heroW, h: heroH });
+    ops.push({
+      kind: "image",
+      src: spec.figureSrc,
+      x: R(mainCx - heroW / 2),
+      y: H - heroH,
+      w: heroW,
+      h: heroH,
+    });
 
     // The stub.
     ops.push({
@@ -585,14 +824,30 @@ export function layoutTicket(spec: TicketSpec, deps: LayoutDeps): LayoutResult {
     const recordSize = R(30 * S);
     const dateSize = R(38 * S);
     if (d.record) {
-      assertFits("the stub record line", measure(d.record, { size: recordSize, weight: 700, track: 0.14 }), stubInnerW);
+      assertFits(
+        "the stub record line",
+        measure(d.record, { size: recordSize, weight: 700, track: 0.14 }),
+        stubInnerW,
+      );
     }
-    assertFits("the stub date line", measure(dateText, { size: dateSize, weight: 700, track: 0.08 }), stubInnerW);
+    assertFits(
+      "the stub date line",
+      measure(dateText, { size: dateSize, weight: 700, track: 0.08 }),
+      stubInnerW,
+    );
     if (d.venue) {
-      assertFits("the stub venue line", measure(d.venue, { size: R(23 * S), track: 0.1 }), stubInnerW);
+      assertFits(
+        "the stub venue line",
+        measure(d.venue, { size: R(23 * S), track: 0.1 }),
+        stubInnerW,
+      );
     }
     if (d.note) {
-      assertFits("the stub dress line", measure(d.note, { size: R(23 * S), track: 0.1 }), stubInnerW);
+      assertFits(
+        "the stub dress line",
+        measure(d.note, { size: R(23 * S), track: 0.1 }),
+        stubInnerW,
+      );
     }
 
     const recordY = pad + recordSize + R(40 * S);
@@ -609,15 +864,82 @@ export function layoutTicket(spec: TicketSpec, deps: LayoutDeps): LayoutResult {
     assertFits("the ticket stub", scanY, H - pad);
 
     if (d.record) {
-      ops.push(line(d.record, { x: sx, y: recordY, size: recordSize, weight: 700, track: 0.14, opacity: 0.85 }));
+      ops.push(
+        line(d.record, {
+          x: sx,
+          y: recordY,
+          size: recordSize,
+          weight: 700,
+          track: 0.14,
+          opacity: 0.85,
+        }),
+      );
     }
-    ops.push(line(dateText, { x: sx, y: dateY, size: dateSize, weight: 700, track: 0.08 }));
-    if (d.doors) ops.push(line(d.doors, { x: sx, y: doorsY, size: R(29 * S), track: 0.12, opacity: 0.85 }));
-    if (d.venue) ops.push(line(d.venue, { x: sx, y: venueY, size: R(23 * S), track: 0.1, opacity: 0.75 }));
-    if (d.note) ops.push(line(d.note, { x: sx, y: dressY, size: R(23 * S), track: 0.1, opacity: 0.75 }));
-    ops.push(line("ADMITS ONE", { x: sx, y: admitsY, size: R(44 * S), weight: 700, track: 0.08 }));
-    ops.push({ kind: "image", src: qrSrc(spec.qrUrl), x: R(sx - qrPx / 2), y: qrTop, w: qrPx, h: qrPx });
-    ops.push(line("SCAN FOR YOUR CODE", { x: sx, y: scanY, size: labelSize, track: 0.16, opacity: 0.6 }));
+    ops.push(
+      line(dateText, {
+        x: sx,
+        y: dateY,
+        size: dateSize,
+        weight: 700,
+        track: 0.08,
+      }),
+    );
+    if (d.doors)
+      ops.push(
+        line(d.doors, {
+          x: sx,
+          y: doorsY,
+          size: R(29 * S),
+          track: 0.12,
+          opacity: 0.85,
+        }),
+      );
+    if (d.venue)
+      ops.push(
+        line(d.venue, {
+          x: sx,
+          y: venueY,
+          size: R(23 * S),
+          track: 0.1,
+          opacity: 0.75,
+        }),
+      );
+    if (d.note)
+      ops.push(
+        line(d.note, {
+          x: sx,
+          y: dressY,
+          size: R(23 * S),
+          track: 0.1,
+          opacity: 0.75,
+        }),
+      );
+    ops.push(
+      line("ADMITS ONE", {
+        x: sx,
+        y: admitsY,
+        size: R(44 * S),
+        weight: 700,
+        track: 0.08,
+      }),
+    );
+    ops.push({
+      kind: "image",
+      src: qrSrc(spec.qrUrl),
+      x: R(sx - qrPx / 2),
+      y: qrTop,
+      w: qrPx,
+      h: qrPx,
+    });
+    ops.push(
+      line("SCAN FOR YOUR CODE", {
+        x: sx,
+        y: scanY,
+        size: labelSize,
+        track: 0.16,
+        opacity: 0.6,
+      }),
+    );
 
     return { w: W, h: H, ops };
   });
@@ -625,7 +947,10 @@ export function layoutTicket(spec: TicketSpec, deps: LayoutDeps): LayoutResult {
 
 /* ── the pass card (store shelf face — square, no QR, no price) ─────────── */
 
-export function layoutPassCard(spec: PassCardSpec, deps: LayoutDeps): LayoutResult {
+export function layoutPassCard(
+  spec: PassCardSpec,
+  deps: LayoutDeps,
+): LayoutResult {
   return run(() => {
     const { w: W, h: H } = PASS_CARD_SIZE;
     const S = W / 2000;
@@ -638,7 +963,14 @@ export function layoutPassCard(spec: PassCardSpec, deps: LayoutDeps): LayoutResu
     const wmW = R(520 * S);
     const wmH = R(wmW * (wm.h / wm.w));
     const wmTop = pad;
-    ops.push({ kind: "image", src: WORDMARK_SRC, x: R(W / 2 - wmW / 2), y: wmTop, w: wmW, h: wmH });
+    ops.push({
+      kind: "image",
+      src: WORDMARK_SRC,
+      x: R(W / 2 - wmW / 2),
+      y: wmTop,
+      w: wmW,
+      h: wmH,
+    });
 
     // The store shelf face is the first thing anyone sees of this record, so it
     // carries the credit. No edition number: the event is Loop Soul (the
@@ -651,7 +983,15 @@ export function layoutPassCard(spec: PassCardSpec, deps: LayoutDeps): LayoutResu
         measure(d.record, { size: creditSize, track: 0.3 }),
         W - pad * 2,
       );
-      ops.push(line(d.record, { x: W / 2, y: creditY, size: creditSize, track: 0.3, opacity: 0.85 }));
+      ops.push(
+        line(d.record, {
+          x: W / 2,
+          y: creditY,
+          size: creditSize,
+          track: 0.3,
+          opacity: 0.85,
+        }),
+      );
     }
 
     const admitsSize = R(78 * S);
@@ -661,15 +1001,26 @@ export function layoutPassCard(spec: PassCardSpec, deps: LayoutDeps): LayoutResu
     const venueY = admitsY - R(96 * S);
     const dateY = venueY - R(62 * S);
     const innerW = W - pad * 2;
-    const dateText = [
-      (d.date ?? "").replace("SATURDAY ", "SAT "),
-      d.doors,
-    ]
+    const dateText = [(d.date ?? "").replace("SATURDAY ", "SAT "), d.doors]
       .filter(Boolean)
       .join(" · ");
-    if (dateText) assertFits("the pass card date line", measure(dateText, { size: dateSize, weight: 700, track: 0.06 }), innerW);
-    if (d.venue) assertFits("the pass card venue line", measure(d.venue, { size: venueSize, track: 0.12 }), innerW);
-    assertFits("the pass card admits line", measure("ADMITS ONE", { size: admitsSize, weight: 700, track: 0.08 }), innerW);
+    if (dateText)
+      assertFits(
+        "the pass card date line",
+        measure(dateText, { size: dateSize, weight: 700, track: 0.06 }),
+        innerW,
+      );
+    if (d.venue)
+      assertFits(
+        "the pass card venue line",
+        measure(d.venue, { size: venueSize, track: 0.12 }),
+        innerW,
+      );
+    assertFits(
+      "the pass card admits line",
+      measure("ADMITS ONE", { size: admitsSize, weight: 700, track: 0.08 }),
+      innerW,
+    );
 
     const heroTop = creditY + R(70 * S);
     const heroMaxH = dateY - dateSize - R(90 * S) - heroTop;
@@ -687,9 +1038,35 @@ export function layoutPassCard(spec: PassCardSpec, deps: LayoutDeps): LayoutResu
       h: heroH,
     });
 
-    if (dateText) ops.push(line(dateText, { x: W / 2, y: dateY, size: dateSize, weight: 700, track: 0.06 }));
-    if (d.venue) ops.push(line(d.venue, { x: W / 2, y: venueY, size: venueSize, track: 0.12, opacity: 0.8 }));
-    ops.push(line("ADMITS ONE", { x: W / 2, y: admitsY, size: admitsSize, weight: 700, track: 0.08 }));
+    if (dateText)
+      ops.push(
+        line(dateText, {
+          x: W / 2,
+          y: dateY,
+          size: dateSize,
+          weight: 700,
+          track: 0.06,
+        }),
+      );
+    if (d.venue)
+      ops.push(
+        line(d.venue, {
+          x: W / 2,
+          y: venueY,
+          size: venueSize,
+          track: 0.12,
+          opacity: 0.8,
+        }),
+      );
+    ops.push(
+      line("ADMITS ONE", {
+        x: W / 2,
+        y: admitsY,
+        size: admitsSize,
+        weight: 700,
+        track: 0.08,
+      }),
+    );
 
     return { w: W, h: H, ops };
   });
@@ -725,11 +1102,24 @@ export function withBleed(list: DisplayList, specLine?: string): DisplayList {
       case "image":
         return { ...op, x: op.x + off, y: op.y + off };
       case "glyphs":
-        return { ...op, y: op.y + off, glyphs: op.glyphs.map((g) => ({ ...g, x: g.x + off })) };
+        return {
+          ...op,
+          y: op.y + off,
+          glyphs: op.glyphs.map((g) => ({ ...g, x: g.x + off })),
+        };
       case "arcGlyphs":
-        return { ...op, glyphs: op.glyphs.map((g) => ({ ...g, x: g.x + off, y: g.y + off })) };
+        return {
+          ...op,
+          glyphs: op.glyphs.map((g) => ({ ...g, x: g.x + off, y: g.y + off })),
+        };
       case "rule":
-        return { ...op, x1: op.x1 + off, y1: op.y1 + off, x2: op.x2 + off, y2: op.y2 + off };
+        return {
+          ...op,
+          x1: op.x1 + off,
+          y1: op.y1 + off,
+          x2: op.x2 + off,
+          y2: op.y2 + off,
+        };
     }
   });
 
@@ -855,7 +1245,12 @@ export function arcLine(
     const at = point(t);
     const before = point(Math.max(0, t - 0.01));
     const after = point(Math.min(1, t + 0.01));
-    glyphs.push({ ch, x: at.x, y: at.y, rot: Math.atan2(after.y - before.y, after.x - before.x) });
+    glyphs.push({
+      ch,
+      x: at.x,
+      y: at.y,
+      rot: Math.atan2(after.y - before.y, after.x - before.x),
+    });
     cursor += w;
   }
 
@@ -872,7 +1267,8 @@ function truncate(
 ): string {
   if (measure(text, opts) <= maxWidth) return text;
   let t = text;
-  while (t.length > 1 && measure(`${t}…`, opts) > maxWidth) t = t.slice(0, -1).trimEnd();
+  while (t.length > 1 && measure(`${t}…`, opts) > maxWidth)
+    t = t.slice(0, -1).trimEnd();
   return `${t}…`;
 }
 
@@ -891,26 +1287,54 @@ function artTile(
   const ops: Op[] = [
     // The keyline is a slightly larger ink rect UNDER the tile — both
     // renderers already know rects and images; no stroke primitive needed.
-    { kind: "rect", x: box.x - k, y: box.y - k, w: box.w + 2 * k, h: box.h + 2 * k, fill: INK },
+    {
+      kind: "rect",
+      x: box.x - k,
+      y: box.y - k,
+      w: box.w + 2 * k,
+      h: box.h + 2 * k,
+      fill: INK,
+    },
   ];
   if (art?.src) {
-    ops.push({ kind: "image", src: art.src, x: box.x, y: box.y, w: box.w, h: box.h });
+    ops.push({
+      kind: "image",
+      src: art.src,
+      x: box.x,
+      y: box.y,
+      w: box.w,
+      h: box.h,
+    });
     return ops;
   }
-  ops.push({ kind: "rect", x: box.x, y: box.y, w: box.w, h: box.h, fill: SAND });
+  ops.push({
+    kind: "rect",
+    x: box.x,
+    y: box.y,
+    w: box.w,
+    h: box.h,
+    fill: SAND,
+  });
   const cx = box.x + box.w / 2;
   const inner = box.w * 0.82;
   if (art) {
     const titleSize = Math.max(14, R(box.w * 0.085));
     const artistSize = Math.max(12, R(box.w * 0.065));
     ops.push(
-      line(truncate(art.title, inner, { size: titleSize, weight: 700, track: 0.04 }), {
-        x: cx,
-        y: box.y + box.h / 2 - titleSize * 0.25,
-        size: titleSize,
-        weight: 700,
-        track: 0.04,
-      }),
+      line(
+        truncate(art.title, inner, {
+          size: titleSize,
+          weight: 700,
+          track: 0.04,
+        }),
+        {
+          x: cx,
+          y: box.y + box.h / 2 - titleSize * 0.25,
+          size: titleSize,
+          weight: 700,
+          track: 0.04,
+        },
+      ),
     );
     ops.push(
       line(truncate(art.artist, inner, { size: artistSize, track: 0.08 }), {
@@ -924,13 +1348,23 @@ function artTile(
   } else {
     const size = Math.max(14, R(box.w * 0.14));
     ops.push(
-      line("TBD", { x: cx, y: box.y + box.h / 2 + size * 0.35, size, weight: 700, track: 0.2, opacity: 0.45 }),
+      line("TBD", {
+        x: cx,
+        y: box.y + box.h / 2 + size * 0.35,
+        size,
+        weight: 700,
+        track: 0.2,
+        opacity: 0.45,
+      }),
     );
   }
   return ops;
 }
 
-export function layoutTournament(spec: TournamentPosterSpec, deps: LayoutDeps): LayoutResult {
+export function layoutTournament(
+  spec: TournamentPosterSpec,
+  deps: LayoutDeps,
+): LayoutResult {
   return run(() => {
     const { w: W, h: H } = POSTER_SIZES[spec.size];
     const S = W / 2400;
@@ -949,8 +1383,22 @@ export function layoutTournament(spec: TournamentPosterSpec, deps: LayoutDeps): 
     const qrPx = R(300 * S);
     const headTop = pad;
     const headBottom = headTop + Math.max(wmH, qrPx + R(46 * S));
-    ops.push({ kind: "image", src: WORDMARK_SRC, x: pad, y: headTop, w: wmW, h: wmH });
-    ops.push({ kind: "image", src: qrSrc(spec.qrUrl), x: W - pad - qrPx, y: headTop, w: qrPx, h: qrPx });
+    ops.push({
+      kind: "image",
+      src: WORDMARK_SRC,
+      x: pad,
+      y: headTop,
+      w: wmW,
+      h: wmH,
+    });
+    ops.push({
+      kind: "image",
+      src: qrSrc(spec.qrUrl),
+      x: W - pad - qrPx,
+      y: headTop,
+      w: qrPx,
+      h: qrPx,
+    });
     ops.push(
       line(spec.cta, {
         x: W - pad - qrPx / 2,
@@ -966,7 +1414,15 @@ export function layoutTournament(spec: TournamentPosterSpec, deps: LayoutDeps): 
     const arcW = R(W * 0.44);
     const arcRise = (100 * arcW) / 320;
     const arcEndY = headBottom + R(120 * S) + R(arcRise);
-    ops.push(arcLine(arcText, { cx: W / 2, y: arcEndY, width: arcW, size: R(58 * S), weight: 700 }));
+    ops.push(
+      arcLine(arcText, {
+        cx: W / 2,
+        y: arcEndY,
+        width: arcW,
+        size: R(58 * S),
+        weight: 700,
+      }),
+    );
 
     // Bottom-up: credits, triad, sublines, headline — the band gets the rest.
     const od = need(deps, ODUBO_SRC);
@@ -987,16 +1443,50 @@ export function layoutTournament(spec: TournamentPosterSpec, deps: LayoutDeps): 
     const subSize = R(40 * S);
     let cursorY = triadY - R(96 * S);
     const textOps: Op[] = [
-      line(TRIAD, { x: W / 2, y: triadY, size: triadSize, track: 0.42, opacity: 0.6 }),
+      line(TRIAD, {
+        x: W / 2,
+        y: triadY,
+        size: triadSize,
+        track: 0.42,
+        opacity: 0.6,
+      }),
     ];
     for (let i = sublines.length - 1; i >= 0; i--) {
-      const text = truncate(sublines[i], innerW, { size: subSize, track: 0.14 });
-      textOps.push(line(text, { x: W / 2, y: cursorY, size: subSize, track: 0.14, opacity: 0.75 }));
+      const text = truncate(sublines[i], innerW, {
+        size: subSize,
+        track: 0.14,
+      });
+      textOps.push(
+        line(text, {
+          x: W / 2,
+          y: cursorY,
+          size: subSize,
+          track: 0.14,
+          opacity: 0.75,
+        }),
+      );
       cursorY -= R(64 * S);
     }
-    const headSize = fitSize(spec.headline, innerW, { weight: 700, track: 0.02 }, { max: R(170 * S) });
-    assertFits("the headline", measure(spec.headline, { size: headSize, weight: 700, track: 0.02 }), innerW);
-    textOps.push(line(spec.headline, { x: W / 2, y: cursorY, size: headSize, weight: 700, track: 0.02 }));
+    const headSize = fitSize(
+      spec.headline,
+      innerW,
+      { weight: 700, track: 0.02 },
+      { max: R(170 * S) },
+    );
+    assertFits(
+      "the headline",
+      measure(spec.headline, { size: headSize, weight: 700, track: 0.02 }),
+      innerW,
+    );
+    textOps.push(
+      line(spec.headline, {
+        x: W / 2,
+        y: cursorY,
+        size: headSize,
+        weight: 700,
+        track: 0.02,
+      }),
+    );
     const headTopY = cursorY - Math.round(headSize * CAP_HEIGHT);
     ops.push(...textOps);
 
@@ -1006,13 +1496,52 @@ export function layoutTournament(spec: TournamentPosterSpec, deps: LayoutDeps): 
     const bandH = bandBottom - bandTop;
     const bandW = innerW;
     assertFits("the tournament band", R(420 * S), bandH);
-    ops.push(...bandOps(spec.band, { x: pad, y: bandTop, w: bandW, h: bandH }, S, keyW, deps));
+    ops.push(
+      ...bandOps(
+        spec.band,
+        { x: pad, y: bandTop, w: bandW, h: bandH },
+        S,
+        keyW,
+        deps,
+      ),
+    );
 
     // Credits — same row as every other piece.
-    ops.push(line(CREDIT_PRESENTER, { x: W * 0.33, y: creditLabelY, size: R(24 * S), track: 0.3, opacity: 0.55 }));
-    ops.push(line(CREDIT_PARTNER, { x: W * 0.67, y: creditLabelY, size: R(24 * S), track: 0.3, opacity: 0.55 }));
-    ops.push({ kind: "image", src: ODUBO_SRC, x: R(W * 0.33 - odW / 2), y: R(creditTop + (creditRowH - odH) / 2), w: odW, h: odH });
-    ops.push({ kind: "image", src: SCOTTS_SRC, x: R(W * 0.67 - scW / 2), y: R(creditTop + (creditRowH - scH) / 2), w: scW, h: scH, opacity: 0.85 });
+    ops.push(
+      line(CREDIT_PRESENTER, {
+        x: W * 0.33,
+        y: creditLabelY,
+        size: R(24 * S),
+        track: 0.3,
+        opacity: 0.55,
+      }),
+    );
+    ops.push(
+      line(CREDIT_PARTNER, {
+        x: W * 0.67,
+        y: creditLabelY,
+        size: R(24 * S),
+        track: 0.3,
+        opacity: 0.55,
+      }),
+    );
+    ops.push({
+      kind: "image",
+      src: ODUBO_SRC,
+      x: R(W * 0.33 - odW / 2),
+      y: R(creditTop + (creditRowH - odH) / 2),
+      w: odW,
+      h: odH,
+    });
+    ops.push({
+      kind: "image",
+      src: SCOTTS_SRC,
+      x: R(W * 0.67 - scW / 2),
+      y: R(creditTop + (creditRowH - scH) / 2),
+      w: scW,
+      h: scH,
+      opacity: 0.85,
+    });
 
     return { w: W, h: H, ops };
   });
@@ -1038,7 +1567,14 @@ function bandOps(
         const scale = Math.min(box.h / fig.h, box.w / fig.w);
         const fw = R(fig.w * scale);
         const fh = R(fig.h * scale);
-        ops.push({ kind: "image", src: band.emptyFigureSrc, x: R(cx - fw / 2), y: R(box.y + (box.h - fh) / 2), w: fw, h: fh });
+        ops.push({
+          kind: "image",
+          src: band.emptyFigureSrc,
+          x: R(cx - fw / 2),
+          y: R(box.y + (box.h - fh) / 2),
+          w: fw,
+          h: fh,
+        });
         return ops;
       }
       const cols = Math.min(Math.ceil(Math.sqrt(art.length)), 5);
@@ -1046,7 +1582,10 @@ function bandOps(
       const gap = R(36 * S);
       const capH = R(52 * S); // caption line + its air
       const tile = Math.floor(
-        Math.min((box.w - gap * (cols - 1)) / cols, (box.h - gap * (rows - 1)) / rows - capH),
+        Math.min(
+          (box.w - gap * (cols - 1)) / cols,
+          (box.h - gap * (rows - 1)) / rows - capH,
+        ),
       );
       const gridH = rows * (tile + capH) + (rows - 1) * gap;
       const y0 = box.y + (box.h - gridH) / 2;
@@ -1079,7 +1618,10 @@ function bandOps(
       const gap = R(44 * S);
       const capH = R(56 * S);
       const tile = Math.floor(
-        Math.min((box.w - gap * (cols - 1)) / cols, (box.h - gap * (rows - 1)) / rows - capH),
+        Math.min(
+          (box.w - gap * (cols - 1)) / cols,
+          (box.h - gap * (rows - 1)) / rows - capH,
+        ),
       );
       const gridW = cols * tile + (cols - 1) * gap;
       const gridH = rows * (tile + capH) + (rows - 1) * gap;
@@ -1093,14 +1635,21 @@ function bandOps(
         ops.push(...artTile(a, { x, y, w: tile, h: tile }, keyW));
         const capSize = R(22 * S);
         ops.push(
-          line(truncate(`${i + 1} · ${a.title}`, tile, { size: capSize, weight: 700, track: 0.06 }), {
-            x: x + tile / 2,
-            y: y + tile + R(38 * S),
-            size: capSize,
-            weight: 700,
-            track: 0.06,
-            opacity: 0.8,
-          }),
+          line(
+            truncate(`${i + 1} · ${a.title}`, tile, {
+              size: capSize,
+              weight: 700,
+              track: 0.06,
+            }),
+            {
+              x: x + tile / 2,
+              y: y + tile + R(38 * S),
+              size: capSize,
+              weight: 700,
+              track: 0.06,
+              opacity: 0.8,
+            },
+          ),
         );
       });
       return ops;
@@ -1113,7 +1662,10 @@ function bandOps(
       const rowH = Math.floor((box.h - gap * (rows - 1)) / rows);
       const midW = R(300 * S);
       const capH = R(50 * S);
-      const tile = Math.min(rowH - capH, Math.floor((box.w - midW - 2 * R(40 * S)) / 2));
+      const tile = Math.min(
+        rowH - capH,
+        Math.floor((box.w - midW - 2 * R(40 * S)) / 2),
+      );
       pairs.forEach((p, i) => {
         const rowTop = box.y + i * (rowH + gap);
         const tileY = R(rowTop + (rowH - capH - tile) / 2);
@@ -1125,39 +1677,69 @@ function bandOps(
         if (p.a) {
           ops.push(
             line(truncate(p.a.title, tile, { size: capSize, track: 0.08 }), {
-              x: ax + tile / 2, y: tileY + tile + R(34 * S), size: capSize, track: 0.08, opacity: 0.7,
+              x: ax + tile / 2,
+              y: tileY + tile + R(34 * S),
+              size: capSize,
+              track: 0.08,
+              opacity: 0.7,
             }),
           );
         }
         if (p.b) {
           ops.push(
             line(truncate(p.b.title, tile, { size: capSize, track: 0.08 }), {
-              x: bx + tile / 2, y: tileY + tile + R(34 * S), size: capSize, track: 0.08, opacity: 0.7,
+              x: bx + tile / 2,
+              y: tileY + tile + R(34 * S),
+              size: capSize,
+              track: 0.08,
+              opacity: 0.7,
             }),
           );
         }
         // VS + the vote bar. 0–0 is a neutral hairline — never "0% / 0%".
         const midCy = tileY + tile / 2;
         const vsSize = R(44 * S);
-        ops.push(line("VS", { x: cx, y: midCy - R(24 * S), size: vsSize, weight: 700, track: 0.12, opacity: 0.85 }));
+        ops.push(
+          line("VS", {
+            x: cx,
+            y: midCy - R(24 * S),
+            size: vsSize,
+            weight: 700,
+            track: 0.12,
+            opacity: 0.85,
+          }),
+        );
         const barW = R(220 * S);
         const barH = Math.max(3, R(10 * S));
         const barY = R(midCy + R(28 * S));
         if (p.pctA == null) {
           ops.push({
             kind: "rule",
-            x1: cx - barW / 2, y1: barY + barH / 2, x2: cx + barW / 2, y2: barY + barH / 2,
-            width: Math.max(2, R(3 * S)), opacity: 0.3,
+            x1: cx - barW / 2,
+            y1: barY + barH / 2,
+            x2: cx + barW / 2,
+            y2: barY + barH / 2,
+            width: Math.max(2, R(3 * S)),
+            opacity: 0.3,
           });
         } else {
           const aW = R(barW * Math.min(1, Math.max(0, p.pctA)));
-          ops.push({ kind: "rect", x: R(cx - barW / 2), y: barY, w: barW, h: barH, fill: INK });
+          ops.push({
+            kind: "rect",
+            x: R(cx - barW / 2),
+            y: barY,
+            w: barW,
+            h: barH,
+            fill: INK,
+          });
           // The unfilled side reads as sand through a second, inset rect.
           if (barW - aW > 0) {
             ops.push({
               kind: "rect",
-              x: R(cx - barW / 2) + aW, y: barY + Math.max(1, R(2 * S)),
-              w: barW - aW, h: barH - 2 * Math.max(1, R(2 * S)),
+              x: R(cx - barW / 2) + aW,
+              y: barY + Math.max(1, R(2 * S)),
+              w: barW - aW,
+              h: barH - 2 * Math.max(1, R(2 * S)),
               fill: SAND,
             });
           }
@@ -1169,7 +1751,16 @@ function bandOps(
     case "hero": {
       const side = Math.floor(Math.min(box.w * 0.72, box.h));
       ops.push(
-        ...artTile(band.art, { x: R(cx - side / 2), y: R(box.y + (box.h - side) / 2), w: side, h: side }, keyW),
+        ...artTile(
+          band.art,
+          {
+            x: R(cx - side / 2),
+            y: R(box.y + (box.h - side) / 2),
+            w: side,
+            h: side,
+          },
+          keyW,
+        ),
       );
       return ops;
     }

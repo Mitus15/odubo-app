@@ -25,7 +25,7 @@ import {
 } from "../../src/lib/loop/publicUrl";
 import { getSetting } from "../../src/lib/loop/loopSetting";
 import { priceLabel } from "../../src/lib/loop/priceLabel";
-import { EVENT_CREDITS } from "../../src/lib/loop/content";
+import { EVENT_CREDITS, RECORDING_NOTICE } from "../../src/lib/loop/content";
 import type { AnthemState } from "../../src/lib/loop/anthem-server";
 import { prepareSharp, renderSharp, assertFontResolves } from "./poster-render-sharp";
 
@@ -55,6 +55,7 @@ const VOLUMES: Record<string, EventDetails & { venueShort: string }> = {
     venue: "SCOTT'S INN & SUITES · KAMLOOPS",
     venueShort: "SCOTT'S INN · KAMLOOPS",
     note: "DRESS CODE · 80s",
+    notice: RECORDING_NOTICE.short.toUpperCase(),
     record: EVENT_CREDITS.record.toUpperCase(),
     feature: EVENT_CREDITS.feature.toUpperCase(),
   },
