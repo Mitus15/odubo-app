@@ -111,7 +111,7 @@ function ProductGridItem({ product, index, onSelect }: ProductGridItemProps) {
       animate={{ opacity: 1, scale: 1 }}
       transition={{ delay: Math.min(index * 0.02, 0.3), duration: 0.2 }}
       onClick={() => onSelect(index)}
-      className="relative w-full overflow-hidden rounded-lg bg-[#1a1817] group text-left"
+      className="relative w-full rounded-lg group text-left"
     >
       {/* Image container */}
       <div className="aspect-square relative">
@@ -123,9 +123,9 @@ function ProductGridItem({ product, index, onSelect }: ProductGridItemProps) {
             <img
               src={product.image.url}
               alt={product.image.altText || product.title}
-              className={`w-full h-full object-cover transition-all duration-300 ${
+              className={`piece w-full h-full object-contain ${
                 imageLoaded ? 'opacity-100' : 'opacity-0'
-              } group-hover:scale-105 group-active:scale-100`}
+              }`}
               loading="lazy"
               onLoad={() => setImageLoaded(true)}
             />
@@ -154,7 +154,7 @@ function ProductGridItem({ product, index, onSelect }: ProductGridItemProps) {
 
         {/* Sold out overlay */}
         {!product.available && (
-          <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+          <div className="absolute inset-0 rounded-lg bg-black/60 flex items-center justify-center">
             <span className="text-white/80 text-sm font-medium tracking-wide">SOLD OUT</span>
           </div>
         )}

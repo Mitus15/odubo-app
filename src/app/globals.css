@@ -2320,3 +2320,82 @@ h6,
 .loop-ring[data-scrubbing] .loop-ring-progress {
   transition: none;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   THE PIECES — cut-out garments
+
+   Every product photo is a transparent PNG (scripts/shopify/cutout-photos.ts),
+   which is what makes this possible: `drop-shadow` traces the ALPHA, so the
+   glow follows the actual shoulder line and hem instead of ringing a square.
+   A tinted tile behind the garment would put back exactly the card the design
+   language rejects.
+
+   Two layers, because one reads as a sticker: a tight halo that rims the
+   garment like a light behind it, and a wider ambient that falls beneath it.
+   Together the piece sits IN the page rather than on it — lit and lifted.
+   Filters compose in order, so the halo is applied first and hugs the
+   garment; the ambient then blooms around the pair.
+
+   The tokens are re-declared per surface because the grounds differ: a warm
+   near-white radiance carries on the sand field, while the studio's near-black
+   wants the sand itself as a rim light.
+   ═══════════════════════════════════════════════════════════════════════ */
+:root {
+  --piece-halo: rgba(217, 170, 122, 0.4);
+  --piece-halo-lit: rgba(232, 193, 149, 0.62);
+  --piece-halo-radius: 13px;
+  --piece-ambient: rgba(0, 0, 0, 0.5);
+}
+
+/* On the sand field a bloom alone just hazes: the ground is already light, so
+   depth does the lifting and the halo only rims. The studio's near-black is the
+   opposite — there the sand itself reads as light behind the garment. */
+.loop-theme {
+  --piece-halo: rgba(255, 249, 238, 0.5);
+  --piece-halo-lit: rgba(255, 252, 246, 0.85);
+  --piece-halo-radius: 9px;
+  --piece-ambient: rgba(42, 15, 10, 0.3);
+}
+
+.piece {
+  filter: drop-shadow(0 0 var(--piece-halo-radius) var(--piece-halo))
+    drop-shadow(0 8px 14px var(--piece-ambient));
+  transition:
+    filter 420ms cubic-bezier(0.2, 0.7, 0.3, 1),
+    transform 420ms cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+/* Coming forward: the halo brightens and widens while the piece rises, so the
+   movement reads as the garment stepping out of the surface. */
+.piece:hover,
+.group:hover .piece,
+.group:focus-visible .piece {
+  filter: drop-shadow(0 0 calc(var(--piece-halo-radius) * 1.7) var(--piece-halo-lit))
+    drop-shadow(0 16px 24px var(--piece-ambient));
+  transform: translateY(-5px) scale(1.02);
+}
+
+/* A thumbnail is small enough that the full radius floods it — the halo has to
+   stay proportional to the piece or it stops reading as light around a garment
+   and starts reading as a lit box. */
+.piece-sm {
+  --piece-halo-radius: 5px;
+}
+
+/* The hero on a product page is already large and still; it gets the light
+   without the lift. */
+.piece-still:hover,
+.group:hover .piece-still {
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .piece {
+    transition: none;
+  }
+  .piece:hover,
+  .group:hover .piece,
+  .group:focus-visible .piece {
+    transform: none;
+  }
+}

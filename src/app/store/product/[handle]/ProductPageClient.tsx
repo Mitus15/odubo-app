@@ -188,7 +188,7 @@ export default function ProductPageClient({ product }: ProductPageClientProps) {
                 {(() => {
                   const src = activeImage || selectedVariant?.image?.src || product?.images?.[0]?.src;
                   if (!src) return <div className="text-[#502d26] text-xs uppercase tracking-widest">No Image</div>;
-                  return <img src={src} alt={product?.title || 'Product'} className="w-full h-full object-contain transition-all duration-500 drop-shadow-[0_10px_18px_rgba(0,0,0,0.35)]" />;
+                  return <img src={src} alt={product?.title || 'Product'} className="piece piece-still w-full h-full object-contain" />;
                 })()}
                 </div>
               </div>

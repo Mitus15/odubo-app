@@ -146,3 +146,82 @@ originals are gone with the delete — that folder is the only copy.
 Code: `PiecesRail` and the `LoopStore` grid no longer paint a tint behind the
 image and use `object-contain`, so the garment sits on the field like everything
 else. `AddToBagSheet`/`LoopBag` thumbnails were left as they were.
+
+---
+
+## Same evening, part three — the whole catalogue comes off the white, and the pieces get their own light
+
+Owner: cut out the B.A.A.D pieces too, and instead of a tinted square behind
+each garment, "a branded glow around the perimeter… as if emerging from the
+screen."
+
+### The other eleven garments
+
+All 46 remaining B.A.A.D images cut out with the same tool. Three hardenings
+were needed before it could be trusted on a catalogue rather than four files:
+
+- **It reports coverage now.** `liftsubject.swift` prints the fraction of the
+  frame the subject occupies, and the runner refuses anything outside 3–92% —
+  a cut that ate the garment or removed nothing never reaches Shopify.
+- **A failure no longer kills the run, or half-cuts a product.** An image that
+  cannot be cut is reported and skipped, and a product is left entirely alone
+  unless *every* one of its photos cut cleanly. No garment ends up half
+  transparent and half white.
+- **Already-transparent photos are left alone** (PNG colour type 6/4), so
+  re-running does not churn the ids of pieces already done. The four Loop
+  pieces were correctly skipped.
+
+**The white-on-white case.** The Wordmark Spray Tee in White is a pure white
+garment on a pure white ground, and Vision does not consider it a subject at
+all — the one image the guard refused. Measuring it showed the body is
+240,240,250 against a flat 255, so there *is* signal, just not where a subject
+detector looks. `liftsubject` now retries with the near-white range
+(0.90–1.00) stretched across the full scale; the stretch is used **only to find
+the mask**, which is then applied to the untouched original. It cut at 0.620
+coverage, in line with its siblings. `--vendor="B.A.A.D"` also added, so the
+run is one command.
+
+Every one of the 46 was reviewed on sand and on near-black before applying —
+the black pieces are where a bad matte shows a white fringe, and none did.
+Verified after: **56 of 56** garment images transparent, **0** missing alt
+text, **141 of 141** variants still linked to an image.
+
+### The glow
+
+`.piece` in `globals.css`. The cut-outs are what make it possible: `drop-shadow`
+traces the **alpha**, so the light follows the shoulder line and the hem rather
+than ringing a box. Two layers, because one reads as a sticker — a tight halo
+rimming the garment, and a wider ambient falling beneath it. Hover widens and
+brightens the halo while the piece rises, so coming forward reads as stepping
+out of the surface. `.piece-sm` tightens the radius for thumbnails, and
+`.piece-still` takes the lift off large heroes. Reduced motion drops the
+movement and keeps the light.
+
+The tokens are per-surface because the grounds are opposites: the sand field is
+already light, so depth does the lifting and the halo only rims; the studio's
+near-black takes the sand itself as a rim light, which is what finally makes
+the black B.A.A.D pieces visible there at all — they used to disappear into the
+tinted tile behind them.
+
+Applied on the Loop rail and shelf, the add-to-bag sheet, the bag, the studio
+grid (`ProductBrowse`, the one actually mounted at `/store`), its detail view,
+the QuickShop modal and the product page hero. Tinted tiles and card borders
+removed at each — including the shelf's `rounded-xl border bg-ink/[0.03]`,
+which the cut-outs made redundant and the design language rejects anyway.
+`object-cover` became `object-contain` everywhere a product renders, since
+cropping a cut-out clips the garment.
+
+**Two traps worth recording.** A tile with `overflow-hidden` clips the halo
+into a hard rectangle — the tinted square back again, just inverted; every
+product tile had to stop clipping. And a halo radius fixed in pixels floods a
+small tile: at 12px on an 82px thumbnail the bloom fills the square. Hence
+`.piece-sm`.
+
+Checked at 390 and at desktop: base glow, hover (halo 13px → 22px, piece lifts
+5px), the sheet, the bag, `/loop`, `/loop/store`, `/store` and
+`/store/product/script-tee`.
+
+**Cache notes, neither a bug:** `getShopifyProduct` holds `revalidate: 60`, so
+product pages served the pre-swap image for a minute. And a bag saved before
+the swap keeps the old image URL in `loop_soul_cart` until that line is
+removed — the store has never had an order, so no customer is holding one.

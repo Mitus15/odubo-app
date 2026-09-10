@@ -65,13 +65,13 @@ export function PiecesRail({ pieces }: { pieces: ProductSummary[] }) {
               aria-label={`${p.title} · ${formatMoney(p.price, p.currency)}`}
               className="group block w-full text-left disabled:cursor-not-allowed"
             >
-              <div className="relative aspect-square overflow-hidden">
+              <div className="relative aspect-square">
                 {p.image?.url ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={p.image.url}
                     alt={p.image.altText || p.title}
-                    className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-[1.03]"
+                    className="piece piece-sm h-full w-full object-contain"
                     loading="lazy"
                   />
                 ) : null}
