@@ -5,6 +5,11 @@ import Logo from "@/components/loop/brand/Logo";
  * Persistent top nav. Legacy is ALWAYS reachable, regardless of event phase —
  * it is the permanent content hub. The current-event entry adapts its label
  * to the phase.
+ *
+ * Store is here rather than only on the front door because the front door's
+ * only route to it is the Pieces rail, which renders nothing when the shelf is
+ * empty or Shopify is unreachable — a shop that disappears with its stock is
+ * a shop nobody can find their way back to.
  */
 export function HubNav({ phaseLabel }: { phaseLabel: string }) {
   return (
@@ -15,6 +20,9 @@ export function HubNav({ phaseLabel }: { phaseLabel: string }) {
       <nav className="flex items-center gap-4 text-sm font-medium">
         <Link href="/loop" className="opacity-80 hover:opacity-100 transition-opacity">
           {phaseLabel}
+        </Link>
+        <Link href="/loop/store" className="opacity-80 hover:opacity-100 transition-opacity">
+          Store
         </Link>
         <Link
           href="/loop/legacy"

@@ -2339,11 +2339,15 @@ h6,
    The tokens are re-declared per surface because the grounds differ: a warm
    near-white radiance carries on the sand field, while the studio's near-black
    wants the sand itself as a rim light.
+
+   At rest the light is a separation, not an effect — enough that a black
+   garment does not sink into a black page, and no more. The brightness is
+   spent on hover, where it is a response to the viewer rather than a constant.
    ═══════════════════════════════════════════════════════════════════════ */
 :root {
-  --piece-halo: rgba(217, 170, 122, 0.4);
-  --piece-halo-lit: rgba(232, 193, 149, 0.62);
-  --piece-halo-radius: 13px;
+  --piece-halo: rgba(217, 170, 122, 0.17);
+  --piece-halo-lit: rgba(232, 193, 149, 0.6);
+  --piece-halo-radius: 11px;
   --piece-ambient: rgba(0, 0, 0, 0.5);
 }
 

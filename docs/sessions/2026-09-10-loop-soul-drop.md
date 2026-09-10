@@ -225,3 +225,60 @@ Checked at 390 and at desktop: base glow, hover (halo 13px → 22px, piece lifts
 product pages served the pre-swap image for a minute. And a bag saved before
 the swap keeps the old image URL in `loop_soul_cart` until that line is
 removed — the store has never had an order, so no customer is holding one.
+
+---
+
+## Same evening, part four — the glow calmed, the hub's dead ends closed, the masthead rebuilt
+
+### The resting glow was too strong on the dark store
+
+Owner's call, and right: at 0.4 alpha the halo read as an effect applied to
+every tile rather than as light. Resting halo is now **0.17 at 11px**; the
+brightness moved to hover (0.6, ×1.7 radius), where it is a response to the
+viewer instead of a constant. The black B.A.A.D pieces still separate from the
+near-black page, which is the only job the resting light has.
+
+### Navigation — two real faults
+
+- **`/loop/pose` was a dead end.** No nav, no mark, not a single `<a>` on the
+  page. It is reached from the Cover Contest, which is reached from a flyer's
+  QR, so a phone can land there with **no back stack at all** and no way home.
+  It now carries `HubNav` like every other public Loop page.
+- **The store hung off one conditional link.** `/loop/store` was linked from
+  exactly one place — the Pieces rail — which renders nothing when the shelf is
+  empty or the Shopify call fails (`.catch(() => null)`). A shop that vanishes
+  with its stock is a shop nobody can find their way back to. `HubNav` now
+  carries **Store** beside Legacy, so it is reachable from every inner page
+  regardless of what Shopify returns.
+
+Audited the rest: `/loop/journal`, `/loop/legacy` and `/loop/code` all have a
+way back, and every public route is reachable from the front door.
+
+### The masthead
+
+Owner: "the album by mani is awkward with the loop soul."
+
+Diagnosis, by comparing the page against the printed flyer: the page had the
+**parts** of the poster's masthead but not its **structure**. The wordmark was
+pinned hard right at 116px while the credit was centred beneath it — two
+objects on two axes, so the eye went right then jumped back to the middle. And
+the mark was the *smaller* element, which inverted the hierarchy: the byline
+looked like the headline, and the record's own name looked like a logo parked
+in a corner. On the flyer the mark anchors top-left and the credit gets its own
+centred band with real air between them, which is why it works there.
+
+Three options were rendered at phone width with the real assets and the owner
+picked **one centred lockup**: the mark, larger and centred, with the credit
+hung directly beneath it. Loop Soul *is* the album's name, so the mark is the
+title and the credit is its byline — a sleeve, not a letterhead. The credit
+keeps the printed treatment exactly (Jost 500, one wide-tracked run, the
+feature at about two thirds beneath), so page and flyer still state the record
+identically, and the name is **stated, not shouted** — the poster rule holds.
+
+The mark is sized as a share of the column (`47%`, capped 196px, floored 136px)
+so it holds its proportion from a 320px phone to the 448px cap, and it was
+trimmed until the dancers below still read as a crowd: at 54% the figure fell
+to 143px, at 47% it holds 164px on a 390×844 and the page is still one screen.
+
+Come Dance stays off the page (owner): the slogan is an invitation, never the
+headline, and the album credit is the centrepiece.
