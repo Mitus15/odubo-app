@@ -343,6 +343,7 @@ export function GatheringPoster({
         {single && singleOpen && (
           <TheSingle
             single={single}
+            dateLabel={dateLabel}
             coverUrl={coverUrl}
             coverCaption={coverCaption}
             onClose={closeSingle}

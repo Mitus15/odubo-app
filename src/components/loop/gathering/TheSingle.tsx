@@ -55,6 +55,7 @@ export function TheSingle({
   single,
   coverUrl,
   coverCaption,
+  dateLabel,
   onClose,
   onGetPass,
   onCoverContest,
@@ -63,6 +64,9 @@ export function TheSingle({
   /** Resolved per visitor: theirs, the room's, or the owner's. */
   coverUrl: string | null;
   coverCaption: string;
+  /** Server-formatted in the venue's timezone. Never typed here: this text was
+   *  hardcoded through two date changes and had to be hunted down both times. */
+  dateLabel: string;
   onClose: () => void;
   onGetPass: () => void;
   onCoverContest: () => void;
@@ -316,14 +320,14 @@ export function TheSingle({
               Hear the rest of it live
             </span>
             <span className="block text-[13px] opacity-70">
-              All 14, front to back · Sept 26
+              All 14, front to back · {dateLabel}
             </span>
           </span>
           <span className="opacity-60">→</span>
         </button>
 
         <p className="loop-muted mt-10 text-sm leading-relaxed">
-          This album isn&apos;t streaming anywhere. September 26th is its first
+          This album isn&apos;t streaming anywhere. {dateLabel} is its first
           exhibition.
         </p>
       </section>

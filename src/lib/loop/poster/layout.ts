@@ -165,10 +165,12 @@ export type EventDetails = {
    *  its name from a track, but that is a habit, not a rule, so the engine is
    *  never taught about the tracklist. */
   record?: string;
-  /** The smallest line on the piece: that the night is filmed and recorded.
-   *  Printed because notice has to reach the person who never scans the code —
-   *  they are the one who finds out too late otherwise. Set below the price
-   *  row and deliberately quiet: it must be legible, not loud. */
+  /** A quiet line below the price row. Carried the filming notice until
+   *  2026-09-10, when it came off the artwork: a poster is not where consent
+   *  is obtained, and the line was doing no legal work there while costing the
+   *  composition. Notice now lives at the door, at registration and on the
+   *  event page — see docs/decisions/loop-soul-filming-consent.md. The field
+   *  stays because a future piece may want a quiet line of its own. */
   notice?: string;
   /** The feature credit, set under the record line at roughly two thirds its
    *  size — "WITH AMEN THE DJ". A separate field rather than more free text in

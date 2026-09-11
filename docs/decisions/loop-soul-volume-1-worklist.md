@@ -1,5 +1,11 @@
 # Volume 1 — the worklist
 
+> **⚠️ DATE MOVED — 2026-09-10.** The event is now **Saturday 10 October 2026**,
+> not Sept 26. Oct 10 is the LAST Saturday before Rocky Mountaineer stops
+> staying at Scott's on Tue 13 Oct, so there is no spare weekend after it. Any
+> day-by-day schedule below still counts from the old date and needs rebasing:
+> add 14 days.
+
 **The single place to check "where are we and what's next."** Updated
 **2026-08-24**. Companion to `loop-soul-volume-1-plan.md` (the strategy),
 [loop-soul-is-the-album.md](loop-soul-is-the-album.md) (what this all is),

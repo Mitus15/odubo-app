@@ -1,5 +1,11 @@
 # 18 posts — Sept 9 → Sept 26
 
+> **⚠️ DATE MOVED — 2026-09-10.** The event is now **Saturday 10 October 2026**,
+> not Sept 26. Oct 10 is the LAST Saturday before Rocky Mountaineer stops
+> staying at Scott's on Tue 13 Oct, so there is no spare weekend after it. Any
+> day-by-day schedule below still counts from the old date and needs rebasing:
+> add 14 days.
+
 **Written 2026-09-08.** Companion to
 [loop-soul-final-stretch.md](loop-soul-final-stretch.md) and
 [loop-soul-the-ask.md](loop-soul-the-ask.md).

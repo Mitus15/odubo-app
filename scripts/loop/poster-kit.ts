@@ -26,7 +26,21 @@ import {
 } from "../../src/lib/loop/publicUrl";
 import { getSetting } from "../../src/lib/loop/loopSetting";
 import { priceLabel } from "../../src/lib/loop/priceLabel";
-import { EVENT_CREDITS, RECORDING_NOTICE } from "../../src/lib/loop/content";
+import { EVENT_CREDITS } from "../../src/lib/loop/content";
+import { MOCK_CURRENT_EVENT } from "../../src/lib/loop/hub";
+
+/** "SATURDAY OCTOBER 10" — the venue's timezone, not the printer's. */
+function printedDate(iso: string): string {
+  return new Date(iso)
+    .toLocaleDateString("en-CA", {
+      timeZone: "America/Vancouver",
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+    })
+    .toUpperCase()
+    .replace(",", "");
+}
 import type { AnthemState } from "../../src/lib/loop/anthem-server";
 import { prepareSharp, renderSharp, assertFontResolves } from "./poster-render-sharp";
 
@@ -49,14 +63,16 @@ import { prepareSharp, renderSharp, assertFontResolves } from "./poster-render-s
 
 const VOLUMES: Record<string, EventDetails & { venueShort: string }> = {
   1: {
-    date: "SATURDAY SEPTEMBER 26",
+    // Derived, never typed. The date has moved twice; each time it was retyped
+    // here as well as in hub.ts, and a poster that disagrees with the front
+    // door about which night it is cannot be corrected once it is printed.
+    date: printedDate(MOCK_CURRENT_EVENT.date),
     // The one thing a reader has to act on is BE HERE BEFORE 8 — an end time
     // only tells them when to leave.
     doors: "DOORS 6:30 · ALBUM AT 8",
     venue: "SCOTT'S INN & SUITES · KAMLOOPS",
     venueShort: "SCOTT'S INN · KAMLOOPS",
     note: "DRESS CODE · 80s",
-    notice: RECORDING_NOTICE.short.toUpperCase(),
     record: EVENT_CREDITS.record.toUpperCase(),
     feature: EVENT_CREDITS.feature.toUpperCase(),
   },

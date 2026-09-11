@@ -51,11 +51,13 @@ export const MOCK_CURRENT_EVENT: LoopEvent = {
   // as UTC midnight and shows as Sep 25 in Pacific time, skewing every derived
   // anthem cutoff half a day early (see anthem-rounds.ts `derive`).
   //
-  // Moved from Sept 12 on 2026-08-24: at 19 days out nothing was sold and
-  // nothing was printed. Sept 26 buys back three weeks and still clears the
-  // Oct 3 ceiling (Rocky Mountaineer leaves Scott's Oct 13) by one weekend.
-  // The 9pm doors it carried until 2026-08-25 were simply wrong.
-  date: "2026-09-26T18:30:00-07:00",
+  // Moved from Sept 12 on 2026-08-24, then to Oct 10 on 2026-09-10 (owner).
+  // Oct 10 is the LAST Saturday before Rocky Mountaineer stops staying at
+  // Scott's on Tue 13 Oct — two days of margin, where Sept 26 had a fortnight.
+  // There is no spare weekend after this one, so the date cannot move again
+  // without changing venue. The 9pm doors it carried until 2026-08-25 were
+  // simply wrong.
+  date: "2026-10-10T18:30:00-07:00",
   capacity: 75,
   phase: "pre",
 };

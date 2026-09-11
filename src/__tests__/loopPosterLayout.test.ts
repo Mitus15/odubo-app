@@ -49,7 +49,7 @@ const deps: LayoutDeps = {
 const details: EventDetails = {
   volume: "VOLUME ONE",
   theme: "80s",
-  date: "SATURDAY SEPTEMBER 26",
+  date: "SATURDAY OCTOBER 10",
   doors: "DOORS 6:30 · ALBUM AT 8",
   venue: "SCOTT'S INN & SUITES · KAMLOOPS",
   note: "DRESS CODE · 80s",

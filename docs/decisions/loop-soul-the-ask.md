@@ -1,5 +1,11 @@
 # The ask — inviting people to Vol 1
 
+> **⚠️ DATE MOVED — 2026-09-10.** The event is now **Saturday 10 October 2026**,
+> not Sept 26. Oct 10 is the LAST Saturday before Rocky Mountaineer stops
+> staying at Scott's on Tue 13 Oct, so there is no spare weekend after it. Any
+> day-by-day schedule below still counts from the old date and needs rebasing:
+> add 14 days.
+
 **Written 2026-09-08.** Companion to
 [loop-soul-final-stretch.md](loop-soul-final-stretch.md). This is the highest-
 value marketing work available in the remaining days, and it is the only kind

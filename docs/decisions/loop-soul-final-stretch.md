@@ -1,5 +1,11 @@
 # Vol 1 — the final stretch (Sept 8 → Sept 26)
 
+> **⚠️ DATE MOVED — 2026-09-10.** The event is now **Saturday 10 October 2026**,
+> not Sept 26. Oct 10 is the LAST Saturday before Rocky Mountaineer stops
+> staying at Scott's on Tue 13 Oct, so there is no spare weekend after it. Any
+> day-by-day schedule below still counts from the old date and needs rebasing:
+> add 14 days.
+
 **Written 2026-09-08. 18 days out.** This doc exists for one reason: to make
 the remaining work small enough to carry while working full time.
 

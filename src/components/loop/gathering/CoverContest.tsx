@@ -42,7 +42,7 @@ export function CoverContest() {
     <section className="w-full space-y-5">
       <p className="text-sm opacity-80">
         The cover of this album is fluid. The one you have seen is mine — you
-        can hold your own. On the 26th the room decides which one is official.
+        can hold your own. On the night the room decides which one is official.
       </p>
 
       <ol className="relative ml-2 space-y-4 border-l border-ink/20">
