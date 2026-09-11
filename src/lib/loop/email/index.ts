@@ -5,6 +5,8 @@
  * Resend. Flipping the env var is the only change at handover.
  */
 
+import { getPublicBaseUrl } from "@/lib/loop/publicUrl";
+
 export type EmailMessage = { to: string; subject: string; text: string };
 
 export interface EmailProvider {
@@ -99,24 +101,76 @@ export async function configuredSender(): Promise<string | null> {
   }
 }
 
-/** Deliver several codes (a multi-pass order) in ONE email — one per guest. */
+/**
+ * What a buyer gets for five dollars.
+ *
+ * One email carrying everything needed to turn up and get in: the code, when
+ * and where, what the night actually is, and the link. Written as one body for
+ * one or many codes because a buyer with two passes and a buyer with one should
+ * not receive two differently-worded emails, and the multi-pass version used to
+ * drift from the single.
+ *
+ * The link is built from `public_base_url`, never typed: the printed URL has
+ * moved once already and an email is the one artefact nobody can correct after
+ * it is sent.
+ */
+async function codesBody(codes: string[], eventTitle: string): Promise<string> {
+  const base = (await getPublicBaseUrl()) ?? "";
+  const many = codes.length > 1;
+  const lookup = base ? `${base}/loop/code` : "the Find your event code page";
+
+  return [
+    `You're in for ${eventTitle}.`,
+    ``,
+    many
+      ? `Your ${codes.length} event codes, one per guest:`
+      : `Your event code:`,
+    ``,
+    ...codes.map((c) => `    ${c}`),
+    ``,
+    many
+      ? `Each code admits one guest. Share one with everybody coming.`
+      : `It admits one guest.`,
+    `Show it at the door, then enter it in the app to unlock the room.`,
+    ``,
+    `THE NIGHT`,
+    ``,
+    `Saturday 10 October, Scott's Inn & Suites, Kamloops. Outdoors, in the courtyard.`,
+    ``,
+    `From 6:30 it's a lounge. Fire pits, games, drinks, music. Come when you come.`,
+    `At 8, the album. All fourteen tracks performed live, front to back, with Amen the DJ.`,
+    `At 9, the floor opens. 80s until the lights come on.`,
+    `Out by 10:30. 19+. Dress code is 80s.`,
+    ``,
+    `Your ticket is also a pre-order. If you want the album, it's yours when it lands.`,
+    ``,
+    `LOST THE CODE`,
+    ``,
+    `Look it up any time with this email address at ${lookup}. You don't need this message.`,
+    ``,
+    `ONE MORE THING`,
+    ``,
+    `The night is filmed and recorded, for the record and for promotion, so you may appear in it.`,
+    `If you would rather not, tell anyone on the door and we'll keep you out of shot.`,
+    `The entertainment room is a no-camera area all night.`,
+    ``,
+    base || "odubostudio.com/loop",
+  ].join("\n");
+}
+
+/** Deliver several codes (a multi-pass order) in ONE email, one per guest. */
 export async function sendEventCodesEmail(
   to: string,
   codes: string[],
   eventTitle: string,
 ): Promise<{ ok: boolean }> {
-  if (codes.length === 1) return sendEventCodeEmail(to, codes[0], eventTitle);
   return getEmail(await configuredSender()).send({
     to,
-    subject: `Your ${codes.length} Loop Soul codes for ${eventTitle}`,
-    text:
-      `You're in for ${eventTitle} — ${codes.length} passes.\n\n` +
-      `Your event codes (one per guest):\n\n` +
-      codes.map((c) => `  ${c}`).join("\n") +
-      `\n\nEach code admits one guest and unlocks the app on the night. ` +
-      `Share one with every guest and keep yours handy.\n\n` +
-      `Lost them? Look them up any time with this email address on the ` +
-      `"Find your event code" page.`,
+    subject:
+      codes.length > 1
+        ? `Your ${codes.length} Loop Soul codes for ${eventTitle}`
+        : `Your Loop Soul code for ${eventTitle}`,
+    text: await codesBody(codes, eventTitle),
   });
 }
 
@@ -126,14 +180,6 @@ export async function sendEventCodeEmail(
   code: string,
   eventTitle: string,
 ): Promise<{ ok: boolean }> {
-  return getEmail(await configuredSender()).send({
-    to,
-    subject: `Your Loop Soul code for ${eventTitle}`,
-    text:
-      `You're in for ${eventTitle}.\n\n` +
-      `Your event code is ${code}.\n\n` +
-      `It's your ticket at the door and it unlocks the app on the night. ` +
-      `Keep it handy — and if you lose it, you can look it up any time with ` +
-      `this email address on the "Find your event code" page.`,
-  });
+  return sendEventCodesEmail(to, [code], eventTitle);
 }
+
