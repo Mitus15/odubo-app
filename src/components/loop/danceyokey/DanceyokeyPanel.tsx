@@ -133,7 +133,7 @@ export function DanceyokeyPanel() {
         <div className="loop-panel rounded-2xl px-5 py-4">
           <div className="loop-muted text-[11px] font-bold uppercase tracking-[0.25em]">
             {mine.status === "performing"
-              ? "You're up — go"
+              ? "You're up. Go"
               : mine.status === "queued"
                 ? "You're in the running order"
                 : "You're on the list"}

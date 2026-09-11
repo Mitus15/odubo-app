@@ -49,7 +49,7 @@ export function LoopBag({
       window.location.href = url;
     } catch {
       // Never strand someone holding a bag they can't pay for.
-      setError("Checkout couldn't start. Your bag is safe — try again.");
+      setError("Checkout couldn't start. Your bag is safe. Try again.");
       setBusy(false);
     }
   };

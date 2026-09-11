@@ -154,7 +154,7 @@ export function LoopStore({
         {merch.length === 0 ? (
           <p className="rounded-2xl border border-dashed border-ink/20 px-5 py-8 text-center text-sm opacity-60">
             {collectionMissing
-              ? "The shelf isn't built yet — no loop-soul collection in Shopify."
+              ? "The shelf isn't built yet. No loop-soul collection in Shopify."
               : "Nothing on the shelf yet. Pieces drop with the volume."}
           </p>
         ) : (

@@ -84,7 +84,7 @@ export function ClaimRow() {
       <h2 className="loop-display text-3xl font-bold tracking-tight">You.</h2>
       <p className="loop-muted mt-2 text-sm leading-relaxed">
         {claimed
-          ? "Your name travels with your work — on every shot you take, on every phone you use."
+          ? "Your name travels with your work, on every shot you take and every phone you use."
           : "Nothing here is required. It's for keeping what you make."}
       </p>
 

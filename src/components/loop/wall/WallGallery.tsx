@@ -331,7 +331,7 @@ export function WallGallery({
           tab === "yours"
             ? "Nothing saved on this device yet. Shots you keep land here."
             : featuredOnly
-              ? "Iconic Moments are being curated — check back."
+              ? "Iconic Moments are being curated. Check back."
               : canPost
                 ? "The Wall is empty. Put the first shot up."
                 : "Nothing on the Wall yet."

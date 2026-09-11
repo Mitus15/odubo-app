@@ -146,13 +146,13 @@ export function AnthemBracket({ initial }: { initial: AnthemState }) {
           tallies: data.tallies ?? s.tallies,
           myBallots: data.myBallots ?? s.myBallots,
         }));
-        setToast("That round just closed — your pick is locked");
+        setToast("That round just closed. Your pick is locked");
         refresh();
       } else if (data.tallies && data.myBallots) {
         setState((s) => ({ ...s, tallies: data.tallies!, myBallots: data.myBallots! }));
       }
     } catch {
-      setToast("No connection — vote didn't count");
+      setToast("No connection. Your vote didn't count");
       refresh();
     } finally {
       setPending((s) => {
@@ -294,12 +294,12 @@ function NominationStage({
       if (res.ok && data.canSuggest) {
         onChange((s) => ({ ...s, canSuggest: true }));
         setCode("");
-        onToast("Pass confirmed — suggest away");
+        onToast("Pass confirmed. Suggest away");
       } else {
         onToast(data.error ?? "That code didn't work");
       }
     } catch {
-      onToast("No connection — try again");
+      onToast("No connection. Try again");
     } finally {
       setRedeeming(false);
     }
@@ -355,7 +355,7 @@ function NominationStage({
         onToast("Nominations are closed");
       }
     } catch {
-      onToast("No connection — try again");
+      onToast("No connection. Try again");
     } finally {
       setBusyId(null);
     }
@@ -398,7 +398,7 @@ function NominationStage({
       }
     } catch {
       onChange(flip(!adding)); // revert
-      onToast("No connection — try again");
+      onToast("No connection. Try again");
     }
   }
 

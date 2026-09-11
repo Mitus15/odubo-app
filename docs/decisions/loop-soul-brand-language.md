@@ -144,3 +144,24 @@ cut highlights. Print artwork is RGB; convert at the shop if they want CMYK.
   `src/lib/loop/priceLabel.ts` over `loop_settings.pass_price`. An unset or zero
   price reads **FREE ENTRY** — that is how a free door is set.
 - The arc device (app): `src/components/loop/brand/ArcedTagline.tsx`.
+
+---
+
+## No em dashes
+
+**Owner, 2026-09-10.** Never use an em dash in copy written as Mani or as the
+brand. App strings, print, emails, press releases, captions, event descriptions.
+
+It isn't how he writes, and it is the tell that a machine drafted the sentence.
+
+**Rewrite rather than substitute.** An em dash is doing one of three jobs and
+each has a better answer in this voice:
+
+| Job | Answer | Example |
+|---|---|---|
+| joining a consequence | a full stop | "No connection. Try again." |
+| introducing an appositive | a colon | "the Loop Soul filter: ink on sand, no faces" |
+| setting off an aside | commas | "Come when you come. Nothing starts until 8." |
+
+Engineering comments and commit messages are not brand voice and are exempt. A
+lone dash standing in for an empty value in a table is typography, not writing.

@@ -121,12 +121,12 @@ export const RUN_OF_SHOW: RunOfShowItem[] = [
     time: "6:30",
     title: "The Lounge",
     detail:
-      "Fire pits, games, drinks and music in the courtyard. Come when you come — nothing starts until 8, and nobody is ever on time.",
+      "Fire pits, games, drinks and music in the courtyard. Come when you come. Nothing starts until 8, and nobody is ever on time.",
   },
   {
     id: "album",
     time: "8:00",
-    title: "The Album — Live",
+    title: "The Album, Live",
     detail:
       "Loop Soul performed live, front to back, outside under the lights. Not a playback: the record played as a set, once. Be here before 8.",
     performer: "Mani Odubo",
@@ -137,7 +137,7 @@ export const RUN_OF_SHOW: RunOfShowItem[] = [
     time: "9:00",
     title: "The 80s Floor",
     detail:
-      "Amen takes it from the last track to the dance floor. Dress code is the decade — come as you'd have come in 1985.",
+      "Amen takes it from the last track to the dance floor. Dress code is the decade, so come as you'd have come in 1985.",
     performer: "Amen the DJ",
     role: "the 1s and 2s",
   },
@@ -221,5 +221,5 @@ export const RECORDING_NOTICE = {
     "Coming in means you may appear in that footage, on camera or in a photograph, " +
     "at any point in the night.",
   optOut:
-    "If you would rather not appear, tell anyone on the door — we will keep you out of shot.",
+    "If you would rather not appear, tell anyone on the door. We will keep you out of shot.",
 } as const;

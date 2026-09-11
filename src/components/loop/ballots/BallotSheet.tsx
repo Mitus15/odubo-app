@@ -41,7 +41,7 @@ export function BallotSheet({ kind }: { kind: "tracklist" | "cover" }) {
       if (!res.ok) throw new Error("standings unavailable");
       setBallot((await res.json()) as Ballot);
     } catch {
-      setError("Couldn't load the standings — try again in a moment.");
+      setError("Couldn't load the standings. Try again in a moment.");
     }
   }, [kind]);
 
@@ -61,7 +61,7 @@ export function BallotSheet({ kind }: { kind: "tracklist" | "cover" }) {
       });
       if (!res.ok) {
         const data = (await res.json().catch(() => null)) as { error?: string } | null;
-        setError(data?.error ?? "That didn't go through — try again.");
+        setError(data?.error ?? "That didn't go through. Try again.");
       }
       await load();
     } finally {
@@ -80,7 +80,7 @@ export function BallotSheet({ kind }: { kind: "tracklist" | "cover" }) {
   const intro =
     kind === "tracklist"
       ? "The room ranks the record. Your votes help decide the album's running order."
-      : "The cover comes from the room. Vote on the shortlisted shots — the winner becomes the album's cover art, credited and paid.";
+      : "The cover comes from the room. Vote on the shortlisted shots. The winner becomes the album's cover art, credited and paid.";
 
   return (
     <section className="w-full">
@@ -88,10 +88,10 @@ export function BallotSheet({ kind }: { kind: "tracklist" | "cover" }) {
 
       <div className="loop-muted mt-2 text-xs font-semibold uppercase tracking-widest">
         {!ballot.open
-          ? "Voting hasn't opened yet — standings only."
+          ? "Voting hasn't opened yet. Standings only."
           : ballot.canVote
             ? `${ballot.voteLimit - ballot.votesUsed} of ${ballot.voteLimit} votes left · tap to vote, tap again to take it back`
-            : "Voting is for the room — enter your event code to take part."}
+            : "Voting is for the room. Enter your event code to take part."}
       </div>
 
       {ballot.options.length === 0 ? (

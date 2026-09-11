@@ -67,7 +67,7 @@ export function PortalPreview({
       <div className="mt-4 grid gap-3">
         <PreviewCard
           title="The programme"
-          body="One night, run like a show — not a playlist. Here's the shape of it."
+          body="One night, run like a show, not a playlist. Here's the shape of it."
         >
           {runOfShow.length > 0 ? (
             <ul className="mt-3 grid gap-1.5">
@@ -109,12 +109,12 @@ export function PortalPreview({
 
         <PreviewCard
           title="The camera"
-          body="Shoot the night through the Loop Soul filter and everyone comes out a figure — ink on sand, no faces. Your shots stay credited to you, and the good ones become the artwork for the volumes after this one."
+          body="Shoot the night through the Loop Soul filter and everyone comes out a figure: ink on sand, no faces. Your shots stay credited to you, and the good ones become the artwork for the volumes after this one."
         />
 
         <PreviewCard
           title="The Wall"
-          body="Everything shot in the room, in one place, as it fills up. After the night it becomes the record of it — the issue for this volume."
+          body="Everything shot in the room, in one place, as it fills up. After the night it becomes the record of it: the issue for this volume."
         />
       </div>
 

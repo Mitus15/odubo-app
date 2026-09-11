@@ -241,7 +241,7 @@ export function CameraSheet({
       setRecording(false);
       const blob = await engine.stopRecording();
       if (blob) showResult(blob, "video");
-      else setError("Nothing was recorded — try again.");
+      else setError("Nothing was recorded. Try again.");
       return;
     }
     if (!engine.startRecording()) {
@@ -445,7 +445,7 @@ export function CameraSheet({
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     onBlur={() => rememberWallName(name)}
-                    placeholder="Your first name — goes on the credit"
+                    placeholder="Your first name, goes on the credit"
                     maxLength={60}
                     className="rounded-full border border-bone/25 bg-ink/60 px-5 py-3 text-sm text-bone outline-none backdrop-blur placeholder:text-bone/40 focus:border-sand"
                   />
@@ -457,7 +457,7 @@ export function CameraSheet({
                   className="rounded-full bg-sand py-4 text-base font-bold text-ink transition-transform active:scale-95 disabled:opacity-70"
                 >
                   {posting === "posted"
-                    ? "On the Wall ✦ — you're in the cover contest"
+                    ? "On the Wall ✦ you're in the cover contest"
                     : posting === "posting"
                       ? "Posting…"
                       : "Post to the Wall"}

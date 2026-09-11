@@ -297,7 +297,7 @@ export function GatheringPoster({
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/loop/branding/odubo.svg"
-          alt="Odubo — presenter"
+          alt="Odubo, presenter"
           className="h-10 w-auto"
         />
         <div className="text-[9px] font-semibold uppercase tracking-[0.3em] opacity-50">

@@ -49,7 +49,7 @@ export function CoverContest() {
         {[
           [
             "Shoot through the filter",
-            "Every photo taken in the room goes through the Loop Soul filter — ink on sand, no faces. Those frames are the entries. You don't sign up for anything.",
+            "Every photo taken in the room goes through the Loop Soul filter: ink on sand, no faces. Those frames are the entries. You don't sign up for anything.",
           ],
           [
             "It lands on the Wall",
@@ -57,7 +57,7 @@ export function CoverContest() {
           ],
           [
             "The room votes",
-            "The standout shots are shortlisted, and everyone in the room votes. The winning frame becomes the official cover, credited to whoever took it. Every other version stays valid — it just isn't the one on the record.",
+            "The standout shots are shortlisted, and everyone in the room votes. The winning frame becomes the official cover, credited to whoever took it. Every other version stays valid. It just isn't the one on the record.",
           ],
         ].map(([title, body]) => (
           <li key={title} className="ml-5">

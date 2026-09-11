@@ -76,13 +76,13 @@ export function GetPassModal({
     ],
     [
       "Your code",
-      "Issued the moment you pay, and always findable with your checkout email — it's your ticket at the door and your key to the room in the app.",
+      "Issued the moment you pay, and always findable with your checkout email. It's your ticket at the door and your key to the room in the app.",
     ],
     // The record is the reason the night exists — see
     // docs/decisions/loop-soul-is-the-album.md.
     [
       "The record, first",
-      "Loop Soul is an album. The 26th is its first exhibition — all 14, front to back, one of them recorded live in the room with you on it.",
+      "Loop Soul is an album. The 26th is its first exhibition: all 14, front to back, one of them recorded live in the room with you on it.",
     ],
     // The cover is fluid (owner, 2026-09-08): his version is one version.
     [
@@ -170,7 +170,7 @@ export function GetPassModal({
                 </dt>
                 <dd className="font-semibold tabular-nums">
                   {capacity.unlimited ? (
-                    "Open — no cap"
+                    "Open, no cap"
                   ) : (
                     <>
                       {capacity.total} passes ·{" "}
@@ -206,7 +206,7 @@ export function GetPassModal({
               </h4>
               <ol className="mt-3 grid gap-2 text-sm leading-relaxed">
                 {[
-                  "Check out securely — card, Apple Pay, or Google Pay.",
+                  "Check out securely: card, Apple Pay, or Google Pay.",
                   // Was "lands in your email within a minute" — the same
                   // promise the includes list just stopped making. There is no
                   // verified sending domain, so the lookup IS the delivery.

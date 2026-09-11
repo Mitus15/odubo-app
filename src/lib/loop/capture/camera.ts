@@ -96,7 +96,7 @@ export function stopStream(stream: MediaStream | null, video?: HTMLVideoElement 
 export function captureFrame(video: HTMLVideoElement, mirror: boolean): HTMLCanvasElement {
   const w = video.videoWidth;
   const h = video.videoHeight;
-  if (!w || !h) throw new Error("Camera isn't ready yet — give it a second.");
+  if (!w || !h) throw new Error("Camera isn't ready yet. Give it a second.");
   const canvas = document.createElement("canvas");
   canvas.width = w;
   canvas.height = h;
