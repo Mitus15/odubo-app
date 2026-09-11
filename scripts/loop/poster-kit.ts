@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   DEFAULT_QR_CAPTION,
+  layoutBanner,
   layoutEventPoster,
   layoutTicket,
   layoutPassCard,
@@ -205,6 +206,16 @@ async function main() {
         }
       }
     }
+  }
+
+  // The Facebook event cover. Its own piece because it is the one landscape
+  // format, and the crowd is the only figure whose aspect suits it.
+  if (pieces.includes("banner")) {
+    const list = unwrap(
+      "banner",
+      layoutBanner({ figureSrc: FIGURES.crowd, slogan, details: ev }, deps),
+    );
+    await write(`loop-soul-v${volume}-facebook-cover-1920x1005.png`, await renderSharp(list, prepared));
   }
 
   if (pieces.includes("ticket")) {

@@ -134,6 +134,16 @@ export const POSTER_SIZES = {
 export type PosterSize = keyof typeof POSTER_SIZES;
 
 export const TICKET_SIZE = { w: 2550, h: 1000 } as const;
+
+/**
+ * Facebook's event cover — 1.91:1.
+ *
+ * Its own size and its own layout because the event poster cannot be made
+ * landscape: that composition budgets air down a column, and at 1.91:1 the
+ * hero band alone exceeds the whole canvas. Cropping a portrait sheet to this
+ * shape loses the type block, which is the half carrying the date.
+ */
+export const BANNER_SIZE = { w: 1920, h: 1005 } as const;
 export const PASS_CARD_SIZE = { w: 2000, h: 2000 } as const;
 
 /* ── specs ──────────────────────────────────────────────────────────────── */
@@ -233,6 +243,13 @@ export type TicketSpec = {
   details: EventDetails;
   /** The crowd is the ticket's hero. */
   figureSrc: string;
+};
+
+export type BannerSpec = {
+  details: EventDetails;
+  /** The wide crowd row — the only figure whose aspect suits a banner. */
+  figureSrc: string;
+  slogan?: string;
 };
 
 export type PassCardSpec = {
@@ -951,6 +968,128 @@ export function layoutTicket(spec: TicketSpec, deps: LayoutDeps): LayoutResult {
 }
 
 /* ── the pass card (store shelf face — square, no QR, no price) ─────────── */
+
+/**
+ * The Facebook event cover.
+ *
+ * Composed downward from the top rather than balanced around a hero, because
+ * the bottom of this image is where Facebook draws its own chrome — the event
+ * name and date sit over the lower left in several placements, and mobile
+ * crops the sides. So everything that has to be read lives in the upper half
+ * and centred, and the crowd stands on the bottom edge where an overlay can
+ * cross it without costing a word.
+ *
+ * No QR: this is a link on a page. A printed code here would be a picture of a
+ * thing to scan sitting next to a button that already does it.
+ */
+export function layoutBanner(spec: BannerSpec, deps: LayoutDeps): LayoutResult {
+  return run(() => {
+    const { w: W, h: H } = BANNER_SIZE;
+    const S = W / 1920;
+    const pad = R(70 * S);
+    const cx = W / 2;
+    const d = spec.details;
+
+    const ops: Op[] = [{ kind: "rect", x: 0, y: 0, w: W, h: H, fill: SAND }];
+
+    // Row 1 — wordmark left, the two credits right, on one line.
+    const wm = need(deps, WORDMARK_SRC);
+    const wmW = R(260 * S);
+    const wmH = R(wmW * (wm.h / wm.w));
+    ops.push({ kind: "image", src: WORDMARK_SRC, x: pad, y: pad, w: wmW, h: wmH });
+
+    const labelSize = R(15 * S);
+    const od = need(deps, ODUBO_SRC);
+    const sc = need(deps, SCOTTS_SRC);
+    const odW = R(120 * S);
+    const odH = R(odW * (od.h / od.w));
+    const scW = R(165 * S);
+    const scH = R(scW * (sc.h / sc.w));
+    const odColW = Math.max(odW, measure(CREDIT_PRESENTER, { size: labelSize, track: 0.2 }));
+    const scColW = Math.max(scW, measure(CREDIT_PARTNER, { size: labelSize, track: 0.2 }));
+    const gap = R(50 * S);
+    const creditLeft = W - pad - (odColW + gap + scColW);
+    const odCx = creditLeft + odColW / 2;
+    const scCx = creditLeft + odColW + gap + scColW / 2;
+    const labelY = pad + R(14 * S);
+    const logoTop = labelY + R(16 * S);
+    const logoRowH = Math.max(odH, scH);
+    assertFits("the banner credit block", odColW + gap + scColW, W - pad * 2 - wmW - R(80 * S));
+    ops.push(line(CREDIT_PRESENTER, { x: odCx, y: labelY, size: labelSize, track: 0.2, opacity: 0.55 }));
+    ops.push(line(CREDIT_PARTNER, { x: scCx, y: labelY, size: labelSize, track: 0.2, opacity: 0.55 }));
+    ops.push({ kind: "image", src: ODUBO_SRC, x: R(odCx - odW / 2), y: R(logoTop + (logoRowH - odH) / 2), w: odW, h: odH });
+    ops.push({ kind: "image", src: SCOTTS_SRC, x: R(scCx - scW / 2), y: R(logoTop + (logoRowH - scH) / 2), w: scW, h: scH, opacity: 0.85 });
+
+    let y = Math.max(pad + wmH, logoTop + logoRowH) + R(58 * S);
+
+    // Row 2 — the credit lines, set as the printed piece sets them.
+    if (d.record) {
+      const size = R(26 * S);
+      assertFits("the banner record line", measure(d.record, { size, track: 0.34 }), W - pad * 2);
+      ops.push(line(d.record, { x: cx, y, size, track: 0.34, opacity: 0.85 }));
+      y += R(40 * S);
+    }
+    if (d.feature) {
+      const size = R(17 * S);
+      ops.push(line(d.feature, { x: cx, y, size, track: 0.3, opacity: 0.62 }));
+      y += R(30 * S);
+    }
+
+    // Row 3 — the slogan, the one line that invites.
+    const slogan = spec.slogan ?? SLOGAN;
+    const sloganSize = fitSize(slogan, W * 0.55, { weight: 700, track: 0.02 }, { max: R(112 * S) });
+    // Air enough for the slogan's ascender: it is set at ~112px and lines are
+    // placed on their baseline, so a gap smaller than the cap height puts
+    // "Come Dance" into the feature credit above it.
+    y += sloganSize * 0.9;
+    ops.push(line(slogan, { x: cx, y, size: sloganSize, weight: 700, track: 0.02 }));
+    y += R(34 * S);
+    ops.push(line(TRIAD, { x: cx, y, size: R(19 * S), track: 0.4, opacity: 0.75 }));
+
+    // Row 4 — when, where, what it costs.
+    const dateText = [d.date, d.doors].filter(Boolean).join("  ·  ");
+    if (dateText) {
+      y += R(58 * S);
+      ops.push(line(dateText, { x: cx, y, size: R(34 * S), weight: 700, track: 0.06 }));
+    }
+    if (d.venue) {
+      y += R(40 * S);
+      ops.push(line(d.venue, { x: cx, y, size: R(24 * S), track: 0.16, opacity: 0.85 }));
+    }
+    const priceText = [d.note, d.price].filter(Boolean).join("  ·  ");
+    if (priceText) {
+      y += R(34 * S);
+      ops.push(line(priceText, { x: cx, y, size: R(21 * S), track: 0.2, opacity: 0.7 }));
+    }
+    if (d.notice) {
+      y += R(26 * S);
+      ops.push(line(d.notice, { x: cx, y, size: R(14 * S), track: 0.18, opacity: 0.5 }));
+    }
+
+    // Row 5 — the crowd on the bottom edge, taking whatever is left.
+    const fig = need(deps, spec.figureSrc);
+    // Facebook overlays the event name across the lower band of this image on
+    // the event page. The crowd stands clear of the very bottom so the chrome
+    // crosses sand rather than cutting the dancers off at the ankle.
+    const floor = R(46 * S);
+    const heroTop = y + R(30 * S);
+    const heroMaxH = H - heroTop - floor;
+    assertFits("the banner hero band", R(150 * S), heroMaxH);
+    const scale = Math.min((W - pad * 2) / fig.w, heroMaxH / fig.h);
+    const heroW = R(fig.w * scale);
+    const heroH = R(fig.h * scale);
+    ops.push({
+      kind: "image",
+      src: spec.figureSrc,
+      x: R(cx - heroW / 2),
+      y: H - heroH - floor,
+      w: heroW,
+      h: heroH,
+    });
+
+    return { w: W, h: H, ops };
+  });
+}
 
 export function layoutPassCard(
   spec: PassCardSpec,
