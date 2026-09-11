@@ -95,7 +95,12 @@ export type LayoutDeps = { sizes: Record<string, ImageInfo> };
 
 export const WORDMARK_SRC = "/loop/branding/loop-soul.svg";
 export const ODUBO_SRC = "/loop/branding/odubo.svg";
-export const SCOTTS_SRC = "/loop/branding/scotts-bw.svg";
+// The 2026 mark (EST. 1964 / Scott's / INN & SUITES), supplied by the venue on
+// 2026-09-09. A raster rather than an SVG because that is how it was supplied,
+// which means it cannot be recoloured at load time the way the brand SVGs are —
+// so it ships pre-trimmed and pre-inked instead. Both renderers dispatch on the
+// ".svg" suffix, so a .png takes the same path the figures do.
+export const SCOTTS_SRC = "/loop/branding/scotts-2026.png";
 
 /** The QR is an image the runtime generates; layout only places it. */
 export const qrSrc = (url: string) => `qr:${url}`;
