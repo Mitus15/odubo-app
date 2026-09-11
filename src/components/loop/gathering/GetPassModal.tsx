@@ -72,7 +72,7 @@ export function GetPassModal({
   const includes: [string, string][] = [
     [
       "Entry for one",
-      `One pass, one guest. Doors ${timeLabel}, album at 8. Dress code: ${theme}.`,
+      `One pass, one guest. Lounge from ${timeLabel}, the album live at 8, 80s floor at 9. Dress code: ${theme}.`,
     ],
     [
       "Your code",

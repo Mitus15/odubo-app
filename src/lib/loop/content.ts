@@ -106,55 +106,40 @@ export type RunOfShowItem = {
 };
 
 export const RUN_OF_SHOW: RunOfShowItem[] = [
+  // Rewritten 2026-09-10 (owner). The night is THREE states, not a sequence of
+  // moments: a lounge, then the record, then a floor. The band is gone — the
+  // whole album is performed live, which is the thing that makes this a
+  // performance rather than a listening party, and "1984" is no longer a
+  // separate slot because it is simply one of the fourteen.
+  //
+  // NOTE: this is the SEED, not what renders. getRunOfShow reads run_of_show in
+  // D1 and only falls back here when that table is empty — the live programme
+  // was already edited to this shape from /loop/admin. Kept in step so the
+  // fallback never contradicts the thing it is standing in for.
   {
-    id: "doors",
+    id: "lounge",
     time: "6:30",
-    title: "Doors · The Barbecue",
+    title: "The Lounge",
     detail:
-      "Come in, meet the room. The grill is on all night — food is available to buy.",
-  },
-  {
-    id: "welcome",
-    time: "7:00",
-    title: "The Welcome",
-    detail: "The opening address — what Loop Soul is, and what tonight is.",
-  },
-  {
-    id: "warm",
-    time: "7:30",
-    title: "Before The Record",
-    detail: "Something to get the room together before the album starts.",
+      "Fire pits, games, drinks and music in the courtyard. Come when you come — nothing starts until 8, and nobody is ever on time.",
   },
   {
     id: "album",
     time: "8:00",
-    title: "The Album",
+    title: "The Album — Live",
     detail:
-      "Loop Soul, start to finish, outside in the courtyard under the lights. This is the part you came for — be here before 8.",
+      "Loop Soul performed live, front to back, outside under the lights. Not a playback: the record played as a set, once. Be here before 8.",
     performer: "Mani Odubo",
-    role: "front to back",
-  },
-  {
-    id: "1984",
-    time: "9:00",
-    title: "\u201C1984\u201D — Live",
-    detail:
-      "The band plays 1984 inside, in the entertainment room. This take is recorded and it goes on the record — you\u2019re on it.",
-    performer: "The Band",
-    role: "live · recorded",
-  },
-  {
-    id: "line",
-    time: "9:15",
-    title: "The Loop Soul Line",
-    detail:
-      "The floor moment: a line that becomes a circle, two into the middle at a time, then back in. Nothing to sign up for — everyone is already in it.",
+    role: "live · with Amen the DJ",
   },
   {
     id: "floor",
-    time: "9:30",
-    title: "The Dance Floor",
-    detail: "Open until they turn the lights on.",
+    time: "9:00",
+    title: "The 80s Floor",
+    detail:
+      "Amen takes it from the last track to the dance floor. Dress code is the decade — come as you'd have come in 1985.",
+    performer: "Amen the DJ",
+    role: "the 1s and 2s",
   },
   {
     id: "out",

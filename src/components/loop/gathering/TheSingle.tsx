@@ -307,7 +307,7 @@ export function TheSingle({
           There are thirteen more.
         </h2>
         <p className="loop-muted mt-2 text-sm leading-relaxed">
-          Played front to back, once, in a courtyard.
+          Performed live, front to back, once, in a courtyard.
         </p>
 
         <button
@@ -320,7 +320,7 @@ export function TheSingle({
               Hear the rest of it live
             </span>
             <span className="block text-[13px] opacity-70">
-              All 14, front to back · {dateLabel}
+              All 14, live, front to back · {dateLabel}
             </span>
           </span>
           <span className="opacity-60">→</span>
