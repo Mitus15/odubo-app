@@ -94,7 +94,12 @@ export type LayoutDeps = { sizes: Record<string, ImageInfo> };
 /* ── shared sources ─────────────────────────────────────────────────────── */
 
 export const WORDMARK_SRC = "/loop/branding/loop-soul.svg";
-export const ODUBO_SRC = "/loop/branding/odubo.svg";
+// The 2026 lockup: MadisonSquare Incised logotype over the danceman. The type
+// arrived as live <text> in a font installed on one Mac; it ships outlined, or
+// it would render correctly for its author and as a fallback sans everywhere
+// else. Much wider than the mark it replaces (2.85:1 against 1.10:1), so the
+// credits row is shorter and the sheet gains air below the price.
+export const ODUBO_SRC = "/loop/branding/odubo-2026.svg";
 // The 2026 mark (EST. 1964 / Scott's / INN & SUITES), supplied by the venue on
 // 2026-09-09. A raster rather than an SVG because that is how it was supplied,
 // which means it cannot be recoloured at load time the way the brand SVGs are —

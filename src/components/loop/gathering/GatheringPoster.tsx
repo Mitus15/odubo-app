@@ -296,7 +296,7 @@ export function GatheringPoster({
       <footer className="mt-5 flex flex-col items-center gap-1.5">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/loop/branding/odubo.svg"
+          src="/loop/branding/odubo-2026.svg"
           alt="Odubo, presenter"
           className="h-10 w-auto"
         />
