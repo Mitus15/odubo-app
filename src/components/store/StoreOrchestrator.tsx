@@ -61,9 +61,16 @@ export default function StoreOrchestrator() {
     closeCart,
   };
 
+  // `h-full` is only correct while a store view is actually mounted. With no
+  // view open this div is empty, but h-full still claimed a full viewport of
+  // document height on EVERY page in the app — and because <body> is
+  // `overflow: hidden`, that height is unreachable dead space that makes a
+  // phone feel like the page half-scrolls and snaps back.
+  const hasView = view === 'browse' || view === 'detail';
+
   return (
     <CartOverlayContext.Provider value={cartOverlayValue}>
-      <div className="relative h-full">
+      <div className={hasView ? 'relative h-full' : 'relative'}>
         {/* Main store views */}
         <AnimatePresence mode="wait">
           {view === 'browse' && <ProductBrowse key="browse" />}

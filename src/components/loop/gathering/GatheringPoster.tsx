@@ -27,6 +27,10 @@ type Capacity =
   | { unlimited: false; sold: number; total: number; remaining: number };
 type ModuleKey = "anthem" | "night" | "cover";
 
+/** Passes remaining at which the poster starts printing the count. Below this
+ *  a number reads as urgency; above it, it reads as "nobody has bought yet". */
+const SCARCITY_AT = 40;
+
 const MODULES: { key: ModuleKey; label: string; title: string }[] = [
   // Advertising a module that does nothing is worse than not showing it, so
   // the anthem drops out entirely while it is parked (see ANTHEM_ENABLED).
@@ -44,7 +48,11 @@ const MODULES: { key: ModuleKey; label: string; title: string }[] = [
   // for the night. The Night has always rendered RUN_OF_SHOW — it was the
   // programme all along, just not findable by that word.
   { key: "night", label: "The Programme", title: "The Night" },
-  { key: "cover", label: "Cover Contest", title: "The Cover Contest" },
+  // Renamed 2026-09-11 (owner): the cover contest AND the tracklist vote are
+  // both about the vinyl, so the module is the vinyl and carries both. Three
+  // nouns on the poster (The Single · The Programme · The Vinyl) also stops
+  // "Contest" from being the loudest word on a record's front door.
+  { key: "cover", label: "The Vinyl", title: "The Vinyl" },
   // Danceyokey is NOT part of Volume 1 (owner, 2026-08-25). The floor moment
   // this volume has is the Loop Soul Line, which lives in the programme rather
   // than needing a module of its own — there is nothing to sign up for.
@@ -157,6 +165,16 @@ export function GatheringPoster({
   const isFree = priceLabel === "FREE ENTRY";
   // "Scott's Inn, Kamloops" → "Scott's Inn" on the tight poster line.
   const venueShort = event.venue.split(",")[0];
+  // A count is only worth printing once it means something. "150 / 150 passes
+  // left" is a true statement that reads as an empty room, so the counter stays
+  // off until the room is actually getting tight (owner, 2026-09-11).
+  const showCount = !capacity.unlimited && capacity.remaining <= SCARCITY_AT;
+  // The album's start time comes from the live programme, so the pass sheet
+  // cannot contradict the thing it is summarising.
+  const albumTime =
+    runOfShow.find((i) => i.id === "album")?.time ??
+    runOfShow.find((i) => /album/i.test(i.title))?.time ??
+    null;
 
   return (
     <div className="relative mx-auto flex min-h-[100dvh] max-w-md flex-col px-5 pb-5 pt-5">
@@ -215,14 +233,16 @@ export function GatheringPoster({
           scarcity count only appears when there is a cap to count against. */}
       <div className="flex flex-col items-center gap-3">
         <div className="text-center">
-          {(soldOut || !capacity.unlimited) && (
+          {(soldOut || showCount) && (
             <div className="text-sm font-bold uppercase tracking-widest">
               {soldOut ? (
-                "Room is full"
+                "The room is full"
               ) : (
                 <>
-                  <span className="tabular-nums">{capacity.remaining}</span> /{" "}
-                  {capacity.total} {isFree ? "spots left" : "passes left"}
+                  <span className="tabular-nums">
+                    {!capacity.unlimited && capacity.remaining}
+                  </span>{" "}
+                  {isFree ? "spots left" : "passes left"}
                 </>
               )}
             </div>
@@ -242,16 +262,6 @@ export function GatheringPoster({
               ? "Register · Free"
               : `Get Pass · ${priceLabel}`}
         </button>
-        {!soldOut && (
-          <button
-            type="button"
-            onClick={() => setPassOpen(true)}
-            className="loop-muted -mt-1 text-[11px] font-bold uppercase tracking-[0.2em] underline underline-offset-4"
-          >
-            What&apos;s included
-          </button>
-        )}
-
         {/* The shelf, right after the pass: the sell comes before the
             navigation. Type and a hairline only — the pass button above stays
             the one drawn shape on the poster. */}
@@ -309,14 +319,14 @@ export function GatheringPoster({
               href="/loop/journal"
               className="text-[10px] font-semibold uppercase tracking-[0.3em] opacity-50 hover:opacity-90"
             >
-              The Journal ↗
+              The Journal
             </Link>
           )}
           <Link
             href="/loop/legacy"
             className="text-[10px] font-semibold uppercase tracking-[0.3em] opacity-50 hover:opacity-90"
           >
-            Loop Soul Legacy ↗
+            Legacy
           </Link>
         </div>
       </footer>
@@ -363,6 +373,7 @@ export function GatheringPoster({
           venue={event.venue}
           dateLabel={dateLabel}
           timeLabel={timeLabel}
+          albumTime={albumTime}
           onClose={() => setPassOpen(false)}
         />
       )}

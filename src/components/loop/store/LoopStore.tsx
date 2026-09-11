@@ -77,10 +77,6 @@ export function LoopStore({
       <header className="flex items-start justify-between gap-4 pb-8 pt-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Store</h1>
-          <p className="mt-2 max-w-md text-sm opacity-70">
-            Passes and pieces for {eventTitle} · {theme}. Everything else the studio
-            makes lives at odubo.
-          </p>
         </div>
         {/* Rendered only once the bag has hydrated — a count that flashes 0
             then corrects itself reads as the bag losing someone's items. */}
@@ -124,7 +120,7 @@ export function LoopStore({
               {/* Wraps rather than truncates — a product title ending in
                   "Volu…" tells the buyer nothing about what they're buying. */}
               <h3 className="text-lg font-bold leading-tight sm:text-xl">
-                {passProduct?.title || `${eventTitle} — Pass`}
+                {passProduct?.title || `${eventTitle} Pass`}
               </h3>
               <p className="mt-1 text-sm opacity-70">
                 {dateLabel} · {timeLabel} · {venue}

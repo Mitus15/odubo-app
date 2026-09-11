@@ -28,6 +28,7 @@ export function GetPassModal({
   venue,
   dateLabel,
   timeLabel,
+  albumTime = null,
   onClose,
 }: {
   capacity: Capacity;
@@ -39,6 +40,11 @@ export function GetPassModal({
   venue: string;
   dateLabel: string;
   timeLabel: string;
+  /** When the album starts, read from the live programme. Null when unknown,
+   *  in which case the line simply doesn't name a time rather than guessing.
+   *  It used to be the literal "8", which the programme could silently
+   *  contradict the next time it was edited from admin. */
+  albumTime?: string | null;
   onClose: () => void;
 }) {
   useEffect(() => {
@@ -72,28 +78,38 @@ export function GetPassModal({
   const includes: [string, string][] = [
     [
       "Entry for one",
-      `One pass, one guest. Lounge from ${timeLabel}, the album live at 8, 80s floor at 9. Dress code: ${theme}.`,
+      `One pass, one guest. Lounge from ${timeLabel}${
+        albumTime
+          ? `, the album live at ${albumTime.replace(/:00$/, "")}`
+          : ", then the album live"
+      }, the 80s floor after. Dress code: ${theme}.`,
     ],
     [
       "Your code",
       "Issued the moment you pay, and always findable with your checkout email. It's your ticket at the door and your key to the room in the app.",
     ],
     // The record is the reason the night exists — see
-    // docs/decisions/loop-soul-is-the-album.md.
+    // docs/decisions/loop-soul-is-the-album.md. The date is read from the event,
+    // never written out: this line said "the 26th" for a day after the night
+    // moved to Oct 10, while the poster above it said Oct 10.
     [
       "The record, first",
-      "Loop Soul is an album. The 26th is its first exhibition: all 14, front to back, one of them recorded live in the room with you on it.",
+      `Loop Soul is an album. ${dateLabel} is its first exhibition: all 14, front to back, one of them recorded live in the room with you on it.`,
     ],
-    // The cover is fluid (owner, 2026-09-08): his version is one version.
+    // The cover contest and the tracklist vote are BOTH about the vinyl
+    // (owner, 2026-09-11). That is what makes them worth voting on: the album
+    // is already 14 tracks and already has Mani's cover, but the record you
+    // can hold is neither of those things yet, and the room decides it.
+    // The 30-minute side limit is the reason and is deliberately left unsaid.
     [
-      "The cover is fluid",
-      "The cover you've seen is Mani's. Shoot through the filter, put it on the Wall, and yours can be the one you hold. The room votes the official one.",
+      "The vinyl is the room's",
+      "The album is 14 tracks. The vinyl won't be. After the night, everyone who was there picks what goes on it, and whose photo is on the front.",
     ],
     // Registration closes at the event and never reopens: the people in the
     // room are the album's audience. This is the whole offer.
     [
       "In the circle, for good",
-      "Registration closes on the night and doesn't reopen. Everyone in the room keeps the gallery, votes the tracklist and the cover, and is credited by name on every shot they took.",
+      "Registration closes on the night and doesn't reopen. Everyone in the room keeps the gallery, votes on the vinyl, and is credited by name on every shot they took.",
     ],
     // Before money changes hands, not after. See RECORDING_NOTICE.
     [
@@ -227,15 +243,15 @@ export function GetPassModal({
 
               <p className="loop-muted mt-5 text-xs leading-relaxed">
                 One code per pass, single use. Buying more than one? You&apos;ll
-                get a code for each — share one with every guest. Your codes
-                live at{" "}
+                get a code for each, so there is one to hand to every guest.
+                Look yours up any time with your checkout email at{" "}
                 <a
                   href="/loop/code"
                   className="font-bold underline underline-offset-2"
                 >
-                  odubostudio.com/loop/code
-                </a>{" "}
-                — look them up any time with your checkout email.
+                  /loop/code
+                </a>
+                .
               </p>
             </>
           )}
@@ -246,7 +262,7 @@ export function GetPassModal({
           {checkoutUrl && !soldOut ? (
             <>
               <p className="loop-muted mb-3 text-center text-[11px] leading-relaxed">
-                {RECORDING_NOTICE.short} {RECORDING_NOTICE.optOut}
+                {RECORDING_NOTICE.short}
               </p>
               <a
                 href={checkoutUrl}
@@ -266,11 +282,13 @@ export function GetPassModal({
           ) : (
             <div className="rounded-2xl border border-ink/20 bg-ink/5 p-4 text-sm">
               <strong className="block">
-                {soldOut ? "Waitlist opens here." : "Passes drop soon."}
+                {soldOut
+                  ? "The waitlist opens here."
+                  : "Passes aren't on sale this minute."}
               </strong>
               <span className="loop-muted">
-                Secure checkout (Apple / Google Pay) opens right here the moment
-                passes go live. Check back, or follow @loopsoul.ca.
+                Checkout opens on this page the moment they are. Nothing to sign
+                up for, just come back.
               </span>
             </div>
           )}

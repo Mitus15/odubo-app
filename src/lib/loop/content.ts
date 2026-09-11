@@ -195,31 +195,36 @@ export const EVENT_CREDITS = {
 } as const;
 
 /**
- * The recording notice.
+ * The recording notice, written as PERMISSION rather than warning.
  *
- * The night is filmed and recorded, and some of that is released — "1984" is
- * performed live and recorded for the record, the room is photographed for the
- * Journal, and footage goes out as promotion. People have to be told that
- * BEFORE they pay, not discovered it when they see themselves in something.
+ * The night is filmed, photographed and recorded, and that material becomes
+ * promotion, content and product for both Odubo Studio and the venue. People
+ * have to be told that BEFORE they pay, not discover it when they see
+ * themselves in something.
  *
- * One constant, because a notice that appears in three places with three
- * wordings is three different notices, and only one of them is the one you
- * meant. It is deliberately plain: a wall of legalese is read by nobody and
- * therefore protects nobody.
+ * Rewritten 2026-09-11 (owner). The old wording said "coming in means you may
+ * appear", which describes a risk and asks for nothing. What is actually
+ * happening is a grant: attending IS the permission, it covers Scott's as well
+ * as the studio, and nothing is owed to anyone who appears. Saying that plainly
+ * is both truer and safer than a hedge, because a hedge is not consent.
+ *
+ * It is deliberately not legalese: a wall of it is read by nobody and therefore
+ * protects nobody.
  *
  * `optOut` is not decoration. The house style renders guests faceless
  * (docs/decisions/loop-soul-the-faceless.md), but facelessness is a privacy
- * control, not a substitute for consent — a notice with no way to say no is a
- * shield, not an offer.
+ * control, not a substitute for consent. A notice with no way to say no is a
+ * shield, not an offer. NOTE: it promises a room the cameras do not cover, so
+ * one has to exist on the night.
  */
 export const RECORDING_NOTICE = {
-  short: "Filmed and recorded. You may appear.",
-  headline: "This night is filmed and recorded",
+  short: "Filmed and recorded. Attending is your permission.",
+  headline: "Attending is your permission",
   body:
-    "The live performance is recorded for release, and the room is filmed and " +
-    "photographed all evening for the album, the magazine and future promotion. " +
-    "Coming in means you may appear in that footage, on camera or in a photograph, " +
-    "at any point in the night.",
+    "The night is filmed, photographed and recorded. Not people individually, " +
+    "the event itself. Odubo Studio and Scott's Inn can use what is captured " +
+    "for promotion, content and product, now or later, with nothing owed to " +
+    "anyone who appears in it. Coming in is how you agree to that.",
   optOut:
-    "If you would rather not appear, tell anyone on the door. We will keep you out of shot.",
+    "If you would rather not be on camera, tell anyone on the door. There is a space the cameras do not cover, and you are welcome in it all night.",
 } as const;

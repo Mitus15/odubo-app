@@ -2,6 +2,15 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "phone-preview",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "npx next dev -p 3100 -H 0.0.0.0"
+      ],
+      "port": 3100
+    },
+    {
       "name": "loop-live-preview",
       "runtimeExecutable": "sh",
       "runtimeArgs": [

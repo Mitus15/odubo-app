@@ -60,8 +60,11 @@ export async function GatheringHome({ event }: { event: LoopEvent }) {
   // Formatted server-side so the venue's timezone is authoritative — not the
   // visitor's phone.
   const when = new Date(event.date);
+  // The weekday is the first thing anyone asks a poster, and it costs three
+  // characters. /loop/store has always carried it; the front door had not.
   const dateLabel = when.toLocaleDateString("en-CA", {
     timeZone: "America/Vancouver",
+    weekday: "short",
     month: "short",
     day: "numeric",
   });
