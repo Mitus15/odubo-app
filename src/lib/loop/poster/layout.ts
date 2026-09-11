@@ -367,38 +367,49 @@ export function layoutEventPoster(
 
     const ops: Op[] = [{ kind: "rect", x: 0, y: 0, w: W, h: H, fill: SAND }];
 
-    // 1. Header — wordmark left, QR right (the two fixed anchors).
+    // 1. Header. On print, the wordmark anchors left and the QR anchors right:
+    // a sheet on a wall has to offer a way in, and a code is the only one paper
+    // has. A STORY does not. It is scrolled past in a phone, where a link
+    // sticker does the job a QR would, and where the top and bottom of the
+    // frame are covered by the app's own chrome. So the story drops the code
+    // entirely and centres the wordmark, which also buys back the width the QR
+    // was holding.
+    const isStory = spec.size === "story";
     const wm = need(deps, WORDMARK_SRC);
-    const wmW = R(560 * S);
+    const wmW = R((isStory ? 620 : 560) * S);
     const wmH = R(wmW * (wm.h / wm.w));
     const qrPx = R(300 * S);
-    const headTop = pad;
-    const headBottom = headTop + Math.max(wmH, qrPx + R(46 * S));
+    // Stories are read in the middle. Pushing the top margin down keeps the
+    // wordmark clear of the profile row, and the hero band absorbs the rest.
+    const headTop = isStory ? pad + R(280 * S) : pad;
+    const headBottom = headTop + (isStory ? wmH : Math.max(wmH, qrPx + R(46 * S)));
     ops.push({
       kind: "image",
       src: WORDMARK_SRC,
-      x: pad,
+      x: isStory ? R(W / 2 - wmW / 2) : pad,
       y: headTop,
       w: wmW,
       h: wmH,
     });
-    ops.push({
-      kind: "image",
-      src: qrSrc(spec.qrUrl),
-      x: W - pad - qrPx,
-      y: headTop,
-      w: qrPx,
-      h: qrPx,
-    });
-    ops.push(
-      line(spec.qrCaption ?? DEFAULT_QR_CAPTION, {
-        x: W - pad - qrPx / 2,
-        y: headTop + qrPx + R(36 * S),
-        size: R(24 * S),
-        track: 0.24,
-        opacity: 0.65,
-      }),
-    );
+    if (!isStory) {
+      ops.push({
+        kind: "image",
+        src: qrSrc(spec.qrUrl),
+        x: W - pad - qrPx,
+        y: headTop,
+        w: qrPx,
+        h: qrPx,
+      });
+      ops.push(
+        line(spec.qrCaption ?? DEFAULT_QR_CAPTION, {
+          x: W - pad - qrPx / 2,
+          y: headTop + qrPx + R(36 * S),
+          size: R(24 * S),
+          track: 0.24,
+          opacity: 0.65,
+        }),
+      );
+    }
 
     // 2. Sizes that never flex — the air between rows does, these don't.
     // The album credit takes the big line under the header. Volume and theme
@@ -424,7 +435,11 @@ export function layoutEventPoster(
     const scW = R(330 * S);
     const scH = R(scW * (sc.h / sc.w));
     const creditRowH = Math.max(odH, scH);
-    const creditBottom = H - pad;
+    // A story is read between the app's chrome: the profile row covers the top
+    // and the reply bar covers the bottom. Anchoring the credits to the sheet's
+    // own margin put the logos underneath the reply bar, so the story pulls its
+    // whole block inward and lets the hero band give up the difference.
+    const creditBottom = H - pad - (isStory ? R(320 * S) : 0);
     const creditTop = creditBottom - creditRowH;
     const creditLabelY = creditTop - R(28 * S);
 
@@ -1040,12 +1055,14 @@ export function layoutBanner(spec: BannerSpec, deps: LayoutDeps): LayoutResult {
     // Row 3 — the slogan, the one line that invites.
     const slogan = spec.slogan ?? SLOGAN;
     const sloganSize = fitSize(slogan, W * 0.55, { weight: 700, track: 0.02 }, { max: R(112 * S) });
-    // Air enough for the slogan's ascender: it is set at ~112px and lines are
-    // placed on their baseline, so a gap smaller than the cap height puts
-    // "Come Dance" into the feature credit above it.
-    y += sloganSize * 0.9;
+    // Optically centred rather than mechanically spaced. Lines are placed on
+    // their baseline, so the air above and below a 112px slogan is whatever is
+    // left after its cap height and descender, and the first pass left 51px
+    // above against 18px below: the word floated high in its own band and read
+    // as a gap rather than a break. Measured off the render and balanced.
+    y += sloganSize * 0.8;
     ops.push(line(slogan, { x: cx, y, size: sloganSize, weight: 700, track: 0.02 }));
-    y += R(34 * S);
+    y += R(45 * S);
     ops.push(line(TRIAD, { x: cx, y, size: R(19 * S), track: 0.4, opacity: 0.75 }));
 
     // Row 4 — when, where, what it costs.
