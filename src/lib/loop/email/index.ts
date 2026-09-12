@@ -38,7 +38,10 @@ class MockEmailProvider implements EmailProvider {
  * does NOT fall back to the mock outbox, so a real miss is visible.
  */
 class ResendEmailProvider implements EmailProvider {
-  constructor(private fromOverride: string | null = null) {}
+  constructor(
+    private fromOverride: string | null = null,
+    private replyTo: string | null = null,
+  ) {}
 
   async send(msg: EmailMessage): Promise<{ ok: boolean }> {
     // Sender precedence: admin setting (loop_settings.email_from) → Loop env →
@@ -65,6 +68,7 @@ class ResendEmailProvider implements EmailProvider {
           to: msg.to,
           subject: msg.subject,
           text: msg.text,
+          ...(this.replyTo ? { reply_to: this.replyTo } : {}),
         }),
       });
       if (!res.ok) {
@@ -81,19 +85,45 @@ class ResendEmailProvider implements EmailProvider {
   }
 }
 
-export function getEmail(from: string | null = null): EmailProvider {
+export function getEmail(
+  from: string | null = null,
+  replyTo: string | null = null,
+): EmailProvider {
   return process.env.EMAIL_MODE === "live" && process.env.RESEND_API_KEY
-    ? new ResendEmailProvider(from)
+    ? new ResendEmailProvider(from, replyTo)
     : new MockEmailProvider();
+}
+
+/** Both settings in one round trip, for the senders below. */
+async function sender(): Promise<EmailProvider> {
+  const [from, replyTo] = await Promise.all([configuredSender(), configuredReplyTo()]);
+  return getEmail(from, replyTo);
 }
 
 /** The admin-set sender, if any (loop_settings.email_from). Falls back to env
  *  inside the provider, so an unset value changes nothing. */
 export async function configuredSender(): Promise<string | null> {
+  return settingOrNull("email_from");
+}
+
+/**
+ * Where a reply goes (loop_settings.email_reply_to).
+ *
+ * Sending from a branded domain does not mean anyone can receive at it: that
+ * needs inbound MX on the apex, and there is none. Without a reply-to, a buyer
+ * who answers the code email is writing into a hole. This routes those replies
+ * to a mailbox that exists, so the From line can stay the brand.
+ */
+export async function configuredReplyTo(): Promise<string | null> {
+  return settingOrNull("email_reply_to");
+}
+
+async function settingOrNull(key: string): Promise<string | null> {
   try {
     const { queryOne } = await import("@/lib/loop/db");
     const row = await queryOne<{ value: string }>(
-      `SELECT value FROM loop_settings WHERE key = 'email_from'`,
+      `SELECT value FROM loop_settings WHERE key = ?1`,
+      [key],
     );
     return row?.value?.trim() || null;
   } catch {
@@ -164,7 +194,7 @@ export async function sendEventCodesEmail(
   codes: string[],
   eventTitle: string,
 ): Promise<{ ok: boolean }> {
-  return getEmail(await configuredSender()).send({
+  return (await sender()).send({
     to,
     subject:
       codes.length > 1
