@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-type CodeRow = { code: string; redeemed: boolean };
+type CodeRow = { code: string; redeemed: boolean; email: string | null; orderId: string | null };
 type Stats = { total: number; redeemed: number };
 
 /**
@@ -19,6 +19,10 @@ export function EventCodes() {
   const [showAll, setShowAll] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // The door's search. A buyer who mistyped their address gets no email and
+  // cannot use /loop/code either, because that keys on the same wrong address.
+  // Matching on a fragment finds them from a near-miss.
+  const [q, setQ] = useState("");
 
   const flash = (msg: string) => {
     setToast(msg);
@@ -30,7 +34,7 @@ export function EventCodes() {
     try {
       const res = await fetch("/api/loop/admin/codes", { cache: "no-store" });
       if (!res.ok) throw new Error(`Couldn't load codes (${res.status})`);
-      const data = await res.json();
+      const data = (await res.json()) as { codes?: CodeRow[]; stats?: Stats };
       setCodes(data.codes ?? []);
       setStats(data.stats ?? { total: 0, redeemed: 0 });
     } catch (e) {
@@ -74,7 +78,18 @@ export function EventCodes() {
     }
   }
 
-  const visible = showAll ? codes : codes.slice(0, 24);
+  // Matching on a fragment of the address OR the code: at the door somebody
+  // says "it was something at gmail" and that has to be enough to find them.
+  const needle = q.trim().toLowerCase();
+  const matched = needle
+    ? codes.filter(
+        (c) =>
+          (c.email ?? "").toLowerCase().includes(needle) ||
+          c.code.toLowerCase().includes(needle) ||
+          (c.orderId ?? "").toLowerCase().includes(needle),
+      )
+    : codes;
+  const visible = needle ? matched : showAll ? codes : codes.slice(0, 24);
 
   return (
     <div className="mt-4">
@@ -114,6 +129,20 @@ export function EventCodes() {
         )}
       </div>
 
+      <input
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        placeholder="Find by email, code or order"
+        className="mt-3 w-full rounded-full border border-ink/20 bg-transparent px-5 py-3 text-sm outline-none placeholder:opacity-40 focus:border-ink"
+      />
+      {needle && (
+        <p className="loop-muted mt-2 text-center text-xs">
+          {matched.length === 0
+            ? "Nothing matches. They may have paid under a different address, or the order never reached us."
+            : `${matched.length} ${matched.length === 1 ? "match" : "matches"}`}
+        </p>
+      )}
+
       {error && (
         <p className="mt-3 rounded-2xl border border-ink/15 bg-ink/5 px-4 py-3 text-sm text-red-700">
           {error}
@@ -142,8 +171,14 @@ export function EventCodes() {
                     ? "border-ink/10 opacity-40 line-through"
                     : "border-ink/20 active:scale-95"
                 }`}
+                title={c.email ?? undefined}
               >
                 {c.code}
+                {needle && c.email && (
+                  <span className="loop-muted mt-0.5 block truncate text-[9px] font-normal normal-case tracking-normal">
+                    {c.email}
+                  </span>
+                )}
               </button>
             ))}
           </div>

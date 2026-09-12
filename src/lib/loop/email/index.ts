@@ -89,9 +89,29 @@ export function getEmail(
   from: string | null = null,
   replyTo: string | null = null,
 ): EmailProvider {
-  return process.env.EMAIL_MODE === "live" && process.env.RESEND_API_KEY
-    ? new ResendEmailProvider(from, replyTo)
-    : new MockEmailProvider();
+  const live = process.env.EMAIL_MODE === "live";
+  const key = Boolean(process.env.RESEND_API_KEY);
+
+  // Asking for live and getting mock is the worst of the three outcomes: the
+  // outbox reports ok, the pass webhook reports delivered: true, and nobody
+  // receives anything. Somebody set EMAIL_MODE deliberately, so a missing key
+  // is a misconfiguration, not a reason to quietly pretend.
+  if (live && !key) {
+    console.error(
+      "[loop:email] EMAIL_MODE=live but RESEND_API_KEY is unset. Refusing to send " +
+        "rather than silently falling back to the mock outbox.",
+    );
+    return new BrokenEmailProvider();
+  }
+  return live ? new ResendEmailProvider(from, replyTo) : new MockEmailProvider();
+}
+
+/** Configured to send and unable to. Reports failure so callers see the truth. */
+class BrokenEmailProvider implements EmailProvider {
+  async send(msg: EmailMessage): Promise<{ ok: boolean }> {
+    console.error(`[loop:email] NOT SENT to ${msg.to}: no RESEND_API_KEY.`);
+    return { ok: false };
+  }
 }
 
 /** Both settings in one round trip, for the senders below. */

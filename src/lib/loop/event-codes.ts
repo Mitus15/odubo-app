@@ -226,10 +226,33 @@ export async function countRedeemed(eventId: string): Promise<{ total: number; r
   return { total: row?.total ?? 0, redeemed: row?.redeemed ?? 0 };
 }
 
-export async function listCodes(eventId: string): Promise<{ code: string; redeemed: boolean }[]> {
-  const rows = await queryDatabase<{ code: string; redeemed_by: string | null }>(
-    `SELECT code, redeemed_by FROM event_codes WHERE event_id = ?1`,
+/**
+ * Every code for a volume, with the address it was issued to.
+ *
+ * The email is here for the door. A buyer who mistyped their address at
+ * checkout, or used one they cannot read on the night, gets no email and cannot
+ * self-serve at /loop/code either, because that lookup keys on the same address
+ * they got wrong. They have paid and they are standing in front of somebody.
+ * The host needs to find their code by what they DO know, which is usually a
+ * near-miss of the address they typed.
+ */
+export async function listCodes(
+  eventId: string,
+): Promise<{ code: string; redeemed: boolean; email: string | null; orderId: string | null }[]> {
+  const rows = await queryDatabase<{
+    code: string;
+    redeemed_by: string | null;
+    email: string | null;
+    order_id: string | null;
+  }>(
+    `SELECT code, redeemed_by, email, order_id FROM event_codes WHERE event_id = ?1
+      ORDER BY rowid DESC`,
     [eventId],
   );
-  return rows.map((r) => ({ code: r.code, redeemed: r.redeemed_by !== null }));
+  return rows.map((r) => ({
+    code: r.code,
+    redeemed: r.redeemed_by !== null,
+    email: r.email,
+    orderId: r.order_id,
+  }));
 }
