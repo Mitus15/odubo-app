@@ -299,7 +299,7 @@ export default function GDPRConsent({ onConsentChange }: GDPRConsentProps) {
       <div className="pointer-events-auto mx-auto flex max-w-3xl flex-col gap-3 rounded-xl border border-white/10 bg-[#1a1210]/95 p-4 shadow-lg backdrop-blur-sm sm:flex-row sm:items-center sm:gap-4">
         <p className="flex-1 text-xs leading-relaxed text-stone-200">
           We use cookies to understand how the site is used.{' '}
-          <a href="/legal/privacy" className="underline underline-offset-2 hover:text-[#d2a79a]">
+          <a href="/legal?tab=privacy" className="underline underline-offset-2 hover:text-[#d2a79a]">
             Privacy Policy
           </a>
         </p>
