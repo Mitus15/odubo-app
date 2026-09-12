@@ -13,8 +13,6 @@ import {
   WORDMARK_SRC,
   ODUBO_SRC,
   SCOTTS_SRC,
-  POSTER_SIZES,
-  type EventDetails,
   type PosterSize,
   type LayoutResult,
 } from "../../src/lib/loop/poster/layout";
@@ -26,21 +24,8 @@ import {
 } from "../../src/lib/loop/publicUrl";
 import { getSetting } from "../../src/lib/loop/loopSetting";
 import { priceLabel } from "../../src/lib/loop/priceLabel";
-import { EVENT_CREDITS } from "../../src/lib/loop/content";
-import { MOCK_CURRENT_EVENT } from "../../src/lib/loop/hub";
+import { VOLUMES } from "./event-config";
 
-/** "SATURDAY OCTOBER 10" — the venue's timezone, not the printer's. */
-function printedDate(iso: string): string {
-  return new Date(iso)
-    .toLocaleDateString("en-CA", {
-      timeZone: "America/Vancouver",
-      weekday: "long",
-      month: "long",
-      day: "numeric",
-    })
-    .toUpperCase()
-    .replace(",", "");
-}
 import type { AnthemState } from "../../src/lib/loop/anthem-server";
 import { prepareSharp, renderSharp, assertFontResolves } from "./poster-render-sharp";
 
@@ -58,33 +43,6 @@ import { prepareSharp, renderSharp, assertFontResolves } from "./poster-render-s
  * Studio renders — and rasterised by scripts/loop/poster-render-sharp.ts in
  * the committed brand face. What the studio previews is what this prints.
  */
-
-/* ─────────────────────────── the only thing to edit ─────────────────────── */
-
-const VOLUMES: Record<string, EventDetails & { venueShort: string }> = {
-  1: {
-    // Derived, never typed. The date has moved twice; each time it was retyped
-    // here as well as in hub.ts, and a poster that disagrees with the front
-    // door about which night it is cannot be corrected once it is printed.
-    date: printedDate(MOCK_CURRENT_EVENT.date),
-    // The one thing a reader has to act on is BE HERE BEFORE 8 — an end time
-    // only tells them when to leave.
-    doors: "DOORS 6:30 · ALBUM AT 8",
-    venue: "SCOTT'S INN & SUITES · KAMLOOPS",
-    venueShort: "SCOTT'S INN · KAMLOOPS",
-    note: "DRESS CODE · 80s",
-    record: EVENT_CREDITS.record.toUpperCase(),
-    feature: EVENT_CREDITS.feature.toUpperCase(),
-  },
-  2: {
-    date: "DATE TBD",
-    doors: "DOORS 6:30 · ALBUM AT 8",
-    venue: "SCOTT'S INN & SUITES · KAMLOOPS",
-    venueShort: "SCOTT'S INN · KAMLOOPS",
-    note: "DRESS CODE · TBD",
-    record: "AN ALBUM BY MANI ODUBO",
-  },
-};
 
 /** Silhouettes available as the hero. `crowd` is the original banner artwork. */
 const FIGURES: Record<string, string> = {

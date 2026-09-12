@@ -1,5 +1,6 @@
 import {
   layoutEventPoster,
+  layoutLivingPoster,
   layoutTicket,
   layoutPassCard,
   layoutTournament,
@@ -9,6 +10,7 @@ import {
   ODUBO_SRC,
   SCOTTS_SRC,
   POSTER_SIZES,
+  LIVING_POSTER_SIZE,
   PRINT_BLEED,
   type EventDetails,
   type LayoutDeps,
@@ -46,9 +48,10 @@ const deps: LayoutDeps = {
   },
 };
 
+// No volume/theme: they came off the artwork on 2026-08-25 and off the type on
+// the same day, but this fixture kept setting them and the literal has been a
+// type error ever since. The suite below still asserts they never render.
 const details: EventDetails = {
-  volume: "VOLUME ONE",
-  theme: "80s",
   date: "SATURDAY OCTOBER 10",
   doors: "DOORS 6:30 · ALBUM AT 8",
   venue: "SCOTT'S INN & SUITES · KAMLOOPS",
@@ -221,6 +224,85 @@ describe("layoutEventPoster", () => {
     else expect(r.error).toMatch(/needs|free/);
   });
 
+  // ── the living poster: a story that has to carry its own way in ──────────
+  it("drops the QR on a story but keeps it everywhere else", () => {
+    const hasQr = (size: PosterSize) => {
+      const r = layoutEventPoster(
+        { size, figureSrc: "/loop/figures/dance.png", qrUrl: "https://example.com/loop", details },
+        deps,
+      );
+      expect(r.ok).toBe(true);
+      return r.ok && r.list.ops.some((o) => o.kind === "image" && o.src.startsWith("qr:"));
+    };
+    expect(hasQr("story")).toBe(false);
+    expect(hasQr("print")).toBe(true);
+    expect(hasQr("feed")).toBe(true);
+  });
+
+  it("puts the code on a story when asked, without overlapping the wordmark", () => {
+    const r = layoutEventPoster(
+      {
+        size: "story",
+        figureSrc: null,
+        qrUrl: "https://example.com/loop",
+        showQr: true,
+        details,
+      },
+      deps,
+    );
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    assertNoOverlap(r.list.ops);
+    expect(r.list.ops.some((o) => o.kind === "image" && o.src.startsWith("qr:"))).toBe(true);
+    // Asking for the code reverts the header to the print treatment, so the
+    // wordmark must leave the centre — that is what makes room for the code.
+    const wm = r.list.ops.find((o) => o.kind === "image" && o.src === WORDMARK_SRC) as {
+      x: number;
+      w: number;
+    };
+    expect(wm.x + wm.w / 2).toBeLessThan(POSTER_SIZES.story.w / 2);
+  });
+
+  it("reports a hero band that the type never reaches into", () => {
+    const r = layoutEventPoster(
+      {
+        size: "story",
+        figureSrc: null,
+        qrUrl: "https://example.com/loop",
+        showQr: true,
+        details,
+      },
+      deps,
+    );
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    const hero = r.list.hero;
+    expect(hero).toBeDefined();
+    if (!hero) return;
+    expect(hero.h).toBeGreaterThan(0);
+    // The living poster puts video in this box. Anything the engine drew that
+    // pokes into it would be sitting on the dancer.
+    for (const box of boxes(r.list.ops)) {
+      const clear =
+        box.y2 <= hero.y || box.y1 >= hero.y + hero.h ||
+        box.x2 <= hero.x || box.x1 >= hero.x + hero.w;
+      expect(`${box.label}:${clear}`).toBe(`${box.label}:true`);
+    }
+  });
+
+  it("leaves the hero band empty when there is no figure", () => {
+    const r = layoutEventPoster(
+      { size: "story", figureSrc: null, qrUrl: "https://x.co", showQr: true, details },
+      deps,
+    );
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    const figures = r.list.ops.filter(
+      (o) => o.kind === "image" && o.src.includes("/loop/figures/"),
+    );
+    expect(figures).toHaveLength(0);
+  });
+
   it("refuses when an image's dimensions were not prepared", () => {
     const r = layoutEventPoster(
       { size: "print", figureSrc: "/not/prepared.png", qrUrl: "https://x.co", details },
@@ -228,6 +310,95 @@ describe("layoutEventPoster", () => {
     );
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.error).toContain("/not/prepared.png");
+  });
+});
+
+describe("layoutLivingPoster", () => {
+  const spec = { qrUrl: "https://example.com/loop", details };
+
+  it("lays out with no overlap and carries the code, the date and both marks", () => {
+    const r = layoutLivingPoster(spec, deps);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    assertNoOverlap(r.list.ops);
+    const srcs = r.list.ops.flatMap((o) => (o.kind === "image" ? [o.src] : []));
+    expect(srcs).toContain(WORDMARK_SRC);
+    expect(srcs).toContain(ODUBO_SRC);
+    expect(srcs).toContain(SCOTTS_SRC);
+    expect(srcs.some((x) => x.startsWith("qr:"))).toBe(true);
+    const text = r.list.ops
+      .flatMap((o) => (o.kind === "glyphs" ? [o.glyphs.map((g) => g.ch).join("")] : []))
+      .join(" | ");
+    expect(text).toContain("SATURDAY OCTOBER 10");
+    expect(text).toContain("SCOTT'S INN & SUITES");
+  });
+
+  it("reserves a hero band nothing is drawn into", () => {
+    const r = layoutLivingPoster(spec, deps);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    const hero = r.list.hero;
+    expect(hero).toBeDefined();
+    if (!hero) return;
+    // The dancer is fitted to this box by scripts/loop/living-poster.ts. If
+    // anything the engine drew reaches into it, the type lands on him — which
+    // is exactly the bug this band exists to prevent.
+    for (const box of boxes(r.list.ops)) {
+      const clear = box.y2 <= hero.y || box.y1 >= hero.y + hero.h;
+      expect(`${box.label}:${clear}`).toBe(`${box.label}:true`);
+    }
+  });
+
+  it("gives the dancer at least a third of the frame", () => {
+    const r = layoutLivingPoster(spec, deps);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    // The whole reason this is not the event poster with a hole in it: that
+    // one left the hero 27% of a 9:16 sheet, and a full-body take needs ~48%.
+    expect(r.list.hero!.h / LIVING_POSTER_SIZE.h).toBeGreaterThan(0.33);
+  });
+
+  it("reads top-down: the record above its feature credit", () => {
+    const r = layoutLivingPoster(spec, deps);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    const yOf = (needle: string) => {
+      const op = r.list.ops.find(
+        (o) => o.kind === "glyphs" && o.glyphs.map((g) => g.ch).join("").includes(needle),
+      );
+      return op && op.kind === "glyphs" ? op.y : NaN;
+    };
+    // Built bottom-up in places, so this is the assertion that catches an
+    // emission order that renders the credit stack upside down.
+    expect(yOf("AN ALBUM BY MANI ODUBO")).toBeLessThan(yOf("SATURDAY OCTOBER 10"));
+    expect(yOf("SATURDAY OCTOBER 10")).toBeLessThan(yOf("SCOTT'S INN & SUITES"));
+  });
+
+  it("drops the slogan on null and defaults it otherwise", () => {
+    const has = (slogan: string | null | undefined) => {
+      const r = layoutLivingPoster({ ...spec, slogan }, deps);
+      expect(r.ok).toBe(true);
+      return (
+        r.ok &&
+        r.list.ops.some(
+          (o) => o.kind === "glyphs" && o.glyphs.map((g) => g.ch).join("") === "Come Dance",
+        )
+      );
+    };
+    expect(has(undefined)).toBe(true);
+    expect(has(null)).toBe(false);
+  });
+
+  it("refuses rather than squeezing the hero out with a giant date line", () => {
+    const r = layoutLivingPoster(
+      {
+        ...spec,
+        details: { ...details, venue: "A".repeat(400), record: "B".repeat(400) },
+      },
+      deps,
+    );
+    if (r.ok) assertNoOverlap(r.list.ops);
+    else expect(r.error).toMatch(/hero band|needs/);
   });
 });
 

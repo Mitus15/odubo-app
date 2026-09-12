@@ -83,7 +83,22 @@ export type Op =
       dash?: [number, number];
     };
 
-export type DisplayList = { w: number; h: number; ops: Op[] };
+export type DisplayList = {
+  w: number;
+  h: number;
+  ops: Op[];
+  /**
+   * The hero band the layout reserved — where the figure was drawn, or the
+   * hole it left when `figureSrc` was null.
+   *
+   * Emitted so a caller can put something there that the engine cannot
+   * rasterise. The living poster is the reason it exists: video frames go in
+   * this box, and the box has to come from the same arithmetic that positioned
+   * the type around it, or the dancer drifts under the slogan on one format
+   * and floats on another.
+   */
+  hero?: { x: number; y: number; w: number; h: number };
+};
 export type LayoutResult =
   | { ok: true; list: DisplayList }
   | { ok: false; error: string };
@@ -196,6 +211,16 @@ export type EventPosterSpec = {
   qrUrl: string;
   /** The line under the QR. Defaults to DEFAULT_QR_CAPTION. */
   qrCaption?: string;
+  /**
+   * Force the code on, or off, against the format's own habit.
+   *
+   * A story drops it by default (below), because a story is scrolled past
+   * inside the app where a link sticker does the job better. A LIVING POSTER
+   * is the case that breaks the rule: a reel is reshared, downloaded, screen
+   * recorded and replayed on a screen at the venue, and no sticker travels
+   * with it. Where the code is the only way in, it has to be on the artwork.
+   */
+  showQr?: boolean;
   details?: EventDetails | null;
 };
 
@@ -380,23 +405,31 @@ export function layoutEventPoster(
     // entirely and centres the wordmark, which also buys back the width the QR
     // was holding.
     const isStory = spec.size === "story";
+    // Two different questions, and they were one variable until the living
+    // poster needed them apart. `isStory` is about the app's CHROME — where
+    // the profile row and reply bar eat the sheet. `wantQr` is about the
+    // header's COMPOSITION. A story that carries a code cannot also centre its
+    // wordmark: centred leaves the code nowhere to go but on top of it, so
+    // asking for the code reverts the header to the print treatment —
+    // wordmark left, code right.
+    const wantQr = spec.showQr ?? !isStory;
     const wm = need(deps, WORDMARK_SRC);
-    const wmW = R((isStory ? 620 : 560) * S);
+    const wmW = R((isStory && !wantQr ? 620 : 560) * S);
     const wmH = R(wmW * (wm.h / wm.w));
     const qrPx = R(300 * S);
     // Stories are read in the middle. Pushing the top margin down keeps the
     // wordmark clear of the profile row, and the hero band absorbs the rest.
     const headTop = isStory ? pad + R(280 * S) : pad;
-    const headBottom = headTop + (isStory ? wmH : Math.max(wmH, qrPx + R(46 * S)));
+    const headBottom = headTop + (wantQr ? Math.max(wmH, qrPx + R(46 * S)) : wmH);
     ops.push({
       kind: "image",
       src: WORDMARK_SRC,
-      x: isStory ? R(W / 2 - wmW / 2) : pad,
+      x: wantQr ? pad : R(W / 2 - wmW / 2),
       y: headTop,
       w: wmW,
       h: wmH,
     });
-    if (!isStory) {
+    if (wantQr) {
       ops.push({
         kind: "image",
         src: qrSrc(spec.qrUrl),
@@ -700,7 +733,225 @@ export function layoutEventPoster(
       opacity: 0.85,
     });
 
-    return { w: W, h: H, ops };
+    return {
+      w: W,
+      h: H,
+      ops,
+      hero: {
+        x: R(W / 2 - heroMaxW / 2),
+        y: heroTop,
+        w: heroMaxW,
+        h: heroMaxH,
+      },
+    };
+  });
+}
+
+/* ── the living poster ──────────────────────────────────────────────────── */
+
+/** 9:16, like the story — it is a reel. */
+export const LIVING_POSTER_SIZE = POSTER_SIZES.story;
+
+export type LivingPosterSpec = {
+  qrUrl: string;
+  qrCaption?: string;
+  details: EventDetails;
+  /** Defaults to the brand slogan. Pass null to drop it. */
+  slogan?: string | null;
+};
+
+/**
+ * The living poster — the piece whose hero is footage, not a silhouette.
+ *
+ * Its own layout rather than the event poster with a hole in it, and the
+ * reason is arithmetic. The event poster budgets a full type block — slogan,
+ * triad, date, venue, dress code, price, two captioned marks — which on a
+ * 1080×1920 sheet leaves the hero 27% of the frame. A dancer shot full-body
+ * occupies 48%. Running one through the other put the album credit across his
+ * head and the slogan across his shins, so this piece carries only what a
+ * scrolling stranger can actually act on:
+ *
+ *   the mark · the code · the date · the venue · who is behind it
+ *
+ * Everything else the event poster says is still said, on the sheet at the
+ * venue and behind the code. Dropped here on purpose: the triad (decoration at
+ * 17px), the dress code and price (unreadable at this size and not the reason
+ * to stop scrolling), and the "PRESENTED BY" labels (a caption above a 60px
+ * mark is smaller than the mark's own wordmark).
+ *
+ * Both bands are held clear of the app's chrome — the profile row eats the top
+ * of a reel and the caption eats the bottom — so nothing that matters is
+ * rendered underneath Instagram's own furniture.
+ */
+export function layoutLivingPoster(
+  spec: LivingPosterSpec,
+  deps: LayoutDeps,
+): LayoutResult {
+  return run(() => {
+    const { w: W, h: H } = LIVING_POSTER_SIZE;
+    const S = W / 2400;
+    const pad = R(150 * S);
+    const d = spec.details;
+
+    const ops: Op[] = [{ kind: "rect", x: 0, y: 0, w: W, h: H, fill: SAND }];
+
+    // Chrome insets. A reel is read between the profile row and the caption;
+    // these are what the story layout learned, kept as named numbers because
+    // they are facts about Instagram, not about this poster.
+    const chromeTop = R(250 * S / 0.45);
+    const chromeBottom = R(300 * S / 0.45);
+
+    /* ── top band: the mark, and the way in ──────────────────────────────── */
+    const qrPx = R(300 * S);
+    const wm = need(deps, WORDMARK_SRC);
+    const wmW = R(700 * S);
+    const wmH = R(wmW * (wm.h / wm.w));
+    const topRowH = Math.max(wmH, qrPx);
+    const topY = chromeTop;
+    ops.push({
+      kind: "image",
+      src: WORDMARK_SRC,
+      x: pad,
+      y: R(topY + (topRowH - wmH) / 2),
+      w: wmW,
+      h: wmH,
+    });
+    ops.push({
+      kind: "image",
+      src: qrSrc(spec.qrUrl),
+      x: W - pad - qrPx,
+      y: topY,
+      w: qrPx,
+      h: qrPx,
+    });
+    ops.push(
+      line(spec.qrCaption ?? DEFAULT_QR_CAPTION, {
+        x: W - pad - qrPx / 2,
+        y: topY + qrPx + R(30 * S),
+        size: R(22 * S),
+        track: 0.22,
+        opacity: 0.65,
+      }),
+    );
+    let topBottom = topY + Math.max(topRowH, qrPx + R(30 * S) + R(22 * S));
+
+    // The record credit rides under the masthead, the way it does on the sheet.
+    // It was tried down in the type block and the block became a wall of six
+    // stacked lines while the space under the mark sat empty — the credit is
+    // what that space is for, and the hero band is measured after this, so
+    // spending it here costs the dancer only what it uses.
+    if (d.record) {
+      const recordSize = fitSize(
+        d.record,
+        W - pad * 2,
+        { track: 0.3 },
+        { max: R(46 * S), min: R(22 * S) },
+      );
+      topBottom += R(90 * S) + recordSize;
+      ops.push(
+        line(d.record, { x: W / 2, y: topBottom, size: recordSize, track: 0.3, opacity: 0.85 }),
+      );
+      if (d.feature) {
+        const featureSize = R(30 * S);
+        topBottom += R(34 * S) + featureSize;
+        ops.push(
+          line(d.feature, {
+            x: W / 2,
+            y: topBottom,
+            size: featureSize,
+            track: 0.28,
+            opacity: 0.6,
+          }),
+        );
+      }
+    }
+
+    /* ── bottom band, built upward from the marks ────────────────────────── */
+    const od = need(deps, ODUBO_SRC);
+    const sc = need(deps, SCOTTS_SRC);
+    // The 2026 lockup is wide and short (2.85:1) against Scott's stacked
+    // 2.22:1, so matching their WIDTHS would leave the house mark visibly
+    // lighter than the venue's on our own poster. Matched on height instead.
+    const odW = R(370 * S);
+    const odH = R(odW * (od.h / od.w));
+    const scW = R(320 * S);
+    const scH = R(scW * (sc.h / sc.w));
+    const markRowH = Math.max(odH, scH);
+    const markTop = H - chromeBottom - markRowH;
+    ops.push({
+      kind: "image",
+      src: ODUBO_SRC,
+      x: R(W * 0.34 - odW / 2),
+      y: R(markTop + (markRowH - odH) / 2),
+      w: odW,
+      h: odH,
+    });
+    ops.push({
+      kind: "image",
+      src: SCOTTS_SRC,
+      x: R(W * 0.66 - scW / 2),
+      y: R(markTop + (markRowH - scH) / 2),
+      w: scW,
+      h: scH,
+      opacity: 0.85,
+    });
+
+    // Venue, then the date above it. The date is the heaviest line on the
+    // piece after the mark: it is the single fact the reel exists to deliver.
+    // Built upward from the marks, so it is written here in reverse of how it
+    // reads.
+    let cursorY = markTop - R(80 * S);
+    if (d.venue) {
+      ops.push(
+        line(d.venue, {
+          x: W / 2,
+          y: cursorY,
+          size: R(40 * S),
+          track: 0.16,
+          opacity: 0.85,
+        }),
+      );
+      cursorY -= R(78 * S);
+    }
+    const dateText = [d.date, d.doors].filter(Boolean).join("  ·  ");
+    if (dateText) {
+      const dateSize = fitSize(
+        dateText,
+        W - pad * 2,
+        { weight: 700, track: 0.06 },
+        { max: R(58 * S), min: R(30 * S) },
+      );
+      ops.push(
+        line(dateText, { x: W / 2, y: cursorY, size: dateSize, weight: 700, track: 0.06 }),
+      );
+      cursorY -= dateSize + R(40 * S);
+    }
+
+    const slogan = spec.slogan === null ? null : (spec.slogan ?? SLOGAN);
+    if (slogan) {
+      const sloganSize = fitSize(
+        slogan,
+        W - pad * 2,
+        { weight: 700, track: 0.02 },
+        { max: R(190 * S) },
+      );
+      ops.push(
+        line(slogan, { x: W / 2, y: cursorY, size: sloganSize, weight: 700, track: 0.02 }),
+      );
+      cursorY -= Math.round(sloganSize * CAP_HEIGHT) + R(30 * S);
+    }
+
+    /* ── what is left is the dancer's ────────────────────────────────────── */
+    const heroTop = topBottom + R(40 * S);
+    const heroH = cursorY - R(30 * S) - heroTop;
+    assertFits("the living poster's hero band", R(700 * S), heroH);
+
+    return {
+      w: W,
+      h: H,
+      ops,
+      hero: { x: 0, y: heroTop, w: W, h: heroH },
+    };
   });
 }
 

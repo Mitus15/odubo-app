@@ -45,6 +45,7 @@
     "mp4:reset-stuck": "tsx --env-file=.env.local scripts/reset-stuck-videos.ts",
     "loop:posters": "tsx --env-file=.env.local scripts/loop/poster-kit.ts",
     "loop:merch": "tsx scripts/loop/merch-kit.ts",
+    "loop:living-poster": "tsx --env-file=.env.local scripts/loop/living-poster.ts",
     "shopify:loop-drop": "tsx --env-file=.env.local scripts/shopify/loop-soul-drop.ts"
   },
   "dependencies": {

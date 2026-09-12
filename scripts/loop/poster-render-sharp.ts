@@ -208,7 +208,22 @@ async function vectorOpsToSvg(ops: Op[], W: number, H: number): Promise<Buffer> 
   );
 }
 
-export async function renderSharp(list: DisplayList, prepared: Prepared): Promise<Buffer> {
+export type RenderOpts = {
+  /**
+   * Render onto transparency instead of white, for a display list that is
+   * meant to be composited over something this renderer cannot draw — video
+   * frames, in the living poster's case. Callers wanting this will also want
+   * to drop the layout's own background rect, or they will have composited an
+   * opaque sheet over their footage.
+   */
+  transparent?: boolean;
+};
+
+export async function renderSharp(
+  list: DisplayList,
+  prepared: Prepared,
+  opts: RenderOpts = {},
+): Promise<Buffer> {
   type Layer = { input: Buffer; left: number; top: number };
   const layers: Layer[] = [];
   let pendingVector: Op[] = [];
@@ -249,7 +264,9 @@ export async function renderSharp(list: DisplayList, prepared: Prepared): Promis
   await flushVector();
 
   return sharp({
-    create: { width: list.w, height: list.h, channels: 3, background: "#ffffff" },
+    create: opts.transparent
+      ? { width: list.w, height: list.h, channels: 4, background: "#00000000" }
+      : { width: list.w, height: list.h, channels: 3, background: "#ffffff" },
   })
     .composite(layers)
     .png()
