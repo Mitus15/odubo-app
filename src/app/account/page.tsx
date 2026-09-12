@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { requireStoreAccess } from '@/lib/storeAccess';
+import { STORE_ACCOUNT_URL } from "@/lib/storeAccount";
 
 /**
  * Account Page
@@ -11,5 +12,5 @@ export default async function AccountPage() {
   await requireStoreAccess();
 
   // If store is accessible, redirect to Shopify account portal
-  redirect('https://account.odubo.studio');
+  redirect(STORE_ACCOUNT_URL);
 }

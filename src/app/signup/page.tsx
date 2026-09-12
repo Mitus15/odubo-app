@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { STORE_ACCOUNT_URL } from "@/lib/storeAccount";
 
 /**
  * Signup Page
@@ -8,7 +9,7 @@ import { useEffect } from 'react';
  */
 export default function SignupPage() {
   useEffect(() => {
-    window.location.href = 'https://account.odubo.studio/register';
+    window.location.href = STORE_ACCOUNT_URL;
   }, []);
 
   return (

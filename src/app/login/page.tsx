@@ -2,10 +2,11 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { STORE_ACCOUNT_URL } from "@/lib/storeAccount";
 
 /**
  * Admin Login Page
- * Customer login handled by Shopify at account.odubo.studio
+ * Customer login handled by Shopify, see src/lib/storeAccount.ts
  */
 export default function LoginPage() {
   const router = useRouter();
@@ -102,7 +103,7 @@ export default function LoginPage() {
             <p className="text-sm text-[#726d6c]">
               Looking for your orders?{' '}
               <a
-                href="https://account.odubo.studio"
+                href={STORE_ACCOUNT_URL}
                 className="text-[#b2a491] hover:text-[#ede8df] transition-colors"
               >
                 Customer Account

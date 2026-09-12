@@ -13,7 +13,7 @@ import StoreOrchestrator from "@/components/store/StoreOrchestrator";
 import OmniShopOrchestrator from "@/components/shop/OmniShopOrchestrator";
 import { UnifiedMediaProvider } from "@/contexts/UnifiedMediaContext";
 import OmniMediaOrchestrator from "@/components/media/OmniMediaOrchestrator";
-// Auth modal removed - customers redirected directly to account.odubo.studio
+// Auth modal removed - customers redirected to Shopify, see src/lib/storeAccount.ts
 import MediaPriorityBridge from "@/components/player/MediaPriorityBridge";
 import DesktopSidebar from "@/components/layout/DesktopSidebar";
 import MainContentWrapper from "@/components/layout/MainContentWrapper";

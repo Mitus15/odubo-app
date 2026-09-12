@@ -7,6 +7,7 @@ import { useStore } from '@/contexts/StoreContext';
 import { useCartOverlay } from './StoreOrchestrator';
 import type { SortOption } from '@/lib/store/types';
 import { isPreorderActive, getTimeUntilDrop } from '@/config/preorder';
+import { STORE_ACCOUNT_URL } from "@/lib/storeAccount";
 
 // ============================================
 // Filter & Sort UI
@@ -253,7 +254,7 @@ export default function ProductBrowse() {
         <div className="flex items-center gap-1">
           {/* Account button */}
           <a
-            href="https://account.odubo.studio"
+            href={STORE_ACCOUNT_URL}
             className="w-10 h-10 flex items-center justify-center text-white/60 hover:text-white transition-colors rounded-full hover:bg-white/5"
             aria-label="Account"
           >

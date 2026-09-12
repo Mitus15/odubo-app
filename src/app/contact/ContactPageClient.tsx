@@ -2,6 +2,7 @@
 
 import { useState, FormEvent } from 'react';
 import Link from 'next/link';
+import { STORE_ACCOUNT_URL } from "@/lib/storeAccount";
 
 type InquiryType = 'order' | 'refund' | 'shipping' | 'general';
 
@@ -95,7 +96,7 @@ export default function ContactPageClient() {
         {/* Quick Links */}
         <div className="grid grid-cols-2 gap-3 mb-10">
           <a
-            href="https://account.odubo.studio"
+            href={STORE_ACCOUNT_URL}
             className="glass-surface border border-[#502d26]/30 rounded-xl p-4 hover:border-[#843c2d]/50 transition-colors group"
           >
             <div className="flex items-center gap-3">
@@ -111,7 +112,7 @@ export default function ContactPageClient() {
             </div>
           </a>
           <a
-            href="https://account.odubo.studio"
+            href={STORE_ACCOUNT_URL}
             className="glass-surface border border-[#502d26]/30 rounded-xl p-4 hover:border-[#843c2d]/50 transition-colors group"
           >
             <div className="flex items-center gap-3">

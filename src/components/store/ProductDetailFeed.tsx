@@ -8,6 +8,7 @@ import { useCartOverlay } from './StoreOrchestrator';
 import { useAnalyticsSafe } from '@/contexts/AnalyticsContext';
 import type { Product, ProductVariant } from '@/lib/store/types';
 import { isPreorderActive, PREORDER_CTA, PREORDER_CTA_ANOTHER, PREORDER_FEEDBACK, PREORDER_SHIP_TEXT } from '@/config/preorder';
+import { STORE_ACCOUNT_URL } from "@/lib/storeAccount";
 
 // Helper to extract image filename for comparison
 // Shopify URLs can differ between list and detail views even for same image
@@ -440,7 +441,7 @@ export default function ProductDetailFeed() {
         <div className="flex items-center gap-1">
           {/* Account button */}
           <a
-            href="https://account.odubo.studio"
+            href={STORE_ACCOUNT_URL}
             className="w-10 h-10 flex items-center justify-center text-white/80 hover:text-white transition-colors rounded-full hover:bg-white/5"
             aria-label="Account"
           >

@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { useOmniShop, type ProductCard } from '@/contexts/OmniShopContext';
 import ProductFeed from './ProductFeed';
+import { STORE_ACCOUNT_URL } from "@/lib/storeAccount";
 
 const PRODUCTS_PER_PAGE = 12;
 
@@ -210,7 +211,7 @@ export default function MaisonModal() {
         <div className="flex items-center gap-2">
           {/* Account link - desktop only */}
           <a
-            href="https://account.odubo.studio"
+            href={STORE_ACCOUNT_URL}
             className="hidden md:flex w-10 h-10 items-center justify-center text-[#ede8df]/60 hover:text-[#ede8df] transition-colors rounded-full hover:bg-white/5"
             aria-label="Account"
           >

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { rateLimit } from '@/lib/rateLimit';
+import { STORE_ACCOUNT_URL } from "@/lib/storeAccount";
 
 // Initialize Resend client
 const resendApiKey = process.env.RESEND_API_KEY;
@@ -161,7 +162,7 @@ Reply directly to this email to respond to the customer.
                     <p style="margin:0 0 16px;font-size:16px;">Hi ${name}, we&rsquo;ve received your message and will get back to you within 24&ndash;48 hours.</p>
                     <p style="margin:0 0 16px;font-size:16px;">In the meantime:</p>
                     <ul style="margin:0 0 20px;padding-left:20px;font-size:15px;color:#1a1716;">
-                      <li style="margin-bottom:8px;"><a href="https://account.odubo.studio" style="color:#843c2d;text-decoration:none;">Check your order status</a></li>
+                      <li style="margin-bottom:8px;"><a href="${STORE_ACCOUNT_URL}" style="color:#843c2d;text-decoration:none;">Check your order status</a></li>
                       <li><a href="https://odubo.studio/store" style="color:#843c2d;text-decoration:none;">Browse the collection</a></li>
                     </ul>
                     <p style="margin:20px 0 0;font-size:15px;color:#6d6459;">&mdash; Odubo Studio</p>
@@ -181,7 +182,7 @@ Hi ${name},
 We've received your message and will get back to you within 24-48 hours.
 
 In the meantime:
-- Check your order status: https://account.odubo.studio
+- Check your order status: ${STORE_ACCOUNT_URL}
 - Browse the collection: https://odubo.studio/store
 
 \u2014 Odubo Studio
