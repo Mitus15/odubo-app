@@ -99,11 +99,38 @@ export async function bindDevice(
   );
 }
 
+/** Thrown when a claim would hand one person's record to another device. */
+export class EmailBelongsToSomeoneElse extends Error {
+  constructor() {
+    super("That email is already claimed.");
+    this.name = "EmailBelongsToSomeoneElse";
+  }
+}
+
 /**
  * "This is me" — bind a name and the checkout email to this device's attendee.
- * If another attendee already owns that email, this device is re-pointed at
- * THEM and the shell record is left behind: the person is one person, however
- * many phones they've used.
+ *
+ * Claiming an UNCLAIMED email is free: if nobody owns it, typing it is just
+ * labelling yourself, and that is the common case.
+ *
+ * Claiming one that already belongs to somebody else is REFUSED. It used to
+ * re-point the device at them, on the reasoning that a person is one person
+ * however many phones they have used. That is the right goal and it was the
+ * wrong mechanism: nothing proved the address was yours. Anyone who knew a
+ * guest's email could take their record, and with it their credited shots,
+ * their cover choice and their claim on the cover payout. The rate limit is no
+ * defence — a targeted takeover needs one attempt, not a thousand.
+ *
+ * Merging devices comes back at rung 4, behind a code sent to the address, now
+ * that there is a sending domain that exists. Until then a second device
+ * recovers through /loop/code with the checkout email, which is proof, because
+ * the code was sent there. Refusing is worse to use and strictly better than
+ * handing somebody else's night away.
+ *
+ * A display name is a label, not a claim: two people called Sarah are fine.
+ * Only the email carries identity.
+ *
+ * See docs/decisions/odubo-one-person-one-record.md.
  */
 export async function claimIdentity(
   voterId: string,
@@ -119,18 +146,7 @@ export async function claimIdentity(
       `SELECT id FROM loop_attendees WHERE email = ?1`,
       [mail],
     );
-    if (owner && owner.id !== me.id) {
-      await bindDevice(voterId, owner.id);
-      if (name) {
-        await executeQuery(
-          `UPDATE loop_attendees SET display_name = COALESCE(display_name, ?2), last_seen_at = ?3
-            WHERE id = ?1`,
-          [owner.id, name, new Date().toISOString()],
-        );
-      }
-      const merged = await attendeeForVoter(voterId);
-      return merged ?? me;
-    }
+    if (owner && owner.id !== me.id) throw new EmailBelongsToSomeoneElse();
   }
 
   await executeQuery(

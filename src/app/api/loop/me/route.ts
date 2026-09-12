@@ -4,6 +4,7 @@ import { getCurrentEvent } from "@/lib/loop/hub";
 import { isHolder } from "@/lib/loop/event-codes";
 import {
   attendeeForVoter,
+  EmailBelongsToSomeoneElse,
   claimIdentity,
   creditedUids,
   ensureAttendee,
@@ -55,6 +56,22 @@ export async function POST(req: NextRequest) {
   }
 
   await ensureAttendee(voterId);
-  const attendee = await claimIdentity(voterId, body.displayName ?? null, email);
-  return NextResponse.json({ success: true, attendee });
+  try {
+    const attendee = await claimIdentity(voterId, body.displayName ?? null, email);
+    return NextResponse.json({ success: true, attendee });
+  } catch (e) {
+    // Someone else already holds that address. Say so plainly and point at the
+    // one path that proves ownership, rather than merging on an unverified
+    // claim. See docs/decisions/odubo-one-person-one-record.md.
+    if (e instanceof EmailBelongsToSomeoneElse) {
+      return NextResponse.json(
+        {
+          error:
+            "That email is already in use. If it's yours, find your event code with it at /loop/code and it'll connect this device.",
+        },
+        { status: 409 },
+      );
+    }
+    throw e;
+  }
 }
