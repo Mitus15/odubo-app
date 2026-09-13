@@ -112,11 +112,25 @@ ramp cannot hold it. No threshold-nudge fixes this; only levelling does.
 - **The interior can never take the field colour.** The body is INK, weak lines
   SAND_DEEP, strong lines SAND_BRIGHT. SAND is reserved for the field.
 
-**SAND_BRIGHT on the figure is deliberate and was arrived at by trying the
-alternative.** Capping the interior at SAND_DEEP made a hole structurally
-impossible, which was the point, but it came back far too quiet against the
-green reference. SAND_BRIGHT is safe for the same structural reason — the one
-colour a figure pixel must never take is the field's, and SAND_BRIGHT is not it.
+**How loud the interior gets is a named choice, `--gradeTone`.** The green look
+carries its detail in HUE — mid-green lines on black — and hue is exactly what
+a sand/ink ramp cannot reproduce, so the ladder has to pick a brightness to
+stand in for it. There is no single right answer:
+
+| `--gradeTone` | ladder | |
+|---|---|---|
+| `chill` (default) | INK · INK_SOFT · SAND_DEEP | matches the green's own weight |
+| `warm` | INK · SAND_DEEP · SAND_DEEP | one tone, more of it |
+| `bright` | INK · SAND_DEEP · SAND_BRIGHT | reads at a glance, but hot |
+
+`bright` shipped first and was wrong: the owner's note was that the highlights
+are too bright and the record is meant to be chill. Set against the green
+reference at the same frame, `chill` is the match.
+
+Whatever the ladder, **SAND is never in it**. The field is painted SAND
+unconditionally, so the one colour a figure pixel must never take is excluded
+by construction — which is what makes a hole impossible rather than merely
+unlikely, and is also why SAND_BRIGHT is available to the figure at all.
 
 ### The field-colour trap
 

@@ -197,6 +197,20 @@ const OPTS = {
   gradeCut1: args.gradeCut1 ? Number(args.gradeCut1) : null,
   gradeCut2: args.gradeCut2 ? Number(args.gradeCut2) : null,
   gradeCache: args.gradeCache ? String(args.gradeCache) : null,
+  /** How loud the dancer's interior line-art is allowed to get.
+   *
+   *  The green look carries its detail in HUE — mid-green lines on black — and
+   *  hue is exactly what a sand/ink ramp cannot reproduce, so the ladder has to
+   *  pick a brightness to stand in for it. There is no single right answer and
+   *  the difference is large, so it is a named choice rather than a constant:
+   *
+   *    chill  INK · INK_SOFT · SAND_DEEP     (default — the green's own weight)
+   *    warm   INK · SAND_DEEP · SAND_DEEP    (one tone, more of it)
+   *    bright INK · SAND_DEEP · SAND_BRIGHT  (reads at a glance, but hot)
+   *
+   *  "bright" was the first default and the owner's note was that it does not
+   *  match the record: the piece is meant to be chill. */
+  gradeTone: String(args.gradeTone ?? "chill"),
 
   /** Encode losslessly (large files, exact flat colour). */
   lossless: flag(args.lossless),
@@ -1030,6 +1044,18 @@ function makeRegradeRenderer(grade, ww, wh, ow, oh) {
   const solid = new Float32Array(on);
   const out = Buffer.alloc(on * 3);
   const rimPx = Math.max(2, Math.round(oh * OPTS.figureRim));
+  const LADDERS = {
+    chill: [INK_SOFT, SAND_DEEP],
+    warm: [SAND_DEEP, SAND_DEEP],
+    bright: [SAND_DEEP, SAND_BRIGHT],
+  };
+  const ladder = LADDERS[OPTS.gradeTone];
+  if (!ladder) {
+    throw new Error(
+      `unknown --gradeTone=${OPTS.gradeTone} · pick one of ${Object.keys(LADDERS).join(", ")}`,
+    );
+  }
+  const [MID, TOP] = ladder;
   let reported = false;
 
   return function render(rgba) {
@@ -1081,16 +1107,13 @@ function makeRegradeRenderer(grade, ww, wh, ow, oh) {
       } else if (rim[p] < 0.72) {
         c = INK;
       } else {
-        // INK body, SAND_DEEP for weak line-art, SAND_BRIGHT for strong.
-        //
-        // The top band is the whole point. In the green look the detail is
-        // bright green on black — a big contrast — and the first attempt here
-        // capped the interior at SAND_DEEP, which came back far too quiet
-        // against the reference. SAND_BRIGHT is safe precisely because this
-        // mode paints the field SAND unconditionally: the one colour a figure
-        // pixel must never take is the field's, and SAND_BRIGHT is not it.
+        // INK body, then the two tones --gradeTone picked. Whatever the
+        // ladder, SAND is never among them: this mode paints the field SAND
+        // unconditionally, and the one colour a figure pixel must never take
+        // is the field's. That is what makes a hole impossible rather than
+        // merely unlikely, and it is why SAND_BRIGHT is available at all.
         const t = figUp[p];
-        c = t > grade.cut2 ? SAND_BRIGHT : t > grade.cut1 ? SAND_DEEP : INK;
+        c = t > grade.cut2 ? TOP : t > grade.cut1 ? MID : INK;
       }
       out[p * 3] = c[0];
       out[p * 3 + 1] = c[1];

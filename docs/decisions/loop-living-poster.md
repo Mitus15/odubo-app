@@ -166,9 +166,42 @@ the silent version has identical frames and the script prints the timecode into
 the song, so the platform's own licensed copy can be dropped over it and will
 land in sync.
 
-Verify a finished file with `scripts/loop/check-sync.mjs`, which compares the
-music-to-movement lag against a reference known to be in sync. Measured on the
-30s cut: **10ms drift**.
+### Verifying it — and the check that had to be thrown away
+
+The obvious verification is to correlate the music's onsets against the
+dancer's movement and see whether they line up. **It does not work, and it
+looked like it did.** On this material the two correlate at about 0.03 — noise
+— and the lag it reported swung by hundreds of milliseconds between cuts that
+are provably aligned identically. A dancer does not move in step with onsets:
+he anticipates, he holds, and a silhouette changes fastest BETWEEN poses rather
+than on them. It emitted confident PASS/FAIL verdicts from nothing, which is
+worse than no check at all.
+
+So the question is split, and each half gets a check that actually works:
+
+**Is the offset right?** `align-takes.mjs`, correlating PICTURE, which is
+unambiguous. It now reports the offset at five points down the take rather than
+one, because the original coarse drift test resolved to 1/6s and could have
+hidden ±83ms of creeping rate difference per third. Result:
+
+```
+A t= 30s → offset -15.900s (confidence   9.2x)
+A t= 91s → offset -15.900s (confidence  71.5x)
+A t=151s → offset -15.900s (confidence 110.4x)
+A t=211s → offset -15.900s (confidence 119.1x)
+median -15.900s · spread 0ms
+```
+
+Zero spread across four independent windows. A single seek holds for the whole
+take. (The fifth window, at t=261s, correlates at 1.5x and is correctly
+excluded — it is past where the two files still overlap.)
+
+**Did this render trim where it meant to?** `check-sync.mjs`, which correlates
+the finished reel's audio against the reference's, on onset envelopes so that
+loudnorm and the AAC re-encode cannot affect it, and reports the absolute
+position it was lifted from. All three cuts: **5ms error** — one hop at the
+tool's 200Hz resolution — at 16-18σ above the search mean. It refuses to give a
+verdict below 6σ rather than reporting noise.
 
 ## The cut is a whole number of bars
 
@@ -192,6 +225,47 @@ One subtlety worth keeping: `bestWindow` scores on a 1/6s probe grid, so its
 answer is rounded, and the exact bar time is snapped back afterwards. An 83ms
 rounding would put the picture and the sound on different clocks, which is the
 bug this whole section exists to fix.
+
+## Three cuts, not one
+
+`--pick` chooses how a window is scored, so one take can be shown three ways
+and the energy compared side by side:
+
+| `--pick` | scored on | on this take |
+|---|---|---|
+| `loop` (default) | seam first, movement as tiebreak | 244.65s · seam 2.0% · motion 2.6%/frame · dancer 70% |
+| `energetic` | most movement | 171.21s · seam 9.6% · motion 4.5%/frame · dancer 62% |
+| `calm` | least movement | 238.53s · seam 11.7% · motion 2.2%/frame · dancer 86% |
+
+The trade is visible in the numbers and worth knowing before posting. `loop`
+repeats invisibly; the other two are chosen without regard to the seam, so both
+show a jump when the reel wraps. And the dancer's size runs the other way from
+the energy: the energetic passage contains a full overhead reach, which widens
+the envelope the band is sized to, so he ends up **smaller** on screen than in
+the calm one.
+
+## The margins, and which of them are real
+
+The outer margins are not symmetric and should not be.
+
+**The bottom 300px is reserved, not wasted.** Instagram puts the caption,
+username and audio ticker there. In a plain video player it reads as dead sand;
+in the app it is covered. Shrink it and the partner marks render underneath
+Instagram's own furniture.
+
+**The top was 250px and that was too much.** It was inherited from the STORY
+layout, where the profile row makes the top heavy as well. A reel's top carries
+only a title and a camera icon. Cut to **170px** on 2026-09-13, which gives the
+hero band 856px instead of 776 and takes the dancer from 63% to 70%.
+
+There is a third cause of him looking small, separate from the margins: the
+band is sized to the union of every pose in the cut, and over 30s that union
+(10.9%-72.9% of frame) is much taller than a typical frame (19.8%-67.2%). He is
+therefore scaled about 31% smaller than any ordinary frame needs, all of it
+paid for the single most extended pose. That is the right default — that pose
+is the one people screenshot — but `--envelopeTolerance=0.02` will size the
+band to p2-p98 instead and buy roughly 20%, at the cost of the extreme frame
+grazing the type.
 
 ## Verified
 

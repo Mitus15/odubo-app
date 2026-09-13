@@ -1,21 +1,33 @@
 /**
- * Does the music in this file land on the dancer's movement?
+ * Prove a finished reel's music was lifted from the position it claims.
  *
- *   node scripts/loop/check-sync.mjs --file=reel.mp4 --reference=known-good.mov
+ *   node scripts/loop/check-sync.mjs \
+ *     --file=reel.mp4 --reference=mani-billie-jean-4.mov --expect=228.750
  *
  * The living poster takes its picture from one file and its sound from
- * another, so "did the sync survive" is a question that has to be answered
- * about the FINISHED file, not about the inputs. A drift of 50ms is audible
- * on a dance clip and invisible in every other check in the pipeline.
+ * another, so "did the sync survive" has to be answered about the FINISHED
+ * file. This answers the half that can actually go wrong.
  *
- * How it answers it: build two envelopes from the same file — where the music
- * has its onsets, and where the body changes shape fastest — and cross
- * correlate them. The lag between them is not zero and is not supposed to be
- * (a dancer anticipates a beat, and a silhouette changes fastest between
- * poses, not on them), so the number is meaningless on its own. It is only
- * meaningful against a reference the owner has confirmed is in sync: if the
- * finished reel shows the same lag as that reference, the relationship
- * between sound and movement was preserved.
+ * WHAT IT DOES NOT DO, and why. The obvious check — correlate the music's
+ * onsets against the dancer's movement and see whether they line up — was
+ * tried first and does not work. On this material the two correlate at about
+ * 0.03, which is noise, and the lag it reports swings by hundreds of
+ * milliseconds between cuts that are provably aligned identically. It looked
+ * authoritative and was worthless, which is worse than no check. A dancer does
+ * not move in step with onsets: he anticipates, holds, and the silhouette
+ * changes fastest BETWEEN poses rather than on them.
+ *
+ * So the problem is split in two, and each half gets a check that works:
+ *
+ *   1. Is the picture-to-sound offset right?  →  scripts/loop/align-takes.mjs,
+ *      which correlates two renders of the same performance on PICTURE, gets
+ *      confidences over 100x, and now reports the offset at five points down
+ *      the take so a creeping rate difference cannot hide.
+ *   2. Did this render actually trim the music where it meant to?  →  here.
+ *
+ * Together those cover it: a correct offset, correctly applied. This half is
+ * the one that breaks silently when a start time is recomputed, rounded, or
+ * passed through the wrong variable.
  */
 import fs from "node:fs/promises";
 import os from "node:os";
@@ -23,10 +35,8 @@ import path from "node:path";
 import { spawn } from "node:child_process";
 
 const FFMPEG = "/opt/homebrew/bin/ffmpeg";
-const HOP_HZ = 100;
+const HOP_HZ = 200; // 5ms hops — the resolution of the answer
 const AUDIO_HZ = 22050;
-const PROBE_W = 96;
-const PROBE_H = 171;
 
 const args = Object.fromEntries(
   process.argv.slice(2).map((a) => {
@@ -43,11 +53,20 @@ function run(cmd, argv) {
   });
 }
 
-async function audioOnsets(src, start, dur) {
-  const raw = path.join(os.tmpdir(), `sync-a-${process.pid}.pcm`);
+/**
+ * Onset envelope, not the waveform.
+ *
+ * The reel's audio has been trimmed, loudness-normalised and re-encoded to
+ * AAC, so it is not sample-identical to the reference even though it is the
+ * same master. Transient POSITIONS survive all of that; sample values do not.
+ */
+async function onsets(src, start, dur) {
+  const raw = path.join(os.tmpdir(), `checksync-${process.pid}-${Math.random()}.pcm`);
   await run(FFMPEG, [
-    "-v", "error", ...(start ? ["-ss", String(start)] : []), "-i", src,
-    ...(dur ? ["-t", String(dur)] : []),
+    "-v", "error",
+    ...(start != null ? ["-ss", String(start)] : []),
+    "-i", src,
+    ...(dur != null ? ["-t", String(dur)] : []),
     "-vn", "-ac", "1", "-ar", String(AUDIO_HZ), "-f", "s16le", raw, "-y",
   ]);
   const buf = await fs.readFile(raw);
@@ -63,90 +82,64 @@ async function audioOnsets(src, start, dur) {
   }
   const env = new Float64Array(hops);
   for (let h = 1; h < hops; h++) env[h] = Math.max(0, rms[h] - rms[h - 1]);
-  return env;
-}
-
-/** How fast the silhouette is changing, resampled onto the audio hop grid. */
-async function motionEnvelope(src, start, dur) {
-  const raw = path.join(os.tmpdir(), `sync-v-${process.pid}.gray`);
-  await run(FFMPEG, [
-    "-v", "error", ...(start ? ["-ss", String(start)] : []), "-i", src,
-    ...(dur ? ["-t", String(dur)] : []),
-    "-vf", `fps=${HOP_HZ / 2},scale=${PROBE_W}:${PROBE_H},format=gray`,
-    "-f", "rawvideo", "-pix_fmt", "gray", raw, "-y",
-  ]);
-  const buf = await fs.readFile(raw);
-  await fs.rm(raw, { force: true });
-  const size = PROBE_W * PROBE_H;
-  const masks = [];
-  for (let i = 0; i + size <= buf.length; i += size) {
-    const f = new Uint8Array(size);
-    for (let p = 0; p < size; p++) f[p] = buf[i + p] < 96 ? 1 : 0;
-    masks.push(f);
-  }
-  // One value per video frame, then repeated to reach the audio hop rate.
-  const perFrame = new Float64Array(masks.length);
-  for (let i = 1; i < masks.length; i++) {
-    let d = 0;
-    for (let p = 0; p < size; p++) if (masks[i][p] !== masks[i - 1][p]) d++;
-    perFrame[i] = d / size;
-  }
-  const env = new Float64Array(perFrame.length * 2);
-  for (let i = 0; i < env.length; i++) env[i] = perFrame[i >> 1];
-  return env;
-}
-
-function standardise(v) {
+  // Standardise so loudnorm's gain change cannot affect the correlation.
   let m = 0;
-  for (const x of v) m += x;
-  m /= v.length;
-  let s = 0;
-  for (const x of v) s += (x - m) ** 2;
-  s = Math.sqrt(s / v.length) || 1;
-  const out = new Float64Array(v.length);
-  for (let i = 0; i < v.length; i++) out[i] = (v[i] - m) / s;
-  return out;
-}
-
-/** Lag, in seconds, at which motion best explains the audio. */
-function bestLag(a, b, maxHops) {
-  const n = Math.min(a.length, b.length);
-  let best = -Infinity, bestLag = 0;
-  for (let lag = -maxHops; lag <= maxHops; lag++) {
-    let acc = 0, count = 0;
-    for (let i = 0; i < n; i++) {
-      const j = i + lag;
-      if (j < 0 || j >= n) continue;
-      acc += a[i] * b[j];
-      count++;
-    }
-    const score = acc / count;
-    if (score > best) { best = score; bestLag = lag; }
-  }
-  return { lag: bestLag / HOP_HZ, score: best };
-}
-
-async function measure(file, start, dur, label) {
-  const [au, mo] = await Promise.all([
-    audioOnsets(file, start, dur),
-    motionEnvelope(file, start, dur),
-  ]);
-  const r = bestLag(standardise(au), standardise(mo), HOP_HZ); // ±1s
-  console.log(`${label.padEnd(26)} lag ${(r.lag * 1000).toFixed(0).padStart(5)}ms   (corr ${r.score.toFixed(3)})`);
-  return r.lag;
+  for (const x of env) m += x;
+  m /= env.length;
+  let sd = 0;
+  for (const x of env) sd += (x - m) ** 2;
+  sd = Math.sqrt(sd / env.length) || 1;
+  for (let i = 0; i < env.length; i++) env[i] = (env[i] - m) / sd;
+  return env;
 }
 
 const file = path.resolve(args.file);
-const ref = args.reference ? path.resolve(args.reference) : null;
-const refStart = args.refStart ? Number(args.refStart) : 0;
-const refDur = args.refDur ? Number(args.refDur) : 60;
-
-console.log("Lag between the music's onsets and the body's movement.\n");
-const mine = await measure(file, null, null, path.basename(file));
-if (ref) {
-  const theirs = await measure(ref, refStart, refDur, `${path.basename(ref)} (reference)`);
-  const drift = Math.abs(mine - theirs);
-  console.log(`\ndrift against reference: ${(drift * 1000).toFixed(0)}ms`);
-  console.log(drift <= 0.05 ? "PASS — sync preserved" : "FAIL — the music has moved against the picture");
-  process.exit(drift <= 0.05 ? 0 : 1);
+const ref = path.resolve(args.reference);
+const expect = Number(args.expect);
+if (!Number.isFinite(expect)) {
+  console.error("need --expect=<seconds into the reference the cut should start>");
+  process.exit(2);
 }
+const search = Number(args.search ?? 3); // seconds either side
+
+const a = await onsets(file, null, null);
+const b = await onsets(ref, Math.max(0, expect - search), a.length / HOP_HZ + search * 2);
+
+let best = -Infinity;
+let bestShift = 0;
+const scores = [];
+const maxShift = Math.round(search * 2 * HOP_HZ);
+for (let shift = 0; shift <= maxShift; shift++) {
+  let acc = 0;
+  let n = 0;
+  for (let i = 0; i < a.length; i++) {
+    const j = i + shift;
+    if (j >= b.length) break;
+    acc += a[i] * b[j];
+    n++;
+  }
+  if (n < a.length * 0.8) break;
+  const score = acc / n;
+  scores.push(score);
+  if (score > best) { best = score; bestShift = shift; }
+}
+const mean = scores.reduce((x, y) => x + y, 0) / scores.length;
+const sd = Math.sqrt(scores.reduce((x, y) => x + (y - mean) ** 2, 0) / scores.length) || 1e-9;
+const sigma = (best - mean) / sd;
+
+const found = Math.max(0, expect - search) + bestShift / HOP_HZ;
+const err = found - expect;
+
+console.log(`reel      ${path.basename(file)}  ${(a.length / HOP_HZ).toFixed(2)}s`);
+console.log(`reference ${path.basename(ref)}`);
+console.log(`\nexpected  the music to start ${expect.toFixed(3)}s into the reference`);
+console.log(`found     it at ${found.toFixed(3)}s   (peak ${sigma.toFixed(1)}σ above the search mean)`);
+console.log(`error     ${(err * 1000).toFixed(0)}ms`);
+
+if (sigma < 6) {
+  console.log(`\nINCONCLUSIVE — no dominant peak, so this number means nothing.`);
+  process.exit(2);
+}
+const ok = Math.abs(err) <= 0.02;
+console.log(ok ? `\nPASS — the music was lifted from where it claims` : `\nFAIL — the trim landed in the wrong place`);
+process.exit(ok ? 0 : 1);

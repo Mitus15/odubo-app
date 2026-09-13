@@ -795,10 +795,17 @@ export function layoutLivingPoster(
 
     const ops: Op[] = [{ kind: "rect", x: 0, y: 0, w: W, h: H, fill: SAND }];
 
-    // Chrome insets. A reel is read between the profile row and the caption;
-    // these are what the story layout learned, kept as named numbers because
-    // they are facts about Instagram, not about this poster.
-    const chromeTop = R(250 * S / 0.45);
+    // Chrome insets — facts about Instagram, not about this poster, which is
+    // why they are named rather than folded into the padding.
+    //
+    // They are NOT symmetric, and the asymmetry is the point. A reel's bottom
+    // carries the caption, the username and the audio ticker, so that margin
+    // is load-bearing: shrink it and the partner marks render underneath
+    // Instagram's own furniture. Its top carries only a title and a camera
+    // icon. This started at 250/300, inherited from the STORY layout where the
+    // profile row makes the top heavy too, and 250 is simply too much for a
+    // reel — it read as dead space and cost the dancer eighty pixels.
+    const chromeTop = R(170 * S / 0.45);
     const chromeBottom = R(300 * S / 0.45);
 
     /* ── top band: the mark, and the way in ──────────────────────────────── */

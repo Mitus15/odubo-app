@@ -183,27 +183,59 @@ async function main() {
   }
 
   // The coarse pass resolves to 1/6 s, which is 6% of a beat at 117bpm — you
-  // would hear that. Refine against a 60s window decoded at 30fps, searching
-  // only ±1s around the coarse answer.
+  // would hear that, and worse, a drift check at that resolution can hide up
+  // to ±83ms of real rate difference per third. So refine at 30fps, and do it
+  // at SEVERAL points down the take rather than one: a constant offset can be
+  // fixed with a seek, a creeping one cannot, and the difference between them
+  // is invisible at coarse resolution.
   const FINE = 30;
-  const FINE_SPAN = 60;
+  const FINE_SPAN = 40;
   const coarse = whole.shift / FPS;
-  const aStart = Math.max(0, Math.min(durA - FINE_SPAN - 1, durA * 0.3));
-  const bStart = Math.max(0, aStart + coarse - 1);
-  const [fa, fb] = await Promise.all([
-    signature(A, "fa", { fps: FINE, start: aStart, duration: FINE_SPAN }),
-    signature(B, "fb", { fps: FINE, start: bStart, duration: FINE_SPAN + 2 }),
-  ]);
-  standardise(fa);
-  standardise(fb);
-  // fb[0] is at bStart, fa[0] at aStart, so a shift of s frames means
-  // b_time - a_time = (bStart - aStart) + s/FINE.
-  const fine = searchOffset(fa, fb, 0, fa.length, FINE);
-  const offset = bStart - aStart + fine.shift / FINE;
-  console.log(`\nFINE    refined over ${FINE_SPAN}s at ${FINE}fps from A t=${aStart.toFixed(1)}s`);
-  console.log(`        B is ${offset.toFixed(3)}s from A  (confidence ${fine.ratio.toFixed(2)}×)`);
-  console.log(`        coarse said ${coarse.toFixed(3)}s · moved ${((offset - coarse) * 1000).toFixed(0)}ms`);
-  console.log(`\n=>      music for plate time t  =  ${path.basename(B)} at  t + (${offset.toFixed(3)})`);
+  console.log(`\nFINE    ${FINE_SPAN}s windows at ${FINE}fps, ±1s around the coarse answer\n`);
+
+  const probes = [0.10, 0.30, 0.50, 0.70, 0.88]
+    .map((f) => Math.max(0, Math.min(durA - FINE_SPAN - 1, durA * f)));
+  const found = [];
+  for (const aStart of probes) {
+    const bStart = Math.max(0, aStart + coarse - 1);
+    const [fa, fb] = await Promise.all([
+      signature(A, "fa", { fps: FINE, start: aStart, duration: FINE_SPAN }),
+      signature(B, "fb", { fps: FINE, start: bStart, duration: FINE_SPAN + 2 }),
+    ]);
+    standardise(fa);
+    standardise(fb);
+    // fb[0] is at bStart, fa[0] at aStart, so a shift of s frames means
+    // b_time - a_time = (bStart - aStart) + s/FINE.
+    const fine = searchOffset(fa, fb, 0, fa.length, FINE);
+    const offset = bStart - aStart + fine.shift / FINE;
+    found.push({ at: aStart, offset, ratio: fine.ratio });
+    console.log(
+      `        A t=${aStart.toFixed(0).padStart(3)}s → offset ${offset.toFixed(3)}s ` +
+        `(confidence ${fine.ratio.toFixed(1)}×)`,
+    );
+  }
+
+  const trusted = found.filter((f) => f.ratio >= 5);
+  if (!trusted.length) {
+    console.log(`\n        no window correlated strongly enough to trust. Do not use this.`);
+    return;
+  }
+  const offsets = trusted.map((f) => f.offset);
+  const spread = Math.max(...offsets) - Math.min(...offsets);
+  const median = [...offsets].sort((a, b) => a - b)[Math.floor(offsets.length / 2)];
+  console.log(`\n        median ${median.toFixed(3)}s · spread ${(spread * 1000).toFixed(0)}ms ` +
+    `across ${trusted.length} trusted window${trusted.length === 1 ? "" : "s"}`);
+  if (spread <= 0.04) {
+    console.log(`        PASS — constant offset, a single seek holds for the whole take`);
+  } else {
+    const first = trusted[0];
+    const last = trusted[trusted.length - 1];
+    const rate = 1 + (last.offset - first.offset) / (last.at - first.at);
+    console.log(`        DRIFT — the offset moves ${(spread * 1000).toFixed(0)}ms across the take.`);
+    console.log(`        B runs at ~${rate.toFixed(6)}× A. One seek cannot hold sync;`);
+    console.log(`        each cut needs its own offset, or B needs resampling.`);
+  }
+  console.log(`\n=>      music for plate time t  =  ${path.basename(B)} at  t + (${median.toFixed(3)})`);
 }
 
 main().catch((e) => {

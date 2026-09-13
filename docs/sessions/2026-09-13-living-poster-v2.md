@@ -4,7 +4,8 @@
 green version; add the music; give me the most visually striking 30-60s for
 Reels.
 
-**Shipped:** `loop-soul-v1-living-poster-30s.mp4` and a silent twin, in
+**Shipped:** three 30.6s cuts — `loop`, `energetic`, `calm` — each with a
+silent twin, in
 `Loop-soul-the-entertainment-room/social-2026-09/living-poster/`. Reasoning in
 [loop-video-converter.md](../decisions/loop-video-converter.md) (the `regrade`
 mode) and [loop-living-poster.md](../decisions/loop-living-poster.md) (the
@@ -44,9 +45,9 @@ different files.
   of the same performance by correlating silhouette signatures, and reports
   whether the two run at the same *rate* as well as the same position.
   Result: **−15.900s, confidence 107.65×, no drift**.
-- **`scripts/loop/check-sync.mjs`** — answers "did the sync survive" about a
-  *finished* file, by comparing its music-to-movement lag against a reference
-  known to be correct.
+- **`scripts/loop/check-sync.mjs`** — verifies a *finished* file's music was
+  lifted from the position it claims. (Its first design did not work; see the
+  owner-review section below.)
 - **Bar snapping and music** in `living-poster.ts` — tempo from the audio
   (117.65 BPM detected on Billie Jean), only bar lines as candidate starts,
   prefix-summed energy, two-pass loudnorm, and two deliverables from one encode.
@@ -55,22 +56,24 @@ different files.
 
 | | |
 |---|---|
-| non-INK share of figure | 5.08% → **12.31%** |
+| non-INK share of figure | 5.08% → **12.31%** (measured on the `bright` ladder) |
 | figure px painted the field colour | 8,702 → **762** (boundary, not holes) |
 | field colour | SAND_BRIGHT (wrong) → **SAND 99.95%** |
 | `scene` / `flat` output | **byte-identical** before and after |
 | loudness | **−14.1 LUFS** against a −14 target |
 | bar multiple | 30.600 / 2.040 = **15.0000** exactly |
-| sync drift vs reference | **10ms** |
+| music trimmed where it claims | **5ms** on all three, at 16-18σ |
+| picture-to-sound offset | **-15.900s, spread 0ms** across four windows |
 | QR out of a finished frame | decodes, destination returns 200 |
 | tests / lint / print kit | 95 pass · clean · renders |
 
 ## What went wrong on the way
 
-1. **Capping the interior at SAND_DEEP was too quiet.** It made a hole
-   structurally impossible, which was the point, but the line-art came back far
-   duller than the green reference. SAND_BRIGHT is safe for the same structural
-   reason and restores the contrast.
+1. **Judged the interior tone by contrast against the reference, and got it
+   backwards.** Capping at SAND_DEEP looked "too quiet" beside the green, so it
+   went to SAND_BRIGHT — but quiet is what the record is. Reverted on owner
+   review and made a named option; see below. The lesson is that matching a
+   measurement is not the same as matching an intent.
 2. **A field-colour trap nearly shipped with the source switch.** Native green
    resolves to `SAND_BRIGHT`, not `SAND`, so the plate would have sat on the
    sheet as a visibly brighter rectangle. It had never shown up because the old
@@ -83,6 +86,40 @@ different files.
 5. Planning predicted the longer cut would make the dancer *bigger* (~84%). It
    did not — the 30s envelope is no tighter than the 15s one, so he is the same
    63%.
+
+## Second pass, same day — owner review
+
+Three notes back, all acted on:
+
+1. **"The highlights are too bright, it's meant to be chill."** Correct. The
+   first ladder used SAND_BRIGHT for strong line-art, chosen because capping at
+   SAND_DEEP had read too quiet against the green reference — but "quiet" was
+   the point. Now `--gradeTone`, defaulting to `chill`
+   (INK · INK_SOFT · SAND_DEEP), with `warm` and `bright` available.
+2. **"The space above and below seems large — is that good for Reels?"** Half
+   right, and the half that was right mattered. The bottom 300px is reserved
+   for Instagram's caption and has to stay. The top 250px was inherited from
+   the STORY layout, where the profile row makes the top heavy too, and is far
+   more than a reel needs — cut to 170px. Hero band 776px → 856px, dancer
+   63% → 70%.
+3. **"Do two other sections for comparing energy."** `--pick=loop|energetic|calm`.
+
+### And a check that had to be thrown away
+
+`check-sync.mjs` originally correlated the music's onsets against the dancer's
+movement. It reported 10ms drift on the first cut and looked authoritative.
+When the other two sections came back at 130ms and 770ms, the tool — not the
+render — turned out to be wrong: the correlation is about 0.03, i.e. noise, and
+a dancer does not move in step with onsets anyway.
+
+Chasing it down produced a real improvement. `align-takes.mjs` now measures the
+offset at five points down the take instead of one, because its original drift
+test resolved to 1/6s and could have hidden ±83ms of creeping rate difference.
+Result: **-15.900s at every trusted window, spread 0ms**, confidences to 119×.
+And `check-sync.mjs` was rewritten to verify the half that can actually break —
+whether the render trimmed the music where it claims — by correlating the
+finished audio against the reference. All three cuts: **5ms, at 16-18σ**. It
+now refuses to give a verdict below 6σ rather than reporting noise.
 
 ## Next
 

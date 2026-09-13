@@ -177,19 +177,42 @@ const inked = (a: Uint8Array) => {
  * row counts as his only at two or more ink pixels, which drops the stray
  * speckle a threshold always leaves behind.
  */
-function figureBand(frames: Uint8Array[]): { top: number; bottom: number } {
-  let top = PROBE_H;
-  let bottom = -1;
+function figureBand(
+  frames: Uint8Array[],
+  /**
+   * 0 = the absolute union, the safe default. Above 0, the fraction of frames
+   * allowed to poke out of each end.
+   *
+   * Measured on the 30s cut: the union spans 10.9%-72.9% of the frame while a
+   * typical frame spans 19.8%-67.2%. Sizing the band to the union therefore
+   * scales him about 31% smaller than any ordinary frame needs, and the whole
+   * of that is paid for the single most extended pose in thirty seconds. Which
+   * is the right trade by default — that pose is the one people screenshot —
+   * but it is a trade, and worth being able to make the other way.
+   */
+  tolerance = 0,
+): { top: number; bottom: number } {
+  const tops: number[] = [];
+  const bottoms: number[] = [];
   for (const f of frames) {
+    let top = -1;
+    let bottom = -1;
     for (let y = 0; y < PROBE_H; y++) {
       let n = 0;
       for (let x = 0; x < PROBE_W; x++) if (f[y * PROBE_W + x]) n++;
       if (n < 2) continue;
-      if (y < top) top = y;
-      if (y > bottom) bottom = y;
+      if (top < 0) top = y;
+      bottom = y;
     }
+    if (top >= 0) { tops.push(top); bottoms.push(bottom); }
   }
-  if (bottom < 0) throw new Error("no figure found in the cut — is this the right take?");
+  if (!tops.length) throw new Error("no figure found in the cut — is this the right take?");
+  tops.sort((a, b) => a - b);
+  bottoms.sort((a, b) => a - b);
+  const at = (arr: number[], q: number) =>
+    arr[Math.min(arr.length - 1, Math.max(0, Math.round(q * (arr.length - 1))))];
+  const top = at(tops, tolerance);
+  const bottom = at(bottoms, 1 - tolerance);
   // A row's worth of slack each way: the probe is 171px tall, so one row is
   // ~11px at output, and a threshold that tight would shave a shoe.
   return {
@@ -304,6 +327,8 @@ function bestWindow(
   seconds: number,
   /** Candidate start times, in plate seconds. Null = every probe frame. */
   starts: number[] | null,
+  /** "loop" (seam-first), "energetic" (most movement), "calm" (least). */
+  pick: string,
 ): Window {
   const { frames, fps } = probe;
   const span = Math.round(seconds * fps);
@@ -346,9 +371,19 @@ function bestWindow(
     const match = differs(frames[s], frames[s + span + 1]);
     const energy = (cumEnergy[s + span] - cumEnergy[s]) / span;
 
-    // Match is the constraint, energy the tiebreak: a seam the eye catches
-    // ruins the piece, whereas slightly calmer dancing only makes it quieter.
-    const score = match - energy * 0.35;
+    // Three ways to choose, because one 30s cut cannot show what the take is
+    // like. The default balances the loop seam against how much he moves;
+    // "energetic" and "calm" go looking for the ends of the range so the two
+    // can be set beside each other.
+    const score =
+      pick === "energetic"
+        ? -energy
+        : pick === "calm"
+          ? energy
+          : // Match is the constraint, energy the tiebreak: a seam the eye
+            // catches ruins the piece, whereas calmer dancing only makes it
+            // quieter.
+            match - energy * 0.35;
     if (score < bestScore) {
       bestScore = score;
       best = { start: s / fps, seconds, match, energy };
@@ -521,7 +556,7 @@ async function main() {
   const scored =
     explicitStart != null
       ? { start: explicitStart, seconds: cutSeconds, match: NaN, energy: NaN }
-      : bestWindow(probe, cutSeconds, barStarts);
+      : bestWindow(probe, cutSeconds, barStarts, str("pick") ?? "loop");
   // bestWindow scores on a 1/6s probe grid, so its answer is rounded. Snap
   // back to the exact bar it stands for: an 83ms rounding would put the
   // picture and the sound on different clocks, which is the bug being fixed.
@@ -562,6 +597,7 @@ async function main() {
       ["--max-old-space-size=8192", "scripts/loop/video-convert.mjs",
        `--in=${srcPath}`, `--mode=regrade`, `--start=${win.start}`, `--preview=${cutSeconds}`,
        `--height=${H}`, `--crf=12`,
+       ...(str("gradeTone") ? [`--gradeTone=${str("gradeTone")}`] : []),
        ...(str("gradeCache") ? [`--gradeCache=${str("gradeCache")}`] : []),
        `--out=${plate}`],
       "video-convert",
@@ -599,7 +635,7 @@ async function main() {
    * the envelope. Scaling down is invisible because the field it pads with is
    * the same SAND the plate is already made of — there is no letterbox, only
    * more sheet. Scaling UP is refused: it would crop him at the sides. */
-  const band = figureBand((await probeFrames(plate)).frames);
+  const band = figureBand((await probeFrames(plate)).frames, num("envelopeTolerance", 0));
   const figurePx = (band.bottom - band.top) * H;
   const fit = Math.min(1, hero.h / figurePx);
   const vidW = Math.round((W * fit) / 2) * 2;
@@ -613,9 +649,11 @@ async function main() {
   // frame but one, and he reads as floating. Standing him on the band puts the
   // slack overhead, where the masthead already is.
   const offY = Math.round(hero.y + hero.h - band.bottom * H * fit);
+  const tol = num("envelopeTolerance", 0);
   console.log(
     `fit  : dancer spans ${(band.top * 100).toFixed(0)}%→${(band.bottom * 100).toFixed(0)}% ` +
-      `of the take · scaled to ${(fit * 100).toFixed(0)}% to land inside the band`,
+      `of the take · scaled to ${(fit * 100).toFixed(0)}% to land inside the band` +
+      (tol > 0 ? `  (envelope p${(tol * 100).toFixed(0)}–p${((1 - tol) * 100).toFixed(0)})` : ""),
   );
   if (fit === 1 && figurePx > hero.h + 1) {
     console.warn(
