@@ -173,7 +173,7 @@ export default function PublishModal({ content, onClose, onPublished, preSelecte
           content_id: content.id,
           platforms: selectedPlatforms,
           publish_now: mode === 'now',
-          schedule_at: mode === 'schedule' ? new Date(scheduleDate).toISOString() : undefined,
+          scheduled_at: mode === 'schedule' ? new Date(scheduleDate).toISOString() : undefined,
         }),
       });
 

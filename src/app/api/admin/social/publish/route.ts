@@ -47,10 +47,27 @@ export async function POST(request: NextRequest) {
     const contentId = (body as { content_id?: number }).content_id;
     const platforms = (body as { platforms?: string[] }).platforms || [];
     const publishNow = (body as { publish_now?: boolean }).publish_now ?? true;
-    const scheduleAt = (body as { scheduled_at?: string }).scheduled_at;
+    // PublishModal sent `schedule_at` while this read `scheduled_at`, so every
+    // scheduled post arrived here with no time on it. The old code then fell
+    // through to an unscheduled createPost — which does not mean "never
+    // fires", it means **posts immediately** — while writing status
+    // 'scheduled' to the row and showing "scheduled" in the UI. A post set for
+    // next Monday went out the moment it was set up. Accept both spellings.
+    const scheduleAt =
+      (body as { scheduled_at?: string }).scheduled_at ??
+      (body as { schedule_at?: string }).schedule_at;
 
     if (!contentId) {
       return NextResponse.json({ error: 'content_id is required' }, { status: 400 });
+    }
+
+    // Refuse rather than guess. The failure this replaces was silent and
+    // published early, which is the one outcome a scheduler must never have.
+    if (!publishNow && !scheduleAt) {
+      return NextResponse.json(
+        { error: 'A scheduled post needs scheduled_at. Refusing to publish immediately instead.' },
+        { status: 400 },
+      );
     }
 
     if (platforms.length === 0) {
