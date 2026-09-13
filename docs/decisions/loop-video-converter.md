@@ -30,7 +30,8 @@ background things, but still minimize anything that's just negative space."*
 |---|---|
 | `scene` (default) | Locked-off camera. Two passes: background plate, then render. |
 | `flat` | Handheld footage, where no plate is possible. Boilier but works. |
-| `recolor` | Clips already rendered in the OLD GREEN look — remaps green→sand, figure→ink so existing videos move to the new brand without re-shooting. |
+| `recolor` | Clips already rendered in the OLD GREEN look — remaps green→sand, figure→ink so existing videos move to the new brand without re-shooting. **Superseded by `regrade`**; kept only so anything already rendered from it still reproduces. |
+| `regrade` | The detail-preserving successor to `recolor`. Same input, but the dancer keeps his line-art instead of flattening to a blob. See below. |
 
 ## Why two passes
 
@@ -56,6 +57,100 @@ benefits most**: the analysis res is where the noise dies, the render res is
 where the lines are born.
 
 ---
+
+## Why `regrade` replaced `recolor` (2026-09-13)
+
+The owner's report: *"the quality of the subject in the new color is not the
+same as that in the green version."* It was not a matter of taste. Measured
+inside the true figure, `recolor` painted the dancer **94.6% flat INK** and
+punched **9,441 of his best pixels out in the field colour**.
+
+Two independent failures, and the arithmetic of both is worth keeping because
+neither is visible by reading the code casually.
+
+**1. The line-art was being keyed as background.** The green renders come from
+`convert_fast.py`, which draws interior detail as green Sobel line-art on a
+near-black body:
+
+```python
+INK = 5/255 · ELECTRIC_BRIGHT = [43,255,143] · edge defaults to 0.4
+subject = ink + (bright - ink) * (line * edge)
+```
+
+So a full-strength line-art pixel is RGB ≈ **(20, 105, 60)**. The old green key
+was `g > 60 && g > r*1.25 && g > b*1.25`; the ratio tests pass for anything
+above `line·edge > 0.017`, so `g > 60` alone decides, and it trips at
+`line·edge > 0.22` — **the strongest 45% of the line-art is called background**.
+
+**2. The contrast had nowhere to go anyway.** Luma of (20,105,60) is 0.328
+against a body at 0.020, which under the old fixed thresholds is `INK_SOFT`
+`[61,26,18]` on `INK` `[42,15,10]` — two nearly identical browns. In the green
+look the detail is carried by **hue**, not brightness, and a monochrome sand
+ramp cannot hold it. No threshold-nudge fixes this; only levelling does.
+
+### What `regrade` does differently
+
+- **Field by hysteresis from unambiguously-green seeds** (`--fieldSeed`, 150),
+  not per-pixel greenness. The two populations are cleanly bimodal — line-art
+  tops out at g=111, the field sits at 224-231 — and 150 is the middle of the
+  empty valley. A border flood fill was the other candidate and is worse: it
+  keeps the enclosed pockets between an arm and the torso, which are field.
+  Line-art is never reached by the grow because `convert_fast.py --erode 6`
+  leaves a ≥6px pure-ink band inside the silhouette edge.
+- **Levels measured ONCE across the whole clip**, following the background
+  plate's precedent. Scene mode's min/max auto-level fails here: this figure is
+  a spike at black plus a sparse tail, measured lo=0.000 / hi=0.5716, which puts
+  the first cut above the figure's own 99th percentile and renders him 98.8%
+  ink. Per-frame percentiles adapt but boil — the first cut swings 0.030-0.098
+  across 120 frames, so a pixel of constant brightness changes colour when the
+  pose changes. The cuts are fractions of the measured p99 (`--gradeLow` 0.20,
+  `--gradeHigh` 0.77) so a source rendered at a different `--edge` still grades
+  right.
+- **Analysis at the source's own height**, not `workHeight=720`. The header's
+  case for analysing small is that noise and compression mush average away
+  there — but a synthetic flat render has no noise, only line-art to lose.
+- **The interior can never take the field colour.** The body is INK, weak lines
+  SAND_DEEP, strong lines SAND_BRIGHT. SAND is reserved for the field.
+
+**SAND_BRIGHT on the figure is deliberate and was arrived at by trying the
+alternative.** Capping the interior at SAND_DEEP made a hole structurally
+impossible, which was the point, but it came back far too quiet against the
+green reference. SAND_BRIGHT is safe for the same structural reason — the one
+colour a figure pixel must never take is the field's, and SAND_BRIGHT is not it.
+
+### The field-colour trap
+
+`regrade` paints the field `SAND` unconditionally, and that is load-bearing.
+Native green measures luma **0.658**, which under `recolor`'s rules resolves to
+`SAND_BRIGHT #f0d3ad` — while the poster sheet is `SAND #d9aa7a` and the plate
+sits on it at ~63% scale. It would read as a visibly brighter rectangle.
+
+This never shipped, but only by luck: the file the pipeline used until now was
+an upscale whose softened green fell just under the 0.62 cut. Switching to the
+native source would have exposed it.
+
+### Measured, before and after
+
+Same frame, ground-truth figure taken from the green source by the same
+hysteresis:
+
+| | `recolor` | `regrade` |
+|---|---|---|
+| non-INK share of figure | 5.08% | **12.31%** |
+| figure px painted the field colour | 8,702 (4.42%) | **762 (0.39%)** |
+| field colour | SAND_BRIGHT 99.24% (wrong) | **SAND 99.95%** |
+| temporal flip rate | 2.345% | 2.575% |
+
+The residual 762 are boundary disagreement between two masks over a ~3,000px
+perimeter, not holes. The flip rate rises 0.23pp — the detail is not being
+bought with boil.
+
+**Cost**: ~12 fps at 1080p, against `recolor`'s ~11 fps with its decode-at-4K.
+No regression, despite doing far more work. A 30s cut at 30fps is ~75s, plus a
+one-off levels pass that `--gradeCache` stores and `--gradeCut1/2` skips.
+
+**`scene` and `flat` are byte-identical** after this change — verified by
+hashing 60 raw rgb24 frames of each, before and after.
 
 ## Tuning findings — read this before changing defaults
 
@@ -142,5 +237,22 @@ reaches a quarter of the faint threshold, so pushing it lower floods the floor.
 
 `media/social-media/mani-billie-jean*.mov` and
 `media/working-files/Mani-Billie-Jean.mp4` are all **already-rendered outputs of
-the old green filter**, not raw footage — use `--mode=recolor` on those. The
-only original plate is `digital-hub/loopsoulca/video-converter/IMG_0191.MOV`.
+the old green filter**, not raw footage — use `--mode=regrade` on those.
+
+**Prefer `digital-hub/loopsoulca/video-converter/loopsoul-full-hq.mp4`** over
+any of them. It is green, logo-free, 1080×1920 @30fps, and per `hq-render.log`
+the direct native output of the matting renderer; everything else is a
+re-encode of a re-encode. Measured 2026-09-13:
+
+- `Mani-Billie-Jean.mp4` at 2160×3840 is **a 2× upscale, not a 4K render**. A
+  round-trip through 1080 and back returns 61.4 dB — a residual under ¼ LSB,
+  i.e. nothing above 1080 Nyquist — where a genuine 1080 render loses 14 dB
+  under the equivalent test.
+- At matched 1080×1920 inside the figure it carries **31% less line-art** than
+  the native render (mean abs Laplacian 0.01627 against 0.02375).
+
+The only original unfiltered plate is
+`digital-hub/loopsoulca/video-converter/IMG_0191.MOV` — and note it is stored
+1920×1080 with **`rotation=-90`**, so it is portrait footage that displays as
+1080×1920. It has the same 9,063 frames as `loopsoul-full-hq.mp4`, which is
+what makes "green as matte, raw as tone" a cheap future option.

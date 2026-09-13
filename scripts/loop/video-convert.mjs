@@ -77,7 +77,10 @@ const OPTS = {
    * "flat"    — single-pass quantization, no plate; for handheld footage.
    * "recolor" — for clips already rendered in the OLD green look: green field
    *             becomes sand, figure becomes ink. Moves existing videos onto
-   *             the new brand without re-shooting.
+   *             the new brand without re-shooting. Superseded by "regrade";
+   *             kept so anything already rendered from it still reproduces.
+   * "regrade" — the detail-preserving successor to "recolor". Same input, but
+   *             it keeps the dancer's line-art instead of flattening him.
    */
   mode: String(args.mode ?? "scene"),
 
@@ -164,6 +167,36 @@ const OPTS = {
    *  because a level erodes by an amount that scales with feature size — it
    *  swallows a shoe whole while barely touching a torso. */
   figureRim: Number(args.figureRim ?? 0.004),
+
+  /* ── regrade only ─────────────────────────────────────────────────────── */
+
+  /** Green level that is unambiguously the FIELD, not the figure.
+   *
+   *  The old green render draws the dancer's interior detail as green Sobel
+   *  line-art on a near-black body, so "is this pixel green" cannot separate
+   *  field from figure — the line-art is green too. Measured, the two
+   *  populations are cleanly bimodal: line-art tops out at g=111 (not one
+   *  pixel above 128) and the field sits at g=224-231. 150 is the middle of
+   *  the empty valley between them, so it seeds only real field. */
+  fieldSeed: Number(args.fieldSeed ?? 150),
+  /** Frames sampled to measure the figure's tone range. Mirrors plateSamples. */
+  gradeSamples: Number(args.gradeSamples ?? 60),
+  /** Analysis height for the levels pass only. The line-art's share of the
+   *  figure is very nearly resolution-invariant (17.2% at 1080, 18.3% at 720,
+   *  18.8% at 540), so the histogram can be gathered cheaply and applied at
+   *  full res. */
+  gradeHeight: Number(args.gradeHeight ?? 540),
+  /** The two interior cuts, as fractions of the figure's measured 99th
+   *  percentile — "the line-art ceiling". Fractions rather than absolute
+   *  levels so a source rendered at a different --edge still grades right.
+   *  0.20 and 0.77 of a measured p99 of 0.322 land on p85 and p96. */
+  gradeLow: Number(args.gradeLow ?? 0.20),
+  gradeHigh: Number(args.gradeHigh ?? 0.77),
+  /** Pin the cuts and skip the levels pass entirely — fast iteration, and
+   *  exact reproducibility of a render. */
+  gradeCut1: args.gradeCut1 ? Number(args.gradeCut1) : null,
+  gradeCut2: args.gradeCut2 ? Number(args.gradeCut2) : null,
+  gradeCache: args.gradeCache ? String(args.gradeCache) : null,
 
   /** Encode losslessly (large files, exact flat colour). */
   lossless: flag(args.lossless),
@@ -660,6 +693,110 @@ async function getPlate(file, w, h, clipDuration) {
   return plate;
 }
 
+/* ───────────────────── regrade: measuring the figure ─────────────────── */
+
+/** Is this pixel plausibly the green field? Loose — the weak side of the
+ *  hysteresis, so it includes antialiased silhouette edges. */
+function greenish(r, g, b) {
+  return g > 60 && g > r * 1.25 && g > b * 1.25;
+}
+
+/**
+ * Where the figure's tones sit, measured once across the whole clip.
+ *
+ * Three approaches were tried before this one and two of them fail badly:
+ *
+ * - Scene mode's min/max auto-level (its lines around the figure pass) is
+ *   wrong here. This figure is not photographed tone, it is a spike at black
+ *   plus a sparse line-art tail; measured lo=0.000 / hi=0.5716 puts the first
+ *   cut above the figure's OWN 99th percentile and renders him 98.8% ink.
+ *   Min/max is meaningless when one outlier pixel sets the top.
+ * - Per-frame percentiles adapt, but they boil: the first cut swings
+ *   0.030-0.098 across 120 frames, so a pixel of constant brightness changes
+ *   colour when the pose changes.
+ *
+ * So it follows the background plate's own precedent instead — measure once
+ * over the whole take, hold it constant for every frame. The histogram is
+ * normalised per frame by that frame's figure area, so a big pose cannot
+ * outvote a small one.
+ */
+async function measureGrade(file, w, h, clipDuration) {
+  const n = w * h;
+  const strong = new Uint8Array(n);
+  const weak = new Uint8Array(n);
+  const field = new Uint8Array(n);
+  const BINS = 256;
+  const hist = new Float64Array(BINS);
+  let sampled = 0;
+
+  await decode(
+    file, w, h,
+    { fps: clipDuration > 0 ? OPTS.gradeSamples / clipDuration : 1 },
+    (frame) => {
+      for (let p = 0, i4 = 0; p < n; p++, i4 += 4) {
+        const r = frame[i4], g = frame[i4 + 1], b = frame[i4 + 2];
+        const green = greenish(r, g, b);
+        strong[p] = green && g >= OPTS.fieldSeed ? 1 : 0;
+        weak[p] = green ? 1 : 0;
+      }
+      growFromSeeds(strong, weak, field, w, h);
+
+      const frameHist = new Float64Array(BINS);
+      let figure = 0;
+      for (let p = 0, i4 = 0; p < n; p++, i4 += 4) {
+        if (field[p]) continue;
+        figure++;
+        const lum =
+          (0.2126 * frame[i4] + 0.7152 * frame[i4 + 1] + 0.0722 * frame[i4 + 2]) / 255;
+        frameHist[Math.min(BINS - 1, (lum * (BINS - 1)) | 0)]++;
+      }
+      if (figure < n * 0.005) return; // he is out of shot, or this is a black frame
+      for (let i = 0; i < BINS; i++) hist[i] += frameHist[i] / figure;
+      sampled++;
+      if (sampled % 10 === 0) process.stdout.write(`\r  grade: ${sampled} samples`);
+    },
+  );
+  process.stdout.write("\r");
+  if (!sampled) throw new Error("grade: no frame had a figure in it — wrong source?");
+
+  const total = hist.reduce((a, b) => a + b, 0);
+  const pct = (q) => {
+    let acc = 0;
+    for (let i = 0; i < BINS; i++) {
+      acc += hist[i];
+      if (acc >= total * q) return i / (BINS - 1);
+    }
+    return 1;
+  };
+  const ceiling = pct(0.99);
+  const cut1 = ceiling * OPTS.gradeLow;
+  const cut2 = ceiling * OPTS.gradeHigh;
+  console.log(
+    `  grade: ${sampled} samples · line-art ceiling ${ceiling.toFixed(3)} · ` +
+      `cuts ${cut1.toFixed(3)} / ${cut2.toFixed(3)}`,
+  );
+  return { cut1, cut2, ceiling };
+}
+
+async function getGrade(file, w, h, clipDuration) {
+  if (OPTS.gradeCut1 != null && OPTS.gradeCut2 != null) {
+    console.log(`  grade: pinned ${OPTS.gradeCut1} / ${OPTS.gradeCut2}`);
+    return { cut1: OPTS.gradeCut1, cut2: OPTS.gradeCut2, ceiling: null };
+  }
+  const cache = OPTS.gradeCache;
+  if (cache && fs.existsSync(cache)) {
+    const saved = JSON.parse(fs.readFileSync(cache, "utf8"));
+    console.log(`  grade: reusing ${path.basename(cache)} — cuts ${saved.cut1.toFixed(3)} / ${saved.cut2.toFixed(3)}`);
+    return saved;
+  }
+  const grade = await measureGrade(file, w, h, clipDuration);
+  if (cache) {
+    fs.mkdirSync(path.dirname(path.resolve(cache)), { recursive: true });
+    fs.writeFileSync(cache, JSON.stringify(grade));
+  }
+  return grade;
+}
+
 /* ──────────────────────────── pass 2: render ─────────────────────────── */
 
 function makeSceneRenderer(plate, ww, wh, ow, oh) {
@@ -851,6 +988,118 @@ function makeRecolorRenderer(ow, oh) {
   };
 }
 
+/**
+ * Old-green footage → the house palette, keeping the dancer's detail.
+ *
+ * What `recolor` gets wrong, and this fixes:
+ *
+ * 1. **The line-art was being keyed as background.** The old renderer draws
+ *    interior detail as green Sobel lines on a near-black body, so a
+ *    per-pixel "is it green" test calls the strongest 45% of that line-art
+ *    field and paints it the backdrop colour — 9,441 holes punched through
+ *    the dancer on a measured frame. Here the field is found by HYSTERESIS
+ *    from unambiguously-green seeds instead, so the line-art is never reached.
+ *    (A border flood fill was the other candidate and is worse: it keeps the
+ *    enclosed pockets between an arm and the torso, which are field.)
+ * 2. **Fixed thresholds flattened him.** The detail in the green look is
+ *    carried by HUE — green lines on black — not by brightness, and a
+ *    monochrome sand ramp has nowhere to put that. Cutting against the
+ *    figure's measured tone range instead is what brings it back.
+ * 3. **Bright interior could open into the field.** The rim closes it.
+ *
+ * The interior is capped at SAND_DEEP rather than SAND. Scene mode lets its
+ * figure reach SAND because its background is a quantized room, but here the
+ * field is uniform sand, so a figure pixel painted SAND is invisible by
+ * construction. Three interior tones make a hole impossible rather than
+ * merely unlikely.
+ */
+function makeRegradeRenderer(grade, ww, wh, ow, oh) {
+  const wn = ww * wh;
+  const on = ow * oh;
+
+  // Fixed for the whole video, so built once — same discipline as the scene
+  // renderer, and the reason the upsampler is a factory.
+  const upMask = makeUpsampler(ww, wh, ow, oh);
+  const upFig = makeUpsampler(ww, wh, ow, oh);
+
+  const strong = new Uint8Array(wn);
+  const weak = new Uint8Array(wn);
+  const field = new Uint8Array(wn);
+  const maskField = new Float32Array(wn);
+  const figField = new Float32Array(wn);
+  const solid = new Float32Array(on);
+  const out = Buffer.alloc(on * 3);
+  const rimPx = Math.max(2, Math.round(oh * OPTS.figureRim));
+  let reported = false;
+
+  return function render(rgba) {
+    for (let p = 0, i4 = 0; p < wn; p++, i4 += 4) {
+      const r = rgba[i4], g = rgba[i4 + 1], b = rgba[i4 + 2];
+      const green = greenish(r, g, b);
+      strong[p] = green && g >= OPTS.fieldSeed ? 1 : 0;
+      weak[p] = green ? 1 : 0;
+      figField[p] = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+    }
+    growFromSeeds(strong, weak, field, ww, wh);
+
+    // Figure is what the field did not reach. keepLargestBlobs sweeps the
+    // compression specks the source's own encode left behind (27 blobs on a
+    // measured frame, 25 of them under 500px). No openMask: there are no
+    // floor reflections in a synthetic render, and eroding would cost limbs.
+    for (let p = 0; p < wn; p++) maskField[p] = field[p] ? 0 : 1;
+    keepLargestBlobs(maskField, ww, wh, Math.max(24, Math.round(wn * OPTS.maskMinRegion)));
+
+    const maskUp = upMask(
+      blur(blur(maskField, ww, wh, OPTS.maskSmooth), ww, wh, OPTS.maskSmooth),
+    );
+    const figUp = upFig(figField);
+
+    for (let p = 0; p < on; p++) solid[p] = maskUp[p] >= 0.5 ? 1 : 0;
+    const rim = blur(solid, ow, oh, rimPx);
+
+    if (OPTS.debug && !reported) {
+      let inside = 0, lit = 0, top = 0;
+      for (let p = 0; p < on; p++) {
+        if (maskUp[p] < 0.5) continue;
+        inside++;
+        if (figUp[p] > grade.cut1) lit++;
+        if (figUp[p] > grade.cut2) top++;
+      }
+      console.log(
+        `\n  regrade: figure ${(inside / on * 100).toFixed(2)}% of frame · ` +
+          `above cut1 ${(lit / inside * 100).toFixed(2)}% · above cut2 ${(top / inside * 100).toFixed(2)}%`,
+      );
+      reported = true;
+    }
+
+    for (let p = 0; p < on; p++) {
+      let c;
+      if (maskUp[p] < 0.5) {
+        c = SAND;
+      } else if (OPTS.debugMask) {
+        c = rim[p] >= 0.72 ? SAND_BRIGHT : INK_SOFT;
+      } else if (rim[p] < 0.72) {
+        c = INK;
+      } else {
+        // INK body, SAND_DEEP for weak line-art, SAND_BRIGHT for strong.
+        //
+        // The top band is the whole point. In the green look the detail is
+        // bright green on black — a big contrast — and the first attempt here
+        // capped the interior at SAND_DEEP, which came back far too quiet
+        // against the reference. SAND_BRIGHT is safe precisely because this
+        // mode paints the field SAND unconditionally: the one colour a figure
+        // pixel must never take is the field's, and SAND_BRIGHT is not it.
+        const t = figUp[p];
+        c = t > grade.cut2 ? SAND_BRIGHT : t > grade.cut1 ? SAND_DEEP : INK;
+      }
+      out[p * 3] = c[0];
+      out[p * 3 + 1] = c[1];
+      out[p * 3 + 2] = c[2];
+    }
+    return out;
+  };
+}
+
 /** Single-pass quantization, for handheld footage where no plate is possible. */
 function makeFlatRenderer(ww, wh, ow, oh) {
   const wn = ww * wh;
@@ -889,16 +1138,37 @@ const fps = OPTS.fps ?? meta.fps;
 
 console.log(`in   : ${path.basename(IN)}  ${meta.width}×${meta.height} @${meta.fps.toFixed(2)}  ${meta.duration.toFixed(0)}s`);
 console.log(`out  : ${path.basename(OUT)}  ${outW}×${outH} @${fps.toFixed(2)}  ${OPTS.lossless ? "lossless" : `crf ${OPTS.crf}`}`);
-console.log(`mode : ${OPTS.mode}${OPTS.mode === "scene" ? `  · analysis ${workW}×${workH} · ${OPTS.plateSamples} plate samples` : ""}`);
+console.log(
+  `mode : ${OPTS.mode}` +
+    (OPTS.mode === "scene"
+      ? `  · analysis ${workW}×${workH} · ${OPTS.plateSamples} plate samples`
+      : ""),
+);
 
 // Recolor reads the source at output res (it's a per-pixel remap, no analysis);
 // the other modes analyse small and render big.
-const readW = OPTS.mode === "recolor" ? outW : OPTS.mode === "flat" ? workW : workW;
-const readH = OPTS.mode === "recolor" ? outH : OPTS.mode === "flat" ? workH : workH;
+//
+// Regrade is the exception to "analyse small": the header's justification for
+// a reduced analysis pass is that sensor noise and compression mush average
+// away there, and a synthetic flat render has no noise to average — only
+// line-art to lose. So it analyses at the source's own height (capped at the
+// output, floored at 720) and still thresholds at output res.
+const regradeH = Math.round(Math.min(meta.height, Math.max(outH, 720)) / 2) * 2;
+const regradeW = Math.round((meta.width / meta.height) * regradeH / 2) * 2;
+const readW = OPTS.mode === "recolor" ? outW : OPTS.mode === "regrade" ? regradeW : workW;
+const readH = OPTS.mode === "recolor" ? outH : OPTS.mode === "regrade" ? regradeH : workH;
 
 let render;
 if (OPTS.mode === "recolor") {
   render = makeRecolorRenderer(outW, outH);
+} else if (OPTS.mode === "regrade") {
+  console.log(`     : analysis ${regradeW}×${regradeH} · field seed g>=${OPTS.fieldSeed}`);
+  // Measured across the WHOLE clip even for a short preview, so two different
+  // cuts of the same take grade identically.
+  const gradeH = Math.round(Math.min(meta.height, OPTS.gradeHeight) / 2) * 2;
+  const gradeW = Math.round((meta.width / meta.height) * gradeH / 2) * 2;
+  const grade = await getGrade(IN, gradeW, gradeH, meta.duration);
+  render = makeRegradeRenderer(grade, regradeW, regradeH, outW, outH);
 } else if (OPTS.mode === "flat") {
   render = makeFlatRenderer(workW, workH, outW, outH);
 } else {

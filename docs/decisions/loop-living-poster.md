@@ -4,7 +4,10 @@
 playing inside it, cut to a seamless loop for Reels.
 
 ```bash
-npm run loop:living-poster -- --in=Mani-Billie-Jean.mp4 --out=./living-poster
+npm run loop:living-poster -- \
+  --in=loopsoul-full-hq.mp4 \
+  --music=mani-billie-jean-4.mov --musicOffset=-15.900 \
+  --seconds=30
 ```
 
 It is one piece of artwork, not a video with a logo dropped on it. The
@@ -30,9 +33,22 @@ That last row is the one that mattered. Because the marks were burned into the
 render, every brand change meant re-rendering five minutes of 4K. The plate and
 the furniture are separate files now, and the furniture is 67 KB.
 
-**The clean source is `media/working-files/Mani-Billie-Jean.mp4`** — green, but
-with no logos on it. Everything in `media/social-media/` already has the old
-marks burned in and is unusable as a source.
+**The plate source is
+`digital-hub/loopsoulca/video-converter/loopsoul-full-hq.mp4`** — green, no
+logos, 1080x1920 @30fps, and per `hq-render.log` the direct native output of
+the matting renderer.
+
+It replaced `media/working-files/Mani-Billie-Jean.mp4` on 2026-09-13, on
+measurement. That file is **a 2x upscale, not a 4K render**: a resolution
+round-trip (2160 -> 1080 -> 2160) returns 61.4 dB, a residual under a quarter
+of a least-significant bit, where a genuine 1080 render under the equivalent
+test loses 14 dB. It is also a lossy generation - at matched 1080x1920 inside
+the figure it carries **31% less line-art** (mean abs Laplacian 0.01627 against
+0.02375). The pipeline was throwing away a third of the dancer's detail before
+the converter ever saw it.
+
+Everything in `media/social-media/` has the old marks burned in and cannot be a
+plate - but see the audio section: one of those files is the sync reference.
 
 ## Why it is not the event poster with a hole in it
 
@@ -73,7 +89,7 @@ furniture renders onto transparency and composites straight on.
 decodes the plate small and grey, thresholds to a silhouette, and takes the
 **absolute** vertical extent across every frame — not a percentile, because a
 percentile clips the one frame where he throws an arm up and that is the frame
-people screenshot. The take spans 10%→74%; the band is 41% of the frame; so the
+people screenshot. The take spans 11%→74% over the 30s cut; the band is 41% of the frame; so the
 video is scaled to 63% and padded with sand, which is invisible because the pad
 colour is the field colour. Scaling *up* is refused — it would crop him.
 
@@ -96,13 +112,86 @@ scores every candidate on two things:
 Match is the constraint and energy the tiebreak: a seam the eye catches ruins
 the piece, whereas calmer dancing only makes it quieter. Windows where the
 figure is missing — the black head and tail of the take — are disqualified
-outright. On the Billie Jean take it picks 265.8s with a 2.2% seam.
+outright. On the 30s cut it picks 244.650s with a 2.0% seam.
 
-## Audio is stripped by default
+Since 2026-09-13 the candidates are **only bar lines**, and the per-pair
+differences are **prefix-summed once** so a window's energy is a subtraction
+rather than a re-scan. The original re-derived every pair for every candidate:
+about 8.9×10⁹ byte comparisons at a 60s span, against ~3×10⁷ now.
 
-The take's own audio is the record playing in the room. A copyright claim mutes
-or blocks the post, which is the whole promotion. Add the single in the Reels
-editor, or pass `--keepAudio` deliberately.
+## The music, and why it comes from a different file
+
+Reversed on 2026-09-13. The reel now carries Billie Jean, which is what Mani
+danced to, and ships **twice**: once with the music and once silent on
+byte-identical frames.
+
+The audio is not a room recording - measured, the assets split into two
+lineages. Room mic at **-35.2 LUFS** (`IMG_0191.MOV`, `loopsoul-full-hq.mp4`)
+and a clean studio dub at **-10.5 to -11.1 LUFS** (the DaVinci exports and
+their descendants). So the plate source has only the quiet room mic, and the
+music has to be lifted from elsewhere.
+
+**Which elsewhere matters.** `Mani-Billie-Jean.mp4` carries a clean dub that
+DRIFTS against its own picture - the owner's report, and the reason this is not
+a one-line change. `mani-billie-jean-4.mov` carries the same music correctly in
+sync, but has the marks burned in. So: picture from one file, sound from the
+other, at a fixed offset.
+
+`scripts/loop/align-takes.mjs` measures that offset. It aligns on **picture**,
+not audio, because correlating a phone room mic against a studio master means
+correlating two very different timbres, whereas two renders of the same dancer
+are the same shape. The signal is a per-frame silhouette signature - area,
+centroid, extent - which is immune to the two files being different
+resolutions. Result:
+
+```
+OFFSET  B is -15.900s from A · confidence 107.65x · no rate drift
+```
+
+Verified two ways: matched frames at t=100 and t=200 show the same pose, and
+head-vs-tail offsets agree exactly, so a constant seek holds for the whole take
+(a rate difference would have meant a shift could never hold sync).
+
+Then `--musicOffset=-15.900`. It is a property of the two files, not of a
+render, so it is passed in rather than recomputed each time.
+
+**Level**: EBU R128 two-pass `loudnorm` to -14 LUFS / -1 dBTP. Instagram's
+target; the repo's music scripts use -16, which is right for a streaming album
+and wrong for a reel. Worth knowing the source measures -10.23 LUFS with a
+**+1.23 dBTP** true peak, i.e. already clipping.
+
+**Why the silent twin.** This is an exact commercial master, so Instagram's
+fingerprinting will match it. If the post gets claimed, muted or region-locked,
+the silent version has identical frames and the script prints the timecode into
+the song, so the platform's own licensed copy can be dropped over it and will
+land in sync.
+
+Verify a finished file with `scripts/loop/check-sync.mjs`, which compares the
+music-to-movement lag against a reference known to be in sync. Measured on the
+30s cut: **10ms drift**.
+
+## The cut is a whole number of bars
+
+A reel loops whether the viewer means it to or not, and a cut that starts or
+ends mid-bar lurches on every repeat. So the tempo is measured from the music -
+onset envelope (half-wave-rectified difference of 10ms RMS), autocorrelated for
+the beat period, phase from summed onset strength - and only bar lines are
+candidate start points. `--seconds` is a target the bar count rounds to.
+
+The period is the number that has to be right, and that is the happy part: a
+cut whose LENGTH is an exact multiple of the bar loops seamlessly even if its
+phase is a beat out. Phase errors are a musical nicety, period errors are an
+audible lurch, and autocorrelation is reliable at exactly the half that
+matters.
+
+Detected on Billie Jean: **117.65 BPM**, bar 2.040s, so 30s becomes **15 bars =
+30.600s** - and 30.600 / 2.040 = 15.0000 exactly.
+
+`--bpm=` and `--downbeat=` override; the script always prints what it detected.
+One subtlety worth keeping: `bestWindow` scores on a 1/6s probe grid, so its
+answer is rounded, and the exact bar time is snapped back afterwards. An 83ms
+rounding would put the picture and the sound on different clocks, which is the
+bug this whole section exists to fix.
 
 ## Verified
 
@@ -115,6 +204,15 @@ editor, or pass `--keepAudio` deliberately.
   top-down, and that the hero keeps at least a third of the frame.
 - The print kit renders byte-compatible output after the config extraction —
   `layoutEventPoster` is unchanged for every existing piece.
+- **`scene` and `flat` are byte-identical** after the `regrade` mode was added:
+  60 frames of each rendered before and after, raw rgb24 streams hashed and
+  compared. The addition is purely additive.
+- **Loudness** `-14.1 LUFS` on the finished file, against a `-14` target.
+- **Bar multiple** 30.600 / 2.040 = 15.0000 exactly.
+- **Sync** 10ms of drift against `mani-billie-jean-4.mov`, the reference the
+  owner confirms is correct (`scripts/loop/check-sync.mjs`).
+- **Subject detail** measured, not eyeballed — see the table in
+  `docs/decisions/loop-video-converter.md` under `regrade`.
 
 ## Known, not fixed
 
@@ -122,3 +220,10 @@ editor, or pass `--keepAudio` deliberately.
   SEPTEMBER 26; the code says OCTOBER 10. Re-run `npm run loop:posters`.
 - `?p=reel` is set as the QR placement, but nothing reads placement back out
   into analytics yet.
+- `--musicOffset` is measured once and pasted in. It would be nicer for
+  `align-takes.mjs` to be importable so the render could do it itself, but the
+  offset is a property of two files that do not change, and recomputing a 20s
+  correlation on every render to get the same number back is worse.
+- The dancer still scales to 63%, not the ~84% predicted when planning the
+  longer cut. The 30s window's envelope (11%→74%) turned out no tighter than
+  the 15s one's, so he is the same size as before, not bigger.
