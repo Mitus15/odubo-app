@@ -80,9 +80,15 @@ export function GetPassModal({
     ],
     // The record is the reason the night exists — see
     // docs/decisions/loop-soul-is-the-album.md.
+    //
+    // The date is `dateLabel`, never a spelled-out one. This line read "the
+    // 26th" for three days after the night moved to Oct 10, contradicting the
+    // header of the very sheet it sits in. A buyer reads this immediately
+    // before paying, so it takes its date from the same source as everything
+    // else and cannot drift again.
     [
       "The record, first",
-      "Loop Soul is an album. The 26th is its first exhibition: all 14, front to back, one of them recorded live in the room with you on it.",
+      `Loop Soul is an album. ${dateLabel} is its first exhibition: all 14, front to back, one of them recorded live in the room with you on it.`,
     ],
     // The cover is fluid (owner, 2026-09-08): his version is one version.
     [
