@@ -12,6 +12,7 @@ interface SocialContent {
   title: string;
   video_id: number | null;
   caption_instagram: string | null;
+  collaborators_instagram: string | null;
   caption_tiktok: string | null;
   caption_youtube: string | null;
   hashtags_instagram: string | null;
@@ -138,10 +139,19 @@ export async function POST(request: NextRequest) {
     if (platformsSet.has('instagram')) {
       const igCaption = content.caption_instagram || content.title || '';
       const igHashtags = content.hashtags_instagram || '';
+      // Co-authors, if the draft names any. Instagram's collaborator feature
+      // puts the post on their grid too, in front of their followers — for an
+      // event at somebody else's venue that reaches the people who most need
+      // to see it. Stored comma-separated; handles are sent without the '@'.
+      const igCollaborators = (content.collaborators_instagram || '')
+        .split(',')
+        .map((h: string) => h.trim().replace(/^@/, ''))
+        .filter(Boolean);
       platformConfigurations.instagram = {
         caption: igHashtags ? `${igCaption}\n\n${igHashtags}` : igCaption,
         placement: 'REELS',
         share_to_feed: true,
+        ...(igCollaborators.length ? { collaborators: igCollaborators } : {}),
       };
     }
 

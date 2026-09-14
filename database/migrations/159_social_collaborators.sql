@@ -1,0 +1,17 @@
+-- 159 — co-authors on a post.
+--
+-- Instagram's collaborator feature puts a post on TWO profiles: it appears in
+-- the venue's grid as well as ours, to their followers as well as ours, with
+-- one shared like and comment count. For an event at somebody else's room that
+-- is worth more than a tag in the caption, because the people who need to see
+-- it are the people who already follow the venue.
+--
+-- It is a property of the POST, not of the account and not of the request, so
+-- it lives on the row: the same draft published twice should invite the same
+-- people both times, and a human reviewing a draft should be able to see who
+-- it will go out with.
+--
+-- Instagram only. TikTok has no co-author concept — the equivalent there is an
+-- @mention inside the caption, which needs no schema because caption_tiktok
+-- already exists.
+ALTER TABLE social_content ADD COLUMN collaborators_instagram TEXT;
