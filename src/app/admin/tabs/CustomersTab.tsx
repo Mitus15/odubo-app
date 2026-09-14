@@ -300,6 +300,14 @@ export default function CustomersTab() {
                 </h3>
                 <div className="text-sm text-[#b2a491]">{selectedCustomer.customer.email}</div>
               </div>
+              <a
+                href={`/admin/inbox?to=${encodeURIComponent(selectedCustomer.customer.email)}&name=${encodeURIComponent(
+                  `${selectedCustomer.customer.firstName || ''} ${selectedCustomer.customer.lastName || ''}`.trim()
+                )}`}
+                className="mr-2 min-h-[44px] inline-flex items-center rounded-full border border-[#843c2d] px-4 text-xs font-medium text-[#ede8df] hover:bg-[#843c2d]/25 transition-colors"
+              >
+                Message
+              </a>
               <button
                 onClick={() => setSelectedCustomer(null)}
                 className="p-2 text-[#b2a491] hover:text-[#ede8df] hover:bg-[#302927]/40 rounded-lg transition-colors"

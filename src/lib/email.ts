@@ -35,8 +35,8 @@ const BRAND = {
   warmBg: '#f9f7f4',
 };
 
-// Email wrapper — shared chrome for all emails
-function emailWrapper(content: string, preheader?: string): string {
+// Email wrapper — shared chrome for all emails (exported for the inbox's replies)
+export function emailWrapper(content: string, preheader?: string): string {
   const site = getSiteUrl();
   const logoUrl = `${site}/brand-logos/Danceman_Logo_Red.png`;
 
@@ -68,7 +68,7 @@ function emailWrapper(content: string, preheader?: string): string {
 }
 
 // CTA button helper
-function ctaButton(href: string, label: string, variant: 'primary' | 'outline' = 'primary'): string {
+export function ctaButton(href: string, label: string, variant: 'primary' | 'outline' = 'primary'): string {
   if (variant === 'outline') {
     return `<a href="${href}" style="display:inline-block;padding:14px 28px;background:transparent;color:${BRAND.accent};border:2px solid ${BRAND.accent};border-radius:999px;text-decoration:none;font-weight:600;font-family:${BRAND.serif};letter-spacing:0.02em;">${label}</a>`;
   }
@@ -390,12 +390,18 @@ export async function sendDay7Email(data: Day7EmailData): Promise<SendResult> {
   }
 }
 
-// Generic send function for custom emails
+// Generic send function for custom emails.
+// `from`, `replyTo` and `headers` are optional so the inbox can send from its
+// own address with a plus-addressed Reply-To and RFC threading headers; every
+// existing caller keeps the configured sender.
 export async function sendEmail(options: {
   to: string;
   subject: string;
   html: string;
   text?: string;
+  from?: string;
+  replyTo?: string;
+  headers?: Record<string, string>;
 }): Promise<SendResult> {
   const resend = getResend();
   if (!resend) {
@@ -406,11 +412,13 @@ export async function sendEmail(options: {
 
   try {
     const result = await resend.emails.send({
-      from: fromEmail,
+      from: options.from || fromEmail,
       to: options.to,
       subject: options.subject,
       html: options.html,
       text: options.text,
+      ...(options.replyTo ? { replyTo: options.replyTo } : {}),
+      ...(options.headers ? { headers: options.headers } : {}),
     });
 
     if (result.error) {

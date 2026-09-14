@@ -36,6 +36,15 @@
         "LOOP_FORCE_PHASE=pre npx next dev -p 3114"
       ],
       "port": 3114
+    },
+    {
+      "name": "inbox",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "npx next dev -p 3115"
+      ],
+      "port": 3115
     }
   ]
 }

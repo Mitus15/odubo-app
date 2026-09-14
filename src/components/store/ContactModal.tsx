@@ -5,6 +5,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 type InquiryType = 'order' | 'refund' | 'shipping' | 'general';
 
+function newSubmissionId(): string {
+  const bytes = new Uint8Array(12);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+}
+
 interface FormData {
   name: string;
   email: string;
@@ -28,6 +34,9 @@ export default function ContactModal({ isOpen, onClose }: ContactModalProps) {
   });
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
+  const [threadUrl, setThreadUrl] = useState<string | null>(null);
+  // One id per open of the form: a double tap on Send is one message, not two.
+  const [submissionId, setSubmissionId] = useState(() => newSubmissionId());
 
   // Reset form when modal closes
   useEffect(() => {
@@ -43,6 +52,8 @@ export default function ContactModal({ isOpen, onClose }: ContactModalProps) {
         });
         setStatus('idle');
         setErrorMessage('');
+        setThreadUrl(null);
+        setSubmissionId(newSubmissionId());
       }, 300);
       return () => clearTimeout(timer);
     }
@@ -68,15 +79,16 @@ export default function ContactModal({ isOpen, onClose }: ContactModalProps) {
       const res = await fetch('/api/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({ ...formData, submissionId }),
       });
 
-      const data = await res.json() as { error?: string };
+      const data = await res.json() as { error?: string; threadUrl?: string };
 
       if (!res.ok) {
         throw new Error(data.error || 'Failed to send message');
       }
 
+      setThreadUrl(data.threadUrl || null);
       setStatus('success');
     } catch (err) {
       setStatus('error');
@@ -137,7 +149,7 @@ export default function ContactModal({ isOpen, onClose }: ContactModalProps) {
                   <div className="text-center mb-6">
                     <h2 className="text-xl sm:text-2xl font-serif font-medium mb-2">Contact Us</h2>
                     <p className="text-sm text-[#b2a491]">
-                      We'll get back to you within 24-48 hours.
+                      You will hear back within a day or two.
                     </p>
                   </div>
 
@@ -149,10 +161,19 @@ export default function ContactModal({ isOpen, onClose }: ContactModalProps) {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                         </svg>
                       </div>
-                      <h3 className="text-lg font-medium text-[#ede8df] mb-2">Message Sent!</h3>
-                      <p className="text-sm text-[#b2a491] mb-6">
-                        We've received your message and will get back to you soon.
+                      <h3 className="text-lg font-medium text-[#ede8df] mb-2">We have it.</h3>
+                      <p className="text-sm text-[#b2a491] mb-2">
+                        You will hear back within a day or two, here and by email.
                       </p>
+                      {threadUrl && (
+                        <a
+                          href={threadUrl}
+                          className="inline-block mb-6 text-sm text-[#d9aa7a] hover:text-[#ede8df] underline underline-offset-4 decoration-[#843c2d] min-h-[44px] leading-[44px]"
+                        >
+                          Open your conversation
+                        </a>
+                      )}
+                      <br />
                       <button
                         onClick={onClose}
                         className="px-6 py-2.5 rounded-xl bg-white/10 text-[#ede8df] hover:bg-white/15 transition-colors text-sm"
@@ -275,12 +296,8 @@ export default function ContactModal({ isOpen, onClose }: ContactModalProps) {
                         )}
                       </button>
 
-                      {/* Email fallback */}
                       <p className="text-center text-[10px] text-[#726d6c] pt-2">
-                        Or email us at{' '}
-                        <a href="mailto:info@odubo.studio" className="text-[#b2a491] hover:text-[#ede8df] transition-colors">
-                          info@odubo.studio
-                        </a>
+                        You get a private link to the conversation, no account needed.
                       </p>
                     </form>
                   )}
