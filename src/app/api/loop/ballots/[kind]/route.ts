@@ -54,10 +54,10 @@ export async function POST(
       closed: { status: 409, error: "this vote isn't open" },
       "not-holder": {
         status: 403,
-        error: "Voting is for the room. Enter your pass first.",
+        error: "Voting is for pass-holders. Find your code at /loop/code.",
       },
       "unknown-option": { status: 404, error: "that option isn't on the ballot" },
-      budget: { status: 409, error: "you've used all your votes — remove one first" },
+      budget: { status: 409, error: "you've used all your votes. remove one first" },
     } as const;
     const m = map[result.reason];
     return NextResponse.json({ error: m.error, reason: result.reason }, { status: m.status });

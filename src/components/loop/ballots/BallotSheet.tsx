@@ -91,8 +91,24 @@ export function BallotSheet({ kind }: { kind: "tracklist" | "cover" }) {
           ? "Voting hasn't opened yet. Standings only."
           : ballot.canVote
             ? `${ballot.voteLimit - ballot.votesUsed} of ${ballot.voteLimit} votes left · tap to vote, tap again to take it back`
-            : "Voting is for the room. Enter your pass to take part."}
+            : "Standings only. Voting is for pass-holders."}
       </div>
+
+      {/* On an open-doors night a guest is IN the room without a code, so this
+       *  state is normal rather than an error. It used to say "voting is for
+       *  the room" to someone standing in it, and then name a code with no way
+       *  to reach one. Say what is actually needed, and open the door to it. */}
+      {ballot.open && !ballot.canVote && (
+        <a
+          href="/loop/code"
+          className="mt-3 flex min-h-[44px] items-center justify-between gap-3 border-t border-current/15 pt-3 text-sm font-bold"
+        >
+          Find your code
+          <span aria-hidden className="text-base">
+            →
+          </span>
+        </a>
+      )}
 
       {ballot.options.length === 0 ? (
         <p className="loop-muted mt-6 text-center text-sm">
