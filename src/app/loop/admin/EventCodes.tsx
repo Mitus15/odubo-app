@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 
 type CodeRow = { code: string; redeemed: boolean; email: string | null; orderId: string | null };
 type Stats = { total: number; redeemed: number };
+type Intent = { token: string; email: string; createdAt: string; orderId: string | null };
 
 /**
  * Event codes — generate & issue. Bulk-mint codes for the door (a 75-person
@@ -13,6 +14,7 @@ type Stats = { total: number; redeemed: number };
 export function EventCodes() {
   const [codes, setCodes] = useState<CodeRow[]>([]);
   const [stats, setStats] = useState<Stats>({ total: 0, redeemed: 0 });
+  const [intents, setIntents] = useState<Intent[]>([]);
   const [count, setCount] = useState("75");
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -37,9 +39,10 @@ export function EventCodes() {
     try {
       const res = await fetch("/api/loop/admin/codes", { cache: "no-store" });
       if (!res.ok) throw new Error(`Couldn't load codes (${res.status})`);
-      const data = (await res.json()) as { codes?: CodeRow[]; stats?: Stats };
+      const data = (await res.json()) as { codes?: CodeRow[]; stats?: Stats; intents?: Intent[] };
       setCodes(data.codes ?? []);
       setStats(data.stats ?? { total: 0, redeemed: 0 });
+      setIntents(data.intents ?? []);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -185,10 +188,10 @@ export function EventCodes() {
             {needsAddress.length} paid {needsAddress.length === 1 ? "pass has" : "passes have"} no address.
           </p>
           <p className="mt-1 text-xs opacity-80">
-            Shopify is sending orders without the buyer&apos;s email, so nothing could be sent and they cannot
-            find their pass at /loop/code. Fix it for good in Shopify → Settings → Apps and sales channels →
-            Develop apps → this app → Configuration → <b>Protected customer data access</b> → request
-            <b> Email</b>. Until then, read the address off the order in Shopify and attach it here.
+            Shopify Basic does not let this app read a buyer&apos;s email, so nothing could be sent and they
+            cannot find their pass at /loop/code. Buyers who use the pass sheet now type their address before
+            checkout and are handled automatically; these are the ones who did not, or who bought before that
+            existed. Attach an address and the pass, the QR ticket and the pre-order all go out.
           </p>
           <div className="mt-3 grid gap-2">
             {needsAddress.map((c) => (
@@ -222,6 +225,25 @@ export function EventCodes() {
                     {sending === c.code ? "Sending…" : "Attach & send pass"}
                   </button>
                 </div>
+                {/* Addresses typed on the pass sheet that no order claimed.
+                    The one typed just before this order is almost certainly
+                    the buyer, so it is one tap rather than a hunt in Shopify. */}
+                {intents.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                    <span className="text-[10px] font-bold uppercase tracking-widest opacity-50">Typed on the pass sheet</span>
+                    {intents.slice(0, 4).map((i) => (
+                      <button
+                        key={i.token}
+                        type="button"
+                        onClick={() => setAttach((m) => ({ ...m, [c.code]: i.email }))}
+                        className="rounded-full border border-ink/25 px-2.5 py-1 text-[11px] font-bold"
+                        title={new Date(i.createdAt).toLocaleString("en-CA", { timeZone: "America/Vancouver" })}
+                      >
+                        {i.email}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </form>
             ))}
           </div>

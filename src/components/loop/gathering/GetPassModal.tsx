@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { priceLabel as formatPrice } from "@/lib/loop/priceLabel";
 import { RECORDING_NOTICE } from "@/lib/loop/content";
 
@@ -19,6 +19,8 @@ type Capacity =
  * legible over the poster artwork on a phone. Scrolls internally; X to close
  * (no drag-to-close, per house UX rules).
  */
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export function GetPassModal({
   capacity,
   checkoutUrl: checkoutUrlProp,
@@ -56,6 +58,10 @@ export function GetPassModal({
     };
   }, []);
 
+  const [email, setEmail] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
   // Admin-set Shopify checkout link first, then the env fallback.
   const checkoutUrl =
     checkoutUrlProp || process.env.NEXT_PUBLIC_LOOP_PASS_CHECKOUT_URL;
@@ -69,6 +75,38 @@ export function GetPassModal({
   // not: there is no verified sending domain, so codes reach the owner and
   // nobody else. The lookup at /loop/code was built precisely so entry never
   // depends on delivery — so that is what this says now.
+  /**
+   * Record the address, then go to checkout with it prefilled.
+   *
+   * A failure here must never cost a sale: if the record cannot be written we
+   * open the plain checkout anyway and the buyer is recoverable from the admin.
+   */
+  async function go(e: React.FormEvent) {
+    e.preventDefault();
+    if (busy) return;
+    const addr = email.trim();
+    if (!EMAIL.test(addr)) {
+      setErr("We need an address to send your pass to.");
+      return;
+    }
+    setBusy(true);
+    setErr(null);
+    let target = checkoutUrl as string;
+    try {
+      const res = await fetch("/api/loop/pass/intent", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email: addr }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { checkoutUrl?: string; error?: string };
+      if (res.ok && data.checkoutUrl) target = data.checkoutUrl;
+      else console.error("[loop:pass] intent not recorded:", data.error ?? res.status);
+    } catch (e2) {
+      console.error("[loop:pass] intent not recorded:", e2);
+    }
+    window.location.href = target;
+  }
+
   const includes: [string, string][] = [
     [
       "Entry for one",
@@ -261,19 +299,45 @@ export function GetPassModal({
               <p className="loop-muted mb-3 text-center text-[11px] leading-relaxed">
                 {RECORDING_NOTICE.short}
               </p>
-              <a
-                href={checkoutUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block w-full rounded-full bg-ink py-4 text-center text-base font-bold text-sand transition-transform active:scale-95"
-              >
-                {isFree
-                  ? "Register · Free"
-                  : `Continue to checkout · ${priceLabel}`}
-              </a>
+              {/* The address is asked for HERE, not taken from the order.
+                  Shopify Basic does not let this app read a buyer's email, so
+                  a pass bought without this step is a pass we cannot send.
+                  It is typed once: the checkout arrives with it prefilled. */}
+              <form onSubmit={go} className="grid gap-2">
+                <label htmlFor="loop-pass-email" className="sr-only">
+                  Where should we send your pass?
+                </label>
+                <input
+                  id="loop-pass-email"
+                  type="email"
+                  inputMode="email"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  autoComplete="email"
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    setErr(null);
+                  }}
+                  placeholder="Where should we send your pass?"
+                  className="min-h-[52px] w-full rounded-full border border-ink/25 bg-transparent px-5 text-base outline-none placeholder:opacity-50 focus:border-ink"
+                />
+                <button
+                  type="submit"
+                  disabled={busy}
+                  className="block w-full rounded-full bg-ink py-4 text-center text-base font-bold text-sand transition-transform active:scale-95 disabled:opacity-60"
+                >
+                  {busy
+                    ? "Opening checkout…"
+                    : isFree
+                      ? "Register · Free"
+                      : `Continue to checkout · ${priceLabel}`}
+                </button>
+              </form>
+              {err && <p className="mt-2 text-center text-[11px] font-semibold text-red-700">{err}</p>}
               <p className="loop-muted mt-2 text-center text-[11px]">
-                Secure checkout on our store. Your pass arrives by email, and
-                you can find it here any time.
+                Secure checkout on our store. Your pass and your QR ticket go to
+                that address, and you can find them here any time.
               </p>
             </>
           ) : (

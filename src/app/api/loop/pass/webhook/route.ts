@@ -3,6 +3,7 @@ import { getCurrentEvent } from "@/lib/loop/hub";
 import { issueForOrder } from "@/lib/loop/event-codes";
 import { sendEventCodesEmail } from "@/lib/loop/email";
 import { grantAlbumForOrder } from "@/lib/loop/album";
+import { claimIntent, refFromNoteAttributes } from "@/lib/loop/passIntent";
 import {
   parseShopifyOrder,
   passMatcherConfigured,
@@ -58,23 +59,31 @@ export async function POST(req: Request) {
   const event = await getCurrentEvent();
   const now = Date.now();
 
+  // Shopify Basic strips email/phone/customer from the payload, so the address
+  // rides in as a cart attribute we set ourselves on the checkout link.
+  let email = order.email;
+  if (!email) {
+    const ref = refFromNoteAttributes(order.noteAttributes);
+    if (ref) email = await claimIntent(ref, order.id);
+  }
+
   const codes: string[] = [];
   let anyNew = false;
   for (const unitOrderId of passUnitOrderIds(order.id, order.passCount)) {
-    const { code, isNew } = await issueForOrder(event.id, unitOrderId, order.email, now);
+    const { code, isNew } = await issueForOrder(event.id, unitOrderId, email, now);
     codes.push(code);
     if (isNew) anyNew = true;
     // The pre-order, written down. Idempotent on the unit order id; never
     // throws, so the code and the email above it are never at its mercy.
-    await grantAlbumForOrder(order.email, unitOrderId, event.id);
+    await grantAlbumForOrder(email, unitOrderId, event.id);
   }
 
   // Only email when something was newly issued — a pure retry stays silent.
   // A partial retry (some units new) resends the FULL set so the buyer always
   // ends up with one complete email.
   let delivered = false;
-  if (order.email && anyNew) {
-    const res = await sendEventCodesEmail(order.email, codes, event.title);
+  if (email && anyNew) {
+    const res = await sendEventCodesEmail(email, codes, event.title);
     delivered = res.ok;
   }
 
@@ -84,9 +93,9 @@ export async function POST(req: Request) {
   // the Admin API until the app is granted Protected Customer Data access.
   // The code is minted anyway so the money is honoured; the admin sees it
   // flagged and can attach the address from the order in Shopify.
-  if (!order.email) {
+  if (!email) {
     console.error(
-      `[loop:pass] order ${order.id} arrived with NO email (Shopify protected customer data not granted?). ` +
+      `[loop:pass] order ${order.id} arrived with NO email and no loop_ref attribute. ` +
         `${codes.length} pass(es) minted without an address — attach it in /loop/admin → Event codes.`,
     );
   }
@@ -98,6 +107,6 @@ export async function POST(req: Request) {
     issued: codes.length,
     anyNew,
     delivered,
-    ...(order.email ? {} : { reason: "no-email" }),
+    ...(email ? {} : { reason: "no-email" }),
   });
 }

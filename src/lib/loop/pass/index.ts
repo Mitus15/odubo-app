@@ -63,6 +63,8 @@ export function verifyShopifyHmac(
 }
 
 export type ShopifyOrder = {
+  /** Cart attributes that survived checkout. Carries `loop_ref`. */
+  noteAttributes: Array<{ name?: string | null; value?: string | null }>;
   id: string;
   email: string | null;
   financialStatus: string | null;
@@ -84,6 +86,7 @@ export function parseShopifyOrder(
     email?: string | null;
     contact_email?: string | null;
     customer?: { email?: string | null } | null;
+    note_attributes?: Array<{ name?: string | null; value?: string | null }> | null;
     financial_status?: string | null;
     line_items?: Array<{ sku?: string | null; product_id?: number | string | null; quantity?: number }>;
   };
@@ -112,6 +115,9 @@ export function parseShopifyOrder(
     // Every place Shopify puts it. All three come back null when the app has
     // not been granted Protected Customer Data access; see the webhook.
     email: body.email ?? body.contact_email ?? body.customer?.email ?? null,
+    // Merchant data, not customer data, so Shopify hands it over on any plan.
+    // This is how the address gets past the Basic plan's PII block.
+    noteAttributes: body.note_attributes ?? [],
     financialStatus: body.financial_status ?? null,
     passCount,
   };

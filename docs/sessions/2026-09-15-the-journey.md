@@ -155,3 +155,47 @@ self-approved there.
 
 The owner's own pass is rescued by that button; nothing was written to the
 ledger by hand.
+
+## Shopify Basic will not hand over the buyer (the real cause)
+
+The owner found it: Settings → Apps → App development → **Protected customer
+data access** says *"API access to personally identifiable information (PII)
+like customer names, addresses, emails, phone numbers is available on
+Shopify, Advanced, and Plus plans"*, with an Upgrade button. The API confirms
+`plan_name: basic`.
+
+**So the earlier advice in this repo was wrong.** This is not a permission to
+tick and custom apps do not self-approve it. On Basic, every webhook and every
+Admin API read returns `email`, `contact_email`, `phone` and `customer` as
+null, for a paid order, no matter which of the two custom apps is configured.
+
+**What Basic DOES give us**, checked against the live store:
+
+- `note_attributes` on an order: readable, not redacted (it is merchant data).
+- `checkout[email]=` on a cart permalink **prefills Shopify's checkout email
+  field** — verified by loading the real checkout and reading the input value.
+- `attributes[...]` on the same permalink survives into the checkout URL.
+
+**So the address is collected on our side and carried past the block:**
+
+1. The pass sheet asks one question before checkout: *"Where should we send
+   your pass?"* `POST /api/loop/pass/intent` records it (migration 163,
+   `loop_pass_intents`) and returns the checkout link carrying
+   `checkout[email]` and `attributes[loop_ref]=<token>`.
+2. The buyer types it once. Shopify's checkout arrives prefilled.
+3. The webhook reads `loop_ref` out of `note_attributes`, claims the intent,
+   and has the address: code, pre-order, pass email and QR ticket all go out
+   exactly as they would on a plan that shares emails.
+4. If the reference never comes back, the intent row is still there with its
+   timestamp. Admin → Event codes shows the unclaimed addresses as one-tap
+   chips beside any pass with no address, so the manual path is a tap rather
+   than a hunt through Shopify.
+
+A failure anywhere in step 1 opens the plain checkout anyway: the sale is
+never at the mercy of this.
+
+**Also found:** the Facebook event went live at 15:53 the same day ("directing
+people to your website"), so this was fixed with traffic already arriving. And
+no *customer* order confirmation email for #1001 reached the owner's inbox,
+only the merchant copy — either a different address was used at checkout or
+Shopify's Order confirmation notification is off. Worth the owner checking.

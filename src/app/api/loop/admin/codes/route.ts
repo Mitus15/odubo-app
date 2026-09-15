@@ -3,6 +3,7 @@ import { getCurrentEvent } from "@/lib/loop/hub";
 import { attachEmail, countRedeemed, generate, listCodes, lookupCode } from "@/lib/loop/event-codes";
 import { grantAlbumForOrder } from "@/lib/loop/album";
 import { sendEventCodesEmail } from "@/lib/loop/email";
+import { openIntents } from "@/lib/loop/passIntent";
 
 /**
  * Event codes for the door: list them (with redeemed state) and bulk-generate.
@@ -30,11 +31,14 @@ async function deliver(eventId: string, eventTitle: string, code: string) {
 }
 export async function GET() {
   const event = await getCurrentEvent();
-  const [codes, stats] = await Promise.all([
+  const [codes, stats, intents] = await Promise.all([
     listCodes(event.id),
     countRedeemed(event.id),
+    // Addresses typed on the pass sheet that no order claimed. Shown beside a
+    // pass with no address: the one typed seconds before it is the buyer.
+    openIntents(event.id),
   ]);
-  return NextResponse.json({ codes, stats });
+  return NextResponse.json({ codes, stats, intents });
 }
 
 export async function POST(req: NextRequest) {
