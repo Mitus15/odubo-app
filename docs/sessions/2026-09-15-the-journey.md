@@ -222,3 +222,22 @@ list the owner owns outright, and one he may legally write to.
 
 Built from the ledger, the pass sheet and the door. Never from Shopify, so it
 does not depend on a plan tier.
+
+## Proven on a real sale
+
+The owner bought a second pass through the new sheet, order `7088817537237`:
+
+| UTC | |
+|---|---|
+| 22:20:13 | address typed on the pass sheet (`loop_pass_intents`) |
+| 22:25:37 | order paid; webhook payload carried **no email**, as Basic always will |
+| 22:25:37 | `loop_ref` found in `note_attributes`, intent claimed, code minted **with the address** |
+| 22:25:38 | album pre-order written |
+| 22:25:39 | Resend: "Your Loop Soul pass for Volume 1" **delivered**, QR ticket attached |
+
+Two seconds, zero hands. This is the path every buyer now takes. It also
+resolved the "missing" customer confirmation: the owner checked out as
+`emorris508@gmail.com`, so Shopify's receipt went there. Nothing was off.
+
+The first pass (`#1001`, bought before the fix) still has no address and is
+the owner's to attach in Admin → Event codes.
