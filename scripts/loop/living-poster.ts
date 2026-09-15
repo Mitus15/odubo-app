@@ -302,6 +302,77 @@ function beatGrid(env: Float64Array, hint: number | null): Grid {
   return { bpm: 60 / beat, beat, bar: beat * 4, downbeat: bestPhase / HOP_HZ };
 }
 
+/* ── the crowd ───────────────────────────────────────────────────────────── */
+
+type Placed = { scale: number; x: number; y: number; enterAt: number; from: number };
+
+/**
+ * Where each copy of the dancer stands, and when he arrives.
+ *
+ * The piece is one man becoming a room, which is the pitch of the night said
+ * in thirty seconds. It works because the plate is a flat field with a figure
+ * that never takes the field's colour — see the regrade — so keying him out is
+ * exact and a copy is free.
+ *
+ * Three rules make a crowd rather than a row of clones:
+ *
+ *  - **Everyone stands on the same floor.** Feet land on the band's foot, the
+ *    same anchor the solo piece uses, so the group reads as one room rather
+ *    than as sprites at different depths.
+ *  - **Nobody is the same size.** A little scale variation is what separates
+ *    "several people" from "one person pasted repeatedly", and smaller reads
+ *    as further back, so the small ones are drawn first and stand a touch
+ *    higher.
+ *  - **Nobody is in the same frame of the dance.** Each copy is sourced from a
+ *    different second of the take. Without this the whole crowd hits the same
+ *    pose on the same beat and the effect collapses.
+ */
+function arrangeCrowd(
+  count: number,
+  base: number,
+  band: { top: number; bottom: number },
+  hero: { y: number; h: number },
+  H: number,
+  W: number,
+  bar: number,
+  cutSeconds: number,
+): Placed[] {
+  const out: Placed[] = [];
+  const floor = hero.y + hero.h;
+  // He starts alone in the CENTRE and the room joins him, rather than the
+  // piece opening on somebody stood off to one side. Arrivals then alternate
+  // right and left so the crowd grows outward from him instead of sweeping
+  // across, which reads as a room filling rather than a queue shuffling.
+  const spots = [0.50, 0.71, 0.29, 0.86, 0.15, 0.62, 0.38];
+  // Distinct depths, not two alternating ones. The man who was there first is
+  // nearest and largest; nobody else matches anybody else's size, which is
+  // what stops five copies reading as five copies.
+  const depths = [0.82, 0.64, 0.72, 0.55, 0.61, 0.68, 0.58];
+  for (let i = 0; i < count; i++) {
+    const depth = depths[i % depths.length];
+    const scale = base * depth;
+    const figureW = W * scale;
+    // He sits around 53% across his own frame over the cut (measured: left p05
+    // 25.9%, right p95 81.5%), so centre on that, not on the frame's middle.
+    const centre = W * spots[i % spots.length];
+    const x = Math.round(centre - figureW * 0.53);
+    // Further back stands a little higher up the sheet.
+    const lift = (1 - depth) * hero.h * 0.10;
+    const y = Math.round(floor - lift - band.bottom * H * scale);
+    // Arrivals land on a bar line, spread across roughly the first half of the
+    // cut so the room fills at a readable pace. One per bar is too quick at
+    // 160bpm — five would all be in before the viewer registered the first.
+    const everyBars = Math.max(1, Math.round(cutSeconds / (count * 2) / bar));
+    const enterAt = i === 0 ? 0 : i * everyBars * bar;
+    // Spread the source offsets across the take, and keep every offset below
+    // its own entry time so the tail never runs dry.
+    const from = i === 0 ? 0 : Math.min(enterAt, cutSeconds * 0.6) * (0.35 + 0.65 * (i / count));
+    out.push({ scale, x, y, enterAt, from });
+  }
+  // Back to front: the small ones are behind.
+  return out.sort((a, b) => a.scale - b.scale);
+}
+
 type Window = { start: number; seconds: number; match: number; energy: number };
 
 /**
@@ -505,7 +576,7 @@ async function main() {
    * render, so it is not recomputed every time. */
   const musicSrc = str("music") ? path.resolve(str("music")!) : null;
   const musicOffset = str("musicOffset") ? Number(str("musicOffset")) : null;
-  if (musicSrc && musicOffset == null) {
+  if (musicSrc && musicOffset == null && !str("musicStart")) {
     throw new Error(
       `--music needs --musicOffset=<seconds> (music time = plate time + offset).\n` +
         `  Measure it once:\n` +
@@ -577,6 +648,24 @@ async function main() {
           `  · motion ${(win.energy * 100).toFixed(1)}%/frame`),
   );
 
+  /* 2b. Retime, for a track the dance was not shot to.
+   *
+   * The footage is 117.65 BPM. Playing it at `retime` speed moves it to
+   * 117.65 x retime, so hallucinogen at 110 wants 110/117.65 = 0.935, a 6.5%
+   * slowdown that nobody can see. 1984 at 160 would want 1.360 and that is
+   * visible, which is why the effects carry the grid there instead.
+   *
+   * The plate is rendered LONGER by exactly the same factor, so a slowed copy
+   * still has material for the whole cut and never wraps mid-piece. */
+  const retime = num("retime", 1);
+  const plateSeconds = cutSeconds / retime;
+  if (retime !== 1) {
+    console.log(
+      `retime: footage at ${retime.toFixed(3)}x ` +
+        `(${((1 / retime - 1) * 100).toFixed(1)}% longer source: ${plateSeconds.toFixed(2)}s)`,
+    );
+  }
+
   /* 3. The plate: sand field, ink figure, nothing else on it. */
   const plate = path.join(outDir, `${stem}-plate.mp4`);
   if (str("plate")) {
@@ -584,7 +673,7 @@ async function main() {
     await run(
       FFMPEG,
       // prettier-ignore
-      ["-v", "error", "-ss", String(win.start), "-t", String(cutSeconds), "-i", srcPath,
+      ["-v", "error", "-ss", String(win.start), "-t", String(plateSeconds), "-i", srcPath,
        "-an", "-vf", `scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H}`,
        "-c:v", "libx264", "-crf", "12", "-pix_fmt", "yuv420p", plate, "-y"],
       "ffmpeg (trim)",
@@ -595,7 +684,7 @@ async function main() {
       process.execPath,
       // prettier-ignore
       ["--max-old-space-size=8192", "scripts/loop/video-convert.mjs",
-       `--in=${srcPath}`, `--mode=regrade`, `--start=${win.start}`, `--preview=${cutSeconds}`,
+       `--in=${srcPath}`, `--mode=regrade`, `--start=${win.start}`, `--preview=${plateSeconds}`,
        `--height=${H}`, `--crf=12`,
        ...(str("gradeTone") ? [`--gradeTone=${str("gradeTone")}`] : []),
        ...(str("gradeCache") ? [`--gradeCache=${str("gradeCache")}`] : []),
@@ -662,32 +751,93 @@ async function main() {
     );
   }
 
-  /* 5. Composite: sheet, then dancer, then type. Picture only — the audio is
-   *    muxed onto a copy afterwards, so both deliverables carry byte-identical
-   *    frames and the expensive encode happens once. */
+  /* 5. Composite: sheet, then dancer(s), then type. Picture only — the audio
+   *    is muxed onto a copy afterwards, so both deliverables carry
+   *    byte-identical frames and the expensive encode happens once. */
   const silent = path.join(outDir, `${stem}-silent.mp4`);
-  await run(
-    FFMPEG,
-    // prettier-ignore
-    ["-v", "error", "-stats",
-     "-i", plate, "-i", overlay,
-     "-filter_complex",
-     `color=c=${SAND}:s=${W}x${H}:r=${plateFps}[sheet];` +
-     `[0:v]scale=${vidW}:${vidH}[fig];` +
-     `[sheet][fig]overlay=${offX}:${offY}:shortest=1[bed];` +
-     `[bed][1:v]overlay=0:0:format=auto,format=yuv420p[v]`,
-     "-map", "[v]", "-an",
-     "-c:v", "libx264", "-preset", "slow", "-crf", "18",
-     "-profile:v", "high", "-level", "4.1",
-     // Reels wants a keyframe it can loop on and a browser-safe pixel format.
-     "-g", String(Math.round(plateFps * 2)), "-movflags", "+faststart",
-     silent, "-y"],
-    "ffmpeg (composite)",
-  );
+  const effect = str("effect") ?? "none";
+
+  if (effect === "fill") {
+    // One man becoming a room. Each copy is its own input at its own seek, so
+    // every figure is in a different part of the dance; -stream_loop keeps the
+    // late arrivals supplied when their offset runs past the end of the cut.
+    const copies = arrangeCrowd(
+      num("copies", 5), fit, band, hero, H, W, grid?.bar ?? 2, cutSeconds,
+    );
+    const inputs: string[] = [];
+    for (const c of copies) {
+      inputs.push("-stream_loop", "-1", "-ss", c.from.toFixed(3), "-i", plate);
+    }
+    const parts: string[] = [`color=c=${SAND}:s=${W}x${H}:r=${plateFps}[bg]`];
+    copies.forEach((c, i) => {
+      const w = Math.round((W * c.scale) / 2) * 2;
+      const h = Math.round((H * c.scale) / 2) * 2;
+      // The key is exact because the regrade guarantees no figure pixel ever
+      // takes the field colour. yuva is needed before fade can touch alpha.
+      parts.push(
+        `[${i}:v]colorkey=${SAND}:0.12:0.04,scale=${w}:${h},format=yuva420p` +
+          (retime !== 1 ? `,setpts=PTS/${retime}` : "") +
+          (c.enterAt > 0 ? `,fade=t=in:st=${c.enterAt.toFixed(2)}:d=0.30:alpha=1` : "") +
+          `[c${i}]`,
+      );
+    });
+    let prev = "bg";
+    copies.forEach((c, i) => {
+      const tag = i === copies.length - 1 ? "bed" : `b${i}`;
+      parts.push(
+        `[${prev}][c${i}]overlay=${c.x}:${c.y}` +
+          (c.enterAt > 0 ? `:enable='gte(t,${c.enterAt.toFixed(2)})'` : "") +
+          `[${tag}]`,
+      );
+      prev = tag;
+    });
+    parts.push(`[bed][${copies.length}:v]overlay=0:0:format=auto,format=yuv420p[v]`);
+    console.log(
+      `crowd: ${copies.length} figures, last arrives at ` +
+        `${Math.max(...copies.map((c) => c.enterAt)).toFixed(1)}s` +
+        `  · scales ${copies.map((c) => (c.scale * 100).toFixed(0)).join("/")}%`,
+    );
+    await run(
+      FFMPEG,
+      // prettier-ignore
+      ["-v", "error", "-stats", ...inputs, "-i", overlay,
+       "-filter_complex", parts.join(";"),
+       "-map", "[v]", "-an", "-t", String(cutSeconds),
+       "-c:v", "libx264", "-preset", "slow", "-crf", "18",
+       "-profile:v", "high", "-level", "4.1",
+       "-g", String(Math.round(plateFps * 2)), "-movflags", "+faststart",
+       silent, "-y"],
+      "ffmpeg (composite · fill)",
+    );
+  } else {
+    await run(
+      FFMPEG,
+      // prettier-ignore
+      ["-v", "error", "-stats",
+       "-i", plate, "-i", overlay,
+       "-filter_complex",
+       `color=c=${SAND}:s=${W}x${H}:r=${plateFps}[sheet];` +
+       `[0:v]scale=${vidW}:${vidH}` + (retime !== 1 ? `,setpts=PTS/${retime}` : "") + `[fig];` +
+       `[sheet][fig]overlay=${offX}:${offY}:shortest=1[bed];` +
+       `[bed][1:v]overlay=0:0:format=auto,format=yuv420p[v]`,
+       "-map", "[v]", "-an",
+       "-c:v", "libx264", "-preset", "slow", "-crf", "18",
+       "-profile:v", "high", "-level", "4.1",
+       // Reels wants a keyframe it can loop on and a browser-safe pixel format.
+       "-g", String(Math.round(plateFps * 2)), "-movflags", "+faststart",
+       silent, "-y"],
+      "ffmpeg (composite)",
+    );
+  }
 
   /* 6. The music, lifted from the reference and levelled for the platform. */
   const mode = str("audio") ?? (musicSrc ? "both" : "none");
-  const musicStart = musicSrc ? win.start + musicOffset! : null;
+  // --musicStart puts the cut anywhere in an UNRELATED track. The offset path
+  // is for lifting sound off a synced reference; a track the dance was never
+  // shot to has no offset to honour, only a good place to start.
+  const musicStart = musicSrc
+    ? (str("musicStart") ? Number(str("musicStart")) : win.start + (musicOffset ?? 0))
+    : null;
   let withMusic: string | null = null;
   if (musicSrc && mode !== "none") {
     const trimmed = path.join(outDir, `${stem}-music.m4a`);
