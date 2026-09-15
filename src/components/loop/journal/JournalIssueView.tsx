@@ -39,7 +39,7 @@ export function JournalIssueView({
   data: JournalData;
   draftPreview?: boolean;
 }) {
-  const { issue, moments, anthem, runOfShow } = data;
+  const { issue, moments, runOfShow } = data;
   const headline = issue?.headline?.trim() || `The ${event.theme} Issue`;
   const [spotlight, ...rest] = moments;
   let section = 0;
@@ -85,43 +85,6 @@ export function JournalIssueView({
           />
         </div>
       </header>
-
-      {/* ── The Anthem ── */}
-      {anthem && (
-        <section>
-          <SectionRule index={nextIndex()} label="The Anthem" />
-          <div className="mt-6 overflow-hidden rounded-3xl bg-ink text-sand">
-            <div className="flex items-center gap-5 p-6">
-              {anthem.champion.artworkUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={anthem.champion.artworkUrl}
-                  alt=""
-                  className="h-24 w-24 shrink-0 rounded-2xl object-cover"
-                />
-              ) : null}
-              <div className="min-w-0">
-                <p className="text-[10px] font-bold uppercase tracking-[0.3em] opacity-60">
-                  Crowned by the room
-                </p>
-                <p className="mt-1 truncate text-2xl font-black leading-tight">
-                  {anthem.champion.title}
-                </p>
-                <p className="truncate text-sm opacity-80">{anthem.champion.artist}</p>
-              </div>
-            </div>
-            {anthem.runnerUp && (
-              <p className="border-t border-sand/20 px-6 py-4 text-sm opacity-80">
-                Took the final{" "}
-                <span className="font-bold tabular-nums">
-                  {anthem.votesFor}–{anthem.votesAgainst}
-                </span>{" "}
-                over {anthem.runnerUp.title} — then the Soul Loop Line did the rest.
-              </p>
-            )}
-          </div>
-        </section>
-      )}
 
       {/* ── Iconic Moments ── */}
       {spotlight && (

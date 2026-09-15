@@ -9,8 +9,8 @@ import LoopLoader from "@/components/loop/brand/LoopLoader";
  * The Loop Journal panel — the editorial frame (headline, standfirst, the
  * publish switch) plus the Iconic Moments curation list. Follows the house
  * admin pattern: edits stay local until Save, then POST + router.refresh().
- * The anthem result and night recap sections print themselves from data the
- * event already recorded, so there is nothing to edit for them here.
+ * The night recap section prints itself from data the event already
+ * recorded, so there is nothing to edit for it here.
  */
 export function JournalEditor({
   initialIssue,
@@ -84,7 +84,7 @@ export function JournalEditor({
             <input
               type="text"
               value={standfirst}
-              placeholder="Seventy-five people, one line, one anthem."
+              placeholder="Two hundred and fifty people, one room, one record."
               onChange={(e) => {
                 setStandfirst(e.target.value);
                 setSaved(false);

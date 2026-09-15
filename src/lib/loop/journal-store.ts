@@ -5,7 +5,7 @@ import { loopGalleryCode, publicUrlFor } from "@/lib/loop/wall/server";
  * The Loop Journal — one issue per event volume, D1-backed like every other
  * Loop store. The issue row is the editorial frame (headline, standfirst,
  * published flag); the Iconic Moments list is the hand-curated photography.
- * Everything else the magazine prints (anthem champion, night recap) is
+ * Everything else the magazine prints (the night recap) is
  * derived from tables that already exist — see journal-server.ts.
  */
 
