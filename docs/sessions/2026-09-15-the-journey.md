@@ -80,3 +80,45 @@ TRU Print has the flyer files and the poster counts. Nothing outstanding.
 2. Prove the holder view on the preview with a real pass.
 3. Merge. Production still opens the song takeover on every bare visit until
    this lands, and the Facebook event may already be live.
+
+## The door (same day, later)
+
+> They should also get a QR code ticket that I can scan at the door.
+
+The guest side half-existed: `/loop/code` already drew a QR per pass, encoding
+the bare code, captioned "show this at the door". There was no door.
+
+**Built:**
+
+- **The ticket.** The QR now encodes the door's own URL with the pass in it
+  (`/loop/admin/door?c=LOOP-XXXX`, origin taken from the page, never typed).
+  A scan from a plain camera app lands the host on the door page holding the
+  pass. The same QR rides in the pass email as a PNG attachment, one per pass,
+  so a buyer has the ticket without ever opening the site. `doorUrlFor` /
+  `parseScannedCode` in `src/lib/loop/door.ts`, pure and tested, are the only
+  place the ticket's shape lives.
+- **The door.** `/loop/admin/door`, gated by the same middleware as the rest
+  of admin. Rear camera, decoded in the page (native `BarcodeDetector` where
+  the browser has it, `jsQR` where it does not — Safari does not). A clean
+  scan **admits** the pass and says IN in green with a tone and a buzz; the
+  same ticket again says ALREADY IN and the time, amber; a code that is not
+  ours says NOT A PASS, red. Scanning never stops between guests. A pass
+  arriving by URL or typed by hand is looked up first and admitted on a tap,
+  because a page load must never admit anyone. A running count: heads in
+  against real passes sold. Wake lock so the screen stays on.
+- **The ledger.** Migration 162 adds `event_codes.admitted_at`, **applied to remote D1** and verified with `PRAGMA table_info`. Admission is
+  its own act: a guest can be let in without opening the app, and open the app
+  without reaching the door, so it does not reuse `redeemed_by`. `admitCode`
+  is guarded (`WHERE admitted_at IS NULL`) so two phones at the door cannot
+  both admit the same pass.
+
+**Verified:** `tsc` at baseline (851 / 10); 268 tests pass (+4 for the
+parser; `npm install jsqr` also refreshed node_modules and one of the two
+`jose` suites now loads and passes); eslint clean. On a dev server:
+`/loop/admin/door` 307s to the admin login, the API 401s without the cookie,
+`/loop/code` compiles with the door URL in its chunk.
+
+**Not verified:** the scanner itself with a real camera and a real ticket,
+and an admission write. Both need the admin password on a phone. It is a
+two-minute test on the preview: open `/loop/code`, prove a pass, then open
+`/loop/admin/door` on a second phone and point it at the first.

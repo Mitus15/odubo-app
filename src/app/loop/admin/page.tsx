@@ -107,6 +107,22 @@ export default async function AdminPage() {
 
       <section className="mt-12">
         <h2 className="text-sm font-bold uppercase tracking-widest opacity-70">
+          The Door
+        </h2>
+        <p className="mt-1 text-sm opacity-70">
+          On the night, this is the phone at the door. It scans ticket QRs,
+          admits a pass once, and counts heads against passes sold.
+        </p>
+        <a
+          href="/loop/admin/door"
+          className="mt-4 block rounded-2xl border border-ink bg-ink px-5 py-4 font-bold text-sand"
+        >
+          Open the door →
+        </a>
+      </section>
+
+      <section className="mt-12">
+        <h2 className="text-sm font-bold uppercase tracking-widest opacity-70">
           Event codes
         </h2>
         <p className="mt-1 text-sm opacity-70">

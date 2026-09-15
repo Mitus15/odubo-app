@@ -7,7 +7,9 @@
 
 import { getPublicBaseUrl } from "@/lib/loop/publicUrl";
 
-export type EmailMessage = { to: string; subject: string; text: string };
+export type EmailMessage = {
+  /** Base64 PNGs etc. Only the live provider sends them; the mock ignores them. */
+  attachments?: { filename: string; content: string }[]; to: string; subject: string; text: string };
 
 export interface EmailProvider {
   send(msg: EmailMessage): Promise<{ ok: boolean }>;
@@ -69,6 +71,7 @@ class ResendEmailProvider implements EmailProvider {
           subject: msg.subject,
           text: msg.text,
           ...(this.replyTo ? { reply_to: this.replyTo } : {}),
+          ...(msg.attachments?.length ? { attachments: msg.attachments } : {}),
         }),
       });
       if (!res.ok) {
@@ -182,6 +185,9 @@ async function codesBody(codes: string[], eventTitle: string): Promise<string> {
       ? `Each pass admits one guest. Share one with everybody coming.`
       : `It admits one guest.`,
     `Show it at the door, then enter it in the app to open the room.`,
+    many
+      ? `Your QR tickets are attached, one per pass. The door scans them.`
+      : `Your QR ticket is attached. The door scans it.`,
     ``,
     `THE NIGHT`,
     ``,
@@ -223,7 +229,40 @@ export async function sendEventCodesEmail(
         ? `Your ${codes.length} Loop Soul passes for ${eventTitle}`
         : `Your Loop Soul pass for ${eventTitle}`,
     text: await codesBody(codes, eventTitle),
+    attachments: await ticketQrAttachments(codes),
   });
+}
+
+/**
+ * One PNG per pass: the QR the door scans. It encodes the door's URL with the
+ * pass in it when the public origin is known, so a plain camera app lands the
+ * host on the door page; otherwise the bare code, which the door's own scanner
+ * reads just the same. Never fatal: a ticket without its picture still has
+ * the code in the text above it.
+ */
+async function ticketQrAttachments(codes: string[]): Promise<{ filename: string; content: string }[]> {
+  try {
+    const [{ default: QRCode }, { doorUrlFor }] = await Promise.all([
+      import("qrcode"),
+      import("@/lib/loop/door"),
+    ]);
+    const base = await getPublicBaseUrl();
+    return await Promise.all(
+      codes.map(async (code) => ({
+        filename: `loop-soul-ticket-${code}.png`,
+        content: (
+          await QRCode.toBuffer(base ? doorUrlFor(code, base) : code, {
+            margin: 2,
+            width: 480,
+            color: { dark: "#2a0f0a", light: "#ffffff" },
+          })
+        ).toString("base64"),
+      })),
+    );
+  } catch (err) {
+    console.error("[loop:email] ticket QR not attached:", err);
+    return [];
+  }
 }
 
 /** Deliver an auto-issued event code to a buyer. */

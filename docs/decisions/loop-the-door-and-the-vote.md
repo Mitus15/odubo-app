@@ -105,6 +105,14 @@ a pass, shoot a cover, put it up. So `gallery/post` no longer requires
 doors-open toggle still overrides on the night, exactly as before. See
 `docs/sessions/2026-09-15-the-journey.md`.
 
+## The physical door (2026-09-15, evening)
+
+The ticket is a QR that encodes `/loop/admin/door?c=<pass>`; the door is that
+page, on the host's phone, scanning and admitting. Admission is recorded in
+`event_codes.admitted_at` (migration 162), separate from the app's
+`redeemed_by`, because being let in and opening the app are different acts
+that happen in either order or not at all. First scan wins; a repeat says so.
+
 ## Still open
 
 - **The capacity counter lies with the doors open.** `getPassCapacity` counts

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import LoopLoader from "@/components/loop/brand/LoopLoader";
+import { doorUrlFor } from "@/lib/loop/door";
 
 type Found = { code: string; redeemed: boolean };
 
@@ -34,7 +35,10 @@ export function CodeLookup() {
     if (step !== "done") return;
     let alive = true;
     Promise.all(
-      codes.map(async (c) => [c.code, await QRCode.toDataURL(c.code, { margin: 1, width: 240, color: { dark: "#2a0f0a", light: "#00000000" } })] as const),
+      // The QR is the ticket: it encodes the door's own URL with the pass in
+      // it, so the host's plain camera app lands on the door page holding it.
+      // The origin is this page's own, never a typed domain.
+      codes.map(async (c) => [c.code, await QRCode.toDataURL(doorUrlFor(c.code, window.location.origin), { margin: 1, width: 240, color: { dark: "#2a0f0a", light: "#00000000" } })] as const),
     )
       .then((pairs) => alive && setQr(Object.fromEntries(pairs)))
       .catch(() => undefined);
@@ -196,9 +200,9 @@ export function CodeLookup() {
               </div>
               {qr[c.code] && (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={qr[c.code]} alt={`QR for ${c.code}`} width={160} height={160} className="mt-3 rounded-xl bg-[var(--background)] p-2" />
+                <img src={qr[c.code]} alt={`Ticket QR for ${c.code}`} width={160} height={160} className="mt-3 rounded-xl bg-[var(--background)] p-2" />
               )}
-              <p className="loop-muted mt-2 text-xs">Show this at the door. Screenshot it to keep it.</p>
+              <p className="loop-muted mt-2 text-xs">This is your ticket. Screenshot it; the door scans it.</p>
             </div>
           ))}
           <button type="button" onClick={() => { router.push("/loop"); router.refresh(); }} className={`${primary} mt-2`}>

@@ -78,6 +78,7 @@
     "jest-environment-jsdom": "^29.7.0",
     "jest-watch-typeahead": "^2.2.2",
     "jose": "^5.2.0",
+    "jsqr": "^1.4.0",
     "jszip": "^3.10.1",
     "jwt-decode": "^4.0.0",
     "lucide-react": "^0.563.0",

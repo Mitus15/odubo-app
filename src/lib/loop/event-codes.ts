@@ -182,6 +182,75 @@ export async function isHolder(eventId: string, voterId: string): Promise<boolea
   return (row?.n ?? 0) > 0;
 }
 
+/* ── the door ─────────────────────────────────────────────────────────────── */
+
+export type DoorLookup = {
+  code: string;
+  email: string | null;
+  orderId: string | null;
+  /** Opened the app with it (a device binding). Not the same as being let in. */
+  redeemed: boolean;
+  /** Let in at the door, ISO time. Null until scanned. */
+  admittedAt: string | null;
+  /** A simulated purchase from the admin, never a real ticket. */
+  sim: boolean;
+};
+
+export async function lookupCode(eventId: string, code: string): Promise<DoorLookup | null> {
+  const row = await queryOne<{
+    code: string;
+    email: string | null;
+    order_id: string | null;
+    redeemed_by: string | null;
+    admitted_at: string | null;
+  }>(
+    `SELECT code, email, order_id, redeemed_by, admitted_at
+       FROM event_codes WHERE event_id = ?1 AND code = ?2`,
+    [eventId, code.trim().toUpperCase()],
+  );
+  if (!row) return null;
+  return {
+    code: row.code,
+    email: row.email,
+    orderId: row.order_id,
+    redeemed: row.redeemed_by !== null,
+    admittedAt: row.admitted_at,
+    sim: (row.order_id ?? "").startsWith("sim:"),
+  };
+}
+
+/**
+ * Let a pass in. First scan wins: a second scan of the same pass (a forwarded
+ * screenshot, a friend with the same email) reports `already` with the time,
+ * and the host decides. The write is guarded so two doors cannot both admit.
+ */
+export async function admitCode(
+  eventId: string,
+  code: string,
+): Promise<{ ok: true; already: boolean; admittedAt: string } | { ok: false; reason: "unknown" }> {
+  const now = new Date().toISOString();
+  const meta = await executeQuery(
+    `UPDATE event_codes SET admitted_at = ?3
+      WHERE event_id = ?1 AND code = ?2 AND admitted_at IS NULL`,
+    [eventId, code.trim().toUpperCase(), now],
+  );
+  if (meta.changes > 0) return { ok: true, already: false, admittedAt: now };
+  const found = await lookupCode(eventId, code);
+  if (!found) return { ok: false, reason: "unknown" };
+  return { ok: true, already: true, admittedAt: found.admittedAt ?? now };
+}
+
+/** Heads through the door, against real passes sold. */
+export async function countAdmitted(eventId: string): Promise<{ admitted: number; sold: number }> {
+  const row = await queryOne<{ admitted: number; sold: number }>(
+    `SELECT COUNT(admitted_at) AS admitted,
+            SUM(CASE WHEN order_id IS NOT NULL AND order_id NOT LIKE 'sim:%' THEN 1 ELSE 0 END) AS sold
+       FROM event_codes WHERE event_id = ?1`,
+    [eventId],
+  );
+  return { admitted: row?.admitted ?? 0, sold: row?.sold ?? 0 };
+}
+
 export async function countRedeemed(eventId: string): Promise<{ total: number; redeemed: number }> {
   const row = await queryOne<{ total: number; redeemed: number }>(
     `SELECT COUNT(*) AS total,
