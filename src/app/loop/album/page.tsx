@@ -2,7 +2,16 @@ import Link from "next/link";
 import AlbumPlayer from "@/components/AlbumPlayer";
 import { getCurrentEvent } from "@/lib/loop/hub";
 import { currentVoterId } from "@/lib/loop/identity/voter";
-import { albumAccessFor, decideAlbumAccess, earlySetFor, loadAlbum, markClaimed } from "@/lib/loop/album";
+import {
+  albumAccessFor,
+  dealablePool,
+  decideAlbumAccess,
+  earlySetFor,
+  freeTrackNumber,
+  loadAlbum,
+  markClaimed,
+} from "@/lib/loop/album";
+import EarlyAlbum from "@/components/loop/album/EarlyAlbum";
 import { getSetting } from "@/lib/loop/loopSetting";
 import { getPassSettings } from "@/lib/loop/pass/settings";
 
@@ -67,6 +76,14 @@ export default async function LoopAlbumPage() {
     );
     const now = data.tracks.filter((t) => set.has(t.track_number));
     const later = data.tracks.length - now.length;
+    // What the draw performs: the one everybody gets, the ones drawn for this
+    // person, and the names the draw moves through on its way to them.
+    const free = freeTrackNumber(data.tracks, featured);
+    const freeTitle = data.tracks.find((t) => t.track_number === free)?.title ?? now[0].title;
+    const dealtTitles = now.filter((t) => t.track_number !== free).map((t) => t.title);
+    const poolTitles = dealablePool(data.tracks, free)
+      .map((n) => data.tracks.find((t) => t.track_number === n)?.title)
+      .filter((t): t is string => Boolean(t));
     if (now.length === 0) {
       return (
         <Shell title="It's yours. It lands after the night.">
@@ -75,6 +92,15 @@ export default async function LoopAlbumPage() {
       );
     }
     return (
+      <EarlyAlbum
+        albumId={data.album.id}
+        albumTitle={data.album.title}
+        artist={data.album.artist_name}
+        total={data.tracks.length}
+        freeTitle={freeTitle}
+        dealtTitles={dealtTitles}
+        poolTitles={poolTitles}
+      >
       <main className="min-h-[100dvh] bg-[#0f0b0b] text-[#ede8df]">
         <div className="mx-auto max-w-2xl px-5 pb-24 pt-10">
           <p className="text-[11px] uppercase tracking-[0.3em] opacity-70">Loop Soul · Yours, early</p>
@@ -90,6 +116,7 @@ export default async function LoopAlbumPage() {
           <BackLink />
         </div>
       </main>
+      </EarlyAlbum>
     );
   }
 

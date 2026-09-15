@@ -261,3 +261,39 @@ changes, the sentence changes with it.
 The takedown promise survives, one line in the email and a paragraph in
 `/legal`: it is keepable, it costs nothing, and it is the part a person
 actually wants to know exists.
+
+## The draw is performed, not computed (2026-09-15)
+
+> "The determining of the other two songs should be an experience in the app.
+> Once they buy the ticket they should be taken on an experience into the music
+> they have now accessed."
+
+The pair was chosen the instant the page loaded, silently, and then listed in a
+player like a receipt. The choosing is the interesting part, and it is the
+first thing a new pass-holder sees seconds after paying — the only chance the
+album gets to introduce itself.
+
+`TheDraw` performs it in four acts: *14 tracks, 3 are yours tonight* → *everybody
+gets this one* (the single) → *and 2 drawn for you*, the names moving and
+settling one at a time → *yours until the night*, the three on hairline rules,
+then **Play**.
+
+Not a slot machine. The house style is typographic and the room is a listening
+room, so the titles rise and settle rather than spin and clatter. Nothing is
+decided here: the pair is already fixed, seeded on the buyer's address. This
+shows a decision already made, which is what every good reveal is.
+
+Plays **once per album per device** (`loop.album.drawn.<albumId>`), written when
+the ceremony ends rather than when it starts, so closing the tab halfway does
+not spend it. Skippable at every moment. `prefers-reduced-motion` collapses the
+timings rather than removing the acts, so the story still reads.
+
+**A flaw worth recording:** `AnimatePresence mode="wait"` plays the exit to
+completion before the next act enters, so a symmetric half-second each way left
+over a second of empty black between acts — which on a dark screen reads as a
+broken page, not a beat. The exit is now a 0.2s blink and the entrance keeps
+its weight. Only visible by watching it.
+
+`/loop/admin/preview-draw?as=<email>` performs it for any address, on a loop,
+so the host can watch it and confirm two buyers really are dealt different
+songs.
