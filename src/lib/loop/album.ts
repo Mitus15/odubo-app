@@ -152,7 +152,12 @@ export type EarlyRule = { enabled: boolean; extra: number };
 export async function earlyRule(): Promise<EarlyRule> {
   try {
     const [on, n] = await Promise.all([getSetting(EARLY_ENABLED_KEY), getSetting(EARLY_EXTRA_KEY)]);
-    const extra = Number(n);
+    // An UNSET setting must mean the default, not zero. Number(null) is 0, not
+    // NaN, so the obvious `Number(n)` check silently dealt every buyer nothing
+    // but the free track — which is how a live email said "Welcome is yours to
+    // hear right now" and offered one song, the intro, to everybody.
+    const raw = (n ?? "").trim();
+    const extra = raw === "" ? EARLY_EXTRA_DEFAULT : Number(raw);
     return {
       enabled: on !== "0",
       extra: Number.isInteger(extra) && extra >= 0 ? extra : EARLY_EXTRA_DEFAULT,
@@ -171,11 +176,27 @@ export async function setEarlyRule(rule: Partial<EarlyRule>): Promise<void> {
 
 type TrackLike = { track_number: number; title: string; duration?: number | null };
 
-/** The one everybody gets, free: whatever song the front door is playing. */
+/** The same default `single.ts` uses, so the free song and the front door agree. */
+export const DEFAULT_FREE_TITLE = "1984";
+
+/**
+ * The one everybody gets, free: whatever song the front door is playing.
+ *
+ * It must never be the intro or an interlude. The first version fell back to
+ * `tracks[0]` when `featured_track` was unset — which in production it is —
+ * and handed every buyer the intro as their one free song. A fallback that
+ * can produce the exact thing the rule forbids is not a fallback.
+ */
 export function freeTrackNumber(tracks: TrackLike[], featured: string | null): number | null {
-  const want = (featured ?? "").trim().toLowerCase();
-  const byTitle = want ? tracks.find((t) => t.title.trim().toLowerCase() === want) : undefined;
-  return (byTitle ?? tracks[0])?.track_number ?? null;
+  const pick = (title: string) =>
+    tracks.find((t) => t.title.trim().toLowerCase() === title.trim().toLowerCase());
+  const proper = (t: TrackLike) => t.track_number !== 1 && (t.duration ?? 0) >= SKIT_MAX_SECONDS;
+
+  const named = (featured ?? "").trim() ? pick(featured!.trim()) : undefined;
+  if (named) return named.track_number;
+  const fallback = pick(DEFAULT_FREE_TITLE);
+  if (fallback) return fallback.track_number;
+  return (tracks.find(proper) ?? tracks[0])?.track_number ?? null;
 }
 
 /** Everything that may be dealt: no intro, no interludes, not the free one. */

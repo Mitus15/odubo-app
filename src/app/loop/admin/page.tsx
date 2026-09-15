@@ -153,6 +153,14 @@ export default async function AdminPage() {
         >
           Export the list (CSV)
         </a>
+        {/* The email is the only part of the product you cannot check by
+            visiting a page, and it is the part a buyer reads first. */}
+        <a
+          href="/api/loop/admin/preview-pass"
+          className="mt-2 block text-center text-[11px] font-bold uppercase tracking-[0.2em] underline underline-offset-4 opacity-60"
+        >
+          Read the pass email as a buyer gets it ↗
+        </a>
         <p className="mt-2 text-xs opacity-60">
           One row per pass: code, email, order, bought, opened the app, admitted,
           marketing consent, album claimed. Only write marketing to the rows with

@@ -55,8 +55,20 @@ describe("freeTrackNumber", () => {
     expect(freeTrackNumber(TRACKS, "1984")).toBe(2);
     expect(freeTrackNumber(TRACKS, "Ghost World")).toBe(14);
   });
-  it("falls back to the first track when the setting names nothing", () => {
-    expect(freeTrackNumber(TRACKS, null)).toBe(1);
+
+  // Regression: featured_track is UNSET in production. The first version fell
+  // back to tracks[0] and handed every buyer the intro as their free song.
+  it("never falls back to the intro when nothing is configured", () => {
+    expect(freeTrackNumber(TRACKS, null)).toBe(2);
+    expect(freeTrackNumber(TRACKS, "   ")).toBe(2);
+    expect(freeTrackNumber(TRACKS, "a song that does not exist")).toBe(2);
+  });
+
+  it("still avoids the intro and the interludes if even 1984 is missing", () => {
+    const odd = TRACKS.filter((t) => t.title !== "1984");
+    const n = freeTrackNumber(odd, null);
+    expect(n).not.toBe(1);
+    expect([4, 7, 12]).not.toContain(n);
   });
 });
 
@@ -103,6 +115,16 @@ describe("earlySetFor", () => {
 
   it("gives nothing when the owner turns it off", () => {
     expect(earlySetFor("a@b.co", TRACKS, "1984", { enabled: false, extra: 2 })).toEqual([]);
+  });
+
+  // Regression: album_early_extra is UNSET in production, and Number(null) is
+  // 0, so the rule resolved to "deal nobody anything" and a live email offered
+  // one song. The default must survive an unset setting.
+  it("deals the default two when nothing is configured", () => {
+    const set = earlySetFor("a@b.co", TRACKS, null, { enabled: true, extra: 2 });
+    expect(set).toHaveLength(3);
+    expect(set).toContain(2);
+    expect(set).not.toContain(1);
   });
 
   it("gives the single alone when the draw is set to zero", () => {

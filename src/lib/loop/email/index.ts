@@ -157,37 +157,69 @@ async function settingOrNull(key: string): Promise<string | null> {
 /**
  * What a buyer gets for five dollars.
  *
- * One email carrying everything needed to turn up and get in: the code, when
- * and where, what the night actually is, and the link. Written as one body for
- * one or many codes because a buyer with two passes and a buyer with one should
- * not receive two differently-worded emails, and the multi-pass version used to
- * drift from the single.
+ * Written for somebody who has just paid and is looking at their phone for the
+ * first time. The previous version told them to "enter it in the app to open
+ * the room", which names two things that do not exist for a stranger — there
+ * is no app, and "the room" is our word, not theirs — and then offered three
+ * links for three different jobs without saying which one was for them now.
+ * A buyer should never have to work out their own next step.
  *
- * The link is built from `public_base_url`, never typed: the printed URL has
+ * So: ONE thing to do now, at the top, with the reward named. Then the night.
+ * Then the ticket. Everything else is reference and sits underneath, quiet.
+ *
+ * Links are built from `public_base_url`, never typed: the printed URL has
  * moved once already and an email is the one artefact nobody can correct after
  * it is sent.
  */
-async function codesBody(codes: string[], eventTitle: string): Promise<string> {
+async function codesBody(codes: string[], eventTitle: string, email: string | null): Promise<string> {
   const base = (await getPublicBaseUrl()) ?? "";
   const many = codes.length > 1;
-  const lookup = base ? `${base}/loop/code` : "the Find your pass page";
+  const site = base || "odubostudio.com";
+  const listen = base ? `${base}/loop/album` : "odubostudio.com/loop/album";
+  const lookup = base ? `${base}/loop/code` : "odubostudio.com/loop/code";
+  const room = base ? `${base}/loop` : "odubostudio.com/loop";
+
+  // Say how many songs they actually have, not a number that drifts from the
+  // rule. Silent if the draw is off or the album cannot be read.
+  let nowLine = `Some of the album is already yours to hear.`;
+  try {
+    const [{ earlyRule, earlySetFor, loadAlbum }, { getSetting }] = await Promise.all([
+      import("@/lib/loop/album"),
+      import("@/lib/loop/loopSetting"),
+    ]);
+    const [rule, album, featured] = await Promise.all([earlyRule(), loadAlbum(), getSetting("featured_track")]);
+    if (rule.enabled && album && email) {
+      const set = earlySetFor(email, album.tracks, featured, rule);
+      const titles = album.tracks.filter((t) => set.includes(t.track_number));
+      if (titles.length) {
+        nowLine =
+          titles.length === 1
+            ? `${titles[0].title} is yours to hear right now.`
+            : `${titles.length} songs are yours to hear right now: ${titles.map((t) => t.title).join(", ")}.`;
+      }
+    }
+  } catch {
+    /* the generic line is true either way */
+  }
 
   return [
     `You're in for ${eventTitle}.`,
     ``,
-    many
-      ? `Your ${codes.length} passes, one per guest:`
-      : `Your pass:`,
+    `START HERE`,
     ``,
+    nowLine,
+    `Open ${listen} and enter this email address. That's all it asks for.`,
+    `The rest of the album lands in the same place after the night.`,
+    ``,
+    `YOUR TICKET`,
+    ``,
+    many
+      ? `${codes.length} tickets are attached, one per guest. Send one to each person coming.`
+      : `Your ticket is attached. Save it to your phone now, while you're thinking about it.`,
+    `Show it at the door on the night and we scan it. ${many ? "Each one admits one guest, once." : "It admits one guest, once."}`,
+    ``,
+    many ? `Your passes:` : `If the picture ever goes missing, this is your pass:`,
     ...codes.map((c) => `    ${c}`),
-    ``,
-    many
-      ? `Each pass admits one guest. Share one with everybody coming.`
-      : `It admits one guest.`,
-    `Show it at the door, then enter it in the app to open the room.`,
-    many
-      ? `${codes.length} tickets are attached, one per guest. Send one to each person coming; each admits one, once.`
-      : `Your ticket is attached. Keep it on your phone, the door scans it.`,
     ``,
     `THE NIGHT`,
     ``,
@@ -198,13 +230,16 @@ async function codesBody(codes: string[], eventTitle: string): Promise<string> {
     `At 9, the floor opens. 80s until the lights come on.`,
     `Out by 10. 19+. Dress code is 80s.`,
     ``,
-    `Your ticket is also a pre-order. A few tracks play now at ${base ? `${base}/loop/album` : "the Loop Soul album page"},`,
-    `and the whole record lands there after the night, whether or not you were in the room.`,
-    `Prove it's you with this email address and press play.`,
+    `ON THE NIGHT, ON YOUR PHONE`,
     ``,
-    `LOST YOUR PASS`,
+    `Type your pass in at ${room} and the night opens up: shoot through the Loop Soul`,
+    `filter, put your shots on the gallery everyone in the room shares, and vote on the`,
+    `album's cover and its running order. Nothing to install.`,
     ``,
-    `Look it up any time with this email address at ${lookup}. You don't need this message.`,
+    `IF YOU LOSE THIS EMAIL`,
+    ``,
+    `Everything above is findable at ${lookup} with this email address.`,
+    `You don't need to keep this message.`,
     ``,
     `ONE MORE THING`,
     ``,
@@ -212,7 +247,7 @@ async function codesBody(codes: string[], eventTitle: string): Promise<string> {
     `Coming in is your agreement to appear in it, on camera or in a photograph.`,
     `If something of you is published and you want it down, write to us and we take it down.`,
     ``,
-    base || "odubostudio.com/loop",
+    site,
   ].join("\n");
 }
 
@@ -228,7 +263,7 @@ export async function sendEventCodesEmail(
       codes.length > 1
         ? `Your ${codes.length} Loop Soul passes for ${eventTitle}`
         : `Your Loop Soul pass for ${eventTitle}`,
-    text: await codesBody(codes, eventTitle),
+    text: await codesBody(codes, eventTitle, to),
     attachments: await ticketAttachments(codes),
   });
 }
@@ -306,6 +341,15 @@ async function ticketAttachments(codes: string[]): Promise<{ filename: string; c
     }
   }
   return out;
+}
+
+/** The pass email as a buyer reads it, without sending. Used by the admin preview. */
+export async function previewCodesEmail(
+  codes: string[],
+  eventTitle: string,
+  email: string | null,
+): Promise<string> {
+  return codesBody(codes, eventTitle, email);
 }
 
 /** Deliver an auto-issued event code to a buyer. */

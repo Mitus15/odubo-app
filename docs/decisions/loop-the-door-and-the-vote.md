@@ -202,3 +202,37 @@ actually walked through the door — instead of who bought. That was the open
 question from earlier today: the number was wrong on an open-doors night, and
 it was also a sales figure shown to guests. Both fixed by counting the right
 thing.
+
+## The buyer should never have to work out their own next step (2026-09-15)
+
+> "As a recipient though, I'm a little confused about the room and the app. I
+> got the email and now I have to scavenger hunt my next steps?"
+
+He was right, and reading the sent email proved it. It said *"Show it at the
+door, then enter it in the app to open the room"* — naming two things that do
+not exist for a stranger: there is no app, and "the room" is our word, not
+theirs. It then offered three links for three different jobs without saying
+which was for them now, and buried the one immediately exciting thing (music
+they can hear this minute) inside a paragraph under the schedule.
+
+Rewritten around **one next step**: a START HERE block naming the songs they
+can play right now and the single link that plays them. Then the ticket, then
+the night, then what their pass does on the night in plain words — *shoot
+through the filter, put shots on the shared gallery, vote on the cover and the
+running order, nothing to install* — then recovery and the notice, quiet, at
+the bottom.
+
+**Reading it out loud found two live bugs** that would have reached every
+buyer, neither of which any test had caught because both were in a *default*:
+
+1. `Number(null)` is `0`, not `NaN`. `album_early_extra` is unset in
+   production, so the rule resolved to "deal nobody anything" and every buyer
+   would have been offered exactly one song.
+2. `freeTrackNumber` fell back to `tracks[0]` when `featured_track` was unset —
+   which it is — so that one song was **the intro**, the precise track the
+   owner's rule exists to exclude.
+
+Both fixed and pinned with regression tests that name the production
+condition. `/api/loop/admin/preview-pass` renders the email without sending
+one, linked from the admin, because the email is the only part of the product
+the owner cannot inspect by visiting a page.
