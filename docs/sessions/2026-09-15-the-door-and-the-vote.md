@@ -9,13 +9,16 @@ Full reasoning: [loop-the-door-and-the-vote.md](../decisions/loop-the-door-and-t
 
 | | |
 |---|---|
-| `109517b` | Delete Danceyokey (1,195 deletions) |
-| `ec452b4` | Ballot copy: stop telling people in the room they are not in it |
-| `84877ef` | Move `currentVoterId` out of the anthem |
-| `c24e04a` | Move the redemption route out of `anthem/` |
-| `fb78968` | Detach the Journal from the bracket |
-| `bf6b951` | Stop loading a hidden module on every front-door hit |
-| `cac5482` | Delete the anthem tournament (3,519 deletions) |
+| `456679e` | refactor(loop): delete Danceyokey, a whole feature nobody could reach |
+| `04dc16b` | fix(loop): the room told people in it that they were not in it |
+| `a86e900` | refactor(loop): move currentVoterId out of the anthem |
+| `1bc4ae1` | refactor(loop): the front door was filed under the anthem |
+| `31badb5` | refactor(loop): the magazine stops printing a section that never printed |
+| `db1d24c` | perf(loop): stop loading a hidden module on every front-door hit |
+| `ffee44f` | refactor(loop): delete the anthem tournament, keep what was never its own |
+| `5b8f872` | docs(loop): write down why the codes exist and what was deleted |
+| `0e0ecd0` | docs(loop): stop the surviving comments describing a deleted feature |
+| `05762bd` | fix(loop): reconnect /loop/album to currentVoterId after the rebase |
 
 ## Verification actually performed
 
@@ -51,6 +54,28 @@ Not planned for, but all of it was describing things that no longer exist:
   song". Both rewritten around the tracklist and cover vote.
 - The Journal's standfirst placeholder read *"Seventy-five people, one line,
   one anthem"* — wrong on the anthem, and wrong on the capacity, which is 250.
+
+## Rebased onto origin/main
+
+Another session shipped four Loop commits the same day (the album pre-order
+ledger, the recording notice, and a "your pass" vocabulary pass). This branch
+was rebased onto them. Four conflicts, resolved as:
+
+- **`danceyokey/route.ts`** and **`AnthemBracket.tsx`** — they had tweaked copy
+  inside files this branch deletes. Both were unreachable code. Deletion stands.
+- **`BallotSheet` / the ballots 403** — they changed the same line, "event code"
+  → "your pass", but kept *"Voting is for the room"*, which is the contradiction
+  this branch exists to remove. Took this branch's wording, which already uses
+  their "pass-holder" vocabulary; adopted their capitalisation.
+- **`PortalGate`** — **took theirs.** Their rewrite is a deliberate vocabulary
+  pass that already drops the stale "the queue" this branch had patched, and
+  does it better.
+
+**The rebase then introduced a silent break that merged without a conflict:**
+their new `/loop/album` page imports `currentVoterId` from `anthem-server`,
+which this branch deleted. Nothing collided textually, so git was happy, and
+`npm run build` was happy too. `tsc --noEmit` caught it as an 11th `TS2307`
+against a baseline of 10. Everything above was re-verified after the rebase.
 
 ## Next
 

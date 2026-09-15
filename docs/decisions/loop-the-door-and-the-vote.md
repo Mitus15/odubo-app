@@ -106,3 +106,11 @@ convention here and an empty table costs nothing.
   deleted next release.
 - `ANTHEM_VOTE_SECRET` keeps its name because it is set in the deployment
   environment; renaming it would be a production change for cosmetics.
+
+## Note on the same-day vocabulary pass
+
+A parallel session rewrote Loop's pass vocabulary ("your pass", not "your event
+code") on the same day. Where the two overlapped, the merge kept whichever
+solved more: their `PortalGate` rewrite superseded this branch's narrower fix,
+and this branch's ballot wording superseded theirs, because theirs still told a
+guest standing in the room that voting was "for the room".
