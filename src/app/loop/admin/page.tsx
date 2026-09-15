@@ -1,5 +1,4 @@
 import { getCurrentEvent, getCurrentPhase, type EventPhase } from "@/lib/loop/hub";
-import { countRedeemed } from "@/lib/loop/event-codes";
 import { getRunOfShow } from "@/lib/loop/content-store";
 import { getJournalIssue, getJournalMoments } from "@/lib/loop/journal-store";
 import { mockOutbox } from "@/lib/loop/email";
@@ -29,8 +28,7 @@ export default async function AdminPage() {
   const emailMode = process.env.EMAIL_MODE === "live" ? "live" : "mock";
 
   // Every read the dashboard needs, issued together rather than in series.
-  const [codeStats, runOfShow, journalIssue, journalMoments] = await Promise.all([
-    countRedeemed(event.id),
+  const [runOfShow, journalIssue, journalMoments] = await Promise.all([
     getRunOfShow(event.id),
     getJournalIssue(event.id),
     getJournalMoments(event.id),

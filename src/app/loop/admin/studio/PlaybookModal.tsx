@@ -214,8 +214,8 @@ function IdeaTab() {
         <LI>
           The anthem phrase is <b>What we dancin&rsquo; to</b> — never with a question
           mark, ever. Said aloud it&rsquo;s also &ldquo;what we dance into&rdquo;: a
-          question and a statement at once. It belongs to the Soul Anthem tournament
-          only — don&rsquo;t promote it back to slogan, don&rsquo;t clean it up.
+          question and a statement at once. It is the arc line, on merch and on
+          the posters — don&rsquo;t promote it back to slogan, don&rsquo;t clean it up.
         </LI>
         <LI>
           The triad is <b>MUSIC · MODE · MOVEMENT</b> — what the night is made of.
@@ -276,12 +276,16 @@ function NightTab({ facts }: { facts: PlaybookFacts }) {
         (the peak) → <b>the Loop Soul Line</b> — a conga that becomes a circle, two
         break into the middle → photos and the fashion floor.
       </P>
-      <H>The anthem</H>
+      <H>The vote</H>
       <P>
-        Before the night, the crowd nominates and votes an 8-song bracket down to one
-        champion — <b>the Soul Loop Anthem</b> — which the night is scored around.
-        Nominating is a pass-holder privilege, which makes the vote itself a sales
-        mechanic: buying in literally buys you a say.
+        The room decides the vinyl: its <b>running order</b> and its <b>cover</b>.
+        Both ballots are pass-holder only, which makes the vote itself a sales
+        mechanic: buying in literally buys you a say. The cover pays $50 and is
+        credited.
+      </P>
+      <P>
+        The old 8-song anthem bracket is gone — it competed with the album for
+        meaning, and the album won.
       </P>
     </div>
   );
@@ -435,8 +439,8 @@ function NowTab() {
           ticket — treat it like cash.
         </LI>
         <LI>
-          In the private window, scroll to the anthem and nominate a song —
-          it&rsquo;ll ask for a pass code, use the one you just made.{" "}
+          In the private window, open the Portal and redeem the code you just
+          made, then try the tracklist vote.{" "}
           <b>That exact flow is what a paying guest experiences.</b>
         </LI>
         <LI>
