@@ -159,6 +159,19 @@ export function AnalyticsProvider({ children }: { children: ReactNode }) {
     // Track initial site visit (once per session)
     if (!hasSentSiteVisitRef.current) {
       hasSentSiteVisitRef.current = true;
+      // `?p=` is the placement tag the poster kit stamps on every printed QR
+      // and every posted link (`?p=reel`, `?p=campus`, `?p=share`). It was
+      // written by that kit and read by nothing: `path` here is
+      // `window.location.pathname`, which drops the query, and so does the GA
+      // config. Every placement therefore looked identical to a bare visit,
+      // which made "did that post sell anything" unanswerable. It is one field
+      // on an event that already fires, not a new pipeline.
+      let placement: string | null = null;
+      try {
+        placement = new URLSearchParams(window.location.search).get('p');
+      } catch {
+        /* malformed query — not worth failing a page view over */
+      }
       queueEvent({
         type: 'site_visit',
         path: window.location.pathname,
@@ -166,6 +179,7 @@ export function AnalyticsProvider({ children }: { children: ReactNode }) {
         metadata: {
           referrer: document.referrer || null,
           userAgent: navigator.userAgent,
+          ...(placement ? { placement } : {}),
         },
       });
     }

@@ -275,8 +275,29 @@ function beatGrid(env: Float64Array, hint: number | null): Grid {
   const maxLag = Math.round((60 / 60) * HOP_HZ); // 60 BPM
   let bestLag = minLag;
   if (hint) {
-    bestLag = Math.round((60 / hint) * HOP_HZ);
-  } else {
+    // An explicit tempo is taken EXACTLY, not snapped to the hop grid. The
+    // grid exists so autocorrelation has integer lags to search; rounding a
+    // known value onto it is pure loss. 110 BPM wants 54.5454 hops, and
+    // rounding to 55 yields 109.09 — which is 0.13s of drift over seven bars,
+    // i.e. an audible lurch at exactly the loop point the bar snapping exists
+    // to prevent.
+    const beatExact = 60 / hint;
+    const barHopsExact = beatExact * 4 * HOP_HZ;
+    let bestPhaseH = 0;
+    let bestScoreH = -Infinity;
+    for (let p = 0; p < Math.round(barHopsExact); p++) {
+      let acc = 0;
+      for (let h = p; h < env.length; h += Math.round(barHopsExact)) acc += env[h];
+      if (acc > bestScoreH) { bestScoreH = acc; bestPhaseH = p; }
+    }
+    return {
+      bpm: hint,
+      beat: beatExact,
+      bar: beatExact * 4,
+      downbeat: bestPhaseH / HOP_HZ,
+    };
+  }
+  {
     let best = -Infinity;
     for (let lag = minLag; lag <= maxLag; lag++) {
       let acc = 0;
@@ -810,6 +831,44 @@ async function main() {
       "ffmpeg (composite · fill)",
     );
   } else {
+    /* The two effects that act on a single figure rather than on a crowd.
+     *
+     * Both are applied to the PLATE before it is scaled into the band, so the
+     * fit arithmetic above is untouched and the type still cannot be reached.
+     *
+     * FREEZE warps time instead of cutting it. A concat of live segments and
+     * held stills would have meant a dozen ffmpeg passes and a duration that
+     * drifts off the bar; a single setpts expression that stalls near each
+     * downbeat and catches up afterwards keeps the total EXACTLY the same
+     * length, which is what lets the reel still loop on the bar. `eps` is how
+     * much motion survives the hold — not zero, because a true stop reads as a
+     * dropped frame, whereas a crawl reads as a body resisting.
+     *
+     * ECHO persists the figure rather than the field. `lagfun` decays toward
+     * darkness, so it holds BRIGHT pixels — and the figure is the dark thing
+     * here. Inverting either side of it flips what persists, so the trail is
+     * the dancer and the sand stays clean. */
+    const hold = num("hold", 0.18);
+    const eps = 0.06;
+    const bar = grid?.bar ?? 2;
+    const warp =
+      `(${bar}*floor(T/${bar})` +
+      `+if(lt(mod(T,${bar}),${hold})` +
+      `,mod(T,${bar})*${eps}` +
+      `,${eps * hold}+(mod(T,${bar})-${hold})*${(bar - eps * hold) }/${bar - hold}))/TB`;
+    const figureChain =
+      effect === "freeze"
+        ? `,setpts='${warp}',fps=${plateFps}`
+        : effect === "echo"
+          ? `,negate,lagfun=decay=${num("decay", 0.94)},negate`
+          : "";
+    if (effect !== "none") {
+      console.log(
+        `effect: ${effect}` +
+          (effect === "freeze" ? `  · holding ${hold}s on every ${bar.toFixed(3)}s bar` : "") +
+          (effect === "echo" ? `  · trail decay ${num("decay", 0.94)}` : ""),
+      );
+    }
     await run(
       FFMPEG,
       // prettier-ignore
@@ -817,7 +876,7 @@ async function main() {
        "-i", plate, "-i", overlay,
        "-filter_complex",
        `color=c=${SAND}:s=${W}x${H}:r=${plateFps}[sheet];` +
-       `[0:v]scale=${vidW}:${vidH}` + (retime !== 1 ? `,setpts=PTS/${retime}` : "") + `[fig];` +
+       `[0:v]scale=${vidW}:${vidH}` + (retime !== 1 ? `,setpts=PTS/${retime}` : "") + figureChain + `[fig];` +
        `[sheet][fig]overlay=${offX}:${offY}:shortest=1[bed];` +
        `[bed][1:v]overlay=0:0:format=auto,format=yuv420p[v]`,
        "-map", "[v]", "-an",

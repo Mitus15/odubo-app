@@ -123,13 +123,23 @@ export function GatheringPoster({
   useEffect(() => {
     if (!single) return;
     try {
-      const gifted = new URLSearchParams(window.location.search).has("from");
-      if (gifted || !localStorage.getItem("loop.single.seen"))
+      const q = new URLSearchParams(window.location.search);
+      const gifted = q.has("from");
+      // Somebody who arrived from a poster, a QR or a reel (?p=) came because
+      // of the NIGHT. Opening a four-screen song takeover in front of them
+      // buries the date and puts the first buy CTA two full scrolls down, so
+      // campaign traffic lands on the poster and the single stays one tap away
+      // as a module. A gifted link always opens it — that visitor was sent for
+      // exactly one reason — and so does a bare first visit, because then the
+      // QR's promise is the only thing we know about why they came.
+      const fromCampaign = q.has("p");
+      if (gifted || (!fromCampaign && !localStorage.getItem("loop.single.seen")))
         setSingleOpen(true);
     } catch {
       setSingleOpen(true);
     }
   }, [single]);
+
   const [capacity, setCapacity] = useState<Capacity>(initialCapacity);
 
   // Keep the scarcity number fresh — it reads the real issued-code ledger.
@@ -157,6 +167,31 @@ export function GatheringPoster({
   const isFree = priceLabel === "FREE ENTRY";
   // "Scott's Inn, Kamloops" → "Scott's Inn" on the tight poster line.
   const venueShort = event.venue.split(",")[0];
+
+  // Telling somebody is the main way a $5 local night fills, and until now the
+  // only share in the guest experience minted a gift code, needed a name first
+  // and talked about the song. None of that is "come to this".
+  const [told, setTold] = useState(false);
+  const tellSomeone = useCallback(async () => {
+    const url = `${window.location.origin}/loop?p=share`;
+    const text =
+      `${event.title ? `Loop Soul — ${event.title}. ` : "Loop Soul. "}` +
+      `${dateLabel}, ${venueShort}. Doors ${timeLabel}.` +
+      (isFree ? " Free." : ` ${priceLabel}.`);
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: "Loop Soul", text, url });
+        return;
+      } catch {
+        /* dismissed — fall through to copy */
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(`${text} ${url}`);
+      setTold(true);
+      setTimeout(() => setTold(false), 2400);
+    } catch {}
+  }, [dateLabel, timeLabel, venueShort, isFree, priceLabel, event.title]);
 
   return (
     <div className="relative mx-auto flex min-h-[100dvh] max-w-md flex-col px-5 pb-5 pt-5">
@@ -242,15 +277,27 @@ export function GatheringPoster({
               ? "Register · Free"
               : `Get Pass · ${priceLabel}`}
         </button>
-        {!soldOut && (
+        {/* Two tappable lines, no second drawn shape: the pass button above
+            stays the only one on the poster. */}
+        <div className="-mt-1 flex items-center gap-3">
+          {!soldOut && (
+            <button
+              type="button"
+              onClick={() => setPassOpen(true)}
+              className="loop-muted text-[11px] font-bold uppercase tracking-[0.2em] underline underline-offset-4"
+            >
+              What&apos;s included
+            </button>
+          )}
+          {!soldOut && <span className="loop-muted text-[11px]">·</span>}
           <button
             type="button"
-            onClick={() => setPassOpen(true)}
-            className="loop-muted -mt-1 text-[11px] font-bold uppercase tracking-[0.2em] underline underline-offset-4"
+            onClick={tellSomeone}
+            className="loop-muted text-[11px] font-bold uppercase tracking-[0.2em] underline underline-offset-4"
           >
-            What&apos;s included
+            {told ? "Copied" : "Tell someone"}
           </button>
-        )}
+        </div>
 
         {/* The shelf, right after the pass: the sell comes before the
             navigation. Type and a hairline only — the pass button above stays
