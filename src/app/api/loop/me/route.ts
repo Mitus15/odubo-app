@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           error:
-            "That email is already in use. If it's yours, find your event code with it at /loop/code and it'll connect this device.",
+            "That email is already in use. If it's yours, find your pass with it at /loop/code and it'll connect this phone.",
         },
         { status: 409 },
       );

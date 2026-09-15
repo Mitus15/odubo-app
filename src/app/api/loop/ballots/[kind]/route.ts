@@ -54,7 +54,7 @@ export async function POST(
       closed: { status: 409, error: "this vote isn't open" },
       "not-holder": {
         status: 403,
-        error: "voting is for the room — enter your event code first",
+        error: "Voting is for the room. Enter your pass first.",
       },
       "unknown-option": { status: 404, error: "that option isn't on the ballot" },
       budget: { status: 409, error: "you've used all your votes — remove one first" },

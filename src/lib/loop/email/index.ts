@@ -167,21 +167,21 @@ async function settingOrNull(key: string): Promise<string | null> {
 async function codesBody(codes: string[], eventTitle: string): Promise<string> {
   const base = (await getPublicBaseUrl()) ?? "";
   const many = codes.length > 1;
-  const lookup = base ? `${base}/loop/code` : "the Find your event code page";
+  const lookup = base ? `${base}/loop/code` : "the Find your pass page";
 
   return [
     `You're in for ${eventTitle}.`,
     ``,
     many
-      ? `Your ${codes.length} event codes, one per guest:`
-      : `Your event code:`,
+      ? `Your ${codes.length} passes, one per guest:`
+      : `Your pass:`,
     ``,
     ...codes.map((c) => `    ${c}`),
     ``,
     many
-      ? `Each code admits one guest. Share one with everybody coming.`
+      ? `Each pass admits one guest. Share one with everybody coming.`
       : `It admits one guest.`,
-    `Show it at the door, then enter it in the app to unlock the room.`,
+    `Show it at the door, then enter it in the app to open the room.`,
     ``,
     `THE NIGHT`,
     ``,
@@ -195,7 +195,7 @@ async function codesBody(codes: string[], eventTitle: string): Promise<string> {
     `Your ticket is also a pre-order. When the album is out it is yours at ${base ? `${base}/loop/album` : "the Loop Soul album page"},`,
     `whether or not you were in the room. Prove it's you with this email address and press play.`,
     ``,
-    `LOST THE CODE`,
+    `LOST YOUR PASS`,
     ``,
     `Look it up any time with this email address at ${lookup}. You don't need this message.`,
     ``,
@@ -219,8 +219,8 @@ export async function sendEventCodesEmail(
     to,
     subject:
       codes.length > 1
-        ? `Your ${codes.length} Loop Soul codes for ${eventTitle}`
-        : `Your Loop Soul code for ${eventTitle}`,
+        ? `Your ${codes.length} Loop Soul passes for ${eventTitle}`
+        : `Your Loop Soul pass for ${eventTitle}`,
     text: await codesBody(codes, eventTitle),
   });
 }
@@ -242,9 +242,9 @@ export async function sendEventCodeEmail(
 export async function sendVerificationEmail(to: string, code: string): Promise<{ ok: boolean }> {
   return (await sender()).send({
     to,
-    subject: `${code} is your Loop Soul code`,
+    subject: `${code} is your Loop Soul number`,
     text: [
-      `Your verification code is ${code}.`,
+      `Your six digits are ${code}.`,
       ``,
       `Type it on the phone that asked for it and your pass will open there too.`,
       `It works for fifteen minutes. If you did not ask for this, ignore it; nothing changes.`,

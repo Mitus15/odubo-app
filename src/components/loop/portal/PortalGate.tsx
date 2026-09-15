@@ -13,8 +13,8 @@ import LoopLoader from "@/components/loop/brand/LoopLoader";
  * them a holder). `tone="vault"` restyles for the dark Legacy field.
  */
 export function PortalGate({
-  title = "Enter your event code",
-  copy = "Your pass code unlocks the galleries, Pose Studio, the queue, and the live program.",
+  title = "Enter your pass",
+  copy = "Your pass opens the Wall, the votes, and the live programme.",
   cta = "Unlock the Portal",
   tone = "poster",
   checkoutUrl = null,
@@ -51,9 +51,9 @@ export function PortalGate({
     const body = (await res.json().catch(() => ({}))) as { error?: string };
     setError(
       res.status === 409
-        ? "That code has already been used."
+        ? "That pass is already in use on another phone. Prove it's you below."
         : body.error === "unknown code" || res.status === 404
-          ? "We don’t recognize that code. Check it and try again."
+          ? "We don’t recognize that pass. Check it and try again."
           : "Something went wrong. Try again.",
     );
   }
@@ -123,7 +123,7 @@ export function PortalGate({
           </a>
         )}
         <p className="loop-muted mt-2 text-xs leading-relaxed">
-          Your code arrives with your pass — it&apos;s what gets you in the door and
+          Your pass is a short code that arrives by email. It gets you in the door and
           unlocks the app.
         </p>
       </div>
@@ -134,7 +134,7 @@ export function PortalGate({
         href="/loop/code"
         className="loop-muted mt-4 block text-center text-[11px] font-bold uppercase tracking-[0.2em] underline underline-offset-4"
       >
-        Bought a pass but no code?
+        Bought a pass but can&apos;t find it?
       </a>
     </div>
   );

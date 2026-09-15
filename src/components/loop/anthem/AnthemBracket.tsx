@@ -296,7 +296,7 @@ function NominationStage({
         setCode("");
         onToast("Pass confirmed. Suggest away");
       } else {
-        onToast(data.error ?? "That code didn't work");
+        onToast(data.error ?? "That pass didn't work");
       }
     } catch {
       onToast("No connection. Try again");
@@ -424,7 +424,7 @@ function NominationStage({
         <div className="mt-5 rounded-2xl border border-ink/15 bg-ink/[0.04] p-4">
           <p className="text-sm font-bold">Got a pass? Suggest a song.</p>
           <p className="mt-0.5 text-xs opacity-70">
-            Suggesting is for pass-holders. Enter your event code to add a track — anyone can still
+            Suggesting is for pass-holders. Enter your pass to add a track — anyone can still
             upvote the longlist below.
           </p>
           <div className="mt-3 flex gap-2">

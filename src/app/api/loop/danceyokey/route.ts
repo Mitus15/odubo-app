@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
   const voterId = await currentVoterId();
   if (!(await hasRoomAccess(event.id, voterId))) {
     return NextResponse.json(
-      { error: "Danceyokey is for pass-holders — redeem your event code first." },
+      { error: "Danceyokey is for pass-holders. Enter your pass first." },
       { status: 403 },
     );
   }

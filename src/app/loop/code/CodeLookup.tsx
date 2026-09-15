@@ -120,7 +120,7 @@ export function CodeLookup() {
             className={field}
           />
           <button type="submit" disabled={busy || email.trim().length === 0} className={primary}>
-            {busy ? <LoopLoader size={24} label="Sending" /> : "Send me a code"}
+            {busy ? <LoopLoader size={24} label="Sending" /> : "Send me the six digits"}
           </button>
           <p className="loop-muted text-xs leading-relaxed">
             If a pass was bought with this address, six digits are on their way to it.
@@ -180,7 +180,7 @@ export function CodeLookup() {
             </span>
           </div>
           <p className="loop-muted text-[11px] font-bold uppercase tracking-[0.25em]">
-            {codes.length === 1 ? "Your code" : `Your ${codes.length} codes`}
+            {codes.length === 1 ? "Your pass" : `Your ${codes.length} passes`}
           </p>
           {codes.map((c) => (
             <div key={c.code} className="loop-panel rounded-2xl px-5 py-4">

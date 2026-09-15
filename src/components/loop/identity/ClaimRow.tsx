@@ -96,7 +96,7 @@ export function ClaimRow() {
           Your cover, on every phone you own.
         </li>
         <li className="border-t border-ink/15 pt-2.5">
-          Your entry code, findable with this email.
+          Your pass, findable with this email.
         </li>
       </ul>
 

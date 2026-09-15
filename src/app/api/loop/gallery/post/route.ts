@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
     }
     if (!(await hasRoomAccess(event.id, voterId))) {
       return NextResponse.json(
-        { error: "Redeem your event code to post to the Wall." },
+        { error: "Enter your pass to post to the Wall." },
         { status: 403 },
       );
     }

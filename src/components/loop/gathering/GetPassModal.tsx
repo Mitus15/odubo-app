@@ -75,8 +75,8 @@ export function GetPassModal({
       `One pass, one guest. Lounge from ${timeLabel}, the album live at 8, 80s floor at 9. Dress code: ${theme}.`,
     ],
     [
-      "Your code",
-      "Issued the moment you pay, and always findable with your checkout email. It's your ticket at the door and your key to the room in the app.",
+      "Your pass",
+      "A short code, sent the moment you pay and always findable with your checkout email. Show it at the door, and enter it in the app to open the room.",
     ],
     // The record is the reason the night exists — see
     // docs/decisions/loop-soul-is-the-album.md.
@@ -108,7 +108,7 @@ export function GetPassModal({
     ],
     [
       "The Vault, after",
-      "Your code keeps working: every shot from the night stays open to you in Legacy.",
+      "Your pass keeps working: every shot from the night stays open to you in Legacy.",
     ],
   ];
 
@@ -223,8 +223,8 @@ export function GetPassModal({
                   // Was "lands in your email within a minute" — the same
                   // promise the includes list just stopped making. There is no
                   // verified sending domain, so the lookup IS the delivery.
-                  "Look your code up here with the email you checked out with.",
-                  "Show it at the door, then enter it in the app to unlock the room.",
+                  "Find your pass here any time with the email you checked out with.",
+                  "Show your pass at the door, then enter it in the app to open the room.",
                 ].map((step, i) => (
                   <li key={step} className="flex gap-3">
                     <span
@@ -239,8 +239,8 @@ export function GetPassModal({
               </ol>
 
               <p className="loop-muted mt-5 text-xs leading-relaxed">
-                One code per pass, single use. Buying more than one? You&apos;ll
-                get a code for each — share one with every guest. Your codes
+                One pass admits one guest, once. Buying more than one? You&apos;ll
+                get a pass for each; share one with every guest. Your passes
                 live at{" "}
                 <a
                   href="/loop/code"
@@ -272,8 +272,8 @@ export function GetPassModal({
                   : `Continue to checkout · ${priceLabel}`}
               </a>
               <p className="loop-muted mt-2 text-center text-[11px]">
-                Secure checkout on our store. You&apos;ll come back here with
-                your code.
+                Secure checkout on our store. Your pass arrives by email, and
+                you can find it here any time.
               </p>
             </>
           ) : (

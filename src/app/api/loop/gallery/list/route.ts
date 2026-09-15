@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
       const voterId = await currentVoterId();
       if (!(await hasRoomAccess(event.id, voterId))) {
         return NextResponse.json(
-          { error: "The Wall is for attendees — redeem your event code." },
+          { error: "The Wall is for attendees. Enter your pass." },
           { status: 403 },
         );
       }

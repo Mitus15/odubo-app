@@ -91,7 +91,7 @@ export async function LegacyHome() {
           <PortalGate
             tone="vault"
             title="Were you in the room?"
-            copy="The Vault is for attendees. Your event code unlocks every shot from the night."
+            copy="The Vault is for attendees. Your pass opens every shot from the night."
             cta="Unlock the Vault"
             checkoutUrl={(await getPassSettings()).checkoutUrl}
           />

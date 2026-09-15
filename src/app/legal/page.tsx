@@ -21,7 +21,7 @@ const LegalContent = {
       <h2 className="text-lg font-semibold mt-8 mb-3 text-[#ede8df]">What we collect, and why</h2>
       <p><strong className="text-[#ede8df]">When you buy something.</strong> Your name, email, shipping address and order contents. Payment is taken by Shopify and we never see your card number. We use this to fulfil the order, to email you about it, and to keep the records the law requires us to keep.</p>
       <p className="mt-3"><strong className="text-[#ede8df]">When you open a Loop Soul page.</strong> A cookie holding a random identifier, so the site can remember which device you are on for 180 days. It carries no name and no email until you give us one.</p>
-      <p className="mt-3"><strong className="text-[#ede8df]">When you buy a pass, post a photo, or claim your name.</strong> A first name, an email, which volumes you attended, and which photographs you took. This is what lets your credit follow you, lets you find your event code again, and lets us pay you if your shot becomes a cover.</p>
+      <p className="mt-3"><strong className="text-[#ede8df]">When you buy a pass, post a photo, or claim your name.</strong> A first name, an email, which volumes you attended, and which photographs you took. This is what lets your credit follow you, lets you find your pass again, and lets us pay you if your shot becomes a cover.</p>
       <p className="mt-3"><strong className="text-[#ede8df]">When you write to us.</strong> Whatever you send, kept only as long as it is useful to answer you.</p>
       <p className="mt-3"><strong className="text-[#ede8df]">Analytics.</strong> Only if you agree to it in the cookie bar. You can change that at any time from the same bar.</p>
 
@@ -38,7 +38,7 @@ const LegalContent = {
       <h2 className="text-lg font-semibold mt-8 mb-3 text-[#ede8df]">Seeing your own record</h2>
       <p>You can ask us for a copy of everything we hold about you, ask us to correct it, or ask us to delete it. Write to the address below and we will answer within 30 days, free. We may need to check you are who you say you are first.</p>
       <p className="mt-3">Two things you can do without asking anyone:</p>
-      <p className="mt-3"><strong className="text-[#ede8df]">Your event code.</strong> Find it any time at <Link href="/loop/code" className="text-[#ede8df] underline underline-offset-2">odubostudio.com/loop/code</Link> with the email you checked out with.</p>
+      <p className="mt-3"><strong className="text-[#ede8df]">Your pass.</strong> Find it any time at <Link href="/loop/code" className="text-[#ede8df] underline underline-offset-2">odubostudio.com/loop/code</Link> with the email you checked out with.</p>
       <p className="mt-3"><strong className="text-[#ede8df]">Your orders.</strong> Shopify keeps them at <a href="https://shop.odubostudio.com/account" target="_blank" rel="noopener noreferrer" className="text-[#ede8df] underline underline-offset-2">shop.odubostudio.com/account</a>. No password is needed. It emails you a code to sign in.</p>
       <p className="mt-3">Deleting your Loop Soul record removes your name, your email and the link between you and your device. Photographs you posted stay up unless you ask for those too, but they lose their credit line.</p>
 
@@ -74,7 +74,7 @@ const LegalContent = {
       <p>A Loop Soul pass admits one person to one night and is also a pre-order of that volume's record. Buying one means you accept these things:</p>
       <p className="mt-3">The door is 19+ and photo ID is checked. We can refuse entry, or ask you to leave, if you are unsafe to others or to the room, and no refund is owed when we do. Capacity is real: once the passes are gone they are gone, and a pass does not guarantee entry if you arrive after the room is full.</p>
       <p className="mt-3">The night is filmed, photographed and recorded throughout, and that footage is used commercially. Coming in is your agreement to appear in it. The <Link href="/legal?tab=privacy" className="text-[#ede8df] underline underline-offset-2">Privacy Policy</Link> sets out what that means and how to have something taken down.</p>
-      <p className="mt-3">A pass is not refundable but it is transferable. Passing your code to someone else passes the seat.</p>
+      <p className="mt-3">A pass is not refundable but it is transferable. Giving your pass to someone else gives them the seat.</p>
 
       <h2 className="text-lg font-semibold mt-8 mb-3 text-[#ede8df]">What you post, and what you are owed for it</h2>
       <p>Photographs and video you post to the Wall stay yours. By posting, you give Odubo Studio permission to use them in the album and its artwork, in the magazine, and in promotion of the project, with your first name credited beside them.</p>
@@ -107,7 +107,7 @@ const LegalContent = {
       <p className="mt-3">Custom and personalised items are final sale.</p>
 
       <h2 className="text-lg font-semibold mt-8 mb-3 text-[#ede8df]">Event passes</h2>
-      <p>A pass is a ticket to a night and a pre-order of the record, so it is not returnable once bought. It is transferable: if you cannot come, send your code to whoever takes your place and they can use it at the door.</p>
+      <p>A pass is a ticket to a night and a pre-order of the record, so it is not returnable once bought. It is transferable: if you cannot come, send your pass to whoever takes your place and they can use it at the door.</p>
       <p className="mt-3">If the event is cancelled outright, every pass is refunded in full. If it is moved, your pass carries to the new date, and you can ask for a refund instead.</p>
 
       <h2 className="text-lg font-semibold mt-8 mb-3 text-[#ede8df]">Questions</h2>

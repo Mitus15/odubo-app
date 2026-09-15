@@ -34,7 +34,7 @@ export async function POST(req: Request) {
     const event = await getCurrentEvent();
     if (!(await hasRoomAccess(event.id, voterId))) {
       return NextResponse.json(
-        { error: "Posters are for pass-holders — redeem your event code." },
+        { error: "Posters are for pass-holders. Enter your pass." },
         { status: 403 },
       );
     }

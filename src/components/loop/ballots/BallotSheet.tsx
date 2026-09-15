@@ -91,7 +91,7 @@ export function BallotSheet({ kind }: { kind: "tracklist" | "cover" }) {
           ? "Voting hasn't opened yet. Standings only."
           : ballot.canVote
             ? `${ballot.voteLimit - ballot.votesUsed} of ${ballot.voteLimit} votes left · tap to vote, tap again to take it back`
-            : "Voting is for the room. Enter your event code to take part."}
+            : "Voting is for the room. Enter your pass to take part."}
       </div>
 
       {ballot.options.length === 0 ? (

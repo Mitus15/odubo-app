@@ -2,7 +2,7 @@ import Link from "next/link";
 import CodeLookup from "./CodeLookup";
 
 export const metadata = {
-  title: "Find your event code — Loop Soul",
+  title: "Find your pass — Loop Soul",
 };
 
 /**
@@ -13,7 +13,7 @@ export const metadata = {
 export default function CodePage() {
   return (
     <main className="mx-auto flex min-h-[100dvh] max-w-md flex-col px-6 py-12">
-      <h1 className="text-2xl font-extrabold">Find your event code</h1>
+      <h1 className="text-2xl font-extrabold">Find your pass</h1>
       <p className="loop-muted mt-2 text-sm leading-relaxed">
         Enter the email you used at checkout. We send six digits to it; type them
         back and your pass opens on this phone. It&apos;s your ticket at the door

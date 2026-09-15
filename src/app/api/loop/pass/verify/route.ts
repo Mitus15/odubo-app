@@ -27,10 +27,10 @@ export async function POST(req: NextRequest) {
   if (outcome !== "ok") {
     const message =
       outcome === "wrong"
-        ? "That's not the code. Check the email and try again."
+        ? "Those aren't the six digits. Check the email and try again."
         : outcome === "burned"
-          ? "Too many wrong tries. Ask for a new code."
-          : "That code has expired. Ask for a new one.";
+          ? "Too many wrong tries. Ask for new digits."
+          : "Those digits have expired. Ask for new ones.";
     return NextResponse.json({ error: message, outcome }, { status: 400 });
   }
 
