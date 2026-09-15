@@ -1,3 +1,4 @@
+import { publicView, type PublicCapacity } from "@/lib/loop/capacity";
 import crypto from "crypto";
 import { queryOne } from "@/lib/loop/db";
 import { getCurrentEvent } from "@/lib/loop/hub";
@@ -152,6 +153,10 @@ export function passUnitOrderIds(orderId: string, count: number): string[] {
  * correct and unembarrassing. The previous implementation defaulted an
  * unconfigured deploy to "44 sold of 75" and put that in front of the public.
  */
+export async function getPublicCapacity(): Promise<PublicCapacity> {
+  return publicView(await getPassCapacity());
+}
+
 export async function getPassCapacity(): Promise<CapacityInfo> {
   const event = await getCurrentEvent();
   // `sim:` orders are the admin "simulate a purchase" tool, not sales. Without

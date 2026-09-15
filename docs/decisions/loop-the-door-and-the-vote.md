@@ -163,3 +163,42 @@ instead of music reads as a mistake. Replaces the hand-picked list: the room
 now compares notes, and between them they have heard most of the record before
 the night. `album_early_enabled` / `album_early_extra` are settings; the admin
 states the rule rather than listing tracks.
+
+## The room's size is public; its sales are not (2026-09-15)
+
+> "The order number should be randomised so people don't know exactly how many
+> people have bought tickets."
+
+The order number was the wrong suspect. It is never shown to a guest anywhere
+in this product — not in the pass email, not at `/loop/code`, not on the album
+page. Only Shopify's own receipt carries `#1001`, and only its one buyer sees
+it. Shopify numbers orders sequentially and offers a prefix/suffix, never a
+random sequence, so there was nothing to change there anyway.
+
+**The leak was ours.** `/api/loop/capacity` returned `{sold, remaining}` to
+anyone who curled it, and four guest surfaces printed the exact figure — the
+poster read *"248 / 250 passes left"*, which is a live sales report published
+to the internet, and early in a campaign it reads as "nobody is coming".
+
+So: **the size of the room is the offer and is said out loud; how many have
+bought is nobody's business until the number left is genuinely low**, at which
+point it stops being a sales report and becomes a warning the buyer needs.
+
+`src/lib/loop/capacity.ts` is the one rule, pure and tested. `sold` never
+leaves the server.
+
+| Remaining | Public state | The line |
+|---|---|---|
+| > 50 | `open` | **250 in the room** — the cap, no sales |
+| ≤ 50 | `filling` | *42 passes left* |
+| ≤ 20 | `last` | *12 passes left*, urgent colour |
+| 0 | `full` | *Room is full* |
+
+The poster, the pass sheet, the Loop store and the locked Portal all read the
+same line from `capacityLine()`, so they can never disagree.
+
+**Inside the room**, `InRoom`'s occupancy now counts `admitted_at` — who
+actually walked through the door — instead of who bought. That was the open
+question from earlier today: the number was wrong on an open-doors night, and
+it was also a sales figure shown to guests. Both fixed by counting the right
+thing.

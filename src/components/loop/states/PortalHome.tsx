@@ -1,7 +1,8 @@
 import type { LoopEvent } from "@/lib/loop/hub";
 import { currentVoterId } from "@/lib/loop/identity/voter";
 import { hasRoomAccess } from "@/lib/loop/doors";
-import { getPassCapacity } from "@/lib/loop/pass";
+import { getPublicCapacity } from "@/lib/loop/pass";
+import { countAdmitted } from "@/lib/loop/event-codes";
 import { getPassSettings } from "@/lib/loop/pass/settings";
 import { getRunOfShow } from "@/lib/loop/content-store";
 import PortalGate from "@/components/loop/portal/PortalGate";
@@ -26,7 +27,7 @@ export async function PortalHome({ event }: { event: LoopEvent }) {
     // gated, never the pitch.
     const [pass, cap, runOfShow] = await Promise.all([
       getPassSettings(),
-      getPassCapacity(),
+      getPublicCapacity(),
       getRunOfShow(event.id),
     ]);
     return (
@@ -41,7 +42,9 @@ export async function PortalHome({ event }: { event: LoopEvent }) {
     );
   }
 
-  const [cap, runOfShow] = await Promise.all([getPassCapacity(), getRunOfShow(event.id)]);
+  // Inside the room the honest number is who walked through the door, not who
+  // bought. It is also the one nobody outside can see.
+  const [heads, runOfShow] = await Promise.all([countAdmitted(event.id), getRunOfShow(event.id)]);
 
   // What's on now: the last slot whose start time has passed, in venue time.
   const toMinutes = (t: string): number => {
@@ -72,7 +75,7 @@ export async function PortalHome({ event }: { event: LoopEvent }) {
   return (
     <main className="flex flex-col items-center px-6 pb-24 pt-10 text-center">
       <p className="loop-muted text-xs uppercase tracking-[0.3em]">Live · {event.venue}</p>
-      <InRoom sold={cap.sold} runOfShow={runOfShow} nowLabel={nowLabel} />
+      <InRoom sold={heads.admitted} runOfShow={runOfShow} nowLabel={nowLabel} />
     </main>
   );
 }

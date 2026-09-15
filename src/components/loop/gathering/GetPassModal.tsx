@@ -4,11 +4,7 @@ import { useEffect, useState } from "react";
 import { priceLabel as formatPrice } from "@/lib/loop/priceLabel";
 import { RECORDING_NOTICE } from "@/lib/loop/content";
 
-/** Mirrors CapacityInfo — unlimited carries null counts on purpose, so a
- *  scarcity line can't render "0 left" for a room with no cap. */
-type Capacity =
-  | { unlimited: true; sold: number; total: null; remaining: null }
-  | { unlimited: false; sold: number; total: number; remaining: number };
+import { capacityLine, isSoldOut, isUrgent, type PublicCapacity } from "@/lib/loop/capacity";
 
 /**
  * The pass, in full, BEFORE checkout — price, what it includes, when, where,
@@ -32,7 +28,7 @@ export function GetPassModal({
   timeLabel,
   onClose,
 }: {
-  capacity: Capacity;
+  capacity: PublicCapacity;
   /** Admin-configured checkout link (loop_settings) — wins over env fallbacks. */
   checkoutUrl?: string | null;
   price?: string | null;
@@ -66,7 +62,7 @@ export function GetPassModal({
   // Admin-set Shopify checkout link first, then the env fallback.
   const checkoutUrl =
     checkoutUrlProp || process.env.NEXT_PUBLIC_LOOP_PASS_CHECKOUT_URL;
-  const soldOut = !capacity.unlimited && capacity.remaining <= 0;
+  const soldOut = isSoldOut(capacity);
   // Same formatter as the front door and the print kit — see priceLabel.ts.
   const priceLabel = formatPrice(price, currency);
   const isFree = priceLabel === "FREE ENTRY";
@@ -189,8 +185,8 @@ export function GetPassModal({
         <div className="flex-1 overflow-y-auto px-6 pb-4">
           {soldOut ? (
             <p className="text-sm leading-relaxed">
-              All {capacity.total} passes are gone. Join the waitlist and
-              you&apos;ll be first in line if one opens up — and for Volume 2.
+              Every pass is gone. Join the waitlist and you&apos;ll be first in
+              line if one opens up — and for Volume 2.
             </p>
           ) : (
             <>
@@ -220,9 +216,9 @@ export function GetPassModal({
                     <>
                       {capacity.total} passes ·{" "}
                       <span
-                        className={capacity.remaining <= 10 ? "text-wine" : ""}
+                        className={isUrgent(capacity) ? "text-wine" : ""}
                       >
-                        {capacity.remaining} left
+                        {capacityLine(capacity)}
                       </span>
                     </>
                   )}

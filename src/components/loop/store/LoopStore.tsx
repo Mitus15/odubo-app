@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { ProductSummary } from "@/lib/store/types";
 import { LOOP_PASS_TAG } from "@/lib/store/brands";
 import { formatMoney } from "@/lib/store/money";
+import { capacityLine, isSoldOut, type PublicCapacity } from "@/lib/loop/capacity";
 import { useLoopCart } from "@/hooks/useLoopCart";
 import GetPassModal from "@/components/loop/gathering/GetPassModal";
 import AddToBagSheet from "@/components/loop/store/AddToBagSheet";
@@ -12,9 +13,6 @@ import LoopBag from "@/components/loop/store/LoopBag";
 
 /** Mirrors CapacityInfo — unlimited carries null counts on purpose, so a
  *  scarcity line can't render "0 left" for a room with no cap. */
-type Capacity =
-  | { unlimited: true; sold: number; total: null; remaining: null }
-  | { unlimited: false; sold: number; total: number; remaining: number };
 
 /**
  * The Loop Soul shelf.
@@ -42,7 +40,7 @@ export function LoopStore({
   products: ProductSummary[];
   /** True when the Shopify collection itself is absent — not merely empty. */
   collectionMissing: boolean;
-  capacity: Capacity;
+  capacity: PublicCapacity;
   checkoutUrl?: string | null;
   price?: string | null;
   currency?: string | null;
@@ -70,7 +68,7 @@ export function LoopStore({
   // half-configured store must never be a closed door.
   const showPassCard = passes.length > 0 || Boolean(checkoutUrl);
   const passProduct = passes[0];
-  const soldOut = !capacity.unlimited && capacity.remaining <= 0;
+  const soldOut = isSoldOut(capacity);
 
   return (
     <main className="mx-auto w-full max-w-5xl px-5 pb-24 pt-2">
@@ -136,7 +134,7 @@ export function LoopStore({
                       price ? formatMoney(price, currency) : "Get a pass",
                       capacity.unlimited
                         ? null
-                        : `${capacity.remaining} of ${capacity.total} left`,
+                        : capacityLine(capacity),
                     ]
                       .filter(Boolean)
                       .join(" · ")}

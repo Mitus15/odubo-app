@@ -1,6 +1,6 @@
 import type { LoopEvent } from "@/lib/loop/hub";
 import { currentVoterId } from "@/lib/loop/identity/voter";
-import { getPassCapacity } from "@/lib/loop/pass";
+import { getPublicCapacity } from "@/lib/loop/pass";
 import { hasRoomAccess } from "@/lib/loop/doors";
 import { getPassSettings } from "@/lib/loop/pass/settings";
 import { getRunOfShow } from "@/lib/loop/content-store";
@@ -34,7 +34,7 @@ export async function GatheringHome({ event }: { event: LoopEvent }) {
     cover,
     shelf,
   ] = await Promise.all([
-    getPassCapacity(),
+    getPublicCapacity(),
     // Redeemed a pass, or the doors are open: may post to the Wall and see it.
     hasRoomAccess(event.id, voterId),
     getRunOfShow(event.id),

@@ -19,11 +19,7 @@ import type { FeaturedSingle } from "@/lib/loop/single";
 import type { ProductSummary } from "@/lib/store/types";
 import PiecesRail from "@/components/loop/store/PiecesRail";
 
-/** Mirrors CapacityInfo — unlimited carries null counts on purpose, so a
- *  scarcity line can't render "0 left" for a room with no cap. */
-type Capacity =
-  | { unlimited: true; sold: number; total: null; remaining: null }
-  | { unlimited: false; sold: number; total: number; remaining: number };
+import { capacityLine, isSoldOut, isUrgent, type PublicCapacity } from "@/lib/loop/capacity";
 type ModuleKey = "night" | "cover" | "wall";
 
 const MODULES: { key: ModuleKey; label: string; title: string }[] = [
@@ -66,7 +62,7 @@ export function GatheringPoster({
   roomAccess = false,
 }: {
   event: LoopEvent;
-  capacity: Capacity;
+  capacity: PublicCapacity;
   runOfShow: RunOfShowItem[];
   /** Admin-configured pass checkout link (loop_settings). */
   checkoutUrl?: string | null;
@@ -122,14 +118,14 @@ export function GatheringPoster({
     }
   }, [single]);
 
-  const [capacity, setCapacity] = useState<Capacity>(initialCapacity);
+  const [capacity, setCapacity] = useState<PublicCapacity>(initialCapacity);
 
   // Keep the scarcity number fresh — it reads the real issued-code ledger.
   useEffect(() => {
     const tick = async () => {
       try {
         const res = await fetch("/api/loop/capacity", { cache: "no-store" });
-        if (res.ok) setCapacity((await res.json()) as Capacity);
+        if (res.ok) setCapacity((await res.json()) as PublicCapacity);
       } catch {
         /* keep last known */
       }
@@ -140,7 +136,7 @@ export function GatheringPoster({
 
   // An unlimited room can never be full — the check has to run through the
   // discriminant, not through a number that would read 0 when uncapped.
-  const soldOut = !capacity.unlimited && capacity.remaining <= 0;
+  const soldOut = isSoldOut(capacity);
   const modules = roomAccess
     ? [...MODULES, { key: "wall" as const, label: "The Wall", title: "The Wall" }]
     : MODULES;
@@ -237,14 +233,11 @@ export function GatheringPoster({
         <div className="text-center">
           {(soldOut || !capacity.unlimited) && (
             <div className="text-sm font-bold uppercase tracking-widest">
-              {soldOut ? (
-                "Room is full"
-              ) : (
-                <>
-                  <span className="tabular-nums">{capacity.remaining}</span> /{" "}
-                  {capacity.total} {isFree ? "spots left" : "passes left"}
-                </>
-              )}
+              {/* The size of the room always; how many are left only once
+                  that is a warning rather than a sales report. */}
+              <span className={isUrgent(capacity) ? "text-wine" : undefined}>
+                {capacityLine(capacity, { free: isFree })}
+              </span>
             </div>
           )}
           <div className="loop-muted mt-1 text-[11px] font-semibold uppercase tracking-[0.18em]">

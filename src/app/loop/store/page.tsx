@@ -4,7 +4,7 @@ import { fetchCollectionProducts } from "@/lib/store/api";
 import { LOOP_COLLECTION_HANDLE } from "@/lib/store/brands";
 import { COUNTRY_COOKIE } from "@/lib/store/money";
 import { getCurrentEvent } from "@/lib/loop/hub";
-import { getPassCapacity } from "@/lib/loop/pass";
+import { getPublicCapacity } from "@/lib/loop/pass";
 import { getPassSettings } from "@/lib/loop/pass/settings";
 import HubNav from "@/components/loop/shell/HubNav";
 import LoopStore from "@/components/loop/store/LoopStore";
@@ -32,7 +32,7 @@ export default async function LoopStorePage() {
 
   const [event, capacity, passSettings, collection] = await Promise.all([
     getCurrentEvent(),
-    getPassCapacity(),
+    getPublicCapacity(),
     getPassSettings(),
     // A Shopify outage must not take the store down with a 500 — an empty
     // shelf with the pass still buyable is a far better failure.

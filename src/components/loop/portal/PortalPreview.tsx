@@ -1,4 +1,5 @@
 import { type RunOfShowItem } from "@/lib/loop/content";
+import type { PublicCapacity } from "@/lib/loop/capacity";
 
 /**
  * What someone WITHOUT a pass sees, under the code gate.
@@ -23,9 +24,7 @@ export function PortalPreview({
    *  is how it went on rendering "0 PASSES LEFT OF 0" after the room became
    *  uncapped — it had side-stepped the discriminant that exists to stop
    *  exactly that. */
-  capacity:
-    | { unlimited: true; sold: number; total: null; remaining: null }
-    | { unlimited: false; sold: number; total: number; remaining: number };
+  capacity: PublicCapacity;
 }) {
   return (
     <section className="mt-14 w-full max-w-md text-left">
@@ -39,10 +38,10 @@ export function PortalPreview({
       {!capacity.unlimited && (
         <div className="mt-5 rounded-2xl border border-ink/15 bg-ink/5 px-5 py-4 text-center">
           <div className="font-sans text-5xl font-extrabold leading-none tabular-nums">
-            {capacity.remaining}
+            {capacity.remaining ?? capacity.total}
           </div>
           <div className="loop-muted mt-1 text-xs font-semibold uppercase tracking-widest">
-            {capacity.remaining === 1 ? "Pass left" : "Passes left"} of {capacity.total}
+            {capacity.remaining === null ? "In the room" : capacity.remaining === 1 ? "Pass left" : "Passes left"}
           </div>
         </div>
       )}
