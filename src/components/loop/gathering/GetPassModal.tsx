@@ -139,7 +139,7 @@ export function GetPassModal({
     // Before money changes hands, not after. See RECORDING_NOTICE.
     [
       RECORDING_NOTICE.headline,
-      `${RECORDING_NOTICE.body} ${RECORDING_NOTICE.condition}`,
+      RECORDING_NOTICE.full,
     ],
     [
       "The Vault, after",

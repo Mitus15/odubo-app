@@ -6,6 +6,7 @@
  */
 
 import { getPublicBaseUrl } from "@/lib/loop/publicUrl";
+import { RECORDING_NOTICE } from "@/lib/loop/content";
 
 export type EmailMessage = {
   /** Base64 PNGs etc. Only the live provider sends them; the mock ignores them. */
@@ -241,10 +242,9 @@ async function codesBody(codes: string[], eventTitle: string, email: string | nu
     `Everything above is findable at ${lookup} with this email address.`,
     `You don't need to keep this message.`,
     ``,
-    `ONE MORE THING`,
+    `FILMING AND PHOTOGRAPHY`,
     ``,
-    `The night is filmed and recorded, for the record and for promotion.`,
-    `Coming in is your agreement to appear in it, on camera or in a photograph.`,
+    RECORDING_NOTICE.full,
     `If something of you is published and you want it down, write to us and we take it down.`,
     ``,
     site,

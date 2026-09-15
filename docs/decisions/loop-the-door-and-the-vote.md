@@ -236,3 +236,28 @@ Both fixed and pinned with regression tests that name the production
 condition. `/api/loop/admin/preview-pass` renders the email without sending
 one, linked from the admin, because the email is the only part of the product
 the owner cannot inspect by visiting a page.
+
+## The filming notice is one sentence (2026-09-15)
+
+> "The film disclaimer is stupid. Can we just make it simple."
+
+It was three paragraphs that explained the filming, then justified it, then
+insisted it was not optional. All true, and all reading as an argument with the
+reader rather than a term they were accepting. A release is a term. State it
+once, plainly, before money changes hands:
+
+> **By buying a ticket and attending, you agree that you may appear on camera
+> and in photographs, and that Odubo Studio and Scott's Inn & Suites may use
+> that material for any purpose, including commercial and promotional use.**
+
+`RECORDING_NOTICE` is now `{ short, headline, full }` — `body` and `condition`
+are gone. The pass sheet, the pass email and both `/legal` tabs all render
+`full` verbatim, so the release a buyer accepts and the release the terms
+describe are the same words.
+
+It names **both** parties, because the venue films too. If the venue ever
+changes, the sentence changes with it.
+
+The takedown promise survives, one line in the email and a paragraph in
+`/legal`: it is keepable, it costs nothing, and it is the part a person
+actually wants to know exists.
