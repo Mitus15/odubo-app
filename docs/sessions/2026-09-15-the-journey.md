@@ -199,3 +199,26 @@ people to your website"), so this was fixed with traffic already arriving. And
 no *customer* order confirmation email for #1001 reached the owner's inbox,
 only the merchant copy — either a different address was used at checkout or
 Shopify's Order confirmation notification is off. Worth the owner checking.
+
+## Your own list (same night, last)
+
+> "I am the one bringing in this traffic after all."
+
+The one-field consolidation already gave us the address. This makes it a
+list the owner owns outright, and one he may legally write to.
+
+- **Consent, opt-in.** A box under the address on the pass sheet: *"Keep me
+  posted about Loop Soul. Optional, and you can stop it any time."* Off by
+  default. Canada's anti-spam law wants express consent and a record of when
+  and where; `loop_marketing_consent` (migration 164) is that record, keyed on
+  the address, first tick wins, `withdrawn_at` for the day someone asks.
+  Transactional mail (the pass, the album release) never needed it.
+- **The Guests** in admin: passes sold, with an address, said keep me posted,
+  through the door. Hairline rules, one drawn shape: **Export the list (CSV)**.
+- `GET /api/loop/admin/guests` (JSON) and `?format=csv` (a file): one row per
+  real pass with code, email, order, bought, opened the app, admitted,
+  marketing consent, album claimed. `guestsCsv` / `csvCell` are pure and
+  tested (RFC 4180 quoting).
+
+Built from the ledger, the pass sheet and the door. Never from Shopify, so it
+does not depend on a plan tier.

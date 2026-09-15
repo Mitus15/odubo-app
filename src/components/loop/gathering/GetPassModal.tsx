@@ -59,6 +59,7 @@ export function GetPassModal({
   }, []);
 
   const [email, setEmail] = useState("");
+  const [consent, setConsent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -96,7 +97,7 @@ export function GetPassModal({
       const res = await fetch("/api/loop/pass/intent", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ email: addr }),
+        body: JSON.stringify({ email: addr, consent }),
       });
       const data = (await res.json().catch(() => ({}))) as { checkoutUrl?: string; error?: string };
       if (res.ok && data.checkoutUrl) target = data.checkoutUrl;
@@ -322,6 +323,19 @@ export function GetPassModal({
                   placeholder="Where should we send your pass?"
                   className="min-h-[52px] w-full rounded-full border border-ink/25 bg-transparent px-5 text-base outline-none placeholder:opacity-50 focus:border-ink"
                 />
+                {/* Off by default, on purpose: consent to marketing has to be
+                    given, not assumed. The pass and the album never need it. */}
+                <label className="flex items-start gap-2.5 px-2 py-1 text-[12px] leading-snug">
+                  <input
+                    type="checkbox"
+                    checked={consent}
+                    onChange={(e) => setConsent(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--foreground)]"
+                  />
+                  <span className="loop-muted">
+                    Keep me posted about Loop Soul. Optional, and you can stop it any time.
+                  </span>
+                </label>
                 <button
                   type="submit"
                   disabled={busy}

@@ -1,5 +1,6 @@
 import { getCurrentEvent, getCurrentPhase, type EventPhase } from "@/lib/loop/hub";
 import { getRunOfShow } from "@/lib/loop/content-store";
+import { guestStats } from "@/lib/loop/guests";
 import { getJournalIssue, getJournalMoments } from "@/lib/loop/journal-store";
 import { mockOutbox } from "@/lib/loop/email";
 import PhaseSwitcher from "./PhaseSwitcher";
@@ -28,10 +29,11 @@ export default async function AdminPage() {
   const emailMode = process.env.EMAIL_MODE === "live" ? "live" : "mock";
 
   // Every read the dashboard needs, issued together rather than in series.
-  const [runOfShow, journalIssue, journalMoments] = await Promise.all([
+  const [runOfShow, journalIssue, journalMoments, guests] = await Promise.all([
     getRunOfShow(event.id),
     getJournalIssue(event.id),
     getJournalMoments(event.id),
+    guestStats(event.id),
   ]);
 
   return (
@@ -119,6 +121,43 @@ export default async function AdminPage() {
         >
           Open the door →
         </a>
+      </section>
+
+      <section className="mt-12">
+        <h2 className="text-sm font-bold uppercase tracking-widest opacity-70">
+          The Guests
+        </h2>
+        <p className="mt-1 text-sm opacity-70">
+          Your list, from your traffic. Built from the pass sheet, the ledger and
+          the door, never from Shopify. Marketing consent is what people ticked;
+          the pass and the album never needed it.
+        </p>
+        <dl className="mt-4 divide-y divide-ink/10 border-y border-ink/10 text-sm">
+          {(
+            [
+              ["Passes sold", guests.sold],
+              ["With an address", guests.withEmail],
+              ["Said keep me posted", guests.list],
+              ["Through the door", guests.admitted],
+            ] as const
+          ).map(([k, v]) => (
+            <div key={k} className="flex items-baseline justify-between py-2.5">
+              <dt className="opacity-70">{k}</dt>
+              <dd className="font-extrabold tabular-nums">{v}</dd>
+            </div>
+          ))}
+        </dl>
+        <a
+          href="/api/loop/admin/guests?format=csv"
+          className="mt-4 block rounded-2xl border border-ink bg-ink px-5 py-4 text-center font-bold text-sand"
+        >
+          Export the list (CSV)
+        </a>
+        <p className="mt-2 text-xs opacity-60">
+          One row per pass: code, email, order, bought, opened the app, admitted,
+          marketing consent, album claimed. Only write marketing to the rows with
+          consent.
+        </p>
       </section>
 
       <section className="mt-12">

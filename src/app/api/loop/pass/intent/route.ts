@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentEvent } from "@/lib/loop/hub";
 import { getPassSettings } from "@/lib/loop/pass/settings";
 import { checkoutUrlWithIntent, createIntent } from "@/lib/loop/passIntent";
+import { recordConsent } from "@/lib/loop/guests";
 import { rateLimit } from "@/lib/rateLimit";
 import { currentVoterId } from "@/lib/loop/identity/voter";
 
@@ -20,7 +21,7 @@ export const runtime = "nodejs";
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function POST(req: NextRequest) {
-  const body = (await req.json().catch(() => null)) as { email?: string } | null;
+  const body = (await req.json().catch(() => null)) as { email?: string; consent?: boolean } | null;
   const email = (body?.email ?? "").trim();
   if (!EMAIL.test(email)) {
     return NextResponse.json({ error: "That does not look like an email address." }, { status: 400 });
@@ -38,5 +39,7 @@ export async function POST(req: NextRequest) {
   }
 
   const token = await createIntent(event.id, email);
+  // Express, opt-in, recorded with the moment it was given. Never assumed.
+  if (body?.consent === true) await recordConsent(event.id, email, "pass-sheet");
   return NextResponse.json({ ok: true, checkoutUrl: checkoutUrlWithIntent(settings.checkoutUrl, email, token) });
 }
