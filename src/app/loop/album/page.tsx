@@ -1,7 +1,7 @@
 import Link from "next/link";
 import AlbumPlayer from "@/components/AlbumPlayer";
 import { getCurrentEvent } from "@/lib/loop/hub";
-import { currentVoterId } from "@/lib/loop/anthem-server";
+import { currentVoterId } from "@/lib/loop/identity/voter";
 import { albumAccessFor, decideAlbumAccess, loadAlbum, markClaimed } from "@/lib/loop/album";
 import { getPassSettings } from "@/lib/loop/pass/settings";
 
