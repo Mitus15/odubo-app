@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 
 type Stats = { entitled: number; addresses: number; notified: number; claimed: number };
-type TrackRow = { number: number; title: string };
+type TrackRow = { number: number; title: string; seconds: number; free: boolean; dealable: boolean };
+type EarlyRule = { enabled: boolean; extra: number };
 
 /**
  * Release the record and tell the people who pre-ordered it. Two buttons, in
@@ -12,7 +13,7 @@ type TrackRow = { number: number; title: string };
 export function AlbumRelease() {
   const [released, setReleased] = useState<boolean | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
-  const [early, setEarly] = useState<number[]>([]);
+  const [early, setEarly] = useState<EarlyRule>({ enabled: true, extra: 2 });
   const [tracks, setTracks] = useState<TrackRow[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
@@ -21,10 +22,10 @@ export function AlbumRelease() {
     try {
       const res = await fetch("/api/loop/admin/album", { cache: "no-store" });
       if (!res.ok) return;
-      const data = (await res.json()) as { released: boolean; stats: Stats; early: number[]; tracks: TrackRow[] };
+      const data = (await res.json()) as { released: boolean; stats: Stats; early: EarlyRule; tracks: TrackRow[] };
       setReleased(data.released);
       setStats(data.stats);
-      setEarly(data.early ?? []);
+      setEarly(data.early ?? { enabled: true, extra: 2 });
       setTracks(data.tracks ?? []);
     } catch {
       /* leave unknown */
@@ -58,19 +59,18 @@ export function AlbumRelease() {
     }
   }
 
-  async function toggleEarly(n: number) {
-    const next = early.includes(n) ? early.filter((x) => x !== n) : [...early, n].sort((a, b) => a - b);
+  async function setRule(patch: Partial<EarlyRule>) {
     setBusy("early");
     setNote(null);
     try {
       const res = await fetch("/api/loop/admin/album", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ action: "setEarly", tracks: next }),
+        body: JSON.stringify({ action: "setEarly", ...patch }),
       });
-      const data = (await res.json().catch(() => ({}))) as { error?: string; early?: number[] };
+      const data = (await res.json().catch(() => ({}))) as { error?: string; early?: EarlyRule };
       if (!res.ok) throw new Error(data.error ?? `${res.status}`);
-      setEarly(data.early ?? next);
+      if (data.early) setEarly(data.early);
     } catch (err) {
       setNote((err as Error).message);
     } finally {
@@ -114,37 +114,49 @@ export function AlbumRelease() {
         </span>
       </button>
 
-      {/* Before it is out: what a pass buys you today. One tap per track. */}
+      {/* Before it is out: the single, free, plus a draw per listener. */}
       <div className="rounded-2xl border border-ink/15 px-4 py-3">
         <div className="text-[10px] font-bold uppercase tracking-widest opacity-60">
-          Before it&apos;s out · what pass-holders can hear now
+          Before it&apos;s out · what a pass-holder hears
         </div>
-        <div className="mt-2 flex flex-wrap gap-1.5">
-          {tracks.map((t) => {
-            const on = early.includes(t.number);
-            return (
-              <button
-                key={t.number}
-                type="button"
-                onClick={() => toggleEarly(t.number)}
-                disabled={busy !== null || released}
-                aria-pressed={on}
-                className={`min-h-[36px] rounded-full border px-3 text-xs font-bold disabled:opacity-50 ${
-                  on ? "border-ink bg-ink text-sand" : "border-ink/20"
-                }`}
-              >
-                {t.number} · {t.title}
-              </button>
-            );
-          })}
-        </div>
-        <p className="mt-2 text-xs opacity-70">
-          {released
-            ? "The whole record is out, so this no longer applies."
-            : early.length === 0
-              ? "Nothing plays until the record is out."
-              : `${early.length} track${early.length === 1 ? "" : "s"} play at /loop/album for anyone owed the record.`}
+        <p className="mt-2 text-sm">
+          <b>{tracks.find((t) => t.free)?.title ?? "The single"}</b> free to everyone, plus{" "}
+          <b>{early.extra}</b> more dealt to each listener at random. Their two never change, and two
+          people rarely get the same pair.
         </p>
+        <p className="mt-1 text-xs opacity-70">
+          Never dealt: the intro, and the {tracks.filter((t) => !t.dealable && !t.free && t.number !== 1).length}{" "}
+          interlude{tracks.filter((t) => !t.dealable && !t.free && t.number !== 1).length === 1 ? "" : "s"} under
+          90 seconds. {tracks.filter((t) => t.dealable).length} songs are in the draw.
+        </p>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setRule({ enabled: !early.enabled })}
+            disabled={busy !== null || released}
+            className={`min-h-[40px] rounded-full px-4 text-xs font-bold disabled:opacity-50 ${
+              early.enabled ? "bg-ink text-sand" : "border border-ink/25"
+            }`}
+          >
+            {early.enabled ? "On" : "Off"}
+          </button>
+          {[0, 1, 2, 3, 4].map((n) => (
+            <button
+              key={n}
+              type="button"
+              onClick={() => setRule({ extra: n })}
+              disabled={busy !== null || released || !early.enabled}
+              aria-pressed={early.extra === n}
+              className={`min-h-[40px] w-11 rounded-full text-xs font-bold disabled:opacity-40 ${
+                early.extra === n ? "border-2 border-ink" : "border border-ink/20"
+              }`}
+            >
+              {n}
+            </button>
+          ))}
+          <span className="text-xs opacity-60">extra each</span>
+        </div>
+        {released && <p className="mt-2 text-xs opacity-70">The whole record is out, so this no longer applies.</p>}
       </div>
 
       <div className="flex gap-2">

@@ -22,11 +22,6 @@ import type { Album, Track } from "@/types/music";
 
 export const ALBUM_ID = LOOP_SOUL_ALBUM_ID;
 const RELEASED_KEY = "album_released";
-const EARLY_KEY = "album_early_tracks";
-/** What an owed listener may hear BEFORE the record is out. Unset means the
- *  opening three; an explicit empty setting means nothing until release. The
- *  owner picks the tracks from /loop/admin, one tap each. */
-const EARLY_DEFAULT = [1, 2, 3];
 
 export function normEmail(raw: string): string {
   return raw.trim().toLowerCase();
@@ -132,35 +127,115 @@ export async function setAlbumReleased(released: boolean): Promise<void> {
 
 // ── early tracks ─────────────────────────────────────────────────────────────
 
-/** "1,2,3" → [1, 2, 3]. Null (never set) falls back to the default; "" is none. */
-export function parseEarlyTracks(raw: string | null | undefined): number[] {
-  if (raw == null) return EARLY_DEFAULT;
-  const nums = raw
-    .split(",")
-    .map((s) => Number(s.trim()))
-    .filter((n) => Number.isInteger(n) && n > 0);
-  return Array.from(new Set(nums)).sort((a, b) => a - b);
-}
+/**
+ * What a pass-holder hears before the record is out.
+ *
+ * The rule (owner, 2026-09-15): the single is free to everyone, and every
+ * pass-holder is dealt TWO more at random from the rest of the album. Not the
+ * same two — the draw is seeded by the listener, so the room compares notes
+ * and between them they have heard most of it by the night. Their own two
+ * never change: the seed is their address, so a new phone plays the same pair.
+ *
+ * Two kinds of track are never dealt. The intro, because opening someone's
+ * first listen with the door-opener and nothing else is a worse gift than a
+ * song. And the interludes — Loop Soul has three at thirty-five seconds —
+ * because being dealt two of those instead of music would read as a mistake.
+ */
+const EARLY_ENABLED_KEY = "album_early_enabled";
+const EARLY_EXTRA_KEY = "album_early_extra";
+/** Anything shorter than this is an interlude, not one of the two you get. */
+export const SKIT_MAX_SECONDS = 90;
+const EARLY_EXTRA_DEFAULT = 2;
 
-export async function earlyTrackNumbers(): Promise<number[]> {
+export type EarlyRule = { enabled: boolean; extra: number };
+
+export async function earlyRule(): Promise<EarlyRule> {
   try {
-    return parseEarlyTracks(await getSetting(EARLY_KEY));
+    const [on, n] = await Promise.all([getSetting(EARLY_ENABLED_KEY), getSetting(EARLY_EXTRA_KEY)]);
+    const extra = Number(n);
+    return {
+      enabled: on !== "0",
+      extra: Number.isInteger(extra) && extra >= 0 ? extra : EARLY_EXTRA_DEFAULT,
+    };
   } catch {
-    return EARLY_DEFAULT;
+    return { enabled: true, extra: EARLY_EXTRA_DEFAULT };
   }
 }
 
-export async function setEarlyTracks(nums: number[]): Promise<void> {
-  const clean = parseEarlyTracks(nums.join(","));
-  await setSetting(EARLY_KEY, clean.join(","));
+export async function setEarlyRule(rule: Partial<EarlyRule>): Promise<void> {
+  if (rule.enabled !== undefined) await setSetting(EARLY_ENABLED_KEY, rule.enabled ? "1" : "0");
+  if (rule.extra !== undefined) {
+    await setSetting(EARLY_EXTRA_KEY, String(Math.max(0, Math.min(Math.floor(rule.extra), 12))));
+  }
+}
+
+type TrackLike = { track_number: number; title: string; duration?: number | null };
+
+/** The one everybody gets, free: whatever song the front door is playing. */
+export function freeTrackNumber(tracks: TrackLike[], featured: string | null): number | null {
+  const want = (featured ?? "").trim().toLowerCase();
+  const byTitle = want ? tracks.find((t) => t.title.trim().toLowerCase() === want) : undefined;
+  return (byTitle ?? tracks[0])?.track_number ?? null;
+}
+
+/** Everything that may be dealt: no intro, no interludes, not the free one. */
+export function dealablePool(tracks: TrackLike[], free: number | null): number[] {
+  return tracks
+    .filter(
+      (t) =>
+        t.track_number !== 1 &&
+        t.track_number !== free &&
+        (t.duration ?? 0) >= SKIT_MAX_SECONDS,
+    )
+    .map((t) => t.track_number)
+    .sort((a, b) => a - b);
+}
+
+/** FNV-1a. Small, stable, and the same answer on every machine forever. */
+export function seedOf(key: string): number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < key.length; i++) {
+    h ^= key.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h >>> 0;
+}
+
+/** Deterministic shuffle: same listener, same order, always. */
+function dealtFrom(pool: number[], seed: number, take: number): number[] {
+  const a = [...pool];
+  let s = seed || 1;
+  for (let i = a.length - 1; i > 0; i--) {
+    s = (Math.imul(s, 1103515245) + 12345) >>> 0;
+    const j = s % (i + 1);
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a.slice(0, Math.max(0, take)).sort((x, y) => x - y);
+}
+
+/**
+ * The track numbers this listener may play before release: the free one, plus
+ * their own draw. `listenerKey` should be the address, so the pair follows the
+ * person rather than the phone.
+ */
+export function earlySetFor(
+  listenerKey: string,
+  tracks: TrackLike[],
+  featured: string | null,
+  rule: EarlyRule,
+): number[] {
+  if (!rule.enabled || tracks.length === 0) return [];
+  const free = freeTrackNumber(tracks, featured);
+  const dealt = dealtFrom(dealablePool(tracks, free), seedOf(listenerKey), rule.extra);
+  return [...new Set([...(free ? [free] : []), ...dealt])].sort((a, b) => a - b);
 }
 
 // ── access ───────────────────────────────────────────────────────────────────
 
 export type AlbumAccess = {
   released: boolean;
-  /** Track numbers that play before release. Empty means wait. */
-  early: number[];
+  /** Whether anything at all plays before release. The set is per listener. */
+  early: EarlyRule;
   /** This device proved an inbox that is owed the record. */
   entitled: boolean;
   /** This device redeemed a pass (a holder), which also counts. */
@@ -181,7 +256,7 @@ export function decideAlbumAccess(
 export async function albumAccessFor(eventId: string, voterId: string): Promise<AlbumAccess> {
   const [released, early, attendee, holder] = await Promise.all([
     albumReleased(),
-    earlyTrackNumbers(),
+    earlyRule(),
     attendeeForVoter(voterId),
     voterId && voterId !== "anonymous" ? isHolder(eventId, voterId) : Promise.resolve(false),
   ]);

@@ -131,3 +131,35 @@ code") on the same day. Where the two overlapped, the merge kept whichever
 solved more: their `PortalGate` rewrite superseded this branch's narrower fix,
 and this branch's ballot wording superseded theirs, because theirs still told a
 guest standing in the room that voting was "for the room".
+
+## The ticket is an object, and the two songs are a draw (2026-09-15, late)
+
+**The ticket.** A code in a paragraph is not a ticket — nobody memorises
+`LOOP-K7X2`, and a line of text is not something anyone screenshots. Every pass
+email now carries a rendered PNG per pass: the wordmark, ADMIT ONE, the QR the
+door scans, the code large enough to read in a dark courtyard, the night, the
+dress code. Portrait, phone-shaped, because it lives in a camera roll.
+
+Rendered with **Satori (`next/og`)**, not the sharp poster engine. The poster
+engine resolves fonts and artwork from a path derived from the script's own
+location, which works on a laptop and vanishes in a serverless bundle. Satori
+was already proven in this app's production OG card, needs one TTF, and takes
+a size we choose. The face is pinned into the function bundle via
+`outputFileTracingIncludes`. **The render is never fatal**: a failure falls
+back to the bare QR, and the email always goes. A missing picture is a
+disappointment; a missing email is a guest at a door with nothing.
+
+**Several passes on one order.** One code per unit, as before, and now one
+numbered ticket per code: *ADMIT ONE · GUEST 2 OF 3*. The buyer forwards one
+per guest, each admits once, each is independent at the door. The email says
+so. `/api/loop/admin/ticket?c=CODE&n=2&of=3` previews any of it.
+
+**The early tracks are dealt, not listed.** The owner's rule: the single is
+free to everyone, and every pass-holder gets **two more at random**, seeded on
+their address so the pair follows the person rather than the phone and never
+changes. Two kinds are never dealt: the **intro**, and the **interludes** —
+Volume 1 has three at thirty-five seconds — because being dealt two of those
+instead of music reads as a mistake. Replaces the hand-picked list: the room
+now compares notes, and between them they have heard most of the record before
+the night. `album_early_enabled` / `album_early_extra` are settings; the admin
+states the rule rather than listing tracks.

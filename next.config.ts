@@ -33,7 +33,10 @@ const nextConfig: NextConfig = {
   // Bundle the daily-verse data file into serverless functions that read it at
   // runtime (bible-verse.ts uses fs.readFileSync); without this Vercel omits it.
   outputFileTracingIncludes: {
-    '/**': ['./data/bible-psalms-proverbs.json'],
+    // The brand face is read at runtime by the OG card and by the ticket
+    // renderer (lib/loop/ticketImage.tsx). Without this Vercel omits it and
+    // the ticket falls back to a bare QR.
+    '/**': ['./data/bible-psalms-proverbs.json', './public/loop/fonts/Jost-700.ttf'],
   },
   images: {
     // Enable Next.js Image Optimization (remove unoptimized: true)

@@ -186,8 +186,8 @@ async function codesBody(codes: string[], eventTitle: string): Promise<string> {
       : `It admits one guest.`,
     `Show it at the door, then enter it in the app to open the room.`,
     many
-      ? `Your QR tickets are attached, one per pass. The door scans them.`
-      : `Your QR ticket is attached. The door scans it.`,
+      ? `${codes.length} tickets are attached, one per guest. Send one to each person coming; each admits one, once.`
+      : `Your ticket is attached. Keep it on your phone, the door scans it.`,
     ``,
     `THE NIGHT`,
     ``,
@@ -229,40 +229,83 @@ export async function sendEventCodesEmail(
         ? `Your ${codes.length} Loop Soul passes for ${eventTitle}`
         : `Your Loop Soul pass for ${eventTitle}`,
     text: await codesBody(codes, eventTitle),
-    attachments: await ticketQrAttachments(codes),
+    attachments: await ticketAttachments(codes),
   });
 }
 
 /**
- * One PNG per pass: the QR the door scans. It encodes the door's URL with the
- * pass in it when the public origin is known, so a plain camera app lands the
- * host on the door page; otherwise the bare code, which the door's own scanner
- * reads just the same. Never fatal: a ticket without its picture still has
- * the code in the text above it.
+ * One ticket per pass, as a picture worth keeping.
+ *
+ * A code in a paragraph is not a ticket. This attaches the real object: the
+ * wordmark, the night, the code large enough to read in a dark courtyard, and
+ * the QR the door scans. An order for three passes gets three files, each
+ * numbered "Guest 2 of 3", so the buyer knows which one to forward to whom.
+ *
+ * Never fatal. If the render fails the email still goes with the codes in the
+ * text, and a bare QR is attached instead so the door still has something to
+ * scan. A missing picture is a disappointment; a missing email is a guest at a
+ * door with nothing.
  */
-async function ticketQrAttachments(codes: string[]): Promise<{ filename: string; content: string }[]> {
+async function ticketAttachments(codes: string[]): Promise<{ filename: string; content: string }[]> {
+  const base = await getPublicBaseUrl();
+  const out: { filename: string; content: string }[] = [];
+
+  let facts: { title: string; venue: string; theme: string; dateLabel: string; timeLabel: string } | null = null;
   try {
-    const [{ default: QRCode }, { doorUrlFor }] = await Promise.all([
-      import("qrcode"),
-      import("@/lib/loop/door"),
-    ]);
-    const base = await getPublicBaseUrl();
-    return await Promise.all(
-      codes.map(async (code) => ({
-        filename: `loop-soul-ticket-${code}.png`,
-        content: (
-          await QRCode.toBuffer(base ? doorUrlFor(code, base) : code, {
-            margin: 2,
-            width: 480,
-            color: { dark: "#2a0f0a", light: "#ffffff" },
-          })
-        ).toString("base64"),
-      })),
-    );
+    const { getCurrentEvent } = await import("@/lib/loop/hub");
+    const event = await getCurrentEvent();
+    const when = new Date(event.date);
+    const at = (opts: Intl.DateTimeFormatOptions) =>
+      when.toLocaleString("en-CA", { timeZone: "America/Vancouver", ...opts });
+    facts = {
+      title: event.title,
+      venue: event.venue,
+      theme: event.theme,
+      dateLabel: at({ weekday: "short", month: "short", day: "numeric" }),
+      timeLabel: at({ hour: "numeric", minute: "2-digit" }),
+    };
   } catch (err) {
-    console.error("[loop:email] ticket QR not attached:", err);
-    return [];
+    console.error("[loop:email] event unreadable, tickets fall back to a bare QR:", err);
   }
+
+  for (const [i, code] of codes.entries()) {
+    const filename = `loop-soul-ticket-${code}.png`;
+    if (facts) {
+      try {
+        const { renderTicketPng } = await import("@/lib/loop/ticketImage");
+        const png = await renderTicketPng({
+          code,
+          baseUrl: base,
+          eventTitle: facts.title,
+          dateLabel: facts.dateLabel,
+          timeLabel: facts.timeLabel,
+          venue: facts.venue,
+          theme: facts.theme,
+          index: i + 1,
+          total: codes.length,
+        });
+        out.push({ filename, content: png.toString("base64") });
+        continue;
+      } catch (err) {
+        console.error(`[loop:email] ticket art failed for ${code}, falling back to a bare QR:`, err);
+      }
+    }
+    try {
+      const [{ default: QRCode }, { doorUrlFor }] = await Promise.all([
+        import("qrcode"),
+        import("@/lib/loop/door"),
+      ]);
+      const buf = await QRCode.toBuffer(base ? doorUrlFor(code, base) : code, {
+        margin: 2,
+        width: 480,
+        color: { dark: "#2a0f0a", light: "#ffffff" },
+      });
+      out.push({ filename, content: buf.toString("base64") });
+    } catch (err) {
+      console.error(`[loop:email] no attachment at all for ${code}:`, err);
+    }
+  }
+  return out;
 }
 
 /** Deliver an auto-issued event code to a buyer. */

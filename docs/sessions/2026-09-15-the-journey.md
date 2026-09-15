@@ -241,3 +241,29 @@ resolved the "missing" customer confirmation: the owner checked out as
 
 The first pass (`#1001`, bought before the fix) still has no address and is
 the owner's to attach in Admin → Event codes.
+
+## The ticket, several passes, and a draw
+
+Four owner asks, late the same night.
+
+1. **"The pass sucks… give them something to keep."** Every pass email now
+   carries a rendered ticket PNG (1080×1620, Satori/`next/og`, brand face
+   pinned into the bundle). Verified by rendering the owner's real pass and
+   looking at it. Falls back to the bare QR if the render ever fails, so the
+   email is never lost.
+2. **Several passes on one order.** One numbered ticket each, *GUEST 2 OF 3*,
+   forwardable, independent at the door. Previewable at
+   `/api/loop/admin/ticket?c=CODE&n=2&of=3`.
+3. **The early tracks.** The single free, plus two dealt per listener, never
+   the intro and never a 35-second interlude. Proven over 400 simulated
+   listeners: no intro, no interludes, stable per person, and across 300
+   listeners every dealable track is reachable.
+4. **The first pass got its address.** `emorris508@gmail.com` written to
+   `shopify:7088745316565#1` directly in D1, since production admin is
+   correctly password-locked and I do not hold that password. Both passes are
+   now on one address and both are findable at `/loop/code`.
+
+**A security check worth recording:** production `/api/loop/admin/login`
+returns 401 to a junk password, so `LOOP_ADMIN_PASSWORD` is set on Vercel and
+admin is locked. Locally it is unset, which puts the dev server in open mode
+by design.

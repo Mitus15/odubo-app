@@ -2,7 +2,8 @@ import Link from "next/link";
 import AlbumPlayer from "@/components/AlbumPlayer";
 import { getCurrentEvent } from "@/lib/loop/hub";
 import { currentVoterId } from "@/lib/loop/identity/voter";
-import { albumAccessFor, decideAlbumAccess, loadAlbum, markClaimed } from "@/lib/loop/album";
+import { albumAccessFor, decideAlbumAccess, earlySetFor, loadAlbum, markClaimed } from "@/lib/loop/album";
+import { getSetting } from "@/lib/loop/loopSetting";
 import { getPassSettings } from "@/lib/loop/pass/settings";
 
 export const dynamic = "force-dynamic";
@@ -17,7 +18,7 @@ export const metadata = {
  * /loop/album — the pre-order, delivered.
  *
  * Five states, one rule (`decideAlbumAccess`):
- *   early   owed it, not out yet, a few tracks play now
+ *   early   owed it, not out yet: the single, plus two dealt to this listener
  *   wait    owed it, not out yet, nothing early set
  *   listen  owed it, out: the album plays here
  *   prove   this device has not proven an inbox; go to /loop/code
@@ -33,7 +34,7 @@ export default async function LoopAlbumPage() {
     released: access.released,
     entitled: access.entitled,
     holder: access.holder,
-    early: access.early.length > 0,
+    early: access.early.enabled,
   });
 
   if (state === "listen") {
@@ -58,19 +59,30 @@ export default async function LoopAlbumPage() {
   }
 
   if (state === "early") {
-    const data = await loadAlbum();
+    const [data, featured] = await Promise.all([loadAlbum(), getSetting("featured_track")]);
     if (!data) return <Shell title="The record">The album is not on the shelf yet. Try again shortly.</Shell>;
-    const set = new Set(access.early);
+    // Seeded on the address so the pair follows the person, not the phone.
+    const set = new Set(
+      earlySetFor(access.email ?? voterId, data.tracks, featured, access.early),
+    );
     const now = data.tracks.filter((t) => set.has(t.track_number));
     const later = data.tracks.length - now.length;
+    if (now.length === 0) {
+      return (
+        <Shell title="It's yours. It lands after the night.">
+          {event.title} is performed live on the night, all fourteen tracks, and then it is released.
+        </Shell>
+      );
+    }
     return (
       <main className="min-h-[100dvh] bg-[#0f0b0b] text-[#ede8df]">
         <div className="mx-auto max-w-2xl px-5 pb-24 pt-10">
           <p className="text-[11px] uppercase tracking-[0.3em] opacity-70">Loop Soul · Yours, early</p>
           <h1 className="mt-2 text-2xl font-extrabold">{data.album.title}</h1>
           <p className="mt-1 text-sm opacity-70">
-            {data.album.artist_name}. {now.length} of {data.tracks.length} tracks now. The other {later} land here
-            after the night{access.email ? `, and ${access.email} is told` : ""}.
+            {data.album.artist_name}. {now.length} of {data.tracks.length} now, dealt to you. The other {later}
+            land here after the night{access.email ? `, and ${access.email} is told` : ""}. Somebody else got a
+            different two.
           </p>
           <div className="mt-8">
             <AlbumPlayer album={data.album} tracks={now} />

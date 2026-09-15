@@ -3,14 +3,17 @@ import { getCurrentEvent } from "@/lib/loop/hub";
 import {
   albumReleased,
   backfillFromCodes,
-  earlyTrackNumbers,
+  dealablePool,
+  earlyRule,
   entitlementStats,
+  freeTrackNumber,
   loadAlbum,
   markNotified,
   setAlbumReleased,
-  setEarlyTracks,
+  setEarlyRule,
   unnotifiedAddresses,
 } from "@/lib/loop/album";
+import { getSetting } from "@/lib/loop/loopSetting";
 import { sendAlbumReleaseEmail } from "@/lib/loop/email";
 
 export const runtime = "nodejs";
@@ -19,20 +22,30 @@ export const runtime = "nodejs";
  * The record's release, from the admin. Auth: middleware gates /api/loop/admin/*.
  *
  *   GET            → { released, early, tracks, stats }
- *   POST setEarly  → which track numbers pass-holders may hear before release
+ *   POST setEarly  → { enabled?, extra? }: the before-release rule
  *   POST release   → the listening page opens for everyone owed it
  *   POST unrelease → closes it again (a mistake, a date change)
  *   POST notify    → one "it's out" email per address not yet told
  *   POST backfill  → any real pass order missing a ledger row gets one
  */
 async function snapshot() {
-  const [released, stats, early, album] = await Promise.all([
+  const [released, stats, early, album, featured] = await Promise.all([
     albumReleased(),
     entitlementStats(),
-    earlyTrackNumbers(),
+    earlyRule(),
     loadAlbum(),
+    getSetting("featured_track"),
   ]);
-  const tracks = (album?.tracks ?? []).map((t) => ({ number: t.track_number, title: t.title }));
+  const all = album?.tracks ?? [];
+  const free = freeTrackNumber(all, featured);
+  const pool = dealablePool(all, free);
+  const tracks = all.map((t) => ({
+    number: t.track_number,
+    title: t.title,
+    seconds: t.duration ?? 0,
+    free: t.track_number === free,
+    dealable: pool.includes(t.track_number),
+  }));
   return { released, stats, early, tracks };
 }
 
@@ -41,14 +54,18 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const body = (await req.json().catch(() => null)) as { action?: string; tracks?: unknown } | null;
+  const body = (await req.json().catch(() => null)) as
+    | { action?: string; enabled?: boolean; extra?: number }
+    | null;
   const event = await getCurrentEvent();
 
   switch (body?.action) {
     case "setEarly": {
-      const nums = Array.isArray(body.tracks) ? body.tracks.filter((n): n is number => Number.isInteger(n)) : null;
-      if (!nums) return NextResponse.json({ error: "tracks must be a list of track numbers" }, { status: 400 });
-      await setEarlyTracks(nums);
+      const { enabled, extra } = body as { enabled?: boolean; extra?: number };
+      if (enabled === undefined && extra === undefined) {
+        return NextResponse.json({ error: "nothing to set" }, { status: 400 });
+      }
+      await setEarlyRule({ enabled, extra });
       return NextResponse.json({ ok: true, ...(await snapshot()) });
     }
     case "release":
