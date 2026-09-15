@@ -8,10 +8,11 @@ import { ensureAttendee, recordAttendance } from "@/lib/loop/identity";
  * THE FRONT DOOR. Redeem an event code to unlock the room.
  *
  * This lived at /api/loop/anthem/redeem, under a tournament that was parked
- * and is now deleted. It was never the anthem's: it is how anyone gets in. Binds the code to the current
- * anonymous voter (ls_voter), marking them a pass-holder, and — since this is
- * the one moment we know a real person is arriving — creates their attendee
- * record and logs the attendance. Zero forms: a name and email can be claimed
+ * and is now deleted. It was never the anthem's: it is how anyone gets in.
+ *
+ * Binds the code to the current anonymous voter (ls_voter), marking them a
+ * pass-holder, and — since this is the one moment we know a real person is
+ * arriving — creates their attendee record and logs the attendance. Zero forms: a name and email can be claimed
  * later (see docs/decisions/loop-identity-and-danceyokey.md).
  */
 export async function POST(req: Request) {

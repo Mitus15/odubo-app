@@ -1,19 +1,28 @@
 import { chunkForParams, executeQuery, queryDatabase, queryOne } from "@/lib/loop/db";
 
 /**
- * Minimal event-code slice — the start of the event-code core (the same
- * primitive State 2 / Legacy will use), scoped here to the Soul Loop Anthem's
- * "who can suggest" gate.
+ * Event codes — the door, and the one thing that makes the vote countable.
  *
- * Suggesting a song is a perk of having a pass: admin bulk-generates unique
- * single-use codes, hands one to each buyer, and the buyer redeems it to become
- * a "holder" who can nominate. Upvoting and bracket voting stay open to everyone.
+ * A code is minted per pass sold (or bulk-generated for the door), handed to
+ * one buyer, and redeemed once to make that `ls_voter` a HOLDER. Scoped per
+ * event, backed by D1, reusing the existing cookie so there is no new identity.
  *
- * Driven by a mode: `open` (anyone can suggest — the
- * promo default before tickets exist) or `ticket` (holders only). Scoped per
- * event, backed by D1. Reuses the existing `ls_voter` identity, so no new
- * cookie. Known limits (promo-acceptable): clearing cookies drops holder status;
- * a leaked code lets a non-buyer suggest.
+ * What holding is still for, now that `doors_open` exists:
+ *
+ * Every room surface (the Wall, the camera, Pose, the Vault) asks
+ * `hasRoomAccess`, which a promoter can satisfy for everyone at once by opening
+ * the doors. The BALLOTS do not: they ask `isHolder` directly, deliberately.
+ * They decide the vinyl's cover and running order, the cover pays $50 and a
+ * royalty, and a single-use code is the only thing here that makes a fake vote
+ * cost a real pass. `ls_voter` is unforgeable but freely clearable, so anything
+ * keyed on the cookie alone is stuffable from an incognito window.
+ *
+ * Known limit: clearing cookies drops holder status. /loop/code is the way back
+ * (prove the checkout email, take the pass onto this device).
+ *
+ * This file also used to own the anthem's "who may suggest a song" gate
+ * (gateMode/setGate/canSuggest, over the `event_gate` table). The anthem is
+ * deleted; that gate went with it, and the table is left in place unused.
  */
 
 const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no ambiguous chars (no 0/O/1/I)

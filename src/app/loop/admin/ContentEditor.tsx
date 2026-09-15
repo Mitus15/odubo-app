@@ -8,7 +8,7 @@ import LoopLoader from "@/components/loop/brand/LoopLoader";
 type Field = { key: string; label: string; placeholder?: string; wide?: boolean };
 
 /**
- * Generic list editor (mirrors the AnthemControls pattern): edit rows inline,
+ * Generic list editor: edit rows inline,
  * add / remove / reorder, then Save posts the whole list as `{ items }` to
  * `endpoint` and refreshes. Edits stay local until Save so mid-typing isn't
  * persisted. Shared by the Run of Show and the Journal's Iconic Moments.

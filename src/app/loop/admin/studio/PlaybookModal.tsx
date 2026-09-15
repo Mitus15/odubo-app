@@ -428,7 +428,7 @@ function NowTab() {
       <ol className="list-decimal pl-5">
         <LI>
           Open <b>/loop</b> in a private window and read it as a stranger would — the
-          poster, the countdown-feel, the anthem, &ldquo;Get Pass&rdquo;.
+          poster, the countdown-feel, the programme, &ldquo;Get Pass&rdquo;.
         </LI>
         <LI>
           Back here: in <b>Posters</b>, export a <b>story</b> PNG. That file is

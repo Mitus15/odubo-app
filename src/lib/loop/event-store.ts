@@ -8,7 +8,7 @@ import type { LoopEvent } from "@/lib/loop/hub";
  * a change shows for every visitor.
  *
  * Scoped per event, backed by D1. `date` is intentionally NOT editable here yet:
- * it drives the anthem schedule (`anthem-rounds.ts`), so it gets its own
+ * it drove the anthem schedule (since deleted), so it gets its own
  * treatment later.
  *
  * `capacity` IS editable (migration 149). The venue owns that number, not the

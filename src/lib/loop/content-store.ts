@@ -6,7 +6,7 @@ import { RUN_OF_SHOW, type RunOfShowItem } from "@/lib/loop/content";
  * from /admin (it is both the program and the lineup). Scoped per event (each
  * monthly event has its own), and **default-seeded from `RUN_OF_SHOW`** until an
  * admin saves one, so the editor is never empty and a fresh event starts from
- * the defaults (consistent with the anthem's per-event cycle).
+ * the defaults (consistent with the per-event cycle).
  *
  * Backed by D1.
  */

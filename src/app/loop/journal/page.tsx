@@ -46,8 +46,8 @@ export default async function JournalPage() {
             this issue is still being written.
           </p>
           <p className="mt-4 max-w-xs text-sm opacity-70">
-            Every volume becomes an issue — the anthem, the iconic moments, the
-            night that was. It prints after the night happens.
+            Every volume becomes an issue: the iconic moments, the night that
+            was. It prints after the night happens.
           </p>
           <Link
             href="/loop"

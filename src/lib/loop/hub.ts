@@ -49,7 +49,7 @@ export const MOCK_CURRENT_EVENT: LoopEvent = {
   //
   // Written with an explicit offset, not a bare "2026-09-26", which JS parses
   // as UTC midnight and shows as Sep 25 in Pacific time, skewing every derived
-  // anthem cutoff half a day early (see anthem-rounds.ts `derive`).
+  // cutoff half a day early.
   //
   // Moved from Sept 12 on 2026-08-24, then to Oct 10 on 2026-09-10 (owner).
   // Oct 10 is the LAST Saturday before Rocky Mountaineer stops staying at

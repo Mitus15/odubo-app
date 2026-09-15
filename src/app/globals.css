@@ -2174,7 +2174,7 @@ h6,
   --foreground: var(--color-ink);
   --accent: var(--color-ink);
   /* Glass sits on the field it floats over. It is deliberately NEAR-OPAQUE:
-     these panels carry reading copy (pass details, run of show, the anthem)
+     these panels carry reading copy (pass details, run of show, the ballots)
      over busy poster artwork, and a translucent tint made that copy hard to
      read on a phone at a venue. Blur now adds depth, not transparency. */
   --loop-glass-tint: rgba(244, 238, 228, 0.96);

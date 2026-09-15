@@ -172,8 +172,9 @@ export async function composePassCard(spec: PosterSpec): Promise<HTMLCanvasEleme
 }
 
 /**
- * The tournament poster — spec comes from tournamentSpec(anthemState), so the
- * caller owns the fetch; this just resolves artwork and renders.
+ * The tournament poster. The caller builds the spec and owns any fetching;
+ * this just resolves artwork and renders. Its original source (the anthem
+ * tournament) is gone; the geometry is source-agnostic and stayed.
  */
 export async function composeTournament(spec: TournamentPosterSpec): Promise<HTMLCanvasElement> {
   const srcs = [...CHROME, qrSrc(spec.qrUrl)];
