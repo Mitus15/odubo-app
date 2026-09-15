@@ -1,13 +1,12 @@
-import { ANTHEM_ENABLED, DANCEYOKEY_ENABLED, type RunOfShowItem } from "@/lib/loop/content";
+import { ANTHEM_ENABLED, type RunOfShowItem } from "@/lib/loop/content";
 
 /**
  * What someone WITHOUT a pass sees, under the code gate.
  *
  * A code prompt on its own is a closed door with no sign on it: whoever landed
  * here from a poster, a QR code or a friend's story has no idea what a pass
- * buys. So the night itself is shown in full — the programme, the anthem,
- * Danceyokey, the camera — and only the surfaces you have to be in the room to
- * use stay locked.
+ * buys. So the night itself is shown in full — the programme, the camera — and
+ * only the surfaces you have to be in the room to use stay locked.
  *
  * Nothing here is sensitive. The programme is what's on the poster, the anthem
  * longlist is already public-safe, and the count of who's coming is the point
@@ -19,7 +18,6 @@ export function PortalPreview({
   capacity,
   nominations,
   anthemStage,
-  danceyokeySpots,
 }: {
   runOfShow: RunOfShowItem[];
   /** The whole CapacityInfo, not loose numbers. Taking `sold` and `capacity`
@@ -33,7 +31,6 @@ export function PortalPreview({
   /** Songs nominated so far — evidence the room is already choosing. */
   nominations: number;
   anthemStage: "nominating" | "seeding" | "bracket" | "champion";
-  danceyokeySpots: number;
 }) {
   const anthemLine =
     anthemStage === "champion"
@@ -93,17 +90,6 @@ export function PortalPreview({
             title="The anthem"
             body="The room decides what we all dance to. Nominate a song, then vote it through the rounds until one is left standing."
             foot={anthemLine}
-          />
-        )}
-
-        {DANCEYOKEY_ENABLED && (
-          <PreviewCard
-            title="Danceyokey"
-            body={`Karaoke, but for dancing. Pick your song, take the floor for the length of it. ${
-              danceyokeySpots > 0
-                ? `${danceyokeySpots} spot${danceyokeySpots === 1 ? "" : "s"} a night`
-                : "A handful of spots a night"
-            } — sign up in advance or in the room, alone or with as many people as you want.`}
           />
         )}
 

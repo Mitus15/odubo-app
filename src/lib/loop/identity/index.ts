@@ -221,15 +221,6 @@ export async function creditedUids(
   return rows.map((r) => r.photo_uid);
 }
 
-/** Attendance count → the "regular" weighting Danceyokey uses. */
-export async function volumesAttended(attendeeId: string): Promise<number> {
-  const row = await queryOne<{ n: number }>(
-    `SELECT COUNT(*) AS n FROM loop_attendance WHERE attendee_id = ?1`,
-    [attendeeId],
-  );
-  return row?.n ?? 0;
-}
-
 export type Contributor = {
   attendeeId: string;
   name: string | null;

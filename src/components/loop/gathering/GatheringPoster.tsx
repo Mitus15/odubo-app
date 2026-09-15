@@ -45,10 +45,8 @@ const MODULES: { key: ModuleKey; label: string; title: string }[] = [
   // programme all along, just not findable by that word.
   { key: "night", label: "The Programme", title: "The Night" },
   { key: "cover", label: "Cover Contest", title: "The Cover Contest" },
-  // Danceyokey is NOT part of Volume 1 (owner, 2026-08-25). The floor moment
-  // this volume has is the Loop Soul Line, which lives in the programme rather
-  // than needing a module of its own — there is nothing to sign up for.
-  // The host console at /loop/admin/danceyokey is untouched for later volumes.
+  // The floor moment this volume has is the Loop Soul Line, which lives in the
+  // programme rather than needing a module of its own — nothing to sign up for.
 ];
 
 /**

@@ -191,22 +191,6 @@ export default async function AdminPage() {
 
       <section className="mt-12">
         <h2 className="text-sm font-bold uppercase tracking-widest opacity-70">
-          Danceyokey
-        </h2>
-        <p className="mt-1 text-sm opacity-70">
-          The night&apos;s dance-floor queue: who&apos;s waiting, the running order,
-          the draw, and wildcards. Run it from your pocket.
-        </p>
-        <a
-          href="/loop/admin/danceyokey"
-          className="mt-4 block rounded-2xl border border-ink/15 bg-ink/5 px-5 py-4 font-bold"
-        >
-          Open the Danceyokey console →
-        </a>
-      </section>
-
-      <section className="mt-12">
-        <h2 className="text-sm font-bold uppercase tracking-widest opacity-70">
           Poster Studio
         </h2>
         <p className="mt-1 text-sm opacity-70">

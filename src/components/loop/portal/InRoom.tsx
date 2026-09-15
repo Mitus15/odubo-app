@@ -5,12 +5,10 @@ import CameraSheet from "@/components/loop/pose/CameraSheet";
 import WallGallery from "@/components/loop/wall/WallGallery";
 import ModuleSheet from "@/components/loop/shell/ModuleSheet";
 import RunOfShow from "@/components/loop/gathering/RunOfShow";
-import DanceyokeyPanel from "@/components/loop/danceyokey/DanceyokeyPanel";
-import { DANCEYOKEY_ENABLED } from "@/lib/loop/content";
 import BallotSheet from "@/components/loop/ballots/BallotSheet";
 import type { RunOfShowItem } from "@/lib/loop/content";
 
-type Surface = "camera" | "wall" | "danceyokey" | "program" | "tracklist" | "cover" | null;
+type Surface = "camera" | "wall" | "program" | "tracklist" | "cover" | null;
 
 /**
  * STATE 2 — the in-room home for pass-holders. A short stack of what's
@@ -122,24 +120,6 @@ export function InRoom({
             </span>
           </button>
 
-          {DANCEYOKEY_ENABLED && (
-            <button
-              type="button"
-              onClick={() => setSurface("danceyokey")}
-              className="loop-panel flex items-center justify-between rounded-3xl px-6 py-5 text-left transition-transform active:scale-[0.98]"
-            >
-              <span>
-                <span className="block text-xl font-extrabold">Danceyokey</span>
-                <span className="block text-sm opacity-75">
-                  Claim the floor — pick your song
-                </span>
-              </span>
-              <span aria-hidden className="text-2xl">
-                ✦
-              </span>
-            </button>
-          )}
-
           <button
             type="button"
             onClick={() => setSurface("program")}
@@ -169,12 +149,6 @@ export function InRoom({
       {surface === "cover" && (
         <ModuleSheet title="The Cover" onClose={() => setSurface(null)}>
           <BallotSheet kind="cover" />
-        </ModuleSheet>
-      )}
-
-      {DANCEYOKEY_ENABLED && surface === "danceyokey" && (
-        <ModuleSheet title="Danceyokey" onClose={() => setSurface(null)}>
-          <DanceyokeyPanel />
         </ModuleSheet>
       )}
 

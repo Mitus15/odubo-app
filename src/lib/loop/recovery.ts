@@ -167,7 +167,6 @@ async function mergeAttendeeInto(fromId: string, intoId: string): Promise<void> 
     [fromId, intoId],
   ).catch(() => undefined);
   await executeQuery(`DELETE FROM loop_cover_choices WHERE attendee_id = ?1`, [fromId]).catch(() => undefined);
-  await executeQuery(`UPDATE OR IGNORE danceyokey_signups SET attendee_id = ?2 WHERE attendee_id = ?1`, [fromId, intoId]).catch(() => undefined);
   await executeQuery(`UPDATE loop_gift_codes SET attendee_id = ?2 WHERE attendee_id = ?1`, [fromId, intoId]).catch(() => undefined);
   await executeQuery(`UPDATE loop_attendee_devices SET attendee_id = ?2 WHERE attendee_id = ?1`, [fromId, intoId]);
   await executeQuery(`DELETE FROM loop_attendees WHERE id = ?1`, [fromId]);
