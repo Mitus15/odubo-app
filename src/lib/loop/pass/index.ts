@@ -83,6 +83,7 @@ export function parseShopifyOrder(
     id?: number | string;
     email?: string | null;
     contact_email?: string | null;
+    customer?: { email?: string | null } | null;
     financial_status?: string | null;
     line_items?: Array<{ sku?: string | null; product_id?: number | string | null; quantity?: number }>;
   };
@@ -108,7 +109,9 @@ export function parseShopifyOrder(
 
   return {
     id: String(body.id),
-    email: body.email ?? body.contact_email ?? null,
+    // Every place Shopify puts it. All three come back null when the app has
+    // not been granted Protected Customer Data access; see the webhook.
+    email: body.email ?? body.contact_email ?? body.customer?.email ?? null,
     financialStatus: body.financial_status ?? null,
     passCount,
   };

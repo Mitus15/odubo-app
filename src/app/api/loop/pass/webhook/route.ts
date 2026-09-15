@@ -78,6 +78,26 @@ export async function POST(req: Request) {
     delivered = res.ok;
   }
 
+  // A paid order with no address is a pass nobody can reach: no email, no
+  // pre-order, no recovery at /loop/code. It happened on the first real sale
+  // (2026-09-15): Shopify strips email, phone and customer from webhooks AND
+  // the Admin API until the app is granted Protected Customer Data access.
+  // The code is minted anyway so the money is honoured; the admin sees it
+  // flagged and can attach the address from the order in Shopify.
+  if (!order.email) {
+    console.error(
+      `[loop:pass] order ${order.id} arrived with NO email (Shopify protected customer data not granted?). ` +
+        `${codes.length} pass(es) minted without an address — attach it in /loop/admin → Event codes.`,
+    );
+  }
+
   // Codes themselves stay out of the response — they travel by email only.
-  return NextResponse.json({ ok: true, passes: order.passCount, issued: codes.length, anyNew, delivered });
+  return NextResponse.json({
+    ok: true,
+    passes: order.passCount,
+    issued: codes.length,
+    anyNew,
+    delivered,
+    ...(order.email ? {} : { reason: "no-email" }),
+  });
 }

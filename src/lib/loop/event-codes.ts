@@ -132,6 +132,19 @@ export async function codesForEmail(
   return rows.map((r) => ({ code: r.code, redeemed: r.redeemed_by !== null }));
 }
 
+/**
+ * Put an address on a pass that was minted without one. Overwrites on purpose:
+ * the only reason to call it is that the address on file is missing or wrong,
+ * and the admin is looking at the order in Shopify while typing it.
+ */
+export async function attachEmail(eventId: string, code: string, email: string): Promise<boolean> {
+  const meta = await executeQuery(
+    `UPDATE event_codes SET email = ?3 WHERE event_id = ?1 AND code = ?2`,
+    [eventId, code.trim().toUpperCase(), email.trim().toLowerCase()],
+  );
+  return meta.changes > 0;
+}
+
 export async function codeForOrder(eventId: string, orderId: string): Promise<string | null> {
   const row = await queryOne<{ code: string }>(
     `SELECT code FROM event_codes WHERE event_id = ?1 AND order_id = ?2`,

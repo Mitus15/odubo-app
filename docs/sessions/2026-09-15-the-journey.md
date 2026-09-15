@@ -122,3 +122,36 @@ parser; `npm install jsqr` also refreshed node_modules and one of the two
 and an admission write. Both need the admin password on a phone. It is a
 two-minute test on the preview: open `/loop/code`, prove a pass, then open
 `/loop/admin/door` on a second phone and point it at the first.
+
+## The first real sale arrived with no buyer (same night)
+
+The owner bought a pass (#1001). The webhook minted the code, and then: no
+pass email, no pre-order row, and `/loop/code` could not have found it. The
+ledger row had `email: null`. Shopify's own Admin API, asked with the store's
+token, returned `email`, `contact_email`, `phone` and `customer.email` all
+null for a paid order. A checkout cannot complete without contact details, so
+the data exists; **the app is not allowed to see it**. That is Shopify's
+Protected Customer Data gate: until the custom app is granted access to
+customer email, every webhook and every Admin API read arrives with the buyer
+stripped out. Resend's log confirmed nothing was ever attempted.
+
+**Only the owner can fix the cause**, in Shopify → Settings → Apps and sales
+channels → Develop apps → the app → Configuration → Protected customer data
+access → request Email (name/phone/address as wanted). Custom apps are
+self-approved there.
+
+**Built so the night survives either way:**
+
+- `parseShopifyOrder` also reads `customer.email` (tested).
+- The webhook logs a loud error and answers `reason: "no-email"` instead of
+  minting silently into the void.
+- Admin → Event codes shows a red box listing every paid pass with no
+  address, with the Shopify path above and an **Attach & send pass** form per
+  code: types the address off the order in Shopify, writes it to the ledger,
+  writes the pre-order, and sends the pass email with the ticket QR. A search
+  that lands on a pass with an address gets **Resend**.
+- `attachEmail` in `event-codes.ts`; `POST /api/loop/admin/codes` gains
+  `action: "attach" | "resend"`.
+
+The owner's own pass is rescued by that button; nothing was written to the
+ledger by hand.

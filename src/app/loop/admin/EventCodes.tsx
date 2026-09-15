@@ -23,6 +23,9 @@ export function EventCodes() {
   // cannot use /loop/code either, because that keys on the same wrong address.
   // Matching on a fragment finds them from a near-miss.
   const [q, setQ] = useState("");
+  // Addresses being typed for passes that arrived without one, keyed by code.
+  const [attach, setAttach] = useState<Record<string, string>>({});
+  const [sending, setSending] = useState<string | null>(null);
 
   const flash = (msg: string) => {
     setToast(msg);
@@ -68,6 +71,51 @@ export function EventCodes() {
     }
   }
 
+  // A paid pass with no address: Shopify sent the order without the buyer's
+  // email (Protected Customer Data not granted to the app). The host reads it
+  // off the order in Shopify and types it here; the pass email, the ticket QR
+  // and the pre-order all happen on this tap.
+  async function attachAndSend(code: string) {
+    const email = (attach[code] ?? "").trim();
+    if (!email) return;
+    setSending(code);
+    setError(null);
+    try {
+      const res = await fetch("/api/loop/admin/codes", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ action: "attach", code, email }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string; delivered?: boolean };
+      if (!res.ok) throw new Error(data.error ?? `Failed (${res.status})`);
+      flash(data.delivered ? `Pass sent to ${email}` : `Attached to ${email}, but the email did not send`);
+      await load();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setSending(null);
+    }
+  }
+
+  async function resend(code: string) {
+    setSending(code);
+    setError(null);
+    try {
+      const res = await fetch("/api/loop/admin/codes", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ action: "resend", code }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string; delivered?: boolean; email?: string };
+      if (!res.ok) throw new Error(data.error ?? `Failed (${res.status})`);
+      flash(data.delivered ? `Pass sent again to ${data.email}` : "The email did not send");
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setSending(null);
+    }
+  }
+
   async function copyUnused() {
     const unused = codes.filter((c) => !c.redeemed).map((c) => c.code);
     try {
@@ -90,6 +138,8 @@ export function EventCodes() {
       )
     : codes;
   const visible = needle ? matched : showAll ? codes : codes.slice(0, 24);
+  // Real money, no address. These are the ones that hurt.
+  const needsAddress = codes.filter((c) => c.orderId && !c.orderId.startsWith("sim:") && !c.email);
 
   return (
     <div className="mt-4">
@@ -128,6 +178,55 @@ export function EventCodes() {
           </button>
         )}
       </div>
+
+      {needsAddress.length > 0 && (
+        <div className="mt-3 rounded-2xl border border-red-700/40 bg-red-700/5 px-4 py-3 text-sm">
+          <p className="font-bold text-red-800">
+            {needsAddress.length} paid {needsAddress.length === 1 ? "pass has" : "passes have"} no address.
+          </p>
+          <p className="mt-1 text-xs opacity-80">
+            Shopify is sending orders without the buyer&apos;s email, so nothing could be sent and they cannot
+            find their pass at /loop/code. Fix it for good in Shopify → Settings → Apps and sales channels →
+            Develop apps → this app → Configuration → <b>Protected customer data access</b> → request
+            <b> Email</b>. Until then, read the address off the order in Shopify and attach it here.
+          </p>
+          <div className="mt-3 grid gap-2">
+            {needsAddress.map((c) => (
+              <form
+                key={c.code}
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void attachAndSend(c.code);
+                }}
+                className="grid gap-1.5"
+              >
+                <div className="flex items-baseline justify-between gap-2 text-xs">
+                  <span className="font-mono font-bold">{c.code}</span>
+                  <span className="truncate opacity-60">{c.orderId}</span>
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="email"
+                    inputMode="email"
+                    autoCapitalize="none"
+                    value={attach[c.code] ?? ""}
+                    onChange={(e) => setAttach((m) => ({ ...m, [c.code]: e.target.value }))}
+                    placeholder="the email on the Shopify order"
+                    className="min-h-[44px] flex-1 rounded-full border border-ink/20 bg-transparent px-4 text-sm outline-none focus:border-ink"
+                  />
+                  <button
+                    type="submit"
+                    disabled={sending !== null || !(attach[c.code] ?? "").trim()}
+                    className="min-h-[44px] rounded-full bg-ink px-4 text-xs font-bold text-sand disabled:opacity-40"
+                  >
+                    {sending === c.code ? "Sending…" : "Attach & send pass"}
+                  </button>
+                </div>
+              </form>
+            ))}
+          </div>
+        </div>
+      )}
 
       <input
         value={q}
@@ -182,6 +281,24 @@ export function EventCodes() {
               </button>
             ))}
           </div>
+          {/* A search that lands on a pass with an address can send it again. */}
+          {needle && matched.length > 0 && matched.length <= 6 && (
+            <div className="mt-2 grid gap-1.5">
+              {matched
+                .filter((c) => c.email)
+                .map((c) => (
+                  <button
+                    key={`resend-${c.code}`}
+                    type="button"
+                    onClick={() => resend(c.code)}
+                    disabled={sending !== null}
+                    className="min-h-[40px] rounded-full border border-ink/25 px-4 text-xs font-bold disabled:opacity-40"
+                  >
+                    {sending === c.code ? "Sending…" : `Resend the pass for ${c.code} to ${c.email}`}
+                  </button>
+                ))}
+            </div>
+          )}
           {codes.length > visible.length && (
             <button
               type="button"
