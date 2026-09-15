@@ -1,6 +1,4 @@
 import { getCurrentEvent } from "@/lib/loop/hub";
-import { currentVoterId } from "@/lib/loop/identity/voter";
-import { leaderboard } from "@/lib/loop/anthem-candidates";
 import { countRedeemed } from "@/lib/loop/event-codes";
 import { getPassCapacity } from "@/lib/loop/pass";
 import { listNotes } from "@/lib/loop/notes";
@@ -17,12 +15,9 @@ export const metadata = { title: "Loop Soul — Promoter Studio" };
  */
 export default async function StudioPage() {
   const event = await getCurrentEvent();
-  const voterId = await currentVoterId();
-
-  const [capacity, codeStats, anthemRows, notes, publicBaseUrl] = await Promise.all([
+  const [capacity, codeStats, notes, publicBaseUrl] = await Promise.all([
     getPassCapacity(),
     countRedeemed(event.id),
-    leaderboard(event.id, voterId),
     listNotes(),
     getPublicBaseUrl(),
   ]);
@@ -50,7 +45,6 @@ export default async function StudioPage() {
         total: capacity.total ?? null,
         redeemed: codeStats.redeemed,
         codes: codeStats.total,
-        anthemEntries: anthemRows.length,
       }}
       notes={notes}
       publicBaseUrl={publicBaseUrl}

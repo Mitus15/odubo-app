@@ -1,4 +1,4 @@
-import { ANTHEM_ENABLED, type RunOfShowItem } from "@/lib/loop/content";
+import { type RunOfShowItem } from "@/lib/loop/content";
 
 /**
  * What someone WITHOUT a pass sees, under the code gate.
@@ -8,16 +8,14 @@ import { ANTHEM_ENABLED, type RunOfShowItem } from "@/lib/loop/content";
  * buys. So the night itself is shown in full — the programme, the camera — and
  * only the surfaces you have to be in the room to use stay locked.
  *
- * Nothing here is sensitive. The programme is what's on the poster, the anthem
- * longlist is already public-safe, and the count of who's coming is the point
+ * Nothing here is sensitive. The programme is what's on the poster, and the
+ * count of who's coming is the point
  * rather than a secret. What stays behind the gate is participation: voting,
  * signing up, shooting, and the Wall.
  */
 export function PortalPreview({
   runOfShow,
   capacity,
-  nominations,
-  anthemStage,
 }: {
   runOfShow: RunOfShowItem[];
   /** The whole CapacityInfo, not loose numbers. Taking `sold` and `capacity`
@@ -28,19 +26,7 @@ export function PortalPreview({
   capacity:
     | { unlimited: true; sold: number; total: null; remaining: null }
     | { unlimited: false; sold: number; total: number; remaining: number };
-  /** Songs nominated so far — evidence the room is already choosing. */
-  nominations: number;
-  anthemStage: "nominating" | "seeding" | "bracket" | "champion";
 }) {
-  const anthemLine =
-    anthemStage === "champion"
-      ? "The anthem has been chosen."
-      : anthemStage === "bracket"
-        ? "The final rounds are running now."
-        : nominations > 0
-          ? `${nominations} song${nominations === 1 ? "" : "s"} in so far.`
-          : "Nominations are open.";
-
   return (
     <section className="mt-14 w-full max-w-md text-left">
       <h2 className="text-center text-xs font-bold uppercase tracking-[0.3em] opacity-60">
@@ -84,14 +70,6 @@ export function PortalPreview({
             </ul>
           ) : null}
         </PreviewCard>
-
-        {ANTHEM_ENABLED && (
-          <PreviewCard
-            title="The anthem"
-            body="The room decides what we all dance to. Nominate a song, then vote it through the rounds until one is left standing."
-            foot={anthemLine}
-          />
-        )}
 
         <PreviewCard
           title="The camera"

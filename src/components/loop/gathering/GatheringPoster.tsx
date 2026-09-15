@@ -5,14 +5,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { AnimatePresence } from "framer-motion";
 import type { LoopEvent } from "@/lib/loop/hub";
-import type { AnthemState } from "@/lib/loop/anthem-server";
 import { priceLabel as formatPrice } from "@/lib/loop/priceLabel";
-import { ANTHEM_ENABLED, EVENT_CREDITS } from "@/lib/loop/content";
+import { EVENT_CREDITS } from "@/lib/loop/content";
 import CoverContest from "./CoverContest";
 import type { RunOfShowItem } from "@/lib/loop/content";
 import Logo from "@/components/loop/brand/Logo";
 import ModuleSheet from "@/components/loop/shell/ModuleSheet";
-import AnthemBracket from "@/components/loop/anthem/AnthemBracket";
 import RunOfShow from "@/components/loop/gathering/RunOfShow";
 import GetPassModal from "@/components/loop/gathering/GetPassModal";
 import TheSingle from "@/components/loop/gathering/TheSingle";
@@ -25,20 +23,9 @@ import PiecesRail from "@/components/loop/store/PiecesRail";
 type Capacity =
   | { unlimited: true; sold: number; total: null; remaining: null }
   | { unlimited: false; sold: number; total: number; remaining: number };
-type ModuleKey = "anthem" | "night" | "cover";
+type ModuleKey = "night" | "cover";
 
 const MODULES: { key: ModuleKey; label: string; title: string }[] = [
-  // Advertising a module that does nothing is worse than not showing it, so
-  // the anthem drops out entirely while it is parked (see ANTHEM_ENABLED).
-  ...(ANTHEM_ENABLED
-    ? [
-        {
-          key: "anthem" as const,
-          label: "Soul Anthem",
-          title: "Soul Loop Anthem",
-        },
-      ]
-    : []),
   // Label vs title on purpose: someone scanning the poster is looking for "the
   // programme", so the button says that; the sheet keeps the brand's own name
   // for the night. The Night has always rendered RUN_OF_SHOW — it was the
@@ -55,14 +42,14 @@ const MODULES: { key: ModuleKey; label: string; title: string }[] = [
  *   • silhouette hero + arced tagline         • Scott's Inn (bottom)
  *   • compact pass counter + Get Pass CTA     • the Pieces rail (the shelf)
  *   • modules that open/close
- * Everything else (Anthem, The Night) opens in a ModuleSheet over the poster.
+ * Everything else (The Night, the Cover Contest) opens in a ModuleSheet over
+ * the poster.
  * The poster fills one viewport on any phone tall enough to hold it; on short
  * ones it grows just past the fold rather than crush the figure.
  */
 export function GatheringPoster({
   event,
   capacity: initialCapacity,
-  anthem,
   runOfShow,
   checkoutUrl = null,
   price = null,
@@ -77,7 +64,6 @@ export function GatheringPoster({
 }: {
   event: LoopEvent;
   capacity: Capacity;
-  anthem: AnthemState;
   runOfShow: RunOfShowItem[];
   /** Admin-configured pass checkout link (loop_settings). */
   checkoutUrl?: string | null;
@@ -373,9 +359,6 @@ export function GatheringPoster({
             title={activeModule.title}
             onClose={() => setActive(null)}
           >
-            {ANTHEM_ENABLED && active === "anthem" && (
-              <AnthemBracket initial={anthem} />
-            )}
             {active === "night" && (
               <RunOfShow items={runOfShow} showHeader={false} />
             )}

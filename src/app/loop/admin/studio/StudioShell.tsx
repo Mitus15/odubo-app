@@ -86,7 +86,7 @@ export function StudioShell({
   publicBaseUrl,
 }: {
   facts: PlaybookFacts;
-  stats: { sold: number; total: number | null; redeemed: number; codes: number; anthemEntries: number };
+  stats: { sold: number; total: number | null; redeemed: number; codes: number };
   notes: LoopNote[];
   eventDetails: { title: string; theme: string; venue: string; dateLabel: string; note?: string };
   /** `loop_settings.public_base_url` — the origin printed QRs are built from. */
@@ -126,10 +126,6 @@ export function StudioShell({
         <span className="rounded-full border border-ink/15 bg-ink/5 px-3 py-1.5">
           <b className="tabular-nums">{stats.redeemed}</b>
           <span className="opacity-70"> / {stats.codes} codes redeemed</span>
-        </span>
-        <span className="rounded-full border border-ink/15 bg-ink/5 px-3 py-1.5">
-          <b className="tabular-nums">{stats.anthemEntries}</b>
-          <span className="opacity-70"> anthem entries</span>
         </span>
       </div>
 

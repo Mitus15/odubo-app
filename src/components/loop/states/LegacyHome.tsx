@@ -54,7 +54,7 @@ export async function LegacyHome() {
             </span>
           </div>
           <div className="text-sm opacity-70">
-            One issue per volume — the anthem, the iconic moments, the night that was.
+            One issue per volume: the iconic moments, the night that was.
           </div>
         </Link>
       </section>

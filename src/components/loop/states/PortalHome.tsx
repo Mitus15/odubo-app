@@ -1,6 +1,5 @@
 import type { LoopEvent } from "@/lib/loop/hub";
 import { currentVoterId } from "@/lib/loop/identity/voter";
-import { getAnthemState } from "@/lib/loop/anthem-server";
 import { hasRoomAccess } from "@/lib/loop/doors";
 import { getPassCapacity } from "@/lib/loop/pass";
 import { getPassSettings } from "@/lib/loop/pass/settings";
@@ -25,11 +24,10 @@ export async function PortalHome({ event }: { event: LoopEvent }) {
     // here. A bare code prompt tells them nothing about what they'd be buying,
     // so the night is shown in full underneath it — only participation is
     // gated, never the pitch.
-    const [pass, cap, runOfShow, anthem] = await Promise.all([
+    const [pass, cap, runOfShow] = await Promise.all([
       getPassSettings(),
       getPassCapacity(),
       getRunOfShow(event.id),
-      getAnthemState(event, voterId),
     ]);
     return (
       <main className="flex flex-col items-center px-6 pb-24 pt-10 text-center">
@@ -38,12 +36,7 @@ export async function PortalHome({ event }: { event: LoopEvent }) {
           checkoutUrl={pass.checkoutUrl}
           priceLabel={pass.price ? `$${Number(pass.price).toFixed(0)}` : null}
         />
-        <PortalPreview
-          runOfShow={runOfShow}
-          capacity={cap}
-          nominations={anthem.leaderboard.length}
-          anthemStage={anthem.stage}
-        />
+        <PortalPreview runOfShow={runOfShow} capacity={cap} />
       </main>
     );
   }

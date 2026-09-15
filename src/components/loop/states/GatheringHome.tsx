@@ -1,6 +1,5 @@
 import type { LoopEvent } from "@/lib/loop/hub";
 import { currentVoterId } from "@/lib/loop/identity/voter";
-import { getAnthemState } from "@/lib/loop/anthem-server";
 import { getPassCapacity } from "@/lib/loop/pass";
 import { getPassSettings } from "@/lib/loop/pass/settings";
 import { getRunOfShow } from "@/lib/loop/content-store";
@@ -15,7 +14,8 @@ import GatheringPoster from "@/components/loop/gathering/GatheringPoster";
 
 /**
  * STATE 1 — The Gathering. A single non-scrolling poster (real logo, silhouette
- * hero, Scott's Inn footer) with Anthem / The Night opening as modules. Data is
+ * hero, Scott's Inn footer) with The Night / Cover Contest opening as modules.
+ * Data is
  * read from the lib layer server-side, then handed to the client poster.
  * (The Lookbook component is built but not yet rendered anywhere — see
  * docs/TODO.md; intended for the Legacy vault.)
@@ -24,7 +24,6 @@ export async function GatheringHome({ event }: { event: LoopEvent }) {
   const voterId = await currentVoterId();
   const country = (await cookies()).get(COUNTRY_COOKIE)?.value;
   const [
-    anthem,
     capacity,
     runOfShow,
     passSettings,
@@ -33,7 +32,6 @@ export async function GatheringHome({ event }: { event: LoopEvent }) {
     cover,
     shelf,
   ] = await Promise.all([
-    getAnthemState(event, voterId),
     getPassCapacity(),
     getRunOfShow(event.id),
     getPassSettings(),
@@ -76,7 +74,6 @@ export async function GatheringHome({ event }: { event: LoopEvent }) {
     <GatheringPoster
       event={event}
       capacity={capacity}
-      anthem={anthem}
       runOfShow={runOfShow}
       checkoutUrl={passSettings.checkoutUrl}
       price={passSettings.price}
