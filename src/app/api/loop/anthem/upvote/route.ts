@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentEvent } from "@/lib/loop/hub";
-import { currentVoterId } from "@/lib/loop/anthem-server";
+import { currentVoterId } from "@/lib/loop/identity/voter";
 import { isNominationOpen } from "@/lib/loop/anthem-rounds";
 import { exists, toggleUpvote } from "@/lib/loop/anthem-candidates";
 

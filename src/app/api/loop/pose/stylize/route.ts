@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getStylizeProvider } from "@/lib/loop/pose/generative";
 import { getCurrentEvent } from "@/lib/loop/hub";
-import { currentVoterId } from "@/lib/loop/anthem-server";
+import { currentVoterId } from "@/lib/loop/identity/voter";
 import { hasRoomAccess } from "@/lib/loop/doors";
 import { ADMIN_COOKIE, verifyAdminSession } from "@/lib/loop/admin-auth";
 import { rateLimit } from "@/lib/rateLimit";

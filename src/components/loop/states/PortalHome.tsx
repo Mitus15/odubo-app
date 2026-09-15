@@ -1,5 +1,6 @@
 import type { LoopEvent } from "@/lib/loop/hub";
-import { currentVoterId, getAnthemState } from "@/lib/loop/anthem-server";
+import { currentVoterId } from "@/lib/loop/identity/voter";
+import { getAnthemState } from "@/lib/loop/anthem-server";
 import { hasRoomAccess } from "@/lib/loop/doors";
 import { getPassCapacity } from "@/lib/loop/pass";
 import { getPassSettings } from "@/lib/loop/pass/settings";

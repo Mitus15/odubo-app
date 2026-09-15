@@ -1,5 +1,5 @@
 import { getCurrentEvent } from "@/lib/loop/hub";
-import { currentVoterId } from "@/lib/loop/anthem-server";
+import { currentVoterId } from "@/lib/loop/identity/voter";
 import { leaderboard } from "@/lib/loop/anthem-candidates";
 import { countRedeemed } from "@/lib/loop/event-codes";
 import { getPassCapacity } from "@/lib/loop/pass";

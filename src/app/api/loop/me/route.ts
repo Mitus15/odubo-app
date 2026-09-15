@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { currentVoterId } from "@/lib/loop/anthem-server";
+import { currentVoterId } from "@/lib/loop/identity/voter";
 import { getCurrentEvent } from "@/lib/loop/hub";
 import { isHolder } from "@/lib/loop/event-codes";
 import {

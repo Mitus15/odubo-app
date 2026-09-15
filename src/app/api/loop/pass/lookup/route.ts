@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentEvent } from "@/lib/loop/hub";
-import { currentVoterId } from "@/lib/loop/anthem-server";
+import { currentVoterId } from "@/lib/loop/identity/voter";
 import { sendVerificationEmail } from "@/lib/loop/email";
 import { createVerification, hasPassesForEmail, normEmail } from "@/lib/loop/recovery";
 import { rateLimit } from "@/lib/rateLimit";

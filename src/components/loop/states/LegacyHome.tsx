@@ -5,7 +5,7 @@ import PortalGate from "@/components/loop/portal/PortalGate";
 import BallotSheet from "@/components/loop/ballots/BallotSheet";
 import WallGallery from "@/components/loop/wall/WallGallery";
 import { getCurrentEvent } from "@/lib/loop/hub";
-import { currentVoterId } from "@/lib/loop/anthem-server";
+import { currentVoterId } from "@/lib/loop/identity/voter";
 import { hasRoomAccess } from "@/lib/loop/doors";
 import { isJournalPublished } from "@/lib/loop/journal-server";
 // Used in the non-attendee branch below. It was missing, so /loop/legacy threw

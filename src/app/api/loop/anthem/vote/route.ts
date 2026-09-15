@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentEvent } from "@/lib/loop/hub";
-import { currentVoterId, resolveSeedTracks } from "@/lib/loop/anthem-server";
+import { currentVoterId } from "@/lib/loop/identity/voter";
+import { resolveSeedTracks } from "@/lib/loop/anthem-server";
 import { buildBracket } from "@/lib/loop/anthem";
 import { bracketSchedule } from "@/lib/loop/anthem-rounds";
 import { voteStore, type Side } from "@/lib/loop/votes";

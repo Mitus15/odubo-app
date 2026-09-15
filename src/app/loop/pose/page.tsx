@@ -1,5 +1,5 @@
 import { getCurrentEvent } from "@/lib/loop/hub";
-import { currentVoterId } from "@/lib/loop/anthem-server";
+import { currentVoterId } from "@/lib/loop/identity/voter";
 import { hasRoomAccess } from "@/lib/loop/doors";
 import PoseStudioShell from "@/components/loop/pose/PoseStudioShell";
 import HubNav from "@/components/loop/shell/HubNav";

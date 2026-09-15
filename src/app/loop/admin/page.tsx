@@ -1,5 +1,6 @@
 import { getCurrentEvent, getCurrentPhase, type EventPhase } from "@/lib/loop/hub";
-import { currentVoterId, resolveSeedTracks } from "@/lib/loop/anthem-server";
+import { currentVoterId } from "@/lib/loop/identity/voter";
+import { resolveSeedTracks } from "@/lib/loop/anthem-server";
 import { bracketSchedule, effectiveSchedule, getSeeds, stageNow } from "@/lib/loop/anthem-rounds";
 import { leaderboard } from "@/lib/loop/anthem-candidates";
 import { buildBracket, type Bracket } from "@/lib/loop/anthem";

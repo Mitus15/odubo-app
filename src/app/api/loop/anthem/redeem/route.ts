@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentEvent } from "@/lib/loop/hub";
-import { currentVoterId } from "@/lib/loop/anthem-server";
+import { currentVoterId } from "@/lib/loop/identity/voter";
 import { canSuggest, redeem } from "@/lib/loop/event-codes";
 import { ensureAttendee, recordAttendance } from "@/lib/loop/identity";
 

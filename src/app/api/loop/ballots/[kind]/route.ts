@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentEvent, getCurrentPhase } from "@/lib/loop/hub";
-import { currentVoterId } from "@/lib/loop/anthem-server";
+import { currentVoterId } from "@/lib/loop/identity/voter";
 import { getBallot, toggleBallotVote, type BallotKind } from "@/lib/loop/ballots";
 
 /**

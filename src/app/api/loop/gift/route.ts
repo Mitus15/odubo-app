@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { queryOne, executeQuery } from "@/lib/loop/db";
-import { currentVoterId } from "@/lib/loop/anthem-server";
+import { currentVoterId } from "@/lib/loop/identity/voter";
 import { claimIdentity, ensureAttendee } from "@/lib/loop/identity";
 
 /**

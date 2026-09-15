@@ -1,9 +1,7 @@
-import { cookies } from "next/headers";
 import type { LoopEvent } from "@/lib/loop/hub";
 import { findPreview } from "@/lib/loop/music/itunes";
 import { buildBracket, type Bracket, type Track } from "@/lib/loop/anthem";
 import { voteStore } from "@/lib/loop/votes";
-import { VOTER_COOKIE, verifyVoter } from "@/lib/loop/anthem-identity";
 import {
   bracketSchedule,
   effectiveSchedule,
@@ -21,13 +19,6 @@ import {
 } from "@/lib/loop/anthem-candidates";
 import { canSuggest as canSuggestFor, gateMode, type GateMode } from "@/lib/loop/event-codes";
 import { ANTHEM_TRACKS } from "@/lib/loop/content";
-
-/** Resolve the current request's verified anonymous voter id (set by middleware). */
-export async function currentVoterId(): Promise<string> {
-  const store = await cookies();
-  const id = await verifyVoter(store.get(VOTER_COOKIE)?.value);
-  return id ?? "anonymous";
-}
 
 /** The eight (or fewer) locked seeds resolved to playable tracks. */
 export async function resolveSeedTracks(eventId: string): Promise<Track[]> {

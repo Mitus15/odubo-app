@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentEvent } from "@/lib/loop/hub";
-import { currentVoterId, getAnthemState } from "@/lib/loop/anthem-server";
+import { currentVoterId } from "@/lib/loop/identity/voter";
+import { getAnthemState } from "@/lib/loop/anthem-server";
 
 /**
  * The single source of truth for the anthem client: the active event's stage,

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { currentVoterId } from "@/lib/loop/anthem-server";
+import { currentVoterId } from "@/lib/loop/identity/voter";
 import { getCurrentEvent } from "@/lib/loop/hub";
 import { queryOne, executeQuery } from "@/lib/loop/db";
 import { ensureAttendee } from "@/lib/loop/identity";
