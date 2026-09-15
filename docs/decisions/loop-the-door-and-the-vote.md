@@ -96,6 +96,15 @@ tracklist and cover votes live in **`candidate_upvotes`** under synthetic ids
 `danceyokey_signups` is likewise left in place. There is no down-migration
 convention here and an empty table costs nothing.
 
+## The Wall opens when the pass is bought (2026-09-15, later the same day)
+
+The gate above was written assuming the Wall was a during-the-night surface.
+The owner's stated journey puts the camera and the Wall BEFORE the night: buy
+a pass, shoot a cover, put it up. So `gallery/post` no longer requires
+`phase === "live"`; it requires `hasRoomAccess` in any phase but archived. The
+doors-open toggle still overrides on the night, exactly as before. See
+`docs/sessions/2026-09-15-the-journey.md`.
+
 ## Still open
 
 - **The capacity counter lies with the doors open.** `getPassCapacity` counts

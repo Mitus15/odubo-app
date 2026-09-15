@@ -88,7 +88,7 @@ export function GetPassModal({
     // else and cannot drift again.
     [
       "The record, first",
-      `Loop Soul is an album. ${dateLabel} is its first exhibition: all 14, front to back, one of them recorded live in the room with you on it.`,
+      `Loop Soul is an album. ${dateLabel} is its first exhibition: all 14, front to back, one of them recorded live in the room with you on it. A few tracks play now with your pass; the rest land after the night.`,
     ],
     // The cover is fluid (owner, 2026-09-08): his version is one version.
     [

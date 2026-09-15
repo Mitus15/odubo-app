@@ -8,6 +8,7 @@ import type { LoopEvent } from "@/lib/loop/hub";
 import { priceLabel as formatPrice } from "@/lib/loop/priceLabel";
 import { EVENT_CREDITS } from "@/lib/loop/content";
 import CoverContest from "./CoverContest";
+import WallGallery from "@/components/loop/wall/WallGallery";
 import type { RunOfShowItem } from "@/lib/loop/content";
 import Logo from "@/components/loop/brand/Logo";
 import ModuleSheet from "@/components/loop/shell/ModuleSheet";
@@ -23,7 +24,7 @@ import PiecesRail from "@/components/loop/store/PiecesRail";
 type Capacity =
   | { unlimited: true; sold: number; total: null; remaining: null }
   | { unlimited: false; sold: number; total: number; remaining: number };
-type ModuleKey = "night" | "cover";
+type ModuleKey = "night" | "cover" | "wall";
 
 const MODULES: { key: ModuleKey; label: string; title: string }[] = [
   // Label vs title on purpose: someone scanning the poster is looking for "the
@@ -32,6 +33,7 @@ const MODULES: { key: ModuleKey; label: string; title: string }[] = [
   // programme all along, just not findable by that word.
   { key: "night", label: "The Programme", title: "The Night" },
   { key: "cover", label: "Cover Contest", title: "The Cover Contest" },
+  // "The Wall" is added per visitor below: only a pass-holder can see it.
   // The floor moment this volume has is the Loop Soul Line, which lives in the
   // programme rather than needing a module of its own — nothing to sign up for.
 ];
@@ -61,6 +63,7 @@ export function GatheringPoster({
   coverCaption = "",
   journalPublished = false,
   pieces = [],
+  roomAccess = false,
 }: {
   event: LoopEvent;
   capacity: Capacity;
@@ -82,15 +85,14 @@ export function GatheringPoster({
   journalPublished?: boolean;
   /** Merch from the loop-soul collection, pass excluded. Empty hides the rail. */
   pieces?: ProductSummary[];
+  /** This device redeemed a pass (or the doors are open): it can post to the
+   *  Wall and see it, before the night as well as during it. */
+  roomAccess?: boolean;
 }) {
   const [active, setActive] = useState<ModuleKey | null>(null);
   const [passOpen, setPassOpen] = useState(false);
   const [singleOpen, setSingleOpen] = useState(false);
 
-  // The QR promises a song, so a first-time arrival gets the song — not a
-  // poster with the song filed behind a button. Anyone who has already been
-  // handed it lands on the poster instead, and a gifted link (?from=) always
-  // opens it, because that visitor was sent for exactly one reason.
   // Stable identities, so memo(TheSingle) actually holds: without these the
   // 15-second capacity poll below would hand the overlay three new functions
   // every tick and re-render the whole thing for nothing.
@@ -107,20 +109,16 @@ export function GatheringPoster({
   useEffect(() => {
     if (!single) return;
     try {
-      const q = new URLSearchParams(window.location.search);
-      const gifted = q.has("from");
-      // Somebody who arrived from a poster, a QR or a reel (?p=) came because
-      // of the NIGHT. Opening a four-screen song takeover in front of them
-      // buries the date and puts the first buy CTA two full scrolls down, so
-      // campaign traffic lands on the poster and the single stays one tap away
-      // as a module. A gifted link always opens it — that visitor was sent for
-      // exactly one reason — and so does a bare first visit, because then the
-      // QR's promise is the only thing we know about why they came.
-      const fromCampaign = q.has("p");
-      if (gifted || (!fromCampaign && !localStorage.getItem("loop.single.seen")))
-        setSingleOpen(true);
+      // A gifted link (?from=) opens the song: that visitor was sent for
+      // exactly one reason. Everyone else lands on the POSTER — the night
+      // first, the pass above the fold, the single one tap away as a module.
+      // That is the order the owner set (2026-09-15): know there is a
+      // listening event, get a ticket, then hear 1984. It matters because the
+      // Facebook event links here bare, with no campaign tag, and used to
+      // open a four-screen song in front of the date.
+      if (new URLSearchParams(window.location.search).has("from")) setSingleOpen(true);
     } catch {
-      setSingleOpen(true);
+      /* stay on the poster */
     }
   }, [single]);
 
@@ -143,7 +141,10 @@ export function GatheringPoster({
   // An unlimited room can never be full — the check has to run through the
   // discriminant, not through a number that would read 0 when uncapped.
   const soldOut = !capacity.unlimited && capacity.remaining <= 0;
-  const activeModule = MODULES.find((m) => m.key === active) ?? null;
+  const modules = roomAccess
+    ? [...MODULES, { key: "wall" as const, label: "The Wall", title: "The Wall" }]
+    : MODULES;
+  const activeModule = modules.find((m) => m.key === active) ?? null;
   // The exact formatter the print kit uses (loopSetting.priceLabel), so the
   // poster on the wall and the front door always say the same thing. An unset
   // or zero price reads "FREE ENTRY" — that is how the door opens.
@@ -283,6 +284,26 @@ export function GatheringPoster({
           </button>
         </div>
 
+        {/* The way back in, for anyone who already bought: their pass, and the
+            record it pre-ordered. Text and a middot, same as the row above —
+            the pass button stays the only drawn shape. Before this row the
+            poster gave a returning buyer no path to either. */}
+        <div className="-mt-1 flex items-center gap-3">
+          <Link
+            href="/loop/code"
+            className="loop-muted text-[11px] font-bold uppercase tracking-[0.2em] underline underline-offset-4"
+          >
+            {roomAccess ? "Your pass" : "Have a pass?"}
+          </Link>
+          <span className="loop-muted text-[11px]">·</span>
+          <Link
+            href="/loop/album"
+            className="loop-muted text-[11px] font-bold uppercase tracking-[0.2em] underline underline-offset-4"
+          >
+            The record
+          </Link>
+        </div>
+
         {/* The shelf, right after the pass: the sell comes before the
             navigation. Type and a hairline only — the pass button above stays
             the one drawn shape on the poster. */}
@@ -310,7 +331,7 @@ export function GatheringPoster({
               The Single · {single.title}
             </button>
           )}
-          {MODULES.map((m) => (
+          {modules.map((m) => (
             <button
               key={m.key}
               type="button"
@@ -362,7 +383,8 @@ export function GatheringPoster({
             {active === "night" && (
               <RunOfShow items={runOfShow} showHeader={false} />
             )}
-            {active === "cover" && <CoverContest />}
+            {active === "cover" && <CoverContest canPost={roomAccess} />}
+            {active === "wall" && <WallGallery canPost />}
           </ModuleSheet>
         )}
       </AnimatePresence>

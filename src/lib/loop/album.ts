@@ -3,7 +3,7 @@ import { queryDatabase as appQuery } from "@/lib/db";
 import { isHolder } from "@/lib/loop/event-codes";
 import { attendeeForVoter } from "@/lib/loop/identity";
 import { LOOP_SOUL_ALBUM_ID } from "@/lib/loop/ballots";
-import { setSetting } from "@/lib/loop/loopSetting";
+import { getSetting, setSetting } from "@/lib/loop/loopSetting";
 import type { Album, Track } from "@/types/music";
 
 /**
@@ -22,6 +22,11 @@ import type { Album, Track } from "@/types/music";
 
 export const ALBUM_ID = LOOP_SOUL_ALBUM_ID;
 const RELEASED_KEY = "album_released";
+const EARLY_KEY = "album_early_tracks";
+/** What an owed listener may hear BEFORE the record is out. Unset means the
+ *  opening three; an explicit empty setting means nothing until release. The
+ *  owner picks the tracks from /loop/admin, one tap each. */
+const EARLY_DEFAULT = [1, 2, 3];
 
 export function normEmail(raw: string): string {
   return raw.trim().toLowerCase();
@@ -125,10 +130,37 @@ export async function setAlbumReleased(released: boolean): Promise<void> {
   await setSetting(RELEASED_KEY, released ? "1" : "0");
 }
 
+// ── early tracks ─────────────────────────────────────────────────────────────
+
+/** "1,2,3" → [1, 2, 3]. Null (never set) falls back to the default; "" is none. */
+export function parseEarlyTracks(raw: string | null | undefined): number[] {
+  if (raw == null) return EARLY_DEFAULT;
+  const nums = raw
+    .split(",")
+    .map((s) => Number(s.trim()))
+    .filter((n) => Number.isInteger(n) && n > 0);
+  return Array.from(new Set(nums)).sort((a, b) => a - b);
+}
+
+export async function earlyTrackNumbers(): Promise<number[]> {
+  try {
+    return parseEarlyTracks(await getSetting(EARLY_KEY));
+  } catch {
+    return EARLY_DEFAULT;
+  }
+}
+
+export async function setEarlyTracks(nums: number[]): Promise<void> {
+  const clean = parseEarlyTracks(nums.join(","));
+  await setSetting(EARLY_KEY, clean.join(","));
+}
+
 // ── access ───────────────────────────────────────────────────────────────────
 
 export type AlbumAccess = {
   released: boolean;
+  /** Track numbers that play before release. Empty means wait. */
+  early: number[];
   /** This device proved an inbox that is owed the record. */
   entitled: boolean;
   /** This device redeemed a pass (a holder), which also counts. */
@@ -137,20 +169,24 @@ export type AlbumAccess = {
 };
 
 /** The one rule, pure so it is under test. */
-export function decideAlbumAccess(a: Pick<AlbumAccess, "released" | "entitled" | "holder">): "listen" | "wait" | "prove" | "buy" {
+export function decideAlbumAccess(
+  a: Pick<AlbumAccess, "released" | "entitled" | "holder"> & { early?: boolean },
+): "listen" | "early" | "wait" | "prove" {
   const owed = a.entitled || a.holder;
-  if (!a.released) return owed ? "wait" : "prove";
-  return owed ? "listen" : "prove";
+  if (!owed) return "prove";
+  if (a.released) return "listen";
+  return a.early ? "early" : "wait";
 }
 
 export async function albumAccessFor(eventId: string, voterId: string): Promise<AlbumAccess> {
-  const [released, attendee, holder] = await Promise.all([
+  const [released, early, attendee, holder] = await Promise.all([
     albumReleased(),
+    earlyTrackNumbers(),
     attendeeForVoter(voterId),
     voterId && voterId !== "anonymous" ? isHolder(eventId, voterId) : Promise.resolve(false),
   ]);
   const email = attendee?.email ?? null;
-  return { released, entitled: await isEntitled(email), holder, email };
+  return { released, early, entitled: await isEntitled(email), holder, email };
 }
 
 // ── the record itself ────────────────────────────────────────────────────────

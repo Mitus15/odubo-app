@@ -32,10 +32,11 @@ const CameraSheet = dynamic(
  * contest was a two-page journey off the front door, which is a lot to ask of
  * someone who has had the idea explained to them ten seconds ago and is holding
  * a piece of paper. Shooting has never needed a pass — only posting to the Wall
- * does — so the filter is open to anyone who scanned the code, and the gate can
- * go on later without moving the button.
+ * does — so the filter is open to anyone who scanned the code. `canPost` is
+ * whether THIS device holds a pass; with it the camera offers the Wall, before
+ * the night as well as during it.
  */
-export function CoverContest() {
+export function CoverContest({ canPost = false }: { canPost?: boolean }) {
   const [cameraOpen, setCameraOpen] = useState(false);
 
   return (
@@ -96,11 +97,12 @@ export function CoverContest() {
       </button>
 
       <p className="loop-muted text-center text-[11px] leading-relaxed">
-        Nothing to sign up for. It all happens on your phone — you decide
-        afterwards whether it goes on the Wall.
+        {canPost
+          ? "Nothing to sign up for. Shoot, then put it on the Wall when you're happy with it."
+          : "Shooting is free. Putting it on the Wall takes a pass."}
       </p>
 
-      {cameraOpen && <CameraSheet onClose={() => setCameraOpen(false)} />}
+      {cameraOpen && <CameraSheet canPost={canPost} onClose={() => setCameraOpen(false)} />}
     </section>
   );
 }

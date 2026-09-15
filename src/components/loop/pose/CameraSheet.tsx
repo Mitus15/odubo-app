@@ -65,7 +65,7 @@ export function CameraSheet({
   studio = false,
 }: {
   onClose: () => void;
-  /** Pass-holders in the live room can post to the Wall. */
+  /** Pass-holders can post to the Wall, before the night and during it. */
   canPost?: boolean;
   onPosted?: () => void;
   /** Shooting promo rather than attending: full vertical HD and longer clips.
@@ -480,6 +480,11 @@ export function CameraSheet({
                 Retake
               </button>
             </div>
+            {!canPost && (
+              <p className="text-center text-[11px] text-bone/70">
+                Kept on this phone. Putting it on the Wall takes a pass.
+              </p>
+            )}
           </div>
         ) : (
           <div className="flex items-center justify-between gap-6">

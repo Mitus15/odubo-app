@@ -33,21 +33,23 @@ const EXT_BY_MIME: Record<string, string> = {
 export async function POST(req: NextRequest) {
   const event = await getCurrentEvent();
 
-  // The Wall accepts posts while the room is live; the admin can post any time.
+  // The Wall takes shots from the moment a pass is bought until the night is
+  // over: the cover contest runs BEFORE the room opens, not only inside it.
+  // Legacy is the record of the night and is read-only. The admin can post any time.
   const store = await cookies();
   const isAdmin = await verifyAdminSession(store.get(ADMIN_COOKIE)?.value);
   const voterId = await currentVoterId();
 
   if (!isAdmin) {
-    if (event.phase !== "live") {
+    if (event.phase === "archived") {
       return NextResponse.json(
-        { error: "The Wall opens during the event." },
+        { error: "The Wall is closed. It's the Vault now." },
         { status: 403 },
       );
     }
     if (!(await hasRoomAccess(event.id, voterId))) {
       return NextResponse.json(
-        { error: "Enter your pass to post to the Wall." },
+        { error: "The Wall is for pass-holders. Enter your pass, or get one." },
         { status: 403 },
       );
     }

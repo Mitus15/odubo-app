@@ -1,6 +1,7 @@
 import type { LoopEvent } from "@/lib/loop/hub";
 import { currentVoterId } from "@/lib/loop/identity/voter";
 import { getPassCapacity } from "@/lib/loop/pass";
+import { hasRoomAccess } from "@/lib/loop/doors";
 import { getPassSettings } from "@/lib/loop/pass/settings";
 import { getRunOfShow } from "@/lib/loop/content-store";
 import { isJournalPublished } from "@/lib/loop/journal-server";
@@ -25,6 +26,7 @@ export async function GatheringHome({ event }: { event: LoopEvent }) {
   const country = (await cookies()).get(COUNTRY_COOKIE)?.value;
   const [
     capacity,
+    roomAccess,
     runOfShow,
     passSettings,
     journalPublished,
@@ -33,6 +35,8 @@ export async function GatheringHome({ event }: { event: LoopEvent }) {
     shelf,
   ] = await Promise.all([
     getPassCapacity(),
+    // Redeemed a pass, or the doors are open: may post to the Wall and see it.
+    hasRoomAccess(event.id, voterId),
     getRunOfShow(event.id),
     getPassSettings(),
     isJournalPublished(event.id),
@@ -85,6 +89,7 @@ export async function GatheringHome({ event }: { event: LoopEvent }) {
       coverUrl={cover.url}
       coverCaption={coverCaption(cover)}
       pieces={pieces}
+      roomAccess={roomAccess}
     />
   );
 }
