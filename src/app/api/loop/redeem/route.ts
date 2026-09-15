@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentEvent } from "@/lib/loop/hub";
 import { currentVoterId } from "@/lib/loop/identity/voter";
-import { canSuggest, redeem } from "@/lib/loop/event-codes";
+import { redeem } from "@/lib/loop/event-codes";
 import { ensureAttendee, recordAttendance } from "@/lib/loop/identity";
 
 /**
@@ -37,5 +37,5 @@ export async function POST(req: Request) {
     console.error("[loop:identity] attendance not recorded:", e);
   }
 
-  return NextResponse.json({ ok: true, canSuggest: await canSuggest(event.id, voterId) });
+  return NextResponse.json({ ok: true });
 }

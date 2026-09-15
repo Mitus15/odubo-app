@@ -1,80 +1,10 @@
 /**
- * Is the Soul Loop Anthem running?
- *
- * Parked for Volume 1 (2026-08-24, owner's call): a four-round tournament was
- * work the campaign did not need, and picking a cover song competed with the
- * album for meaning. The machinery is deliberately left intact — it comes back
- * after the event pointed at a better question, VOTING ON THE ALBUM'S
- * TRACKLIST, which makes the room shape the record instead of choosing
- * something outside it.
- *
- * Flip this to true to bring the module, its poster family and its pass
- * promise back. Nothing else has to change.
- */
-export const ANTHEM_ENABLED = false;
-
-/**
  * Seed content for State 1 — The Gathering.
  *
  * This is the content the marketing team will eventually edit from /admin
  * (persisted in D1). For now it lives here as typed seed data so the promo
  * experience is real and complete without a database.
  */
-
-export type AnthemTrack = {
-  id: string;
-  title: string;
-  artist: string;
-  /** Search term used to resolve a 30s preview + artwork from iTunes. */
-  query: string;
-};
-
-/** Eight tracks → Soul Loop Anthem bracket (quarters → semis → final). */
-export const ANTHEM_TRACKS: AnthemTrack[] = [
-  {
-    id: "billie-jean",
-    title: "Billie Jean",
-    artist: "Michael Jackson",
-    query: "Billie Jean Michael Jackson",
-  },
-  {
-    id: "flashlight",
-    title: "Flashlight",
-    artist: "Parliament",
-    query: "Flashlight Parliament",
-  },
-  {
-    id: "september",
-    title: "September",
-    artist: "Earth, Wind & Fire",
-    query: "September Earth Wind Fire",
-  },
-  {
-    id: "aint-nobody",
-    title: "Ain't Nobody",
-    artist: "Rufus & Chaka Khan",
-    query: "Ain't Nobody Chaka Khan",
-  },
-  { id: "le-freak", title: "Le Freak", artist: "Chic", query: "Le Freak Chic" },
-  {
-    id: "got-to-be-real",
-    title: "Got to Be Real",
-    artist: "Cheryl Lynn",
-    query: "Got to Be Real Cheryl Lynn",
-  },
-  {
-    id: "super-freak",
-    title: "Super Freak",
-    artist: "Rick James",
-    query: "Super Freak Rick James",
-  },
-  {
-    id: "give-it-to-me",
-    title: "Give It to Me Baby",
-    artist: "Rick James",
-    query: "Give It To Me Baby Rick James",
-  },
-];
 
 /**
  * The Run of Show — ONE timeline that is both the program (timed segments) and
@@ -89,7 +19,7 @@ export type RunOfShowItem = {
   detail: string;
   /** Performer at this slot, if any (folds the old lineup into the timeline). */
   performer?: string;
-  /** Short performer tag, e.g. "resident DJ", "filmed set", "the anthem". */
+  /** Short performer tag, e.g. "resident DJ", "filmed set", "the band". */
   role?: string;
   /** Bare Instagram handle → links to instagram.com/<handle>. */
   instagram?: string;

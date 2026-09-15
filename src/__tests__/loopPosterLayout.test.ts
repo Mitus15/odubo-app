@@ -19,8 +19,7 @@ import {
   type TournamentArt,
   type TournamentBand,
 } from "@/lib/loop/poster/layout";
-import { closesLine, tournamentSpec } from "@/lib/loop/poster/tournament";
-import type { AnthemState } from "@/lib/loop/anthem-server";
+import { artUrl, closesLine } from "@/lib/loop/poster/copy";
 import { measure, CAP_HEIGHT } from "@/lib/loop/brand";
 
 /**
@@ -542,104 +541,7 @@ describe("layoutTournament", () => {
   });
 });
 
-describe("tournamentSpec", () => {
-  const NOW = 1_756_500_000_000;
-  const track = (i: number, artwork: string | null) => ({
-    id: `t${i}`,
-    title: `Track ${i}`,
-    artist: `Artist ${i}`,
-    previewUrl: null,
-    artworkUrl: artwork,
-  });
-  const baseState = {
-    eventId: "ev1",
-    serverNow: NOW,
-    schedule: { nominations: NOW + 3 * 86_400_000, qf: NOW + 5 * 86_400_000, sf: NOW + 6 * 86_400_000, final: NOW + 7 * 86_400_000 },
-    gate: "ticket",
-    canSuggest: false,
-    leaderboard: [],
-    myUpvotes: 0,
-    upvoteLimit: 3,
-    seeds: null,
-    bracket: null,
-    tallies: {},
-    myBallots: {},
-  } as unknown as AnthemState;
-
-  it("maps nominating with an empty-string artwork to a tile-safe spec", () => {
-    const state = {
-      ...baseState,
-      stage: "nominating",
-      leaderboard: [
-        { candidate: { ...track(1, ""), suggestedBy: "v", createdAt: NOW, hidden: false }, votes: 4, mine: false },
-        { candidate: { ...track(2, "https://a.mzstatic.com/image/thumb/x/600x600bb.jpg"), suggestedBy: "v", createdAt: NOW, hidden: false }, votes: 1, mine: false },
-      ],
-    } as unknown as AnthemState;
-    const s = tournamentSpec(state, { size: "story", qrUrl: "https://x.co", now: NOW });
-    expect(s.headline).toBe("2 SONGS NOMINATED");
-    if (s.band.kind !== "grid") throw new Error("expected grid band");
-    expect(s.band.art[0].src).toBe(""); // "" stays "" — truthiness, not !== null
-    expect(s.cta).toBe("SCAN TO UPVOTE"); // ticket gate changes the SUGGEST cta only
-  });
-
-  it("keeps the vote CTA identical in both gate modes", () => {
-    const mk = (gate: string) =>
-      tournamentSpec(
-        {
-          ...baseState,
-          gate,
-          stage: "bracket",
-          bracket: {
-            rounds: [
-              {
-                round: 0,
-                name: "Quarterfinals",
-                closesAt: NOW + 86_400_000,
-                closed: false,
-                matchups: [
-                  { id: "m1", a: track(1, null), b: track(2, null), votesA: 0, votesB: 0, winner: null, decided: false, votable: true },
-                ],
-              },
-            ],
-            champion: null,
-            activeRound: 0,
-            activeRoundClosesAt: NOW + 86_400_000,
-          },
-        } as unknown as AnthemState,
-        { size: "feed", qrUrl: "https://x.co", now: NOW },
-      );
-    expect(mk("open").cta).toBe("SCAN TO VOTE");
-    expect(mk("ticket").cta).toBe("SCAN TO VOTE");
-  });
-
-  it("gives 0–0 matchups a null pct (the neutral bar)", () => {
-    const s = tournamentSpec(
-      {
-        ...baseState,
-        stage: "bracket",
-        bracket: {
-          rounds: [
-            {
-              round: 0,
-              name: "The Final",
-              closesAt: NOW + 3_600_000,
-              closed: false,
-              matchups: [
-                { id: "f", a: track(1, null), b: track(2, null), votesA: 0, votesB: 0, winner: null, decided: false, votable: true },
-              ],
-            },
-          ],
-          champion: null,
-          activeRound: 0,
-          activeRoundClosesAt: NOW + 3_600_000,
-        },
-      } as unknown as AnthemState,
-      { size: "story", qrUrl: "https://x.co", now: NOW },
-    );
-    if (s.band.kind !== "pairs") throw new Error("expected pairs band");
-    expect(s.band.pairs[0].pctA).toBeNull();
-  });
-
+describe("poster copy helpers", () => {
   it("prints absolute dates and posts relative ones", () => {
     const closes = Date.UTC(2026, 8, 5, 12, 0, 0); // Sept 5
     const printLine = closesLine(closes, "print", closes - 2 * 86_400_000);
@@ -650,18 +552,16 @@ describe("tournamentSpec", () => {
 
   it("upsizes artwork for print only, through the one indirection", () => {
     const url = "https://is1-ssl.mzstatic.com/image/thumb/x/600x600bb.jpg";
-    const state = {
-      ...baseState,
-      stage: "champion",
-      bracket: { rounds: [], champion: track(1, url), activeRound: null, activeRoundClosesAt: null },
-    } as unknown as AnthemState;
-    const printSpec = tournamentSpec(state, { size: "print", qrUrl: "https://x.co", now: NOW });
-    const feedSpec = tournamentSpec(state, { size: "feed", qrUrl: "https://x.co", now: NOW });
-    if (printSpec.band.kind !== "hero" || feedSpec.band.kind !== "hero") throw new Error("expected hero");
-    expect(printSpec.band.art.src).toContain("/1500x1500bb.");
-    expect(feedSpec.band.art.src).toContain("/600x600bb.");
+    expect(artUrl(url, "print")).toContain("/1500x1500bb.");
+    expect(artUrl(url, "feed")).toContain("/600x600bb.");
+  });
+
+  it("returns an empty string rather than a broken src for missing artwork", () => {
+    expect(artUrl(null, "print")).toBe("");
+    expect(artUrl("", "feed")).toBe("");
   });
 });
+
 
 describe("withBleed", () => {
   it("expands by margin+bleed on each side and keeps crop marks in the margin", () => {

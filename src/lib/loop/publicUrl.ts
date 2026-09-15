@@ -17,7 +17,7 @@ import { getSetting, setSetting } from "./loopSetting";
 export const PUBLIC_BASE_URL_KEY = "public_base_url";
 
 /** Every piece the studio and the kit can render. */
-export type DestinationPiece = "event" | "tournament" | "ticket" | "pass" | "flyer";
+export type DestinationPiece = "event" | "ticket" | "pass" | "flyer";
 
 /**
  * Default path per piece. `null` means the piece carries no QR at all — the
@@ -28,7 +28,6 @@ export type DestinationPiece = "event" | "tournament" | "ticket" | "pass" | "fly
  */
 export const PIECE_PATHS: Record<DestinationPiece, string | null> = {
   event: "/loop",
-  tournament: "/loop",
   ticket: "/loop",
   pass: null,
   flyer: "/loop",

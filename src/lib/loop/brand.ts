@@ -26,9 +26,11 @@ export const SAND_BRIGHT = "#f0d3ad";
 export const SLOGAN = "Come Dance";
 
 /**
- * The Soul Loop Anthem's phrase — the question the tournament answers. Never
- * "cleaned up" to "What are you dancing to?", never given a question mark, and
- * never promoted back to slogan. Arc it; never arc the slogan.
+ * The arc line. Named for the anthem tournament it was written for; that is
+ * gone, this is not — it is a brand line, on merch and as the poster arc's
+ * default. Never "cleaned up" to "What are you dancing to?", never given a
+ * question mark, and never promoted back to slogan. Arc it; never arc the
+ * slogan.
  */
 export const ANTHEM_PHRASE = "What we dancin' to";
 

@@ -16,35 +16,6 @@ import { chunkForParams, executeQuery, queryDatabase, queryOne } from "@/lib/loo
  * a leaked code lets a non-buyer suggest.
  */
 
-export type GateMode = "open" | "ticket";
-
-function defaultGate(): GateMode {
-  return process.env.ANTHEM_SUGGEST_GATE === "ticket" ? "ticket" : "open";
-}
-
-export async function gateMode(eventId: string): Promise<GateMode> {
-  const row = await queryOne<{ mode: GateMode }>(
-    `SELECT mode FROM event_gate WHERE event_id = ?1`,
-    [eventId],
-  );
-  return row?.mode ?? defaultGate();
-}
-
-export async function setGate(eventId: string, mode: GateMode): Promise<void> {
-  await executeQuery(
-    `INSERT INTO event_gate (event_id, mode) VALUES (?1, ?2)
-     ON CONFLICT (event_id) DO UPDATE SET mode = excluded.mode`,
-    [eventId, mode],
-  );
-}
-
-/** Wipe an event's codes, holders, and gate override (simulator "reset"). */
-export async function reset(eventId: string): Promise<void> {
-  await executeQuery(`DELETE FROM event_codes WHERE event_id = ?1`, [eventId]);
-  await executeQuery(`DELETE FROM event_holders WHERE event_id = ?1`, [eventId]);
-  await executeQuery(`DELETE FROM event_gate WHERE event_id = ?1`, [eventId]);
-}
-
 const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no ambiguous chars (no 0/O/1/I)
 
 function randomCode(taken: Set<string>): string {
@@ -200,20 +171,6 @@ export async function isHolder(eventId: string, voterId: string): Promise<boolea
     [eventId, voterId],
   );
   return (row?.n ?? 0) > 0;
-}
-
-/** Whether this voter may suggest: anyone in `open` mode, holders only in `ticket`. */
-export async function canSuggest(eventId: string, voterId: string): Promise<boolean> {
-  // Both facts in one round-trip — this is on the hot path for every page load
-  // that renders the suggest box.
-  const row = await queryOne<{ mode: GateMode | null; holder: number }>(
-    `SELECT (SELECT mode FROM event_gate WHERE event_id = ?1) AS mode,
-            (SELECT COUNT(*) FROM event_holders
-              WHERE event_id = ?1 AND voter_id = ?2) AS holder`,
-    [eventId, voterId],
-  );
-  const mode = row?.mode ?? defaultGate();
-  return mode === "open" || (row?.holder ?? 0) > 0;
 }
 
 export async function countRedeemed(eventId: string): Promise<{ total: number; redeemed: number }> {

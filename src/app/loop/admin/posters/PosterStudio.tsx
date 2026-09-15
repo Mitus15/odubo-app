@@ -7,7 +7,6 @@ import {
   composePrintWithBleed,
   composeTicket,
   composePassCard,
-  composeTournament,
   POSTER_SIZES,
   TICKET_SIZE,
   PASS_CARD_SIZE,
@@ -15,10 +14,8 @@ import {
   type PosterSize,
   type PosterSpec,
 } from "@/lib/loop/poster/compose";
-import { tournamentSpec } from "@/lib/loop/poster/tournament";
 import { SLOGAN, ANTHEM_PHRASE } from "@/lib/loop/brand";
 import { buildDestination, destinationFor, PIECE_PATHS } from "@/lib/loop/publicUrl";
-import type { AnthemState } from "@/lib/loop/anthem-server";
 import type { WallPhotoDto } from "@/lib/loop/wall/client";
 
 const BRAND_FIGURES = [
@@ -38,12 +35,11 @@ const BRAND_FIGURES = [
 const DEFAULT_QR_PATH = "/loop";
 
 type SourceTab = "figures" | "upload" | "wall";
-type Piece = "event" | "tournament" | "ticket" | "pass";
+type Piece = "event" | "ticket" | "pass";
 type SloganMode = "slogan" | "anthem" | "custom";
 
 const PIECES: [Piece, string][] = [
   ["event", "Event"],
-  ["tournament", "Tournament"],
   ["ticket", "Ticket"],
   ["pass", "Pass card"],
 ];
@@ -80,8 +76,8 @@ function humanError(e: unknown): string {
 
 /**
  * Poster Studio — every marketing piece from one workbench: the event poster
- * (figures, your art, or a Wall shot), the tournament poster (drawn live from
- * the anthem), the door ticket, and the pass card. One layout engine renders
+ * (figures, your art, or a Wall shot), the door ticket, and the pass card.
+ * One layout engine renders
  * all of them, so what previews here is what the print kit produces.
  */
 export function PosterStudio({
@@ -121,8 +117,6 @@ export function PosterStudio({
   const [size, setSize] = useState<PosterSize>("print");
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [anthem, setAnthem] = useState<AnthemState | null>(null);
-  const [anthemError, setAnthemError] = useState<string | null>(null);
 
   /** The session's baseline — edits are marked against this, never saved. */
   const initialDetails = useMemo<Details>(
@@ -174,21 +168,6 @@ export function PosterStudio({
     })();
   }, [tab, wallPhotos.length]);
 
-  // The tournament piece draws the LIVE anthem — fetched once per visit.
-  useEffect(() => {
-    if (piece !== "tournament" || anthem) return;
-    void (async () => {
-      try {
-        setAnthemError(null);
-        const res = await fetch("/api/loop/anthem", { cache: "no-store" });
-        if (!res.ok) throw new Error(`anthem state unavailable (${res.status})`);
-        setAnthem((await res.json()) as AnthemState);
-      } catch (e) {
-        setAnthemError(humanError(e));
-      }
-    })();
-  }, [piece, anthem]);
-
   const tagline =
     sloganMode === "slogan" ? SLOGAN : sloganMode === "anthem" ? ANTHEM_PHRASE : customSlogan;
 
@@ -211,19 +190,13 @@ export function PosterStudio({
       switch (piece) {
         case "event":
           return composePoster(buildSpec(forSize));
-        case "tournament": {
-          if (!anthem) return null; // still loading — keep the last preview
-          return composeTournament(
-            tournamentSpec(anthem, { size: forSize, qrUrl: qrUrl ?? "" }),
-          );
-        }
         case "ticket":
           return composeTicket(buildSpec(forSize));
         case "pass":
           return composePassCard(buildSpec(forSize));
       }
     },
-    [piece, buildSpec, anthem, qrUrl],
+    [piece, buildSpec],
   );
 
   // Live preview — debounced; a failed compose KEEPS the last good bitmap on
@@ -293,8 +266,8 @@ export function PosterStudio({
       : piece === "pass"
         ? "Pass card · square (store + socials)"
         : POSTER_SIZES[size].label;
-  const hasSizes = piece === "event" || piece === "tournament";
-  const showFigure = piece !== "tournament";
+  const hasSizes = piece === "event";
+  const showFigure = true;
   const edited = DETAIL_FIELDS.filter(([k]) => details[k] !== initialDetails[k]);
 
   return (
@@ -314,13 +287,6 @@ export function PosterStudio({
           </button>
         ))}
       </div>
-
-      {piece === "tournament" && (
-        <p className="mt-2 px-1 text-xs opacity-70">
-          Drawn from the live anthem — {anthem ? `stage: ${anthem.stage}` : anthemError ?? "loading the room…"}.
-          The poster follows the tournament; there is nothing to configure but the size.
-        </p>
-      )}
 
       {/* Figure source */}
       {showFigure && (
@@ -500,49 +466,47 @@ export function PosterStudio({
       )}
 
       {/* Session-only detail overrides, tucked away until needed */}
-      {piece !== "tournament" && (
-        <details className="mt-2 rounded-2xl border border-ink/15">
-          <summary className="cursor-pointer px-4 py-3 text-sm font-bold">
-            More controls — event lines on this piece
-            {edited.length > 0 && (
-              <span className="ml-2 rounded-full bg-ink px-2 py-0.5 text-[10px] font-bold text-sand">
-                {edited.length} edited
-              </span>
-            )}
-          </summary>
-          <div className="grid gap-2 px-4 pb-4">
-            <p className="text-xs opacity-60">
-              These start from the live event and only change this session&apos;s posters —
-              nothing here writes back to the event.
-            </p>
-            {DETAIL_FIELDS.map(([key, label]) => (
-              <label key={key} className="grid grid-cols-[72px_1fr_auto] items-center gap-2 text-xs">
-                <span className="font-bold opacity-70">{label}</span>
-                <input
-                  type="text"
-                  value={details[key]}
-                  onChange={(e) => setDetails((d) => ({ ...d, [key]: e.target.value }))}
-                  className={`rounded-xl border bg-transparent px-3 py-2 outline-none focus:border-ink ${
-                    details[key] !== initialDetails[key] ? "border-ink" : "border-ink/20"
-                  }`}
-                />
-                {details[key] !== initialDetails[key] ? (
-                  <button
-                    type="button"
-                    onClick={() => setDetails((d) => ({ ...d, [key]: initialDetails[key] }))}
-                    className="rounded-full border border-ink/25 px-2 py-1 text-[10px] font-bold"
-                    title="Back to the live event's value"
-                  >
-                    reset
-                  </button>
-                ) : (
-                  <span className="w-10" />
-                )}
-              </label>
-            ))}
-          </div>
-        </details>
-      )}
+      <details className="mt-2 rounded-2xl border border-ink/15">
+        <summary className="cursor-pointer px-4 py-3 text-sm font-bold">
+          More controls — event lines on this piece
+          {edited.length > 0 && (
+            <span className="ml-2 rounded-full bg-ink px-2 py-0.5 text-[10px] font-bold text-sand">
+              {edited.length} edited
+            </span>
+          )}
+        </summary>
+        <div className="grid gap-2 px-4 pb-4">
+          <p className="text-xs opacity-60">
+            These start from the live event and only change this session&apos;s posters —
+            nothing here writes back to the event.
+          </p>
+          {DETAIL_FIELDS.map(([key, label]) => (
+            <label key={key} className="grid grid-cols-[72px_1fr_auto] items-center gap-2 text-xs">
+              <span className="font-bold opacity-70">{label}</span>
+              <input
+                type="text"
+                value={details[key]}
+                onChange={(e) => setDetails((d) => ({ ...d, [key]: e.target.value }))}
+                className={`rounded-xl border bg-transparent px-3 py-2 outline-none focus:border-ink ${
+                  details[key] !== initialDetails[key] ? "border-ink" : "border-ink/20"
+                }`}
+              />
+              {details[key] !== initialDetails[key] ? (
+                <button
+                  type="button"
+                  onClick={() => setDetails((d) => ({ ...d, [key]: initialDetails[key] }))}
+                  className="rounded-full border border-ink/25 px-2 py-1 text-[10px] font-bold"
+                  title="Back to the live event's value"
+                >
+                  reset
+                </button>
+              ) : (
+                <span className="w-10" />
+              )}
+            </label>
+          ))}
+        </div>
+      </details>
 
       {/* Size + preview */}
       {hasSizes && (
@@ -578,7 +542,7 @@ export function PosterStudio({
       )}
 
       {/* Exports, per piece */}
-      {(piece === "event" || piece === "tournament") && (
+      {piece === "event" && (
         <>
           <div className="mt-3 grid grid-cols-3 gap-2">
             {(Object.keys(POSTER_SIZES) as PosterSize[]).map((s) => (
@@ -586,9 +550,9 @@ export function PosterStudio({
                 key={s}
                 type="button"
                 onClick={() =>
-                  runExport(s, () => compose(s), `loop-soul-${piece === "tournament" ? "anthem" : "poster"}-${s}`)
+                  runExport(s, () => compose(s), `loop-soul-poster-${s}`)
                 }
-                disabled={busy !== null || error !== null || (piece === "tournament" && !anthem)}
+                disabled={busy !== null || error !== null}
                 className="rounded-full bg-ink py-3 text-xs font-bold capitalize text-sand transition-transform active:scale-95 disabled:opacity-50"
               >
                 {busy === s ? "Exporting…" : `Export ${s}`}

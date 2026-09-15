@@ -1,19 +1,11 @@
 import { getCurrentEvent, getCurrentPhase, type EventPhase } from "@/lib/loop/hub";
-import { currentVoterId } from "@/lib/loop/identity/voter";
-import { resolveSeedTracks } from "@/lib/loop/anthem-server";
-import { bracketSchedule, effectiveSchedule, getSeeds, stageNow } from "@/lib/loop/anthem-rounds";
-import { leaderboard } from "@/lib/loop/anthem-candidates";
-import { buildBracket, type Bracket } from "@/lib/loop/anthem";
-import { voteStore } from "@/lib/loop/votes";
-import { countRedeemed, gateMode } from "@/lib/loop/event-codes";
+import { countRedeemed } from "@/lib/loop/event-codes";
 import { getRunOfShow } from "@/lib/loop/content-store";
 import { getJournalIssue, getJournalMoments } from "@/lib/loop/journal-store";
 import { mockOutbox } from "@/lib/loop/email";
 import PhaseSwitcher from "./PhaseSwitcher";
 import AdminLogout from "./AdminLogout";
 import EventDetails from "./EventDetails";
-import AnthemControls from "./AnthemControls";
-import AnthemSim from "./AnthemSim";
 import ContentEditor from "./ContentEditor";
 import DoorsToggle from "./DoorsToggle";
 import EventCodes from "./EventCodes";
@@ -27,52 +19,22 @@ import AlbumRelease from "./AlbumRelease";
  * /admin — control surface for the (non-technical) marketing team. Gated by the
  * `ls_admin` session cookie in middleware (see admin-auth.ts); unauthenticated
  * hits are redirected to /admin/login. It flips the event phase, edits event
- * details + the Run of Show, and manages the anthem; it will grow into the full
+ * details + the Run of Show; it will grow into the full
  * dashboard (capacity, codes, moderation, curation) backed by D1.
  */
 export default async function AdminPage() {
   const phase: EventPhase = await getCurrentPhase();
   const event = await getCurrentEvent();
-  const voterId = await currentVoterId();
-  const now = Date.now();
   const outbox = mockOutbox();
   const emailMode = process.env.EMAIL_MODE === "live" ? "live" : "mock";
 
   // Every read the dashboard needs, issued together rather than in series.
-  const [stage, schedule, rows, lockedSeedIds, gate, codeStats, runOfShow, journalIssue, journalMoments] = await Promise.all([
-    stageNow(event, now),
-    effectiveSchedule(event),
-    leaderboard(event.id, voterId),
-    getSeeds(event.id),
-    gateMode(event.id),
+  const [codeStats, runOfShow, journalIssue, journalMoments] = await Promise.all([
     countRedeemed(event.id),
     getRunOfShow(event.id),
     getJournalIssue(event.id),
     getJournalMoments(event.id),
   ]);
-
-  // Build the live bracket so the team can watch standings + the champion from
-  // /admin (it's the same pure derivation the public page uses).
-  let bracket: Bracket | null = null;
-  if (stage === "bracket" || stage === "champion") {
-    const [seeds, tallies, bracketAt] = await Promise.all([
-      resolveSeedTracks(event.id),
-      voteStore.getTallies(event.id),
-      bracketSchedule(event),
-    ]);
-    bracket = buildBracket(seeds, tallies, bracketAt, now);
-  }
-
-  const anthemAdmin = {
-    stage,
-    schedule,
-    rows,
-    lockedSeedIds,
-    gate,
-    codeStats,
-    serverNow: now,
-    bracket,
-  };
 
   return (
     <main className="mx-auto max-w-xl px-6 py-12">
@@ -123,29 +85,6 @@ export default async function AdminPage() {
           }}
         />
       </section>
-
-      <section className="mt-12">
-        <h2 className="text-sm font-bold uppercase tracking-widest opacity-70">
-          Soul Loop Anthem
-        </h2>
-        <p className="mt-1 text-sm opacity-70">
-          Lock the 8 seeds the crowd surfaced, manage round cutoffs, hide off-brand picks.
-        </p>
-        <AnthemControls {...anthemAdmin} />
-      </section>
-
-      {process.env.ENABLE_ANTHEM_SIM === "1" ? (
-        <section className="mt-12">
-          <h2 className="text-sm font-bold uppercase tracking-widest opacity-70">
-            Testing — simulate a session
-          </h2>
-          <p className="mt-1 text-sm opacity-70">
-            Run a full 75-participant cycle (nominate → like → lock 8 → vote → champion) to watch
-            the mechanism end-to-end. Reset when done. (Dev-only; hidden unless ENABLE_ANTHEM_SIM=1.)
-          </p>
-          <AnthemSim />
-        </section>
-      ) : null}
 
       <section className="mt-12">
         <h2 className="text-sm font-bold uppercase tracking-widest opacity-70">
@@ -234,9 +173,8 @@ export default async function AdminPage() {
           The Loop Journal {journalIssue?.published ? "(published)" : "(draft)"}
         </h2>
         <p className="mt-1 text-sm opacity-70">
-          The volume&apos;s magazine at /loop/journal. The anthem result and the
-          night recap print themselves; you curate the photography and the
-          headline, then publish.{" "}
+          The volume&apos;s magazine at /loop/journal. The night recap prints
+          itself; you curate the photography and the headline, then publish.{" "}
           <a href="/loop/journal" className="underline">
             Preview the issue ↗
           </a>
