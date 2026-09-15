@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentEvent } from "@/lib/loop/hub";
 import { issueForOrder } from "@/lib/loop/event-codes";
 import { sendEventCodesEmail } from "@/lib/loop/email";
+import { grantAlbumForOrder } from "@/lib/loop/album";
 import {
   parseShopifyOrder,
   passMatcherConfigured,
@@ -63,6 +64,9 @@ export async function POST(req: Request) {
     const { code, isNew } = await issueForOrder(event.id, unitOrderId, order.email, now);
     codes.push(code);
     if (isNew) anyNew = true;
+    // The pre-order, written down. Idempotent on the unit order id; never
+    // throws, so the code and the email above it are never at its mercy.
+    await grantAlbumForOrder(order.email, unitOrderId, event.id);
   }
 
   // Only email when something was newly issued — a pure retry stays silent.

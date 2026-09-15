@@ -104,7 +104,7 @@ export function GetPassModal({
     // Before money changes hands, not after. See RECORDING_NOTICE.
     [
       RECORDING_NOTICE.headline,
-      `${RECORDING_NOTICE.body} ${RECORDING_NOTICE.optOut}`,
+      `${RECORDING_NOTICE.body} ${RECORDING_NOTICE.condition}`,
     ],
     [
       "The Vault, after",
@@ -212,7 +212,14 @@ export function GetPassModal({
               </h4>
               <ol className="mt-3 grid gap-2 text-sm leading-relaxed">
                 {[
-                  "Check out securely: card, Apple Pay, or Google Pay.",
+                  // Shopify's online checkout in Canada takes Visa, Mastercard,
+                  // Amex and Discover, in a wallet or typed in. It does not take
+                  // Interac, online, for any store. A Visa Debit or Debit
+                  // Mastercard works; a plain bank client card is refused, and
+                  // the owner found this out with his own card. So the line
+                  // says what works, and the door is named as the way in for
+                  // anyone whose card is not.
+                  "Check out securely: credit card, Visa Debit or Debit Mastercard, Apple Pay, Google Pay, Shop Pay or PayPal. Interac-only cards can't pay online; if yours is refused, PayPal works, or pay $5 at the door.",
                   // Was "lands in your email within a minute" — the same
                   // promise the includes list just stopped making. There is no
                   // verified sending domain, so the lookup IS the delivery.
@@ -252,7 +259,7 @@ export function GetPassModal({
           {checkoutUrl && !soldOut ? (
             <>
               <p className="loop-muted mb-3 text-center text-[11px] leading-relaxed">
-                {RECORDING_NOTICE.short} {RECORDING_NOTICE.optOut}
+                {RECORDING_NOTICE.short}
               </p>
               <a
                 href={checkoutUrl}

@@ -213,13 +213,23 @@ export const EVENT_CREDITS = {
  * shield, not an offer.
  */
 export const RECORDING_NOTICE = {
-  short: "Filmed and recorded. You may appear.",
+  short: "Filmed and recorded. Coming in means you're in it.",
   headline: "This night is filmed and recorded",
   body:
-    "The live performance is recorded for release, and the room is filmed and " +
+    "The performance is recorded for release, and the room is filmed and " +
     "photographed all evening for the album, the magazine and future promotion. " +
-    "Coming in means you may appear in that footage, on camera or in a photograph, " +
-    "at any point in the night.",
-  optOut:
-    "If you would rather not appear, tell anyone on the door. We will keep you out of shot.",
+    "Buying a pass and walking in is your agreement to appear in that footage, " +
+    "on camera or in a photograph, at any point in the night.",
+  /**
+   * The condition, stated plainly.
+   *
+   * This used to promise "tell anyone on the door and we will keep you out of
+   * shot". That is a guarantee nobody can keep: the room is filmed all evening,
+   * the guests photograph each other through the filter, and a featured Wall
+   * shot is public. Promising absence and then failing is worse than saying the
+   * true thing once, before money changes hands, which is what this does.
+   * A published photograph still comes down on request — see /legal.
+   */
+  condition:
+    "This part is not optional. It is a filmed night, and the room is part of the record.",
 } as const;

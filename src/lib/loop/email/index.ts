@@ -192,7 +192,8 @@ async function codesBody(codes: string[], eventTitle: string): Promise<string> {
     `At 9, the floor opens. 80s until the lights come on.`,
     `Out by 10. 19+. Dress code is 80s.`,
     ``,
-    `Your ticket is also a pre-order. If you want the album, it's yours when it lands.`,
+    `Your ticket is also a pre-order. When the album is out it is yours at ${base ? `${base}/loop/album` : "the Loop Soul album page"},`,
+    `whether or not you were in the room. Prove it's you with this email address and press play.`,
     ``,
     `LOST THE CODE`,
     ``,
@@ -200,9 +201,9 @@ async function codesBody(codes: string[], eventTitle: string): Promise<string> {
     ``,
     `ONE MORE THING`,
     ``,
-    `The night is filmed and recorded, for the record and for promotion, so you may appear in it.`,
-    `If you would rather not, tell anyone on the door and we'll keep you out of shot.`,
-    `The entertainment room is a no-camera area all night.`,
+    `The night is filmed and recorded, for the record and for promotion.`,
+    `Coming in is your agreement to appear in it, on camera or in a photograph.`,
+    `If something of you is published and you want it down, write to us and we take it down.`,
     ``,
     base || "odubostudio.com/loop",
   ].join("\n");
@@ -247,6 +248,24 @@ export async function sendVerificationEmail(to: string, code: string): Promise<{
       ``,
       `Type it on the phone that asked for it and your pass will open there too.`,
       `It works for fifteen minutes. If you did not ask for this, ignore it; nothing changes.`,
+      ``,
+      `Odubo Studio`,
+    ].join("\n"),
+  });
+}
+
+/** "It's out." Sent once per address that pre-ordered, by the release action. */
+export async function sendAlbumReleaseEmail(to: string, albumTitle: string): Promise<{ ok: boolean }> {
+  const base = (await getPublicBaseUrl()) ?? "";
+  const link = base ? `${base}/loop/album` : "odubostudio.com/loop/album";
+  return (await sender()).send({
+    to,
+    subject: `${albumTitle} is out. It's yours.`,
+    text: [
+      `${albumTitle} is out.`,
+      ``,
+      `You pre-ordered it with your pass, so it is yours: ${link}`,
+      `Prove it's you with this email address and press play. No account, no password.`,
       ``,
       `Odubo Studio`,
     ].join("\n"),

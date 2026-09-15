@@ -204,6 +204,9 @@ export function CodeLookup() {
           <button type="button" onClick={() => { router.push("/loop"); router.refresh(); }} className={`${primary} mt-2`}>
             Into the room
           </button>
+          <a href="/loop/album" className="loop-muted mt-1 min-h-[44px] text-center text-xs underline underline-offset-4">
+            The record, when it lands →
+          </a>
         </div>
       )}
     </div>

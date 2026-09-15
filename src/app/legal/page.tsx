@@ -28,7 +28,7 @@ const LegalContent = {
       <h2 className="text-lg font-semibold mt-8 mb-3 text-[#ede8df]">Filming and photography at our events</h2>
       <p>Loop Soul events are filmed, photographed and audio recorded throughout. The performance is recorded for release.</p>
       <p className="mt-3">Coming into the room means you may appear in that footage, on camera or in a photograph, at any point in the night. Those recordings are used <strong className="text-[#ede8df]">commercially</strong>: in the album and its artwork, in the Loop Soul magazine, in video, and in promotion of the project and of future volumes. There is no time limit on that use.</p>
-      <p className="mt-3">This is told to you before you buy a pass, again on the notice at the door, and again on the signs in the room. If you would rather not appear, tell anyone on the door and we will keep you out of shot. Anyone featured as a recognisable subject, rather than as part of the crowd, signs a separate written release on the night.</p>
+      <p className="mt-3">This is told to you before you buy a pass, again on the notice at the door, and again on the signs in the room. Being filmed is a condition of coming in: it is a filmed night, and the room is part of the record. We cannot promise to keep anyone out of shot, and we would rather say so than promise it and fail. Anyone featured as a recognisable subject, rather than as part of the crowd, signs a separate written release on the night.</p>
       <p className="mt-3">If a photograph of you is already published and you want it taken down, write to us. We will remove it from anything we control. We cannot recall a physical print or a copy someone else has already downloaded, and we will say so plainly rather than promise otherwise.</p>
 
       <h2 className="text-lg font-semibold mt-8 mb-3 text-[#ede8df]">Who else sees it</h2>
@@ -73,7 +73,7 @@ const LegalContent = {
       <h2 className="text-lg font-semibold mt-8 mb-3 text-[#ede8df]">Event passes</h2>
       <p>A Loop Soul pass admits one person to one night and is also a pre-order of that volume's record. Buying one means you accept these things:</p>
       <p className="mt-3">The door is 19+ and photo ID is checked. We can refuse entry, or ask you to leave, if you are unsafe to others or to the room, and no refund is owed when we do. Capacity is real: once the passes are gone they are gone, and a pass does not guarantee entry if you arrive after the room is full.</p>
-      <p className="mt-3">The night is filmed, photographed and recorded throughout, and that footage is used commercially. The <Link href="/legal?tab=privacy" className="text-[#ede8df] underline underline-offset-2">Privacy Policy</Link> sets out what that means and how to be kept out of shot.</p>
+      <p className="mt-3">The night is filmed, photographed and recorded throughout, and that footage is used commercially. Coming in is your agreement to appear in it. The <Link href="/legal?tab=privacy" className="text-[#ede8df] underline underline-offset-2">Privacy Policy</Link> sets out what that means and how to have something taken down.</p>
       <p className="mt-3">A pass is not refundable but it is transferable. Passing your code to someone else passes the seat.</p>
 
       <h2 className="text-lg font-semibold mt-8 mb-3 text-[#ede8df]">What you post, and what you are owed for it</h2>

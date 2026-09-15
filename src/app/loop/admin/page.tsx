@@ -20,6 +20,7 @@ import JournalEditor from "./JournalEditor";
 import PassSettings from "./PassSettings";
 import BallotControls from "./BallotControls";
 import WallModeration from "./WallModeration";
+import AlbumRelease from "./AlbumRelease";
 
 /**
  * /admin — control surface for the (non-technical) marketing team. Gated by the
@@ -218,6 +219,18 @@ export default async function AdminPage() {
         >
           Open Poster Studio →
         </a>
+      </section>
+
+      <section className="mt-12">
+        <h2 className="text-sm font-bold uppercase tracking-widest opacity-70">
+          The Record
+        </h2>
+        <p className="mt-1 text-sm opacity-70">
+          Every pass is a pre-order, written down here at purchase. When the
+          album is out, release it: the page at /loop/album opens for everyone
+          owed it, and each address is told once by email.
+        </p>
+        <AlbumRelease />
       </section>
 
       <section className="mt-12">
