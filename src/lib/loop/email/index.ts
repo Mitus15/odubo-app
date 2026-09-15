@@ -190,7 +190,7 @@ async function codesBody(codes: string[], eventTitle: string): Promise<string> {
     `From 6:30 it's a lounge. Fire pits, games, drinks, music. Come when you come.`,
     `At 8, the album. All fourteen tracks performed live, front to back, with Amen the DJ.`,
     `At 9, the floor opens. 80s until the lights come on.`,
-    `Out by 10:30. 19+. Dress code is 80s.`,
+    `Out by 10. 19+. Dress code is 80s.`,
     ``,
     `Your ticket is also a pre-order. If you want the album, it's yours when it lands.`,
     ``,
@@ -233,3 +233,22 @@ export async function sendEventCodeEmail(
   return sendEventCodesEmail(to, [code], eventTitle);
 }
 
+/**
+ * The six digits that prove an inbox. Sent when a buyer asks for their pass on
+ * a device that has never held it; typing it back binds that device to them.
+ * Short, because it is read on one phone and typed into another.
+ */
+export async function sendVerificationEmail(to: string, code: string): Promise<{ ok: boolean }> {
+  return (await sender()).send({
+    to,
+    subject: `${code} is your Loop Soul code`,
+    text: [
+      `Your verification code is ${code}.`,
+      ``,
+      `Type it on the phone that asked for it and your pass will open there too.`,
+      `It works for fifteen minutes. If you did not ask for this, ignore it; nothing changes.`,
+      ``,
+      `Odubo Studio`,
+    ].join("\n"),
+  });
+}

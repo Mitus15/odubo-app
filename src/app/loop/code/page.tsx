@@ -15,9 +15,10 @@ export default function CodePage() {
     <main className="mx-auto flex min-h-[100dvh] max-w-md flex-col px-6 py-12">
       <h1 className="text-2xl font-extrabold">Find your event code</h1>
       <p className="loop-muted mt-2 text-sm leading-relaxed">
-        Enter the email you used at checkout and we&apos;ll show the code that came
-        with your pass. It&apos;s your ticket at the door and it unlocks the app on
-        the night.
+        Enter the email you used at checkout. We send six digits to it; type them
+        back and your pass opens on this phone. It&apos;s your ticket at the door
+        and it unlocks the app on the night. No account, no password: the email
+        is the proof.
       </p>
 
       <CodeLookup />
