@@ -9,7 +9,7 @@ import LoopLoader from "@/components/loop/brand/LoopLoader";
  * attendee-only surfaces — the Portal in State 2, the Vault in Legacy. On
  * success we refresh the route — the server re-renders unlocked because
  * `isHolder` is now true for this `ls_voter`. Reuses the existing
- * /api/anthem/redeem endpoint (which binds the code to the voter and marks
+ * /api/loop/redeem endpoint (which binds the code to the voter and marks
  * them a holder). `tone="vault"` restyles for the dark Legacy field.
  */
 export function PortalGate({
@@ -38,7 +38,7 @@ export function PortalGate({
     e.preventDefault();
     setBusy(true);
     setError(null);
-    const res = await fetch("/api/loop/anthem/redeem", {
+    const res = await fetch("/api/loop/redeem", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ code: code.trim() }),
