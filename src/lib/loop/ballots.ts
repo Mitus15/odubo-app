@@ -186,6 +186,8 @@ export type BallotState = {
   options: BallotOption[];
   votesUsed: number;
   voteLimit: number;
+  /** The frozen outcome, once declared. Null while the room is still deciding. */
+  result: BallotResult | null;
 };
 
 export async function getBallot(
@@ -195,21 +197,25 @@ export async function getBallot(
   voterId: string,
 ): Promise<BallotState> {
   const scope = ballotScope(eventId, kind);
-  const [open, holder, options, used] = await Promise.all([
+  const [open, holder, options, used, result] = await Promise.all([
     isBallotOpen(kind, phase),
     isHolder(eventId, voterId),
     kind === "tracklist"
       ? tracklistOptions(scope, voterId)
       : coverOptions(eventId, scope, voterId),
     myVoteCount(scope, voterId),
+    getBallotResult(eventId, kind),
   ]);
   return {
     kind,
     open,
-    canVote: open && holder,
+    // A declared result ends the vote whatever the open flag says: a vote cast
+    // after the outcome is frozen cannot count, so do not invite it.
+    canVote: open && holder && !result,
     options,
     votesUsed: used,
     voteLimit: BALLOT_VOTE_LIMIT,
+    result,
   };
 }
 
@@ -309,5 +315,118 @@ export async function toggleBallotVote(
     voted: true,
     votesUsed: await myVoteCount(scope, voterId),
     voteLimit: BALLOT_VOTE_LIMIT,
+  };
+}
+
+/* ── the declared result ─────────────────────────────────────────────────── */
+
+/**
+ * The outcome of a ballot, once someone has said the word.
+ *
+ * Standings are derived and live; a result must not be. Options come from
+ * featured Wall shots, so unfeaturing a shot after the room has voted would
+ * silently rewrite what happened, and ties, a withdrawn shot and the owner's
+ * own judgment all need a human in the loop anyway. So the outcome is DECLARED
+ * and frozen, never inferred from whoever happens to be top right now.
+ *
+ * The frozen `winner` is the option id (`pic:<uid>`), not a photo row, so the
+ * result survives the shot being unfeatured later: it records what the room
+ * decided, which is not the same question as what is currently on the ballot.
+ */
+export type BallotResult = {
+  kind: BallotKind;
+  /** Cover: the winning option id. Null on a tracklist result. */
+  winner: string | null;
+  /** Tracklist: the frozen running order. Null on a cover result. */
+  order: string[] | null;
+  declaredAt: string;
+  note: string | null;
+};
+
+export async function getBallotResult(eventId: string, kind: BallotKind): Promise<BallotResult | null> {
+  const row = await queryOne<{ result: string; declared_at: string; note: string | null }>(
+    `SELECT result, declared_at, note FROM loop_ballot_results WHERE event_id = ?1 AND kind = ?2`,
+    [eventId, kind],
+  );
+  if (!row) return null;
+  // A malformed payload must not take the page down: an undeclared result is
+  // a far better failure than a 500 on the night the winner is announced.
+  let parsed: { winner?: string; order?: string[] } = {};
+  try {
+    parsed = JSON.parse(row.result) as typeof parsed;
+  } catch {
+    console.error(`[loop:ballots] unreadable result for ${eventId}/${kind}`);
+    return null;
+  }
+  return {
+    kind,
+    winner: parsed.winner ?? null,
+    order: Array.isArray(parsed.order) ? parsed.order : null,
+    declaredAt: row.declared_at,
+    note: row.note ?? null,
+  };
+}
+
+/** Freeze an outcome. Re-declaring overwrites, so the owner can correct a call. */
+export async function declareBallotResult(
+  eventId: string,
+  kind: BallotKind,
+  payload: { winner?: string; order?: string[] },
+  note: string | null = null,
+): Promise<void> {
+  await executeQuery(
+    `INSERT INTO loop_ballot_results (event_id, kind, result, declared_at, declared_by, note)
+          VALUES (?1, ?2, ?3, ?4, 'loop-admin', ?5)
+     ON CONFLICT (event_id, kind) DO UPDATE SET
+       result = excluded.result, declared_at = excluded.declared_at, note = excluded.note`,
+    [eventId, kind, JSON.stringify(payload), new Date().toISOString(), note],
+  );
+}
+
+export async function clearBallotResult(eventId: string, kind: BallotKind): Promise<void> {
+  await executeQuery(`DELETE FROM loop_ballot_results WHERE event_id = ?1 AND kind = ?2`, [eventId, kind]);
+}
+
+/**
+ * The winning shot, resolved from the FROZEN option id and read from the photo
+ * row directly, so an unfeatured winner still renders. Credit prefers the
+ * attendee record over the name typed at upload, the answer royalties are paid
+ * on. A cover that named the wrong person would be worse than no cover.
+ */
+export type CoverWinner = {
+  uid: string;
+  imageSrc: string;
+  credit: string | null;
+  votes: number;
+  declaredAt: string;
+  note: string | null;
+};
+
+export async function getCoverWinner(eventId: string): Promise<CoverWinner | null> {
+  const result = await getBallotResult(eventId, "cover");
+  const uid = result?.winner?.match(/^pic:(.+)$/)?.[1];
+  if (!result || !uid) return null;
+  const [row, tally] = await Promise.all([
+    queryOne<{ r2_key: string; user_name: string | null; attendee_name: string | null }>(
+      `SELECT p.r2_key, p.user_name, a.display_name AS attendee_name
+         FROM gallery_photos p JOIN galleries g ON g.id = p.gallery_id
+         LEFT JOIN loop_media_credits c ON c.photo_uid = p.uid
+         LEFT JOIN loop_attendees a ON a.id = c.attendee_id
+        WHERE g.code = ?1 AND p.uid = ?2`,
+      [wallCode(eventId), uid],
+    ),
+    queryOne<{ n: number }>(
+      `SELECT COUNT(*) AS n FROM candidate_upvotes WHERE event_id = ?1 AND candidate_id = ?2`,
+      [ballotScope(eventId, "cover"), result.winner],
+    ),
+  ]);
+  if (!row) return null;
+  return {
+    uid,
+    imageSrc: `/api/loop/gallery/media/${row.r2_key}`,
+    credit: row.attendee_name ?? row.user_name ?? null,
+    votes: tally?.n ?? 0,
+    declaredAt: result.declaredAt,
+    note: result.note,
   };
 }

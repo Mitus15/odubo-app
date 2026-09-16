@@ -21,6 +21,8 @@ type Option = {
   mine: boolean;
 };
 
+type BallotResult = { winner: string | null; declaredAt: string; note: string | null } | null;
+
 type Ballot = {
   kind: "tracklist" | "cover";
   open: boolean;
@@ -28,6 +30,7 @@ type Ballot = {
   options: Option[];
   votesUsed: number;
   voteLimit: number;
+  result: BallotResult;
 };
 
 export function BallotSheet({ kind }: { kind: "tracklist" | "cover" }) {
@@ -87,18 +90,20 @@ export function BallotSheet({ kind }: { kind: "tracklist" | "cover" }) {
       <p className="text-sm opacity-80">{intro}</p>
 
       <div className="loop-muted mt-2 text-xs font-semibold uppercase tracking-widest">
-        {!ballot.open
-          ? "Voting hasn't opened yet. Standings only."
-          : ballot.canVote
-            ? `${ballot.voteLimit - ballot.votesUsed} of ${ballot.voteLimit} votes left · tap to vote, tap again to take it back`
-            : "Standings only. Voting is for pass-holders."}
+        {ballot.result
+          ? "The room has decided."
+          : !ballot.open
+            ? "Voting hasn't opened yet. Standings only."
+            : ballot.canVote
+              ? `${ballot.voteLimit - ballot.votesUsed} of ${ballot.voteLimit} votes left · tap to vote, tap again to take it back`
+              : "Standings only. Voting is for pass-holders."}
       </div>
 
       {/* On an open-doors night a guest is IN the room without a code, so this
        *  state is normal rather than an error. It used to say "voting is for
        *  the room" to someone standing in it, and then name a code with no way
        *  to reach one. Say what is actually needed, and open the door to it. */}
-      {ballot.open && !ballot.canVote && (
+      {ballot.open && !ballot.canVote && !ballot.result && (
         <a
           href="/loop/code"
           className="mt-3 flex min-h-[44px] items-center justify-between gap-3 border-t border-current/15 pt-3 text-sm font-bold"
@@ -126,11 +131,15 @@ export function BallotSheet({ kind }: { kind: "tracklist" | "cover" }) {
                 disabled={!ballot.canVote || busy !== null}
                 aria-pressed={o.mine}
                 className={`flex w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left transition-transform active:scale-[0.99] ${
-                  o.mine ? "border-current bg-current/10" : "border-current/15"
+                  ballot.result?.winner === o.id
+                    ? "border-current bg-current/15"
+                    : o.mine
+                      ? "border-current bg-current/10"
+                      : "border-current/15"
                 } ${ballot.canVote ? "" : "cursor-default"}`}
               >
                 <span className="loop-muted w-6 shrink-0 font-mono text-sm tabular-nums">
-                  {i + 1}
+                  {ballot.result?.winner === o.id ? "✦" : i + 1}
                 </span>
                 {o.imageSrc && (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -149,7 +158,7 @@ export function BallotSheet({ kind }: { kind: "tracklist" | "cover" }) {
                 <span className="shrink-0 text-right">
                   <span className="block font-black tabular-nums">{o.votes}</span>
                   <span className="loop-muted block text-[10px] uppercase tracking-widest">
-                    {o.mine ? "yours ✓" : "votes"}
+                    {ballot.result?.winner === o.id ? "the one" : o.mine ? "yours ✓" : "votes"}
                   </span>
                 </span>
               </button>

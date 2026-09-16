@@ -101,9 +101,14 @@ export async function resolveCover(
     console.error("[loop:cover] could not resolve a personal cover:", e);
   }
 
-  // 2 — the room's, once it has decided.
+  // 2 — the room's, once it has decided. The declared ballot winner is the
+  // canonical answer; the older official_cover setting is a fallback for a
+  // volume decided before the ballot froze results.
   try {
-    const officialUid = await getSetting(officialCoverKey(eventId));
+    const { getBallotResult } = await import("@/lib/loop/ballots");
+    const declared = await getBallotResult(eventId, "cover");
+    const declaredUid = declared?.winner?.match(/^pic:(.+)$/)?.[1] ?? null;
+    const officialUid = declaredUid ?? (await getSetting(officialCoverKey(eventId)));
     if (officialUid) {
       const shot = await visibleShot(eventId, officialUid);
       if (shot) {

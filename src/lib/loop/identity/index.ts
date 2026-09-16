@@ -257,3 +257,52 @@ export async function listContributors(
     shots: Number(r.shots) || 0,
   }));
 }
+
+/**
+ * Who took this shot, and how the owner reaches them to pay the $50.
+ *
+ * Three answers, weakest last: the display name and email the person claimed
+ * (authoritative), then the address the pass was bought with, reached through
+ * loop_attendance.code -> event_codes.email. The buyer email is reachability
+ * of LAST RESORT and is deliberately not written onto the attendee: a two-pass
+ * order issues two codes against one address, so claiming it would merge two
+ * friends into one person. It gets you to a phone; it does not say whose shot
+ * it is.
+ */
+export type PhotoContact = {
+  attendeeId: string;
+  displayName: string | null;
+  email: string | null;
+  buyerEmail: string | null;
+  /** How many shots this person took at this event. */
+  shots: number;
+};
+
+export async function contactForPhoto(photoUid: string): Promise<PhotoContact | null> {
+  const row = await queryOne<{
+    id: string;
+    display_name: string | null;
+    email: string | null;
+    buyer_email: string | null;
+    shots: number;
+  }>(
+    `SELECT a.id, a.display_name, a.email,
+            ec.email AS buyer_email,
+            (SELECT COUNT(*) FROM loop_media_credits c2
+              WHERE c2.attendee_id = a.id AND c2.event_id = c.event_id) AS shots
+       FROM loop_media_credits c
+       JOIN loop_attendees a ON a.id = c.attendee_id
+       LEFT JOIN loop_attendance att ON att.attendee_id = a.id AND att.event_id = c.event_id
+       LEFT JOIN event_codes ec ON ec.event_id = c.event_id AND ec.code = att.code
+      WHERE c.photo_uid = ?1`,
+    [photoUid],
+  );
+  if (!row) return null;
+  return {
+    attendeeId: row.id,
+    displayName: row.display_name,
+    email: row.email,
+    buyerEmail: row.buyer_email,
+    shots: row.shots ?? 0,
+  };
+}
