@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { jwtVerify } from 'jose';
 import { COUNTRY_COOKIE, normalizeCountry } from '@/lib/store/money';
 import { VOTER_COOKIE, verifyVoter, mintVoter } from '@/lib/loop/anthem-identity';
 import { ADMIN_COOKIE as LOOP_ADMIN_COOKIE, verifyAdminSession as verifyLoopAdminSession } from '@/lib/loop/admin-auth';
@@ -223,11 +224,78 @@ async function handleCatalogueWrites(request: NextRequest): Promise<NextResponse
 }
 
 /**
+ * Odubo admin API gate (/api/admin/**), fail-closed at the edge.
+ *
+ * Handlers under /api/admin were each expected to check auth for themselves
+ * and 40 of 101 do not — admin/stats even says in a comment that it trusts
+ * the admin PAGE to have checked, which is client-side auth. Worse, most of
+ * those that do check call getUserFromRequest, which base64-decodes a JWT
+ * WITHOUT verifying the signature, so a forged {"is_admin":true} passes.
+ *
+ * This verifies properly, once, for the whole prefix. Handlers keep their own
+ * checks: defence in depth, not a replacement. It does NOT fix
+ * getUserFromRequest — 142 files still call it, and 94 route files outside
+ * /api/admin still gate on it. That is the real repair and it is still owed.
+ *
+ * Returns null for every other path, so no other flow is touched.
+ */
+async function handleAdminApi(request: NextRequest): Promise<NextResponse | null> {
+  const { pathname } = request.nextUrl;
+  if (!pathname.startsWith('/api/admin/') && pathname !== '/api/admin') return null;
+
+  // Invite acceptance carries its own credential (a hashed, expiring invite
+  // token) and by definition runs before the caller is an admin.
+  if (pathname === '/api/admin/accept-invite') return null;
+
+  const token =
+    request.cookies.get('token')?.value ||
+    (request.headers.get('authorization')?.startsWith('Bearer ')
+      ? request.headers.get('authorization')!.slice('Bearer '.length)
+      : null);
+
+  if (!token) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const secret = process.env.JWT_SECRET;
+  if (!secret && process.env.NODE_ENV === 'production') {
+    // Never fall back to a dev secret on a path that guards admin data.
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    const { payload } = await jwtVerify(
+      token,
+      new TextEncoder().encode(secret || 'dev-insecure-secret'),
+    );
+    const email = typeof payload.email === 'string' ? payload.email : '';
+    const adminList = (process.env.ADMIN_EMAILS || '')
+      .split(',')
+      .map((e) => e.trim().toLowerCase())
+      .filter(Boolean);
+    const isAdmin = payload.is_admin === true || adminList.includes(email.toLowerCase());
+    if (!payload.userId || !email || !isAdmin) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+  } catch {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  return null; // verified admin — fall through to the handler
+}
+
+/**
  * Middleware - subdomain routing + Loop Soul surface
  * Clerk has been removed in favor of JWT-based auth for admin
  */
 export default async function middleware(request: NextRequest) {
-  const denied = (await handleCommandCenterApi(request)) ?? (await handleCatalogueWrites(request));
+  // Three edge backstops, all fail-closed, each returning null when the path
+  // is not theirs: the whole /api/admin surface, the command centre, and
+  // catalogue WRITES.
+  const denied =
+    (await handleAdminApi(request)) ??
+    (await handleCommandCenterApi(request)) ??
+    (await handleCatalogueWrites(request));
   if (denied) return denied;
 
   const response =
