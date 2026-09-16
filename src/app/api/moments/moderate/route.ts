@@ -6,7 +6,7 @@ import { writeAuditLog } from '@/lib/audit';
 
 export async function POST(req: Request) {
   try {
-  const user = getUserFromRequest(req as any);
+  const user = await getUserFromRequest(req as any);
     if (!user || !user.is_admin) return NextResponse.json({ error: 'Admins only' }, { status: 403 });
 
   const rl = await rateLimit({ key: `moments:moderate:${user.userId}`, limit: 120, windowMs: 60_000 });

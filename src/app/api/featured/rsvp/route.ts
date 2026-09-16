@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Record RSVP via audit log (no extra schema needed now)
-    try { await writeAuditLog(req, getUserFromRequest(req) || null, 'featured.rsvp', slug, { instagram: handle }); } catch {}
+    try { await writeAuditLog(req, await getUserFromRequest(req) || null, 'featured.rsvp', slug, { instagram: handle }); } catch {}
 
     // Optionally, issue a simple token or echo back success
     return NextResponse.json({ success: true, handle });

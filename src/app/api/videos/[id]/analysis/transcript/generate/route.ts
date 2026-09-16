@@ -8,7 +8,7 @@ export const runtime = 'nodejs';
 export const maxDuration = 300; // 5 minutes
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const user = getUserFromRequest(req);
+  const user = await getUserFromRequest(req);
   if (!isAdminUser(user)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const { id } = await params;

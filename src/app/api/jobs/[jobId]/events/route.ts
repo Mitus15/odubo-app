@@ -5,7 +5,7 @@ import { getUserFromRequest, isAdminUser } from '@/lib/auth';
 export const runtime = 'nodejs';
 
 export async function GET(req: NextRequest, { params }: { params: { jobId: string } }) {
-  const user = getUserFromRequest(req);
+  const user = await getUserFromRequest(req);
   if (!isAdminUser(user)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   const { jobId } = params;
   if (!jobId) return NextResponse.json({ error: 'jobId required' }, { status: 400 });

@@ -13,7 +13,7 @@ const s3 = new S3Client({
 });
 
 export async function GET(req: NextRequest) {
-  const user = getUserFromRequest(req);
+  const user = await getUserFromRequest(req);
   const allowed = isAdminUser(user) || await userHasAnyRole(req, ['editor']);
   if (!allowed) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   const { searchParams } = new URL(req.url);
@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const user = getUserFromRequest(req);
+  const user = await getUserFromRequest(req);
   const allowed = isAdminUser(user) || await userHasAnyRole(req, ['editor']);
   if (!allowed) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   const { searchParams } = new URL(req.url);

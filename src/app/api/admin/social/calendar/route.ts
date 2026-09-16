@@ -5,7 +5,7 @@ import { queryDatabase } from '@/lib/db';
 
 // GET: Fetch content for calendar view (grouped by date)
 export async function GET(req: NextRequest) {
-  const user = getUserFromRequest(req);
+  const user = await getUserFromRequest(req);
   if (!isAdminUser(user)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
@@ -226,7 +226,7 @@ export async function GET(req: NextRequest) {
 
 // PATCH: Reschedule content (drag-and-drop)
 export async function PATCH(req: NextRequest) {
-  const user = getUserFromRequest(req);
+  const user = await getUserFromRequest(req);
   if (!isAdminUser(user)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }

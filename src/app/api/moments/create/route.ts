@@ -6,7 +6,7 @@ import { writeAuditLog } from '@/lib/audit';
 import { GalleryCreateSchema, type GalleryLinkInput } from '@/lib/momentsSchemas';
 
 export async function POST(req: Request) {
-  const user = getUserFromRequest(req as any);
+  const user = await getUserFromRequest(req as any);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   if (!isAdminUser(user)) return NextResponse.json({ error: 'Admins only' }, { status: 403 });
 

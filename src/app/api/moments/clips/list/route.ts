@@ -6,7 +6,7 @@ import { readableGallery } from '@/lib/moments/access';
 
 export async function GET(req: Request) {
   try {
-    const user = getUserFromRequest(req as any) || null;
+    const user = await getUserFromRequest(req as any) || null;
     const isAdmin = isAdminUser(user);
 
     const url = new URL(req.url);

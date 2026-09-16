@@ -15,7 +15,7 @@ export const runtime = 'nodejs';
  */
 export async function POST(req: NextRequest) {
   try {
-    const user = getUserFromRequest(req);
+    const user = await getUserFromRequest(req);
     if (!isAdminUser(user)) {
       return NextResponse.json({ error: 'Forbidden: Admins only' }, { status: 403 });
     }
@@ -134,7 +134,7 @@ export async function POST(req: NextRequest) {
  */
 export async function GET(req: NextRequest) {
   try {
-    const user = getUserFromRequest(req);
+    const user = await getUserFromRequest(req);
     if (!isAdminUser(user)) {
       return NextResponse.json({ error: 'Forbidden: Admins only' }, { status: 403 });
     }

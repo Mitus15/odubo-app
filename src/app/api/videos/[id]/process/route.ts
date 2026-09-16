@@ -10,7 +10,7 @@ export const runtime = 'nodejs';
 // 2. Generate Thumbnails (if missing)
 // 3. Generate Description (using transcript + frames)
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const user = getUserFromRequest(req);
+  const user = await getUserFromRequest(req);
   if (!isAdminUser(user)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const { id } = await params;

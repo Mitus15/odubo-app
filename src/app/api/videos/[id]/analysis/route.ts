@@ -5,7 +5,7 @@ export const runtime = 'nodejs';
 
 // GET /api/videos/[id]/analysis?uid= optional: returns latest videos_analysis row enriched
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const user = getUserFromRequest(req);
+  const user = await getUserFromRequest(req);
   if (!isAdminUser(user)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   try {
     const { id } = await params;

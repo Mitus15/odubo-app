@@ -16,7 +16,7 @@ interface SocialSettings {
  * Get social studio settings
  */
 export async function GET(request: NextRequest) {
-  const user = getUserFromRequest(request);
+  const user = await getUserFromRequest(request);
   if (!isAdminUser(user)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
  * Update social studio settings
  */
 export async function PATCH(request: NextRequest) {
-  const user = getUserFromRequest(request);
+  const user = await getUserFromRequest(request);
   if (!isAdminUser(user)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }

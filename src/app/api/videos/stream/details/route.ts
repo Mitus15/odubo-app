@@ -5,7 +5,7 @@ import CloudflareStreamAPI from '@/lib/cloudflareStream';
 export const runtime = 'nodejs';
 
 export async function GET(req: NextRequest) {
-  const user = getUserFromRequest(req);
+  const user = await getUserFromRequest(req);
   if (!isAdminUser(user)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }

@@ -9,7 +9,7 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const actor = getUserFromRequest(req);
+  const actor = await getUserFromRequest(req);
   if (!isAdminUser(actor)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
@@ -58,7 +58,7 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const actor = getUserFromRequest(req);
+  const actor = await getUserFromRequest(req);
   if (!isAdminUser(actor)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
@@ -124,7 +124,7 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const actor = getUserFromRequest(req);
+  const actor = await getUserFromRequest(req);
   if (!isAdminUser(actor)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }

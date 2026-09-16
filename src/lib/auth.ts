@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { jwtVerify, SignJWT, JWTPayload } from 'jose';
+import { jwtVerify, SignJWT } from 'jose';
 import { getUserByEmail } from '@/lib/db';
 
 export type AuthTokenPayload = {
@@ -41,18 +41,17 @@ export function getAuthTokenFromRequest(req: NextRequest): string | null {
   return null;
 }
 
-export function getUserFromRequest(req: NextRequest): AuthTokenPayload | null {
-  try {
-    const token = getAuthTokenFromRequest(req);
-    if (!token) return null;
-    const payload = decodeWithoutVerify(token) as AuthTokenPayload | null;
-    return payload && payload.userId && payload.email ? payload : null;
-  } catch {
-    return null;
-  }
-}
-
-export async function verifyUserFromRequest(req: NextRequest): Promise<AuthTokenPayload | null> {
+/**
+ * The verified user on a request, or null.
+ *
+ * This USED TO decode the JWT payload without checking the signature, so a
+ * forged unsigned `{"is_admin":true}` token passed it. 142 files call it and
+ * 94 routes outside /api/admin gated on it, all of them forgeable. It now
+ * verifies the signature with `jose.jwtVerify`, which makes it async: every
+ * caller awaits. `verifyUserFromRequest` is kept as an alias so the routes
+ * that already migrated to it (and read as "verify" on purpose) still work.
+ */
+export async function getUserFromRequest(req: NextRequest): Promise<AuthTokenPayload | null> {
   try {
     const token = getAuthTokenFromRequest(req);
     if (!token) return null;
@@ -66,22 +65,8 @@ export async function verifyUserFromRequest(req: NextRequest): Promise<AuthToken
   }
 }
 
-function decodeWithoutVerify(token: string): JWTPayload | null {
-  try {
-    const parts = token.split('.');
-    if (parts.length !== 3) return null;
-    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-    const padLen = (4 - (base64.length % 4)) % 4;
-    const padded = base64 + '='.repeat(padLen);
-    const binary = typeof atob === 'function' ? atob(padded) : globalThis.atob!(padded);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-    const json = new TextDecoder().decode(bytes);
-    return JSON.parse(json) as JWTPayload;
-  } catch {
-    return null;
-  }
-}
+/** The same verification, under the name the migrated routes already use. */
+export const verifyUserFromRequest = getUserFromRequest;
 
 function emailInAdminList(email?: string | null): boolean {
   if (!email) return false;
@@ -102,9 +87,7 @@ export function isAdminUser(user: AuthTokenPayload | null | undefined): boolean 
 
 export async function getUserRoleFromRequest(req: NextRequest): Promise<Role | null> {
   try {
-    const token = getAuthTokenFromRequest(req);
-    if (!token) return null;
-    const payload = decodeWithoutVerify(token) as AuthTokenPayload | null;
+    const payload = await getUserFromRequest(req);
     if (!payload?.email) return null;
     const dbUser = await getUserByEmail(payload.email);
     if (!dbUser) return null;

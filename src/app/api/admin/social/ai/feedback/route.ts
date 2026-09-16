@@ -5,7 +5,7 @@ import { executeQuery, queryDatabase } from '@/lib/db';
 export const runtime = 'edge';
 
 export async function POST(req: NextRequest) {
-  const user = getUserFromRequest(req);
+  const user = await getUserFromRequest(req);
   if (!isAdminUser(user)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }

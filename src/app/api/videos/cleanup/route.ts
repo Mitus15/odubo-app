@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    try { await writeAuditLog(req, getUserFromRequest(req), 'videos.cleanup', 'r2', { orphaned: deleteResults.successful, failed: deleteResults.failed }); } catch {}
+    try { await writeAuditLog(req, await getUserFromRequest(req), 'videos.cleanup', 'r2', { orphaned: deleteResults.successful, failed: deleteResults.failed }); } catch {}
     return NextResponse.json({
       success: true,
       message: 'R2 cleanup completed',
@@ -183,7 +183,7 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    try { await writeAuditLog(req, getUserFromRequest(req), 'videos.cleanup.preview', 'r2', { orphaned: orphanedFiles.length, valid: validFiles.length }); } catch {}
+    try { await writeAuditLog(req, await getUserFromRequest(req), 'videos.cleanup.preview', 'r2', { orphaned: orphanedFiles.length, valid: validFiles.length }); } catch {}
     return NextResponse.json({
       preview: true,
       summary: {

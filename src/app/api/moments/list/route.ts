@@ -18,7 +18,7 @@ export async function GET(req: Request) {
     // moderated = 0 (default/unreviewed) → visible
     // moderated = 1 (approved) → visible
     // moderated = 2 (rejected/hidden) → hidden from public
-    const user = getUserFromRequest(req as any) || null;
+    const user = await getUserFromRequest(req as any) || null;
     const isAdmin = isAdminUser(user);
     const rlKey = isAdmin ? `moments:list:admin:${user!.userId}` : `moments:list:${galleryId}:public`;
     const rl = await rateLimit({ key: rlKey, limit: 300, windowMs: 60_000 });

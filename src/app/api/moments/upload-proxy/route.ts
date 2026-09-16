@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
     }
 
-  const user = getUserFromRequest(req as any) || null;
+  const user = await getUserFromRequest(req as any) || null;
   const isAdmin = isAdminUser(user);
 
   const form = await req.formData();

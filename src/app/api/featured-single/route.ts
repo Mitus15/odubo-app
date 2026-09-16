@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
-  const user = getUserFromRequest(req);
+  const user = await getUserFromRequest(req);
   const allowed = isAdminUser(user) || await userHasAnyRole(req, ['editor']);
   if (!allowed) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   try {

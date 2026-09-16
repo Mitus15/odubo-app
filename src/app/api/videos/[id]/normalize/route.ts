@@ -164,7 +164,7 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const authUser = getUserFromRequest(req);
+  const authUser = await getUserFromRequest(req);
   if (!isAdminUser(authUser)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
@@ -381,7 +381,7 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const authUser = getUserFromRequest(req);
+  const authUser = await getUserFromRequest(req);
   if (!isAdminUser(authUser)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }

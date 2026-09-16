@@ -128,7 +128,7 @@ async function geminiRank(candidates: FrameScore[], context: { title?: string; c
 }
 
 export async function POST(req: NextRequest) {
-  const user = getUserFromRequest(req);
+  const user = await getUserFromRequest(req);
   if (!isAdminUser(user)) return NextResponse.json({ error: 'Forbidden: Admins only' }, { status: 403 });
 
   try {

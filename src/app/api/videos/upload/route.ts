@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
   // Authenticate admin using server-side token
-  const authUser = getUserFromRequest(req);
+  const authUser = await getUserFromRequest(req);
   if (!isAdminUser(authUser)) {
     return NextResponse.json({ error: "Forbidden: Admins only" }, { status: 403 });
   }

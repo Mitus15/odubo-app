@@ -38,7 +38,7 @@ interface SocialAccount {
  * Publish social_content directly to platforms via Post for Me API
  */
 export async function POST(request: NextRequest) {
-  const user = getUserFromRequest(request);
+  const user = await getUserFromRequest(request);
   if (!isAdminUser(user)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
@@ -288,7 +288,7 @@ export async function POST(request: NextRequest) {
  * Get connected accounts for publishing
  */
 export async function GET(request: NextRequest) {
-  const user = getUserFromRequest(request);
+  const user = await getUserFromRequest(request);
   if (!isAdminUser(user)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }

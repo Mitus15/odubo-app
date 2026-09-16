@@ -15,7 +15,7 @@ export const runtime = 'nodejs';
  */
 export async function DELETE(req: NextRequest) {
   try {
-    const user = getUserFromRequest(req);
+    const user = await getUserFromRequest(req);
     if (!isAdminUser(user)) {
       return NextResponse.json({ error: 'Forbidden: Admins only' }, { status: 403 });
     }

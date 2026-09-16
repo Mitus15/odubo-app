@@ -16,7 +16,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
     // access to a private gallery — so an unguarded read here handed out the
     // key, not just the contents.
     const code = new URL(req.url).searchParams.get('code');
-    const isAdmin = isAdminUser(getUserFromRequest(req as any));
+    const isAdmin = isAdminUser(await getUserFromRequest(req as any));
     if (!(await readableGallery(id, { code, isAdmin }))) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
     }
@@ -49,7 +49,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
 
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   try {
-    const user = getUserFromRequest(req as any);
+    const user = await getUserFromRequest(req as any);
     if (!isAdminUser(user)) return NextResponse.json({ error: 'Admins only' }, { status: 403 });
     const { id: idStr } = await ctx.params;
     const id = Number(idStr);
@@ -117,7 +117,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
 
 export async function DELETE(req: Request, ctx: { params: Promise<{ id: string }> }) {
   try {
-    const user = getUserFromRequest(req as any);
+    const user = await getUserFromRequest(req as any);
     if (!isAdminUser(user)) return NextResponse.json({ error: 'Admins only' }, { status: 403 });
     const { id: idStr } = await ctx.params;
     const id = Number(idStr);

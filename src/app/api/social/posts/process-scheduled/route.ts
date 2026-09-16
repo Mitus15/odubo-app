@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
     const isCronAuth = cronSecret && authHeader === `Bearer ${cronSecret}`;
     
     if (!isCronAuth) {
-      const user = getUserFromRequest(request);
+      const user = await getUserFromRequest(request);
       if (!isAdminUser(user)) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }

@@ -6,7 +6,7 @@ import { callDeepSeekWithRetry } from '@/lib/deepseek';
 
 // POST: Test caption generation with current profile settings
 export async function POST(req: NextRequest) {
-  const user = getUserFromRequest(req);
+  const user = await getUserFromRequest(req);
   if (!isAdminUser(user)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }

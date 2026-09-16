@@ -16,7 +16,7 @@ const s3 = new S3Client({
 
 export async function DELETE(req: Request, ctx: { params: { id: string } }) {
   try {
-    const user = getUserFromRequest(req as any);
+    const user = await getUserFromRequest(req as any);
     if (!isAdminUser(user)) return NextResponse.json({ error: 'Admins only' }, { status: 403 });
 
     const rl = await rateLimit({ key: `moments:photo-delete:${user!.userId}`, limit: 60, windowMs: 60_000 });

@@ -55,7 +55,7 @@ export async function GET(req: Request) {
       // so a private gallery must not answer it without one.
       if (!(await readableGallery(galleryId, {
         code,
-        isAdmin: isAdminUser(getUserFromRequest(req as any)),
+        isAdmin: isAdminUser(await getUserFromRequest(req as any)),
       }))) {
         return NextResponse.json({ error: 'Gallery not found' }, { status: 404 });
       }
@@ -84,7 +84,7 @@ export async function GET(req: Request) {
     }
 
     // Admin-only endpoint for listing all galleries
-    const user = getUserFromRequest(req as any);
+    const user = await getUserFromRequest(req as any);
     console.log('[galleries/GET] Auth check:', {
       hasUser: !!user,
       isAdmin: isAdminUser(user),

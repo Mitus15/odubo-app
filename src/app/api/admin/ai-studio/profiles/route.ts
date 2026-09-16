@@ -5,7 +5,7 @@ import { queryDatabase, executeQuery } from '@/lib/db';
 
 // GET: Fetch voice profiles
 export async function GET(req: NextRequest) {
-  const user = getUserFromRequest(req);
+  const user = await getUserFromRequest(req);
   if (!isAdminUser(user)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
 
 // POST: Create new profile
 export async function POST(req: NextRequest) {
-  const user = getUserFromRequest(req);
+  const user = await getUserFromRequest(req);
   if (!isAdminUser(user)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
@@ -91,7 +91,7 @@ export async function POST(req: NextRequest) {
 
 // PATCH: Update profile
 export async function PATCH(req: NextRequest) {
-  const user = getUserFromRequest(req);
+  const user = await getUserFromRequest(req);
   if (!isAdminUser(user)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
@@ -162,7 +162,7 @@ export async function PATCH(req: NextRequest) {
 
 // DELETE: Delete profile
 export async function DELETE(req: NextRequest) {
-  const user = getUserFromRequest(req);
+  const user = await getUserFromRequest(req);
   if (!isAdminUser(user)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }

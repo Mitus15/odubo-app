@@ -21,7 +21,7 @@ interface AdminRole {
  */
 export async function GET(req: NextRequest) {
   // Require authentication - only admins can view roles
-  const user = getUserFromRequest(req);
+  const user = await getUserFromRequest(req);
   if (!isAdminUser(user)) {
     return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
   }

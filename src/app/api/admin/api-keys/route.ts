@@ -28,7 +28,7 @@ const mockApiKeys = [
 
 export async function GET(req: NextRequest) {
   // Require authentication - API keys are highly sensitive
-  const user = getUserFromRequest(req);
+  const user = await getUserFromRequest(req);
   if (!isAdminUser(user)) {
     return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
   }
@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(request: NextRequest) {
   // Require authentication - only admins can create API keys
-  const user = getUserFromRequest(request);
+  const user = await getUserFromRequest(request);
   if (!isAdminUser(user)) {
     return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
   }

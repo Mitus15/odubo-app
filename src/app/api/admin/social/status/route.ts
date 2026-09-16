@@ -23,7 +23,7 @@ interface PostData {
  * Fetch current status from PostForMe for a piece of content
  */
 export async function GET(request: NextRequest) {
-  const user = getUserFromRequest(request);
+  const user = await getUserFromRequest(request);
   if (!isAdminUser(user)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
@@ -201,7 +201,7 @@ export async function GET(request: NextRequest) {
  * Batch sync status for multiple content items
  */
 export async function POST(request: NextRequest) {
-  const user = getUserFromRequest(request);
+  const user = await getUserFromRequest(request);
   if (!isAdminUser(user)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }

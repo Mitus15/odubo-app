@@ -5,7 +5,7 @@ import { queryDatabase } from '@/lib/db';
 
 // GET: List available moments photos for import
 export async function GET(req: NextRequest) {
-  const user = getUserFromRequest(req);
+  const user = await getUserFromRequest(req);
   if (!isAdminUser(user)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
@@ -101,7 +101,7 @@ export async function GET(req: NextRequest) {
 
 // POST: Import a moments photo into Social CMS
 export async function POST(req: NextRequest) {
-  const user = getUserFromRequest(req);
+  const user = await getUserFromRequest(req);
   if (!isAdminUser(user)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }

@@ -105,7 +105,7 @@ export async function GET(req: NextRequest) {
     });
 
     // Audit (non-blocking)
-    await writeAuditLog(req, getUserFromRequest(req), 'videos.list', `count=${transformedVideos.length}`, {
+    await writeAuditLog(req, await getUserFromRequest(req), 'videos.list', `count=${transformedVideos.length}`, {
       limit,
       offset,
       publication_status: hasFilter ? publicationStatus : 'any',
@@ -159,7 +159,7 @@ const videoCreateSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
-    const user = getUserFromRequest(req);
+    const user = await getUserFromRequest(req);
     if (!isAdminUser(user)) {
       return NextResponse.json({ error: 'Forbidden: Admins only' }, { status: 403 });
     }
@@ -274,7 +274,7 @@ export async function POST(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
-    const user = getUserFromRequest(req);
+    const user = await getUserFromRequest(req);
     if (!isAdminUser(user)) {
       return NextResponse.json({ error: 'Forbidden: Admins only' }, { status: 403 });
     }
@@ -306,7 +306,7 @@ export async function PATCH(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
-    const user = getUserFromRequest(req);
+    const user = await getUserFromRequest(req);
     if (!isAdminUser(user)) {
       return NextResponse.json({ error: 'Forbidden: Admins only' }, { status: 403 });
     }

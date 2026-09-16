@@ -6,7 +6,7 @@ export const runtime = 'edge';
 
 // GET: List albums with optional category filter
 export async function GET(req: NextRequest) {
-  const actor = getUserFromRequest(req);
+  const actor = await getUserFromRequest(req);
   if (!isAdminUser(actor)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
@@ -53,7 +53,7 @@ export async function GET(req: NextRequest) {
 
 // POST: Create new album
 export async function POST(req: NextRequest) {
-  const actor = getUserFromRequest(req);
+  const actor = await getUserFromRequest(req);
   if (!isAdminUser(actor)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
@@ -117,7 +117,7 @@ export async function POST(req: NextRequest) {
 
 // PATCH: Update album
 export async function PATCH(req: NextRequest) {
-  const actor = getUserFromRequest(req);
+  const actor = await getUserFromRequest(req);
   if (!isAdminUser(actor)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
@@ -187,7 +187,7 @@ export async function PATCH(req: NextRequest) {
 
 // DELETE: Delete album
 export async function DELETE(req: NextRequest) {
-  const actor = getUserFromRequest(req);
+  const actor = await getUserFromRequest(req);
   if (!isAdminUser(actor)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }

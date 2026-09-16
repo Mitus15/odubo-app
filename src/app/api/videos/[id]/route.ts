@@ -68,7 +68,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       }
     }
     
-    try { await writeAuditLog(_req, getUserFromRequest(_req), 'videos.get', String(id)); } catch {}
+    try { await writeAuditLog(_req, await getUserFromRequest(_req), 'videos.get', String(id)); } catch {}
     return NextResponse.json({ success: true, video });
   } catch (error) {
     console.error('Error fetching video:', error);
@@ -102,7 +102,7 @@ const videoUpdateSchema = z.object({
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const user = getUserFromRequest(req);
+    const user = await getUserFromRequest(req);
     if (!isAdminUser(user)) {
       return NextResponse.json({ error: 'Forbidden: Admins only' }, { status: 403 });
     }
@@ -320,7 +320,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const user = getUserFromRequest(req);
+    const user = await getUserFromRequest(req);
     if (!isAdminUser(user)) {
       return NextResponse.json({ error: 'Forbidden: Admins only' }, { status: 403 });
     }

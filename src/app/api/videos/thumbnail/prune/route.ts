@@ -10,7 +10,7 @@ import { writeAuditLog } from '@/lib/audit';
  * - Mode B: By session — delete all candidates for a given sessionId
  */
 export async function POST(req: NextRequest) {
-  const user = getUserFromRequest(req);
+  const user = await getUserFromRequest(req);
   if (!isAdminUser(user)) return NextResponse.json({ error: 'Forbidden: Admins only' }, { status: 403 });
 
   try {

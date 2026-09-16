@@ -31,7 +31,7 @@ interface SocialContent {
 
 // GET: List all social content with optional filtering
 export async function GET(req: NextRequest) {
-  const actor = getUserFromRequest(req);
+  const actor = await getUserFromRequest(req);
   if (!isAdminUser(actor)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
@@ -88,7 +88,7 @@ export async function GET(req: NextRequest) {
 
 // POST: Create new social content
 export async function POST(req: NextRequest) {
-  const actor = getUserFromRequest(req);
+  const actor = await getUserFromRequest(req);
   if (!isAdminUser(actor)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }

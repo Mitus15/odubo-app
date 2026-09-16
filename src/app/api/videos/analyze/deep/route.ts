@@ -66,7 +66,7 @@ async function describeFramesWithGemini(frames: { pct: number; url: string; buff
 }
 
 export async function POST(req: NextRequest) {
-  const user = getUserFromRequest(req);
+  const user = await getUserFromRequest(req);
   if (!isAdminUser(user)) return NextResponse.json({ error: 'Forbidden: Admins only' }, { status: 403 });
   try {
     const body = (await req.json()) as { id?: number; uid?: string; force?: boolean };

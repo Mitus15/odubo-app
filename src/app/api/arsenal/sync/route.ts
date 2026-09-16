@@ -461,7 +461,7 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const user = getUserFromRequest(request);
+    const user = await getUserFromRequest(request);
     if (!isAdminUser(user)) {
       return NextResponse.json({ error: 'Forbidden: Admins only' }, { status: 403 });
     }

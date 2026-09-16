@@ -6,7 +6,7 @@ import CloudflareStreamAPI from '@/lib/cloudflareStream';
 import { writeAuditLog } from '@/lib/audit';
 
 export async function POST(req: NextRequest) {
-  const user = getUserFromRequest(req);
+  const user = await getUserFromRequest(req);
   if (!isAdminUser(user)) return NextResponse.json({ error: 'Forbidden: Admins only' }, { status: 403 });
 
   try {

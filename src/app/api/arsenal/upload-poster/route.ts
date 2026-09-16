@@ -44,7 +44,7 @@ function getMimeType(fileName: string): string {
  */
 export async function POST(request: NextRequest) {
   try {
-    const user = getUserFromRequest(request);
+    const user = await getUserFromRequest(request);
     if (!isAdminUser(user)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }

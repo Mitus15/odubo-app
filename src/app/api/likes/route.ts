@@ -7,7 +7,7 @@ import { rateLimit } from '@/lib/rateLimit';
 export async function GET(req: NextRequest) {
   try {
     const url = new URL(req.url);
-    const authUser = getUserFromRequest(req);
+    const authUser = await getUserFromRequest(req);
     const userId = authUser?.userId;
     const type = url.searchParams.get('type'); // 'tracks', 'videos', 'albums'
     const limit = url.searchParams.get('limit') || '50';
@@ -111,7 +111,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const authUser = getUserFromRequest(req);
+    const authUser = await getUserFromRequest(req);
     if (!authUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -186,7 +186,7 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
-    const authUser = getUserFromRequest(req);
+    const authUser = await getUserFromRequest(req);
     if (!authUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

@@ -6,7 +6,7 @@ import { rateLimit } from '@/lib/rateLimit';
 import { writeAuditLog } from '@/lib/audit';
 
 export async function POST(req: NextRequest) {
-  const user = getUserFromRequest(req);
+  const user = await getUserFromRequest(req);
   if (!isAdminUser(user)) return NextResponse.json({ error: 'Forbidden: Admins only' }, { status: 403 });
 
   const ip = req.headers.get('x-forwarded-for') || 'unknown';

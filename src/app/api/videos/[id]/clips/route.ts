@@ -7,7 +7,7 @@ export const runtime = 'nodejs';
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const user = getUserFromRequest(req);
+    const user = await getUserFromRequest(req);
     if (!isAdminUser(user)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
@@ -32,7 +32,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const user = getUserFromRequest(req);
+    const user = await getUserFromRequest(req);
     if (!isAdminUser(user)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
@@ -169,7 +169,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const user = getUserFromRequest(req);
+    const user = await getUserFromRequest(req);
     if (!isAdminUser(user)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
@@ -200,7 +200,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const user = getUserFromRequest(req);
+    const user = await getUserFromRequest(req);
     if (!isAdminUser(user)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }

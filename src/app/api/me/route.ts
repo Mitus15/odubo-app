@@ -13,7 +13,7 @@ function isEmailInAdminList(email: string): boolean {
 }
 
 export async function GET(req: NextRequest) {
-  const user = getUserFromRequest(req);
+  const user = await getUserFromRequest(req);
   if (user) {
     const role = await getUserRoleFromRequest(req);
     const isAdmin = isAdminUser(user);

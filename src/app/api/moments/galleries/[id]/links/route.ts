@@ -37,7 +37,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
  */
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   try {
-    const user = getUserFromRequest(req as any);
+    const user = await getUserFromRequest(req as any);
     if (!isAdminUser(user)) return NextResponse.json({ error: 'Admins only' }, { status: 403 });
 
     const { id: idStr } = await ctx.params;
@@ -104,7 +104,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
  */
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   try {
-    const user = getUserFromRequest(req as any);
+    const user = await getUserFromRequest(req as any);
     if (!isAdminUser(user)) return NextResponse.json({ error: 'Admins only' }, { status: 403 });
 
     const { id: idStr } = await ctx.params;
@@ -173,7 +173,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
  */
 export async function DELETE(req: Request, ctx: { params: Promise<{ id: string }> }) {
   try {
-    const user = getUserFromRequest(req as any);
+    const user = await getUserFromRequest(req as any);
     if (!isAdminUser(user)) return NextResponse.json({ error: 'Admins only' }, { status: 403 });
 
     const { id: idStr } = await ctx.params;
@@ -223,7 +223,7 @@ export async function DELETE(req: Request, ctx: { params: Promise<{ id: string }
  */
 export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }) {
   try {
-    const user = getUserFromRequest(req as any);
+    const user = await getUserFromRequest(req as any);
     if (!isAdminUser(user)) return NextResponse.json({ error: 'Admins only' }, { status: 403 });
 
     const { id: idStr } = await ctx.params;

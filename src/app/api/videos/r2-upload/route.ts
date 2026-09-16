@@ -26,7 +26,7 @@ const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL || 'https://media.odubo.studio';
  */
 export async function POST(req: NextRequest) {
   try {
-    const user = getUserFromRequest(req);
+    const user = await getUserFromRequest(req);
     if (!isAdminUser(user)) {
       return NextResponse.json({ error: 'Forbidden: Admins only' }, { status: 403 });
     }
@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
  */
 export async function PUT(req: NextRequest) {
   try {
-    const user = getUserFromRequest(req);
+    const user = await getUserFromRequest(req);
     if (!isAdminUser(user)) {
       return NextResponse.json({ error: 'Forbidden: Admins only' }, { status: 403 });
     }

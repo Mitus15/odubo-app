@@ -5,7 +5,7 @@ import { rateLimit } from '@/lib/rateLimit';
 
 export async function POST(req: Request) {
   try {
-    const user = getUserFromRequest(req as any) || null;
+    const user = await getUserFromRequest(req as any) || null;
     const isAdmin = isAdminUser(user);
 
     const body = await req.json() as any;

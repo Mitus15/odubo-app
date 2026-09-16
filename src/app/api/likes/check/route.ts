@@ -8,7 +8,7 @@ export const runtime = 'edge';
 export async function GET(req: NextRequest) {
   try {
     const url = new URL(req.url);
-    const authUser = getUserFromRequest(req);
+    const authUser = await getUserFromRequest(req);
     const userId = authUser?.userId;
     const itemId = url.searchParams.get('item_id');
     const type = url.searchParams.get('type');

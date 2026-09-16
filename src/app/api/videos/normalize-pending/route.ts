@@ -265,7 +265,7 @@ async function processVideo(
  * List all videos/clips that haven't been normalized yet.
  */
 export async function GET(req: NextRequest) {
-  const authUser = getUserFromRequest(req);
+  const authUser = await getUserFromRequest(req);
   if (!isAdminUser(authUser)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
@@ -327,7 +327,7 @@ export async function GET(req: NextRequest) {
  * Call repeatedly to process all pending videos.
  */
 export async function POST(req: NextRequest) {
-  const authUser = getUserFromRequest(req);
+  const authUser = await getUserFromRequest(req);
   if (!isAdminUser(authUser)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }

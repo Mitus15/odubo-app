@@ -12,7 +12,7 @@ function hex(bytes: number) {
 
 export async function POST(req: NextRequest) {
   try {
-    const actor = getUserFromRequest(req);
+    const actor = await getUserFromRequest(req);
     if (!isAdminUser(actor)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     const { email } = await req.json() as { email: string };

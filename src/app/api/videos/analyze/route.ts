@@ -43,7 +43,7 @@ async function generateAIDescription(input: { title: string; description?: strin
 }
 
 export async function POST(req: NextRequest) {
-  const user = getUserFromRequest(req);
+  const user = await getUserFromRequest(req);
   if (!isAdminUser(user)) return NextResponse.json({ error: 'Forbidden: Admins only' }, { status: 403 });
 
   try {

@@ -5,7 +5,7 @@ import { queryDatabase } from '@/lib/db';
 import { writeAuditLog } from '@/lib/audit';
 
 export async function GET(req: NextRequest) {
-  const user = getUserFromRequest(req);
+  const user = await getUserFromRequest(req);
   if (!isAdminUser(user)) return NextResponse.json({ error: 'Forbidden: Admins only' }, { status: 403 });
 
   try {

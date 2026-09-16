@@ -51,7 +51,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   // Admin-only endpoint to (re)create the default live input
-  const user = getUserFromRequest(req);
+  const user = await getUserFromRequest(req);
   if (!isAdminUser(user)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   try {
     const stream = new CloudflareStreamAPI();

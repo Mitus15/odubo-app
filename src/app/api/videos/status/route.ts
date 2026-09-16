@@ -7,7 +7,7 @@ import { writeAuditLog } from "@/lib/audit";
 
 export async function GET(req: NextRequest) {
   // Authenticate user (prefer token)
-  const authUser = getUserFromRequest(req);
+  const authUser = await getUserFromRequest(req);
   if (!isAdminUser(authUser)) {
     // fallback to legacy header
     const email = req.headers.get("x-user-email") || req.headers.get("X-User-Email");

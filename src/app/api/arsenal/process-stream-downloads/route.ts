@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
       console.log('[Process Stream Downloads] Triggered by cron service');
     } else {
       // Require admin authentication
-      const user = getUserFromRequest(req);
+      const user = await getUserFromRequest(req);
       if (!isAdminUser(user)) {
         return NextResponse.json({ error: 'Forbidden: Admins only' }, { status: 403 });
       }

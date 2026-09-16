@@ -23,7 +23,7 @@ interface RoleWithDetails {
 export async function GET(request: NextRequest) {
   try {
     // Verify requester is admin
-    const requester = getUserFromRequest(request);
+    const requester = await getUserFromRequest(request);
     if (!isAdminUser(requester)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     // Verify requester is admin
-    const requester = getUserFromRequest(request);
+    const requester = await getUserFromRequest(request);
     if (!isAdminUser(requester)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -122,7 +122,7 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     // Verify requester is admin
-    const requester = getUserFromRequest(request);
+    const requester = await getUserFromRequest(request);
     if (!isAdminUser(requester)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

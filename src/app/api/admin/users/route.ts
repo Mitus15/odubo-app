@@ -5,14 +5,14 @@ import { queryDatabase, executeQuery } from '@/lib/db';
 export const runtime = 'edge';
 
 export async function GET(req: NextRequest) {
-  const actor = getUserFromRequest(req);
+  const actor = await getUserFromRequest(req);
   if (!isAdminUser(actor)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   const users = await queryDatabase('SELECT id, email, username, role, is_admin, email_verified, created_at FROM users ORDER BY created_at DESC');
   return NextResponse.json({ success: true, users });
 }
 
 export async function PATCH(req: NextRequest) {
-  const actor = getUserFromRequest(req);
+  const actor = await getUserFromRequest(req);
   if (!isAdminUser(actor)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   const body = await req.json() as { userId: string; role?: 'admin' | 'editor' | 'viewer'; is_active?: boolean };
   if (!body.userId) return NextResponse.json({ error: 'userId required' }, { status: 400 });

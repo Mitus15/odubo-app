@@ -12,7 +12,7 @@ export const runtime = 'nodejs';
 export async function GET(req: NextRequest) {
   try {
     // Require admin auth
-    const user = getUserFromRequest(req);
+    const user = await getUserFromRequest(req);
     if (!isAdminUser(user)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

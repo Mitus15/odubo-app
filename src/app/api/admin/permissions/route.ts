@@ -41,7 +41,7 @@ interface RoleRow {
 
 export async function GET(request: NextRequest) {
   try {
-    const legacyUser = getUserFromRequest(request);
+    const legacyUser = await getUserFromRequest(request);
 
     if (legacyUser) {
       if (isAdminUser(legacyUser)) {

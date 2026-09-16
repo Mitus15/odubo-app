@@ -4,7 +4,7 @@ import { executeQuery, queryDatabase } from '@/lib/db';
 import { getUserFromRequest, isAdminUser, userHasAnyRole } from '@/lib/auth';
 
 export async function POST(req: NextRequest) {
-  const user = getUserFromRequest(req);
+  const user = await getUserFromRequest(req);
   const allowed = isAdminUser(user) || await userHasAnyRole(req, ['editor']);
   if (!allowed) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 

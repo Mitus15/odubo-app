@@ -87,7 +87,7 @@ function formatCaption(
 export async function POST(request: NextRequest) {
   try {
     // Server-side authentication using httpOnly cookies
-    const user = getUserFromRequest(request);
+    const user = await getUserFromRequest(request);
     if (!isAdminUser(user)) {
       return NextResponse.json(
         { error: 'Forbidden: Admins only' },

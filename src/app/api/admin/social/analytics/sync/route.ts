@@ -25,7 +25,7 @@ interface SocialContent {
  * Sync analytics from Post for Me for all posted content
  */
 export async function POST(request: NextRequest) {
-  const user = getUserFromRequest(request);
+  const user = await getUserFromRequest(request);
   if (!isAdminUser(user)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
@@ -166,7 +166,7 @@ export async function POST(request: NextRequest) {
  * Get analytics for all posted content
  */
 export async function GET(request: NextRequest) {
-  const user = getUserFromRequest(request);
+  const user = await getUserFromRequest(request);
   if (!isAdminUser(user)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }

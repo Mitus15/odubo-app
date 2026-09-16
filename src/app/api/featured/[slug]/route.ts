@@ -32,7 +32,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ slu
 }
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
-  const user = getUserFromRequest(req);
+  const user = await getUserFromRequest(req);
   const allowed = isAdminUser(user) || await userHasAnyRole(req, ['editor']);
   if (!allowed) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   try {
@@ -67,7 +67,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ slug
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
-  const user = getUserFromRequest(req);
+  const user = await getUserFromRequest(req);
   const allowed = isAdminUser(user) || await userHasAnyRole(req, ['editor']);
   if (!allowed) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   try {

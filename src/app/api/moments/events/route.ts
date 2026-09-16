@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Admin authentication
-    const user = getUserFromRequest(req);
+    const user = await getUserFromRequest(req);
     if (!user || !isAdminUser(user)) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 401 });
     }
@@ -93,7 +93,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Admin authentication
-    const user = getUserFromRequest(req);
+    const user = await getUserFromRequest(req);
     if (!user || !isAdminUser(user)) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 401 });
     }

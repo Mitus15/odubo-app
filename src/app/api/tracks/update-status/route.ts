@@ -5,7 +5,7 @@ import { getUserFromRequest, isAdminUser } from '@/lib/auth';
 
 export async function PATCH(req: NextRequest) {
   try {
-    const user = getUserFromRequest(req);
+    const user = await getUserFromRequest(req);
     if (!isAdminUser(user)) {
       return NextResponse.json({ error: 'Forbidden: Admins only' }, { status: 403 });
     }
