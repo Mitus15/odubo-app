@@ -1,4 +1,4 @@
--- 159 — the inbox: one place where a customer's message arrives already
+-- 166 — the inbox: one place where a customer's message arrives already
 -- attached to who they are and what they bought.
 --
 -- Until now the store's contact form sent an email and kept nothing. Replies
