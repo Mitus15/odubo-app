@@ -1,10 +1,27 @@
 import { queryDatabase } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
+import { verifyUserFromRequest, isAdminUser } from '@/lib/auth';
 
 export const runtime = 'nodejs';
 
+/**
+ * Every customer's email, name, phone and lifetime spend.
+ *
+ * This had NO guard of any kind and answered 200 to the open internet. It was
+ * empty only because the table was empty; one sale would have made it a live
+ * export of the customer list. Found 2026-09-16 while triaging unmerged
+ * branches — a fix for it had been sitting on one of them for eleven days.
+ *
+ * It sits outside /api/admin, so the edge backstop in middleware does not
+ * reach it. Verified admin, in-route, using the signature-checking path —
+ * never getUserFromRequest, which decodes without verifying.
+ */
 export async function GET(req: NextRequest) {
   try {
+    const user = await verifyUserFromRequest(req);
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!isAdminUser(user)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
     const { searchParams } = new URL(req.url);
     const sortBy = searchParams.get('sort') || 'created_at';
     const sortOrder = searchParams.get('order') || 'DESC';
