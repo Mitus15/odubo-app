@@ -53,7 +53,7 @@ export async function ensureLoopGallery(
   // Column set stops at migration 125 on remote D1 (133's retention columns —
   // is_permanent / content_rights — were never applied there, and no read path
   // enforces them). Permanence is carried in config.persistent instead.
-  const title = `Loop Soul — ${event.title}`;
+  const title = `Loop Soul · ${event.title}`;
   await executeQuery(
     `INSERT OR IGNORE INTO galleries
        (code, title, description, created_by, config, gallery_type, upload_mode)

@@ -49,7 +49,7 @@ export function JournalIssueView({
     <main className="mx-auto w-full max-w-xl px-6 pb-24">
       {draftPreview && (
         <p className="mt-4 rounded-full border border-ink/30 px-4 py-2 text-center text-[10px] font-bold uppercase tracking-[0.3em] opacity-70">
-          Draft preview — only admins can see this
+          Draft preview, admins only
         </p>
       )}
 
@@ -116,7 +116,7 @@ export function JournalIssueView({
               <figcaption className="mt-2 px-1 text-sm">
                 <span className="font-bold">{spotlight.caption}</span>
                 {spotlight.credit && (
-                  <span className="opacity-60"> — {spotlight.credit}</span>
+                  <span className="opacity-60"> · {spotlight.credit}</span>
                 )}
               </figcaption>
             )}
@@ -147,7 +147,7 @@ export function JournalIssueView({
                   {(m.caption || m.credit) && (
                     <figcaption className="mt-1.5 px-1 text-xs">
                       <span className="font-bold">{m.caption}</span>
-                      {m.credit && <span className="opacity-60"> — {m.credit}</span>}
+                      {m.credit && <span className="opacity-60"> · {m.credit}</span>}
                     </figcaption>
                   )}
                 </figure>

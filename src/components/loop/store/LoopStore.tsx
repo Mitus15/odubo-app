@@ -31,7 +31,6 @@ export function LoopStore({
   checkoutUrl,
   price,
   currency,
-  eventTitle,
   theme,
   venue,
   dateLabel,
@@ -44,7 +43,6 @@ export function LoopStore({
   checkoutUrl?: string | null;
   price?: string | null;
   currency?: string | null;
-  eventTitle: string;
   theme: string;
   venue: string;
   dateLabel: string;
@@ -76,7 +74,7 @@ export function LoopStore({
         <div>
           <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Store</h1>
           <p className="mt-2 max-w-md text-sm opacity-70">
-            Passes and pieces for {eventTitle} · {theme}. Everything else the studio
+            Passes and pieces for Loop Soul · {theme}. Everything else the studio
             makes lives at odubo.
           </p>
         </div>
@@ -108,7 +106,7 @@ export function LoopStore({
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={passProduct.image.url}
-                  alt={passProduct.image.altText || `${eventTitle} pass`}
+                  alt={passProduct.image.altText || "Loop Soul pass"}
                   className="h-full w-full object-cover"
                   loading="lazy"
                 />
@@ -119,10 +117,10 @@ export function LoopStore({
               )}
             </div>
             <div className="flex min-w-0 flex-1 flex-col justify-center py-4 pr-4 sm:py-6">
-              {/* Wraps rather than truncates — a product title ending in
-                  "Volu…" tells the buyer nothing about what they're buying. */}
+              {/* Wraps rather than truncates: a truncated title tells the buyer
+                  nothing about what they're buying. */}
               <h3 className="text-lg font-bold leading-tight sm:text-xl">
-                {passProduct?.title || `${eventTitle} — Pass`}
+                {passProduct?.title || "Loop Soul Pass"}
               </h3>
               <p className="mt-1 text-sm opacity-70">
                 {dateLabel} · {timeLabel} · {venue}
@@ -153,7 +151,7 @@ export function LoopStore({
           <p className="rounded-2xl border border-dashed border-ink/20 px-5 py-8 text-center text-sm opacity-60">
             {collectionMissing
               ? "The shelf isn't built yet. No loop-soul collection in Shopify."
-              : "Nothing on the shelf yet. Pieces drop with the volume."}
+              : "Nothing on the shelf yet."}
           </p>
         ) : (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">

@@ -139,8 +139,7 @@ export function ClaimRow() {
       {error && <p className="mt-3 text-[13px] font-bold text-wine">{error}</p>}
 
       <p className="loop-muted mt-5 text-[11px] leading-relaxed">
-        No password. The email is how you find yourself again on a new phone —
-        we don&apos;t send anything to it.
+        No password. The email is how you find yourself again on a new phone.
       </p>
     </div>
   );

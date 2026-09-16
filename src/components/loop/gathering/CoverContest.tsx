@@ -3,103 +3,62 @@
 import { useState } from "react";
 import dynamic from "next/dynamic";
 
-// The camera pulls in the segmenter and the GL stylizer — a large payload that
+// The camera pulls in the segmenter and the GL stylizer, a large payload that
 // nobody scanning a flyer should download before they have asked for a camera.
-const CameraSheet = dynamic(
-  () => import("@/components/loop/pose/CameraSheet"),
-  { ssr: false },
-);
+const CameraSheet = dynamic(() => import("@/components/loop/pose/CameraSheet"), { ssr: false });
 
 /**
- * The Cover Contest — the reason the filter exists on the night.
+ * The Cover.
  *
- * The cover is FLUID (owner, 2026-09-08). The artwork already shipping on the
- * single is not a placeholder waiting to be replaced — it is the owner's
- * version, and it stays his version. Anyone can hold their own. What the night
- * decides is which one becomes OFFICIAL.
+ * The cover is FLUID (owner, 2026-09-08): the artwork on the single is his
+ * version and stays his version; anyone can hold their own; the room decides
+ * on the night which one is official. This sheet shows the cover this person
+ * sees, offers the camera, and states the two facts about the contest in two
+ * lines. It used to explain the contest in three numbered steps and a prize
+ * box before anyone had shot anything; the camera's own result screen already
+ * says "Your album cover", and posting already says you are in the running.
+ * A guest learns the contest by entering it.
  *
- * That distinction matters to the copy: this module used to say the album
- * "needs a cover", which stopped being true the moment the single rendered one
- * and would have read as a contradiction to anyone who saw both. A record with
- * many covers and one official cover has no such problem, and is a truer
- * statement of the closed circle than a vacancy would have been — the people in
- * the room are not filling a gap, they are entering a version.
- *
- * Numbers are stated plainly and on purpose. A contest that names its payment
- * reads as an offer; one that doesn't reads as free labour.
- *
- * The camera opens HERE rather than sending people to /loop/pose. Entering the
- * contest was a two-page journey off the front door, which is a lot to ask of
- * someone who has had the idea explained to them ten seconds ago and is holding
- * a piece of paper. Shooting has never needed a pass — only posting to the Wall
- * does — so the filter is open to anyone who scanned the code. `canPost` is
- * whether THIS device holds a pass; with it the camera offers the Wall, before
- * the night as well as during it.
+ * Shooting has never needed a pass; only posting to the Wall does. `canPost`
+ * is whether THIS device holds a pass.
  */
-export function CoverContest({ canPost = false }: { canPost?: boolean }) {
+export function CoverContest({
+  canPost = false,
+  coverUrl = null,
+  coverCaption = "",
+}: {
+  canPost?: boolean;
+  /** Resolved per visitor: theirs, the room's, or the owner's. */
+  coverUrl?: string | null;
+  coverCaption?: string;
+}) {
   const [cameraOpen, setCameraOpen] = useState(false);
 
   return (
-    <section className="w-full space-y-5">
-      <p className="text-sm opacity-80">
-        The cover of this album is fluid. The one you have seen is mine — you
-        can hold your own. On the night the room decides which one is official.
-      </p>
-
-      <ol className="relative ml-2 space-y-4 border-l border-ink/20">
-        {[
-          [
-            "Shoot through the filter",
-            "Every photo taken in the room goes through the Loop Soul filter: ink on sand, no faces. Those frames are the entries. You don't sign up for anything.",
-          ],
-          [
-            "It lands on the Wall",
-            "The room's gallery. Everyone in the room can see it, and everyone in the room keeps it.",
-          ],
-          [
-            "The room votes",
-            "The standout shots are shortlisted, and everyone in the room votes. The winning frame becomes the official cover, credited to whoever took it. Every other version stays valid. It just isn't the one on the record.",
-          ],
-        ].map(([title, body]) => (
-          <li key={title} className="ml-5">
-            <span className="absolute -left-[7px] mt-1.5 h-3 w-3 rounded-full bg-ink" />
-            <div className="font-bold">{title}</div>
-            <p className="mt-0.5 text-sm opacity-70">{body}</p>
-          </li>
-        ))}
-      </ol>
-
-      <div className="rounded-2xl border border-ink/20 p-4">
-        <div className="text-[11px] font-semibold uppercase tracking-[0.25em] opacity-60">
-          What it pays
+    <section className="w-full">
+      {coverUrl && (
+        <div className="relative mx-auto aspect-square w-full max-w-[320px] overflow-hidden">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={coverUrl} alt="The cover" className="h-full w-full object-cover" />
         </div>
-        <dl className="mt-2 space-y-1 text-sm">
-          <div className="flex items-baseline justify-between gap-3">
-            <dt>The official cover</dt>
-            <dd className="font-black tabular-nums">$50</dd>
-          </div>
-          <div className="flex items-baseline justify-between gap-3">
-            <dt>Any shot used in the magazine</dt>
-            <dd className="font-black tabular-nums">$5</dd>
-          </div>
-        </dl>
-        <p className="loop-muted mt-3 text-xs">
-          Credit is fixed at the moment the shot is taken, so it stays yours.
-        </p>
-      </div>
+      )}
+      <p className="mt-4 text-center text-sm">{coverCaption || "This one is mine. Make yours."}</p>
 
       <button
         type="button"
         onClick={() => setCameraOpen(true)}
-        className="block w-full rounded-full bg-ink py-4 text-center text-sm font-bold text-sand transition-transform active:scale-95"
+        className="mt-5 block w-full rounded-full bg-ink py-4 text-center text-base font-bold text-sand transition-transform active:scale-95"
       >
-        Make your cover
+        Shoot
       </button>
 
-      <p className="loop-muted text-center text-[11px] leading-relaxed">
-        {canPost
-          ? "Nothing to sign up for. Shoot, then put it on the Wall when you're happy with it."
-          : "Shooting is free. Putting it on the Wall takes a pass."}
+      <div className="mt-6 border-t border-ink/15">
+        <p className="border-b border-ink/15 py-3 text-sm">The room picks the official cover on the night.</p>
+        <p className="border-b border-ink/15 py-3 text-sm">$50 to whoever shot it. $5 for any shot in the magazine.</p>
+      </div>
+
+      <p className="loop-muted mt-4 text-center text-[11px] leading-relaxed">
+        {canPost ? "Shoot, then put it on the Wall when you're happy with it." : "Shooting is free. Putting it on the Wall takes a pass."}
       </p>
 
       {cameraOpen && <CameraSheet canPost={canPost} onClose={() => setCameraOpen(false)} />}

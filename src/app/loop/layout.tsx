@@ -27,9 +27,9 @@ const script = Pinyon_Script({
 });
 
 export const metadata: Metadata = {
-  title: "Loop Soul — the album",
+  title: "Loop Soul, the album",
   description:
-    "Loop Soul is an album by Mani Odubo. Each volume is the record brought into a room — Volume 1 is the first time it's played anywhere, at Scott's Inn, Kamloops.",
+    "Loop Soul is an album by Mani Odubo, performed live for the first time at Scott's Inn, Kamloops.",
   applicationName: "Loop Soul",
   // Loop-scoped manifest → "Add to Home Screen" installs /loop as its own
   // standalone app (overrides odubo's /site.webmanifest for this segment).

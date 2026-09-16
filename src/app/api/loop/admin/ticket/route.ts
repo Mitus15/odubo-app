@@ -31,8 +31,8 @@ export async function GET(req: NextRequest) {
 
   const png = await renderTicketPng({
     code: pass.code,
+    serial: pass.serial,
     baseUrl: await getPublicBaseUrl(),
-    eventTitle: event.title,
     dateLabel: at({ weekday: "short", month: "short", day: "numeric" }),
     timeLabel: at({ hour: "numeric", minute: "2-digit" }),
     venue: event.venue,

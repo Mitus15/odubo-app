@@ -9,7 +9,7 @@ import { MOCK_CURRENT_EVENT } from "@/lib/loop/hub";
  * Note: Satori (next/og) needs explicit display on multi-child nodes and only
  * the default Latin font offline, so we avoid the ∞ glyph and draw the loop.
  */
-export const alt = "Loop Soul — The Rec Room at Scott's Inn";
+export const alt = "Loop Soul, an album by Mani Odubo, live at Scott's Inn";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 

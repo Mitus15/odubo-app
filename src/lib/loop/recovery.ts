@@ -38,12 +38,13 @@ export function newOtp(): string {
   return String(buf[0] % 1_000_000).padStart(6, "0");
 }
 
-function pepper(): string {
+/** The secret every inbox-proof hash is salted with: the six digits and the claim link alike. */
+export function otpPepper(): string {
   return process.env.LOOP_OTP_PEPPER || process.env.JWT_SECRET || "dev-insecure-pepper";
 }
 
 export async function hashOtp(email: string, code: string): Promise<string> {
-  const data = new TextEncoder().encode(`${normEmail(email)}|${code.trim()}|${pepper()}`);
+  const data = new TextEncoder().encode(`${normEmail(email)}|${code.trim()}|${otpPepper()}`);
   const digest = await crypto.subtle.digest("SHA-256", data);
   return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
 }
@@ -198,9 +199,29 @@ async function resolveOwner(email: string, voterId: string, codes: CodeRow[]): P
   return (await attendeeByEmail(mail)) ?? me.id;
 }
 
+/**
+ * Put an address on this device's attendee, but only if nobody owns it yet.
+ *
+ * Used by the claim link for the buyer's own ticket (unit #1 of an order). A
+ * friend's phone opening a forwarded Guest 2 link must never claim the buyer's
+ * address: `loop_attendees.email` is unique, so the buyer could then never own
+ * it, and a later six-digit proof would merge the buyer INTO the friend.
+ */
+export async function claimEmailIfUnowned(email: string, voterId: string): Promise<boolean> {
+  const mail = normEmail(email);
+  if (!mail || !voterId || voterId === "anonymous") return false;
+  if (await attendeeByEmail(mail)) return false;
+  const me = await ensureAttendee(voterId);
+  const meta = await executeQuery(
+    `UPDATE loop_attendees SET email = ?2 WHERE id = ?1 AND email IS NULL`,
+    [me.id, mail],
+  );
+  return meta.changes > 0;
+}
+
 export type RecoveryResult = {
   attendeeId: string;
-  codes: { code: string; redeemed: boolean }[];
+  codes: { code: string; serial: number | null; redeemed: boolean }[];
   taken: number;
   evicted: number;
 };
@@ -251,13 +272,13 @@ export async function recoverForVerifiedOwner(eventId: string, email: string, vo
     await recordAttendance(eventId, ownerId, codes[0].code);
   }
 
-  const after = await queryDatabase<{ code: string; redeemed_by: string | null }>(
-    `SELECT code, redeemed_by FROM event_codes WHERE event_id = ?1 AND LOWER(TRIM(email)) = ?2 ORDER BY created_at ASC`,
+  const after = await queryDatabase<{ code: string; serial: number | null; redeemed_by: string | null }>(
+    `SELECT code, serial, redeemed_by FROM event_codes WHERE event_id = ?1 AND LOWER(TRIM(email)) = ?2 ORDER BY created_at ASC`,
     [eventId, mail],
   );
   return {
     attendeeId: ownerId,
-    codes: after.map((r) => ({ code: r.code, redeemed: r.redeemed_by !== null })),
+    codes: after.map((r) => ({ code: r.code, serial: r.serial ?? null, redeemed: r.redeemed_by !== null })),
     taken: plan.take.length,
     evicted,
   };

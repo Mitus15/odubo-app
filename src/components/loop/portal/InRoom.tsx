@@ -47,86 +47,43 @@ export function InRoom({
         </div>
 
         {nowLabel && (
-          <div className="loop-panel mt-6 rounded-2xl px-5 py-4 text-left">
-            <div className="loop-muted text-[11px] font-bold uppercase tracking-[0.25em]">
-              On now
-            </div>
+          <div className="mt-6 border-t border-[color-mix(in_srgb,var(--foreground)_15%,transparent)] pt-3 text-left">
+            <div className="loop-muted text-[11px] font-bold uppercase tracking-[0.25em]">On now</div>
             <div className="mt-1 text-lg font-bold">{nowLabel}</div>
           </div>
         )}
 
-        <div className="mt-6 grid gap-3">
+        {/* One drawn shape, the camera; the rest is type on hairlines. */}
+        <div className="mt-6">
           <button
             type="button"
             onClick={() => setSurface("camera")}
-            className="flex items-center justify-between rounded-3xl bg-[var(--foreground)] px-6 py-5 text-left text-[var(--background)] transition-transform active:scale-[0.98]"
+            className="flex w-full items-baseline justify-between rounded-full bg-[var(--foreground)] px-6 py-4 text-left text-[var(--background)] transition-transform active:scale-[0.98]"
           >
-            <span>
-              <span className="block text-xl font-extrabold">Camera</span>
-              <span className="block text-sm opacity-75">
-                Strike a pose — we&apos;ll Loop Soul it
-              </span>
-            </span>
-            <span aria-hidden className="text-2xl">
-              ◉
-            </span>
+            <span className="text-lg font-extrabold">Camera</span>
+            <span className="text-xs opacity-75">Shoot through the filter</span>
           </button>
 
-          <button
-            type="button"
-            onClick={() => setSurface("wall")}
-            className="loop-panel flex items-center justify-between rounded-3xl px-6 py-5 text-left transition-transform active:scale-[0.98]"
-          >
-            <span>
-              <span className="block text-xl font-extrabold">The Wall</span>
-              <span className="block text-sm opacity-75">
-                Everything the room is shooting, live
-              </span>
-            </span>
-            <span aria-hidden className="text-2xl">
-              ▦
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setSurface("tracklist")}
-            className="loop-panel flex items-center justify-between rounded-3xl px-6 py-5 text-left transition-transform active:scale-[0.98]"
-          >
-            <span>
-              <span className="block text-xl font-extrabold">The Tracklist</span>
-              <span className="block text-sm opacity-75">
-                You heard it — now rank it. The room orders the record
-              </span>
-            </span>
-            <span aria-hidden className="text-2xl">
-              ↕
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setSurface("cover")}
-            className="loop-panel flex items-center justify-between rounded-3xl px-6 py-5 text-left transition-transform active:scale-[0.98]"
-          >
-            <span>
-              <span className="block text-xl font-extrabold">The Cover</span>
-              <span className="block text-sm opacity-75">
-                Vote the album&apos;s cover out of the night&apos;s shots
-              </span>
-            </span>
-            <span aria-hidden className="text-2xl">
-              ✦
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setSurface("program")}
-            className="rounded-2xl border border-[color-mix(in_srgb,var(--foreground)_25%,transparent)] py-3 text-xs font-bold uppercase tracking-widest"
-          >
-            The Night — full program
-          </button>
+          <div className="mt-5 border-t border-[color-mix(in_srgb,var(--foreground)_15%,transparent)]">
+            {(
+              [
+                ["wall", "The Wall", "What the room is shooting, live"],
+                ["tracklist", "The Tracklist", "Rank the record"],
+                ["cover", "The Cover", "Vote the night's shots"],
+                ["program", "The Night", "The programme"],
+              ] as const
+            ).map(([key, title, sub]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setSurface(key)}
+                className="flex min-h-[52px] w-full items-baseline justify-between gap-4 border-b border-[color-mix(in_srgb,var(--foreground)_15%,transparent)] py-3.5 text-left"
+              >
+                <span className="text-lg font-extrabold">{title}</span>
+                <span className="loop-muted text-xs">{sub}</span>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

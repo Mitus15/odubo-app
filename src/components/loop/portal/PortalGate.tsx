@@ -5,16 +5,16 @@ import { useState } from "react";
 import LoopLoader from "@/components/loop/brand/LoopLoader";
 
 /**
- * The event-code gate. A ticket-holder redeems their code to unlock the
- * attendee-only surfaces — the Portal in State 2, the Vault in Legacy. On
- * success we refresh the route — the server re-renders unlocked because
- * `isHolder` is now true for this `ls_voter`. Reuses the existing
- * /api/loop/redeem endpoint (which binds the code to the voter and marks
- * them a holder). `tone="vault"` restyles for the dark Legacy field.
+ * The pass gate. A ticket-holder types their pass to unlock the attendee-only
+ * surfaces (the Portal on the night, the Vault in Legacy). On success the
+ * route refreshes: the server re-renders unlocked because `isHolder` is now
+ * true for this `ls_voter`. Uses /api/loop/redeem, which binds the code to
+ * the voter and marks them a holder. `tone="vault"` restyles for the dark
+ * Legacy field. Type and one drawn shape, no bubble.
  */
 export function PortalGate({
   title = "Enter your pass",
-  copy = "Your pass opens the Wall, the votes, and the live programme.",
+  copy = "Your pass opens the Wall, the votes, and the night.",
   cta = "Unlock the Portal",
   tone = "poster",
   checkoutUrl = null,
@@ -60,11 +60,7 @@ export function PortalGate({
 
   const vault = tone === "vault";
   return (
-    <div
-      className={`mt-12 w-full max-w-md rounded-2xl border px-5 py-6 text-left ${
-        vault ? "border-sand/25 bg-sand/5" : "border-ink/15 bg-ink/5"
-      }`}
-    >
+    <div className={`mt-12 w-full max-w-md border-t pt-6 text-left ${vault ? "border-sand/25" : "border-ink/15"}`}>
       <div className="font-bold">{title}</div>
       <div className="mt-1 text-sm opacity-70">{copy}</div>
 
@@ -98,44 +94,24 @@ export function PortalGate({
         </button>
       </form>
 
-      {/* No pass yet? Then a code prompt alone is a dead end. */}
-      <div className={`mt-5 border-t pt-4 ${vault ? "border-sand/20" : "border-ink/15"}`}>
-        <p className="text-sm font-bold">No pass yet?</p>
-        {checkoutUrl ? (
-          <a
-            href={checkoutUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={`mt-2 block rounded-2xl px-5 py-3 text-center font-bold ${
-              vault ? "bg-sand text-ink" : "bg-ink text-sand"
-            }`}
-          >
-            Get a pass{priceLabel ? ` · ${priceLabel}` : ""}
-          </a>
-        ) : (
-          <a
-            href="/loop"
-            className={`mt-2 block rounded-2xl border px-5 py-3 text-center font-bold ${
-              vault ? "border-sand/40 text-sand" : "border-ink/25"
-            }`}
-          >
-            See the event & get a pass
-          </a>
-        )}
-        <p className="loop-muted mt-2 text-xs leading-relaxed">
-          Your pass is a short code that arrives by email. It gets you in the door and
-          unlocks the app.
-        </p>
+      {/* Two tappable lines under the one drawn shape: a way to buy, and the
+          way back for anyone who already did. */}
+      <div className={`mt-5 flex items-center justify-center gap-3 border-t pt-4 ${vault ? "border-sand/20" : "border-ink/15"}`}>
+        <a
+          href={checkoutUrl ?? "/loop"}
+          {...(checkoutUrl ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+          className="loop-muted min-h-[44px] text-[11px] font-bold uppercase tracking-[0.2em] underline underline-offset-4"
+        >
+          Get a pass{priceLabel ? ` · ${priceLabel}` : ""}
+        </a>
+        <span className="loop-muted text-[11px]">·</span>
+        <a
+          href="/loop/code"
+          className="loop-muted min-h-[44px] text-[11px] font-bold uppercase tracking-[0.2em] underline underline-offset-4"
+        >
+          Find your pass
+        </a>
       </div>
-
-      {/* Email delivery can't be trusted yet, so the recovery path is always
-          one tap away — at the door as much as at home. */}
-      <a
-        href="/loop/code"
-        className="loop-muted mt-4 block text-center text-[11px] font-bold uppercase tracking-[0.2em] underline underline-offset-4"
-      >
-        Bought a pass but can&apos;t find it?
-      </a>
     </div>
   );
 }

@@ -141,5 +141,5 @@ export function coverCaption(cover: ResolvedCover): string {
   }
   // An invitation, not just a statement — this line is tappable and it is the
   // shortest route from hearing the record to entering the contest.
-  return "This cover is mine. Make yours →";
+  return "This one is mine. Make yours.";
 }

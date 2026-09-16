@@ -5,27 +5,31 @@ import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import LoopLoader from "@/components/loop/brand/LoopLoader";
 import { doorUrlFor } from "@/lib/loop/door";
+import { formatSerial } from "@/lib/loop/passLink";
 
-type Found = { code: string; redeemed: boolean };
+type Found = { code: string; serial?: number | null; redeemed: boolean };
 
 /**
- * Find your code, in two steps that prove the inbox.
+ * Your ticket, in two steps that prove the inbox, or in none.
  *
+ *   0. This phone already holds a pass (the link in the email bound it, or it
+ *      proved the inbox before): the ticket shows at once.
  *   1. The checkout email. A six-digit code goes to it.
  *   2. The six digits. This phone becomes yours: every pass bought with that
- *      address opens here, and the code is shown for the door, as text and as
- *      a QR the host can scan.
+ *      address opens here, and the ticket is shown for the door, number, code
+ *      and the QR the host scans.
  *
- * Nothing is shown before step two. The email is the proof, because the pass
- * was sent there, and that is the whole reason a stranger who knows your
- * address cannot take your night.
+ * Nothing is shown before proof. The email is the proof, because the pass was
+ * sent there, and that is the whole reason a stranger who knows your address
+ * cannot take your night.
  */
-export function CodeLookup() {
+export function CodeLookup({ initialHeld = [] }: { initialHeld?: Found[] }) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
-  const [step, setStep] = useState<"email" | "otp" | "done">("email");
-  const [codes, setCodes] = useState<Found[]>([]);
+  const [step, setStep] = useState<"email" | "otp" | "done">(initialHeld.length > 0 ? "done" : "email");
+  const [codes, setCodes] = useState<Found[]>(initialHeld);
+  const [proved, setProved] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
@@ -86,6 +90,7 @@ export function CodeLookup() {
         throw new Error(data.error ?? `Couldn't verify (${res.status})`);
       }
       setCodes(data.codes ?? []);
+      setProved(true);
       setStep("done");
       router.refresh();
     } catch (err) {
@@ -127,7 +132,7 @@ export function CodeLookup() {
             {busy ? <LoopLoader size={24} label="Sending" /> : "Send me the six digits"}
           </button>
           <p className="loop-muted text-xs leading-relaxed">
-            If a pass was bought with this address, six digits are on their way to it.
+            If a pass was bought with this address, six digits are on their way.
           </p>
         </form>
       )}
@@ -166,50 +171,48 @@ export function CodeLookup() {
         </form>
       )}
 
-      {error && <p className="loop-panel mt-4 rounded-2xl px-4 py-3 text-sm">{error}</p>}
+      {error && <p className="mt-4 border-t border-[color-mix(in_srgb,var(--foreground)_15%,transparent)] pt-3 text-sm font-semibold">{error}</p>}
 
       {step === "done" && codes.length === 0 && (
-        <div className="loop-panel mt-4 rounded-2xl px-5 py-4 text-sm leading-relaxed">
+        <div className="mt-4 border-t border-[color-mix(in_srgb,var(--foreground)_15%,transparent)] pt-4 text-sm leading-relaxed">
           <strong className="block">That address is yours, but no pass is under it.</strong>
-          <span className="loop-muted">Try the address your payment receipt went to, or ask at the door.</span>
+          <span className="loop-muted">Try the address your receipt went to, or ask at the door.</span>
         </div>
       )}
 
       {step === "done" && codes.length > 0 && (
         <div className="mt-2 grid gap-3">
-          <div className="loop-panel rounded-2xl px-5 py-4 text-sm leading-relaxed">
-            <strong className="block">This phone is yours now.</strong>
-            <span className="loop-muted">
-              Your pass opens the room here. It still works on any other phone you prove the same way.
-            </span>
-          </div>
-          <p className="loop-muted text-[11px] font-bold uppercase tracking-[0.25em]">
-            {codes.length === 1 ? "Your pass" : `Your ${codes.length} passes`}
-          </p>
-          {codes.map((c) => (
-            <div key={c.code} className="loop-panel rounded-2xl px-5 py-4">
-              <div className="flex items-center justify-between gap-3">
-                <span className="font-mono text-xl font-bold tracking-widest">{c.code}</span>
-                <button
-                  type="button"
-                  onClick={() => copy(c.code)}
-                  className="min-h-[44px] rounded-full border border-[color-mix(in_srgb,var(--foreground)_25%,transparent)] px-3 text-xs font-bold"
-                >
-                  {copied === c.code ? "Copied" : "Copy"}
-                </button>
+          {proved && (
+            <p className="loop-muted text-sm leading-relaxed">This phone is yours now.</p>
+          )}
+          {codes.map((c) => {
+            const serial = formatSerial(c.serial);
+            return (
+              <div key={c.code} className="border-t border-[color-mix(in_srgb,var(--foreground)_15%,transparent)] pt-4">
+                {serial && <p className="text-3xl font-extrabold tracking-tight">{serial}</p>}
+                <div className="mt-1 flex items-center justify-between gap-3">
+                  <span className="font-mono text-lg font-bold tracking-widest">{c.code}</span>
+                  <button
+                    type="button"
+                    onClick={() => copy(c.code)}
+                    className="loop-muted min-h-[44px] px-2 text-[11px] font-bold uppercase tracking-[0.2em] underline underline-offset-4"
+                  >
+                    {copied === c.code ? "Copied" : "Copy"}
+                  </button>
+                </div>
+                {qr[c.code] && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={qr[c.code]} alt={`Ticket QR for ${c.code}`} width={200} height={200} className="mt-3 rounded-xl bg-[var(--background)] p-2" />
+                )}
+                <p className="loop-muted mt-2 text-xs">Show this at the door.</p>
               </div>
-              {qr[c.code] && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={qr[c.code]} alt={`Ticket QR for ${c.code}`} width={160} height={160} className="mt-3 rounded-xl bg-[var(--background)] p-2" />
-              )}
-              <p className="loop-muted mt-2 text-xs">This is your ticket. Screenshot it; the door scans it.</p>
-            </div>
-          ))}
+            );
+          })}
           <button type="button" onClick={() => { router.push("/loop"); router.refresh(); }} className={`${primary} mt-2`}>
             Into the room
           </button>
           <a href="/loop/album" className="loop-muted mt-1 min-h-[44px] text-center text-xs underline underline-offset-4">
-            The record, when it lands →
+            Your record →
           </a>
         </div>
       )}

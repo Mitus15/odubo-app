@@ -15,6 +15,8 @@ import {
 } from "@/lib/loop/album";
 import { getSetting } from "@/lib/loop/loopSetting";
 import { sendAlbumReleaseEmail } from "@/lib/loop/email";
+import { releaseLinkFor } from "@/lib/loop/pass/deliver";
+import { getPublicBaseUrl } from "@/lib/loop/publicUrl";
 
 export const runtime = "nodejs";
 
@@ -85,10 +87,14 @@ export async function POST(req: NextRequest) {
       const album = await loadAlbum();
       const title = album?.album.title ?? event.title;
       const addresses = await unnotifiedAddresses();
+      const plain = `${(await getPublicBaseUrl()) ?? ""}/loop/album`;
       let sent = 0;
       let failed = 0;
       for (const email of addresses) {
-        const res = await sendAlbumReleaseEmail(email, title);
+        // A claim link where one of their passes can carry it, so the phone
+        // that taps Play is bound and the record simply plays.
+        const link = (await releaseLinkFor(event.id, email).catch(() => null)) ?? plain;
+        const res = await sendAlbumReleaseEmail(email, title, link);
         if (res.ok) {
           await markNotified(email);
           sent++;

@@ -36,7 +36,7 @@ export function PortalPreview({
           isn't, say nothing — a scarcity block with no scarcity behind it is
           worse than no block at all. */}
       {!capacity.unlimited && (
-        <div className="mt-5 rounded-2xl border border-ink/15 bg-ink/5 px-5 py-4 text-center">
+        <div className="mt-5 text-center">
           <div className="font-sans text-5xl font-extrabold leading-none tabular-nums">
             {capacity.remaining ?? capacity.total}
           </div>
@@ -46,70 +46,41 @@ export function PortalPreview({
         </div>
       )}
 
-      <div className="mt-4 grid gap-3">
-        <PreviewCard
-          title="The programme"
-          body="One night, run like a show, not a playlist. Here's the shape of it."
-        >
+      <div className="mt-5 border-t border-ink/15">
+        <Row title="The programme">
           {runOfShow.length > 0 ? (
-            <ul className="mt-3 grid gap-1.5">
+            <ul className="mt-2 grid gap-1.5">
               {runOfShow.map((item) => (
                 <li key={item.id} className="flex gap-3 text-sm">
-                  <span className="loop-muted w-12 shrink-0 font-mono text-xs tabular-nums">
-                    {item.time}
-                  </span>
+                  <span className="loop-muted w-12 shrink-0 font-mono text-xs tabular-nums">{item.time}</span>
                   <span>
                     <span className="font-semibold">{item.title}</span>
-                    {item.performer ? (
-                      <span className="loop-muted"> · {item.performer}</span>
-                    ) : null}
+                    {item.performer ? <span className="loop-muted"> · {item.performer}</span> : null}
                   </span>
                 </li>
               ))}
             </ul>
           ) : null}
-        </PreviewCard>
-
-        <PreviewCard
-          title="The camera"
-          body="Shoot the night through the Loop Soul filter and everyone comes out a figure: ink on sand, no faces. Your shots stay credited to you, and the good ones become the artwork for the volumes after this one."
-        />
-
-        <PreviewCard
-          title="The Wall"
-          body="Everything shot in the room, in one place, as it fills up. After the night it becomes the record of it: the issue for this volume."
-        />
+        </Row>
+        <Row title="The camera" body="The night through the Loop Soul filter. Every shot stays credited to you." />
+        <Row title="The Wall" body="Everything shot in the room, in one place, as it fills." />
       </div>
 
-      {/* The point of the app, stated before anyone buys — so nobody arrives
+      {/* The point of the app, stated before anyone buys, so nobody arrives
           expecting to spend the night on their phone. */}
       <p className="loop-muted mt-6 px-1 text-center text-xs leading-relaxed">
-        The app is for specific moments — getting in, taking your turn, shooting
-        a shot. The rest of the night it stays in your pocket.
+        The app is for moments: getting in, shooting a shot. The rest of the night it stays in your pocket.
       </p>
     </section>
   );
 }
 
-function PreviewCard({
-  title,
-  body,
-  foot,
-  children,
-}: {
-  title: string;
-  body: string;
-  foot?: string;
-  children?: React.ReactNode;
-}) {
+function Row({ title, body, children }: { title: string; body?: string; children?: React.ReactNode }) {
   return (
-    <div className="rounded-2xl border border-ink/15 bg-ink/5 px-5 py-4">
+    <div className="border-b border-ink/15 py-4">
       <div className="font-bold">{title}</div>
-      <p className="mt-1 text-sm leading-relaxed opacity-75">{body}</p>
+      {body && <p className="mt-1 text-sm leading-relaxed opacity-75">{body}</p>}
       {children}
-      {foot ? (
-        <p className="loop-muted mt-3 text-xs font-semibold uppercase tracking-widest">{foot}</p>
-      ) : null}
     </div>
   );
 }

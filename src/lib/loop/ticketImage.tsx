@@ -2,8 +2,9 @@ import { ImageResponse } from "next/og";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import QRCode from "qrcode";
-import { INK, SAND } from "@/lib/loop/brand";
+import { INK, PRODUCT_NAME, SAND } from "@/lib/loop/brand";
 import { doorUrlFor } from "@/lib/loop/door";
+import { formatSerial } from "@/lib/loop/passLink";
 
 /**
  * The ticket, as a thing you keep.
@@ -28,9 +29,12 @@ export const TICKET_H = 1620;
 
 export type TicketFacts = {
   code: string;
+  /** The pass number, the human identity of the ticket. Null on door comps. */
+  serial?: number | null;
   /** The origin the QR points at. Without it the QR carries the bare code, which the door also reads. */
   baseUrl: string | null;
-  eventTitle: string;
+  /** Kept for callers; the ticket names the product, never an edition. */
+  eventTitle?: string;
   /** "Sat Oct 10" — already formatted in the venue's timezone by the caller. */
   dateLabel: string;
   /** "6:30 p.m." */
@@ -62,6 +66,7 @@ async function qrDataUrl(t: TicketFacts): Promise<string> {
 export async function renderTicketPng(t: TicketFacts): Promise<Buffer> {
   const [font, qr] = await Promise.all([jost(), qrDataUrl(t)]);
   const many = (t.total ?? 1) > 1;
+  const serial = formatSerial(t.serial);
 
   const res = new ImageResponse(
     (
@@ -116,8 +121,10 @@ export async function renderTicketPng(t: TicketFacts): Promise<Buffer> {
           <img src={qr} alt="" width={540} height={540} style={{ display: "flex" }} />
         </div>
 
-        {/* The code, readable without a scanner — a dead phone at the door
-            still gets in, because the host can type this. */}
+        {/* The number is the ticket's name; the code, readable without a
+            scanner, is how a dead phone at the door still gets in, because
+            the host can type it. Door comps have no number and lead with the
+            code as before. */}
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
           <div
             style={{
@@ -131,7 +138,18 @@ export async function renderTicketPng(t: TicketFacts): Promise<Buffer> {
           >
             Your pass
           </div>
-          <div style={{ display: "flex", fontSize: 78, fontWeight: 700, letterSpacing: 6 }}>{t.code}</div>
+          {serial ? (
+            // A column of its own: Satori lays a fragment's children out in
+            // a row, which put the number and the code on one line.
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+              <div style={{ display: "flex", fontSize: 96, fontWeight: 700, letterSpacing: 4, lineHeight: 1 }}>{serial}</div>
+              <div style={{ display: "flex", fontSize: 38, fontWeight: 700, letterSpacing: 6, opacity: 0.7, marginTop: 14 }}>
+                {t.code}
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: "flex", fontSize: 78, fontWeight: 700, letterSpacing: 6 }}>{t.code}</div>
+          )}
         </div>
 
         {/* The night */}
@@ -171,7 +189,7 @@ export async function renderTicketPng(t: TicketFacts): Promise<Buffer> {
               marginTop: 18,
             }}
           >
-            {t.eventTitle} · Dress code {t.theme} · 19+
+            {PRODUCT_NAME} · Dress code {t.theme} · 19+
           </div>
         </div>
       </div>

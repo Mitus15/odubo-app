@@ -18,7 +18,7 @@ export function RunOfShow({
       {showHeader && (
         <header className="mb-3 px-1">
           <h2 className="text-2xl font-extrabold">The Night</h2>
-          <p className="text-sm opacity-70">Run of show — who, what, when.</p>
+          <p className="text-sm opacity-70">Who, what, when.</p>
         </header>
       )}
       <ol className="relative ml-2 border-l border-ink/20">

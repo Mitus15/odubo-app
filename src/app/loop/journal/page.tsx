@@ -8,8 +8,8 @@ import HubNav from "@/components/loop/shell/HubNav";
 import JournalIssueView from "@/components/loop/journal/JournalIssueView";
 
 export const metadata: Metadata = {
-  title: "The Loop Journal — Loop Soul",
-  description: "One issue per volume — the liner notes for the night that was: the iconic moments, the room, the record.",
+  title: "The Loop Journal · Loop Soul",
+  description: "One issue per volume: the liner notes for the night that was, the iconic moments, the room, the record.",
 };
 
 /**

@@ -1,27 +1,36 @@
 import Link from "next/link";
 import CodeLookup from "./CodeLookup";
+import { getCurrentEvent } from "@/lib/loop/hub";
+import { currentVoterId } from "@/lib/loop/identity/voter";
+import { codesHeldBy } from "@/lib/loop/event-codes";
+
+export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Find your pass — Loop Soul",
+  title: "Find your pass · Loop Soul",
 };
 
 /**
- * /loop/code — "where's my code?" Public by design: it's the recovery path when
- * the confirmation email doesn't arrive, and the answer at the door when
- * someone can't find it. Entry must never depend on email delivery.
+ * /loop/code — your ticket, and the way to it on a new phone.
+ *
+ * A phone that already holds a pass lands straight on the ticket: number, code,
+ * the QR the door scans. Any other phone proves the inbox with six digits and
+ * then holds it too. Public by design: entry must never depend on an email
+ * arriving, and this is the answer at the door for anyone who cannot find
+ * theirs.
  */
-export default function CodePage() {
+export default async function CodePage() {
+  const [event, voterId] = await Promise.all([getCurrentEvent(), currentVoterId()]);
+  const held = await codesHeldBy(event.id, voterId).catch(() => []);
+
   return (
     <main className="mx-auto flex min-h-[100dvh] max-w-md flex-col px-6 py-12">
-      <h1 className="text-2xl font-extrabold">Find your pass</h1>
-      <p className="loop-muted mt-2 text-sm leading-relaxed">
-        Enter the email you used at checkout. We send six digits to it; type them
-        back and your pass opens on this phone. It&apos;s your ticket at the door
-        and it unlocks the app on the night. No account, no password: the email
-        is the proof.
-      </p>
+      <h1 className="text-2xl font-extrabold">{held.length > 0 ? "Your ticket" : "Find your pass"}</h1>
+      {held.length === 0 && (
+        <p className="loop-muted mt-2 text-sm leading-relaxed">The email you paid with. We send six digits to it.</p>
+      )}
 
-      <CodeLookup />
+      <CodeLookup initialHeld={held} />
 
       <Link
         href="/loop"

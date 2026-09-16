@@ -2,7 +2,7 @@ import { publicView, type PublicCapacity } from "@/lib/loop/capacity";
 import crypto from "crypto";
 import { queryOne } from "@/lib/loop/db";
 import { getCurrentEvent } from "@/lib/loop/hub";
-import { getPassSettings } from "./settings";
+import { refFromNoteAttributes } from "@/lib/loop/passIntent";
 
 /**
  * Shopify pass sales for Loop Soul. Shopify handles money and inventory; Loop
@@ -122,6 +122,20 @@ export function parseShopifyOrder(
     financialStatus: body.financial_status ?? null,
     passCount,
   };
+}
+
+/**
+ * Is this order Loop Soul's? A pass line item, or the `loop_ref` the pass
+ * sheet stamps on the cart. Odubo's own order-confirmation webhook asks this
+ * so a ticket buyer never receives "your Odubo piece is on its way".
+ */
+export function isLoopPassOrder(
+  rawBody: string,
+  matcher: { sku: string | null; productId: string | null },
+): boolean {
+  const order = parseShopifyOrder(rawBody, matcher);
+  if (!order) return false;
+  return order.passCount > 0 || refFromNoteAttributes(order.noteAttributes) !== null;
 }
 
 /** True when at least one pass matcher is configured. */

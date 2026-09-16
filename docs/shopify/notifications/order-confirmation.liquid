@@ -1,0 +1,80 @@
+{% comment %}
+  Odubo Studio · Order confirmation (Shopify notification template)
+
+  Paste into: Shopify admin → Settings → Notifications → Customer notifications
+  → Order confirmation → Edit code. Replace the whole body. Set the subject to:
+
+      Receipt · {{ order.name }}
+
+  This is a RECEIPT and nothing else. Loop Soul passes get their own email
+  from the site (the ticket, the record), and merch buyers do not need a
+  second sales pitch under a receipt. Shopify's confirmation cannot be turned
+  off, so it is made quiet instead. Sand and ink, one table, no marketing.
+
+  Do not put {{ attributes.loop_ref }} anywhere in here: it is a pass-sheet
+  reference, not a link a customer should tap.
+{% endcomment %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title>Receipt · {{ order.name }}</title>
+</head>
+<body style="margin:0;padding:0;background:#d9aa7a;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#d9aa7a;">
+<tr><td align="center" style="padding:40px 20px 48px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:440px;">
+
+  <tr><td style="font-family:Jost,Futura,'Helvetica Neue',Arial,sans-serif;font-size:11px;line-height:1.7;letter-spacing:0.16em;text-transform:uppercase;color:#2a0f0a;opacity:0.7;padding-bottom:6px;">Odubo Studio</td></tr>
+  <tr><td style="font-family:Jost,Futura,'Helvetica Neue',Arial,sans-serif;font-size:26px;font-weight:700;line-height:1.2;color:#2a0f0a;padding-bottom:4px;">Receipt · {{ order.name }}</td></tr>
+  <tr><td style="font-family:Jost,Futura,'Helvetica Neue',Arial,sans-serif;font-size:13px;line-height:1.6;color:#2a0f0a;opacity:0.75;padding-bottom:24px;">{{ order.created_at | date: "%-d %B %Y" }}</td></tr>
+
+  <tr><td style="border-top:1px solid rgba(42,15,10,0.2);padding-top:14px;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+    {% for line in order.line_items %}
+      <tr>
+        <td style="font-family:Jost,Futura,'Helvetica Neue',Arial,sans-serif;font-size:15px;line-height:1.5;color:#2a0f0a;padding:8px 0;border-bottom:1px solid rgba(42,15,10,0.12);">
+          {{ line.title }}{% if line.variant.title != 'Default Title' and line.variant.title != blank %} · {{ line.variant.title }}{% endif %}{% if line.quantity > 1 %} · × {{ line.quantity }}{% endif %}
+        </td>
+        <td align="right" style="font-family:Jost,Futura,'Helvetica Neue',Arial,sans-serif;font-size:15px;line-height:1.5;color:#2a0f0a;padding:8px 0;border-bottom:1px solid rgba(42,15,10,0.12);white-space:nowrap;">
+          {{ line.final_line_price | money_with_currency }}
+        </td>
+      </tr>
+    {% endfor %}
+    {% if order.shipping_price > 0 %}
+      <tr>
+        <td style="font-family:Jost,Futura,'Helvetica Neue',Arial,sans-serif;font-size:13px;line-height:1.5;color:#2a0f0a;opacity:0.75;padding:8px 0;">Shipping</td>
+        <td align="right" style="font-family:Jost,Futura,'Helvetica Neue',Arial,sans-serif;font-size:13px;line-height:1.5;color:#2a0f0a;opacity:0.75;padding:8px 0;white-space:nowrap;">{{ order.shipping_price | money_with_currency }}</td>
+      </tr>
+    {% endif %}
+    {% if order.tax_price > 0 %}
+      <tr>
+        <td style="font-family:Jost,Futura,'Helvetica Neue',Arial,sans-serif;font-size:13px;line-height:1.5;color:#2a0f0a;opacity:0.75;padding:8px 0;">Tax</td>
+        <td align="right" style="font-family:Jost,Futura,'Helvetica Neue',Arial,sans-serif;font-size:13px;line-height:1.5;color:#2a0f0a;opacity:0.75;padding:8px 0;white-space:nowrap;">{{ order.tax_price | money_with_currency }}</td>
+      </tr>
+    {% endif %}
+      <tr>
+        <td style="font-family:Jost,Futura,'Helvetica Neue',Arial,sans-serif;font-size:15px;font-weight:700;line-height:1.5;color:#2a0f0a;padding:12px 0 0;border-top:1px solid rgba(42,15,10,0.2);">Total</td>
+        <td align="right" style="font-family:Jost,Futura,'Helvetica Neue',Arial,sans-serif;font-size:15px;font-weight:700;line-height:1.5;color:#2a0f0a;padding:12px 0 0;border-top:1px solid rgba(42,15,10,0.2);white-space:nowrap;">{{ order.total_price | money_with_currency }}</td>
+      </tr>
+    </table>
+  </td></tr>
+
+  {% if order.shipping_address %}
+  <tr><td style="font-family:Jost,Futura,'Helvetica Neue',Arial,sans-serif;font-size:13px;line-height:1.6;color:#2a0f0a;opacity:0.75;padding-top:24px;">
+    Shipping to {{ order.shipping_address.name }}, {{ order.shipping_address.city }}. We write when it ships.
+  </td></tr>
+  {% endif %}
+
+  <tr><td style="font-family:Jost,Futura,'Helvetica Neue',Arial,sans-serif;font-size:13px;line-height:1.6;color:#2a0f0a;padding-top:24px;">
+    <a href="{{ order.order_status_url }}" style="color:#2a0f0a;text-decoration:underline;">Your order</a>
+  </td></tr>
+
+  <tr><td style="font-family:Jost,Futura,'Helvetica Neue',Arial,sans-serif;font-size:11px;line-height:1.7;letter-spacing:0.16em;text-transform:uppercase;color:#2a0f0a;opacity:0.55;padding-top:36px;">Odubo Studio · Kamloops</td></tr>
+
+</table>
+</td></tr>
+</table>
+</body>
+</html>

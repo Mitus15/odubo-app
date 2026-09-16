@@ -7,6 +7,7 @@ import { getRunOfShow } from "@/lib/loop/content-store";
 import { isJournalPublished } from "@/lib/loop/journal-server";
 import { getFeaturedSingle } from "@/lib/loop/single";
 import { resolveCover, coverCaption } from "@/lib/loop/cover";
+import { earlyRule } from "@/lib/loop/album";
 import { cookies } from "next/headers";
 import { fetchCollectionProducts } from "@/lib/store/api";
 import { LOOP_COLLECTION_HANDLE, LOOP_PASS_TAG } from "@/lib/store/brands";
@@ -15,7 +16,7 @@ import GatheringPoster from "@/components/loop/gathering/GatheringPoster";
 
 /**
  * STATE 1 — The Gathering. A single non-scrolling poster (real logo, silhouette
- * hero, Scott's Inn footer) with The Night / Cover Contest opening as modules.
+ * hero, Scott's Inn footer) with The Night / The Cover opening as modules.
  * Data is
  * read from the lib layer server-side, then handed to the client poster.
  * (The Lookbook component is built but not yet rendered anywhere — see
@@ -33,6 +34,7 @@ export async function GatheringHome({ event }: { event: LoopEvent }) {
     single,
     cover,
     shelf,
+    early,
   ] = await Promise.all([
     getPublicCapacity(),
     // Redeemed a pass, or the doors are open: may post to the Wall and see it.
@@ -53,6 +55,8 @@ export async function GatheringHome({ event }: { event: LoopEvent }) {
       first: 12,
       country,
     }).catch(() => null),
+    // How many tracks a pass hears before release: the pass sheet's one promise.
+    earlyRule(),
   ]);
 
   // Merch only — the pass has its own flow (GetPassModal) and its own button.
@@ -90,6 +94,7 @@ export async function GatheringHome({ event }: { event: LoopEvent }) {
       coverCaption={coverCaption(cover)}
       pieces={pieces}
       roomAccess={roomAccess}
+      earlyCount={early.enabled ? early.extra + 1 : 0}
     />
   );
 }

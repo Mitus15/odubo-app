@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentEvent } from "@/lib/loop/hub";
 import { issueForOrder } from "@/lib/loop/event-codes";
-import { sendEventCodeEmail } from "@/lib/loop/email";
+import { deliverPassEmail } from "@/lib/loop/pass/deliver";
 
 export const runtime = "nodejs";
 
@@ -31,7 +31,7 @@ export async function POST(req: Request) {
   const event = await getCurrentEvent();
   const { code, isNew } = await issueForOrder(event.id, orderId, email, Date.now());
 
-  const res = await sendEventCodeEmail(email, code, event.title);
+  const res = await deliverPassEmail(event.id, email, [code]);
 
   return NextResponse.json({ ok: true, code, isNew, email, delivered: res.ok });
 }

@@ -1,0 +1,26 @@
+{
+  "id": "gid://shopify/Product/9530389397717",
+  "title": "Loop Soul Volume 1 Pass",
+  "handle": "loop-soul-volume-1-pass",
+  "vendor": "Odubo Studio",
+  "tags": [
+    "brand:loop-soul",
+    "drop:loop-soul",
+    "loop-pass",
+    "type:pass"
+  ],
+  "descriptionHtml": "<p>One pass to Loop Soul Volume 1: the room, the Wall, and the album played live front to back.</p><p><strong>Saturday October 10, 2026</strong><br>Doors 6:30, the album at 8, the floor from 9, out by 10<br>Scott's Inn &amp; Suites, Kamloops<br>Admits one. 19+. Dress code: 80s.</p><p><strong>Your ticket is your pre-order.</strong> Loop Soul is an album. October 10 is its first exhibition, all 14 tracks front to back, one of them recorded live in the room. The record comes to you when it is out, whether or not you were in the room.</p><p><strong>Your pass is a short code</strong>, emailed the moment you pay. Show it at the door, and enter it in the app to open the room. Find it again any time at <a href=\"https://www.odubostudio.com/loop/code\">odubostudio.com/loop/code</a> with the email you check out with.</p><p><strong>This night is filmed and recorded.</strong> The performance is recorded for release, and the room is filmed and photographed all evening for the album, the magazine and future promotion. Buying a pass and walking in is your agreement to appear in that footage, on camera or in a photograph, at any point in the night. This part is not optional: it is a filmed night, and the room is part of the record.</p><p>Paying: credit card, Visa Debit or Debit Mastercard, Apple Pay, Google Pay, Shop Pay or PayPal. Interac-only cards cannot pay online; PayPal works, or pay $5 at the door.</p>",
+  "seo": {
+    "title": null,
+    "description": "Saturday October 10, 2026 at Scott's Inn, Kamloops. Doors 6:30, the album live at 8. Your pass is your pre-order of the album. 19+, dress code 80s."
+  },
+  "variants": {
+    "nodes": [
+      {
+        "id": "gid://shopify/ProductVariant/54476588974293",
+        "sku": "LOOP-PASS-VOL1",
+        "price": "5.00"
+      }
+    ]
+  }
+}

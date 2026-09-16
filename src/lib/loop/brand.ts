@@ -22,6 +22,13 @@ export const SAND_BRIGHT = "#f0d3ad";
 
 /* ── the words ──────────────────────────────────────────────────────────── */
 
+/**
+ * What a guest calls the thing they bought into. Loop Soul is the album, the
+ * night and the app; "Volume 1" is the studio's edition number and stays in
+ * the admin and the ledger, never in front of a guest.
+ */
+export const PRODUCT_NAME = "Loop Soul";
+
 /** Mixed case on purpose — the one line in the system that is not caps. */
 export const SLOGAN = "Come Dance";
 

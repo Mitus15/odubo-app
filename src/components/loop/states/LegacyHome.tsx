@@ -62,7 +62,7 @@ export async function LegacyHome() {
       <section className="mt-12 w-full max-w-md text-left">
         <h2 className="text-xs uppercase tracking-[0.3em] opacity-70">The Ballots</h2>
         <p className="mt-1 text-sm opacity-70">
-          The room is still deciding — the running order, and the cover.
+          The room is still deciding: the running order, and the cover.
         </p>
         <div className="mt-4 grid gap-6">
           <BallotSheet kind="tracklist" />
@@ -81,7 +81,7 @@ export async function LegacyHome() {
       <section className="mt-14 w-full max-w-md text-left">
         <h2 className="text-xs uppercase tracking-[0.3em] opacity-70">The Vault</h2>
         <p className="mt-1 text-sm opacity-70">
-          Every shot from the Wall — {event.title}.
+          Every shot from the Wall.
         </p>
         {attendee ? (
           <div className="mt-4">

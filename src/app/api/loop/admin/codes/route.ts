@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentEvent } from "@/lib/loop/hub";
 import { attachEmail, countRedeemed, generate, listCodes, lookupCode } from "@/lib/loop/event-codes";
 import { grantAlbumForOrder } from "@/lib/loop/album";
-import { sendEventCodesEmail } from "@/lib/loop/email";
+import { deliverPassEmail } from "@/lib/loop/pass/deliver";
 import { openIntents } from "@/lib/loop/passIntent";
 
 /**
@@ -21,12 +21,12 @@ import { openIntents } from "@/lib/loop/passIntent";
  */
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-async function deliver(eventId: string, eventTitle: string, code: string) {
+async function deliver(eventId: string, code: string) {
   const pass = await lookupCode(eventId, code);
   if (!pass) return NextResponse.json({ error: "No such code on this volume." }, { status: 404 });
   if (!pass.email) return NextResponse.json({ error: "That pass has no address yet. Attach one first." }, { status: 400 });
   if (pass.orderId && !pass.sim) await grantAlbumForOrder(pass.email, pass.orderId, eventId);
-  const res = await sendEventCodesEmail(pass.email, [pass.code], eventTitle);
+  const res = await deliverPassEmail(eventId, pass.email, [pass.code]);
   return NextResponse.json({ ok: true, delivered: res.ok, email: pass.email, code: pass.code });
 }
 export async function GET() {
@@ -55,12 +55,12 @@ export async function POST(req: NextRequest) {
     if (!(await attachEmail(event.id, code, email))) {
       return NextResponse.json({ error: "No such code on this volume." }, { status: 404 });
     }
-    return deliver(event.id, event.title, code);
+    return deliver(event.id, code);
   }
   if (body?.action === "resend") {
     const code = (body.code ?? "").trim().toUpperCase();
     if (!code) return NextResponse.json({ error: "Which code?" }, { status: 400 });
-    return deliver(event.id, event.title, code);
+    return deliver(event.id, code);
   }
 
   const count = Math.min(Math.max(Number(body?.count) || 0, 1), 100);

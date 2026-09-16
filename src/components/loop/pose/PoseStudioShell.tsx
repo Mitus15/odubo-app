@@ -31,7 +31,7 @@ export function PoseStudioShell({ canPost = false }: { canPost?: boolean }) {
       <header className="text-center">
         <h1 className="text-3xl font-extrabold">Pose Studio</h1>
         <p className="loop-muted mt-1 text-sm">
-          Strike a pose — we&apos;ll Loop Soul it. Everything happens on your device.
+          Strike a pose. We Loop Soul it, on your phone.
         </p>
       </header>
 

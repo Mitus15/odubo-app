@@ -27,8 +27,8 @@ const MODULES: { key: ModuleKey; label: string; title: string }[] = [
   // programme", so the button says that; the sheet keeps the brand's own name
   // for the night. The Night has always rendered RUN_OF_SHOW — it was the
   // programme all along, just not findable by that word.
-  { key: "night", label: "The Programme", title: "The Night" },
-  { key: "cover", label: "Cover Contest", title: "The Cover Contest" },
+  { key: "night", label: "The Night", title: "The Night" },
+  { key: "cover", label: "The Cover", title: "The Cover" },
   // "The Wall" is added per visitor below: only a pass-holder can see it.
   // The floor moment this volume has is the Loop Soul Line, which lives in the
   // programme rather than needing a module of its own — nothing to sign up for.
@@ -60,6 +60,7 @@ export function GatheringPoster({
   journalPublished = false,
   pieces = [],
   roomAccess = false,
+  earlyCount = null,
 }: {
   event: LoopEvent;
   capacity: PublicCapacity;
@@ -84,6 +85,8 @@ export function GatheringPoster({
   /** This device redeemed a pass (or the doors are open): it can post to the
    *  Wall and see it, before the night as well as during it. */
   roomAccess?: boolean;
+  /** Tracks a pass hears before release, for the pass sheet's one promise. */
+  earlyCount?: number | null;
 }) {
   const [active, setActive] = useState<ModuleKey | null>(null);
   const [passOpen, setPassOpen] = useState(false);
@@ -155,10 +158,7 @@ export function GatheringPoster({
   const [told, setTold] = useState(false);
   const tellSomeone = useCallback(async () => {
     const url = `${window.location.origin}/loop?p=share`;
-    const text =
-      `${event.title ? `Loop Soul — ${event.title}. ` : "Loop Soul. "}` +
-      `${dateLabel}, ${venueShort}. Doors ${timeLabel}.` +
-      (isFree ? " Free." : ` ${priceLabel}.`);
+    const text = `Loop Soul. ${dateLabel}, ${venueShort}. From ${timeLabel}.` + (isFree ? " Free." : ` ${priceLabel}.`);
     if (navigator.share) {
       try {
         await navigator.share({ title: "Loop Soul", text, url });
@@ -172,7 +172,7 @@ export function GatheringPoster({
       setTold(true);
       setTimeout(() => setTold(false), 2400);
     } catch {}
-  }, [dateLabel, timeLabel, venueShort, isFree, priceLabel, event.title]);
+  }, [dateLabel, timeLabel, venueShort, isFree, priceLabel]);
 
   return (
     <div className="relative mx-auto flex min-h-[100dvh] max-w-md flex-col px-5 pb-5 pt-5">
@@ -241,7 +241,7 @@ export function GatheringPoster({
             </div>
           )}
           <div className="loop-muted mt-1 text-[11px] font-semibold uppercase tracking-[0.18em]">
-            {dateLabel} · Doors {timeLabel} · {venueShort}
+            {dateLabel} · From {timeLabel} · {venueShort}
           </div>
         </div>
         <button
@@ -277,23 +277,22 @@ export function GatheringPoster({
           </button>
         </div>
 
-        {/* The way back in, for anyone who already bought: their pass, and the
-            record it pre-ordered. Text and a middot, same as the row above —
-            the pass button stays the only drawn shape. Before this row the
-            poster gave a returning buyer no path to either. */}
+        {/* The way back in, for anyone who already bought: the record they
+            pre-ordered and the ticket they hold. Text and a middot, same as
+            the row above; the pass button stays the only drawn shape. */}
         <div className="-mt-1 flex items-center gap-3">
-          <Link
-            href="/loop/code"
-            className="loop-muted text-[11px] font-bold uppercase tracking-[0.2em] underline underline-offset-4"
-          >
-            {roomAccess ? "Your pass" : "Have a pass?"}
-          </Link>
-          <span className="loop-muted text-[11px]">·</span>
           <Link
             href="/loop/album"
             className="loop-muted text-[11px] font-bold uppercase tracking-[0.2em] underline underline-offset-4"
           >
-            The record
+            {roomAccess ? "Your record" : "The record"}
+          </Link>
+          <span className="loop-muted text-[11px]">·</span>
+          <Link
+            href="/loop/code"
+            className="loop-muted text-[11px] font-bold uppercase tracking-[0.2em] underline underline-offset-4"
+          >
+            {roomAccess ? "Your ticket" : "Have a pass?"}
           </Link>
         </div>
 
@@ -302,26 +301,22 @@ export function GatheringPoster({
             the one drawn shape on the poster. */}
         <PiecesRail pieces={pieces} />
 
-        {/* Module launchers */}
-        <nav className="grid w-full grid-cols-2 gap-2 [&>*:last-child:nth-child(odd)]:col-span-2">
-          {/* First in the grid: it is the one thing the flyer actually
-              promised, so it outranks the programme and the contest.
+        {/* Module launchers: tappable type on hairlines, two to a row, no
+            bubbles (owner: the pass button is the only drawn shape here).
 
-              It says "The Single" because that is the phrase the flyer's QR
-              caption used before it sold passes, and the phrase the sheet
-              behind it opens with. It read "Play 1984" before, which asked a
-              stranger to recognise a title they have never heard: the flyer
-              sent them for the single, and the page answered with a number.
-              The track is still named, after the middot, so the title is the
-              thing they leave knowing. Noun phrase, like The Programme and
-              Cover Contest beside it — the verb was the odd one out. */}
+            The Single goes first: it is the one thing the flyer actually
+            promised. It says "The Single" because that is the phrase the
+            flyer's QR caption used, and the track is named after the middot
+            so the title is the thing they leave knowing. */}
+        <nav className="grid w-full grid-cols-2 gap-x-6 [&>*:last-child:nth-child(odd)]:col-span-2">
           {single && (
             <button
               type="button"
               onClick={() => setSingleOpen(true)}
-              className="rounded-2xl border border-ink/20 px-2 py-3 text-xs font-bold uppercase tracking-wide transition-colors hover:bg-ink/10"
+              className="flex min-h-[44px] items-center justify-between border-t border-ink/15 py-2.5 text-left text-[11px] font-bold uppercase tracking-[0.2em] hover:opacity-70"
             >
-              The Single · {single.title}
+              <span>The Single · {single.title}</span>
+              <span aria-hidden className="loop-muted">→</span>
             </button>
           )}
           {modules.map((m) => (
@@ -329,9 +324,10 @@ export function GatheringPoster({
               key={m.key}
               type="button"
               onClick={() => setActive(m.key)}
-              className="rounded-2xl border border-ink/20 py-3 text-xs font-bold uppercase tracking-wide transition-colors hover:bg-ink/10"
+              className="flex min-h-[44px] items-center justify-between border-t border-ink/15 py-2.5 text-left text-[11px] font-bold uppercase tracking-[0.2em] hover:opacity-70"
             >
-              {m.label}
+              <span>{m.label}</span>
+              <span aria-hidden className="loop-muted">→</span>
             </button>
           ))}
         </nav>
@@ -348,22 +344,17 @@ export function GatheringPoster({
         <div className="text-[9px] font-semibold uppercase tracking-[0.3em] opacity-50">
           Venue partner · Scott&apos;s Inn &amp; Suites
         </div>
-        <div className="flex items-center gap-5">
-          {journalPublished && (
-            <Link
-              href="/loop/journal"
-              className="text-[10px] font-semibold uppercase tracking-[0.3em] opacity-50 hover:opacity-90"
-            >
-              The Journal ↗
-            </Link>
-          )}
+        {/* Legacy (last volume's vault) is not offered from the poster: before
+            the night it is a page about a year that has not happened yet. It
+            returns as the whole front door once the volume is archived. */}
+        {journalPublished && (
           <Link
-            href="/loop/legacy"
+            href="/loop/journal"
             className="text-[10px] font-semibold uppercase tracking-[0.3em] opacity-50 hover:opacity-90"
           >
-            Loop Soul Legacy ↗
+            The Journal ↗
           </Link>
-        </div>
+        )}
       </footer>
 
       {/* Module overlay */}
@@ -376,7 +367,9 @@ export function GatheringPoster({
             {active === "night" && (
               <RunOfShow items={runOfShow} showHeader={false} />
             )}
-            {active === "cover" && <CoverContest canPost={roomAccess} />}
+            {active === "cover" && (
+              <CoverContest canPost={roomAccess} coverUrl={coverUrl} coverCaption={coverCaption} />
+            )}
             {active === "wall" && <WallGallery canPost />}
           </ModuleSheet>
         )}
@@ -406,6 +399,8 @@ export function GatheringPoster({
           venue={event.venue}
           dateLabel={dateLabel}
           timeLabel={timeLabel}
+          runOfShow={runOfShow}
+          earlyCount={earlyCount}
           onClose={() => setPassOpen(false)}
         />
       )}

@@ -19,22 +19,27 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export const metadata = {
-  title: "The record — Loop Soul",
+  title: "The record · Loop Soul",
   robots: { index: false, follow: false },
 };
 
 /**
  * /loop/album — the pre-order, delivered.
  *
- * Five states, one rule (`decideAlbumAccess`):
- *   early   owed it, not out yet: the single, plus two dealt to this listener
+ * Four states, one rule (`decideAlbumAccess`):
+ *   early   owed it, not out yet: the single, plus the ones dealt to this listener
  *   wait    owed it, not out yet, nothing early set
  *   listen  owed it, out: the album plays here
- *   prove   this device has not proven an inbox; go to /loop/code
- *   buy     (folded into prove: the gate names the pass)
+ *   prove   this device holds nothing: the link in the pass email binds it, or
+ *           the six digits at /loop/code do on a new phone
  *
- * The proof is the same one that recovers a pass: six digits to the checkout
- * email. Nothing here asks for a password, and nothing here is public.
+ * A buyer normally never sees `prove`: the pass email's button lands them
+ * here already bound. Nothing here asks for a password, and nothing here is
+ * public.
+ *
+ * Dark on purpose, through the vault tokens rather than typed hexes, so the
+ * record and the vault are the same dark and nothing on this page can drift
+ * from the palette.
  */
 export default async function LoopAlbumPage() {
   const [event, voterId] = await Promise.all([getCurrentEvent(), currentVoterId()]);
@@ -49,48 +54,37 @@ export default async function LoopAlbumPage() {
   if (state === "listen") {
     const data = await loadAlbum();
     if (access.email) await markClaimed(access.email);
-    if (!data) return <Shell title="The record">The album is not on the shelf yet. Try again shortly.</Shell>;
+    if (!data) return <Shell title="Not on the shelf yet.">Try again shortly.</Shell>;
     return (
-      <main className="min-h-[100dvh] bg-[#0f0b0b] text-[#ede8df]">
+      <Dark>
         <div className="mx-auto max-w-2xl px-5 pb-24 pt-10">
           <p className="text-[11px] uppercase tracking-[0.3em] opacity-70">Loop Soul · Yours</p>
           <h1 className="mt-2 text-2xl font-extrabold">{data.album.title}</h1>
-          <p className="mt-1 text-sm opacity-70">
-            {data.album.artist_name}. Pre-ordered with your pass{access.email ? ` under ${access.email}` : ""}.
-          </p>
+          <p className="mt-1 text-sm opacity-70">{data.album.artist_name}.</p>
           <div className="mt-8">
             <AlbumPlayer album={data.album} tracks={data.tracks} />
           </div>
           <BackLink />
         </div>
-      </main>
+      </Dark>
     );
   }
 
   if (state === "early") {
     const [data, featured] = await Promise.all([loadAlbum(), getSetting("featured_track")]);
-    if (!data) return <Shell title="The record">The album is not on the shelf yet. Try again shortly.</Shell>;
+    if (!data) return <Shell title="Not on the shelf yet.">Try again shortly.</Shell>;
     // Seeded on the address so the pair follows the person, not the phone.
-    const set = new Set(
-      earlySetFor(access.email ?? voterId, data.tracks, featured, access.early),
-    );
+    const set = new Set(earlySetFor(access.email ?? voterId, data.tracks, featured, access.early));
     const now = data.tracks.filter((t) => set.has(t.track_number));
-    const later = data.tracks.length - now.length;
     // What the draw performs: the one everybody gets, the ones drawn for this
     // person, and the names the draw moves through on its way to them.
     const free = freeTrackNumber(data.tracks, featured);
-    const freeTitle = data.tracks.find((t) => t.track_number === free)?.title ?? now[0].title;
+    const freeTitle = data.tracks.find((t) => t.track_number === free)?.title ?? now[0]?.title ?? "";
     const dealtTitles = now.filter((t) => t.track_number !== free).map((t) => t.title);
     const poolTitles = dealablePool(data.tracks, free)
       .map((n) => data.tracks.find((t) => t.track_number === n)?.title)
       .filter((t): t is string => Boolean(t));
-    if (now.length === 0) {
-      return (
-        <Shell title="It's yours. It lands after the night.">
-          {event.title} is performed live on the night, all fourteen tracks, and then it is released.
-        </Shell>
-      );
-    }
+    if (now.length === 0) return <Shell title="It lands after the night." />;
     return (
       <EarlyAlbum
         albumId={data.album.id}
@@ -101,46 +95,33 @@ export default async function LoopAlbumPage() {
         dealtTitles={dealtTitles}
         poolTitles={poolTitles}
       >
-      <main className="min-h-[100dvh] bg-[#0f0b0b] text-[#ede8df]">
-        <div className="mx-auto max-w-2xl px-5 pb-24 pt-10">
-          <p className="text-[11px] uppercase tracking-[0.3em] opacity-70">Loop Soul · Yours, early</p>
-          <h1 className="mt-2 text-2xl font-extrabold">{data.album.title}</h1>
-          <p className="mt-1 text-sm opacity-70">
-            {data.album.artist_name}. {now.length} of {data.tracks.length} now, dealt to you. The other {later}
-            land here after the night{access.email ? `, and ${access.email} is told` : ""}. Somebody else got a
-            different two.
-          </p>
-          <div className="mt-8">
-            <AlbumPlayer album={data.album} tracks={now} />
+        <Dark>
+          <div className="mx-auto max-w-2xl px-5 pb-24 pt-10">
+            <p className="text-[11px] uppercase tracking-[0.3em] opacity-70">Loop Soul · Yours, early</p>
+            <h1 className="mt-2 text-2xl font-extrabold">{data.album.title}</h1>
+            <p className="mt-1 text-sm opacity-70">
+              {now.length} of {data.tracks.length} now. The rest after the night.
+            </p>
+            <div className="mt-8">
+              <AlbumPlayer album={data.album} tracks={now} />
+            </div>
+            <BackLink />
           </div>
-          <BackLink />
-        </div>
-      </main>
+        </Dark>
       </EarlyAlbum>
     );
   }
 
-  if (state === "wait") {
-    return (
-      <Shell title="It's yours. It lands after the night.">
-        {event.title} is performed live on the night, all fourteen tracks, and then it is released. This page
-        plays it the moment it is out, and the address you paid with is told by email.
-        {access.email && (
-          <span className="mt-3 block text-xs opacity-60">Pre-order recorded under {access.email}.</span>
-        )}
-      </Shell>
-    );
-  }
+  if (state === "wait") return <Shell title="It lands after the night." />;
 
   const checkoutUrl = (await getPassSettings()).checkoutUrl;
   return (
-    <Shell title="The record is for people who pre-ordered it.">
-      A pass is a pre-order. If you bought one, prove it&apos;s you with the email you paid with and this page
-      opens{access.released ? " and plays" : " when the album is out"}.
+    <Shell title="Your record opens from your pass email.">
+      Tap the link in it. New phone, or lost the email? Prove the inbox.
       <span className="mt-6 grid gap-3">
         <Link
           href="/loop/code"
-          className="flex min-h-[48px] items-center justify-center rounded-2xl bg-[#ede8df] px-5 font-bold text-[#0f0b0b]"
+          className="flex min-h-[48px] items-center justify-center rounded-full bg-[var(--foreground)] px-5 font-bold text-[var(--background)]"
         >
           That&apos;s me
         </Link>
@@ -154,16 +135,25 @@ export default async function LoopAlbumPage() {
   );
 }
 
-function Shell({ title, children }: { title: string; children: React.ReactNode }) {
+/** The vault tokens, applied at render so there is no sand-to-ink flash. */
+function Dark({ children }: { children: React.ReactNode }) {
   return (
-    <main className="min-h-[100dvh] bg-[#0f0b0b] text-[#ede8df]">
+    <div className="loop-theme" data-mode="vault">
+      <main className="min-h-[100dvh] bg-[var(--background)] text-[var(--foreground)]">{children}</main>
+    </div>
+  );
+}
+
+function Shell({ title, children }: { title: string; children?: React.ReactNode }) {
+  return (
+    <Dark>
       <div className="mx-auto max-w-md px-6 pb-24 pt-12">
         <p className="text-[11px] uppercase tracking-[0.3em] opacity-70">Loop Soul · The record</p>
         <h1 className="mt-2 text-2xl font-extrabold leading-tight">{title}</h1>
-        <p className="mt-4 text-sm leading-relaxed opacity-85">{children}</p>
+        {children && <p className="mt-4 text-sm leading-relaxed opacity-85">{children}</p>}
         <BackLink />
       </div>
-    </main>
+    </Dark>
   );
 }
 

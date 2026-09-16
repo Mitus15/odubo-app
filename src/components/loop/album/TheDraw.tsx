@@ -34,7 +34,7 @@ type Props = {
 
 type Act = "open" | "free" | "draw" | "yours";
 
-const RULE = "border-t border-[#ede8df]/15";
+const RULE = "border-t border-[color-mix(in_srgb,var(--foreground)_15%,transparent)]";
 
 export default function TheDraw({
   albumTitle,
@@ -115,7 +115,7 @@ export default function TheDraw({
   };
 
   return (
-    <main className="flex min-h-[100dvh] flex-col bg-[#0f0b0b] px-6 text-[#ede8df]">
+    <main className="loop-theme flex min-h-[100dvh] flex-col bg-[var(--background)] px-6 text-[var(--foreground)]" data-mode="vault">
       <div className="flex flex-1 flex-col items-center justify-center text-center">
         <AnimatePresence mode="wait">
           {act === "open" && (
@@ -197,7 +197,7 @@ export default function TheDraw({
               <button
                 type="button"
                 onClick={onDone}
-                className="mt-8 min-h-[52px] w-full rounded-full bg-[#ede8df] text-base font-extrabold text-[#0f0b0b]"
+                className="mt-8 min-h-[52px] w-full rounded-full bg-[var(--foreground)] text-base font-extrabold text-[var(--background)]"
               >
                 Play
               </button>

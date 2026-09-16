@@ -457,7 +457,7 @@ export function CameraSheet({
                   className="rounded-full bg-sand py-4 text-base font-bold text-ink transition-transform active:scale-95 disabled:opacity-70"
                 >
                   {posting === "posted"
-                    ? "On the Wall ✦ you're in the cover contest"
+                    ? "On the Wall ✦ In the running for the cover"
                     : posting === "posting"
                       ? "Posting…"
                       : "Post to the Wall"}

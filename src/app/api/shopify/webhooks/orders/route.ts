@@ -12,6 +12,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { sendOrderConfirmation, type OrderConfirmationData } from '@/lib/email';
+import { isLoopPassOrder } from '@/lib/loop/pass';
+import { getPassSettings } from '@/lib/loop/pass/settings';
 
 export const runtime = 'nodejs';
 
@@ -63,6 +65,13 @@ export async function POST(req: NextRequest) {
     // Verify webhook authenticity
     if (!verifyWebhook(rawBody, signature)) {
       return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+    }
+
+    // A Loop Soul pass has its own email (the ticket, from the pass webhook).
+    // This one would say "your Odubo piece is on its way" to somebody who
+    // bought a night out, so it stands down.
+    if (isLoopPassOrder(rawBody, await getPassSettings())) {
+      return NextResponse.json({ success: true, skipped: 'loop-pass' });
     }
 
     // Parse order data

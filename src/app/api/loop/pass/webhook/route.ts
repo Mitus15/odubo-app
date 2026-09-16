@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { getCurrentEvent } from "@/lib/loop/hub";
 import { issueForOrder } from "@/lib/loop/event-codes";
-import { sendEventCodesEmail } from "@/lib/loop/email";
+import { deliverPassEmail } from "@/lib/loop/pass/deliver";
+import { getPassCapacity } from "@/lib/loop/pass";
 import { grantAlbumForOrder } from "@/lib/loop/album";
 import { claimIntent, refFromNoteAttributes } from "@/lib/loop/passIntent";
 import {
@@ -83,8 +84,19 @@ export async function POST(req: Request) {
   // ends up with one complete email.
   let delivered = false;
   if (email && anyNew) {
-    const res = await sendEventCodesEmail(email, codes, event.title);
+    const res = await deliverPassEmail(event.id, email, codes);
     delivered = res.ok;
+  }
+
+  // Shopify's inventory is the till; this only shouts if it ever lets more
+  // through than the room holds, so somebody looks before the night.
+  try {
+    const cap = await getPassCapacity();
+    if (!cap.unlimited && cap.sold > cap.total) {
+      console.error(`[loop:pass] SOLD PAST CAPACITY: ${cap.sold} passes against a room of ${cap.total}.`);
+    }
+  } catch {
+    /* the sale stands either way */
   }
 
   // A paid order with no address is a pass nobody can reach: no email, no

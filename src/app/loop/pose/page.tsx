@@ -14,7 +14,7 @@ import HubNav from "@/components/loop/shell/HubNav";
  * Journal chain no longer requires flipping the event phase to `live` and
  * changing what every visitor to /loop sees.
  */
-export const metadata = { title: "Loop Soul — Pose Studio" };
+export const metadata = { title: "Pose Studio · Loop Soul" };
 
 export default async function PosePage() {
   const event = await getCurrentEvent();

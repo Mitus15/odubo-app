@@ -329,12 +329,12 @@ export function WallGallery({
         onOpen={setViewer}
         empty={
           tab === "yours"
-            ? "Nothing saved on this device yet. Shots you keep land here."
+            ? "Shots you keep land here."
             : featuredOnly
-              ? "Iconic Moments are being curated. Check back."
+              ? "Iconic Moments, once the night has had them."
               : canPost
-                ? "The Wall is empty. Put the first shot up."
-                : "Nothing on the Wall yet."
+                ? "Nothing here yet. Put the first shot up."
+                : "Nothing here yet."
         }
       />
 
@@ -367,8 +367,7 @@ export function WallGallery({
 
       {coverUid && (
         <p className="loop-muted text-center text-[11px] leading-relaxed">
-          That shot is your album cover now — it&apos;s on the record when you
-          open Loop Soul.
+          That shot is your cover now. It&apos;s on the record when you open Loop Soul.
         </p>
       )}
     </div>

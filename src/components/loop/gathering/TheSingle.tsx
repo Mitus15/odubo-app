@@ -157,7 +157,7 @@ export function TheSingle({
     // Origin, never a hardcoded domain — the printed URL has moved once
     // already and the share link must follow it without a deploy.
     const url = `${window.location.origin}/loop?from=${c}`;
-    const text = `Listen to "${single.title}" — ${single.artistName}`;
+    const text = `Listen to "${single.title}" by ${single.artistName}`;
     if (navigator.share) {
       try {
         await navigator.share({ title: single.title, text, url });

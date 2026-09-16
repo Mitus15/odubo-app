@@ -10,8 +10,8 @@ import HubNav from "@/components/loop/shell/HubNav";
 import LoopStore from "@/components/loop/store/LoopStore";
 
 export const metadata: Metadata = {
-  title: "Loop Soul — Store",
-  description: "Passes and pieces for the Loop Soul series at Scott's Inn, Kamloops.",
+  title: "Store · Loop Soul",
+  description: "Passes and pieces for Loop Soul at Scott's Inn, Kamloops.",
 };
 
 /**
@@ -66,7 +66,6 @@ export default async function LoopStorePage() {
         checkoutUrl={passSettings.checkoutUrl}
         price={passSettings.price}
         currency={passSettings.currency}
-        eventTitle={event.title}
         theme={event.theme}
         venue={event.venue}
         dateLabel={dateLabel}
