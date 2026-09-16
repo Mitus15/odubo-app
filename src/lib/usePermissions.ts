@@ -17,6 +17,7 @@ const SECTION_PARENT_MAP: Record<string, string> = {
   'social-accounts': 'social',
   'social-analytics': 'social',
   // Commerce
+  'inbox': 'commerce',
   'products': 'commerce',
   'orders': 'commerce',
   'customers': 'commerce',

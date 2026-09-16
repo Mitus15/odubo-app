@@ -1,212 +1,111 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Resend } from 'resend';
+
+import { notifyOwner } from '@/lib/inbox/alerts';
+import { sendAcknowledgement, threadLink } from '@/lib/inbox/send';
+import { inboxAutoAck } from '@/lib/inbox/settings';
+import { isValidEmail, normalizeOrderNumber } from '@/lib/inbox/text';
+import { appendMessage, deleteEmptyThread, findMessageBySubmissionId, findOrCreateContact, openThread } from '@/lib/inbox/threads';
+import { INBOX_TOPICS, type InboxTopic } from '@/lib/inbox/types';
 import { rateLimit } from '@/lib/rateLimit';
-import { STORE_ACCOUNT_URL } from "@/lib/storeAccount";
 
-// Initialize Resend client
-const resendApiKey = process.env.RESEND_API_KEY;
-const fromEmail = process.env.RESEND_FROM_EMAIL || process.env.EMAIL_FROM || 'Odubo Studio <info@odubo.studio>';
-const supportEmail = process.env.SUPPORT_EMAIL || 'info@odubo.studio';
+export const runtime = 'nodejs';
 
+/**
+ * The store's contact form.
+ *
+ * This used to email the owner and keep nothing. Now the message is the
+ * record: it is written to the inbox first, and only then do the emails go
+ * out, the acknowledgement to the customer (with their private link and the
+ * reply key) and the alert to the owner. An email failing never loses the
+ * message; it is logged loudly and the thread is still there in the admin.
+ */
 interface ContactFormData {
-  name: string;
-  email: string;
+  name?: string;
+  email?: string;
   orderNumber?: string;
-  inquiryType: 'order' | 'refund' | 'shipping' | 'general';
-  message: string;
+  inquiryType?: string;
+  message?: string;
+  submissionId?: string;
 }
 
-const inquirySubjects: Record<string, string> = {
-  order: 'Order Inquiry',
-  refund: 'Return/Refund Request',
-  shipping: 'Shipping Question',
-  general: 'General Inquiry',
+const SUBJECTS: Record<InboxTopic, string> = {
+  order: 'Order inquiry',
+  refund: 'Return or refund',
+  shipping: 'Shipping question',
+  general: 'General inquiry',
 };
 
 export async function POST(request: NextRequest) {
   try {
-    // Rate limit: 3 requests per minute per IP
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
-    const rateLimitResult = await rateLimit({ key: `contact:${ip}`, limit: 3, windowMs: 60_000 });
-    if (!rateLimitResult.allowed) {
-      return NextResponse.json(
-        { error: 'Too many requests. Please try again later.' },
-        { status: 429 }
-      );
+    const limiter = await rateLimit({ key: `contact:${ip}`, limit: 3, windowMs: 60_000 });
+    if (!limiter.allowed) {
+      return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429 });
     }
 
-    // Parse request body
-    const body = (await request.json()) as ContactFormData;
-    const { name, email, orderNumber, inquiryType, message } = body;
+    const body = (await request.json().catch(() => ({}))) as ContactFormData;
+    const name = body.name?.trim();
+    const email = body.email?.trim();
+    const message = body.message?.trim();
 
-    // Validate required fields
     if (!name || !email || !message) {
-      return NextResponse.json(
-        { error: 'Name, email, and message are required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Name, email, and message are required' }, { status: 400 });
+    }
+    if (!isValidEmail(email)) {
+      return NextResponse.json({ error: 'Please provide a valid email address' }, { status: 400 });
+    }
+    if (message.length > 10_000) {
+      return NextResponse.json({ error: 'That message is too long. Keep it under 10,000 characters.' }, { status: 400 });
     }
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return NextResponse.json(
-        { error: 'Please provide a valid email address' },
-        { status: 400 }
-      );
+    const topic: InboxTopic = INBOX_TOPICS.includes(body.inquiryType as InboxTopic) ? (body.inquiryType as InboxTopic) : 'general';
+    const orderNumber = normalizeOrderNumber(body.orderNumber);
+    const submissionId = body.submissionId && /^[A-Za-z0-9_-]{8,64}$/.test(body.submissionId) ? `form:${body.submissionId}` : null;
+
+    // A repeat of a submission we already hold answers before anything is
+    // created, so a double tap never leaves an empty second thread behind.
+    if (submissionId && (await findMessageBySubmissionId(submissionId))) {
+      return NextResponse.json({ success: true, duplicate: true });
     }
 
-    // Build email content
-    const subjectLabel = inquirySubjects[inquiryType] || inquirySubjects.general;
-    const subject = `${subjectLabel} from ${name}`;
+    const contact = await findOrCreateContact(email, name);
+    const thread = await openThread({
+      contact,
+      subject: orderNumber ? `${SUBJECTS[topic]} · #${orderNumber}` : SUBJECTS[topic],
+      topic,
+      orderNumber,
+    });
+    const stored = await appendMessage({
+      threadId: thread.id,
+      direction: 'in',
+      channel: 'web',
+      bodyText: message,
+      fromEmail: contact.email,
+      submissionId,
+    });
 
-    const htmlContent = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        </head>
-        <body style="margin:0;padding:0;background:#f6f3ee;">
-          <div style="background:#f6f3ee;padding:24px 16px;">
-            <div style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:16px;border:1px solid #ece7df;overflow:hidden">
-              <div style="padding:20px 22px;background:linear-gradient(135deg, #843c2d, #6d3224);color:white;">
-                <h2 style="margin:0;font-family:'Baskerville','Times New Roman',Times,Georgia,serif;">New Contact Form Submission</h2>
-                <p style="margin:5px 0 0;opacity:0.9;font-family:'Baskerville','Times New Roman',Times,Georgia,serif;">${subjectLabel}</p>
-              </div>
-              <div style="padding:22px;font-family:'Baskerville','Times New Roman',Times,Georgia,serif;color:#1a1716;">
-                <div style="margin-bottom:15px;">
-                  <div style="font-weight:600;color:#6d6459;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;">From</div>
-                  <div style="margin-top:4px;"><strong>${name}</strong> (${email})</div>
-                </div>
-                ${orderNumber ? `
-                <div style="margin-bottom:15px;">
-                  <div style="font-weight:600;color:#6d6459;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;">Order Number</div>
-                  <div style="margin-top:4px;">${orderNumber}</div>
-                </div>
-                ` : ''}
-                <div style="margin-bottom:15px;">
-                  <div style="font-weight:600;color:#6d6459;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;">Inquiry Type</div>
-                  <div style="margin-top:4px;">${inquiryType.charAt(0).toUpperCase() + inquiryType.slice(1)}</div>
-                </div>
-                <div style="margin-bottom:15px;">
-                  <div style="font-weight:600;color:#6d6459;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;">Message</div>
-                  <div style="margin-top:10px;background:#f9f7f4;padding:15px;border-radius:8px;border-left:3px solid #843c2d;">${message.replace(/\n/g, '<br>')}</div>
-                </div>
-              </div>
-              <div style="padding:14px 22px 20px;border-top:1px solid #f0ebe3;color:#6d6459;font-size:12px;font-family:'Baskerville','Times New Roman',Times,Georgia,serif;">
-                <p style="margin:0;">Reply directly to this email to respond to the customer.</p>
-              </div>
-            </div>
-          </div>
-        </body>
-      </html>
-    `;
-
-    const textContent = `
-New Contact Form Submission
-${subjectLabel}
-
-From: ${name} (${email})
-${orderNumber ? `Order Number: ${orderNumber}` : ''}
-Inquiry Type: ${inquiryType}
-
-Message:
-${message}
-
----
-Reply directly to this email to respond to the customer.
-    `.trim();
-
-    // If Resend is configured, send the email
-    if (resendApiKey) {
-      const resend = new Resend(resendApiKey);
-
-      // Primary: notify the studio. Best-effort so a transient email failure
-      // never blocks the customer's inquiry from being acknowledged.
-      try {
-        await resend.emails.send({
-          from: fromEmail,
-          to: supportEmail,
-          replyTo: email,
-          subject,
-          html: htmlContent,
-          text: textContent,
-        });
-      } catch (notifyErr) {
-        console.error('Contact form: failed to send studio notification:', notifyErr);
-      }
-
-      // Confirmation to the customer is best-effort: without a verified sending
-      // domain, Resend may reject sends to arbitrary recipients. Never fatal.
-      try {
-      await resend.emails.send({
-        from: fromEmail,
-        to: email,
-        subject: `We received your message \u2014 Odubo Studio`,
-        html: `
-          <!DOCTYPE html>
-          <html>
-            <head>
-              <meta charset="utf-8">
-              <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            </head>
-            <body style="margin:0;padding:0;background:#f6f3ee;">
-              <div style="background:#f6f3ee;padding:24px 16px;">
-                <div style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:16px;border:1px solid #ece7df;overflow:hidden">
-                  <div style="padding:20px 22px 0 22px;text-align:center;border-bottom:1px solid #f0ebe3">
-                    <img src="https://odubo.studio/brand-logos/Danceman_Logo_Red.png" alt="Odubo" style="height:40px;width:auto;margin:8px auto 14px;display:block" />
-                  </div>
-                  <div style="padding:22px;font-family:'Baskerville','Times New Roman',Times,Georgia,serif;color:#1a1716;">
-                    <h2 style="margin:0 0 12px;font-size:22px;color:#171616;">Thanks for reaching out.</h2>
-                    <p style="margin:0 0 16px;font-size:16px;">Hi ${name}, we&rsquo;ve received your message and will get back to you within 24&ndash;48 hours.</p>
-                    <p style="margin:0 0 16px;font-size:16px;">In the meantime:</p>
-                    <ul style="margin:0 0 20px;padding-left:20px;font-size:15px;color:#1a1716;">
-                      <li style="margin-bottom:8px;"><a href="${STORE_ACCOUNT_URL}" style="color:#843c2d;text-decoration:none;">Check your order status</a></li>
-                      <li><a href="https://odubo.studio/store" style="color:#843c2d;text-decoration:none;">Browse the collection</a></li>
-                    </ul>
-                    <p style="margin:20px 0 0;font-size:15px;color:#6d6459;">&mdash; Odubo Studio</p>
-                  </div>
-                  <div style="padding:14px 22px 20px;border-top:1px solid #f0ebe3;color:#6d6459;font-size:12px;font-family:'Baskerville','Times New Roman',Times,Georgia,serif;text-align:center;">
-                    <p style="margin:0 0 4px;">Odubo Studio</p>
-                    <p style="margin:0;">&copy; ${new Date().getFullYear()} Odubo. All rights reserved.</p>
-                  </div>
-                </div>
-              </div>
-            </body>
-          </html>
-        `,
-        text: `
-Hi ${name},
-
-We've received your message and will get back to you within 24-48 hours.
-
-In the meantime:
-- Check your order status: ${STORE_ACCOUNT_URL}
-- Browse the collection: https://odubo.studio/store
-
-\u2014 Odubo Studio
-        `.trim(),
-      });
-      } catch (confirmErr) {
-        console.error('Contact form: failed to send customer confirmation (non-fatal):', confirmErr);
-      }
-    } else {
-      // Log for development/debugging when Resend isn't configured
-      console.log('[EMAIL] Contact form submission (Resend not configured):');
-      console.log({ name, email, orderNumber, inquiryType, message });
+    if (!stored) {
+      // Lost a race with an identical submission: keep the thread that won.
+      await deleteEmptyThread(thread.id);
+      return NextResponse.json({ success: true, duplicate: true });
     }
+
+    // Emails are best effort from here: the message is already the record.
+    const [ack] = await Promise.allSettled([
+      (async () => {
+        if (await inboxAutoAck()) await sendAcknowledgement(thread, contact, stored);
+      })(),
+      notifyOwner(thread, contact, stored),
+    ]);
+    if (ack.status === 'rejected') console.error('[contact] acknowledgement:', ack.reason);
 
     return NextResponse.json({
       success: true,
-      message: 'Your message has been sent successfully'
+      message: 'Your message has been sent',
+      threadUrl: threadLink(thread),
     });
-
   } catch (error) {
     console.error('Contact form error:', error);
-    return NextResponse.json(
-      { error: 'Failed to send message. Please try again later.' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to send message. Please try again later.' }, { status: 500 });
   }
 }

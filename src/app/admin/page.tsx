@@ -223,6 +223,7 @@ interface NavItem {
   icon?: ReactNode;
   children?: NavItem[];
   href?: string; // External link (navigates to another page)
+  badge?: number; // Unread count, rendered on href items (the inbox)
 }
 
 // Navigation - all tabs render in-place (no page navigation)
@@ -247,6 +248,7 @@ const navItems: NavItem[] = [
     label: 'Commerce',
     icon: Icons.commerce,
     children: [
+      { id: 'inbox', label: 'Inbox', icon: Icons.customers, href: '/admin/inbox' },
       { id: 'products', label: 'Products', icon: Icons.products },
       { id: 'orders', label: 'Orders', icon: Icons.orders },
       { id: 'customers', label: 'Customers', icon: Icons.customers },
@@ -282,6 +284,27 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<string>('overview');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
+  // Unread conversations, shown on the Inbox nav item. Polled lightly.
+  const [inboxUnread, setInboxUnread] = useState(0);
+  useEffect(() => {
+    let alive = true;
+    const load = async () => {
+      try {
+        const res = await fetch('/api/admin/inbox/threads?count=unread', { cache: 'no-store' });
+        if (!res.ok) return;
+        const data = (await res.json()) as { unread?: number };
+        if (alive) setInboxUnread(data.unread || 0);
+      } catch {
+        /* the badge is a courtesy, never an error */
+      }
+    };
+    void load();
+    const t = setInterval(load, 60_000);
+    return () => {
+      alive = false;
+      clearInterval(t);
+    };
+  }, []);
   const { canAccess, hasAccessibleChildren, loading: permissionsLoading, isAdmin } = usePermissions();
 
   // Filter nav items based on user permissions
@@ -376,6 +399,11 @@ export default function AdminPage() {
               {item.icon && <span className="flex-shrink-0 opacity-80">{item.icon}</span>}
               <span>{item.label}</span>
             </div>
+            {item.id === 'inbox' && inboxUnread > 0 && (
+              <span className="ml-2 rounded-full bg-[#843c2d] px-2 py-0.5 text-[10px] font-semibold text-[#ede8df] tabular-nums">
+                {inboxUnread}
+              </span>
+            )}
           </Link>
         </div>
       );
