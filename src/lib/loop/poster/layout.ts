@@ -128,18 +128,26 @@ export const qrSrc = (url: string) => `qr:${url}`;
 /**
  * The line under the QR on the event poster.
  *
- * Was "MORE", on the reasoning that the scan is the only route to the
- * programme, the cover contest, the gallery *and* the single, so naming one
- * would sell the rest short. Revised 2026-09-08: "MORE" asks the reader to be
- * curious, and a stranger holding a flyer at a barbecue is not. Naming the
- * single trades breadth for a reason to lift the phone — the other
- * destinations are still one tap away once they land, and they are worth
- * nothing to someone who never scanned.
+ * It has been three things, and each change followed what the night needed.
+ *
+ * "MORE" first, on the reasoning that the scan is the only route to the
+ * programme, the cover contest, the gallery AND the single, so naming one
+ * would sell the rest short. Revised 2026-09-08 to "SCAN FOR THE SINGLE",
+ * because "MORE" asks the reader to be curious and a stranger holding a flyer
+ * at a barbecue is not: naming the song traded breadth for a reason to lift
+ * the phone.
+ *
+ * Now "SCAN FOR PASSES" (owner, 2026-09-16). Passes are on sale, the room is
+ * finite, and the night is weeks away — so the scan should name the thing the
+ * reader can act on and that can run out, not the thing they can hear any
+ * time. Every piece's QR lands on /loop, where Get Pass sits above the fold,
+ * so the line is a promise the landing page keeps. The single is still one tap
+ * from there.
  *
  * Overridable per run (`--qrCaption=…`) and, failing that, read from the
- * `poster_qr_caption` setting, so the line can change without a code edit.
+ * `poster_qr_caption` setting, so the line can change again without a deploy.
  */
-export const DEFAULT_QR_CAPTION = "SCAN FOR THE SINGLE";
+export const DEFAULT_QR_CAPTION = "SCAN FOR PASSES";
 
 export const POSTER_SIZES = {
   print: { w: 2400, h: 3300, label: "Print · 8×11in 300dpi" },

@@ -4,8 +4,9 @@ import { getSetting } from "./loopSetting";
 /**
  * The single behind the QR.
  *
- * The printed flyer says SCAN FOR THE SINGLE, so this is the one lookup on the
- * site with a piece of paper depending on it. Two rules follow from that:
+ * Printed pieces now say SCAN FOR PASSES (the poster's QR sells the night, not
+ * the song), but the single is still the first thing a scan can play and the
+ * flyers already in circulation say SCAN FOR THE SINGLE. Two rules follow:
  *
  * 1. WHICH song it is must be a setting, never a constant. The owner changes
  *    what people hear without a deploy — the same rule the price and the

@@ -308,7 +308,7 @@ export function GatheringPoster({
               promised, so it outranks the programme and the contest.
 
               It says "The Single" because that is the phrase the flyer's QR
-              caption uses — SCAN FOR THE SINGLE — and the phrase the sheet
+              caption used before it sold passes, and the phrase the sheet
               behind it opens with. It read "Play 1984" before, which asked a
               stranger to recognise a title they have never heard: the flyer
               sent them for the single, and the page answered with a number.
