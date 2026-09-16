@@ -348,3 +348,32 @@ the same person rather than about nobody.
 **Still open** (the big branch, deliberately not merged tonight): `/api/customers`
 and `/api/admin/stats` answer unauthenticated, and `getUserFromRequest`
 base64-decodes a JWT without verifying it in 135 files.
+
+## The catalogue could be rewritten by anyone (merged 2026-09-15)
+
+`claude/admin-studio-release-setup-f6f006`, written twelve days ago and never
+merged. Its own commit message said the holes were "open in production today",
+and they still were when the triage found it.
+
+- **`PATCH /api/tracks/[id]`, the bulk track routes, `/api/albums/[id]` and the
+  credits route had no authentication of any kind.** An anonymous request could
+  repoint a track's `audio_url` at its own file, or flip `status` to published.
+  Sibling routes that *did* check used `getUserFromRequest`, which base64-decodes
+  a JWT without verifying the signature, so a forged `is_admin` passed anyway.
+- **`/api/r2-proxy` deleted.** No auth, no prefix restriction, zero callers,
+  inert only because `media.odubo.studio` is NXDOMAIN — one domain purchase
+  from being an open proxy over the whole bucket.
+- **`/api/admin/media-proxy` had no auth despite the path**, and allowlisted by
+  substring, so `https://evil.example/?x=r2.cloudflarestorage.com` passed.
+
+Merged as-is: eight files, no conflicts, nothing today had touched. The
+middleware addition is a backstop in the same spirit as
+`handleCommandCenterApi` — the in-route checks are the real gate, and the edge
+check means a newly added handler cannot reintroduce the hole by forgetting
+one. Reads stay open, because the player needs them and the audio itself is
+now gated separately (`audioAccess.ts`).
+
+Verified locally, unauthenticated: all five write paths **401**, r2-proxy
+**404**, media-proxy **401**, while `/api/tracks` and `/api/albums` still read
+**200**, the single still streams **206**, an unreleased track still **404**s,
+and a PATCH that tried to rename a track left the title untouched.
