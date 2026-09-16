@@ -297,3 +297,54 @@ its weight. Only visible by watching it.
 `/loop/admin/preview-draw?as=<email>` performs it for any address, on a loop,
 so the host can watch it and confirm two buyers really are dealt different
 songs.
+
+## The unreleased record was public (2026-09-15, found and closed)
+
+Found while auditing nine unmerged branches. On production, with plain
+unauthenticated GETs:
+
+- `GET /api/albums` → **200**, the Loop Soul album, `status: draft`
+- `GET /api/tracks` → **200**, all fourteen titles **with their audio URLs**
+- `GET /api/tracks/<id>/stream` → **206**, real audio
+- `GET /api/customers` → **200**, no auth (empty today, but ungated)
+- `GET /api/admin/stats` → **200**, no auth
+
+Anyone who opened `/api/tracks` had the whole record. That hollows out the
+thing the product sells — *"the record is for people who pre-ordered it"* — and
+made the single's own line, *"this album isn't streaming anywhere"*, untrue.
+
+A fix existed: commit `04bf012` on `claude/loop-soul-platform-eval-dbcba9`,
+eleven days old, never merged. It is 227 files and rewrites JWT verification
+across 190 call sites. Merging that at five in the morning onto a day that
+deleted the anthem those branches still reference, with a live store and a live
+Facebook event, is how a working night breaks. So: the surgical part only.
+
+**`src/lib/loop/audioAccess.ts` is the one authority**, pure and tested, and it
+is the same rule `/loop/album` already shows on screen — moved to where the
+bytes leave the building, because a gate drawn in the UI is a suggestion.
+
+| Caller | Verdict |
+|---|---|
+| Published album | public, unchanged |
+| The featured single | public — the flyer promises it |
+| Verified admin | through (Warehouse preview, `/admin`) |
+| Pass-holder, before release | **only their own draw** |
+| Pass-holder, after release | the whole record |
+| Anyone else | 404, never 403 — a 403 confirms the id is real |
+
+It fails **closed**: a database wobble refuses rather than opens.
+
+Applied at both byte routes, and `/api/tracks` now withholds `audio_url` for
+unpublished albums. That listing is public and CDN-cached, so it stays
+impersonal — it never decides *who* may listen, only that the address of an
+unreleased recording is not handed to everyone who asks.
+
+**The detail that nearly shipped broken:** the stream route *proxies* the media
+route, so gating both made the inner hop anonymous and an admin previewing a
+draft got a 404 from our own building. The proxy now forwards the caller's
+cookies to the same origin, so the inner gate reaches the same verdict about
+the same person rather than about nobody.
+
+**Still open** (the big branch, deliberately not merged tonight): `/api/customers`
+and `/api/admin/stats` answer unauthenticated, and `getUserFromRequest`
+base64-decodes a JWT without verifying it in 135 files.

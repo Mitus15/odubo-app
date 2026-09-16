@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import { queryDatabase } from '@/lib/db';
 import { resolveAudioSource } from '@/lib/release/audioSource';
+import { mayHearTrackId } from '@/lib/loop/audioAccess';
 
 export const runtime = 'edge';
 
@@ -20,6 +21,12 @@ export async function HEAD(req: NextRequest, { params }: { params: Promise<{ id:
 
 async function handleProxy(req: NextRequest, id: string, headOnly = false) {
   try {
+    // An unreleased record is not public. 404 rather than 403: a 403 confirms
+    // the id is real, which is the one thing a fishing expedition wants.
+    if (!(await mayHearTrackId(req, id))) {
+      return NextResponse.json({ error: 'Track not found' }, { status: 404 });
+    }
+
     // Lookup track with additional metadata (guard against non-JSON DB errors)
     let rows: any[] = [];
     try {
@@ -94,6 +101,17 @@ async function handleProxy(req: NextRequest, id: string, headOnly = false) {
     // the 206's Content-Range without transferring the file.
     const probing = headOnly && !range;
     if (probing) upstreamHeaders['Range'] = 'bytes=0-0';
+
+    // This route PROXIES the media route, so the inner hop is a second request
+    // that the media route gates independently. Without the caller's cookies it
+    // arrives anonymous and is refused, and an admin previewing a draft gets a
+    // 404 sourced from our own building. Carry the caller forward: this route
+    // has already decided they may listen, and the inner gate then reaches the
+    // same verdict about the same person instead of about nobody.
+    const cookie = req.headers.get('cookie');
+    if (cookie && sourceUrl.startsWith(new URL(req.url).origin)) {
+      upstreamHeaders['Cookie'] = cookie;
+    }
 
     const upstream = await fetch(sourceUrl, {
       method: 'GET',

@@ -10,12 +10,18 @@ export async function GET(req: NextRequest) {
     const albumId = url.searchParams.get('album_id');
     
     // SELECT tracks with video count (how many videos are linked to this track)
+    // `album_status` rides along so an unreleased track can have its audio
+    // location withheld below. This route is public and CDN-cached, so it must
+    // stay impersonal: it never decides WHO may listen, only that the address
+    // of an unreleased recording is not handed to everybody who asks.
     let query = `
       SELECT 
         t.*,
+        a.status AS album_status,
         COUNT(v.id) as video_count
       FROM tracks t
       LEFT JOIN videos v ON v.track_id = t.id
+      LEFT JOIN albums a ON a.id = t.album_id
     `;
     const params: any[] = [];
     
@@ -26,7 +32,20 @@ export async function GET(req: NextRequest) {
     
     query += ' GROUP BY t.id ORDER BY t.track_number ASC';
     
-    const tracks = await queryDatabase(query, params);
+    const rows = (await queryDatabase(query, params)) as Record<string, unknown>[];
+    // Until an album is published, the public listing carries the track but
+    // not the way to play it. The byte routes enforce the real rule; this
+    // stops the catalogue from advertising the door.
+    const tracks = rows.map((t) => {
+      const published = String(t.album_status ?? '').toLowerCase() === 'published';
+      const out = { ...t };
+      delete out.album_status;
+      if (!published) {
+        out.audio_url = null;
+        out.preview_url = null;
+      }
+      return out;
+    });
     const res = NextResponse.json({ success: true, tracks });
     res.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');
     res.headers.set('CDN-Cache-Control', 'public, max-age=300');

@@ -7,16 +7,23 @@
  * after a domain purchase. Same trick the Wall already uses for photos
  * (src/app/api/loop/gallery/media/[...key]).
  *
- * Unauthenticated by design: this is the album preview's audio path, and the
- * preview is a link the owner sends to people. The exposure is bounded by
- * isServableKey(), which allows only the warehouse/ and music/ prefixes and
- * refuses traversal — this must never become a way to browse the bucket.
- * Keys under those prefixes carry timestamps and UUIDs, not guessable names.
+ * Bounded by isServableKey(), which allows only the warehouse/ and music/
+ * prefixes and refuses traversal — this must never become a way to browse the
+ * bucket. Keys under those prefixes carry timestamps and UUIDs, not guessable
+ * names.
+ *
+ * It used to be unauthenticated outright, on the reasoning that it served an
+ * owner-shared preview link. That reasoning stopped being true the moment the
+ * catalogue pointed at it: on 2026-09-15 the unreleased album was streamable
+ * by anyone who read /api/tracks. A key that belongs to a CATALOGUE TRACK now
+ * goes through the same rule the listening page shows (see audioAccess.ts).
+ * A key that belongs to no track — a master, a field stem — is untouched.
  */
 import { NextRequest, NextResponse } from 'next/server';
 
 import { createStorageService } from '@/lib/storage/StorageService';
 import { isServableKey } from '@/lib/release/audioSource';
+import { mayHearMediaKey } from '@/lib/loop/audioAccess';
 
 export const runtime = 'nodejs';
 
@@ -52,6 +59,12 @@ export async function GET(
   const key = (segments ?? []).join('/');
 
   if (!isServableKey(key)) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  }
+
+  // null means the key is not a catalogue track: leave it exactly as it was.
+  const allowed = await mayHearMediaKey(req, key);
+  if (allowed === false) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
