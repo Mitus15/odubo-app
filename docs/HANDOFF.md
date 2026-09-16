@@ -60,9 +60,12 @@ This is the product. If a change breaks this sequence, it is wrong.
    that email prefilled.
 3. Pays $5. Within ~2s: a code is minted, a pre-order is written, and an email
    arrives with a **rendered PNG ticket** attached.
-4. Taps the link in that email → **`/loop/album`** → a short animated "draw"
-   deals them **the single plus two more tracks, chosen from their address** so
-   two buyers get different songs. They listen.
+4. Taps **Open your record** in that email → **`/loop/p/<token>`** binds the
+   phone with nothing to type → the "draw" deals them **the single plus two
+   more tracks, seeded on their address** so two buyers get different songs.
+   The six digits at `/loop/code` are now only for a new phone or a lost email.
+   (Was: the link carried no token and dead-ended on "you have not pre-ordered";
+   fixed 2026-09-16, see docs/decisions/loop-claim-link.md.)
 5. On the night: shows the ticket at the door. The host scans it on
    **`/loop/admin/door`**. It admits once.
 6. In the room: shoots through the Loop Soul camera filter, posts to the shared
@@ -99,24 +102,16 @@ Longer-form reasoning is in `docs/decisions/` and `docs/sessions/`.
 
 Three holes were closed on 2026-09-15/16. **One large one remains.**
 
-### Still open, and it is the priority
+### CLOSED 2026-09-16 — the JWT repair
 
-**`getUserFromRequest()` in `src/lib/auth.ts` does not verify the JWT
-signature.** It calls `decodeWithoutVerify`. Anyone can mint
-`{"userId":"x","email":"x","is_admin":true}` and be an admin anywhere that
-function guards.
-
-- **142 files** call it.
-- **94 route files outside `/api/admin`** still gate on it — the moments
-  galleries, uploads and moderation among them. **These are live and forgeable.**
-- A correct `verifyUserFromRequest()` sits ten lines below it and is used by 21
-  files.
-
-**The repair:** make `getUserFromRequest` verify. It becomes async, so ~142
-files gain `await`. Mechanical, large, and it wants a dedicated pass with the
-moments gallery exercised afterwards. A prepared version exists on
-`claude/loop-soul-platform-eval-dbcba9` (227 files, 11 days stale) — read it,
-don't merge it blind.
+**`getUserFromRequest()` now verifies the signature** (`jose.jwtVerify`,
+identical to `verifyUserFromRequest`, which is kept as an alias). It is async;
+all 131 call sites await; `decodeWithoutVerify` is deleted;
+`getUserRoleFromRequest` verifies too. A bare `await` in a non-async function
+is a syntax error, so tsc holding at the 850/10 baseline proves every call
+landed in async scope. A forged unsigned admin token is now rejected by the
+moments routes; a signed token still passes. Locked by
+`src/__tests__/auth.test.ts`. The 227-file eval branch was NOT used.
 
 **Mitigation already in place:** `src/middleware.ts` now has three fail-closed
 edge backstops — the whole `/api/admin/**` prefix (verified with `jose`),
@@ -169,8 +164,8 @@ Six remain. None are merged into `main`; four dead ones were archived as
 
 | Branch | Commits | What it is |
 |---|---|---|
-| `claude/shopify-customer-messaging-crm-0f1a53` | 1 | **A finished customer inbox**, 3,335 lines, docs, tests. **Not in production** despite the owner's notes saying it shipped. ⚠️ migration collides at `159`. He gets scam "are you the store owner" emails weekly that this was built to handle |
-| `claude/loop-gallery-album-contest-flow-b38fe8` | 2 | Cover-contest winner resolution. ⚠️ collides at `157`. Touches six files rewritten on 2026-09-15 |
+| ~~`claude/shopify-customer-messaging-crm-0f1a53`~~ | — | **MERGED 2026-09-16.** The customer inbox is live at /admin/inbox; migration renumbered 159 → 166 and applied. Owner still needs to set the Resend Inbound MX + `RESEND_WEBHOOK_SECRET` for email replies (see docs/loop/owner-checklist.md) |
+| ~~`claude/loop-gallery-album-contest-flow-b38fe8`~~ | — | **CARRIED 2026-09-16.** The winner-declaration half is applied by hand (migration 167, `loop_ballot_results`, admin Declare, frozen resolveCover). The 3-covers-hold schema rebuild is deferred |
 | `claude/loop-soul-platform-eval-dbcba9` | 7 | The 227-file auth repair + domain move. **Contains the real JWT fix.** Read, don't merge blind |
 | `claude/scotts-inn-venue-brief-846aab` | 11 | Venue brief docs, plus one real change: **19+ on the Volume 1 artwork**, which is not on `main`. The door is 19+ and the posters do not say so |
 | `claude/loop-soul-hub-overview-a5ac87` | 6 | Superseded playbill design. Its worktree holds **8 uncommitted files** — look before deleting |
@@ -202,17 +197,18 @@ without a backup.**
 
 ## 8. What I would do first
 
-1. **The JWT repair.** 94 live forgeable routes. Everything else is cosmetic
-   next to it.
-2. **Decide the inbox.** Finished work going stale; renumber its migration and
-   merge, or delete it and stop believing it exists.
-3. **Put 19+ on the artwork** before any more posters are printed. It is a
-   licensing condition, not a preference.
-4. **Test the door with a real camera.** `/loop/admin/door` has never been
-   exercised against real hardware. Ticket on one phone, door on another. That
-   is the one part of the night still unproven.
-5. **Make the email mock stop reporting success.** It is how a "sent" email was
-   reported that never sent.
+The 2026-09-16 pass closed items 1 and 2 (JWT verified, inbox merged) and
+rebuilt the buyer journey. What remains is the owner's, in
+`docs/loop/owner-checklist.md`:
+
+1. **A real $5 purchase from a phone.** The one true test of the new one-tap
+   journey. Confirm delivery in the Resend dashboard, not the return value.
+2. **Test the door with two real phones.** `/loop/admin/door` is still unproven
+   against real hardware. The one part of the night not yet exercised.
+3. **Put 19+ on the printed artwork** before any print run. A licensing
+   condition. The ticket and pass sheet already carry it.
+4. **The Shopify clicks** (store name → Odubo Studio, order prefix OS-, the
+   receipt template, the pass image alt text).
 
 ---
 
