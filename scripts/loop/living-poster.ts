@@ -22,6 +22,7 @@ import {
   destinationFor,
 } from "../../src/lib/loop/publicUrl";
 import { getSetting } from "../../src/lib/loop/loopSetting";
+import { priceLabel } from "../../src/lib/loop/priceLabel";
 import { VOLUMES } from "./event-config";
 import { prepareSharp, renderSharp, assertFontResolves } from "./poster-render-sharp";
 
@@ -578,6 +579,10 @@ async function main() {
   // venueShort is for the ticket stub; this piece has room for the full line.
   const details: EventDetails = { ...configured, venue: configured.venue };
   delete (details as { venueShort?: string }).venueShort;
+  // The price on the reel is the front door's price, as on every printed
+  // piece (poster-kit does the same). It carried none until 2026-09-16.
+  details.price = priceLabel(await getSetting("pass_price"), await getSetting("pass_currency"));
+  console.log(`→ price line    : ${details.price}`);
 
   console.log(`→ QR destination: ${qrUrl}`);
   console.log(`→ date line     : ${details.date}  ·  ${details.venue}`);

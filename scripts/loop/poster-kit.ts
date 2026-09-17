@@ -125,8 +125,10 @@ async function main() {
   await fs.mkdir(out, { recursive: true });
 
   const figures = String(args.figures ?? "crowd,dance,spin").split(",");
-  const sizes = String(args.sizes ?? "print,story").split(",") as PosterSize[];
-  const pieces = String(args.pieces ?? "posters,ticket,pass").split(",");
+  // Every piece by default: the flyer is the one handed to people and the
+  // banner is the Facebook event cover, and both were off unless asked for.
+  const sizes = String(args.sizes ?? "print,flyer,feed,story").split(",") as PosterSize[];
+  const pieces = String(args.pieces ?? "posters,banner,ticket,pass").split(",");
   const bleed = Boolean(args.bleed);
 
   // One prepare covers every piece — the src universe is small and shared.

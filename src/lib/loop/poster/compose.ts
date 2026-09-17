@@ -56,6 +56,10 @@ export type PosterSpec = {
     price?: string;
     /** Optional kicker naming the record — see EventDetails.record. */
     record?: string;
+    /** The feature credit under the record line — see EventDetails.feature. */
+    feature?: string;
+    /** The line under the QR; the brand default when empty. */
+    qrCaption?: string;
   };
   /** Ignored — the face is the committed brand font. Kept for compatibility. */
   fontSans?: string;
@@ -79,6 +83,7 @@ function toDetails(spec: PosterSpec): EventDetails {
     note: spec.details.note || undefined,
     price: spec.details.price || undefined,
     record: spec.details.record || undefined,
+    feature: spec.details.feature || undefined,
   };
 }
 
@@ -110,6 +115,7 @@ function toEngineSpec(spec: PosterSpec): EventPosterSpec {
     slogan: spec.tagline.trim() || undefined,
     showTriad: spec.showTriad,
     qrUrl: requireScannable(spec.qrUrl),
+    qrCaption: spec.details.qrCaption?.trim() || undefined,
     details: spec.showDetails ? toDetails(spec) : null,
   };
 }

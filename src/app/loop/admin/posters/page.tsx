@@ -3,6 +3,9 @@ import { getCurrentEvent } from "@/lib/loop/hub";
 import { getPassSettings } from "@/lib/loop/pass/settings";
 import { getPublicBaseUrl } from "@/lib/loop/publicUrl";
 import { priceLabel } from "@/lib/loop/priceLabel";
+import { getSetting } from "@/lib/loop/loopSetting";
+import { VOLUMES } from "@/lib/loop/poster/volumes";
+import { DEFAULT_QR_CAPTION } from "@/lib/loop/poster/layout";
 import PosterStudio from "./PosterStudio";
 
 /**
@@ -10,17 +13,14 @@ import PosterStudio from "./PosterStudio";
  * /loop/admin page. Server shell resolves the event for the details block.
  */
 export default async function PostersPage() {
-  const [event, pass, publicBaseUrl] = await Promise.all([
+  const [event, pass, publicBaseUrl, qrCaption] = await Promise.all([
     getCurrentEvent(),
     getPassSettings(),
     getPublicBaseUrl(),
+    getSetting("poster_qr_caption"),
   ]);
-  const dateLabel = new Date(event.date).toLocaleDateString("en-CA", {
-    timeZone: "America/Vancouver",
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  });
+  // The same lines the print kit puts on paper (lib/loop/poster/volumes).
+  const printed = VOLUMES["1"];
 
   return (
     <main className="mx-auto max-w-xl px-6 py-12">
@@ -41,9 +41,14 @@ export default async function PostersPage() {
         eventDetails={{
           title: event.title,
           theme: event.theme,
-          venue: event.venue,
-          dateLabel,
+          venue: printed.venue ?? event.venue,
+          dateLabel: printed.date ?? "",
+          doors: printed.doors,
+          note: printed.note,
+          record: printed.record,
+          feature: printed.feature,
           price: priceLabel(pass.price, pass.currency),
+          qrCaption: qrCaption ?? DEFAULT_QR_CAPTION,
         }}
         publicBaseUrl={publicBaseUrl}
       />

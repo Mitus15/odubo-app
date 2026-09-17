@@ -54,15 +54,19 @@ type Details = {
   note: string;
   price: string;
   record: string;
+  feature: string;
+  qrCaption: string;
 };
 
 const DETAIL_FIELDS: [keyof Details, string][] = [
   ["dateLabel", "Date"],
   ["doors", "Doors"],
   ["venue", "Venue"],
-  ["note", "Note (dress code)"],
+  ["note", "Note (age, dress code)"],
   ["price", "Price"],
   ["record", "Record line"],
+  ["feature", "Feature"],
+  ["qrCaption", "QR caption"],
 ];
 
 /** Export failures in words a promoter can act on. */
@@ -89,10 +93,15 @@ export function PosterStudio({
     theme: string;
     venue: string;
     dateLabel: string;
-    /** e.g. "60 PASSES" — from the live capacity when the server knows it. */
+    /** From VOLUMES (lib/loop/poster/volumes): the same lines the kit prints. */
+    doors?: string;
     note?: string;
+    record?: string;
+    feature?: string;
     /** From loop_settings.pass_price via priceLabel() — never typed in twice. */
     price?: string;
+    /** loop_settings.poster_qr_caption, the same line the kit prints. */
+    qrCaption?: string;
   };
   /** `loop_settings.public_base_url` — the origin every printed QR is built
    *  from. Undefined until the owner sets it; we fall back to this admin's own
@@ -125,10 +134,15 @@ export function PosterStudio({
       theme: eventDetails.theme,
       venue: eventDetails.venue,
       dateLabel: eventDetails.dateLabel,
-      doors: "DOORS 9PM",
-      note: eventDetails.note ?? "DRESS CODE · 80s",
+      // No literals here: these come from the same block the print kit reads,
+      // so the studio preview and the printed sheet cannot disagree. The
+      // studio said DOORS 9PM on its own until 2026-09-16.
+      doors: eventDetails.doors ?? "",
+      note: eventDetails.note ?? "",
       price: eventDetails.price ?? "",
-      record: "AN ALBUM BY MANI ODUBO",
+      record: eventDetails.record ?? "",
+      feature: eventDetails.feature ?? "",
+      qrCaption: eventDetails.qrCaption ?? "",
     }),
     [eventDetails],
   );
