@@ -78,7 +78,33 @@ The Pieces rail on the /loop poster takes `slice(0, 4)` **after** the pass is
 filtered out (`GatheringHome.tsx:69`), so all four garments still show. Had the
 zip hoodie stayed, the fifth piece would have fallen off the rail silently.
 
-## Still open, not ours
+## The pass image said the wrong night — fixed
 
-The pass image's alt text still reads "Saturday September 26" — the night moved
-to **Sat Oct 10**. That is the owner's artwork to re-export.
+Filed at first as "the owner's artwork to re-export", which was wrong twice
+over. It was not only the alt text: **SAT SEPTEMBER 26 was baked into the
+pixels** of the square the buyer looks at while paying, and the night is Sat
+Oct 10. And it was never the owner's to re-export — this repo renders that
+exact file.
+
+`src/lib/loop/poster/volumes.ts` already derives the printed date from the event
+record (`MOCK_CURRENT_EVENT.date`, 2026-10-10), so the engine had been correct
+since the night moved. The PNG in Shopify was simply a render taken before it.
+Exactly the drift the file's own header warns about: "the date has already moved
+twice, and a piece that disagrees with the front door about the night cannot be
+corrected once it is out."
+
+    npx tsx --env-file=.env.local scripts/loop/poster-kit.ts --pieces=pass
+
+Byte-for-byte the same artwork, one line different. Uploaded new-then-delete so
+the product was never imageless, alt text rewritten to the real night, and the
+superseded render archived outside the repo at
+`~/Documents/Loop-soul-the-entertainment-room/superseded-2026-09/`.
+
+Verified through the Storefront API and by reading the pixels back off the CDN:
+the served 2000×2000 square reads **SAT OCTOBER 10 · DOORS 6:30 · ALBUM AT 8**.
+(The file hash differs from the local render because Shopify re-encodes PNGs on
+upload.)
+
+`docs/loop/owner-checklist.md` item 4 asked the owner to hand-edit that alt
+text; it is now marked done, minus the one part still theirs — unpublishing the
+pass from the Meta and Microsoft channels.

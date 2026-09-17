@@ -39,10 +39,16 @@ The name a buyer sees at checkout and on the Shopify receipt is still
 - **Settings → Checkout → Customize.** Add the logo and the sand/ink colours to
   the checkout, thank-you and order-status pages. No apps.
 
-### 4. Shopify: the pass image
-The pass product photo's alt text still says Sept 26. **Products → Loop Soul
-Pass → the image → Edit alt text** → `Loop Soul pass, admits one`. While you
-are there, **unpublish the pass from the Meta and Microsoft channels**.
+### 4. Shopify: the pass image — DONE 2026-09-17
+The photo itself said **SAT SEPTEMBER 26** in the artwork, not just the alt
+text, on the product people pay for. Re-rendered from the poster engine
+(`npx tsx --env-file=.env.local scripts/loop/poster-kit.ts --pieces=pass`) and
+replaced in Shopify; alt text now carries the real night too. The engine was
+always right — `volumes.ts` derives the date from the event record — it was the
+uploaded PNG that was a stale render. **Nothing to do here.**
+
+Still yours, while you are in that product: **unpublish the pass from the Meta
+and Microsoft channels**.
 
 ### 5. Two edits in the programme (no deploy)
 In **/loop/admin → The Night**: put your Instagram handle and Amen's on the
