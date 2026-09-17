@@ -1,59 +1,49 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import QRCode from "qrcode";
+import { useState } from "react";
 import LoopLoader from "@/components/loop/brand/LoopLoader";
-import { doorUrlFor } from "@/lib/loop/door";
-import { publicPassNumber } from "@/lib/loop/passLink";
-
-type Found = { code: string; serial?: number | null; redeemed: boolean };
 
 /**
- * Your ticket, in two steps that prove the inbox, or in none.
+ * Enter your pass.
  *
- *   0. This phone already holds a pass (the link in the email bound it, or it
- *      proved the inbox before): the ticket shows at once.
- *   1. The checkout email. A six-digit code goes to it.
- *   2. The six digits. This phone becomes yours: every pass bought with that
- *      address opens here, and the ticket is shown for the door, number, code
- *      and the QR the host scans.
- *
- * Nothing is shown before proof. The email is the proof, because the pass was
- * sent there, and that is the whole reason a stranger who knows your address
- * cannot take your night.
+ * The code on the ticket is the login (owner, 2026-09-16). Type it and this
+ * phone is yours: the record, the cover, the night. There is no second step.
+ * Lost the email? The address you paid with gets the pass sent again, and
+ * nothing is shown on screen for it, so knowing an address is worth nothing.
  */
-export function CodeLookup({ initialHeld = [] }: { initialHeld?: Found[] }) {
+export function PassEntry() {
   const router = useRouter();
+  const [code, setCode] = useState("");
   const [email, setEmail] = useState("");
-  const [otp, setOtp] = useState("");
-  const [step, setStep] = useState<"email" | "otp" | "done">(initialHeld.length > 0 ? "done" : "email");
-  const [codes, setCodes] = useState<Found[]>(initialHeld);
-  const [proved, setProved] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState<"enter" | "send" | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [copied, setCopied] = useState<string | null>(null);
-  const [qr, setQr] = useState<Record<string, string>>({});
+  const [sent, setSent] = useState(false);
+  const [lost, setLost] = useState(false);
 
-  useEffect(() => {
-    if (step !== "done") return;
-    let alive = true;
-    Promise.all(
-      // The QR is the ticket: it encodes the door's own URL with the pass in
-      // it, so the host's plain camera app lands on the door page holding it.
-      // The origin is this page's own, never a typed domain.
-      codes.map(async (c) => [c.code, await QRCode.toDataURL(doorUrlFor(c.code, window.location.origin), { margin: 1, width: 240, color: { dark: "#2a0f0a", light: "#00000000" } })] as const),
-    )
-      .then((pairs) => alive && setQr(Object.fromEntries(pairs)))
-      .catch(() => undefined);
-    return () => {
-      alive = false;
-    };
-  }, [step, codes]);
-
-  async function sendCode(e: React.FormEvent) {
+  async function enter(e: React.FormEvent) {
     e.preventDefault();
-    setBusy(true);
+    setBusy("enter");
+    setError(null);
+    try {
+      const res = await fetch("/api/loop/pass/enter", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ code }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) throw new Error(data.error ?? `Couldn't enter (${res.status})`);
+      router.push("/loop");
+      router.refresh();
+    } catch (err) {
+      setError((err as Error).message);
+      setBusy(null);
+    }
+  }
+
+  async function resend(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy("send");
     setError(null);
     try {
       const res = await fetch("/api/loop/pass/lookup", {
@@ -63,50 +53,11 @@ export function CodeLookup({ initialHeld = [] }: { initialHeld?: Found[] }) {
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) throw new Error(data.error ?? `Couldn't send (${res.status})`);
-      setStep("otp");
+      setSent(true);
     } catch (err) {
       setError((err as Error).message);
     } finally {
-      setBusy(false);
-    }
-  }
-
-  async function verify(e: React.FormEvent) {
-    e.preventDefault();
-    setBusy(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/loop/pass/verify", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ email, code: otp }),
-      });
-      const data = (await res.json().catch(() => ({}))) as { error?: string; codes?: Found[]; outcome?: string };
-      if (!res.ok) {
-        if (data.outcome === "burned" || data.outcome === "expired" || data.outcome === "none") {
-          setStep("email");
-          setOtp("");
-        }
-        throw new Error(data.error ?? `Couldn't verify (${res.status})`);
-      }
-      setCodes(data.codes ?? []);
-      setProved(true);
-      setStep("done");
-      router.refresh();
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function copy(code: string) {
-    try {
-      await navigator.clipboard.writeText(code);
-      setCopied(code);
-      window.setTimeout(() => setCopied(null), 1800);
-    } catch {
-      /* long-press to copy */
+      setBusy(null);
     }
   }
 
@@ -117,107 +68,64 @@ export function CodeLookup({ initialHeld = [] }: { initialHeld?: Found[] }) {
 
   return (
     <div className="mt-6">
-      {step === "email" && (
-        <form onSubmit={sendCode} className="grid gap-3">
-          <input
-            type="email"
-            inputMode="email"
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@email.com"
-            className={field}
-          />
-          <button type="submit" disabled={busy || email.trim().length === 0} className={primary}>
-            {busy ? <LoopLoader size={24} label="Sending" /> : "Send me the six digits"}
-          </button>
-          <p className="loop-muted text-xs leading-relaxed">
-            If a pass was bought with this address, six digits are on their way.
-          </p>
-        </form>
+      <form onSubmit={enter} className="grid gap-3">
+        <input
+          type="text"
+          inputMode="text"
+          autoComplete="off"
+          autoCapitalize="characters"
+          spellCheck={false}
+          value={code}
+          onChange={(e) => setCode(e.target.value.toUpperCase())}
+          placeholder="LOOP-XXXX"
+          autoFocus
+          className={`${field} text-center font-mono text-2xl tracking-[0.3em]`}
+        />
+        <button type="submit" disabled={busy !== null || code.trim().length < 4} className={primary}>
+          {busy === "enter" ? <LoopLoader size={24} label="Entering" /> : "Enter"}
+        </button>
+        <p className="loop-muted text-xs leading-relaxed">It&apos;s on your ticket, under the QR.</p>
+      </form>
+
+      {error && (
+        <p className="mt-4 border-t border-[color-mix(in_srgb,var(--foreground)_15%,transparent)] pt-3 text-sm font-semibold">
+          {error}
+        </p>
       )}
 
-      {step === "otp" && (
-        <form onSubmit={verify} className="grid gap-3">
+      <div className="mt-8 border-t border-[color-mix(in_srgb,var(--foreground)_15%,transparent)] pt-4">
+        {!lost ? (
+          <button
+            type="button"
+            onClick={() => setLost(true)}
+            className="loop-muted min-h-[44px] text-[11px] font-bold uppercase tracking-[0.2em] underline underline-offset-4"
+          >
+            Lost your ticket?
+          </button>
+        ) : sent ? (
           <p className="text-sm leading-relaxed">
-            Check <strong>{email.trim()}</strong>. Type the six digits here and this phone is yours.
+            If a pass was bought with <strong>{email.trim()}</strong>, it&apos;s on its way there again.
           </p>
-          <input
-            type="text"
-            inputMode="numeric"
-            autoComplete="one-time-code"
-            pattern="[0-9]*"
-            maxLength={6}
-            value={otp}
-            onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
-            placeholder="000000"
-            autoFocus
-            className={`${field} text-center font-mono text-2xl tracking-[0.4em]`}
-          />
-          <button type="submit" disabled={busy || otp.length !== 6} className={primary}>
-            {busy ? <LoopLoader size={24} label="Checking" /> : "That's me"}
-          </button>
-          <div className="flex items-center justify-between text-xs">
-            <button type="button" onClick={() => { setStep("email"); setOtp(""); setError(null); }} className="loop-muted min-h-[44px] underline underline-offset-4">
-              Different email
+        ) : (
+          <form onSubmit={resend} className="grid gap-3">
+            <p className="text-sm leading-relaxed">The email you paid with. We send your pass again.</p>
+            <input
+              type="email"
+              inputMode="email"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@email.com"
+              className={field}
+            />
+            <button type="submit" disabled={busy !== null || email.trim().length === 0} className={primary}>
+              {busy === "send" ? <LoopLoader size={24} label="Sending" /> : "Send my pass again"}
             </button>
-            <button type="button" onClick={(e) => void sendCode(e as unknown as React.FormEvent)} disabled={busy} className="loop-muted min-h-[44px] underline underline-offset-4">
-              Send it again
-            </button>
-          </div>
-          <p className="loop-muted text-xs leading-relaxed">
-            Nothing arrived? Check spam, or the address your receipt went to. Still stuck? Ask at the door.
-          </p>
-        </form>
-      )}
-
-      {error && <p className="mt-4 border-t border-[color-mix(in_srgb,var(--foreground)_15%,transparent)] pt-3 text-sm font-semibold">{error}</p>}
-
-      {step === "done" && codes.length === 0 && (
-        <div className="mt-4 border-t border-[color-mix(in_srgb,var(--foreground)_15%,transparent)] pt-4 text-sm leading-relaxed">
-          <strong className="block">That address is yours, but no pass is under it.</strong>
-          <span className="loop-muted">Try the address your receipt went to, or ask at the door.</span>
-        </div>
-      )}
-
-      {step === "done" && codes.length > 0 && (
-        <div className="mt-2 grid gap-3">
-          {proved && (
-            <p className="loop-muted text-sm leading-relaxed">This phone is yours now.</p>
-          )}
-          {codes.map((c) => {
-            const serial = publicPassNumber(c.serial);
-            return (
-              <div key={c.code} className="border-t border-[color-mix(in_srgb,var(--foreground)_15%,transparent)] pt-4">
-                {serial && <p className="text-3xl font-extrabold tracking-tight">{serial}</p>}
-                <div className="mt-1 flex items-center justify-between gap-3">
-                  <span className="font-mono text-lg font-bold tracking-widest">{c.code}</span>
-                  <button
-                    type="button"
-                    onClick={() => copy(c.code)}
-                    className="loop-muted min-h-[44px] px-2 text-[11px] font-bold uppercase tracking-[0.2em] underline underline-offset-4"
-                  >
-                    {copied === c.code ? "Copied" : "Copy"}
-                  </button>
-                </div>
-                {qr[c.code] && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={qr[c.code]} alt={`Ticket QR for ${c.code}`} width={200} height={200} className="mt-3 rounded-xl bg-[var(--background)] p-2" />
-                )}
-                <p className="loop-muted mt-2 text-xs">Show this at the door.</p>
-              </div>
-            );
-          })}
-          <button type="button" onClick={() => { router.push("/loop"); router.refresh(); }} className={`${primary} mt-2`}>
-            Into the room
-          </button>
-          <a href="/loop/album" className="loop-muted mt-1 min-h-[44px] text-center text-xs underline underline-offset-4">
-            Your record →
-          </a>
-        </div>
-      )}
+          </form>
+        )}
+      </div>
     </div>
   );
 }
 
-export default CodeLookup;
+export default PassEntry;

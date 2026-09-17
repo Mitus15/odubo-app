@@ -52,17 +52,22 @@ export function isSoldOut(c: PublicCapacity): boolean {
 /**
  * The one line every surface shows, so the poster, the pass sheet and the
  * store can never disagree about how full the night is.
+ *
+ * While the room is open this says NOTHING (owner, 2026-09-16). "250 in the
+ * room" read as a claim about who had bought, and a number on a poster for a
+ * night nobody has heard of yet is a number that argues against coming. The
+ * line only appears once it is a warning the buyer needs.
  */
 export function capacityLine(c: PublicCapacity, opts: { free?: boolean } = {}): string | null {
   if (c.unlimited) return null;
   switch (c.state) {
     case "full":
-      return "Room is full";
+      return "Sold out";
     case "last":
     case "filling":
       return `${c.remaining} ${opts.free ? "spots" : "passes"} left`;
     case "open":
-      return `${c.total} in the room`;
+      return null;
   }
 }
 

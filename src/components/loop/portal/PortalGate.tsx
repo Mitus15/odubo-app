@@ -15,7 +15,7 @@ import LoopLoader from "@/components/loop/brand/LoopLoader";
 export function PortalGate({
   title = "Enter your pass",
   copy = "Your pass opens the Wall, the votes, and the night.",
-  cta = "Unlock the Portal",
+  cta = "Enter",
   tone = "poster",
   checkoutUrl = null,
   priceLabel = null,
@@ -38,7 +38,7 @@ export function PortalGate({
     e.preventDefault();
     setBusy(true);
     setError(null);
-    const res = await fetch("/api/loop/redeem", {
+    const res = await fetch("/api/loop/pass/enter", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ code: code.trim() }),
@@ -49,13 +49,7 @@ export function PortalGate({
     }
     setBusy(false);
     const body = (await res.json().catch(() => ({}))) as { error?: string };
-    setError(
-      res.status === 409
-        ? "That pass is already in use on another phone. Prove it's you below."
-        : body.error === "unknown code" || res.status === 404
-          ? "We don’t recognize that pass. Check it and try again."
-          : "Something went wrong. Try again.",
-    );
+    setError(body.error ?? "Something went wrong. Try again.");
   }
 
   const vault = tone === "vault";
@@ -109,7 +103,7 @@ export function PortalGate({
           href="/loop/code"
           className="loop-muted min-h-[44px] text-[11px] font-bold uppercase tracking-[0.2em] underline underline-offset-4"
         >
-          Find your pass
+          Lost your ticket?
         </a>
       </div>
     </div>

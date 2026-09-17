@@ -14,6 +14,7 @@ import {
 import EarlyAlbum from "@/components/loop/album/EarlyAlbum";
 import { getSetting } from "@/lib/loop/loopSetting";
 import { getPassSettings } from "@/lib/loop/pass/settings";
+import { resolveCover, coverCaption } from "@/lib/loop/cover";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -51,6 +52,9 @@ export default async function LoopAlbumPage() {
     early: access.early.enabled,
   });
 
+  // Which cover THIS person sees on their record: theirs, the room's, or the owner's.
+  const cover = state === "listen" || state === "early" ? await resolveCover(event.id, voterId) : null;
+
   if (state === "listen") {
     const data = await loadAlbum();
     if (access.email) await markClaimed(access.email);
@@ -58,6 +62,7 @@ export default async function LoopAlbumPage() {
     return (
       <Dark>
         <div className="mx-auto max-w-2xl px-5 pb-24 pt-10">
+          <Cover cover={cover} />
           <p className="text-[11px] uppercase tracking-[0.3em] opacity-70">Loop Soul · Yours</p>
           <h1 className="mt-2 text-2xl font-extrabold">{data.album.title}</h1>
           <p className="mt-1 text-sm opacity-70">{data.album.artist_name}.</p>
@@ -97,6 +102,7 @@ export default async function LoopAlbumPage() {
       >
         <Dark>
           <div className="mx-auto max-w-2xl px-5 pb-24 pt-10">
+            <Cover cover={cover} />
             <p className="text-[11px] uppercase tracking-[0.3em] opacity-70">Loop Soul · Yours, early</p>
             <h1 className="mt-2 text-2xl font-extrabold">{data.album.title}</h1>
             <p className="mt-1 text-sm opacity-70">
@@ -116,14 +122,14 @@ export default async function LoopAlbumPage() {
 
   const checkoutUrl = (await getPassSettings()).checkoutUrl;
   return (
-    <Shell title="Your record opens from your pass email.">
-      Tap the link in it. New phone, or lost the email? Prove the inbox.
+    <Shell title="Your record is behind your pass.">
+      The code on your ticket opens it.
       <span className="mt-6 grid gap-3">
         <Link
           href="/loop/code"
           className="flex min-h-[48px] items-center justify-center rounded-full bg-[var(--foreground)] px-5 font-bold text-[var(--background)]"
         >
-          That&apos;s me
+          Enter your pass
         </Link>
         {checkoutUrl && (
           <a href={checkoutUrl} className="text-center text-xs underline underline-offset-4 opacity-80">
@@ -132,6 +138,18 @@ export default async function LoopAlbumPage() {
         )}
       </span>
     </Shell>
+  );
+}
+
+/** The cover this listener holds, above their record. Owner's art when they have none. */
+function Cover({ cover }: { cover: Awaited<ReturnType<typeof resolveCover>> | null }) {
+  if (!cover?.url) return null;
+  return (
+    <div className="mb-6">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={cover.url} alt="The cover" className="aspect-square w-full max-w-[280px] object-cover" />
+      <p className="mt-2 text-xs opacity-60">{coverCaption(cover)}</p>
+    </div>
   );
 }
 

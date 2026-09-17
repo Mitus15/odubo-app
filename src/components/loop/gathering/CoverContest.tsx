@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import dynamic from "next/dynamic";
+import WallGallery from "@/components/loop/wall/WallGallery";
 
 // The camera pulls in the segmenter and the GL stylizer, a large payload that
 // nobody scanning a flyer should download before they have asked for a camera.
@@ -57,9 +58,18 @@ export function CoverContest({
         <p className="border-b border-ink/15 py-3 text-sm">$50 to whoever shot it. $5 for any shot in the magazine.</p>
       </div>
 
-      <p className="loop-muted mt-4 text-center text-[11px] leading-relaxed">
-        {canPost ? "Shoot, then put it on the Wall when you're happy with it." : "Shooting is free. Putting it on the Wall takes a pass."}
-      </p>
+      {canPost ? (
+        // The Wall IS the contest (owner, 2026-09-16): every shot in the room,
+        // and any of them can be your cover. One place, not two.
+        <div className="mt-8">
+          <p className="loop-muted mb-3 text-[11px] font-bold uppercase tracking-[0.25em]">On the Wall</p>
+          <WallGallery canPost />
+        </div>
+      ) : (
+        <p className="loop-muted mt-4 text-center text-[11px] leading-relaxed">
+          Shooting is free. Putting it on the Wall takes a pass.
+        </p>
+      )}
 
       {cameraOpen && <CameraSheet canPost={canPost} onClose={() => setCameraOpen(false)} />}
     </section>

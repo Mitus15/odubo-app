@@ -1,7 +1,6 @@
 import type { LoopEvent } from "@/lib/loop/hub";
 import { currentVoterId } from "@/lib/loop/identity/voter";
 import { hasRoomAccess } from "@/lib/loop/doors";
-import { getPublicCapacity } from "@/lib/loop/pass";
 import { countAdmitted } from "@/lib/loop/event-codes";
 import { getPassSettings } from "@/lib/loop/pass/settings";
 import { getRunOfShow } from "@/lib/loop/content-store";
@@ -25,11 +24,7 @@ export async function PortalHome({ event }: { event: LoopEvent }) {
     // here. A bare code prompt tells them nothing about what they'd be buying,
     // so the night is shown in full underneath it — only participation is
     // gated, never the pitch.
-    const [pass, cap, runOfShow] = await Promise.all([
-      getPassSettings(),
-      getPublicCapacity(),
-      getRunOfShow(event.id),
-    ]);
+    const [pass, runOfShow] = await Promise.all([getPassSettings(), getRunOfShow(event.id)]);
     return (
       <main className="flex flex-col items-center px-6 pb-24 pt-10 text-center">
         <p className="loop-muted text-xs uppercase tracking-[0.3em]">Live · {event.venue}</p>
@@ -37,7 +32,7 @@ export async function PortalHome({ event }: { event: LoopEvent }) {
           checkoutUrl={pass.checkoutUrl}
           priceLabel={pass.price ? `$${Number(pass.price).toFixed(0)}` : null}
         />
-        <PortalPreview runOfShow={runOfShow} capacity={cap} />
+        <PortalPreview runOfShow={runOfShow} />
       </main>
     );
   }

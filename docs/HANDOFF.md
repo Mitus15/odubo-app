@@ -63,13 +63,18 @@ This is the product. If a change breaks this sequence, it is wrong.
 4. Taps **Open your record** in that email → **`/loop/p/<token>`** binds the
    phone with nothing to type → the "draw" deals them **the single plus two
    more tracks, seeded on their address** so two buyers get different songs.
-   The six digits at `/loop/code` are now only for a new phone or a lost email.
+   On any other phone, typing the code from the ticket at `/loop/code` does
+   the same binding. The six-digit OTP is gone (2026-09-16, owner): the code
+   IS the login. "Lost your ticket?" resends the pass email; nothing is typed
+   back.
    (Was: the link carried no token and dead-ended on "you have not pre-ordered";
    fixed 2026-09-16, see docs/decisions/loop-claim-link.md.)
 5. On the night: shows the ticket at the door. The host scans it on
    **`/loop/admin/door`**. It admits once.
-6. In the room: shoots through the Loop Soul camera filter, posts to the shared
-   Wall, votes on the album's **cover** and **running order**.
+6. Holding a pass, `/loop` is THEIR page: **Your record** (the button), Your
+   ticket, Tell someone, and The Cover, which holds the camera AND the Wall
+   (one thing, not two). No Get Pass, no room count. On the night: votes on
+   the album's **cover** and **running order**.
 
 ---
 

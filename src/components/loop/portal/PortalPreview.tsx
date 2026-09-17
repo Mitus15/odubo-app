@@ -1,5 +1,4 @@
 import { type RunOfShowItem } from "@/lib/loop/content";
-import type { PublicCapacity } from "@/lib/loop/capacity";
 
 /**
  * What someone WITHOUT a pass sees, under the code gate.
@@ -14,37 +13,12 @@ import type { PublicCapacity } from "@/lib/loop/capacity";
  * rather than a secret. What stays behind the gate is participation: voting,
  * signing up, shooting, and the Wall.
  */
-export function PortalPreview({
-  runOfShow,
-  capacity,
-}: {
-  runOfShow: RunOfShowItem[];
-  /** The whole CapacityInfo, not loose numbers. Taking `sold` and `capacity`
-   *  as plain numbers let this component compute its own `remaining`, which
-   *  is how it went on rendering "0 PASSES LEFT OF 0" after the room became
-   *  uncapped — it had side-stepped the discriminant that exists to stop
-   *  exactly that. */
-  capacity: PublicCapacity;
-}) {
+export function PortalPreview({ runOfShow }: { runOfShow: RunOfShowItem[] }) {
   return (
     <section className="mt-14 w-full max-w-md text-left">
       <h2 className="text-center text-xs font-bold uppercase tracking-[0.3em] opacity-60">
         What a pass gets you
       </h2>
-
-      {/* When the room is finite that IS the pitch, so say it plainly. When it
-          isn't, say nothing — a scarcity block with no scarcity behind it is
-          worse than no block at all. */}
-      {!capacity.unlimited && (
-        <div className="mt-5 text-center">
-          <div className="font-sans text-5xl font-extrabold leading-none tabular-nums">
-            {capacity.remaining ?? capacity.total}
-          </div>
-          <div className="loop-muted mt-1 text-xs font-semibold uppercase tracking-widest">
-            {capacity.remaining === null ? "In the room" : capacity.remaining === 1 ? "Pass left" : "Passes left"}
-          </div>
-        </div>
-      )}
 
       <div className="mt-5 border-t border-ink/15">
         <Row title="The programme">

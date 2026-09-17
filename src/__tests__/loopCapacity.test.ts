@@ -41,12 +41,12 @@ describe("publicView", () => {
 
 describe("capacityLine", () => {
   it("states the size of the room, not the sales", () => {
-    expect(capacityLine(room(248))).toBe("250 in the room");
+    expect(capacityLine(room(248))).toBeNull();
   });
   it("warns with a real number when it matters", () => {
     expect(capacityLine(room(12))).toBe("12 passes left");
     expect(capacityLine(room(12), { free: true })).toBe("12 spots left");
-    expect(capacityLine(room(0))).toBe("Room is full");
+    expect(capacityLine(room(0))).toBe("Sold out");
   });
 });
 

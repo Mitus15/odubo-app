@@ -18,8 +18,11 @@ The security argument is that **the email is proof of the inbox, and that is
 the same proof the six digits give.** /loop/code sends six digits to the
 checkout address and binds the device that types them back; possession of the
 inbox is the whole proof. A link mailed to that same inbox proves the same
-thing by the same logic. The six digits stay for the case the link can't cover:
-a new phone, or a lost email.
+thing by the same logic. On another phone, the code on the ticket does the same
+binding (`POST /api/loop/pass/enter`): the code IS the login, same trust as a
+paper ticket. The six-digit OTP that used to live at /loop/code was removed the
+same day (owner: a second login for people who had just been given one).
+"Lost your ticket?" resends the pass email and shows nothing on screen.
 
 ## What makes it safe
 - **The token is 32 random bytes, stored only as a peppered SHA-256 hash**

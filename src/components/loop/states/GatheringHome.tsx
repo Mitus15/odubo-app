@@ -8,6 +8,7 @@ import { isJournalPublished } from "@/lib/loop/journal-server";
 import { getFeaturedSingle } from "@/lib/loop/single";
 import { resolveCover, coverCaption } from "@/lib/loop/cover";
 import { earlyRule } from "@/lib/loop/album";
+import { codesHeldBy } from "@/lib/loop/event-codes";
 import { cookies } from "next/headers";
 import { fetchCollectionProducts } from "@/lib/store/api";
 import { LOOP_COLLECTION_HANDLE, LOOP_PASS_TAG } from "@/lib/store/brands";
@@ -58,6 +59,8 @@ export async function GatheringHome({ event }: { event: LoopEvent }) {
     // How many tracks a pass hears before release: the pass sheet's one promise.
     earlyRule(),
   ]);
+  // The ticket(s) on this phone: a holder's poster is their own page.
+  const held = roomAccess ? await codesHeldBy(event.id, voterId).catch(() => []) : [];
 
   // Merch only — the pass has its own flow (GetPassModal) and its own button.
   const pieces = (shelf?.products ?? [])
@@ -95,6 +98,7 @@ export async function GatheringHome({ event }: { event: LoopEvent }) {
       pieces={pieces}
       roomAccess={roomAccess}
       earlyCount={early.enabled ? early.extra + 1 : 0}
+      held={held.map((h) => ({ code: h.code, serial: h.serial }))}
     />
   );
 }

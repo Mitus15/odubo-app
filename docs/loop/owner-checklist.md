@@ -38,13 +38,12 @@ write it. **Products → Loop Soul Pass → the image → Edit alt text** →
 the Meta and Microsoft channels** (it should not be in shopping feeds; it is a
 ticket to one night). The title, description and vendor are already fixed.
 
-### 3. Buy one real pass, from your phone
-This is the only true test. Buy a $5 pass on your phone. Within a couple of
-seconds you should get **one email**: your ticket (a picture, numbered `OS-321511`), and a
-button, **Open your record**. Tap it. It should drop you straight into the
-draw and then the record, with nothing to type. Then open the same email in
-Safari and tap it again; that phone should also open the record. If it does,
-the whole journey works.
+### 3. Test with the two passes you already own
+No new purchase. Tap one of the two claim links you were sent: it should drop
+you straight into the draw and then the record, with nothing to type, and
+`/loop` becomes your own page (Your record, Your ticket, The Cover). Then on a
+second browser type the code from your ticket at `/loop/code`; that phone
+opens too. If both work, the whole journey works.
 
 Check the **Resend dashboard** to confirm the email actually sent (the app can
 report "sent" in mock mode without sending; production is set to live, but

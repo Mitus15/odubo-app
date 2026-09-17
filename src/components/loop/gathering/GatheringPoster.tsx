@@ -8,7 +8,6 @@ import type { LoopEvent } from "@/lib/loop/hub";
 import { priceLabel as formatPrice } from "@/lib/loop/priceLabel";
 import { EVENT_CREDITS } from "@/lib/loop/content";
 import CoverContest from "./CoverContest";
-import WallGallery from "@/components/loop/wall/WallGallery";
 import type { RunOfShowItem } from "@/lib/loop/content";
 import Logo from "@/components/loop/brand/Logo";
 import ModuleSheet from "@/components/loop/shell/ModuleSheet";
@@ -18,9 +17,10 @@ import TheSingle from "@/components/loop/gathering/TheSingle";
 import type { FeaturedSingle } from "@/lib/loop/single";
 import type { ProductSummary } from "@/lib/store/types";
 import PiecesRail from "@/components/loop/store/PiecesRail";
+import YourTicket, { type HeldPass } from "@/components/loop/gathering/YourTicket";
 
 import { capacityLine, isSoldOut, isUrgent, type PublicCapacity } from "@/lib/loop/capacity";
-type ModuleKey = "night" | "cover" | "wall";
+type ModuleKey = "night" | "cover" | "ticket";
 
 const MODULES: { key: ModuleKey; label: string; title: string }[] = [
   // Label vs title on purpose: someone scanning the poster is looking for "the
@@ -28,10 +28,10 @@ const MODULES: { key: ModuleKey; label: string; title: string }[] = [
   // for the night. The Night has always rendered RUN_OF_SHOW — it was the
   // programme all along, just not findable by that word.
   { key: "night", label: "The Night", title: "The Night" },
+  // The Cover holds the camera AND the Wall: every shot in the room, any of
+  // which can be your cover. They were two modules; the owner: "the cover and
+  // the wall are the same thing".
   { key: "cover", label: "The Cover", title: "The Cover" },
-  // "The Wall" is added per visitor below: only a pass-holder can see it.
-  // The floor moment this volume has is the Loop Soul Line, which lives in the
-  // programme rather than needing a module of its own — nothing to sign up for.
 ];
 
 /**
@@ -61,6 +61,7 @@ export function GatheringPoster({
   pieces = [],
   roomAccess = false,
   earlyCount = null,
+  held = [],
 }: {
   event: LoopEvent;
   capacity: PublicCapacity;
@@ -87,6 +88,8 @@ export function GatheringPoster({
   roomAccess?: boolean;
   /** Tracks a pass hears before release, for the pass sheet's one promise. */
   earlyCount?: number | null;
+  /** The pass(es) this phone holds. Non-empty means this poster is THEIR page. */
+  held?: HeldPass[];
 }) {
   const [active, setActive] = useState<ModuleKey | null>(null);
   const [passOpen, setPassOpen] = useState(false);
@@ -140,15 +143,15 @@ export function GatheringPoster({
   // An unlimited room can never be full — the check has to run through the
   // discriminant, not through a number that would read 0 when uncapped.
   const soldOut = isSoldOut(capacity);
-  const modules = roomAccess
-    ? [...MODULES, { key: "wall" as const, label: "The Wall", title: "The Wall" }]
-    : MODULES;
-  const activeModule = modules.find((m) => m.key === active) ?? null;
+  const modules = MODULES;
+  const activeModule =
+    active === "ticket" ? { key: "ticket" as const, label: "Your ticket", title: "Your ticket" } : (modules.find((m) => m.key === active) ?? null);
   // The exact formatter the print kit uses (loopSetting.priceLabel), so the
   // poster on the wall and the front door always say the same thing. An unset
   // or zero price reads "FREE ENTRY" — that is how the door opens.
   const priceLabel = formatPrice(price, currency);
   const isFree = priceLabel === "FREE ENTRY";
+  const line = capacityLine(capacity, { free: isFree });
   // "Scott's Inn, Kamloops" → "Scott's Inn" on the tight poster line.
   const venueShort = event.venue.split(",")[0];
 
@@ -231,43 +234,56 @@ export function GatheringPoster({
           scarcity count only appears when there is a cap to count against. */}
       <div className="flex flex-col items-center gap-3">
         <div className="text-center">
-          {(soldOut || !capacity.unlimited) && (
+          {/* Nothing about the room until it is nearly full: a count on a
+              poster reads as a claim about who has bought. */}
+          {line && !roomAccess && (
             <div className="text-sm font-bold uppercase tracking-widest">
-              {/* The size of the room always; how many are left only once
-                  that is a warning rather than a sales report. */}
-              <span className={isUrgent(capacity) ? "text-wine" : undefined}>
-                {capacityLine(capacity, { free: isFree })}
-              </span>
+              <span className={isUrgent(capacity) ? "text-wine" : undefined}>{line}</span>
             </div>
           )}
           <div className="loop-muted mt-1 text-[11px] font-semibold uppercase tracking-[0.18em]">
             {dateLabel} · From {timeLabel} · {venueShort}
           </div>
         </div>
-        <button
-          type="button"
-          onClick={() => setPassOpen(true)}
-          className="w-full rounded-full bg-ink py-4 text-base font-bold text-sand transition-transform active:scale-95"
-        >
-          {soldOut
-            ? "Join the Waitlist"
-            : isFree
-              ? "Register · Free"
-              : `Get Pass · ${priceLabel}`}
-        </button>
-        {/* Two tappable lines, no second drawn shape: the pass button above
-            stays the only one on the poster. */}
+        {/* ONE drawn shape, and it is a different one for the two people who
+            can be standing here. A stranger is sold the night. Somebody who
+            holds a pass is not sold anything: this is their page, and the
+            thing they came to do is listen. */}
+        {roomAccess ? (
+          <Link
+            href="/loop/album"
+            className="block w-full rounded-full bg-ink py-4 text-center text-base font-bold text-sand transition-transform active:scale-95"
+          >
+            Your record
+          </Link>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setPassOpen(true)}
+            className="w-full rounded-full bg-ink py-4 text-base font-bold text-sand transition-transform active:scale-95"
+          >
+            {soldOut ? "Join the Waitlist" : isFree ? "Register · Free" : `Get Pass · ${priceLabel}`}
+          </button>
+        )}
+        {/* Two tappable lines, no second drawn shape. */}
         <div className="-mt-1 flex items-center gap-3">
-          {!soldOut && (
+          {roomAccess ? (
             <button
               type="button"
-              onClick={() => setPassOpen(true)}
+              onClick={() => setActive("ticket")}
               className="loop-muted text-[11px] font-bold uppercase tracking-[0.2em] underline underline-offset-4"
             >
-              What&apos;s included
+              Your ticket
             </button>
+          ) : (
+            <Link
+              href="/loop/code"
+              className="loop-muted text-[11px] font-bold uppercase tracking-[0.2em] underline underline-offset-4"
+            >
+              Enter your pass
+            </Link>
           )}
-          {!soldOut && <span className="loop-muted text-[11px]">·</span>}
+          <span className="loop-muted text-[11px]">·</span>
           <button
             type="button"
             onClick={tellSomeone}
@@ -275,25 +291,6 @@ export function GatheringPoster({
           >
             {told ? "Copied" : "Tell someone"}
           </button>
-        </div>
-
-        {/* The way back in, for anyone who already bought: the record they
-            pre-ordered and the ticket they hold. Text and a middot, same as
-            the row above; the pass button stays the only drawn shape. */}
-        <div className="-mt-1 flex items-center gap-3">
-          <Link
-            href="/loop/album"
-            className="loop-muted text-[11px] font-bold uppercase tracking-[0.2em] underline underline-offset-4"
-          >
-            {roomAccess ? "Your record" : "The record"}
-          </Link>
-          <span className="loop-muted text-[11px]">·</span>
-          <Link
-            href="/loop/code"
-            className="loop-muted text-[11px] font-bold uppercase tracking-[0.2em] underline underline-offset-4"
-          >
-            {roomAccess ? "Your ticket" : "Have a pass?"}
-          </Link>
         </div>
 
         {/* The shelf, right after the pass: the sell comes before the
@@ -370,7 +367,7 @@ export function GatheringPoster({
             {active === "cover" && (
               <CoverContest canPost={roomAccess} coverUrl={coverUrl} coverCaption={coverCaption} />
             )}
-            {active === "wall" && <WallGallery canPost />}
+            {active === "ticket" && <YourTicket passes={held} />}
           </ModuleSheet>
         )}
       </AnimatePresence>
@@ -389,7 +386,7 @@ export function GatheringPoster({
         )}
       </AnimatePresence>
 
-      {passOpen && (
+      {passOpen && !roomAccess && (
         <GetPassModal
           capacity={capacity}
           checkoutUrl={checkoutUrl}
