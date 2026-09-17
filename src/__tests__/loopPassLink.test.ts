@@ -4,7 +4,8 @@
  * The claim link and the pass number, pure.
  */
 import {
-  formatSerial,
+  passNumberDigits,
+  publicPassNumber,
   hashPassLinkToken,
   isPassLinkToken,
   newPassLinkToken,
@@ -64,17 +65,38 @@ describe("parseUnitOrderId", () => {
   });
 });
 
-describe("formatSerial", () => {
-  it("pads to three digits with the ordinal sign Jost can draw", () => {
-    expect(formatSerial(42)).toBe("Nº 042");
-    expect(formatSerial(1)).toBe("Nº 001");
-    expect(formatSerial(1234)).toBe("Nº 1234");
-    // U+00BA, never U+2116.
-    expect(formatSerial(7)?.charCodeAt(1)).toBe(0xba);
+describe("publicPassNumber", () => {
+  it("is a six-digit reference that never reveals the sale count", () => {
+    expect(publicPassNumber(1)).toBe("OS-473837");
+    expect(publicPassNumber(2)).toBe("OS-847674");
+    // The second sale must not look like "the second sale".
+    expect(publicPassNumber(2)).not.toContain("002");
+    for (const n of [1, 2, 3, 7, 42, 250]) {
+      expect(passNumberDigits(n)).toMatch(/^[1-9]\d{5}$/);
+    }
   });
-  it("is null when there is no number", () => {
-    expect(formatSerial(null)).toBeNull();
-    expect(formatSerial(undefined)).toBeNull();
-    expect(formatSerial(0)).toBeNull();
+
+  it("is stable: the same pass always shows the same number", () => {
+    expect(publicPassNumber(42)).toBe(publicPassNumber(42));
+  });
+
+  it("is a bijection across a whole room, so two guests never share a number", () => {
+    const seen = new Set<string>();
+    for (let n = 1; n <= 2000; n++) seen.add(passNumberDigits(n) as string);
+    expect(seen.size).toBe(2000);
+  });
+
+  it("puts consecutive sales nowhere near each other", () => {
+    for (let n = 1; n < 50; n++) {
+      const a = Number(passNumberDigits(n));
+      const b = Number(passNumberDigits(n + 1));
+      expect(Math.abs(a - b)).toBeGreaterThan(1000);
+    }
+  });
+
+  it("is null when there is no number (door comps, simulated sales)", () => {
+    expect(publicPassNumber(null)).toBeNull();
+    expect(publicPassNumber(undefined)).toBeNull();
+    expect(publicPassNumber(0)).toBeNull();
   });
 });

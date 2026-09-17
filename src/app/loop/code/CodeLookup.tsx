@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import LoopLoader from "@/components/loop/brand/LoopLoader";
 import { doorUrlFor } from "@/lib/loop/door";
-import { formatSerial } from "@/lib/loop/passLink";
+import { publicPassNumber } from "@/lib/loop/passLink";
 
 type Found = { code: string; serial?: number | null; redeemed: boolean };
 
@@ -186,7 +186,7 @@ export function CodeLookup({ initialHeld = [] }: { initialHeld?: Found[] }) {
             <p className="loop-muted text-sm leading-relaxed">This phone is yours now.</p>
           )}
           {codes.map((c) => {
-            const serial = formatSerial(c.serial);
+            const serial = publicPassNumber(c.serial);
             return (
               <div key={c.code} className="border-t border-[color-mix(in_srgb,var(--foreground)_15%,transparent)] pt-4">
                 {serial && <p className="text-3xl font-extrabold tracking-tight">{serial}</p>}

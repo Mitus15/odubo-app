@@ -31,7 +31,7 @@ describe("renderPassEmail", () => {
   it("carries the number, the code, the night and the link, in both parts", () => {
     const { text, html } = renderPassEmail(one, facts);
     for (const part of [text, html]) {
-      expect(part).toContain("Nº 042");
+      expect(part).toContain("OS-");
       expect(part).toContain("LOOP-K7X2");
       expect(part).toContain(facts.line);
       expect(part).toContain("https://www.odubostudio.com/loop/p/pl_a");
@@ -55,7 +55,7 @@ describe("renderPassEmail", () => {
 
   it("numbers several guests and gives each their own link", () => {
     const { text, html } = renderPassEmail(three, facts);
-    expect(text).toContain("Guest 2 of 3 · Nº 044 · LOOP-0002");
+    expect(text).toMatch(/Guest 2 of 3 · OS-\d{6} · LOOP-0002/);
     expect(text).toContain("/loop/p/pl_2");
     expect(html).toContain("Guest 3 of 3");
     expect(html.match(/Open your record/g)).toHaveLength(3);

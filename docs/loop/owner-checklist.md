@@ -14,13 +14,17 @@ The name a buyer sees at checkout and on the Shopify receipt is still
 **"B.A.A.D by Odubo"**. B.A.A.D is the clothing label; the shop is Odubo Studio.
 
 - **Settings → Store details → Store name** → `Odubo Studio`.
-- **Settings → General → Order ID → Prefix** → `OS-`. Receipts then read
-  `OS-1004` instead of `#1004`. (Shopify can't reset the counter, only prefix
-  it. It applies to new orders only.) The number a guest sees is the `Nº 042`
-  on their ticket, not this one, so this is only ever a receipt number.
+- **Order numbers are handled, no click needed.** Shopify starts every store at
+  #1001 and no plan below Plus can move that counter, so printing it on a
+  receipt tells a customer how few orders you have taken. The receipt template
+  below therefore shows no order number at all: the customer gets the date, the
+  items and their own order link, and #1001 stays in your admin where you want
+  it. The only number a guest ever sees is the one on their ticket,
+  `OS-473837`, which is computed so that consecutive sales land nowhere near
+  each other.
 - **Settings → Notifications → Order confirmation → Edit code.** Paste the file
   `docs/shopify/notifications/order-confirmation.liquid` over the body, and set
-  the subject to `Receipt · {{ order.name }}`. Shopify's confirmation can't be
+  the subject to `Your Odubo Studio receipt`. Shopify's confirmation can't be
   turned off, so this makes it a plain receipt with no second sales pitch under
   it. (Loop Soul passes get their own email from the site; merch buyers get
   this receipt and nothing else.)
@@ -36,7 +40,7 @@ ticket to one night). The title, description and vendor are already fixed.
 
 ### 3. Buy one real pass, from your phone
 This is the only true test. Buy a $5 pass on your phone. Within a couple of
-seconds you should get **one email**: your ticket (a picture, `Nº 003`), and a
+seconds you should get **one email**: your ticket (a picture, numbered `OS-321511`), and a
 button, **Open your record**. Tap it. It should drop you straight into the
 draw and then the record, with nothing to type. Then open the same email in
 Safari and tap it again; that phone should also open the record. If it does,

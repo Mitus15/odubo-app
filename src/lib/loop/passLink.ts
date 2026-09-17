@@ -57,12 +57,42 @@ export function parseUnitOrderId(orderId: string | null | undefined): { order: s
 }
 
 /**
- * The number on the ticket: "Nº 042". Capital N and the masculine ordinal
- * (U+00BA), NOT the numero sign (U+2116) — Jost, the ticket face, has no glyph
- * for it and Satori would draw a blank. Three digits because the room holds
- * 250; a bigger room simply grows past 999.
+ * The number on the ticket, and the only reference a guest ever sees.
+ *
+ * `serial` is the true count of passes sold, which is exactly why it must not
+ * be shown: "Nº 002" tells the second buyer they are the second buyer, and a
+ * room that looks empty is a room nobody wants to walk into. Shopify has the
+ * same problem and cannot fix it — no plan below Plus lets you move the order
+ * counter off 1001, only prefix it — so the public number is ours instead.
+ *
+ * This maps the serial onto a six-digit number that looks like a real order
+ * reference and reveals nothing about order. It is a modular multiplication:
+ * 900000 factors as 2^5 · 3^2 · 5^5, and the multiplier shares none of those
+ * factors, so it is a BIJECTION over the whole six-digit range. Every pass
+ * gets its own number, the same one every time, and consecutive sales land
+ * nowhere near each other:
+ *
+ *   1 -> OS-473837    2 -> OS-847674    3 -> OS-321511
+ *
+ * Deterministic, so it needs no column and no backfill: the ledger keeps the
+ * honest count for the owner, and the guest gets a number that says nothing.
  */
-export function formatSerial(n: number | null | undefined): string | null {
-  if (n === null || n === undefined || !Number.isFinite(n) || n < 1) return null;
-  return `Nº ${String(Math.floor(n)).padStart(3, "0")}`;
+const NUMBER_BASE = 100000;
+const NUMBER_SPAN = 900000;
+/** Coprime to 900000: odd, and divisible by neither 3 nor 5. */
+const NUMBER_STRIDE = 373837;
+
+export const PASS_NUMBER_PREFIX = "OS-";
+
+/** The six digits alone, e.g. "473837". Null when there is no number. */
+export function passNumberDigits(serial: number | null | undefined): string | null {
+  if (serial === null || serial === undefined || !Number.isFinite(serial) || serial < 1) return null;
+  const n = Math.floor(serial);
+  return String(NUMBER_BASE + ((n * NUMBER_STRIDE) % NUMBER_SPAN));
+}
+
+/** The public reference, e.g. "OS-473837". Null for door comps and simulated sales. */
+export function publicPassNumber(serial: number | null | undefined): string | null {
+  const digits = passNumberDigits(serial);
+  return digits === null ? null : PASS_NUMBER_PREFIX + digits;
 }

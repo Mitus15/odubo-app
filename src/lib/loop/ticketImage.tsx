@@ -4,7 +4,7 @@ import { join } from "node:path";
 import QRCode from "qrcode";
 import { INK, PRODUCT_NAME, SAND } from "@/lib/loop/brand";
 import { doorUrlFor } from "@/lib/loop/door";
-import { formatSerial } from "@/lib/loop/passLink";
+import { publicPassNumber } from "@/lib/loop/passLink";
 
 /**
  * The ticket, as a thing you keep.
@@ -66,7 +66,7 @@ async function qrDataUrl(t: TicketFacts): Promise<string> {
 export async function renderTicketPng(t: TicketFacts): Promise<Buffer> {
   const [font, qr] = await Promise.all([jost(), qrDataUrl(t)]);
   const many = (t.total ?? 1) > 1;
-  const serial = formatSerial(t.serial);
+  const serial = publicPassNumber(t.serial);
 
   const res = new ImageResponse(
     (
@@ -142,7 +142,7 @@ export async function renderTicketPng(t: TicketFacts): Promise<Buffer> {
             // A column of its own: Satori lays a fragment's children out in
             // a row, which put the number and the code on one line.
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-              <div style={{ display: "flex", fontSize: 96, fontWeight: 700, letterSpacing: 4, lineHeight: 1 }}>{serial}</div>
+              <div style={{ display: "flex", fontSize: 82, fontWeight: 700, letterSpacing: 2, lineHeight: 1 }}>{serial}</div>
               <div style={{ display: "flex", fontSize: 38, fontWeight: 700, letterSpacing: 6, opacity: 0.7, marginTop: 14 }}>
                 {t.code}
               </div>

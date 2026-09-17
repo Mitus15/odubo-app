@@ -1,5 +1,5 @@
 import { INK, PRODUCT_NAME, SAND } from "@/lib/loop/brand";
-import { formatSerial } from "@/lib/loop/passLink";
+import { publicPassNumber } from "@/lib/loop/passLink";
 
 /**
  * The pass email, as words and as a page. Pure: what goes in is what the
@@ -55,7 +55,7 @@ export function passEmailSubject(count: number): string {
 }
 
 function passLabel(p: PassForEmail): string {
-  return [formatSerial(p.serial), p.code].filter(Boolean).join(" · ");
+  return [publicPassNumber(p.serial), p.code].filter(Boolean).join(" · ");
 }
 
 export function renderPassEmailText(passes: PassForEmail[], facts: PassEmailFacts): string {
