@@ -1,6 +1,7 @@
 # Odubo Studio / Loop Soul — engineering handoff
 
-**Written 2026-09-16.** Main is `4ea6495`, deployed. The owner (Mani Odubo,
+**Written 2026-09-16, updated 2026-09-17** (the complete pass: see
+`docs/sessions/2026-09-17-complete-pass.md`). Main is `585fdb6`, deployed. The owner (Mani Odubo,
 `maniodubo@gmail.com`) is a musician, not an engineer, and is handing this over
 because the scope outgrew one person. Treat him as the product owner: he makes
 the calls, you make them buildable.
@@ -21,7 +22,7 @@ a module, leave a dangling import, and the build is green. Use:
 ```bash
 npx tsc --noEmit | grep -c "error TS"     # baseline: 850
 npx tsc --noEmit | grep -c "error TS2307" # baseline: 10 — a new one is a broken import
-npm test                                   # baseline: 301 passing, 2 failing
+npm test                                   # baseline: 317 passing, 2 failing
 ```
 
 Those two failures (`emailTemplates`, `videos.get`) were red before any of this
@@ -70,11 +71,15 @@ This is the product. If a change breaks this sequence, it is wrong.
    (Was: the link carried no token and dead-ended on "you have not pre-ordered";
    fixed 2026-09-16, see docs/decisions/loop-claim-link.md.)
 5. On the night: shows the ticket at the door. The host scans it on
-   **`/loop/admin/door`**. It admits once.
+   **`/loop/admin/door`**. It admits once. The QR encodes `/loop/d?c=`: the
+   host's phone goes to the scanner, a guest scanning their own ticket goes to
+   Enter your pass with the code filled in.
 6. Holding a pass, `/loop` is THEIR page: **Your record** (the button), Your
    ticket, Tell someone, and The Cover, which holds the camera AND the Wall
-   (one thing, not two). No Get Pass, no room count. On the night: votes on
-   the album's **cover** and **running order**.
+   (one thing, not two). No Get Pass, no room count. On the night ("Tonight"
+   in the nav, once the owner flips the phase): Your ticket first, the head
+   count, the camera, the Wall, and votes on the album's **cover** and
+   **running order**. After: Legacy shows the declared cover.
 
 ---
 
@@ -172,7 +177,7 @@ Six remain. None are merged into `main`; four dead ones were archived as
 | ~~`claude/shopify-customer-messaging-crm-0f1a53`~~ | — | **MERGED 2026-09-16.** The customer inbox is live at /admin/inbox; migration renumbered 159 → 166 and applied. Owner still needs to set the Resend Inbound MX + `RESEND_WEBHOOK_SECRET` for email replies (see docs/loop/owner-checklist.md) |
 | ~~`claude/loop-gallery-album-contest-flow-b38fe8`~~ | — | **CARRIED 2026-09-16.** The winner-declaration half is applied by hand (migration 167, `loop_ballot_results`, admin Declare, frozen resolveCover). The 3-covers-hold schema rebuild is deferred |
 | `claude/loop-soul-platform-eval-dbcba9` | 7 | The 227-file auth repair + domain move. **Contains the real JWT fix.** Read, don't merge blind |
-| `claude/scotts-inn-venue-brief-846aab` | 11 | Venue brief docs, plus one real change: **19+ on the Volume 1 artwork**, which is not on `main`. The door is 19+ and the posters do not say so |
+| `claude/scotts-inn-venue-brief-846aab` | 11 | Venue brief docs. Its one code change (19+ on the artwork) was redone on `main` 2026-09-17 in `lib/loop/poster/volumes.ts` |
 | `claude/loop-soul-hub-overview-a5ac87` | 6 | Superseded playbill design. Its worktree holds **8 uncommitted files** — look before deleting |
 | `feat/loop-journal` | 1 | Obsolete: built on a feature deleted 2026-09-15 |
 
@@ -210,10 +215,12 @@ rebuilt the buyer journey. What remains is the owner's, in
    journey. Confirm delivery in the Resend dashboard, not the return value.
 2. **Test the door with two real phones.** `/loop/admin/door` is still unproven
    against real hardware. The one part of the night not yet exercised.
-3. **Put 19+ on the printed artwork** before any print run. A licensing
-   condition. The ticket and pass sheet already carry it.
-4. **The Shopify clicks** (store name → Odubo Studio, order prefix OS-, the
-   receipt template, the pass image alt text).
+3. **Re-render and print.** 19+, the price and the feature credit are now on
+   every piece; the files on disk predate that. `npm run loop:posters`.
+4. **The Shopify clicks** (store name → Odubo Studio, the receipt template,
+   the pass image alt text).
+5. **On Oct 10, flip the phase to Tonight** in /loop/admin before the doors.
+   It is the switch that changes what every visitor sees.
 
 ---
 
