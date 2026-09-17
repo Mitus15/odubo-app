@@ -1,5 +1,5 @@
 import { queryOne } from "@/lib/loop/db";
-import { isHolder } from "@/lib/loop/event-codes";
+import { countAdmitted, countRedeemed, isHolder } from "@/lib/loop/event-codes";
 
 /**
  * "Open doors" — treat everyone as a pass-holder, no code required.
@@ -29,4 +29,17 @@ export async function hasRoomAccess(eventId: string, voterId: string): Promise<b
   if (await doorsOpen()) return true;
   if (!voterId || voterId === "anonymous") return false;
   return isHolder(eventId, voterId);
+}
+
+/**
+ * How many people are in the room, for the people in it.
+ *
+ * When the door is being run from a phone, a head is a scan. When the doors
+ * are open (trust mode: nobody scans), a head is a pass that has been entered
+ * on a device, which is the nearest honest number. It was `countAdmitted` in
+ * both cases, so an open-doors night read 0 all night.
+ */
+export async function roomHeads(eventId: string): Promise<number> {
+  if (await doorsOpen()) return (await countRedeemed(eventId)).redeemed;
+  return (await countAdmitted(eventId)).admitted;
 }

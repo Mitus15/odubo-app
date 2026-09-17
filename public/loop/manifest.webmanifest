@@ -1,7 +1,7 @@
 {
   "name": "Loop Soul",
   "short_name": "Loop Soul",
-  "description": "The soul of Kamloops — the room, the Wall, the anthem.",
+  "description": "Loop Soul. An album by Mani Odubo, live at Scott's Inn, Kamloops.",
   "start_url": "/loop",
   "scope": "/loop",
   "display": "standalone",
@@ -9,11 +9,8 @@
   "background_color": "#d9aa7a",
   "theme_color": "#d9aa7a",
   "icons": [
-    {
-      "src": "/loop/icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any"
-    }
+    { "src": "/loop/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/loop/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/loop/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
   ]
 }

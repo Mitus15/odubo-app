@@ -1,9 +1,9 @@
 /**
  * The door, the pure part.
  *
- * A ticket QR encodes the door's own URL with the pass in it, so that a scan
- * from a plain camera app lands the host on /loop/admin/door with the code
- * already in hand. The in-page scanner reads the same QR, and it also reads a
+ * A ticket QR encodes /loop/d with the pass in it, so that a scan from a
+ * plain camera app lands the host on /loop/admin/door with the code already
+ * in hand (and a guest on their own ticket). The in-page scanner reads the same QR, and it also reads a
  * bare code (an older screenshot, a code typed by hand). Everything funnels
  * through here so the two paths cannot disagree about what a pass looks like.
  */
@@ -30,7 +30,12 @@ export function parseScannedCode(text: string | null | undefined): string | null
   return m ? m[0].toUpperCase() : null;
 }
 
-/** What a ticket QR encodes: the door, with the pass in hand. */
+/**
+ * What a ticket QR encodes: /loop/d, with the pass in hand. That page sends
+ * the host's phone (admin cookie) to the door scanner and anyone else to
+ * "Enter your pass" with the code filled in. It used to encode the scanner
+ * itself, so a guest scanning their own ticket met the admin login.
+ */
 export function doorUrlFor(code: string, baseUrl: string): string {
-  return `${baseUrl.replace(/\/$/, "")}/loop/admin/door?c=${encodeURIComponent(code)}`;
+  return `${baseUrl.replace(/\/$/, "")}/loop/d?c=${encodeURIComponent(code)}`;
 }

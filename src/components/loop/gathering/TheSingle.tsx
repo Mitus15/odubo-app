@@ -1,6 +1,7 @@
 "use client";
 
 import { memo, useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { usePWA } from "@/components/PWAProvider";
 import SinglePlayer from "@/components/loop/gathering/SinglePlayer";
@@ -59,6 +60,7 @@ export function TheSingle({
   onClose,
   onGetPass,
   onCoverContest,
+  holder = false,
 }: {
   single: FeaturedSingle;
   /** Resolved per visitor: theirs, the room's, or the owner's. */
@@ -70,6 +72,8 @@ export function TheSingle({
   onClose: () => void;
   onGetPass: () => void;
   onCoverContest: () => void;
+  /** This phone holds a pass: the rest of the record is theirs, not for sale. */
+  holder?: boolean;
 }) {
   const [heard, setHeard] = useState(false);
   const [sender, setSender] = useState<string | null>(null);
@@ -310,21 +314,34 @@ export function TheSingle({
           Performed live, front to back, once, in a courtyard.
         </p>
 
-        <button
-          type="button"
-          onClick={onGetPass}
-          className="mt-8 flex w-full items-center justify-between rounded-2xl bg-ink px-6 py-5 text-left text-sand transition-transform active:scale-95"
-        >
-          <span>
-            <span className="block text-base font-bold">
-              Hear the rest of it live
+        {holder ? (
+          <Link
+            href="/loop/album"
+            className="mt-8 flex w-full items-center justify-between rounded-2xl bg-ink px-6 py-5 text-left text-sand transition-transform active:scale-95"
+          >
+            <span>
+              <span className="block text-base font-bold">The rest of it is yours</span>
+              <span className="block text-[13px] opacity-70">Your record · All 14, live, {dateLabel}</span>
             </span>
-            <span className="block text-[13px] opacity-70">
-              All 14, live, front to back · {dateLabel}
+            <span className="opacity-60">→</span>
+          </Link>
+        ) : (
+          <button
+            type="button"
+            onClick={onGetPass}
+            className="mt-8 flex w-full items-center justify-between rounded-2xl bg-ink px-6 py-5 text-left text-sand transition-transform active:scale-95"
+          >
+            <span>
+              <span className="block text-base font-bold">
+                Hear the rest of it live
+              </span>
+              <span className="block text-[13px] opacity-70">
+                All 14, live, front to back · {dateLabel}
+              </span>
             </span>
-          </span>
-          <span className="opacity-60">→</span>
-        </button>
+            <span className="opacity-60">→</span>
+          </button>
+        )}
 
         <p className="loop-muted mt-10 text-sm leading-relaxed">
           This album isn&apos;t streaming anywhere. {dateLabel} is its first

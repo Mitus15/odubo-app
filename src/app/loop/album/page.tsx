@@ -15,6 +15,7 @@ import EarlyAlbum from "@/components/loop/album/EarlyAlbum";
 import { getSetting } from "@/lib/loop/loopSetting";
 import { getPassSettings } from "@/lib/loop/pass/settings";
 import { resolveCover, coverCaption } from "@/lib/loop/cover";
+import { priceLabel as formatPrice } from "@/lib/loop/priceLabel";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -32,7 +33,7 @@ export const metadata = {
  *   wait    owed it, not out yet, nothing early set
  *   listen  owed it, out: the album plays here
  *   prove   this device holds nothing: the link in the pass email binds it, or
- *           the six digits at /loop/code do on a new phone
+ *           the code on the ticket does at /loop/code on a new phone
  *
  * A buyer normally never sees `prove`: the pass email's button lands them
  * here already bound. Nothing here asks for a password, and nothing here is
@@ -120,7 +121,11 @@ export default async function LoopAlbumPage() {
 
   if (state === "wait") return <Shell title="It lands after the night." />;
 
-  const checkoutUrl = (await getPassSettings()).checkoutUrl;
+  // No bare checkout link here: the pass sheet on /loop is the only way to
+  // buy, because it is the only place that takes the address the ticket goes
+  // to. Sale #1 came through a bare link and arrived with no email.
+  const pass = await getPassSettings();
+  const price = formatPrice(pass.price, pass.currency);
   return (
     <Shell title="Your record is behind your pass.">
       The code on your ticket opens it.
@@ -131,10 +136,10 @@ export default async function LoopAlbumPage() {
         >
           Enter your pass
         </Link>
-        {checkoutUrl && (
-          <a href={checkoutUrl} className="text-center text-xs underline underline-offset-4 opacity-80">
-            No pass yet? Get one, $5
-          </a>
+        {pass.checkoutUrl && (
+          <Link href="/loop" className="text-center text-xs underline underline-offset-4 opacity-80">
+            No pass yet? Get a pass{price === "FREE ENTRY" ? "" : ` · ${price}`}
+          </Link>
         )}
       </span>
     </Shell>

@@ -78,6 +78,7 @@ export function GetPassModal({
   const [consent, setConsent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [listed, setListed] = useState(false);
 
   // Admin-set Shopify checkout link first, then the env fallback.
   const checkoutUrl = checkoutUrlProp || process.env.NEXT_PUBLIC_LOOP_PASS_CHECKOUT_URL;
@@ -120,6 +121,33 @@ export function GetPassModal({
     window.location.href = target;
   }
 
+  /** Sold out: the same field joins the waitlist instead. */
+  async function join(e: React.FormEvent) {
+    e.preventDefault();
+    if (busy) return;
+    const addr = email.trim();
+    if (!EMAIL.test(addr)) {
+      setErr("We need an address to reach you at.");
+      return;
+    }
+    setBusy(true);
+    setErr(null);
+    try {
+      const res = await fetch("/api/loop/pass/waitlist", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email: addr }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) throw new Error(data.error ?? "Couldn't add you. Try again.");
+      setListed(true);
+    } catch (e2) {
+      setErr((e2 as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-end justify-center bg-ink/70 p-0 backdrop-blur-sm sm:items-center sm:p-4"
@@ -135,7 +163,7 @@ export function GetPassModal({
       >
         <div className="flex items-start justify-between gap-3 px-6 pb-3 pt-6">
           <div>
-            <h3 className="text-2xl font-extrabold leading-tight">{soldOut ? "The room is full" : "The Pass"}</h3>
+            <h3 className="text-2xl font-extrabold leading-tight">{soldOut ? "Sold out" : "The Pass"}</h3>
             {!soldOut && <p className="mt-1 text-lg font-bold tabular-nums">{priceLabel}</p>}
           </div>
           <button
@@ -151,7 +179,7 @@ export function GetPassModal({
         <div className="flex-1 overflow-y-auto px-6 pb-4">
           {soldOut ? (
             <p className="text-sm leading-relaxed">
-              Every pass is gone. Join the waitlist and you&apos;re first if one opens up.
+              {listed ? "You're on the list." : "Every pass is gone. Leave your email and you're first if one opens up."}
             </p>
           ) : (
             <>
@@ -222,9 +250,40 @@ export function GetPassModal({
                 Visa, Mastercard, Apple Pay, Google Pay, PayPal. Interac cards don&apos;t work online.
               </p>
             </>
+          ) : soldOut && !listed ? (
+            <form onSubmit={join} className="grid gap-2">
+              <label htmlFor="loop-waitlist-email" className="sr-only">
+                Your email
+              </label>
+              <input
+                id="loop-waitlist-email"
+                type="email"
+                inputMode="email"
+                autoCapitalize="none"
+                autoCorrect="off"
+                autoComplete="email"
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setErr(null);
+                }}
+                placeholder="Your email"
+                className="min-h-[52px] w-full rounded-full border border-ink/25 bg-transparent px-5 text-base outline-none placeholder:opacity-50 focus:border-ink"
+              />
+              <button
+                type="submit"
+                disabled={busy}
+                className="block w-full rounded-full bg-ink py-4 text-center text-base font-bold text-sand transition-transform active:scale-95 disabled:opacity-60"
+              >
+                {busy ? "One moment…" : "Put me first"}
+              </button>
+              {err && <p className="mt-1 text-center text-[11px] font-semibold text-red-700">{err}</p>}
+            </form>
+          ) : soldOut ? (
+            <p className="text-center text-sm font-semibold">If one opens up, it&apos;s yours first.</p>
           ) : (
             <div className="border-t border-ink/15 pt-4 text-sm">
-              <strong className="block">{soldOut ? "Waitlist opens here." : "Passes drop soon."}</strong>
+              <strong className="block">Passes drop soon.</strong>
               <span className="loop-muted">Check back, or follow @loopsoul.ca.</span>
             </div>
           )}

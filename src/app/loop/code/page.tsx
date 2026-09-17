@@ -4,6 +4,7 @@ import YourTicket from "@/components/loop/gathering/YourTicket";
 import { getCurrentEvent } from "@/lib/loop/hub";
 import { currentVoterId } from "@/lib/loop/identity/voter";
 import { codesHeldBy } from "@/lib/loop/event-codes";
+import { parseScannedCode } from "@/lib/loop/door";
 
 export const dynamic = "force-dynamic";
 
@@ -16,9 +17,11 @@ export const metadata = {
  * ticket itself. Public by design: it is the answer at the door for anyone who
  * cannot find their email.
  */
-export default async function CodePage() {
-  const [event, voterId] = await Promise.all([getCurrentEvent(), currentVoterId()]);
+export default async function CodePage({ searchParams }: { searchParams: Promise<{ c?: string }> }) {
+  const [event, voterId, { c }] = await Promise.all([getCurrentEvent(), currentVoterId(), searchParams]);
   const held = await codesHeldBy(event.id, voterId).catch(() => []);
+  // A guest who scanned their own ticket arrives with the code in the URL.
+  const initialCode = parseScannedCode(c ?? null) ?? "";
 
   return (
     <main className="mx-auto flex min-h-[100dvh] max-w-md flex-col px-6 py-12">
@@ -28,7 +31,7 @@ export default async function CodePage() {
           <YourTicket passes={held} />
         </div>
       ) : (
-        <PassEntry />
+        <PassEntry initialCode={initialCode} />
       )}
 
       <Link href="/loop" className="loop-muted mt-10 text-center text-[11px] font-bold uppercase tracking-[0.3em]">

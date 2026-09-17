@@ -94,6 +94,10 @@ export function GatheringPoster({
   const [active, setActive] = useState<ModuleKey | null>(null);
   const [passOpen, setPassOpen] = useState(false);
   const [singleOpen, setSingleOpen] = useState(false);
+  // Whose page this is. A ticket on this phone, not "the doors are open":
+  // on an open-doors night a stranger has room access and still no ticket
+  // to show and no record to play.
+  const holder = held.length > 0;
 
   // Stable identities, so memo(TheSingle) actually holds: without these the
   // 15-second capacity poll below would hand the overlay three new functions
@@ -236,7 +240,7 @@ export function GatheringPoster({
         <div className="text-center">
           {/* Nothing about the room until it is nearly full: a count on a
               poster reads as a claim about who has bought. */}
-          {line && !roomAccess && (
+          {line && !holder && (
             <div className="text-sm font-bold uppercase tracking-widest">
               <span className={isUrgent(capacity) ? "text-wine" : undefined}>{line}</span>
             </div>
@@ -249,7 +253,7 @@ export function GatheringPoster({
             can be standing here. A stranger is sold the night. Somebody who
             holds a pass is not sold anything: this is their page, and the
             thing they came to do is listen. */}
-        {roomAccess ? (
+        {holder ? (
           <Link
             href="/loop/album"
             className="block w-full rounded-full bg-ink py-4 text-center text-base font-bold text-sand transition-transform active:scale-95"
@@ -267,7 +271,7 @@ export function GatheringPoster({
         )}
         {/* Two tappable lines, no second drawn shape. */}
         <div className="-mt-1 flex items-center gap-3">
-          {roomAccess ? (
+          {holder ? (
             <button
               type="button"
               onClick={() => setActive("ticket")}
@@ -382,11 +386,12 @@ export function GatheringPoster({
             onClose={closeSingle}
             onCoverContest={openCoverContest}
             onGetPass={openPassFromSingle}
+            holder={holder}
           />
         )}
       </AnimatePresence>
 
-      {passOpen && !roomAccess && (
+      {passOpen && !holder && (
         <GetPassModal
           capacity={capacity}
           checkoutUrl={checkoutUrl}

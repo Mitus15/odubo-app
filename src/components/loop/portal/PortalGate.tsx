@@ -1,38 +1,61 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import LoopLoader from "@/components/loop/brand/LoopLoader";
+import GetPassModal from "@/components/loop/gathering/GetPassModal";
+import { priceLabel as formatPrice } from "@/lib/loop/priceLabel";
+import type { RunOfShowItem } from "@/lib/loop/content";
+import type { PublicCapacity } from "@/lib/loop/capacity";
 
 /**
- * The pass gate. A ticket-holder types their pass to unlock the attendee-only
- * surfaces (the Portal on the night, the Vault in Legacy). On success the
- * route refreshes: the server re-renders unlocked because `isHolder` is now
- * true for this `ls_voter`. Uses /api/loop/redeem, which binds the code to
- * the voter and marks them a holder. `tone="vault"` restyles for the dark
- * Legacy field. Type and one drawn shape, no bubble.
+ * Everything the pass sheet needs to sell a pass, handed down from the server.
+ * Present means "a pass can be bought from this gate"; absent means the night
+ * is over and the gate only opens for people who were there.
+ */
+export type PassOffer = {
+  capacity: PublicCapacity;
+  checkoutUrl: string | null;
+  price: string | null;
+  currency: string | null;
+  theme: string;
+  venue: string;
+  dateLabel: string;
+  timeLabel: string;
+  runOfShow: RunOfShowItem[];
+  earlyCount: number | null;
+};
+
+/**
+ * The pass gate. A ticket-holder types their pass and this phone becomes
+ * theirs: the server re-renders with `isHolder` true for this `ls_voter`
+ * (POST /api/loop/pass/enter binds the code to the device). `tone="vault"`
+ * restyles for the dark Legacy field. Type and one drawn shape, no bubble.
+ *
+ * Someone without a pass is sent to the pass SHEET, never to a bare checkout
+ * link: the sheet is the only place that takes the address the ticket goes
+ * to, and sale #1 came through a bare link with no email at all.
  */
 export function PortalGate({
   title = "Enter your pass",
   copy = "Your pass opens the Wall, the votes, and the night.",
   cta = "Enter",
   tone = "poster",
-  checkoutUrl = null,
-  priceLabel = null,
+  offer = null,
 }: {
   title?: string;
   copy?: string;
   cta?: string;
   tone?: "poster" | "vault";
-  /** Where someone without a pass goes to get one — a gate with no way in is
-   *  a dead end. */
-  checkoutUrl?: string | null;
-  priceLabel?: string | null;
+  /** How to buy one, when one can still be bought. */
+  offer?: PassOffer | null;
 }) {
   const router = useRouter();
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [passOpen, setPassOpen] = useState(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -44,7 +67,7 @@ export function PortalGate({
       body: JSON.stringify({ code: code.trim() }),
     });
     if (res.ok) {
-      router.refresh(); // server re-renders → unlocked Portal
+      router.refresh(); // server re-renders → this is their page now
       return;
     }
     setBusy(false);
@@ -53,6 +76,9 @@ export function PortalGate({
   }
 
   const vault = tone === "vault";
+  const price = offer ? formatPrice(offer.price, offer.currency) : null;
+  const canBuy = Boolean(offer?.checkoutUrl);
+
   return (
     <div className={`mt-12 w-full max-w-md border-t pt-6 text-left ${vault ? "border-sand/25" : "border-ink/15"}`}>
       <div className="font-bold">{title}</div>
@@ -84,28 +110,48 @@ export function PortalGate({
             vault ? "border-sand bg-sand text-ink" : "border-ink bg-ink text-sand"
           }`}
         >
-          {busy ? <LoopLoader size={24} label="Unlocking" /> : cta}
+          {busy ? <LoopLoader size={24} label="Opening" /> : cta}
         </button>
       </form>
 
-      {/* Two tappable lines under the one drawn shape: a way to buy, and the
-          way back for anyone who already did. */}
+      {/* Tappable lines under the one drawn shape: a way to buy while there is
+          one, and the way back for anyone who already did. */}
       <div className={`mt-5 flex items-center justify-center gap-3 border-t pt-4 ${vault ? "border-sand/20" : "border-ink/15"}`}>
-        <a
-          href={checkoutUrl ?? "/loop"}
-          {...(checkoutUrl ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-          className="loop-muted min-h-[44px] text-[11px] font-bold uppercase tracking-[0.2em] underline underline-offset-4"
-        >
-          Get a pass{priceLabel ? ` · ${priceLabel}` : ""}
-        </a>
-        <span className="loop-muted text-[11px]">·</span>
-        <a
+        {canBuy && (
+          <>
+            <button
+              type="button"
+              onClick={() => setPassOpen(true)}
+              className="loop-muted min-h-[44px] text-[11px] font-bold uppercase tracking-[0.2em] underline underline-offset-4"
+            >
+              Get a pass{price && price !== "FREE ENTRY" ? ` · ${price}` : ""}
+            </button>
+            <span className="loop-muted text-[11px]">·</span>
+          </>
+        )}
+        <Link
           href="/loop/code"
           className="loop-muted min-h-[44px] text-[11px] font-bold uppercase tracking-[0.2em] underline underline-offset-4"
         >
           Lost your ticket?
-        </a>
+        </Link>
       </div>
+
+      {passOpen && offer && (
+        <GetPassModal
+          capacity={offer.capacity}
+          checkoutUrl={offer.checkoutUrl}
+          price={offer.price}
+          currency={offer.currency}
+          theme={offer.theme}
+          venue={offer.venue}
+          dateLabel={offer.dateLabel}
+          timeLabel={offer.timeLabel}
+          runOfShow={offer.runOfShow}
+          earlyCount={offer.earlyCount}
+          onClose={() => setPassOpen(false)}
+        />
+      )}
     </div>
   );
 }

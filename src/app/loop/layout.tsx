@@ -34,6 +34,10 @@ export const metadata: Metadata = {
   // Loop-scoped manifest → "Add to Home Screen" installs /loop as its own
   // standalone app (overrides odubo's /site.webmanifest for this segment).
   manifest: "/loop/manifest.webmanifest",
+  // Chrome's install prompt needs a PNG of at least 192px; Safari's home
+  // screen needs apple-touch-icon. The SVG alone satisfied neither, so "Get
+  // Loop Soul on your home screen" could not, until 2026-09-16.
+  icons: { icon: "/loop/icon.svg", apple: "/loop/icon-192.png" },
   appleWebApp: {
     capable: true,
     title: "Loop Soul",

@@ -68,3 +68,9 @@ export function nightLine(theme: string, items: RunOfShowItem[]): string {
     ? `The album live at ${t.album}. ${theme} floor at ${t.floor}. 19+. Dress code ${theme}.`
     : `The album, live. Then the ${theme} floor. 19+. Dress code ${theme}.`;
 }
+
+/** The share card's one line: "Sat Oct 10 · Scott's Inn, Kamloops · 19+ · $5" */
+export function shareLine(e: NightFacts, price: string): string {
+  const cost = price === "FREE ENTRY" ? "Free" : price;
+  return `${shortDate(e.date)} · ${e.venue} · 19+ · ${cost}`;
+}

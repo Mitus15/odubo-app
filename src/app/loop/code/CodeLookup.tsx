@@ -12,9 +12,9 @@ import LoopLoader from "@/components/loop/brand/LoopLoader";
  * Lost the email? The address you paid with gets the pass sent again, and
  * nothing is shown on screen for it, so knowing an address is worth nothing.
  */
-export function PassEntry() {
+export function PassEntry({ initialCode = "" }: { initialCode?: string }) {
   const router = useRouter();
-  const [code, setCode] = useState("");
+  const [code, setCode] = useState(initialCode);
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState<"enter" | "send" | null>(null);
   const [error, setError] = useState<string | null>(null);

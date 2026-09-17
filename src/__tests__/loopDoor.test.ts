@@ -21,7 +21,7 @@ describe("parseScannedCode", () => {
   });
   it("round-trips through the URL it makes", () => {
     const url = doorUrlFor("LOOP-K7X2", "https://www.odubostudio.com/");
-    expect(url).toBe("https://www.odubostudio.com/loop/admin/door?c=LOOP-K7X2");
+    expect(url).toBe("https://www.odubostudio.com/loop/d?c=LOOP-K7X2");
     expect(parseScannedCode(url)).toBe("LOOP-K7X2");
   });
 });

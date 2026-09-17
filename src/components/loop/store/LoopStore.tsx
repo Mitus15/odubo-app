@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import type { ProductSummary } from "@/lib/store/types";
 import { LOOP_PASS_TAG } from "@/lib/store/brands";
+import type { RunOfShowItem } from "@/lib/loop/content";
 import { formatMoney } from "@/lib/store/money";
 import { capacityLine, isSoldOut, type PublicCapacity } from "@/lib/loop/capacity";
 import { useLoopCart } from "@/hooks/useLoopCart";
@@ -35,6 +36,8 @@ export function LoopStore({
   venue,
   dateLabel,
   timeLabel,
+  runOfShow = [],
+  earlyCount = null,
 }: {
   products: ProductSummary[];
   /** True when the Shopify collection itself is absent — not merely empty. */
@@ -47,6 +50,9 @@ export function LoopStore({
   venue: string;
   dateLabel: string;
   timeLabel: string;
+  /** The programme and the early-tracks promise, for the pass sheet. */
+  runOfShow?: RunOfShowItem[];
+  earlyCount?: number | null;
 }) {
   const [passOpen, setPassOpen] = useState(false);
   const [bagOpen, setBagOpen] = useState(false);
@@ -233,6 +239,8 @@ export function LoopStore({
           venue={venue}
           dateLabel={dateLabel}
           timeLabel={timeLabel}
+          runOfShow={runOfShow}
+          earlyCount={earlyCount}
           onClose={() => setPassOpen(false)}
         />
       )}

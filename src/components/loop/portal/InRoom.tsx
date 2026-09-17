@@ -1,49 +1,70 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import CameraSheet from "@/components/loop/pose/CameraSheet";
 import WallGallery from "@/components/loop/wall/WallGallery";
 import ModuleSheet from "@/components/loop/shell/ModuleSheet";
 import RunOfShow from "@/components/loop/gathering/RunOfShow";
 import BallotSheet from "@/components/loop/ballots/BallotSheet";
+import YourTicket, { type HeldPass } from "@/components/loop/gathering/YourTicket";
 import type { RunOfShowItem } from "@/lib/loop/content";
 
-type Surface = "camera" | "wall" | "program" | "tracklist" | "cover" | null;
+type Surface = "camera" | "wall" | "program" | "tracklist" | "cover" | "ticket" | null;
 
 /**
- * STATE 2 — the in-room home for pass-holders. A short stack of what's
- * happening now, then the two things people actually came to do: shoot, and
- * watch the Wall fill up. Both open as full surfaces over this one, so the
- * camera gets the whole screen and you never lose your place.
+ * STATE 2 — the in-room home for pass-holders. Their ticket first (the door
+ * asks for it), then what's happening now, then the two things people came
+ * to do: shoot, and watch the Wall fill up. Both open as full surfaces over
+ * this one, so the camera gets the whole screen and you never lose your place.
  */
 export function InRoom({
-  sold,
+  heads: initialHeads,
   runOfShow,
   nowLabel,
+  held = [],
 }: {
-  sold: number;
+  /** Who is in the room, resolved server-side; polled from here after that. */
+  heads: number;
   runOfShow: RunOfShowItem[];
   /** The current run-of-show slot, resolved server-side. */
   nowLabel: string | null;
+  /** The pass(es) this phone holds. Empty on an open-doors night with no pass. */
+  held?: HeldPass[];
 }) {
   const [surface, setSurface] = useState<Surface>(null);
   const [wallBump, setWallBump] = useState(0);
+  const [heads, setHeads] = useState(initialHeads);
+  const holder = held.length > 0;
 
   // Re-mount the Wall after a post so a freshly-posted shot is already there.
   useEffect(() => {
     if (surface === "wall") setWallBump((k) => k + 1);
   }, [surface]);
 
+  // The count is people walking through a door: it moves all night.
+  useEffect(() => {
+    const tick = async () => {
+      try {
+        const res = await fetch("/api/loop/room", { cache: "no-store" });
+        if (res.ok) {
+          const d = (await res.json()) as { heads?: number };
+          if (typeof d.heads === "number") setHeads(d.heads);
+        }
+      } catch {
+        /* keep last known */
+      }
+    };
+    const id = setInterval(tick, 20000);
+    return () => clearInterval(id);
+  }, []);
+
   return (
     <>
       <div className="mt-10 w-full max-w-md">
         <div className="text-center">
-          <div className="font-sans text-6xl font-extrabold leading-none tabular-nums">
-            {sold}
-          </div>
-          <div className="loop-muted mt-2 text-sm font-semibold uppercase tracking-widest">
-            In The Room
-          </div>
+          <div className="font-sans text-6xl font-extrabold leading-none tabular-nums">{heads}</div>
+          <div className="loop-muted mt-2 text-sm font-semibold uppercase tracking-widest">Here tonight</div>
         </div>
 
         {nowLabel && (
@@ -65,6 +86,18 @@ export function InRoom({
           </button>
 
           <div className="mt-5 border-t border-[color-mix(in_srgb,var(--foreground)_15%,transparent)]">
+            {holder && (
+              <>
+                <Row title="Your ticket" sub="Show it at the door" onClick={() => setSurface("ticket")} />
+                <Link
+                  href="/loop/album"
+                  className="flex min-h-[52px] w-full items-baseline justify-between gap-4 border-b border-[color-mix(in_srgb,var(--foreground)_15%,transparent)] py-3.5 text-left"
+                >
+                  <span className="text-lg font-extrabold">Your record</span>
+                  <span className="loop-muted text-xs">Listen</span>
+                </Link>
+              </>
+            )}
             {(
               [
                 ["wall", "The Wall", "What the room is shooting, live"],
@@ -73,15 +106,7 @@ export function InRoom({
                 ["program", "The Night", "The programme"],
               ] as const
             ).map(([key, title, sub]) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => setSurface(key)}
-                className="flex min-h-[52px] w-full items-baseline justify-between gap-4 border-b border-[color-mix(in_srgb,var(--foreground)_15%,transparent)] py-3.5 text-left"
-              >
-                <span className="text-lg font-extrabold">{title}</span>
-                <span className="loop-muted text-xs">{sub}</span>
-              </button>
+              <Row key={key} title={title} sub={sub} onClick={() => setSurface(key)} />
             ))}
           </div>
         </div>
@@ -89,6 +114,12 @@ export function InRoom({
 
       {surface === "camera" && (
         <CameraSheet canPost onClose={() => setSurface(null)} onPosted={() => setWallBump((k) => k + 1)} />
+      )}
+
+      {surface === "ticket" && (
+        <ModuleSheet title="Your ticket" onClose={() => setSurface(null)}>
+          <YourTicket passes={held} />
+        </ModuleSheet>
       )}
 
       {surface === "wall" && (
@@ -115,6 +146,19 @@ export function InRoom({
         </ModuleSheet>
       )}
     </>
+  );
+}
+
+function Row({ title, sub, onClick }: { title: string; sub: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex min-h-[52px] w-full items-baseline justify-between gap-4 border-b border-[color-mix(in_srgb,var(--foreground)_15%,transparent)] py-3.5 text-left"
+    >
+      <span className="text-lg font-extrabold">{title}</span>
+      <span className="loop-muted text-xs">{sub}</span>
+    </button>
   );
 }
 

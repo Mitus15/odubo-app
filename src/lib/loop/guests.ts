@@ -19,6 +19,8 @@ export type GuestRow = {
   admittedAt: string | null;
   /** When they ticked "keep me posted". Null means no marketing to this address. */
   consentedAt: string | null;
+  /** Where the consent came from: pass-sheet, waitlist. */
+  consentSource: string | null;
   albumClaimedAt: string | null;
 };
 
@@ -31,11 +33,12 @@ export async function listGuests(eventId: string): Promise<GuestRow[]> {
     redeemed: number;
     admitted_at: string | null;
     consented_at: string | null;
+    consent_source: string | null;
     claimed_at: string | null;
   }>(
     `SELECT c.code, c.email, c.order_id, c.created_at,
             (c.redeemed_by IS NOT NULL) AS redeemed, c.admitted_at,
-            m.consented_at, e.claimed_at
+            m.consented_at, m.source AS consent_source, e.claimed_at
        FROM event_codes c
        LEFT JOIN loop_marketing_consent m ON m.email = c.email AND m.withdrawn_at IS NULL
        LEFT JOIN loop_album_entitlements e ON e.email = c.email AND e.order_id = c.order_id
@@ -51,6 +54,7 @@ export async function listGuests(eventId: string): Promise<GuestRow[]> {
     redeemed: r.redeemed === 1,
     admittedAt: r.admitted_at,
     consentedAt: r.consented_at,
+    consentSource: r.consent_source,
     albumClaimedAt: r.claimed_at,
   }));
 }
@@ -110,9 +114,9 @@ export function csvCell(v: string | number | boolean | null | undefined): string
 }
 
 export function guestsCsv(rows: GuestRow[]): string {
-  const head = ["code", "email", "order", "bought", "opened_app", "admitted", "marketing_consent", "album_claimed"];
+  const head = ["code", "email", "order", "bought", "opened_app", "admitted", "marketing_consent", "source", "album_claimed"];
   const lines = rows.map((r) =>
-    [r.code, r.email, r.orderId, r.mintedAt, r.redeemed, r.admittedAt, r.consentedAt, r.albumClaimedAt]
+    [r.code, r.email, r.orderId, r.mintedAt, r.redeemed, r.admittedAt, r.consentedAt, r.consentSource, r.albumClaimedAt]
       .map(csvCell)
       .join(","),
   );

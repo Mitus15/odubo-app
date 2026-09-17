@@ -8,11 +8,6 @@ import { getCurrentEvent } from "@/lib/loop/hub";
 import { currentVoterId } from "@/lib/loop/identity/voter";
 import { hasRoomAccess } from "@/lib/loop/doors";
 import { isJournalPublished } from "@/lib/loop/journal-server";
-// Used in the non-attendee branch below. It was missing, so /loop/legacy threw
-// a ReferenceError for every visitor without a pass — i.e. the entire public,
-// which is the audience the page exists for. `ignoreBuildErrors` + `--no-lint`
-// meant the build never said a word.
-import { getPassSettings } from "@/lib/loop/pass/settings";
 
 /**
  * STATE 3 — Legacy (persistent content hub), rendered in "vault mode"
@@ -92,8 +87,7 @@ export async function LegacyHome() {
             tone="vault"
             title="Were you in the room?"
             copy="The Vault is for attendees. Your pass opens every shot from the night."
-            cta="Unlock the Vault"
-            checkoutUrl={(await getPassSettings()).checkoutUrl}
+            cta="Open the Vault"
           />
         )}
       </section>

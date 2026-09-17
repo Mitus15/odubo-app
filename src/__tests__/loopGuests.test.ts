@@ -30,12 +30,13 @@ describe("guestsCsv", () => {
         redeemed: false,
         admittedAt: null,
         consentedAt: "2026-09-15T21:16:00.000Z",
+        consentSource: "pass-sheet",
         albumClaimedAt: null,
       },
     ]);
     const lines = csv.split("\r\n");
-    expect(lines[0]).toBe("code,email,order,bought,opened_app,admitted,marketing_consent,album_claimed");
-    expect(lines[1]).toBe("LOOP-K7X2,a@b.co,shopify:1#1,2026-09-15T21:17:24.000Z,no,,2026-09-15T21:16:00.000Z,");
+    expect(lines[0]).toBe("code,email,order,bought,opened_app,admitted,marketing_consent,source,album_claimed");
+    expect(lines[1]).toBe("LOOP-K7X2,a@b.co,shopify:1#1,2026-09-15T21:17:24.000Z,no,,2026-09-15T21:16:00.000Z,pass-sheet,");
     expect(lines[2]).toBe("");
   });
 });

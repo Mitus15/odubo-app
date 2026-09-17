@@ -9,6 +9,7 @@ import { getFeaturedSingle } from "@/lib/loop/single";
 import { resolveCover, coverCaption } from "@/lib/loop/cover";
 import { earlyRule } from "@/lib/loop/album";
 import { codesHeldBy } from "@/lib/loop/event-codes";
+import { clockTime, shortDate } from "@/lib/loop/eventFacts";
 import { cookies } from "next/headers";
 import { fetchCollectionProducts } from "@/lib/store/api";
 import { LOOP_COLLECTION_HANDLE, LOOP_PASS_TAG } from "@/lib/store/brands";
@@ -69,17 +70,10 @@ export async function GatheringHome({ event }: { event: LoopEvent }) {
 
   // Formatted server-side so the venue's timezone is authoritative — not the
   // visitor's phone.
-  const when = new Date(event.date);
-  const dateLabel = when.toLocaleDateString("en-CA", {
-    timeZone: "America/Vancouver",
-    month: "short",
-    day: "numeric",
-  });
-  const timeLabel = when.toLocaleTimeString("en-CA", {
-    timeZone: "America/Vancouver",
-    hour: "numeric",
-    minute: "2-digit",
-  });
+  // "Sat Oct 10": the day sells the night. One formatter for the poster, the
+  // store and the pass sheet, so they cannot say two different things.
+  const dateLabel = shortDate(event.date);
+  const timeLabel = clockTime(event.date);
 
   return (
     <GatheringPoster

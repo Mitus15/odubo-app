@@ -1,45 +1,63 @@
 import type { LoopEvent } from "@/lib/loop/hub";
 import { currentVoterId } from "@/lib/loop/identity/voter";
-import { hasRoomAccess } from "@/lib/loop/doors";
-import { countAdmitted } from "@/lib/loop/event-codes";
+import { hasRoomAccess, roomHeads } from "@/lib/loop/doors";
+import { codesHeldBy } from "@/lib/loop/event-codes";
 import { getPassSettings } from "@/lib/loop/pass/settings";
+import { getPublicCapacity } from "@/lib/loop/pass";
 import { getRunOfShow } from "@/lib/loop/content-store";
+import { earlyRule } from "@/lib/loop/album";
+import { clockTime, shortDate } from "@/lib/loop/eventFacts";
 import PortalGate from "@/components/loop/portal/PortalGate";
 import PortalPreview from "@/components/loop/portal/PortalPreview";
 import InRoom from "@/components/loop/portal/InRoom";
 
 /**
- * STATE 2 — The Portal (live, event-code gated).
+ * STATE 2 — Tonight (live, pass gated).
  *
- * Locked: a ticket-holder redeems their event code (see PortalGate). Unlocked:
- * the in-room home (InRoom) — occupancy, what's on now, and the two full
- * surfaces the night runs on: the camera and the Wall.
+ * Locked: a ticket-holder enters their pass (see PortalGate); someone without
+ * one is shown the night and sold a pass from the same sheet the poster uses.
+ * Unlocked: the in-room home (InRoom): their ticket, their record, the head
+ * count, what's on now, and the two full surfaces the night runs on: the
+ * camera and the Wall.
  */
 export async function PortalHome({ event }: { event: LoopEvent }) {
   const voterId = await currentVoterId();
-  const unlocked = await hasRoomAccess(event.id, voterId);
+  const [unlocked, runOfShow] = await Promise.all([hasRoomAccess(event.id, voterId), getRunOfShow(event.id)]);
 
   if (!unlocked) {
     // Someone arriving from a poster, a QR code or a friend's story lands
     // here. A bare code prompt tells them nothing about what they'd be buying,
     // so the night is shown in full underneath it — only participation is
     // gated, never the pitch.
-    const [pass, runOfShow] = await Promise.all([getPassSettings(), getRunOfShow(event.id)]);
+    const [pass, capacity, early] = await Promise.all([getPassSettings(), getPublicCapacity(), earlyRule()]);
     return (
       <main className="flex flex-col items-center px-6 pb-24 pt-10 text-center">
         <p className="loop-muted text-xs uppercase tracking-[0.3em]">Live · {event.venue}</p>
         <PortalGate
-          checkoutUrl={pass.checkoutUrl}
-          priceLabel={pass.price ? `$${Number(pass.price).toFixed(0)}` : null}
+          offer={{
+            capacity,
+            checkoutUrl: pass.checkoutUrl,
+            price: pass.price,
+            currency: pass.currency,
+            theme: event.theme,
+            venue: event.venue,
+            dateLabel: shortDate(event.date),
+            timeLabel: clockTime(event.date),
+            runOfShow,
+            earlyCount: early.enabled ? early.extra + 1 : 0,
+          }}
         />
         <PortalPreview runOfShow={runOfShow} />
       </main>
     );
   }
 
-  // Inside the room the honest number is who walked through the door, not who
-  // bought. It is also the one nobody outside can see.
-  const [heads, runOfShow] = await Promise.all([countAdmitted(event.id), getRunOfShow(event.id)]);
+  // The ticket(s) on this phone (none on an open-doors night without a pass),
+  // and the honest head count, which InRoom keeps polling.
+  const [held, heads] = await Promise.all([
+    codesHeldBy(event.id, voterId).catch(() => []),
+    roomHeads(event.id).catch(() => 0),
+  ]);
 
   // What's on now: the last slot whose start time has passed, in venue time.
   const toMinutes = (t: string): number => {
@@ -70,7 +88,12 @@ export async function PortalHome({ event }: { event: LoopEvent }) {
   return (
     <main className="flex flex-col items-center px-6 pb-24 pt-10 text-center">
       <p className="loop-muted text-xs uppercase tracking-[0.3em]">Live · {event.venue}</p>
-      <InRoom sold={heads.admitted} runOfShow={runOfShow} nowLabel={nowLabel} />
+      <InRoom
+        heads={heads}
+        runOfShow={runOfShow}
+        nowLabel={nowLabel}
+        held={held.map((h) => ({ code: h.code, serial: h.serial }))}
+      />
     </main>
   );
 }

@@ -6,6 +6,9 @@ import { COUNTRY_COOKIE } from "@/lib/store/money";
 import { getCurrentEvent } from "@/lib/loop/hub";
 import { getPublicCapacity } from "@/lib/loop/pass";
 import { getPassSettings } from "@/lib/loop/pass/settings";
+import { getRunOfShow } from "@/lib/loop/content-store";
+import { earlyRule } from "@/lib/loop/album";
+import { clockTime, shortDate } from "@/lib/loop/eventFacts";
 import HubNav from "@/components/loop/shell/HubNav";
 import LoopStore from "@/components/loop/store/LoopStore";
 
@@ -30,10 +33,12 @@ export default async function LoopStorePage() {
   const jar = await cookies();
   const country = jar.get(COUNTRY_COOKIE)?.value;
 
-  const [event, capacity, passSettings, collection] = await Promise.all([
-    getCurrentEvent(),
+  const event = await getCurrentEvent();
+  const [capacity, passSettings, runOfShow, early, collection] = await Promise.all([
     getPublicCapacity(),
     getPassSettings(),
+    getRunOfShow(event.id),
+    earlyRule(),
     // A Shopify outage must not take the store down with a 500 — an empty
     // shelf with the pass still buyable is a far better failure.
     fetchCollectionProducts({
@@ -43,22 +48,14 @@ export default async function LoopStorePage() {
     }).catch(() => null),
   ]);
 
-  const when = new Date(event.date);
-  const dateLabel = when.toLocaleDateString("en-CA", {
-    timeZone: "America/Vancouver",
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  });
-  const timeLabel = when.toLocaleTimeString("en-CA", {
-    timeZone: "America/Vancouver",
-    hour: "numeric",
-    minute: "2-digit",
-  });
+  // The same formatters as the poster, so the pass sheet reads identically
+  // from the store and from the front door.
+  const dateLabel = shortDate(event.date);
+  const timeLabel = clockTime(event.date);
 
   return (
     <>
-      <HubNav phaseLabel={event.phase === "live" ? "The Portal" : "The Gathering"} />
+      <HubNav phaseLabel={event.phase === "live" ? "Tonight" : "The Gathering"} />
       <LoopStore
         products={collection?.products ?? []}
         collectionMissing={collection === null}
@@ -70,6 +67,8 @@ export default async function LoopStorePage() {
         venue={event.venue}
         dateLabel={dateLabel}
         timeLabel={timeLabel}
+        runOfShow={runOfShow}
+        earlyCount={early.enabled ? early.extra + 1 : 0}
       />
     </>
   );
