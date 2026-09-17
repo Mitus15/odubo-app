@@ -82,8 +82,8 @@ export function BallotSheet({ kind }: { kind: "tracklist" | "cover" }) {
 
   const intro =
     kind === "tracklist"
-      ? "The room ranks the record. Your votes help decide the album's running order."
-      : "The cover comes from the room. Vote on the shortlisted shots. The winner becomes the album's cover art, credited and paid.";
+      ? "Everyone there ranks the record. Your votes help decide the album's running order."
+      : "The cover comes from the night. Vote on the shortlisted shots. The winner becomes the album's cover art, credited and paid.";
 
   return (
     <section className="w-full">
@@ -91,7 +91,7 @@ export function BallotSheet({ kind }: { kind: "tracklist" | "cover" }) {
 
       <div className="loop-muted mt-2 text-xs font-semibold uppercase tracking-widest">
         {ballot.result
-          ? "The room has decided."
+          ? "Decided on the night."
           : !ballot.open
             ? "Voting hasn't opened yet. Standings only."
             : ballot.canVote
@@ -99,16 +99,15 @@ export function BallotSheet({ kind }: { kind: "tracklist" | "cover" }) {
               : "Standings only. Voting is for pass-holders."}
       </div>
 
-      {/* On an open-doors night a guest is IN the room without a code, so this
-       *  state is normal rather than an error. It used to say "voting is for
-       *  the room" to someone standing in it, and then name a code with no way
-       *  to reach one. Say what is actually needed, and open the door to it. */}
+      {/* On an open-doors night a guest is here without a pass, so this state
+       *  is normal rather than an error. Say what is needed, and open the way
+       *  to it: the code on the ticket is the login. */}
       {ballot.open && !ballot.canVote && !ballot.result && (
         <a
           href="/loop/code"
           className="mt-3 flex min-h-[44px] items-center justify-between gap-3 border-t border-current/15 pt-3 text-sm font-bold"
         >
-          Find your code
+          Enter your pass
           <span aria-hidden className="text-base">
             →
           </span>

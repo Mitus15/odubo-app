@@ -8,6 +8,8 @@ import { getCurrentEvent } from "@/lib/loop/hub";
 import { currentVoterId } from "@/lib/loop/identity/voter";
 import { hasRoomAccess } from "@/lib/loop/doors";
 import { isJournalPublished } from "@/lib/loop/journal-server";
+import { getBallotResult, getCoverWinner } from "@/lib/loop/ballots";
+import DeclaredCover from "@/components/loop/ballots/DeclaredCover";
 
 /**
  * STATE 3 — Legacy (persistent content hub), rendered in "vault mode"
@@ -22,10 +24,13 @@ import { isJournalPublished } from "@/lib/loop/journal-server";
 export async function LegacyHome() {
   const event = await getCurrentEvent();
   const voterId = await currentVoterId();
-  const [attendee, published] = await Promise.all([
+  const [attendee, published, cover, tracklist] = await Promise.all([
     hasRoomAccess(event.id, voterId),
     isJournalPublished(event.id),
+    getCoverWinner(event.id),
+    getBallotResult(event.id, "tracklist"),
   ]);
+  const decided = Boolean(cover) && Boolean(tracklist);
 
   return (
     <main className="flex flex-col items-center px-6 pb-24 pt-10 text-center">
@@ -45,7 +50,7 @@ export async function LegacyHome() {
           <div className="flex items-baseline justify-between gap-3">
             <span className="font-bold">The Loop Journal</span>
             <span className="shrink-0 text-[10px] font-bold uppercase tracking-[0.25em] opacity-70">
-              {published ? `Read ${event.title} ↗` : "In print ↗"}
+              {published ? "Read the issue ↗" : "In print ↗"}
             </span>
           </div>
           <div className="text-sm opacity-70">
@@ -54,10 +59,18 @@ export async function LegacyHome() {
         </Link>
       </section>
 
+      {cover && (
+        <div className="mt-12 w-full max-w-md">
+          <DeclaredCover cover={cover} />
+        </div>
+      )}
+
       <section className="mt-12 w-full max-w-md text-left">
         <h2 className="text-xs uppercase tracking-[0.3em] opacity-70">The Ballots</h2>
         <p className="mt-1 text-sm opacity-70">
-          The room is still deciding: the running order, and the cover.
+          {decided
+            ? "Decided on the night: the running order, and the cover."
+            : "Still deciding: the running order, and the cover."}
         </p>
         <div className="mt-4 grid gap-6">
           <BallotSheet kind="tracklist" />

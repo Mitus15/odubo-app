@@ -55,7 +55,7 @@ export default async function LoopStorePage() {
 
   return (
     <>
-      <HubNav phaseLabel={event.phase === "live" ? "Tonight" : "The Gathering"} />
+      <HubNav phase={event.phase} />
       <LoopStore
         products={collection?.products ?? []}
         collectionMissing={collection === null}

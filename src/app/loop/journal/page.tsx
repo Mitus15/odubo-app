@@ -3,6 +3,7 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { getCurrentEvent } from "@/lib/loop/hub";
 import { getJournalData } from "@/lib/loop/journal-server";
+import { getCoverWinner } from "@/lib/loop/ballots";
 import { ADMIN_COOKIE, verifyAdminSession } from "@/lib/loop/admin-auth";
 import HubNav from "@/components/loop/shell/HubNav";
 import JournalIssueView from "@/components/loop/journal/JournalIssueView";
@@ -20,7 +21,7 @@ export const metadata: Metadata = {
  */
 export default async function JournalPage() {
   const event = await getCurrentEvent();
-  const data = await getJournalData(event);
+  const [data, cover] = await Promise.all([getJournalData(event), getCoverWinner(event.id)]);
 
   const published = data.issue?.published ?? false;
   let draftPreview = false;
@@ -31,9 +32,9 @@ export default async function JournalPage() {
 
   return (
     <>
-      <HubNav phaseLabel="The Gathering" />
+      <HubNav phase={event.phase} />
       {published || draftPreview ? (
-        <JournalIssueView event={event} data={data} draftPreview={draftPreview} />
+        <JournalIssueView event={event} data={data} cover={cover} draftPreview={draftPreview} />
       ) : (
         <main className="mx-auto flex min-h-[70dvh] w-full max-w-md flex-col items-center justify-center px-6 text-center">
           <p className="text-[11px] font-bold uppercase tracking-[0.35em] opacity-70">

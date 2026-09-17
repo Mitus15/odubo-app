@@ -45,7 +45,7 @@ export const MOCK_CURRENT_EVENT: LoopEvent = {
   venue: "Scott's Inn, Kamloops",
   // This is DOORS, not the start of the music — the front door renders it as
   // "Doors {time}" and the pass modal as "when". 6:30pm Vancouver (PDT,
-  // −07:00); the album plays at 8 and the room is empty by 10:30.
+  // −07:00); the album plays at 8 and the courtyard is empty by 10.
   //
   // Written with an explicit offset, not a bare "2026-09-26", which JS parses
   // as UTC midnight and shows as Sep 25 in Pacific time, skewing every derived
@@ -107,4 +107,13 @@ export async function getCurrentEvent(): Promise<LoopEvent> {
   // id and date stay controlled here, and phase has its own store.
   const overrides = await getEventOverrides(MOCK_CURRENT_EVENT.id);
   return { ...MOCK_CURRENT_EVENT, ...overrides, phase };
+}
+
+/**
+ * What the nav calls the current event in each phase. "Tonight" while the
+ * doors are open: a guest is never told about a Portal, and the night has one
+ * name on every surface.
+ */
+export function phaseLabel(phase: EventPhase): string {
+  return phase === "live" ? "Tonight" : phase === "archived" ? "Legacy" : "The Gathering";
 }

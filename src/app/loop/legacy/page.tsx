@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { getCurrentEvent } from "@/lib/loop/hub";
 import HubNav from "@/components/loop/shell/HubNav";
 import LegacyHome from "@/components/loop/states/LegacyHome";
 import VaultMode from "@/components/loop/shell/VaultMode";
@@ -9,11 +10,12 @@ export const metadata: Metadata = {
 };
 
 /** Legacy is always reachable, in every phase. Renders in vault mode. */
-export default function LegacyPage() {
+export default async function LegacyPage() {
+  const event = await getCurrentEvent();
   return (
     <>
       <VaultMode />
-      <HubNav phaseLabel="The Gathering" />
+      <HubNav phase={event.phase} />
       <LegacyHome />
     </>
   );

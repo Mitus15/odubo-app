@@ -2,6 +2,8 @@ import Image from "next/image";
 import Link from "next/link";
 import type { LoopEvent } from "@/lib/loop/hub";
 import type { JournalData } from "@/lib/loop/journal-server";
+import type { CoverWinner } from "@/lib/loop/ballots";
+import DeclaredCover from "@/components/loop/ballots/DeclaredCover";
 
 /**
  * The Loop Journal — one volume's issue, laid out as a printed object. It
@@ -33,10 +35,13 @@ function issueDate(event: LoopEvent): string {
 export function JournalIssueView({
   event,
   data,
+  cover = null,
   draftPreview = false,
 }: {
   event: LoopEvent;
   data: JournalData;
+  /** The cover the night declared, when it has. */
+  cover?: CoverWinner | null;
   draftPreview?: boolean;
 }) {
   const { issue, moments, runOfShow } = data;
@@ -59,7 +64,7 @@ export function JournalIssueView({
           The Loop Journal
         </p>
         <p className="mt-1 text-[10px] uppercase tracking-[0.25em] opacity-50">
-          {event.title} · {issueDate(event)}
+          {issueDate(event)}
         </p>
 
         <h1 className="mt-8 text-5xl font-black leading-[0.95] tracking-tight">
@@ -75,15 +80,23 @@ export function JournalIssueView({
           </p>
         ) : null}
 
-        <div className="relative mx-auto mt-8 h-56 w-full max-w-sm">
-          <Image
-            src="/loop/figures/listen.png"
-            alt="Loop Soul figure in silhouette"
-            fill
-            unoptimized
-            className="object-contain"
-          />
-        </div>
+        {/* The declared cover is the issue's cover. Until it is declared, the
+            figure stands in. */}
+        {cover ? (
+          <div className="mx-auto mt-8 max-w-sm text-left">
+            <DeclaredCover cover={cover} tone="paper" />
+          </div>
+        ) : (
+          <div className="relative mx-auto mt-8 h-56 w-full max-w-sm">
+            <Image
+              src="/loop/figures/listen.png"
+              alt="Loop Soul figure in silhouette"
+              fill
+              unoptimized
+              className="object-contain"
+            />
+          </div>
+        )}
       </header>
 
       {/* ── Iconic Moments ── */}
@@ -202,7 +215,7 @@ export function JournalIssueView({
       </section>
 
       <footer className="mt-10 text-center text-[10px] uppercase tracking-[0.3em] opacity-50">
-        Loop Soul · The Rec Room · {event.venue}
+        Loop Soul · {event.venue}
       </footer>
     </main>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import { INFINITY_D } from "./LoopLoader";
 
 /**
@@ -29,6 +30,8 @@ export default function LoopIntro() {
   const [ready, setReady] = useState(false);
   const [gone, setGone] = useState(false);
   const startRef = useRef<number>(0);
+  // Three seconds of brand over the door scanner is three seconds of a queue.
+  const admin = usePathname()?.startsWith("/loop/admin") ?? false;
 
   useEffect(() => {
     startRef.current = performance.now();
@@ -55,7 +58,7 @@ export default function LoopIntro() {
     };
   }, []);
 
-  if (gone) return null;
+  if (gone || admin) return null;
 
   return (
     <div

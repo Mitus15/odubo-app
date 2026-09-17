@@ -19,7 +19,7 @@ export default async function Home() {
 
   return (
     <>
-      <HubNav phaseLabel={event.phase === "live" ? "Tonight" : "Legacy"} />
+      <HubNav phase={event.phase} />
       {event.phase === "live" && <PortalHome event={event} />}
       {event.phase === "archived" && (
         <>

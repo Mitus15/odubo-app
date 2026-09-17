@@ -27,7 +27,7 @@ export default async function PosePage() {
   // nothing saying whose camera this is.
   return (
     <>
-      <HubNav phaseLabel={event.phase === "live" ? "The Portal" : "The Gathering"} />
+      <HubNav phase={event.phase} />
       <PoseStudioShell canPost={canPost} />
     </>
   );

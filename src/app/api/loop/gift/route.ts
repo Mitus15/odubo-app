@@ -79,19 +79,38 @@ export async function POST(req: Request) {
         { status: 400 },
       );
 
-    const owner = await queryOne<{ name: string }>(
-      `SELECT name FROM loop_gift_codes WHERE code = ?1`,
+    const owner = await queryOne<{ name: string; attendee_id: string | null }>(
+      `SELECT name, attendee_id FROM loop_gift_codes WHERE code = ?1`,
       [code],
     );
     // An unknown code is not an error worth surfacing — a mistyped or expired
     // link should still land on the song, just without a name attached to it.
     if (!owner) return NextResponse.json({ name: null });
 
-    // The sender arriving on their own link would otherwise count themselves.
-    await executeQuery(
-      `INSERT OR IGNORE INTO loop_gifts (code, visitor) VALUES (?1, ?2)`,
-      [code, visitor],
-    );
+    // The sender opening their own link is not somebody they reached. The
+    // comment said this was handled; it was not: the visitor id is per
+    // browser, the code is per attendee, and nothing compared them.
+    let self = false;
+    if (owner.attendee_id) {
+      try {
+        const voterId = await currentVoterId();
+        if (voterId && voterId !== "anonymous") {
+          const device = await queryOne<{ attendee_id: string }>(
+            `SELECT attendee_id FROM loop_attendee_devices WHERE voter_id = ?1`,
+            [voterId],
+          );
+          self = device?.attendee_id === owner.attendee_id;
+        }
+      } catch {
+        /* count them; a miss here is one phantom reach, not a broken page */
+      }
+    }
+    if (!self) {
+      await executeQuery(
+        `INSERT OR IGNORE INTO loop_gifts (code, visitor) VALUES (?1, ?2)`,
+        [code, visitor],
+      );
+    }
     return NextResponse.json({ name: owner.name });
   }
 

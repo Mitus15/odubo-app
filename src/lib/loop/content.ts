@@ -63,9 +63,9 @@ export const RUN_OF_SHOW: RunOfShowItem[] = [
   },
   {
     id: "out",
-    time: "10:30",
+    time: "10:00",
     title: "Out",
-    detail: "Hard stop. The room has to be empty by 10:30.",
+    detail: "Hard stop. The courtyard is empty by 10, which is what keeps the night licensed to run outside.",
   },
 ];
 
