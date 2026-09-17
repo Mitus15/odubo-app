@@ -1,0 +1,972 @@
+[
+  {
+    "id": "gid://shopify/Product/9587274186965",
+    "title": "Script Tee",
+    "handle": "script-tee",
+    "status": "ACTIVE",
+    "vendor": "B.A.A.D",
+    "productType": "Tops",
+    "tags": [
+      "brand:baad",
+      "drop:loop-soul",
+      "type:tee"
+    ],
+    "descriptionHtml": "<p>The loop∞Soul script on the chest. Slim, heavyweight cotton — 280 gsm.</p>\n<p><strong>Care.</strong> Machine wash at 30°C (gentle cycle). Do not bleach. Tumble dry low. Iron at low temperature, avoid ironing on print. Do not dry clean.</p>\n<h3>Size guide</h3>\n<p>Flat garment measurements. Allow 1–2 cm tolerance.</p>\n<table>\n<thead><tr>\n<th scope=\"col\">Measurement</th>\n<th scope=\"col\">S</th>\n<th scope=\"col\">M</th>\n<th scope=\"col\">L</th>\n<th scope=\"col\">XL</th>\n<th scope=\"col\">2XL</th>\n</tr></thead>\n<tbody>\n<tr>\n<th scope=\"row\">Chest</th>\n<td>17.7 in / 45 cm</td>\n<td>18.5 in / 47 cm</td>\n<td>19.3 in / 49 cm</td>\n<td>20.1 in / 51 cm</td>\n<td>20.9 in / 53 cm</td>\n</tr>\n<tr>\n<th scope=\"row\">Length</th>\n<td>24.8 in / 63 cm</td>\n<td>25.6 in / 65 cm</td>\n<td>26.4 in / 67 cm</td>\n<td>27.2 in / 69 cm</td>\n<td>27.9 in / 71 cm</td>\n</tr>\n<tr>\n<th scope=\"row\">Shoulder</th>\n<td>16.5 in / 42 cm</td>\n<td>17.1 in / 43.5 cm</td>\n<td>17.7 in / 45 cm</td>\n<td>18.3 in / 46.5 cm</td>\n<td>18.9 in / 48 cm</td>\n</tr>\n<tr>\n<th scope=\"row\">Sleeve length</th>\n<td>7.5 in / 19 cm</td>\n<td>7.9 in / 20 cm</td>\n<td>8.3 in / 21 cm</td>\n<td>8.7 in / 22 cm</td>\n<td>9.1 in / 23 cm</td>\n</tr>\n</tbody>\n</table>",
+    "category": {
+      "id": "gid://shopify/TaxonomyCategory/aa-1-13-8",
+      "fullName": "Apparel & Accessories > Clothing > Clothing Tops > T-Shirts"
+    },
+    "seo": {
+      "title": "Script Tee — B.A.A.D | Odubo Studio",
+      "description": "Script Tee — the Loop Soul drop by B.A.A.D, Odubo Studio. Apricot, Coffee. Sizes S, M, L, XL, 2XL. $30.00 CAD."
+    },
+    "collections": {
+      "nodes": [
+        {
+          "id": "gid://shopify/Collection/487450575061",
+          "handle": "clothes"
+        },
+        {
+          "id": "gid://shopify/Collection/525509591253",
+          "handle": "loop-soul"
+        }
+      ]
+    },
+    "resourcePublicationsV2": {
+      "nodes": [
+        {
+          "isPublished": true,
+          "publication": {
+            "id": "gid://shopify/Publication/159053807829",
+            "name": "Online Store"
+          }
+        },
+        {
+          "isPublished": true,
+          "publication": {
+            "id": "gid://shopify/Publication/159053840597",
+            "name": "Point of Sale"
+          }
+        },
+        {
+          "isPublished": true,
+          "publication": {
+            "id": "gid://shopify/Publication/159053906133",
+            "name": "Shop"
+          }
+        },
+        {
+          "isPublished": true,
+          "publication": {
+            "id": "gid://shopify/Publication/159054069973",
+            "name": "Buy Button"
+          }
+        },
+        {
+          "isPublished": true,
+          "publication": {
+            "id": "gid://shopify/Publication/159129567445",
+            "name": "Odubo Studio Headless"
+          }
+        },
+        {
+          "isPublished": true,
+          "publication": {
+            "id": "gid://shopify/Publication/172494946517",
+            "name": "Odubo Studio Headless 02"
+          }
+        }
+      ]
+    },
+    "options": [
+      {
+        "name": "Color",
+        "values": [
+          "Apricot",
+          "Coffee"
+        ]
+      },
+      {
+        "name": "Size",
+        "values": [
+          "S",
+          "M",
+          "L",
+          "XL",
+          "2XL"
+        ]
+      }
+    ],
+    "variants": {
+      "nodes": [
+        {
+          "id": "gid://shopify/ProductVariant/54882451259605",
+          "title": "Apricot / S",
+          "price": "30.00",
+          "selectedOptions": [
+            {
+              "name": "Color",
+              "value": "Apricot"
+            },
+            {
+              "name": "Size",
+              "value": "S"
+            }
+          ],
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/script-tee-2.png?v=1789017178"
+          }
+        },
+        {
+          "id": "gid://shopify/ProductVariant/54882451292373",
+          "title": "Apricot / M",
+          "price": "30.00",
+          "selectedOptions": [
+            {
+              "name": "Color",
+              "value": "Apricot"
+            },
+            {
+              "name": "Size",
+              "value": "M"
+            }
+          ],
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/script-tee-2.png?v=1789017178"
+          }
+        },
+        {
+          "id": "gid://shopify/ProductVariant/54882451325141",
+          "title": "Apricot / L",
+          "price": "30.00",
+          "selectedOptions": [
+            {
+              "name": "Color",
+              "value": "Apricot"
+            },
+            {
+              "name": "Size",
+              "value": "L"
+            }
+          ],
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/script-tee-2.png?v=1789017178"
+          }
+        },
+        {
+          "id": "gid://shopify/ProductVariant/54882451357909",
+          "title": "Apricot / XL",
+          "price": "30.00",
+          "selectedOptions": [
+            {
+              "name": "Color",
+              "value": "Apricot"
+            },
+            {
+              "name": "Size",
+              "value": "XL"
+            }
+          ],
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/script-tee-2.png?v=1789017178"
+          }
+        },
+        {
+          "id": "gid://shopify/ProductVariant/54882451390677",
+          "title": "Apricot / 2XL",
+          "price": "30.00",
+          "selectedOptions": [
+            {
+              "name": "Color",
+              "value": "Apricot"
+            },
+            {
+              "name": "Size",
+              "value": "2XL"
+            }
+          ],
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/script-tee-2.png?v=1789017178"
+          }
+        },
+        {
+          "id": "gid://shopify/ProductVariant/54882451423445",
+          "title": "Coffee / S",
+          "price": "30.00",
+          "selectedOptions": [
+            {
+              "name": "Color",
+              "value": "Coffee"
+            },
+            {
+              "name": "Size",
+              "value": "S"
+            }
+          ],
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/script-tee-0.png?v=1789017171"
+          }
+        },
+        {
+          "id": "gid://shopify/ProductVariant/54882451456213",
+          "title": "Coffee / M",
+          "price": "30.00",
+          "selectedOptions": [
+            {
+              "name": "Color",
+              "value": "Coffee"
+            },
+            {
+              "name": "Size",
+              "value": "M"
+            }
+          ],
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/script-tee-0.png?v=1789017171"
+          }
+        },
+        {
+          "id": "gid://shopify/ProductVariant/54882451488981",
+          "title": "Coffee / L",
+          "price": "30.00",
+          "selectedOptions": [
+            {
+              "name": "Color",
+              "value": "Coffee"
+            },
+            {
+              "name": "Size",
+              "value": "L"
+            }
+          ],
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/script-tee-0.png?v=1789017171"
+          }
+        },
+        {
+          "id": "gid://shopify/ProductVariant/54882451521749",
+          "title": "Coffee / XL",
+          "price": "30.00",
+          "selectedOptions": [
+            {
+              "name": "Color",
+              "value": "Coffee"
+            },
+            {
+              "name": "Size",
+              "value": "XL"
+            }
+          ],
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/script-tee-0.png?v=1789017171"
+          }
+        },
+        {
+          "id": "gid://shopify/ProductVariant/54882451554517",
+          "title": "Coffee / 2XL",
+          "price": "30.00",
+          "selectedOptions": [
+            {
+              "name": "Color",
+              "value": "Coffee"
+            },
+            {
+              "name": "Size",
+              "value": "2XL"
+            }
+          ],
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/script-tee-0.png?v=1789017171"
+          }
+        }
+      ]
+    },
+    "media": {
+      "nodes": [
+        {
+          "id": "gid://shopify/MediaImage/42552656396501",
+          "alt": "Script Tee in Coffee — front view",
+          "mediaContentType": "IMAGE",
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/script-tee-0.png?v=1789017171"
+          }
+        },
+        {
+          "id": "gid://shopify/MediaImage/42552656527573",
+          "alt": "Script Tee in Coffee — back view",
+          "mediaContentType": "IMAGE",
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/script-tee-1.png?v=1789017175"
+          }
+        },
+        {
+          "id": "gid://shopify/MediaImage/42552656560341",
+          "alt": "Script Tee in Apricot — front view",
+          "mediaContentType": "IMAGE",
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/script-tee-2.png?v=1789017178"
+          }
+        },
+        {
+          "id": "gid://shopify/MediaImage/42552657051861",
+          "alt": "Script Tee in Apricot — back view",
+          "mediaContentType": "IMAGE",
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/script-tee-3.png?v=1789017181"
+          }
+        }
+      ]
+    },
+    "images": {
+      "nodes": [
+        {
+          "id": "gid://shopify/ProductImage/52891963654357",
+          "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/script-tee-0.png?v=1789017171",
+          "altText": "Script Tee in Coffee — front view"
+        },
+        {
+          "id": "gid://shopify/ProductImage/52891963752661",
+          "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/script-tee-1.png?v=1789017175",
+          "altText": "Script Tee in Coffee — back view"
+        },
+        {
+          "id": "gid://shopify/ProductImage/52891964014805",
+          "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/script-tee-2.png?v=1789017178",
+          "altText": "Script Tee in Apricot — front view"
+        },
+        {
+          "id": "gid://shopify/ProductImage/52891964604629",
+          "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/script-tee-3.png?v=1789017181",
+          "altText": "Script Tee in Apricot — back view"
+        }
+      ]
+    }
+  },
+  {
+    "id": "gid://shopify/Product/9587272220885",
+    "title": "Infinity Hoodie",
+    "handle": "infinity-hoodie",
+    "status": "ACTIVE",
+    "vendor": "B.A.A.D",
+    "productType": "Tops",
+    "tags": [
+      "brand:baad",
+      "drop:loop-soul",
+      "type:hoodie"
+    ],
+    "descriptionHtml": "<p>The ∞ across the chest. Oversized pullover, curved panels, hidden side zips, no drawstring — 350 gsm.</p>\n<p><strong>Care.</strong> Machine wash at 30°C (gentle cycle). Do not bleach. Tumble dry low. Iron at low temperature, avoid ironing on print. Do not dry clean.</p>\n<h3>Size guide</h3>\n<p>Flat garment measurements. Allow 1–2 cm tolerance.</p>\n<table>\n<thead><tr>\n<th scope=\"col\">Measurement</th>\n<th scope=\"col\">S</th>\n<th scope=\"col\">M</th>\n<th scope=\"col\">L</th>\n<th scope=\"col\">XL</th>\n<th scope=\"col\">2XL</th>\n</tr></thead>\n<tbody>\n<tr>\n<th scope=\"row\">Chest</th>\n<td>26.4 in / 67 cm</td>\n<td>27.2 in / 69 cm</td>\n<td>27.9 in / 71 cm</td>\n<td>28.7 in / 73 cm</td>\n<td>29.5 in / 75 cm</td>\n</tr>\n<tr>\n<th scope=\"row\">Length</th>\n<td>24.0 in / 61 cm</td>\n<td>24.8 in / 63 cm</td>\n<td>25.6 in / 65 cm</td>\n<td>26.4 in / 67 cm</td>\n<td>27.2 in / 69 cm</td>\n</tr>\n<tr>\n<th scope=\"row\">Sleeve length</th>\n<td>31.3 in / 79.5 cm</td>\n<td>32.1 in / 81.5 cm</td>\n<td>32.9 in / 83.5 cm</td>\n<td>33.7 in / 85.5 cm</td>\n<td>34.5 in / 87.5 cm</td>\n</tr>\n</tbody>\n</table>",
+    "category": {
+      "id": "gid://shopify/TaxonomyCategory/aa-1-13-13",
+      "fullName": "Apparel & Accessories > Clothing > Clothing Tops > Hoodies"
+    },
+    "seo": {
+      "title": "Infinity Hoodie — B.A.A.D | Odubo Studio",
+      "description": "Infinity Hoodie — the Loop Soul drop by B.A.A.D, Odubo Studio. Apricot. Sizes S, M, L, XL, 2XL. $70.00 CAD."
+    },
+    "collections": {
+      "nodes": [
+        {
+          "id": "gid://shopify/Collection/487450575061",
+          "handle": "clothes"
+        },
+        {
+          "id": "gid://shopify/Collection/525509591253",
+          "handle": "loop-soul"
+        }
+      ]
+    },
+    "resourcePublicationsV2": {
+      "nodes": [
+        {
+          "isPublished": true,
+          "publication": {
+            "id": "gid://shopify/Publication/159053807829",
+            "name": "Online Store"
+          }
+        },
+        {
+          "isPublished": true,
+          "publication": {
+            "id": "gid://shopify/Publication/159053840597",
+            "name": "Point of Sale"
+          }
+        },
+        {
+          "isPublished": true,
+          "publication": {
+            "id": "gid://shopify/Publication/159053906133",
+            "name": "Shop"
+          }
+        },
+        {
+          "isPublished": true,
+          "publication": {
+            "id": "gid://shopify/Publication/159054069973",
+            "name": "Buy Button"
+          }
+        },
+        {
+          "isPublished": true,
+          "publication": {
+            "id": "gid://shopify/Publication/159129567445",
+            "name": "Odubo Studio Headless"
+          }
+        },
+        {
+          "isPublished": true,
+          "publication": {
+            "id": "gid://shopify/Publication/172494946517",
+            "name": "Odubo Studio Headless 02"
+          }
+        }
+      ]
+    },
+    "options": [
+      {
+        "name": "Color",
+        "values": [
+          "Apricot"
+        ]
+      },
+      {
+        "name": "Size",
+        "values": [
+          "S",
+          "M",
+          "L",
+          "XL",
+          "2XL"
+        ]
+      }
+    ],
+    "variants": {
+      "nodes": [
+        {
+          "id": "gid://shopify/ProductVariant/54882447360213",
+          "title": "Apricot / S",
+          "price": "70.00",
+          "selectedOptions": [
+            {
+              "name": "Color",
+              "value": "Apricot"
+            },
+            {
+              "name": "Size",
+              "value": "S"
+            }
+          ],
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/infinity-hoodie-0.png?v=1789017186"
+          }
+        },
+        {
+          "id": "gid://shopify/ProductVariant/54882447392981",
+          "title": "Apricot / M",
+          "price": "70.00",
+          "selectedOptions": [
+            {
+              "name": "Color",
+              "value": "Apricot"
+            },
+            {
+              "name": "Size",
+              "value": "M"
+            }
+          ],
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/infinity-hoodie-0.png?v=1789017186"
+          }
+        },
+        {
+          "id": "gid://shopify/ProductVariant/54882447425749",
+          "title": "Apricot / L",
+          "price": "70.00",
+          "selectedOptions": [
+            {
+              "name": "Color",
+              "value": "Apricot"
+            },
+            {
+              "name": "Size",
+              "value": "L"
+            }
+          ],
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/infinity-hoodie-0.png?v=1789017186"
+          }
+        },
+        {
+          "id": "gid://shopify/ProductVariant/54882447458517",
+          "title": "Apricot / XL",
+          "price": "70.00",
+          "selectedOptions": [
+            {
+              "name": "Color",
+              "value": "Apricot"
+            },
+            {
+              "name": "Size",
+              "value": "XL"
+            }
+          ],
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/infinity-hoodie-0.png?v=1789017186"
+          }
+        },
+        {
+          "id": "gid://shopify/ProductVariant/54882447491285",
+          "title": "Apricot / 2XL",
+          "price": "70.00",
+          "selectedOptions": [
+            {
+              "name": "Color",
+              "value": "Apricot"
+            },
+            {
+              "name": "Size",
+              "value": "2XL"
+            }
+          ],
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/infinity-hoodie-0.png?v=1789017186"
+          }
+        }
+      ]
+    },
+    "media": {
+      "nodes": [
+        {
+          "id": "gid://shopify/MediaImage/42552657314005",
+          "alt": "Infinity Hoodie in Apricot — front view",
+          "mediaContentType": "IMAGE",
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/infinity-hoodie-0.png?v=1789017186"
+          }
+        },
+        {
+          "id": "gid://shopify/MediaImage/42552657543381",
+          "alt": "Infinity Hoodie in Apricot — back view",
+          "mediaContentType": "IMAGE",
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/infinity-hoodie-1.png?v=1789017188"
+          }
+        }
+      ]
+    },
+    "images": {
+      "nodes": [
+        {
+          "id": "gid://shopify/ProductImage/52891964997845",
+          "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/infinity-hoodie-0.png?v=1789017186",
+          "altText": "Infinity Hoodie in Apricot — front view"
+        },
+        {
+          "id": "gid://shopify/ProductImage/52891965096149",
+          "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/infinity-hoodie-1.png?v=1789017188",
+          "altText": "Infinity Hoodie in Apricot — back view"
+        }
+      ]
+    }
+  },
+  {
+    "id": "gid://shopify/Product/9611632771285",
+    "title": "Sunfaded Edge Fleece Hoodie",
+    "handle": "sunfaded-edge-fleece-hoodie-1",
+    "status": "ACTIVE",
+    "vendor": "ODMPOD",
+    "productType": "",
+    "tags": [],
+    "descriptionHtml": "Made from 350GSM heavyweight fleece, this vintage hoodie combines warmth and durability without feeling bulky. Featuring a classic hood and a soft brushed interior, it offers all-day comfort with a retro streetwear vibe. Whether layered or worn solo, it’s perfect for custom printing and bulk orders. Match it with sweatpants #RK0005 to create a coordinated set.<h3>Features</h3><div>- Effects: Washed</div><div>- Fit: Oversized</div><div>- Neckline: Hooded</div><div>- Sleeve Style: Drop Shoulder</div><div>- Sleeve Length: Long Sleeve</div><div>- Season: Spring / Autumn / Winter</div><div>- Style: Basics / Casual / Street</div><h3>Care Instructions</h3><div>- Machine wash at 30°C (gentle cycle)</div><div>- Do not bleach</div><div>- Tumble dry low</div><div>- Iron at low temperature, avoid ironing on print</div><div>- Do not dry clean</div><h3>Fabric</h3><div>- Material: 53% polyester, 47% cotton</div><div>- Fabric Weight: 350 gsm (10.3 oz)</div><div>- Thickness: Extra Thick</div><div>- Breathability: Moderate</div><table id=\"size-guide\" style=\"width: 1024px;\"><tbody>\n<tr>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; background: #F8F8F8;\"></td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\" colspan=\"2\">S</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\" colspan=\"2\">M</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\" colspan=\"2\">L</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\" colspan=\"2\">XL</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\" colspan=\"2\">2XL</td>\n</tr>\n<tr>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; background: #F8F8F8;\"></td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">inch</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">cm</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">inch</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">cm</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">inch</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">cm</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">inch</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">cm</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">inch</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">cm</td>\n</tr>\n<tr>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px;\">Length</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">26.38</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">67</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">27.17</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">69</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">27.95</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">71</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">28.74</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">73</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">29.53</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">75</td>\n</tr>\n<tr>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px;\">Shoulder</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">23.23</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">59</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">24.02</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">61</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">24.80</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">63</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">25.59</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">65</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">26.38</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">67</td>\n</tr>\n<tr>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px;\">Chest</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">25.98</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">66</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">26.77</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">68</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">27.56</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">70</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">28.35</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">72</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">29.13</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">74</td>\n</tr>\n<tr>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px;\">Sleeve length</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">23.23</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">59</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">23.62</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">60</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">24.02</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">61</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">24.41</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center;\">62</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">24.80</td>\n<td style=\"font-weight: 400; border: 1px solid #e2e2e2; width: 150px; text-align: center; background: #F8F8F8;\">63</td>\n</tr>\n</tbody></table>",
+    "category": null,
+    "seo": {
+      "title": null,
+      "description": null
+    },
+    "collections": {
+      "nodes": []
+    },
+    "resourcePublicationsV2": {
+      "nodes": [
+        {
+          "isPublished": true,
+          "publication": {
+            "id": "gid://shopify/Publication/159053807829",
+            "name": "Online Store"
+          }
+        }
+      ]
+    },
+    "options": [
+      {
+        "name": "Color",
+        "values": [
+          "Washed Black"
+        ]
+      },
+      {
+        "name": "Size",
+        "values": [
+          "S",
+          "M",
+          "L",
+          "XL",
+          "2XL"
+        ]
+      }
+    ],
+    "variants": {
+      "nodes": [
+        {
+          "id": "gid://shopify/ProductVariant/54965499658453",
+          "title": "Washed Black / S",
+          "price": "75.00",
+          "selectedOptions": [
+            {
+              "name": "Color",
+              "value": "Washed Black"
+            },
+            {
+              "name": "Size",
+              "value": "S"
+            }
+          ],
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/91c41806bed94cbbb7772cdf2fafcbdf_f56cc0cc-b0e3-459b-b6c4-c604d257d63c.png?v=1789671243"
+          }
+        },
+        {
+          "id": "gid://shopify/ProductVariant/54965499691221",
+          "title": "Washed Black / M",
+          "price": "75.00",
+          "selectedOptions": [
+            {
+              "name": "Color",
+              "value": "Washed Black"
+            },
+            {
+              "name": "Size",
+              "value": "M"
+            }
+          ],
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/91c41806bed94cbbb7772cdf2fafcbdf_f56cc0cc-b0e3-459b-b6c4-c604d257d63c.png?v=1789671243"
+          }
+        },
+        {
+          "id": "gid://shopify/ProductVariant/54965499723989",
+          "title": "Washed Black / L",
+          "price": "75.00",
+          "selectedOptions": [
+            {
+              "name": "Color",
+              "value": "Washed Black"
+            },
+            {
+              "name": "Size",
+              "value": "L"
+            }
+          ],
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/91c41806bed94cbbb7772cdf2fafcbdf_f56cc0cc-b0e3-459b-b6c4-c604d257d63c.png?v=1789671243"
+          }
+        },
+        {
+          "id": "gid://shopify/ProductVariant/54965499756757",
+          "title": "Washed Black / XL",
+          "price": "75.00",
+          "selectedOptions": [
+            {
+              "name": "Color",
+              "value": "Washed Black"
+            },
+            {
+              "name": "Size",
+              "value": "XL"
+            }
+          ],
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/91c41806bed94cbbb7772cdf2fafcbdf_f56cc0cc-b0e3-459b-b6c4-c604d257d63c.png?v=1789671243"
+          }
+        },
+        {
+          "id": "gid://shopify/ProductVariant/54965499789525",
+          "title": "Washed Black / 2XL",
+          "price": "75.00",
+          "selectedOptions": [
+            {
+              "name": "Color",
+              "value": "Washed Black"
+            },
+            {
+              "name": "Size",
+              "value": "2XL"
+            }
+          ],
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/91c41806bed94cbbb7772cdf2fafcbdf_f56cc0cc-b0e3-459b-b6c4-c604d257d63c.png?v=1789671243"
+          }
+        }
+      ]
+    },
+    "media": {
+      "nodes": [
+        {
+          "id": "gid://shopify/MediaImage/42672329851093",
+          "alt": "",
+          "mediaContentType": "IMAGE",
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/91c41806bed94cbbb7772cdf2fafcbdf_f56cc0cc-b0e3-459b-b6c4-c604d257d63c.png?v=1789671243"
+          }
+        },
+        {
+          "id": "gid://shopify/MediaImage/42672329883861",
+          "alt": "",
+          "mediaContentType": "IMAGE",
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/1b633d44a3cb4ea289c6feb029dc64a3_9d303a7c-73b3-46e2-b982-9871a051ac36.png?v=1789671243"
+          }
+        }
+      ]
+    },
+    "images": {
+      "nodes": [
+        {
+          "id": "gid://shopify/ProductImage/53027512058069",
+          "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/91c41806bed94cbbb7772cdf2fafcbdf_f56cc0cc-b0e3-459b-b6c4-c604d257d63c.png?v=1789671243",
+          "altText": ""
+        },
+        {
+          "id": "gid://shopify/ProductImage/53027512090837",
+          "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/1b633d44a3cb4ea289c6feb029dc64a3_9d303a7c-73b3-46e2-b982-9871a051ac36.png?v=1789671243",
+          "altText": ""
+        }
+      ]
+    }
+  },
+  {
+    "id": "gid://shopify/Product/9587266912469",
+    "title": "Barrel Jeans",
+    "handle": "barrel-jeans",
+    "status": "ACTIVE",
+    "vendor": "B.A.A.D",
+    "productType": "Bottoms",
+    "tags": [
+      "brand:baad",
+      "drop:loop-soul",
+      "type:jeans"
+    ],
+    "descriptionHtml": "<p>Vintage wash, barrel leg, mid rise. Heavy cotton denim — 450 gsm.</p>\n<p><strong>Care.</strong> Machine wash at 30°C (gentle cycle). Do not bleach. Tumble dry low. Iron at low temperature, avoid ironing on print. Do not dry clean.</p>\n<h3>Size guide</h3>\n<p>Flat garment measurements. Allow 1–2 cm tolerance.</p>\n<table>\n<thead><tr>\n<th scope=\"col\">Measurement</th>\n<th scope=\"col\">S</th>\n<th scope=\"col\">M</th>\n<th scope=\"col\">L</th>\n<th scope=\"col\">XL</th>\n<th scope=\"col\">2XL</th>\n</tr></thead>\n<tbody>\n<tr>\n<th scope=\"row\">Length</th>\n<td>41.7 in / 106 cm</td>\n<td>42.1 in / 107 cm</td>\n<td>42.5 in / 108 cm</td>\n<td>42.9 in / 109 cm</td>\n<td>43.3 in / 110 cm</td>\n</tr>\n<tr>\n<th scope=\"row\">Waist</th>\n<td>15.0 in / 38 cm</td>\n<td>15.8 in / 40 cm</td>\n<td>16.5 in / 42 cm</td>\n<td>17.3 in / 44 cm</td>\n<td>18.1 in / 46 cm</td>\n</tr>\n<tr>\n<th scope=\"row\">Hip</th>\n<td>21.1 in / 53.5 cm</td>\n<td>21.9 in / 55.5 cm</td>\n<td>22.6 in / 57.5 cm</td>\n<td>23.4 in / 59.5 cm</td>\n<td>24.2 in / 61.5 cm</td>\n</tr>\n</tbody>\n</table>",
+    "category": {
+      "id": "gid://shopify/TaxonomyCategory/aa-1-12-4",
+      "fullName": "Apparel & Accessories > Clothing > Pants > Jeans"
+    },
+    "seo": {
+      "title": "Barrel Jeans — B.A.A.D | Odubo Studio",
+      "description": "Barrel Jeans — the Loop Soul drop by B.A.A.D, Odubo Studio. Jeans Blue. Sizes S, M, L, XL, 2XL. $80.00 CAD."
+    },
+    "collections": {
+      "nodes": [
+        {
+          "id": "gid://shopify/Collection/487450575061",
+          "handle": "clothes"
+        },
+        {
+          "id": "gid://shopify/Collection/525509591253",
+          "handle": "loop-soul"
+        }
+      ]
+    },
+    "resourcePublicationsV2": {
+      "nodes": [
+        {
+          "isPublished": true,
+          "publication": {
+            "id": "gid://shopify/Publication/159053807829",
+            "name": "Online Store"
+          }
+        },
+        {
+          "isPublished": true,
+          "publication": {
+            "id": "gid://shopify/Publication/159053840597",
+            "name": "Point of Sale"
+          }
+        },
+        {
+          "isPublished": true,
+          "publication": {
+            "id": "gid://shopify/Publication/159053906133",
+            "name": "Shop"
+          }
+        },
+        {
+          "isPublished": true,
+          "publication": {
+            "id": "gid://shopify/Publication/159054069973",
+            "name": "Buy Button"
+          }
+        },
+        {
+          "isPublished": true,
+          "publication": {
+            "id": "gid://shopify/Publication/159129567445",
+            "name": "Odubo Studio Headless"
+          }
+        },
+        {
+          "isPublished": true,
+          "publication": {
+            "id": "gid://shopify/Publication/172494946517",
+            "name": "Odubo Studio Headless 02"
+          }
+        }
+      ]
+    },
+    "options": [
+      {
+        "name": "Color",
+        "values": [
+          "Jeans Blue"
+        ]
+      },
+      {
+        "name": "Size",
+        "values": [
+          "S",
+          "M",
+          "L",
+          "XL",
+          "2XL"
+        ]
+      }
+    ],
+    "variants": {
+      "nodes": [
+        {
+          "id": "gid://shopify/ProductVariant/54882437890261",
+          "title": "Jeans Blue / S",
+          "price": "80.00",
+          "selectedOptions": [
+            {
+              "name": "Color",
+              "value": "Jeans Blue"
+            },
+            {
+              "name": "Size",
+              "value": "S"
+            }
+          ],
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/barrel-jeans-0.png?v=1789017200"
+          }
+        },
+        {
+          "id": "gid://shopify/ProductVariant/54882437923029",
+          "title": "Jeans Blue / M",
+          "price": "80.00",
+          "selectedOptions": [
+            {
+              "name": "Color",
+              "value": "Jeans Blue"
+            },
+            {
+              "name": "Size",
+              "value": "M"
+            }
+          ],
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/barrel-jeans-0.png?v=1789017200"
+          }
+        },
+        {
+          "id": "gid://shopify/ProductVariant/54882437955797",
+          "title": "Jeans Blue / L",
+          "price": "80.00",
+          "selectedOptions": [
+            {
+              "name": "Color",
+              "value": "Jeans Blue"
+            },
+            {
+              "name": "Size",
+              "value": "L"
+            }
+          ],
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/barrel-jeans-0.png?v=1789017200"
+          }
+        },
+        {
+          "id": "gid://shopify/ProductVariant/54882437988565",
+          "title": "Jeans Blue / XL",
+          "price": "80.00",
+          "selectedOptions": [
+            {
+              "name": "Color",
+              "value": "Jeans Blue"
+            },
+            {
+              "name": "Size",
+              "value": "XL"
+            }
+          ],
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/barrel-jeans-0.png?v=1789017200"
+          }
+        },
+        {
+          "id": "gid://shopify/ProductVariant/54882438021333",
+          "title": "Jeans Blue / 2XL",
+          "price": "80.00",
+          "selectedOptions": [
+            {
+              "name": "Color",
+              "value": "Jeans Blue"
+            },
+            {
+              "name": "Size",
+              "value": "2XL"
+            }
+          ],
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/barrel-jeans-0.png?v=1789017200"
+          }
+        }
+      ]
+    },
+    "media": {
+      "nodes": [
+        {
+          "id": "gid://shopify/MediaImage/42552659116245",
+          "alt": "Barrel Jeans in Jeans Blue — front view",
+          "mediaContentType": "IMAGE",
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/barrel-jeans-0.png?v=1789017200"
+          }
+        },
+        {
+          "id": "gid://shopify/MediaImage/42552659149013",
+          "alt": "Barrel Jeans in Jeans Blue — back view",
+          "mediaContentType": "IMAGE",
+          "image": {
+            "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/barrel-jeans-1.png?v=1789017203"
+          }
+        }
+      ]
+    },
+    "images": {
+      "nodes": [
+        {
+          "id": "gid://shopify/ProductImage/52891967258837",
+          "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/barrel-jeans-0.png?v=1789017200",
+          "altText": "Barrel Jeans in Jeans Blue — front view"
+        },
+        {
+          "id": "gid://shopify/ProductImage/52891967389909",
+          "url": "https://cdn.shopify.com/s/files/1/0752/0842/5685/files/barrel-jeans-1.png?v=1789017203",
+          "altText": "Barrel Jeans in Jeans Blue — back view"
+        }
+      ]
+    }
+  }
+]

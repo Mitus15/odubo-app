@@ -6,7 +6,8 @@
  * hides them — published to the Online Store channel only, which the headless
  * site never reads. This script takes each piece in MANIFEST to the house
  * standard the other B.A.A.D garments already meet, and makes it visible to
- * the Storefront API.
+ * the Storefront API. It also takes the pieces in RETIRED back off the shelf,
+ * so the drop is a list the shelf follows rather than a one-time import.
  *
  *   npx tsx --env-file=.env.local scripts/shopify/loop-soul-drop.ts           # dry run: prints the diff
  *   npx tsx --env-file=.env.local scripts/shopify/loop-soul-drop.ts --apply   # writes
@@ -71,12 +72,12 @@ const MANIFEST: Piece[] = [
     line: "The ∞ across the chest. Oversized pullover, curved panels, hidden side zips, no drawstring — 350 gsm.",
   },
   {
-    from: "heavyweight-raglan-sleeve-zip-hoodie",
-    title: "Infinity Zip Hoodie",
-    handle: "infinity-zip-hoodie",
+    from: "sunfaded-edge-fleece-hoodie-1",
+    title: "Faceless Hoodie",
+    handle: "faceless-hoodie",
     productType: "Tops",
     type: "hoodie",
-    line: "The ∞ on the chest, a wine stripe down each sleeve. Two-way zip, raglan sleeve — 400 gsm.",
+    line: "The ∞ small on the chest, the mask across the back. Oversized washed fleece, drop shoulder, sunfaded seams. 350 gsm.",
   },
   {
     from: "mens-vintage-wash-barrel-leg-jeans",
@@ -86,6 +87,19 @@ const MANIFEST: Piece[] = [
     type: "jeans",
     line: "Vintage wash, barrel leg, mid rise. Heavy cotton denim — 450 gsm.",
   },
+];
+
+/**
+ * Pieces pulled from the drop. Archiving is the reversible way out: the
+ * product, its photos and its size guide stay in Shopify, but it leaves every
+ * sales channel and the `loop-soul` collection, so the store, /loop and the
+ * Pieces rail stop seeing it. Nothing is ever deleted here.
+ *
+ * A handle listed here that no longer exists is fine — the step skips it.
+ */
+const RETIRED: { handle: string; why: string }[] = [
+  { handle: "infinity-zip-hoodie", why: "replaced by the Faceless Hoodie (owner, 2026-09-17)" },
+  { handle: "sunfaded-edge-fleece-hoodie", why: "the Sept 10 import of the same garment, superseded by the $75 re-import" },
 ];
 
 const CARE =
@@ -284,6 +298,58 @@ async function setImageAlt(productId: string, imageId: string, alt: string) {
 }
 
 // ---------------------------------------------------------------------------
+// Retiring a piece
+// ---------------------------------------------------------------------------
+
+/**
+ * Take every piece in RETIRED off the shelf: unpublish from all channels,
+ * leave the `loop-soul` collection, and archive. Reversible in one click from
+ * the Shopify admin, and safe to re-run — a piece already archived and off the
+ * collection reports "already retired" and is not written again.
+ */
+async function retire(collectionId: string) {
+  for (const { handle, why } of RETIRED) {
+    const p = await productByHandle(handle);
+    if (!p) {
+      console.log(`\n=== ${handle}: not in Shopify, nothing to retire`);
+      continue;
+    }
+    console.log(`\n=== RETIRE ${p.title}  (${p.handle}) — ${why}`);
+
+    const live = p.resourcePublicationsV2.nodes.filter((n) => n.isPublished).map((n) => n.publication);
+    if (live.length) {
+      console.log(`  unpublish from: ${live.map((x) => x.name).join(" · ")}`);
+      if (APPLY) {
+        const res = await admin<{ publishableUnpublish: { userErrors: UserError[] } }>(
+          `mutation($id: ID!, $input: [PublicationInput!]!) { publishableUnpublish(id: $id, input: $input) { userErrors { field message } } }`,
+          { id: p.id, input: live.map((x) => ({ publicationId: x.id })) },
+        );
+        userErrors(res.publishableUnpublish, "publishableUnpublish");
+      }
+    } else {
+      console.log("  channels: already off every channel");
+    }
+
+    const input: Record<string, unknown> = { id: p.id };
+    if (p.collections.nodes.some((c) => c.id === collectionId)) input.collectionsToLeave = [collectionId];
+    if (p.status !== "ARCHIVED") input.status = "ARCHIVED";
+    const changes = Object.keys(input).filter((k) => k !== "id");
+    if (changes.length) {
+      console.log(`  productUpdate: ${changes.join(", ")}`);
+      if (APPLY) {
+        const res = await admin<{ productUpdate: { userErrors: UserError[] } }>(
+          `mutation($input: ProductInput!) { productUpdate(input: $input) { product { id status } userErrors { field message } } }`,
+          { input },
+        );
+        userErrors(res.productUpdate, "productUpdate");
+      }
+    } else {
+      console.log("  already retired");
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Run
 // ---------------------------------------------------------------------------
 
@@ -299,6 +365,8 @@ async function main() {
   );
   if (!collection.collectionByHandle) throw new Error(`Collection ${COLLECTION_HANDLE} does not exist`);
   const collectionId = collection.collectionByHandle.id;
+
+  await retire(collectionId);
 
   const reference = await productByHandle(REFERENCE_HANDLE);
   if (!reference) throw new Error(`Reference garment ${REFERENCE_HANDLE} not found`);
