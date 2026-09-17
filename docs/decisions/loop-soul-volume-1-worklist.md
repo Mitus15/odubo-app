@@ -1,5 +1,7 @@
 # Volume 1 — the worklist
 
+> **Superseded 2026-09-16.** The system this describes was rebuilt; see `docs/sessions/2026-09-16-ready-today.md` and `docs/HANDOFF.md`. Kept as history.
+
 > **⚠️ DATE MOVED — 2026-09-10.** The event is now **Saturday 10 October 2026**,
 > not Sept 26. Oct 10 is the LAST Saturday before Rocky Mountaineer stops
 > staying at Scott's on Tue 13 Oct, so there is no spare weekend after it. Any

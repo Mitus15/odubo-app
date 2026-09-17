@@ -5,7 +5,6 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { usePWA } from "@/components/PWAProvider";
 import SinglePlayer from "@/components/loop/gathering/SinglePlayer";
-import ClaimRow from "@/components/loop/identity/ClaimRow";
 import type { FeaturedSingle } from "@/lib/loop/single";
 
 /**
@@ -25,7 +24,8 @@ import type { FeaturedSingle } from "@/lib/loop/single";
  * that stops where it is told reads as composed; a page that halts halfway
  * through a heading reads as a document someone forgot to finish. The
  * three-screen order is also an argument: the song, then what you keep, then
- * what it costs to hear the rest.
+ * what it costs to hear the rest. (A fourth screen asked for a name and an
+ * email; the code on the ticket is the login now, so it went.)
  */
 
 const SEEN_KEY = "loop.single.seen";
@@ -347,11 +347,6 @@ export function TheSingle({
           This album isn&apos;t streaming anywhere. {dateLabel} is its first
           exhibition.
         </p>
-      </section>
-
-      {/* ── 4 · you ──────────────────────────────────────────────────── */}
-      <section className={SECTION}>
-        <ClaimRow />
       </section>
     </motion.div>
   );

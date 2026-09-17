@@ -4,25 +4,7 @@
  * The recovery rule: who holds a pass after its owner proves the inbox on a
  * new phone. Pure, so it runs without a database.
  */
-import { hashOtp, newOtp, normEmail, planReclaim } from "@/lib/loop/recovery";
-
-describe("newOtp", () => {
-  it("is six digits, zero-padded", () => {
-    for (let i = 0; i < 200; i++) expect(newOtp()).toMatch(/^\d{6}$/);
-  });
-});
-
-describe("hashOtp", () => {
-  it("is stable for the same inputs and blind to email case", async () => {
-    const a = await hashOtp("Jane@Example.com", "123456");
-    const b = await hashOtp("jane@example.com ", "123456");
-    expect(a).toBe(b);
-    expect(a).toHaveLength(64);
-  });
-  it("changes with the code", async () => {
-    expect(await hashOtp("j@x.com", "111111")).not.toBe(await hashOtp("j@x.com", "111112"));
-  });
-});
+import { normEmail, planReclaim } from "@/lib/loop/recovery";
 
 describe("planReclaim", () => {
   const me = "device-new";

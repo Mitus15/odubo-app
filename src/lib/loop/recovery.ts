@@ -5,8 +5,8 @@ import { attendeeByEmail, attendeeForVoter, bindDevice, ensureAttendee, recordAt
  * Recovery: a ticket follows its owner to a new phone.
  *
  * The checkout email is the only identity a buyer has, so proving the inbox
- * is proving the person. A six-digit code goes to that address; typing it back
- * on this device does three things at once:
+ * is proving the person. The claim link in the pass email proves it (see
+ * passLinks.ts); opening it on a device does three things at once:
  *
  *   1. binds this device to the attendee who owns the email (their credited
  *      shots, cover choice and attendance come with them),
@@ -16,94 +16,24 @@ import { attendeeByEmail, attendeeForVoter, bindDevice, ensureAttendee, recordAt
  * The third is what "nobody can take it away from you" means in practice. A
  * pass redeemed by someone who merely knew the email loses it the moment the
  * real owner proves the inbox. A pass on the owner's OTHER phone is left alone,
- * because that phone is bound to the same attendee.
+ * because that phone is bound to the same attendee. (A six-digit emailed code
+ * did the proving until 2026-09-16; the owner asked what it was for, and the
+ * answer was nothing the link did not already do. Table
+ * loop_email_verifications stays, empty.)
  *
  * The pure decision (`planReclaim`) is separated from the writes so the rule
  * is under test without a database.
  */
 
-// ── the one-time code ────────────────────────────────────────────────────────
-
-export const OTP_TTL_MS = 15 * 60 * 1000;
-export const OTP_MAX_ATTEMPTS = 5;
+// ── the address ──────────────────────────────────────────────────────────────
 
 export function normEmail(raw: string): string {
   return raw.trim().toLowerCase();
 }
 
-/** Six digits, from crypto, never starting with a zero-padding problem. */
-export function newOtp(): string {
-  const buf = new Uint32Array(1);
-  crypto.getRandomValues(buf);
-  return String(buf[0] % 1_000_000).padStart(6, "0");
-}
-
-/** The secret every inbox-proof hash is salted with: the six digits and the claim link alike. */
+/** The secret every inbox-proof hash is salted with (the claim link's token hash). */
 export function otpPepper(): string {
   return process.env.LOOP_OTP_PEPPER || process.env.JWT_SECRET || "dev-insecure-pepper";
-}
-
-export async function hashOtp(email: string, code: string): Promise<string> {
-  const data = new TextEncoder().encode(`${normEmail(email)}|${code.trim()}|${otpPepper()}`);
-  const digest = await crypto.subtle.digest("SHA-256", data);
-  return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
-}
-
-function timingSafeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  let diff = 0;
-  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return diff === 0;
-}
-
-/** Whether any pass for this event was bought with the address. */
-export async function hasPassesForEmail(eventId: string, email: string): Promise<boolean> {
-  const row = await queryOne<{ n: number }>(
-    `SELECT COUNT(*) AS n FROM event_codes WHERE event_id = ?1 AND LOWER(TRIM(email)) = ?2`,
-    [eventId, normEmail(email)],
-  );
-  return (row?.n ?? 0) > 0;
-}
-
-/** Issue a code for the address. Returns the plain code for sending; only the hash is stored. */
-export async function createVerification(email: string, voterId: string, now = Date.now()): Promise<string> {
-  const code = newOtp();
-  const id = `ver_${crypto.randomUUID().replace(/-/g, "").slice(0, 20)}`;
-  await executeQuery(
-    `INSERT INTO loop_email_verifications (id, email, code_hash, voter_id, attempts, expires_at, consumed_at, created_at)
-     VALUES (?1, ?2, ?3, ?4, 0, ?5, NULL, ?6)`,
-    [id, normEmail(email), await hashOtp(email, code), voterId, now + OTP_TTL_MS, now],
-  );
-  return code;
-}
-
-export type VerifyOutcome = "ok" | "wrong" | "expired" | "burned" | "none";
-
-/**
- * Check a typed code against the newest live verification for the address.
- * A wrong guess counts; the fifth burns the row and the buyer asks for a new one.
- */
-export async function checkVerification(email: string, code: string, now = Date.now()): Promise<VerifyOutcome> {
-  const row = await queryOne<{ id: string; code_hash: string; attempts: number; expires_at: number; consumed_at: number | null }>(
-    `SELECT id, code_hash, attempts, expires_at, consumed_at FROM loop_email_verifications
-      WHERE email = ?1 ORDER BY created_at DESC LIMIT 1`,
-    [normEmail(email)],
-  );
-  if (!row) return "none";
-  if (row.consumed_at !== null) return row.attempts >= OTP_MAX_ATTEMPTS ? "burned" : "expired";
-  if (now > row.expires_at) return "expired";
-
-  const matches = timingSafeEqual(row.code_hash, await hashOtp(email, code));
-  if (matches) {
-    await executeQuery(`UPDATE loop_email_verifications SET consumed_at = ?2 WHERE id = ?1`, [row.id, now]);
-    return "ok";
-  }
-  const attempts = row.attempts + 1;
-  await executeQuery(
-    `UPDATE loop_email_verifications SET attempts = ?2, consumed_at = CASE WHEN ?2 >= ?3 THEN ?4 ELSE NULL END WHERE id = ?1`,
-    [row.id, attempts, OTP_MAX_ATTEMPTS, now],
-  );
-  return attempts >= OTP_MAX_ATTEMPTS ? "burned" : "wrong";
 }
 
 // ── the reclaim rule (pure) ──────────────────────────────────────────────────

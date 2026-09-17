@@ -1,63 +1,53 @@
 import { getCurrentEvent } from "@/lib/loop/hub";
 import { countRedeemed } from "@/lib/loop/event-codes";
 import { getPassCapacity } from "@/lib/loop/pass";
-import { listNotes } from "@/lib/loop/notes";
+import { getPassSettings } from "@/lib/loop/pass/settings";
 import { getPublicBaseUrl } from "@/lib/loop/publicUrl";
+import { getSetting } from "@/lib/loop/loopSetting";
+import { priceLabel } from "@/lib/loop/priceLabel";
+import { VOLUMES } from "@/lib/loop/poster/volumes";
+import { DEFAULT_QR_CAPTION } from "@/lib/loop/poster/layout";
 import StudioShell from "./StudioShell";
 
-export const metadata = { title: "Loop Soul — Promoter Studio" };
+export const metadata = { title: "Loop Soul — Studio" };
 
 /**
- * /loop/admin/studio — the promoter's whole workspace on one page: posters,
- * tickets, pricing, the numbers, and the thread, with the full written brief
- * tucked into the Playbook modal. Gated by middleware like every /loop/admin
- * path. This server shell does every read; the client shell does the rest.
+ * /loop/admin/studio — posters, tickets and pricing on one page. Gated by
+ * middleware like every /loop/admin path. This server shell does every read;
+ * the client shell does the rest. The poster lines come from the same block
+ * the print kit reads (lib/loop/poster/volumes), never typed here.
  */
 export default async function StudioPage() {
   const event = await getCurrentEvent();
-  const [capacity, codeStats, notes, publicBaseUrl] = await Promise.all([
+  const [capacity, codeStats, pass, publicBaseUrl, qrCaption] = await Promise.all([
     getPassCapacity(),
     countRedeemed(event.id),
-    listNotes(),
+    getPassSettings(),
     getPublicBaseUrl(),
+    getSetting("poster_qr_caption"),
   ]);
-
-  const dateLabel = new Date(event.date).toLocaleDateString("en-CA", {
-    timeZone: "America/Vancouver",
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  });
+  const printed = VOLUMES["1"];
 
   return (
     <StudioShell
-      facts={{
-        title: event.title,
-        theme: event.theme,
-        venue: event.venue,
-        dateLabel,
-        capacity: capacity.total ?? null,
-        sold: capacity.sold,
-      }}
       stats={{
         sold: capacity.sold,
         total: capacity.total ?? null,
         redeemed: codeStats.redeemed,
         codes: codeStats.total,
       }}
-      notes={notes}
       publicBaseUrl={publicBaseUrl}
       eventDetails={{
         title: event.title,
         theme: event.theme,
-        venue: event.venue,
-        dateLabel: new Date(event.date).toLocaleDateString("en-CA", {
-          timeZone: "America/Vancouver",
-          month: "long",
-          day: "numeric",
-          year: "numeric",
-        }),
+        venue: printed.venue ?? event.venue,
+        dateLabel: printed.date ?? "",
+        doors: printed.doors,
+        note: printed.note,
+        record: printed.record,
+        feature: printed.feature,
+        price: priceLabel(pass.price, pass.currency),
+        qrCaption: qrCaption ?? DEFAULT_QR_CAPTION,
       }}
     />
   );

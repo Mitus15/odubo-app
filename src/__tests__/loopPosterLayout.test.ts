@@ -3,7 +3,6 @@ import {
   layoutLivingPoster,
   layoutTicket,
   layoutPassCard,
-  layoutTournament,
   withBleed,
   qrSrc,
   WORDMARK_SRC,
@@ -16,10 +15,7 @@ import {
   type LayoutDeps,
   type Op,
   type PosterSize,
-  type TournamentArt,
-  type TournamentBand,
 } from "@/lib/loop/poster/layout";
-import { artUrl, closesLine } from "@/lib/loop/poster/copy";
 import { measure, CAP_HEIGHT } from "@/lib/loop/brand";
 
 /**
@@ -461,107 +457,6 @@ describe("layoutPassCard", () => {
     expect(r.list.ops.some((o) => o.kind === "image" && o.src.startsWith("qr:"))).toBe(false);
   });
 });
-
-describe("layoutTournament", () => {
-  const sizes = Object.keys(POSTER_SIZES) as PosterSize[];
-  const ART = "https://is1-ssl.mzstatic.com/image/thumb/x/600x600bb.jpg";
-  const art = (n: number): TournamentArt[] =>
-    Array.from({ length: n }, (_, i) => ({
-      src: `${ART}?${i}`,
-      title: `TRACK ${i + 1}`,
-      artist: `ARTIST ${i + 1}`,
-    }));
-  const tdeps = (n: number): LayoutDeps => ({
-    sizes: {
-      ...deps.sizes,
-      ...Object.fromEntries(art(n).map((a) => [a.src, { w: 600, h: 600 }])),
-    },
-  });
-  const spec = (size: PosterSize, band: TournamentBand) => ({
-    size,
-    qrUrl: "https://example.com/loop",
-    band,
-    headline: "QUARTERFINALS",
-    sublines: ["LEADING · SEPTEMBER", "VOTING CLOSES IN 2 DAYS"],
-    cta: "SCAN TO VOTE",
-  });
-
-  const bands: [string, TournamentBand, number][] = [
-    ["grid of 12", { kind: "grid", art: art(12), emptyFigureSrc: "/loop/figures/crowd.png" }, 12],
-    ["grid of 5 (ragged last row)", { kind: "grid", art: art(5), emptyFigureSrc: "/loop/figures/crowd.png" }, 5],
-    ["empty grid (crowd fallback)", { kind: "grid", art: [], emptyFigureSrc: "/loop/figures/crowd.png" }, 0],
-    ["seed wall of 8", { kind: "seeds", art: art(8) }, 8],
-    [
-      "quarterfinal pairs",
-      {
-        kind: "pairs",
-        pairs: [
-          { a: art(1)[0], b: art(2)[1], pctA: 0.62 },
-          { a: art(3)[2], b: art(4)[3], pctA: null }, // 0–0 → neutral hairline
-          { a: art(5)[4], b: null, pctA: null }, // TBD slot
-          { a: art(7)[6], b: art(8)[7], pctA: 1 },
-        ],
-      },
-      8,
-    ],
-    ["the final (one pair)", { kind: "pairs", pairs: [{ a: art(1)[0], b: art(2)[1], pctA: 0.5 }] }, 2],
-    ["champion hero", { kind: "hero", art: art(1)[0] }, 1],
-    ["champion with no artwork", { kind: "hero", art: { src: "", title: "BILLIE JEAN", artist: "MICHAEL JACKSON" } }, 0],
-  ];
-
-  for (const [name, band, n] of bands) {
-    it.each(sizes)(`lays out ${name} at %s with no overlap`, (size) => {
-      const r = layoutTournament(spec(size, band), tdeps(n));
-      expect(r.ok).toBe(true);
-      if (r.ok) assertNoOverlap(r.list.ops);
-    });
-  }
-
-  it("renders a neutral hairline for 0–0, never a filled bar", () => {
-    const r = layoutTournament(
-      spec("print", { kind: "pairs", pairs: [{ a: art(1)[0], b: art(2)[1], pctA: null }] }),
-      tdeps(2),
-    );
-    expect(r.ok).toBe(true);
-    if (!r.ok) return;
-    // Exactly one rule op beyond none (the hairline) and no bar rects.
-    const rules = r.list.ops.filter((o) => o.kind === "rule");
-    expect(rules).toHaveLength(1);
-  });
-
-  it("carries the arc (the anthem phrase asks) and a straight headline", () => {
-    const r = layoutTournament(spec("print", { kind: "hero", art: art(1)[0] }), tdeps(1));
-    expect(r.ok).toBe(true);
-    if (!r.ok) return;
-    expect(r.list.ops.some((o) => o.kind === "arcGlyphs")).toBe(true);
-    const straight = r.list.ops.find(
-      (o) => o.kind === "glyphs" && o.glyphs.map((g) => g.ch).join("") === "QUARTERFINALS",
-    );
-    expect(straight).toBeDefined();
-  });
-});
-
-describe("poster copy helpers", () => {
-  it("prints absolute dates and posts relative ones", () => {
-    const closes = Date.UTC(2026, 8, 5, 12, 0, 0); // Sept 5
-    const printLine = closesLine(closes, "print", closes - 2 * 86_400_000);
-    const storyLine = closesLine(closes, "story", closes - 2 * 86_400_000);
-    expect(printLine).toMatch(/^CLOSES SEPTEMBER \d/); // absolute — never goes stale
-    expect(storyLine).toBe("CLOSES IN 2 DAYS");
-  });
-
-  it("upsizes artwork for print only, through the one indirection", () => {
-    const url = "https://is1-ssl.mzstatic.com/image/thumb/x/600x600bb.jpg";
-    expect(artUrl(url, "print")).toContain("/1500x1500bb.");
-    expect(artUrl(url, "feed")).toContain("/600x600bb.");
-  });
-
-  it("returns an empty string rather than a broken src for missing artwork", () => {
-    expect(artUrl(null, "print")).toBe("");
-    expect(artUrl("", "feed")).toBe("");
-  });
-});
-
 
 describe("withBleed", () => {
   it("expands by margin+bleed on each side and keeps crop marks in the margin", () => {

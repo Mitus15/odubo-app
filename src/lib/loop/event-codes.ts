@@ -245,40 +245,6 @@ export async function codeForOrder(eventId: string, orderId: string): Promise<st
   return row?.code ?? null;
 }
 
-export type RedeemResult = { ok: boolean; reason?: "unknown" | "used" };
-
-/** Redeem a code for a voter → marks them a holder. Single-use, idempotent for the same voter. */
-export async function redeem(
-  eventId: string,
-  code: string,
-  voterId: string,
-): Promise<RedeemResult> {
-  const normalized = code.trim().toUpperCase();
-  const record = await queryOne<{ redeemed_by: string | null }>(
-    `SELECT redeemed_by FROM event_codes WHERE event_id = ?1 AND code = ?2`,
-    [eventId, normalized],
-  );
-
-  if (!record) return { ok: false, reason: "unknown" };
-  if (record.redeemed_by && record.redeemed_by !== voterId) return { ok: false, reason: "used" };
-
-  // Re-check redeemed_by in the WHERE clause so two voters racing on the same
-  // unredeemed code can't both come away holders.
-  const meta = await executeQuery(
-    `UPDATE event_codes SET redeemed_by = ?3
-      WHERE event_id = ?1 AND code = ?2
-        AND (redeemed_by IS NULL OR redeemed_by = ?3)`,
-    [eventId, normalized, voterId],
-  );
-  if (meta.changes === 0) return { ok: false, reason: "used" };
-
-  await executeQuery(
-    `INSERT OR IGNORE INTO event_holders (event_id, voter_id) VALUES (?1, ?2)`,
-    [eventId, voterId],
-  );
-  return { ok: true };
-}
-
 export async function isHolder(eventId: string, voterId: string): Promise<boolean> {
   const row = await queryOne<{ n: number }>(
     `SELECT COUNT(*) AS n FROM event_holders WHERE event_id = ?1 AND voter_id = ?2`,

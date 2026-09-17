@@ -1,5 +1,7 @@
 # Loop Soul — the show: running order, spirit, and what the app must support
 
+> **Superseded 2026-09-16.** The system this describes was rebuilt; see `docs/sessions/2026-09-16-ready-today.md` and `docs/HANDOFF.md`. Kept as history.
+
 **Captured 2026-08-11** from the owner's dictated walkthrough. This is the
 *spirit* of the program — the thing the run of show in the app should express,
 and the shape the episode edit follows. Living document.

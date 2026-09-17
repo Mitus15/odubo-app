@@ -17,7 +17,6 @@ import {
   layoutEventPoster,
   layoutTicket,
   layoutPassCard,
-  layoutTournament,
   withBleed,
   qrSrc,
   WORDMARK_SRC,
@@ -31,7 +30,6 @@ import {
   type EventDetails,
   type PosterSize,
   type LayoutResult,
-  type TournamentPosterSpec,
 } from "./layout";
 import { prepareImages, renderCanvas } from "./render-canvas";
 
@@ -174,30 +172,5 @@ export async function composePassCard(spec: PosterSpec): Promise<HTMLCanvasEleme
   const list = unwrap(
     layoutPassCard({ figureSrc, details: toDetails(spec) }, { sizes: prepared.sizes }),
   );
-  return renderCanvas(list, prepared);
-}
-
-/**
- * The tournament poster. The caller builds the spec and owns any fetching;
- * this just resolves artwork and renders. Its original source (the anthem
- * tournament) is gone; the geometry is source-agnostic and stayed.
- */
-export async function composeTournament(spec: TournamentPosterSpec): Promise<HTMLCanvasElement> {
-  const srcs = [...CHROME, qrSrc(spec.qrUrl)];
-  const band = spec.band;
-  if (band.kind === "grid") {
-    srcs.push(band.emptyFigureSrc, ...band.art.map((a) => a.src).filter(Boolean));
-  } else if (band.kind === "seeds") {
-    srcs.push(...band.art.map((a) => a.src).filter(Boolean));
-  } else if (band.kind === "pairs") {
-    for (const p of band.pairs) {
-      if (p.a?.src) srcs.push(p.a.src);
-      if (p.b?.src) srcs.push(p.b.src);
-    }
-  } else if (band.art.src) {
-    srcs.push(band.art.src);
-  }
-  const prepared = await prepareImages(srcs);
-  const list = unwrap(layoutTournament(spec, { sizes: prepared.sizes }));
   return renderCanvas(list, prepared);
 }

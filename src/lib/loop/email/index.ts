@@ -316,26 +316,6 @@ async function ticketAttachments(
 }
 
 /**
- * The six digits that prove an inbox. Sent when a buyer asks for their pass on
- * a device that has never held it; typing it back binds that device to them.
- * Short, because it is read on one phone and typed into another.
- */
-export async function sendVerificationEmail(to: string, code: string): Promise<{ ok: boolean }> {
-  return (await sender()).send({
-    to,
-    subject: `${code} is your ${PRODUCT_NAME} number`,
-    text: [
-      `Your six digits are ${code}.`,
-      ``,
-      `Type it on the phone that asked for it and your pass will open there too.`,
-      `It works for fifteen minutes. If you did not ask for this, ignore it; nothing changes.`,
-      ``,
-      `Odubo Studio`,
-    ].join("\n"),
-  });
-}
-
-/**
  * "It's out." Sent once per address that pre-ordered, by the release action.
  * `link` is a claim link for one of that address's passes, so the phone that
  * taps it is bound and the record simply plays; the caller falls back to the
