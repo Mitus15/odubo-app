@@ -9,12 +9,30 @@ import FieldPlayer from '@/components/field/FieldPlayer';
 interface AlbumPlayerProps {
   album: Album;
   tracks: Track[];
+  /** Show the stem-field player for songs that have a pack. Off inside a
+   *  guest's record on /loop/album: the field is a studio surface. */
+  field?: boolean;
 }
 
 /** Songs with a stem pack published under warehouse/field/. */
 const FIELD_SONGS = new Set(['News Peak']);
 
-export default function AlbumPlayer({ album, tracks }: AlbumPlayerProps) {
+/**
+ * Palette: read from the surface it sits on. Inside `.loop-theme` the tokens
+ * are the poster's or the vault's; on odubo's music page, where none are set,
+ * the fallbacks are the odubo dark palette it was typed in. Six hexes used to
+ * live here as literals, so the player wore odubo's colours inside the vault.
+ */
+const PALETTE = {
+  '--ap-fg': 'var(--foreground, #ede8df)',
+  '--ap-bg': 'var(--background, #1c1a19)',
+  '--ap-accent': 'var(--accent, #843c2d)',
+  '--ap-muted': 'color-mix(in srgb, var(--foreground, #ede8df) 55%, transparent)',
+  '--ap-line': 'color-mix(in srgb, var(--foreground, #ede8df) 18%, transparent)',
+  '--ap-surface': 'color-mix(in srgb, var(--foreground, #ede8df) 10%, transparent)',
+} as React.CSSProperties;
+
+export default function AlbumPlayer({ album, tracks, field = true }: AlbumPlayerProps) {
   const { state, playTrack, playAlbum, addToQueue, toggleShuffle, playFromQueue } = useMusicPlayer();
   const [isClient, setIsClient] = useState(false);
 
@@ -57,7 +75,7 @@ export default function AlbumPlayer({ album, tracks }: AlbumPlayerProps) {
   const upNextTracks = state.queue.slice(state.currentIndex + 1, state.currentIndex + 6);
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4" style={PALETTE}>
       {/*
         The transport, docked.
 
@@ -73,7 +91,7 @@ export default function AlbumPlayer({ album, tracks }: AlbumPlayerProps) {
         logo button. It renders nothing until a track is loaded.
       */}
       {isClient && state.currentTrack && (
-        <div className="fixed bottom-5 left-20 z-40 rounded-full bg-[#1c1a19]/90 backdrop-blur-md border border-[#502d26]/60 px-3 py-2 shadow-lg shadow-black/40">
+        <div className="fixed bottom-5 left-20 z-40 rounded-full bg-[color-mix(in_srgb,var(--ap-bg)_90%,transparent)] backdrop-blur-md border border-[var(--ap-line)] px-3 py-2 shadow-lg shadow-black/40">
           <VinylMiniPlayer />
         </div>
       )}
@@ -86,7 +104,7 @@ export default function AlbumPlayer({ album, tracks }: AlbumPlayerProps) {
         no column for this yet; when the second song is packed, that is the
         moment to give it one rather than extend a list.
       */}
-      {isClient && tracks.some((t) => FIELD_SONGS.has(t.title)) && (
+      {isClient && field && tracks.some((t) => FIELD_SONGS.has(t.title)) && (
         <FieldPlayer title={tracks.find((t) => FIELD_SONGS.has(t.title))!.title} />
       )}
 
@@ -97,8 +115,8 @@ export default function AlbumPlayer({ album, tracks }: AlbumPlayerProps) {
           disabled={!hasAvailableTracks}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-colors ${
             hasAvailableTracks
-              ? 'bg-[#ede8df] text-[#302927] hover:bg-[#ede8df]/90'
-              : 'bg-[#302927] text-[#726d6c] cursor-not-allowed'
+              ? 'bg-[var(--ap-fg)] text-[var(--ap-bg)] hover:opacity-90'
+              : 'bg-[var(--ap-surface)] text-[var(--ap-muted)] cursor-not-allowed'
           }`}
         >
           <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
@@ -112,8 +130,8 @@ export default function AlbumPlayer({ album, tracks }: AlbumPlayerProps) {
           disabled={!hasAvailableTracks}
           className={`p-2 rounded-lg transition-colors ${
             hasAvailableTracks
-              ? 'text-[#b2a491] hover:text-[#ede8df] hover:bg-[#302927]'
-              : 'text-[#726d6c] cursor-not-allowed'
+              ? 'text-[var(--ap-muted)] hover:text-[var(--ap-fg)] hover:bg-[var(--ap-surface)]'
+              : 'text-[var(--ap-muted)] cursor-not-allowed'
           }`}
           title="Shuffle"
         >
@@ -130,8 +148,8 @@ export default function AlbumPlayer({ album, tracks }: AlbumPlayerProps) {
           disabled={!hasAvailableTracks}
           className={`p-2 rounded-lg transition-colors ${
             hasAvailableTracks
-              ? 'text-[#b2a491] hover:text-[#ede8df] hover:bg-[#302927]'
-              : 'text-[#726d6c] cursor-not-allowed'
+              ? 'text-[var(--ap-muted)] hover:text-[var(--ap-fg)] hover:bg-[var(--ap-surface)]'
+              : 'text-[var(--ap-muted)] cursor-not-allowed'
           }`}
           title="Add to queue"
         >
@@ -142,9 +160,9 @@ export default function AlbumPlayer({ album, tracks }: AlbumPlayerProps) {
       </div>
 
       {/* Track List */}
-      <div className="rounded-xl border border-[#502d26]/20 overflow-hidden">
+      <div className="rounded-xl border border-[var(--ap-line)] overflow-hidden">
         {tracks.length > 0 ? (
-          <div className="divide-y divide-[#502d26]/10">
+          <div className="divide-y divide-[var(--ap-line)]">
             {tracks.map((track, index) => {
               const isDisabled = !track.audio_url;
               const isCurrent = isCurrentTrack(track);
@@ -155,19 +173,19 @@ export default function AlbumPlayer({ album, tracks }: AlbumPlayerProps) {
                   key={track.id}
                   onClick={() => !isDisabled && playTrackFromAlbum(track, index)}
                   className={`flex items-center gap-3 px-4 py-3 transition-colors ${
-                    isDisabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer hover:bg-[#302927]/30'
-                  } ${isCurrent ? 'bg-[#843c2d]/10' : ''}`}
+                    isDisabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer hover:bg-[var(--ap-surface)]'
+                  } ${isCurrent ? 'bg-[var(--ap-surface)]' : ''}`}
                 >
                   {/* Track Number / Playing Indicator */}
                   <div className="w-6 text-center flex-shrink-0">
                     {isPlaying ? (
                       <div className="flex justify-center gap-0.5">
-                        <span className="w-0.5 h-3 bg-[#843c2d] animate-pulse" />
-                        <span className="w-0.5 h-3 bg-[#843c2d] animate-pulse" style={{ animationDelay: '0.1s' }} />
-                        <span className="w-0.5 h-3 bg-[#843c2d] animate-pulse" style={{ animationDelay: '0.2s' }} />
+                        <span className="w-0.5 h-3 bg-[var(--ap-accent)] animate-pulse" />
+                        <span className="w-0.5 h-3 bg-[var(--ap-accent)] animate-pulse" style={{ animationDelay: '0.1s' }} />
+                        <span className="w-0.5 h-3 bg-[var(--ap-accent)] animate-pulse" style={{ animationDelay: '0.2s' }} />
                       </div>
                     ) : (
-                      <span className={`text-xs ${isCurrent ? 'text-[#843c2d]' : 'text-[#726d6c]'}`}>
+                      <span className={`text-xs ${isCurrent ? 'text-[var(--ap-accent)]' : 'text-[var(--ap-muted)]'}`}>
                         {track.track_number || index + 1}
                       </span>
                     )}
@@ -175,14 +193,14 @@ export default function AlbumPlayer({ album, tracks }: AlbumPlayerProps) {
 
                   {/* Title */}
                   <span className={`flex-1 text-sm truncate ${
-                    isCurrent ? 'text-[#843c2d]' : 'text-[#ede8df]'
+                    isCurrent ? 'text-[var(--ap-accent)]' : 'text-[var(--ap-fg)]'
                   }`}>
                     {track.title}
                   </span>
 
                   {/* Explicit */}
                   {Boolean(track.explicit_content) && (
-                    <span className="px-1 py-0.5 bg-[#502d26] text-[#ede8df] text-[10px] font-bold rounded">E</span>
+                    <span className="px-1 py-0.5 bg-[var(--ap-line)] text-[var(--ap-fg)] text-[10px] font-bold rounded">E</span>
                   )}
                 </div>
               );
@@ -190,8 +208,8 @@ export default function AlbumPlayer({ album, tracks }: AlbumPlayerProps) {
           </div>
         ) : (
           <div className="flex items-center justify-center py-12">
-            <div className="w-12 h-12 rounded-xl border border-[#502d26]/20 flex items-center justify-center">
-              <svg className="w-6 h-6 text-[#726d6c]" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+            <div className="w-12 h-12 rounded-xl border border-[var(--ap-line)] flex items-center justify-center">
+              <svg className="w-6 h-6 text-[var(--ap-muted)]" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 9l10.5-3m0 6.553v3.75a2.25 2.25 0 01-1.632 2.163l-1.32.377a1.803 1.803 0 11-.99-3.467l2.31-.66a2.25 2.25 0 001.632-2.163zm0 0V4.5l-10.5 3v10.553m0-10.553v10.553" />
               </svg>
             </div>
@@ -203,35 +221,35 @@ export default function AlbumPlayer({ album, tracks }: AlbumPlayerProps) {
       {upNextTracks.length > 0 && (
         <div className="mt-2">
           <div className="flex items-center gap-2 mb-3">
-            <div className="w-1 h-4 rounded-full bg-gradient-to-b from-[#843c2d] to-[#502d26]" />
-            <h3 className="text-xs font-medium uppercase tracking-wider text-[#b2a491]">
+            <div className="w-1 h-4 rounded-full bg-gradient-to-b from-[var(--ap-accent)] to-[var(--ap-line)]" />
+            <h3 className="text-xs font-medium uppercase tracking-wider text-[var(--ap-muted)]">
               Up Next
             </h3>
           </div>
-          <div className="rounded-xl border border-[#502d26]/20 overflow-hidden">
-            <div className="divide-y divide-[#502d26]/10">
+          <div className="rounded-xl border border-[var(--ap-line)] overflow-hidden">
+            <div className="divide-y divide-[var(--ap-line)]">
               {upNextTracks.map((track, idx) => {
                 const queueIndex = state.currentIndex + 1 + idx;
                 return (
                   <div
                     key={`${track.id}-${queueIndex}`}
                     onClick={() => playFromQueue(queueIndex)}
-                    className="group flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-[#302927]/30 transition-colors"
+                    className="group flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-[var(--ap-surface)] transition-colors"
                   >
                     {/* Queue position */}
-                    <span className="w-5 text-center text-[10px] text-[#726d6c] group-hover:hidden">
+                    <span className="w-5 text-center text-[10px] text-[var(--ap-muted)] group-hover:hidden">
                       {idx + 1}
                     </span>
                     {/* Play icon on hover */}
                     <div className="w-5 hidden group-hover:flex items-center justify-center">
-                      <svg className="w-3 h-3 text-[#843c2d]" fill="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-3 h-3 text-[var(--ap-accent)]" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M8 5v14l11-7z"/>
                       </svg>
                     </div>
 
                     {/* Track info */}
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm text-[#ede8df] truncate">{track.title}</p>
+                      <p className="text-sm text-[var(--ap-fg)] truncate">{track.title}</p>
                     </div>
                   </div>
                 );

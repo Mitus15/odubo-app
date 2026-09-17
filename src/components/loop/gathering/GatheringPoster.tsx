@@ -62,6 +62,7 @@ export function GatheringPoster({
   roomAccess = false,
   earlyCount = null,
   held = [],
+  released = false,
 }: {
   event: LoopEvent;
   capacity: PublicCapacity;
@@ -90,6 +91,8 @@ export function GatheringPoster({
   earlyCount?: number | null;
   /** The pass(es) this phone holds. Non-empty means this poster is THEIR page. */
   held?: HeldPass[];
+  /** The whole record is out: the holder's button says so. */
+  released?: boolean;
 }) {
   const [active, setActive] = useState<ModuleKey | null>(null);
   const [passOpen, setPassOpen] = useState(false);
@@ -258,7 +261,7 @@ export function GatheringPoster({
             href="/loop/album"
             className="block w-full rounded-full bg-ink py-4 text-center text-base font-bold text-sand transition-transform active:scale-95"
           >
-            Your record
+            {released ? "Your record · Out now" : "Your record"}
           </Link>
         ) : (
           <button

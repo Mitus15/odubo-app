@@ -68,7 +68,7 @@ export default async function LoopAlbumPage() {
           <h1 className="mt-2 text-2xl font-extrabold">{data.album.title}</h1>
           <p className="mt-1 text-sm opacity-70">{data.album.artist_name}.</p>
           <div className="mt-8">
-            <AlbumPlayer album={data.album} tracks={data.tracks} />
+            <AlbumPlayer album={data.album} tracks={data.tracks} field={false} />
           </div>
           <BackLink />
         </div>
@@ -110,7 +110,7 @@ export default async function LoopAlbumPage() {
               {now.length} of {data.tracks.length} now. The rest after the night.
             </p>
             <div className="mt-8">
-              <AlbumPlayer album={data.album} tracks={now} />
+              <AlbumPlayer album={data.album} tracks={now} field={false} />
             </div>
             <BackLink />
           </div>

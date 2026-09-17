@@ -7,7 +7,7 @@ import { getRunOfShow } from "@/lib/loop/content-store";
 import { isJournalPublished } from "@/lib/loop/journal-server";
 import { getFeaturedSingle } from "@/lib/loop/single";
 import { resolveCover, coverCaption } from "@/lib/loop/cover";
-import { earlyRule } from "@/lib/loop/album";
+import { albumReleased, earlyRule } from "@/lib/loop/album";
 import { codesHeldBy } from "@/lib/loop/event-codes";
 import { clockTime, shortDate } from "@/lib/loop/eventFacts";
 import { cookies } from "next/headers";
@@ -37,6 +37,7 @@ export async function GatheringHome({ event }: { event: LoopEvent }) {
     cover,
     shelf,
     early,
+    released,
   ] = await Promise.all([
     getPublicCapacity(),
     // Redeemed a pass, or the doors are open: may post to the Wall and see it.
@@ -59,6 +60,7 @@ export async function GatheringHome({ event }: { event: LoopEvent }) {
     }).catch(() => null),
     // How many tracks a pass hears before release: the pass sheet's one promise.
     earlyRule(),
+    albumReleased(),
   ]);
   // The ticket(s) on this phone: a holder's poster is their own page.
   const held = roomAccess ? await codesHeldBy(event.id, voterId).catch(() => []) : [];
@@ -93,6 +95,7 @@ export async function GatheringHome({ event }: { event: LoopEvent }) {
       roomAccess={roomAccess}
       earlyCount={early.enabled ? early.extra + 1 : 0}
       held={held.map((h) => ({ code: h.code, serial: h.serial }))}
+      released={released}
     />
   );
 }

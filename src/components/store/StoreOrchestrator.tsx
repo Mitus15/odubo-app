@@ -63,7 +63,11 @@ export default function StoreOrchestrator() {
 
   return (
     <CartOverlayContext.Provider value={cartOverlayValue}>
-      <div className="relative h-full">
+      {/* Full-height only while the store is showing something. Closed, this
+          wrapper was an empty viewport-tall block under <body>, which doubled
+          the document height on every page and let /loop/album scroll off the
+          record into a blank odubo gradient. */}
+      <div className={view === 'closed' ? 'contents' : 'relative h-full'}>
         {/* Main store views */}
         <AnimatePresence mode="wait">
           {view === 'browse' && <ProductBrowse key="browse" />}

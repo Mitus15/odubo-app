@@ -35,6 +35,7 @@ type Props = {
 type Act = "open" | "free" | "draw" | "yours";
 
 const RULE = "border-t border-[color-mix(in_srgb,var(--foreground)_15%,transparent)]";
+const WORDS = ["none", "one", "two", "three", "four", "five", "six"];
 
 export default function TheDraw({
   albumTitle,
@@ -191,8 +192,8 @@ export default function TheDraw({
                 ))}
               </ul>
               <p className="mt-5 text-sm leading-relaxed opacity-60">
-                {artist}. Somebody else in the room was dealt a different two. Between you, most of the record
-                is already out.
+                {artist}. Somebody else was dealt a different {WORDS[dealtTitles.length] ?? dealtTitles.length}.
+                Between you, most of the record is already out.
               </p>
               <button
                 type="button"
@@ -206,14 +207,17 @@ export default function TheDraw({
         </AnimatePresence>
       </div>
 
-      {/* Always escapable. Someone here for the music, not the ceremony. */}
-      <button
-        type="button"
-        onClick={onDone}
-        className="mx-auto mb-8 min-h-[44px] text-[11px] font-bold uppercase tracking-[0.3em] opacity-40"
-      >
-        {act === "yours" ? "Skip" : "Skip the draw"}
-      </button>
+      {/* Always escapable. Someone here for the music, not the ceremony. On
+          the last act Play is the way out, so a second exit under it is noise. */}
+      {act !== "yours" && (
+        <button
+          type="button"
+          onClick={onDone}
+          className="mx-auto mb-8 min-h-[44px] text-[11px] font-bold uppercase tracking-[0.3em] opacity-40"
+        >
+          Skip the draw
+        </button>
+      )}
     </main>
   );
 }
