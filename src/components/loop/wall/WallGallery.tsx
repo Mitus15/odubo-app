@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import MediaGrid from "@/components/loop/media/MediaGrid";
 import MediaViewer, {
   type ViewerAction,
@@ -39,6 +40,7 @@ export function WallGallery({
    *  Wall itself is attendee-gated and would only ever 403. */
   deviceOnly?: boolean;
 }) {
+  const router = useRouter();
   const [tab, setTab] = useState<Tab>(deviceOnly ? "yours" : "everyone");
   const [wall, setWall] = useState<WallPhotoDto[]>([]);
   const [mine, setMine] = useState<MediaItem[]>([]);
@@ -233,10 +235,19 @@ export function WallGallery({
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({ uid: item.id }),
                 });
-                if (!res.ok) return;
+                if (!res.ok) {
+                  const body = (await res.json().catch(() => ({}))) as { error?: string };
+                  flash(body.error ?? "Couldn't set that as your cover.");
+                  return;
+                }
                 setCoverUid(item.id);
+                // The cover shows above the Wall and on the record: the server
+                // resolved it, so it changes now, not on the next reload.
+                setViewer(null);
+                flash("That's your cover now");
+                router.refresh();
               } catch {
-                /* the shot is still on the Wall; only the preference failed */
+                flash("Couldn't set that as your cover.");
               }
             },
           } satisfies ViewerAction,

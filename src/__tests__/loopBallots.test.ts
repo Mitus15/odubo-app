@@ -4,7 +4,8 @@
  * scoping and identity logic that keeps ballot votes and anthem votes from
  * ever colliding.
  */
-import { ballotScope, wallCode, BALLOT_VOTE_LIMIT } from "@/lib/loop/ballots";
+import { ballotScope, BALLOT_VOTE_LIMIT } from "@/lib/loop/ballots";
+import { loopGalleryCode } from "@/lib/loop/wall/server";
 
 describe("ballotScope", () => {
   it("scopes each ballot under a distinct synthetic event id", () => {
@@ -25,12 +26,13 @@ describe("ballotScope", () => {
   });
 });
 
-describe("wallCode", () => {
+describe("loopGalleryCode", () => {
   it("derives the volume's gallery code from the event id", () => {
     // The real Vol 1 gallery is code LOOPVOL1 — this is what wires the cover
-    // ballot to the actual Wall.
-    expect(wallCode("vol-1")).toBe("LOOPVOL1");
-    expect(wallCode("vol-2")).toBe("LOOPVOL2");
+    // ballot to the actual Wall. One function for the Wall, the ballot, the
+    // journal and the cover; there were two.
+    expect(loopGalleryCode("vol-1")).toBe("LOOPVOL1");
+    expect(loopGalleryCode("vol-2")).toBe("LOOPVOL2");
   });
 });
 

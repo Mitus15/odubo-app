@@ -439,29 +439,35 @@ export function CameraSheet({
           <div className="flex flex-col gap-2">
             {canPost && (
               <>
+                {/* The credit needs a person: the $50 for the cover and the $5
+                    for a shot in the magazine go to a name. The phone
+                    remembers it, so it is asked once. */}
                 {posting === "idle" && (
                   <input
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     onBlur={() => rememberWallName(name)}
-                    placeholder="Your first name, goes on the credit"
+                    placeholder="Your name, so the credit is yours"
                     maxLength={60}
                     className="rounded-full border border-bone/25 bg-ink/60 px-5 py-3 text-sm text-bone outline-none backdrop-blur placeholder:text-bone/40 focus:border-sand"
                   />
                 )}
                 <button
                   type="button"
-                  onClick={post}
-                  disabled={posting !== "idle"}
+                  onClick={posting === "posted" ? onClose : post}
+                  disabled={posting === "posting" || (posting === "idle" && name.trim().length === 0)}
                   className="rounded-full bg-sand py-4 text-base font-bold text-ink transition-transform active:scale-95 disabled:opacity-70"
                 >
                   {posting === "posted"
-                    ? "On the Wall ✦ In the running for the cover"
+                    ? "See it on the Wall"
                     : posting === "posting"
                       ? "Posting…"
                       : "Post to the Wall"}
                 </button>
+                {posting === "posted" && (
+                  <p className="text-center text-[11px] font-bold uppercase tracking-widest text-sand">On the Wall ✦</p>
+                )}
               </>
             )}
             <div className="grid grid-cols-2 gap-2">

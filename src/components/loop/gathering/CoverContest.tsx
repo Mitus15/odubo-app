@@ -17,8 +17,8 @@ const CameraSheet = dynamic(() => import("@/components/loop/pose/CameraSheet"), 
  * sees, offers the camera, and states the two facts about the contest in two
  * lines. It used to explain the contest in three numbered steps and a prize
  * box before anyone had shot anything; the camera's own result screen already
- * says "Your album cover", and posting already says you are in the running.
- * A guest learns the contest by entering it.
+ * says "Your album cover", and a posted shot lands on the Wall in front of
+ * them. A guest learns the contest by entering it.
  *
  * Shooting has never needed a pass; only posting to the Wall does. `canPost`
  * is whether THIS device holds a pass.
@@ -34,6 +34,9 @@ export function CoverContest({
   coverCaption?: string;
 }) {
   const [cameraOpen, setCameraOpen] = useState(false);
+  // Re-mount the Wall after a post so the guest's shot is already there when
+  // the camera closes on "See it on the Wall".
+  const [wallBump, setWallBump] = useState(0);
 
   return (
     <section className="w-full">
@@ -54,7 +57,7 @@ export function CoverContest({
       </button>
 
       <div className="mt-6 border-t border-ink/15">
-        <p className="border-b border-ink/15 py-3 text-sm">The room picks the official cover on the night.</p>
+        <p className="border-b border-ink/15 py-3 text-sm">Everyone there votes the official cover on the night.</p>
         <p className="border-b border-ink/15 py-3 text-sm">$50 to whoever shot it. $5 for any shot in the magazine.</p>
       </div>
 
@@ -63,7 +66,7 @@ export function CoverContest({
         // and any of them can be your cover. One place, not two.
         <div className="mt-8">
           <p className="loop-muted mb-3 text-[11px] font-bold uppercase tracking-[0.25em]">On the Wall</p>
-          <WallGallery canPost />
+          <WallGallery key={wallBump} canPost />
         </div>
       ) : (
         <p className="loop-muted mt-4 text-center text-[11px] leading-relaxed">
@@ -71,7 +74,13 @@ export function CoverContest({
         </p>
       )}
 
-      {cameraOpen && <CameraSheet canPost={canPost} onClose={() => setCameraOpen(false)} />}
+      {cameraOpen && (
+        <CameraSheet
+          canPost={canPost}
+          onClose={() => setCameraOpen(false)}
+          onPosted={() => setWallBump((k) => k + 1)}
+        />
+      )}
     </section>
   );
 }

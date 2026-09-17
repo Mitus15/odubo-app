@@ -3,6 +3,7 @@ import { isHolder } from "@/lib/loop/event-codes";
 import { getSetting, setSetting } from "@/lib/loop/loopSetting";
 import type { EventPhase } from "@/lib/loop/hub";
 import { CREDIT_EXPR, CREDIT_JOIN } from "@/lib/loop/identity";
+import { loopGalleryCode } from "@/lib/loop/wall/server";
 
 /**
  * The two member ballots — the tracklist vote and the album-cover vote — on
@@ -152,9 +153,8 @@ async function coverOptions(
          ${CREDIT_JOIN}
         WHERE g.code = ?1 AND p.featured = 1 AND p.moderated = 1
         ORDER BY p.id DESC`,
-      // The Wall gallery's join code is the event id uppercased + "VOL" glue —
-      // in practice one gallery per volume, looked up by its code.
-      [wallCode(eventId)],
+      // One gallery per volume, looked up by the code the Wall provisions it under.
+      [loopGalleryCode(eventId)],
     ),
     voteTallies(scope, voterId),
   ]);
@@ -171,11 +171,6 @@ async function coverOptions(
       };
     })
     .sort((a, b) => b.votes - a.votes);
-}
-
-/** `vol-1` → `LOOPVOL1`, the gallery code provisioned for the volume. */
-export function wallCode(eventId: string): string {
-  return `LOOP${eventId.replace(/[^a-z0-9]/gi, "").toUpperCase()}`;
 }
 
 export type BallotState = {
@@ -252,7 +247,7 @@ async function optionExists(
     `SELECT COUNT(*) AS n
        FROM gallery_photos p JOIN galleries g ON g.id = p.gallery_id
       WHERE g.code = ?1 AND p.uid = ?2 AND p.featured = 1 AND p.moderated = 1`,
-    [wallCode(eventId), m[1]],
+    [loopGalleryCode(eventId), m[1]],
   );
   return (row?.n ?? 0) > 0;
 }
@@ -413,7 +408,7 @@ export async function getCoverWinner(eventId: string): Promise<CoverWinner | nul
          LEFT JOIN loop_media_credits c ON c.photo_uid = p.uid
          LEFT JOIN loop_attendees a ON a.id = c.attendee_id
         WHERE g.code = ?1 AND p.uid = ?2`,
-      [wallCode(eventId), uid],
+      [loopGalleryCode(eventId), uid],
     ),
     queryOne<{ n: number }>(
       `SELECT COUNT(*) AS n FROM candidate_upvotes WHERE event_id = ?1 AND candidate_id = ?2`,
