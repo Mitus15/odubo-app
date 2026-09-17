@@ -196,7 +196,7 @@ export function PassSettings() {
       <ol className="mt-3 list-decimal space-y-1 rounded-2xl border border-ink/15 bg-ink/5 px-5 py-4 pl-9 text-sm opacity-80">
         <li>
           In Shopify: create the pass product — SKU{" "}
-          <b className="font-mono">LOOP-PASS-VOL1</b>, inventory 75, your price.
+          <b className="font-mono">LOOP-PASS-VOL1</b>, inventory tracked at the capacity (250), your price.
         </li>
         <li>
           Shopify → Settings → Notifications → Webhooks: topic{" "}

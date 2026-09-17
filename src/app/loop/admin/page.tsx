@@ -1,6 +1,7 @@
 import { getCurrentEvent, getCurrentPhase, type EventPhase } from "@/lib/loop/hub";
 import { getRunOfShow } from "@/lib/loop/content-store";
 import { guestStats } from "@/lib/loop/guests";
+import { loopNumbers } from "@/lib/loop/numbers";
 import { getJournalIssue, getJournalMoments } from "@/lib/loop/journal-store";
 import { mockOutbox } from "@/lib/loop/email";
 import PhaseSwitcher from "./PhaseSwitcher";
@@ -14,6 +15,7 @@ import PassSettings from "./PassSettings";
 import BallotControls from "./BallotControls";
 import WallModeration from "./WallModeration";
 import AlbumRelease from "./AlbumRelease";
+import SimulatePurchase from "./SimulatePurchase";
 
 /**
  * /admin — control surface for the (non-technical) marketing team. Gated by the
@@ -29,11 +31,12 @@ export default async function AdminPage() {
   const emailMode = process.env.EMAIL_MODE === "live" ? "live" : "mock";
 
   // Every read the dashboard needs, issued together rather than in series.
-  const [runOfShow, journalIssue, journalMoments, guests] = await Promise.all([
+  const [runOfShow, journalIssue, journalMoments, guests, numbers] = await Promise.all([
     getRunOfShow(event.id),
     getJournalIssue(event.id),
     getJournalMoments(event.id),
     guestStats(event.id),
+    loopNumbers(event.id),
   ]);
 
   return (
@@ -50,12 +53,34 @@ export default async function AdminPage() {
         href="/loop/admin/studio"
         className="mt-4 block rounded-2xl border border-ink bg-ink px-5 py-4 text-sand"
       >
-        <span className="block font-bold">Promoter Studio →</span>
-        <span className="block text-sm opacity-80">
-          The one-page workspace — posters, tickets, pricing, numbers, the Playbook,
-          and the thread.
-        </span>
+        <span className="block font-bold">Studio →</span>
+        <span className="block text-sm opacity-80">Posters, tickets and pricing on one page.</span>
       </a>
+
+      {/* The funnel. Without it nothing here says whether the campaign works. */}
+      <section className="mt-10">
+        <h2 className="text-sm font-bold uppercase tracking-widest opacity-70">Numbers</h2>
+        <p className="mt-1 text-sm opacity-70">
+          Real sales only; simulated passes never count. Refresh the page for the latest.
+        </p>
+        <dl className="mt-4 grid grid-cols-3 gap-x-4 gap-y-5 border-y border-ink/10 py-5 text-center">
+          {(
+            [
+              ["Passes sold", numbers.passesSold],
+              ["Links opened", numbers.linksOpened],
+              ["Records claimed", numbers.recordsClaimed],
+              ["Gifts sent", numbers.giftsMinted],
+              ["Gifts opened", numbers.giftsOpened],
+              ["Shots on the Wall", numbers.wallShots],
+            ] as const
+          ).map(([k, v]) => (
+            <div key={k}>
+              <dd className="text-3xl font-extrabold tabular-nums">{v}</dd>
+              <dt className="mt-1 text-[11px] font-semibold uppercase tracking-widest opacity-60">{k}</dt>
+            </div>
+          ))}
+        </dl>
+      </section>
 
       <section className="mt-10">
         <h2 className="text-sm font-bold uppercase tracking-widest opacity-70">
@@ -151,7 +176,15 @@ export default async function AdminPage() {
           href="/api/loop/admin/guests?format=csv"
           className="mt-4 block rounded-2xl border border-ink bg-ink px-5 py-4 text-center font-bold text-sand"
         >
-          Export the list (CSV)
+          Export the guest list (CSV)
+        </a>
+        {/* The list a reminder goes to: everyone who ticked the box or joined
+            the waitlist, buyer or not. Paste it into a Resend Broadcast. */}
+        <a
+          href="/api/loop/admin/guests?format=csv&list=consent"
+          className="mt-2 block rounded-2xl border border-ink/25 px-5 py-4 text-center font-bold"
+        >
+          Export the marketing list (CSV) · {guests.list}
         </a>
         {/* The email is the only part of the product you cannot check by
             visiting a page, and it is the part a buyer reads first. */}
@@ -162,9 +195,8 @@ export default async function AdminPage() {
           Read the pass email as a buyer gets it ↗
         </a>
         <p className="mt-2 text-xs opacity-60">
-          One row per pass: code, email, order, bought, opened the app, admitted,
-          marketing consent, album claimed. Only write marketing to the rows with
-          consent.
+          The guest list is one row per pass: code, email, order, bought, opened the app, admitted, marketing
+          consent, album claimed. The marketing list is the only one to write to.
         </p>
       </section>
 
@@ -173,8 +205,8 @@ export default async function AdminPage() {
           Event codes
         </h2>
         <p className="mt-1 text-sm opacity-70">
-          Mint pass codes for the door. Each code unlocks the Portal (and the
-          Wall) once, for one guest.
+          Sold passes land here from the webhook. Mint comp codes for the door
+          when you need them; each opens the night once, for one guest.
         </p>
         <EventCodes />
       </section>
@@ -216,6 +248,12 @@ export default async function AdminPage() {
           owed it, and each address is told once by email.
         </p>
         <AlbumRelease />
+        <a
+          href="/loop/admin/preview-draw"
+          className="mt-2 block text-center text-[11px] font-bold uppercase tracking-[0.2em] underline underline-offset-4 opacity-60"
+        >
+          Watch the draw a new buyer sees ↗
+        </a>
       </section>
 
       <section className="mt-12">
@@ -254,8 +292,7 @@ export default async function AdminPage() {
         </p>
         {outbox.length === 0 ? (
           <p className="mt-4 rounded-2xl border border-ink/15 bg-ink/5 px-5 py-4 text-sm opacity-70">
-            No emails yet. Use “Simulate a ticket purchase” (or a real checkout) to
-            issue a code — it’ll appear here.
+            No emails captured here yet. Simulate a purchase below, or make a real one.
           </p>
         ) : (
           <ul className="mt-4 grid gap-2">
@@ -283,14 +320,7 @@ export default async function AdminPage() {
               ))}
           </ul>
         )}
-      </section>
-
-      <section className="mt-12 text-sm opacity-60">
-        <h2 className="text-sm font-bold uppercase tracking-widest">Coming here</h2>
-        <ul className="mt-2 list-disc pl-5">
-          <li>Portal photo submissions → Journal moderation queue</li>
-          <li>Waitlist & reminders</li>
-        </ul>
+        <SimulatePurchase />
       </section>
     </main>
   );

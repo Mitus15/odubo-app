@@ -3,7 +3,7 @@
  *
  * The guest list export. Pure parts only.
  */
-import { csvCell, guestsCsv } from "@/lib/loop/guests";
+import { consentCsv, csvCell, guestsCsv } from "@/lib/loop/guests";
 
 describe("csvCell", () => {
   it("passes plain values through and blanks nulls", () => {
@@ -38,5 +38,20 @@ describe("guestsCsv", () => {
     expect(lines[0]).toBe("code,email,order,bought,opened_app,admitted,marketing_consent,source,album_claimed");
     expect(lines[1]).toBe("LOOP-K7X2,a@b.co,shopify:1#1,2026-09-15T21:17:24.000Z,no,,2026-09-15T21:16:00.000Z,pass-sheet,");
     expect(lines[2]).toBe("");
+  });
+});
+
+describe("consentCsv", () => {
+  it("is one address per row with when and where it was given", () => {
+    const csv = consentCsv([
+      { email: "a@b.co", consentedAt: "2026-09-15T21:16:00.000Z", source: "pass-sheet" },
+      { email: "c@d.co", consentedAt: "2026-09-16T01:00:00.000Z", source: "waitlist" },
+    ]);
+    expect(csv.split("\r\n")).toEqual([
+      "email,consented_at,source",
+      "a@b.co,2026-09-15T21:16:00.000Z,pass-sheet",
+      "c@d.co,2026-09-16T01:00:00.000Z,waitlist",
+      "",
+    ]);
   });
 });

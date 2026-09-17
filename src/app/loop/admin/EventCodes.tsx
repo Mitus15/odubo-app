@@ -1,21 +1,23 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { publicPassNumber } from "@/lib/loop/passLink";
 
-type CodeRow = { code: string; redeemed: boolean; email: string | null; orderId: string | null };
+type CodeRow = { code: string; serial: number | null; redeemed: boolean; email: string | null; orderId: string | null };
 type Stats = { total: number; redeemed: number };
 type Intent = { token: string; email: string; createdAt: string; orderId: string | null };
 
 /**
- * Event codes — generate & issue. Bulk-mint codes for the door (a 75-person
- * night needs 75 in hand), watch redemptions tick up, copy the unused batch
- * out to wherever tickets are delivered.
+ * Event codes — generate & issue. Bulk-mint comp codes for the door, watch
+ * redemptions tick up, copy the unused batch out to wherever tickets are
+ * delivered. Sold passes arrive here from the webhook with a ticket number
+ * (OS-######), which is what a guest reads out at the door.
  */
 export function EventCodes() {
   const [codes, setCodes] = useState<CodeRow[]>([]);
   const [stats, setStats] = useState<Stats>({ total: 0, redeemed: 0 });
   const [intents, setIntents] = useState<Intent[]>([]);
-  const [count, setCount] = useState("75");
+  const [count, setCount] = useState("25");
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showAll, setShowAll] = useState(false);
@@ -132,11 +134,13 @@ export function EventCodes() {
   // Matching on a fragment of the address OR the code: at the door somebody
   // says "it was something at gmail" and that has to be enough to find them.
   const needle = q.trim().toLowerCase();
+  const number = (c: CodeRow) => (c.serial ? publicPassNumber(c.serial) : null);
   const matched = needle
     ? codes.filter(
         (c) =>
           (c.email ?? "").toLowerCase().includes(needle) ||
           c.code.toLowerCase().includes(needle) ||
+          (number(c) ?? "").toLowerCase().includes(needle) ||
           (c.orderId ?? "").toLowerCase().includes(needle),
       )
     : codes;
@@ -253,7 +257,7 @@ export function EventCodes() {
       <input
         value={q}
         onChange={(e) => setQ(e.target.value)}
-        placeholder="Find by email, code or order"
+        placeholder="Find by email, code, ticket number or order"
         className="mt-3 w-full rounded-full border border-ink/20 bg-transparent px-5 py-3 text-sm outline-none placeholder:opacity-40 focus:border-ink"
       />
       {needle && (
@@ -295,6 +299,9 @@ export function EventCodes() {
                 title={c.email ?? undefined}
               >
                 {c.code}
+                {number(c) && (
+                  <span className="loop-muted mt-0.5 block text-[9px] font-bold tracking-widest">{number(c)}</span>
+                )}
                 {needle && c.email && (
                   <span className="loop-muted mt-0.5 block truncate text-[9px] font-normal normal-case tracking-normal">
                     {c.email}

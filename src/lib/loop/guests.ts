@@ -97,6 +97,17 @@ export async function recordConsent(eventId: string, email: string, source: stri
   );
 }
 
+export type ConsentRow = { email: string; consentedAt: string; source: string | null };
+
+/** Everyone who may be written to, buyer or not: the pass sheet's box and the waitlist. */
+export async function listConsent(): Promise<ConsentRow[]> {
+  const rows = await queryDatabase<{ email: string; consented_at: string; source: string | null }>(
+    `SELECT email, consented_at, source FROM loop_marketing_consent
+      WHERE withdrawn_at IS NULL ORDER BY consented_at DESC`,
+  );
+  return rows.map((r) => ({ email: r.email, consentedAt: r.consented_at, source: r.source }));
+}
+
 export async function withdrawConsent(email: string): Promise<void> {
   await executeQuery(
     `UPDATE loop_marketing_consent SET withdrawn_at = ?2 WHERE email = ?1 AND withdrawn_at IS NULL`,
@@ -120,5 +131,12 @@ export function guestsCsv(rows: GuestRow[]): string {
       .map(csvCell)
       .join(","),
   );
+  return [head.join(","), ...lines].join("\r\n") + "\r\n";
+}
+
+/** The list a mail tool takes: one address per row, with when and where it was given. */
+export function consentCsv(rows: ConsentRow[]): string {
+  const head = ["email", "consented_at", "source"];
+  const lines = rows.map((r) => [r.email, r.consentedAt, r.source].map(csvCell).join(","));
   return [head.join(","), ...lines].join("\r\n") + "\r\n";
 }
