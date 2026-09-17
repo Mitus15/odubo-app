@@ -47,8 +47,14 @@ replaced in Shopify; alt text now carries the real night too. The engine was
 always right — `volumes.ts` derives the date from the event record — it was the
 uploaded PNG that was a stale render. **Nothing to do here.**
 
-Still yours, while you are in that product: **unpublish the pass from the Meta
-and Microsoft channels**.
+The Meta and Microsoft Copilot unpublish is **also done** (2026-09-17). It took
+two tries: `publishableUnpublish` returns a clean 200 with an empty
+`userErrors` and **does nothing** on those two channels, and
+`resourcePublicationsV2` does not report them at all, so both the write and the
+read agreed on a state that was not true. `publicationUpdate` with
+`publishablesToRemove` is the call that works, and `resourcePublications`
+(no V2) is the field that tells the truth. The pass is now on Online Store and
+the two Headless channels only, and still sells at $5.
 
 ### 5. Two edits in the programme (no deploy)
 In **/loop/admin → The Night**: put your Instagram handle and Amen's on the

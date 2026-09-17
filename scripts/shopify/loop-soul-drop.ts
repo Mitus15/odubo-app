@@ -147,6 +147,10 @@ const PRODUCT_FIELDS = `
   seo { title description }
   collections(first: 20) { nodes { id handle } }
   resourcePublicationsV2(first: 20) { nodes { isPublished publication { id name } } }
+  # The truthful one. V2 does NOT report app-owned channels like Meta and
+  # Microsoft Copilot: it returns the six the store controls and calls that the
+  # whole list. Used to VERIFY, never to decide what to mirror.
+  resourcePublications(first: 30) { nodes { isPublished publication { id name } } }
   options { name values }
   variants(first: 50) { nodes { id title price selectedOptions { name value } image { url } } }
   media(first: 20) { nodes { id alt mediaContentType ... on MediaImage { image { url } } } }
@@ -160,6 +164,7 @@ type Product = {
   seo: { title: string | null; description: string | null };
   collections: { nodes: { id: string; handle: string }[] };
   resourcePublicationsV2: { nodes: { isPublished: boolean; publication: { id: string; name: string } }[] };
+  resourcePublications: { nodes: { isPublished: boolean; publication: { id: string; name: string } }[] };
   options: { name: string; values: string[] }[];
   variants: { nodes: { id: string; title: string; price: string; selectedOptions: { name: string; value: string }[]; image: { url: string } | null }[] };
   media: { nodes: { id: string; alt: string | null; mediaContentType: string; image?: { url: string } | null }[] };
@@ -345,6 +350,26 @@ async function retire(collectionId: string) {
       }
     } else {
       console.log("  already retired");
+    }
+
+    // Verify against the field that reports app-owned channels. `publishableUnpublish`
+    // returns a clean 200 with no userErrors for Meta and Microsoft Copilot and
+    // does nothing at all — measured 2026-09-17 — so a retire that trusted its
+    // own log would leave a "removed" product live on two shopping feeds.
+    // Archiving does clear them; this is here to notice the day it stops.
+    if (APPLY) {
+      const after = await productByHandle(handle);
+      const stillOn = (after?.resourcePublications.nodes ?? [])
+        .filter((n) => n.isPublished)
+        .map((n) => n.publication.name);
+      if (stillOn.length) {
+        throw new Error(
+          `${handle}: archived but STILL PUBLISHED to ${stillOn.join(" · ")}. ` +
+            `Remove it by hand in the Shopify admin, or with publicationUpdate(publishablesToRemove:) ` +
+            `— publishableUnpublish silently no-ops on app-owned channels.`,
+        );
+      }
+      console.log("  verified: off every channel, app-owned ones included");
     }
   }
 }

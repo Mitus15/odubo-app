@@ -108,3 +108,44 @@ upload.)
 `docs/loop/owner-checklist.md` item 4 asked the owner to hand-edit that alt
 text; it is now marked done, minus the one part still theirs — unpublishing the
 pass from the Meta and Microsoft channels.
+
+## The pass came off Meta and Microsoft — and the API lied twice doing it
+
+Item 4's leftover. It should have been one mutation. It took four, because both
+the read and the write were wrong in the same direction:
+
+**The read.** `resourcePublicationsV2` does not report app-owned channels.
+Asked about the pass it answered *Online Store · Headless · Headless 02* — three
+channels, confidently. `resourcePublications` (no V2) on the same product, the
+same second, answered *Microsoft Copilot · Online Store · Headless · Headless 02
+· Meta*. The first version of this fix read V2, printed "Already off both.
+Nothing to do", and would have closed the task having changed nothing.
+
+**The write.** `publishableUnpublish` on those two publications returns HTTP
+200, `userErrors: []`, and **no change** — its own response payload comes back
+still saying `isPublished: true`. Not a race with the channel's auto-sync; a
+silent no-op. (`REST DELETE /product_listings` at least fails honestly:
+`403 requires merchant approval for write_product_listings`.)
+
+What works: **`publicationUpdate(id: <publication>, input: { publishablesToRemove: [<product>] })`**.
+
+Verified with `resourcePublications(onlyPublished: false)` so an unpublished row
+could not hide by absence:
+
+```
+Loop Soul Pass — every publication row, published or not:
+  ON    Online Store
+  ON    Odubo Studio Headless
+  ON    Odubo Studio Headless 02
+```
+
+Still `availableForSale: true` at $5 through the Storefront API.
+
+**The filer now checks instead of assuming.** `retire()` reads the non-V2 field
+back after archiving and throws, naming the channels, if anything is still
+published. Archiving *does* clear Meta and Microsoft today — both retired
+hoodies verify clean — but the script no longer takes its own log's word for it.
+
+⚠️ The merch is still on Meta and Microsoft, deliberately. Only the pass was
+ever meant to be off the shopping feeds: it is admission to one night in one
+room, not a product for a stranger's ad feed.
