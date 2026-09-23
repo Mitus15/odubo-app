@@ -35,8 +35,9 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     // The brand face is read at runtime by the OG card and by the ticket
     // renderer (lib/loop/ticketImage.tsx). Without this Vercel omits it and
-    // the ticket falls back to a bare QR.
-    '/**': ['./data/bible-psalms-proverbs.json', './public/loop/fonts/Jost-700.ttf'],
+    // the ticket falls back to a bare QR. The single's share card
+    // (/loop/1984/opengraph-image) also sets its small lines in the 500.
+    '/**': ['./data/bible-psalms-proverbs.json', './public/loop/fonts/Jost-700.ttf', './public/loop/fonts/Jost-500.ttf'],
   },
   images: {
     // Enable Next.js Image Optimization (remove unoptimized: true)

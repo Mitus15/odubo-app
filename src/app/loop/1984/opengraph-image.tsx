@@ -44,9 +44,9 @@ async function coverDataUri(coverUrl: string | null): Promise<string | null> {
 }
 
 export default async function OgImage() {
-  // Literal paths on purpose: Vercel's file tracer only bundles a file it can
-  // see named in the source. Built from a variable, the fonts were left out of
-  // the function and the card 500'd in production (ENOENT) while working locally.
+  // Both weights must be listed in next.config's outputFileTracingIncludes:
+  // Vercel does not bundle a file read at runtime unless told to, and this
+  // card 500'd in production (ENOENT on the 500) while rendering locally.
   const [single, event, base, j500, j700] = await Promise.all([
     getFeaturedSingle(),
     getCurrentEvent(),
