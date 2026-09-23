@@ -156,6 +156,12 @@ const OPTS = {
    *  eats real objects (a ceiling speaker, a chair), which are exactly what
    *  should survive as graphic shapes. */
   bgMinRegion: Number(args.bgMinRegion ?? 0.0015),
+  /** The darkest band the ROOM may be drawn in (0 = INK … 4 = SAND_BRIGHT).
+   *  Default 0 keeps the room's darks as they are. Raise it to 2 when a dark
+   *  object sits behind the dancer (a TV, a doorway): drawn in ink, it swallows
+   *  a dark shirt whole, head and all. At 2 it becomes a SAND_DEEP shape and
+   *  only the dancer is ink. Found on the 2026-06-20 plate (IMG_0129). */
+  bgFloor: Number(args.bgFloor ?? 0),
   /** Cuts inside the figure. Higher = more solid ink, less internal detail. */
   figureDetail: Number(args.figureDetail ?? 0.55),
   /** Thickness of the solid-ink rim held around the figure, as a fraction of
@@ -830,7 +836,7 @@ function makeSceneRenderer(plate, ww, wh, ow, oh) {
   for (let p = 0; p < wn; p++) bgField[p] = plateLabels[p] / (BANDS.length - 1);
   const bgUp = makeUpsampler(ww, wh, ow, oh)(bgField);
   const bgLabels = new Uint8Array(on);
-  for (let p = 0; p < on; p++) bgLabels[p] = Math.round(bgUp[p] * (BANDS.length - 1));
+  for (let p = 0; p < on; p++) bgLabels[p] = Math.max(OPTS.bgFloor, Math.round(bgUp[p] * (BANDS.length - 1)));
 
   // Every one of these — the resampling grid and the despeckle scratch space
   // — depends only on ww/wh/ow/oh, which are fixed for the whole video. Built
