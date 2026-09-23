@@ -44,13 +44,15 @@ async function coverDataUri(coverUrl: string | null): Promise<string | null> {
 }
 
 export default async function OgImage() {
-  const fonts = join(process.cwd(), "public/loop/fonts");
+  // Literal paths on purpose: Vercel's file tracer only bundles a file it can
+  // see named in the source. Built from a variable, the fonts were left out of
+  // the function and the card 500'd in production (ENOENT) while working locally.
   const [single, event, base, j500, j700] = await Promise.all([
     getFeaturedSingle(),
     getCurrentEvent(),
     getPublicBaseUrl(),
-    readFile(join(fonts, "Jost-500.ttf")),
-    readFile(join(fonts, "Jost-700.ttf")),
+    readFile(join(process.cwd(), "public/loop/fonts/Jost-500.ttf")),
+    readFile(join(process.cwd(), "public/loop/fonts/Jost-700.ttf")),
   ]);
   const cover = await coverDataUri(single?.coverUrl ?? null);
   const host = (base ?? "https://www.odubostudio.com").replace(/^https?:\/\/(www\.)?/, "");
