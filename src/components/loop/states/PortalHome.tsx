@@ -2,11 +2,8 @@ import type { LoopEvent } from "@/lib/loop/hub";
 import { currentVoterId } from "@/lib/loop/identity/voter";
 import { hasRoomAccess, roomHeads } from "@/lib/loop/doors";
 import { codesHeldBy } from "@/lib/loop/event-codes";
-import { getPassSettings } from "@/lib/loop/pass/settings";
-import { getPublicCapacity } from "@/lib/loop/pass";
 import { getRunOfShow } from "@/lib/loop/content-store";
-import { earlyRule } from "@/lib/loop/album";
-import { clockTime, shortDate } from "@/lib/loop/eventFacts";
+import { getPassOffer } from "@/lib/loop/pass/offer";
 import PortalGate from "@/components/loop/portal/PortalGate";
 import PortalPreview from "@/components/loop/portal/PortalPreview";
 import InRoom from "@/components/loop/portal/InRoom";
@@ -29,24 +26,11 @@ export async function PortalHome({ event }: { event: LoopEvent }) {
     // here. A bare code prompt tells them nothing about what they'd be buying,
     // so the night is shown in full underneath it — only participation is
     // gated, never the pitch.
-    const [pass, capacity, early] = await Promise.all([getPassSettings(), getPublicCapacity(), earlyRule()]);
+    const offer = await getPassOffer(event);
     return (
       <main className="flex flex-col items-center px-6 pb-24 pt-10 text-center">
         <p className="loop-muted text-xs uppercase tracking-[0.3em]">Live · {event.venue}</p>
-        <PortalGate
-          offer={{
-            capacity,
-            checkoutUrl: pass.checkoutUrl,
-            price: pass.price,
-            currency: pass.currency,
-            theme: event.theme,
-            venue: event.venue,
-            dateLabel: shortDate(event.date),
-            timeLabel: clockTime(event.date),
-            runOfShow,
-            earlyCount: early.enabled ? early.extra + 1 : 0,
-          }}
-        />
+        <PortalGate offer={offer} />
         <PortalPreview runOfShow={runOfShow} />
       </main>
     );

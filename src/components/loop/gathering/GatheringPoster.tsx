@@ -126,6 +126,8 @@ export function GatheringPoster({
       // Facebook event links here bare, with no campaign tag, and used to
       // open a four-screen song in front of the date.
       if (new URLSearchParams(window.location.search).has("from")) setSingleOpen(true);
+      // The single's page sends "shoot for the cover" here with #cover.
+      else if (window.location.hash === "#cover") setActive("cover");
     } catch {
       /* stay on the poster */
     }

@@ -39,3 +39,44 @@ describe("shareLine", () => {
     expect(shareLine(e, "FREE ENTRY")).toBe("Sat Oct 10 · Scott's Inn, Kamloops · 19+ · Free");
   });
 });
+
+describe("the single's page", () => {
+  const { isThisSingle, singleMeta } = jest.requireActual("@/lib/loop/singlePage") as typeof import("@/lib/loop/singlePage");
+  it("only calls 1984 by its name", () => {
+    expect(isThisSingle("1984")).toBe(true);
+    expect(isThisSingle(" 1984 ")).toBe(true);
+    expect(isThisSingle("News Peak")).toBe(false);
+    expect(isThisSingle(null)).toBe(false);
+  });
+  it("reads as the song when pasted", () => {
+    const m = singleMeta(
+      { title: "1984", artistName: "Mani Odubo", albumTitle: "Loop Soul" },
+      { dateLabel: "Sat Oct 10", venue: "Scott's Inn, Kamloops" },
+    );
+    expect(m.title).toBe("1984 · Mani Odubo");
+    expect(m.description).toBe("The lead single from Loop Soul, free to hear. The album plays live Sat Oct 10 at Scott's Inn, Kamloops.");
+  });
+});
+
+describe("press captions", () => {
+  const { captions, daysInWords, daysUntil } = jest.requireActual("@/lib/loop/press/copy") as typeof import("@/lib/loop/press/copy");
+  const facts = { doors: "6:30", album: "8", price: "$5", days: 18, site: "odubostudio.com/loop" };
+  it("counts down in words, in venue days", () => {
+    expect(daysUntil("2026-09-22", "2026-10-10")).toBe(18);
+    expect(daysInWords(18)).toBe("Eighteen");
+    expect(daysInWords(26)).toBe("Twenty six");
+    expect(daysInWords(30)).toBe("Thirty");
+  });
+  it("puts the date, the place, the price and 19+ in every caption, and no em dash", () => {
+    for (const c of captions(facts)) {
+      expect(c.text).toMatch(/October 10/);
+      expect(c.text).toMatch(/Scott's/);
+      expect(c.text).toContain("$5");
+      expect(c.text).toContain("19+");
+      expect(c.text).not.toContain("—");
+    }
+  });
+  it("says Tonight on the night", () => {
+    expect(captions({ ...facts, days: 0 }).find((c) => c.id === "countdown")!.text.startsWith("Tonight.")).toBe(true);
+  });
+});

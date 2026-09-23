@@ -1,0 +1,193 @@
+{
+  "builtAt": "2026-09-23T03:13:50.049Z",
+  "zip": {
+    "name": "Loop-Soul-Press-Kit.zip",
+    "href": "/api/media/audio/warehouse/press/loop-soul-v1/Loop-Soul-Press-Kit.zip",
+    "bytes": 8880889
+  },
+  "artwork": [
+    {
+      "name": "loop-soul-v1-crowd-8x11in-300dpi-bleed.png",
+      "href": "/loop/press/artwork/loop-soul-v1-crowd-8x11in-300dpi-bleed.png?v=bc0a226700",
+      "bytes": 745431,
+      "w": 2626,
+      "h": 3526
+    },
+    {
+      "name": "loop-soul-v1-crowd-8x11in-300dpi.png",
+      "href": "/loop/press/artwork/loop-soul-v1-crowd-8x11in-300dpi.png?v=333920cd59",
+      "bytes": 710478,
+      "w": 2400,
+      "h": 3300
+    },
+    {
+      "name": "loop-soul-v1-crowd-feed.png",
+      "href": "/loop/press/artwork/loop-soul-v1-crowd-feed.png?v=e40a5933e1",
+      "bytes": 196866,
+      "w": 1080,
+      "h": 1350
+    },
+    {
+      "name": "loop-soul-v1-crowd-flyer-5.5x8.5in-300dpi-bleed.png",
+      "href": "/loop/press/artwork/loop-soul-v1-crowd-flyer-5.5x8.5in-300dpi-bleed.png?v=dd15ed1d7b",
+      "bytes": 463294,
+      "w": 1876,
+      "h": 2776
+    },
+    {
+      "name": "loop-soul-v1-crowd-flyer-5.5x8.5in-300dpi.png",
+      "href": "/loop/press/artwork/loop-soul-v1-crowd-flyer-5.5x8.5in-300dpi.png?v=2b7db11c7e",
+      "bytes": 431010,
+      "w": 1650,
+      "h": 2550
+    },
+    {
+      "name": "loop-soul-v1-crowd-story.png",
+      "href": "/loop/press/artwork/loop-soul-v1-crowd-story.png?v=aa90b2a342",
+      "bytes": 270365,
+      "w": 1080,
+      "h": 1920
+    },
+    {
+      "name": "loop-soul-v1-dance-8x11in-300dpi-bleed.png",
+      "href": "/loop/press/artwork/loop-soul-v1-dance-8x11in-300dpi-bleed.png?v=a8d1956ead",
+      "bytes": 882610,
+      "w": 2626,
+      "h": 3526
+    },
+    {
+      "name": "loop-soul-v1-dance-8x11in-300dpi.png",
+      "href": "/loop/press/artwork/loop-soul-v1-dance-8x11in-300dpi.png?v=1dd8cac87e",
+      "bytes": 849916,
+      "w": 2400,
+      "h": 3300
+    },
+    {
+      "name": "loop-soul-v1-dance-feed.png",
+      "href": "/loop/press/artwork/loop-soul-v1-dance-feed.png?v=98f519b78f",
+      "bytes": 180021,
+      "w": 1080,
+      "h": 1350
+    },
+    {
+      "name": "loop-soul-v1-dance-flyer-5.5x8.5in-300dpi-bleed.png",
+      "href": "/loop/press/artwork/loop-soul-v1-dance-flyer-5.5x8.5in-300dpi-bleed.png?v=870f60ecfd",
+      "bytes": 770824,
+      "w": 1876,
+      "h": 2776
+    },
+    {
+      "name": "loop-soul-v1-dance-flyer-5.5x8.5in-300dpi.png",
+      "href": "/loop/press/artwork/loop-soul-v1-dance-flyer-5.5x8.5in-300dpi.png?v=182b0666d5",
+      "bytes": 741722,
+      "w": 1650,
+      "h": 2550
+    },
+    {
+      "name": "loop-soul-v1-dance-story.png",
+      "href": "/loop/press/artwork/loop-soul-v1-dance-story.png?v=6c4d5d3532",
+      "bytes": 330635,
+      "w": 1080,
+      "h": 1920
+    },
+    {
+      "name": "loop-soul-v1-facebook-cover-1920x1005.png",
+      "href": "/loop/press/artwork/loop-soul-v1-facebook-cover-1920x1005.png?v=6b6a889cee",
+      "bytes": 222746,
+      "w": 1920,
+      "h": 1005
+    },
+    {
+      "name": "loop-soul-v1-pass-square.png",
+      "href": "/loop/press/artwork/loop-soul-v1-pass-square.png?v=29234494ae",
+      "bytes": 457885,
+      "w": 2000,
+      "h": 2000
+    },
+    {
+      "name": "loop-soul-v1-ticket-bleed.png",
+      "href": "/loop/press/artwork/loop-soul-v1-ticket-bleed.png?v=c3228cf5d8",
+      "bytes": 375495,
+      "w": 2776,
+      "h": 1226
+    },
+    {
+      "name": "loop-soul-v1-ticket.png",
+      "href": "/loop/press/artwork/loop-soul-v1-ticket.png?v=83cd22fbbc",
+      "bytes": 348765,
+      "w": 2550,
+      "h": 1000
+    }
+  ],
+  "cover": [
+    {
+      "name": "loop-soul-cover-art-mani-version.png",
+      "href": "/loop/press/cover/loop-soul-cover-art-mani-version.png?v=a5ec51c4b8",
+      "bytes": 1968891,
+      "w": 2048,
+      "h": 2048
+    }
+  ],
+  "logos": [
+    {
+      "name": "loop-soul.svg",
+      "href": "/loop/press/logos/loop-soul.svg?v=c37f496c8e",
+      "bytes": 5294,
+      "w": null,
+      "h": null
+    },
+    {
+      "name": "odubo-studio.svg",
+      "href": "/loop/press/logos/odubo-studio.svg?v=6b9f4a2164",
+      "bytes": 6150,
+      "w": null,
+      "h": null
+    },
+    {
+      "name": "scotts-inn-and-suites.png",
+      "href": "/loop/press/logos/scotts-inn-and-suites.png?v=5410dd7fe5",
+      "bytes": 52532,
+      "w": 1009,
+      "h": 468
+    }
+  ],
+  "photos": [],
+  "reels": [
+    {
+      "name": "loop-soul-v1-reel-30s-calm-silent.mp4",
+      "href": "/api/media/audio/warehouse/press/loop-soul-v1/reels/loop-soul-v1-reel-30s-calm-silent.mp4",
+      "bytes": 7617253,
+      "silent": true
+    },
+    {
+      "name": "loop-soul-v1-reel-30s-calm.mp4",
+      "href": "/api/media/audio/warehouse/press/loop-soul-v1/reels/loop-soul-v1-reel-30s-calm.mp4",
+      "bytes": 8388405,
+      "silent": false
+    },
+    {
+      "name": "loop-soul-v1-reel-30s-energetic-silent.mp4",
+      "href": "/api/media/audio/warehouse/press/loop-soul-v1/reels/loop-soul-v1-reel-30s-energetic-silent.mp4",
+      "bytes": 5748545,
+      "silent": true
+    },
+    {
+      "name": "loop-soul-v1-reel-30s-energetic.mp4",
+      "href": "/api/media/audio/warehouse/press/loop-soul-v1/reels/loop-soul-v1-reel-30s-energetic.mp4",
+      "bytes": 6516028,
+      "silent": false
+    },
+    {
+      "name": "loop-soul-v1-reel-30s-loop-silent.mp4",
+      "href": "/api/media/audio/warehouse/press/loop-soul-v1/reels/loop-soul-v1-reel-30s-loop-silent.mp4",
+      "bytes": 5881025,
+      "silent": true
+    },
+    {
+      "name": "loop-soul-v1-reel-30s-loop.mp4",
+      "href": "/api/media/audio/warehouse/press/loop-soul-v1/reels/loop-soul-v1-reel-30s-loop.mp4",
+      "bytes": 6652192,
+      "silent": false
+    }
+  ]
+}

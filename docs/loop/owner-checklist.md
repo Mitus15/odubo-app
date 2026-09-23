@@ -63,6 +63,21 @@ rewrite the Dancefloor row's detail, which has an em dash in it ("the Loop
 Soul Line — a line that becomes a circle"). Your voice has no em dashes; make
 it two sentences.
 
+## Promoting (added 2026-09-22)
+
+- **The one link for anyone helping:** odubostudio.com/loop/press. Artwork,
+  reels, captions, the single, a zip. Text it; see
+  `docs/loop/promoters/text-promoter.md` for three ready versions.
+- **The single on its own:** odubostudio.com/loop/1984. Send this first.
+- **Your friend's email** is a Gmail draft (To: empty). Put his name in, send.
+- **Photos of you:** drop 2 or 3 into `public/loop/press/photos` and run
+  `npm run loop:press -- --no-reels`, then commit and push (or ask Claude).
+- **Castanet:** no to the $500 article; maybe the $140 if it runs Oct 3 to 10
+  with a link. Open the PDF on her Sept 21 email. The reply is a Gmail draft in
+  that thread. See `docs/loop/promoters/castanet.md`.
+- **Two quotes for the press release** wait for your yes in
+  `docs/loop/press/draft-quotes.md`.
+
 ## Week two
 
 ### 6. The door, with two real phones

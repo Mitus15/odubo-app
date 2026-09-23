@@ -46,6 +46,7 @@
     "loop:posters": "tsx --env-file=.env.local scripts/loop/poster-kit.ts",
     "loop:merch": "tsx scripts/loop/merch-kit.ts",
     "loop:living-poster": "tsx --env-file=.env.local scripts/loop/living-poster.ts",
+    "loop:press": "tsx --env-file=.env.local scripts/loop/press-kit.ts",
     "shopify:loop-drop": "tsx --env-file=.env.local scripts/shopify/loop-soul-drop.ts",
     "shopify:loop-pass": "tsx --env-file=.env.local scripts/shopify/loop-soul-pass-listing.ts"
   },

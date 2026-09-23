@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { usePWA } from "@/components/PWAProvider";
 import SinglePlayer from "@/components/loop/gathering/SinglePlayer";
 import type { FeaturedSingle } from "@/lib/loop/single";
+import { SINGLE_PATH } from "@/lib/loop/singlePage";
 
 /**
  * THE SINGLE — what the flyer's QR promises.
@@ -159,8 +160,10 @@ export function TheSingle({
     if (!c) return;
 
     // Origin, never a hardcoded domain — the printed URL has moved once
-    // already and the share link must follow it without a deploy.
-    const url = `${window.location.origin}/loop?from=${c}`;
+    // already and the share link must follow it without a deploy. The song's
+    // own page, so the link unfurls as the song (/loop?from= still works for
+    // links already sent).
+    const url = `${window.location.origin}${SINGLE_PATH}?from=${c}`;
     const text = `Listen to "${single.title}" by ${single.artistName}`;
     if (navigator.share) {
       try {

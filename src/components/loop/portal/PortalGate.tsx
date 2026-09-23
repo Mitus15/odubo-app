@@ -6,26 +6,9 @@ import { useState } from "react";
 import LoopLoader from "@/components/loop/brand/LoopLoader";
 import GetPassModal from "@/components/loop/gathering/GetPassModal";
 import { priceLabel as formatPrice } from "@/lib/loop/priceLabel";
-import type { RunOfShowItem } from "@/lib/loop/content";
-import type { PublicCapacity } from "@/lib/loop/capacity";
+import type { PassOffer } from "@/lib/loop/pass/offer";
 
-/**
- * Everything the pass sheet needs to sell a pass, handed down from the server.
- * Present means "a pass can be bought from this gate"; absent means the night
- * is over and the gate only opens for people who were there.
- */
-export type PassOffer = {
-  capacity: PublicCapacity;
-  checkoutUrl: string | null;
-  price: string | null;
-  currency: string | null;
-  theme: string;
-  venue: string;
-  dateLabel: string;
-  timeLabel: string;
-  runOfShow: RunOfShowItem[];
-  earlyCount: number | null;
-};
+export type { PassOffer };
 
 /**
  * The pass gate. A ticket-holder types their pass and this phone becomes
