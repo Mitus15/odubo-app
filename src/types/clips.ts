@@ -21,6 +21,11 @@ export type ClipApiRow = {
   youtube_shorts_url?: string | null;
   tiktok_url?: string | null;
   instagram_reels_url?: string | null;
+  // Loop Soul film (migration 168): the song, the chapter, and the approved card
+  track_id?: string | null;
+  film_chapter_id?: string | null;
+  card_flip?: string | null;
+  card_verse_ref?: string | null;
   // Engagement fields (optional, only present when withEngagement=true)
   view_count?: number;
   completion_count?: number;
@@ -51,8 +56,19 @@ export type ClipItem = {
   youtubeShortsUrl?: string | null;
   tiktokUrl?: string | null;
   instagramReelsUrl?: string | null;
+  // Loop Soul film (migration 168). A film clip carries no product: its chapter
+  // page does the selling, and the card's flip is the words on the clip.
+  trackId?: string | null;
+  filmChapter?: string | null;        // loop_film_chapters.slug, opens /loop/<slug>
+  card?: ClipFilmCard | null;         // only an APPROVED card ever reaches a clip
   // Engagement data (optional)
   engagementScore?: number;
   viewCount?: number;
   completionCount?: number;
+};
+
+/** The scripture card a film clip was cut from: the owner's flip and the verse it flips. */
+export type ClipFilmCard = {
+  flip: string | null;
+  verseRef: string;
 };

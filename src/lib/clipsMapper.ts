@@ -1,4 +1,4 @@
-import type { ClipApiRow, ClipItem } from '@/types/clips';
+import type { ClipApiRow, ClipFilmCard, ClipItem } from '@/types/clips';
 
 function buildHlsUrl(row: ClipApiRow): string | null {
   if (row.hls_url) return row.hls_url;
@@ -23,6 +23,17 @@ function parseParentId(related?: string | null): number | null {
     return Number.isFinite(n) ? n : null;
   }
   return null;
+}
+
+/**
+ * The film card a clip was cut from. The query only joins APPROVED cards, and a
+ * card always has a verse reference, so no reference means no card. A blank
+ * flip is no flip: the clip then shows nothing over the video.
+ */
+function mapFilmCard(row: ClipApiRow): ClipFilmCard | null {
+  const verseRef = row.card_verse_ref?.trim();
+  if (!verseRef) return null;
+  return { flip: row.card_flip?.trim() || null, verseRef };
 }
 
 export function mapClipRow(row: ClipApiRow): ClipItem | null {
@@ -62,6 +73,10 @@ export function mapClipRow(row: ClipApiRow): ClipItem | null {
     youtubeShortsUrl: row.youtube_shorts_url ?? null,
     tiktokUrl: row.tiktok_url ?? null,
     instagramReelsUrl: row.instagram_reels_url ?? null,
+    // Loop Soul film: the song, the chapter the flip opens, and the card
+    trackId: row.track_id ?? null,
+    filmChapter: row.film_chapter_id?.trim() || null,
+    card: mapFilmCard(row),
     // Include engagement data if present
     engagementScore: row.engagement_score,
     viewCount: row.view_count,
