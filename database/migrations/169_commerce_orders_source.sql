@@ -1,0 +1,18 @@
+-- Which storefront sold an order.
+--
+-- One Shopify store, two businesses: odubo's store and the Loop Soul store.
+-- Every checkout stamps a `_source` cart attribute (createCheckout in
+-- src/lib/store/api.ts: 'odubo_store' by default, 'loop_soul_store' from the
+-- Loop bag, 'odubo_headless_store' from /api/shopify/checkout), and the order
+-- carries it into its custom attributes. The daily order sync
+-- (/api/cron/sync-shopify) already saved `_entry_*` and `_session` back onto
+-- commerce_orders but dropped `_source`, so the two businesses' revenue could
+-- not be told apart. This is where it lands.
+--
+-- Not Shopify's own `source_name` (web, pos, shopify_draft_order...), which
+-- says which Shopify channel took the order, not which of our storefronts.
+--
+-- The sync tolerates this column being absent: until this runs, it writes
+-- orders without it and logs the gap once per run. Orders synced before then
+-- keep NULL here until they are synced again (a full sync: ?full=true).
+ALTER TABLE commerce_orders ADD COLUMN source TEXT;

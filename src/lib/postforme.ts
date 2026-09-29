@@ -498,6 +498,19 @@ export function mapPlatform(platform: string): SocialPlatform {
 }
 
 /**
+ * Has PostForMe handed this post to the platforms?
+ *
+ * PostForMe's lifecycle is `scheduled` -> `processed`. It never reports
+ * `published` (and never returns platform URLs), so a check for `published`
+ * alone never fires. `processed` means the content was sent to the platforms,
+ * which is when the site should show it too. `published` stays accepted in
+ * case the API ever starts reporting it. Same reading as /api/arsenal/sync.
+ */
+export function isPostDelivered(status: string | null | undefined): boolean {
+  return status === 'processed' || status === 'published';
+}
+
+/**
  * Map Post for Me content type to our internal content types
  */
 export function mapContentType(

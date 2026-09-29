@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromRequest, isAdminUser } from '@/lib/auth';
-import { getPost } from '@/lib/postforme';
+import { getPost, isPostDelivered } from '@/lib/postforme';
 import { queryDatabase, executeQuery } from '@/lib/db';
 
 export const runtime = 'edge';
@@ -115,11 +115,13 @@ export async function GET(request: NextRequest) {
       ]
     );
 
-    // VISIBILITY: When PostForMe confirms status is 'published', make content visible
+    // VISIBILITY: When PostForMe confirms the post went out, make content visible.
+    // PostForMe goes scheduled -> processed and never reports 'published', so
+    // 'processed' counts as published here (isPostDelivered).
     let videoMadePublic = false;
     let clipsMadePublic = 0;
 
-    if (post.status === 'published') {
+    if (isPostDelivered(post.status)) {
       // Find the source video
       let sourceVideoId = content.video_id;
       
@@ -152,7 +154,7 @@ export async function GET(request: NextRequest) {
             [now, sourceVideoId]
           );
           videoMadePublic = true;
-          console.log(`[Social Status] Made video ${sourceVideoId} publicly visible (PostForMe status: published)`);
+          console.log(`[Social Status] Made video ${sourceVideoId} publicly visible (PostForMe status: ${post.status})`);
 
           // If this is a PARENT video (not a clip), also make all its clips visible
           if (video.type !== 'clip') {
@@ -268,8 +270,9 @@ export async function POST(request: NextRequest) {
             ]
           );
 
-          // VISIBILITY: When PostForMe confirms status is 'published', make content visible
-          if (post.status === 'published') {
+          // VISIBILITY: When PostForMe confirms the post went out, make content
+          // visible ('processed' counts as published, see isPostDelivered)
+          if (isPostDelivered(post.status)) {
             let sourceVideoId = content.video_id;
             
             if (!sourceVideoId && content.upload_uid) {

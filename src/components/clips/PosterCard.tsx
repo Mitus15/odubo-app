@@ -3,6 +3,7 @@
 import { memo } from 'react';
 import Image from 'next/image';
 import VinylMiniPlayer from '../player/VinylMiniPlayer';
+import ClipFlip from '@/components/clips/ClipFlip';
 import type { ClipItem } from '@/types/clips';
 
 interface PosterCardProps {
@@ -68,15 +69,27 @@ function PosterCard({ clip, active, videoReady = false }: PosterCardProps) {
         }}
       />
 
-      {/* Bottom-left: Title & info - only visible when this clip is active */}
+      {/* Bottom-left: the film flip (Loop Soul clips) above the vinyl, in one
+          column so the two can never overlap. The column sits 12px above the
+          feed's title panel (ClipsFeed's GlassPanel: 48px tall on this same
+          safe-area bottom), and the flip stops 88px short of the right edge,
+          clear of the logo button's 56px column. Visible, and tappable, only
+          while this clip is active. */}
       <div
-        className={`absolute left-4 z-20 pointer-events-auto transition-opacity duration-200 ${
-          active ? 'opacity-100' : 'opacity-0'
+        className={`absolute left-4 z-20 flex flex-col items-start gap-3 transition-opacity duration-200 ${
+          active ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         }`}
-        style={{ bottom: 'calc(max(env(safe-area-inset-bottom, 16px), 16px) + 24px)' }}
+        style={{ bottom: 'calc(max(env(safe-area-inset-bottom, 0px), 16px) + 60px)' }}
         onClick={(e) => e.stopPropagation()}
       >
-        <VinylMiniPlayer className="mb-3" />
+        {clip.card?.flip && (
+          <ClipFlip
+            card={clip.card}
+            chapter={clip.filmChapter}
+            style={{ maxWidth: 'min(calc(100vw - 104px), 28rem)' }}
+          />
+        )}
+        <VinylMiniPlayer />
       </div>
 
     </div>

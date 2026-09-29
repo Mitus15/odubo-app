@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { queryDatabase } from '@/lib/db';
+import { publicVideoWhere, CLIP_FILM_FIELDS, CLIP_FILM_JOIN } from '@/lib/publicVideos';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -25,8 +26,9 @@ export async function GET(req: NextRequest) {
     const useManualOrder = searchParams.get('order') === 'manual';
 
     // Base query fields (including mp4_url for native playback)
-    // Join with parent video to get parent title
-    const baseFields = `v.id, v.title, v.artist_name, v.description, v.url, v.uid, v.mp4_url, v.duration, v.duration_seconds, v.poster_url, v.thumbnail, v.created_at, v.shopify_product_handle, v.related_projects, v.feed_position, parent.title as parent_title`;
+    // Join with parent video to get parent title, and with the film card for
+    // Loop Soul clips (the flip and its verse; approved cards only)
+    const baseFields = `v.id, v.title, v.artist_name, v.description, v.url, v.uid, v.mp4_url, v.duration, v.duration_seconds, v.poster_url, v.thumbnail, v.created_at, v.shopify_product_handle, v.related_projects, v.feed_position, parent.title as parent_title, ${CLIP_FILM_FIELDS}`;
 
     // Engagement fields and scoring
     const engagementFields = withEngagement
@@ -91,16 +93,15 @@ export async function GET(req: NextRequest) {
     params.push(limit, offset);
 
     // Include public clips, treating legacy/null status values as published/live
-    // CRITICAL: Parentheses added to fix operator precedence bug
+    // CRITICAL: publicVideoWhere is fully parenthesised (operator precedence bug)
     const rows = await queryDatabase(
       `SELECT ${baseFields}${engagementFieldsFinal}
        FROM videos v
        LEFT JOIN videos parent ON v.parent_video_id = parent.id
+       ${CLIP_FILM_JOIN}
        ${engagementJoinFinal}
        WHERE v.type = 'clip'
-         AND ((v.is_public = 1 OR v.is_public IS NULL)
-              AND COALESCE(v.status, 'published') != 'archived'
-              AND COALESCE(v.publication_status, 'live') = 'live')
+         AND ${publicVideoWhere('v')}
        ${parentFilter}
        ${orderBy}
        LIMIT ? OFFSET ?`,

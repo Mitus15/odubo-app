@@ -1,6 +1,7 @@
 import { queryDatabase } from '@/lib/db';
 import { mapClipRows } from '@/lib/clipsMapper';
 import { getDailyVerse } from '@/lib/bible-verse';
+import { publicVideoWhere, CLIP_FILM_FIELDS, CLIP_FILM_JOIN } from '@/lib/publicVideos';
 import type { ClipApiRow, ClipItem } from '@/types/clips';
 
 export interface VerseOfTheDay {
@@ -52,9 +53,7 @@ export async function getHomepageMode(): Promise<'clips' | 'music'> {
     const countResult = await queryDatabase(
       `SELECT COUNT(*) as count FROM videos
        WHERE type = 'clip'
-         AND (is_public = 1 OR is_public IS NULL)
-         AND COALESCE(publication_status, 'live') = 'live'
-         AND COALESCE(status, 'published') != 'archived'`,
+         AND ${publicVideoWhere('')}`,
       []
     ) as { count: number }[];
 
@@ -70,19 +69,20 @@ export async function getHomepageMode(): Promise<'clips' | 'music'> {
 }
 
 /**
- * Fetch initial clips for SSR
+ * Fetch initial clips for SSR. The homepage feed shows these before it ever
+ * calls /api/clips, so they carry the same fields (the film flip included) and
+ * obey the same public rule.
  */
 export async function getInitialClips(limit = 12): Promise<ClipItem[]> {
   try {
-    const baseFields = `v.id, v.title, v.artist_name, v.description, v.url, v.uid, v.mp4_url, v.duration, v.duration_seconds, v.poster_url, v.thumbnail, v.created_at, v.shopify_product_handle, v.related_projects, parent.title as parent_title`;
+    const baseFields = `v.id, v.title, v.artist_name, v.description, v.url, v.uid, v.mp4_url, v.duration, v.duration_seconds, v.poster_url, v.thumbnail, v.created_at, v.shopify_product_handle, v.related_projects, parent.title as parent_title, ${CLIP_FILM_FIELDS}`;
     const rows = await queryDatabase(
       `SELECT ${baseFields}
        FROM videos v
        LEFT JOIN videos parent ON v.parent_video_id = parent.id
+       ${CLIP_FILM_JOIN}
        WHERE v.type = 'clip'
-         AND (v.is_public = 1 OR v.is_public IS NULL)
-         AND COALESCE(v.status, 'published') != 'archived'
-         AND COALESCE(v.publication_status, 'live') = 'live'
+         AND ${publicVideoWhere('v')}
        ORDER BY RANDOM()
        LIMIT ?`,
       [limit]

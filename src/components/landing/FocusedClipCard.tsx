@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 import type { ClipItem } from '@/types/clips';
+import { useClipShop } from '@/hooks/useClipShop';
 
 interface FocusedClipCardProps {
   clip: ClipItem;
@@ -19,6 +20,7 @@ export default function FocusedClipCard({
   const [isPlaying, setIsPlaying] = useState(false);
   const [hasLoaded, setHasLoaded] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const shop = useClipShop();
 
   useEffect(() => {
     if (!clip.poster) {
@@ -162,13 +164,24 @@ export default function FocusedClipCard({
                 {clip.viewCount > 999 ? `${(clip.viewCount / 1000).toFixed(1)}k` : clip.viewCount} views
               </span>
             )}
+            {/* The shop tap: opens QuickShop on this clip's product, never the
+                clip behind it. A 44px target on a 20px line (negative margin);
+                the panel ignores pointers, so the button opts back in. */}
             {clip.productHandle && (
-              <span className="text-white/40 text-[10px] flex items-center gap-0.5">
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  shop(clip);
+                }}
+                aria-label={`Shop ${clip.title}`}
+                className="pointer-events-auto -my-3 inline-flex min-h-[44px] min-w-[44px] items-center gap-0.5 text-[10px] text-white/70 transition-colors hover:text-white"
+              >
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
                 </svg>
                 Shop
-              </span>
+              </button>
             )}
           </div>
         </div>

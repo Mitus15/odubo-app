@@ -3,13 +3,19 @@
 import { useEffect, useState } from "react";
 import { createCheckout } from "@/lib/store/api";
 import { formatMoney, getCountryFromCookie } from "@/lib/store/money";
+import { getAttribution, getSessionId } from "@/lib/attribution";
+import { getVisitorId } from "@/lib/visitorId";
 import type { Cart } from "@/lib/store/types";
 
 /**
  * The Loop Soul bag.
  *
  * Checkout stamps `_source: loop_soul_store` so Loop sales are separable from
- * odubo's in reporting — same Shopify store, two businesses.
+ * odubo's in reporting — same Shopify store, two businesses. It also carries
+ * the session's attribution, as the main store's checkout does: the clip or
+ * gallery the visitor came in on (`?clip=` or /clips/<id>), the session, the
+ * UTM source, and the page they landed on (/loop/store when none was caught).
+ * The order sync reads all of it back onto commerce_orders.
  *
  * The bag is NOT cleared on checkout. The redirect hands off to Shopify and we
  * never hear whether the buyer paid or hit back; clearing on the way out means
@@ -40,9 +46,21 @@ export function LoopBag({
     setBusy(true);
     setError(null);
     try {
+      const attribution = getAttribution();
       const url = await createCheckout(
         cart.items.map((i) => ({ variantId: i.variantId, quantity: i.quantity })),
-        { source: "loop_soul_store", entryPath: "/loop/store" },
+        {
+          source: "loop_soul_store",
+          sessionId: getSessionId(),
+          visitorId: getVisitorId(),
+          utmSource: attribution?.source,
+          utmMedium: attribution?.medium,
+          utmCampaign: attribution?.campaign,
+          entryClipId: attribution?.entryClipId,
+          entryGalleryId: attribution?.entryGalleryId,
+          entryAlbumId: attribution?.entryAlbumId,
+          entryPath: attribution?.landingPage || "/loop/store",
+        },
         getCountryFromCookie(),
       );
       if (!url) throw new Error("no checkout url");
