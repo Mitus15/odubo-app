@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { fetchProduct } from "@/lib/store/api";
 import { formatMoney, getCountryFromCookie } from "@/lib/store/money";
 import type { CartItem, Product, ProductVariant } from "@/lib/store/types";
+import { isPreorderProduct, preorderShipsLine } from "@/config/preorder";
 
 /**
  * Pick a size, put it in the bag.
@@ -168,6 +169,9 @@ export function AddToBagSheet({
                 </fieldset>
               ))}
 
+            {isPreorderProduct(product.tags) && preorderShipsLine(product.tags) && (
+              <p className="loop-muted mt-6 text-sm">{preorderShipsLine(product.tags)}</p>
+            )}
             <div className="mt-6 flex items-center justify-between gap-4">
               <span className="text-lg font-bold">
                 {formatMoney(
@@ -181,7 +185,7 @@ export function AddToBagSheet({
                 disabled={!canAdd}
                 className="rounded-full bg-ink px-6 py-3 text-sm font-bold text-sand transition-opacity disabled:opacity-40"
               >
-                {canAdd ? "Add to bag" : variant ? "Sold out" : "Choose an option"}
+                {canAdd ? (isPreorderProduct(product.tags) ? "Pre-order" : "Add to bag") : variant ? "Sold out" : "Choose an option"}
               </button>
             </div>
           </>

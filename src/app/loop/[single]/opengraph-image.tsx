@@ -9,6 +9,7 @@ import { createStorageService } from "@/lib/storage/StorageService";
 import { shortDate, venueShort } from "@/lib/loop/eventFacts";
 import { cardTitleSize } from "@/lib/loop/singlePage";
 import { releaseLabel, singleBySlug, singlePath } from "@/lib/loop/singles";
+import { songBySlug } from "@/lib/loop/songs";
 import { getSingleStatuses } from "@/lib/loop/singlesStore";
 
 /**
@@ -46,7 +47,10 @@ async function coverDataUri(coverUrl: string | null): Promise<string | null> {
 }
 
 export default async function OgImage({ params }: { params: Promise<{ single: string }> }) {
-  const def = singleBySlug((await params).single);
+  const slug = (await params).single;
+  // A single, or one of the other chapters of the flight.
+  const def = singleBySlug(slug) ?? (songBySlug(slug) ? { slug, title: songBySlug(slug)!.title } : null);
+  const chapterNumber = !singleBySlug(slug) ? songBySlug(slug)?.number ?? null : null;
   // Both weights must be listed in next.config's outputFileTracingIncludes:
   // Vercel does not bundle a file read at runtime unless told to, and this
   // card 500'd in production (ENOENT on the 500) while rendering locally.
@@ -63,6 +67,8 @@ export default async function OgImage({ params }: { params: Promise<{ single: st
   const status = (await getSingleStatuses().catch(() => [])).find((x) => x.slug === def?.slug);
   const out = status?.out ?? false;
   const when = releaseLabel(status?.releaseDate ?? null);
+  const kicker = chapterNumber ? `Loop Soul · Chapter ${chapterNumber}` : "Loop Soul · The single";
+  const callToAction = chapterNumber ? "Enter the flight" : out ? "Listen free" : when ? `Out ${when}` : "Coming soon";
   const path = singlePath(def?.slug ?? "");
   const artist = single?.artistName ?? "Mani Odubo";
 
@@ -83,14 +89,14 @@ export default async function OgImage({ params }: { params: Promise<{ single: st
           }}
         >
           <div style={{ display: "flex", fontSize: 22, fontWeight: 500, letterSpacing: 6, textTransform: "uppercase", opacity: 0.7 }}>
-            Loop Soul · The single
+            {kicker}
           </div>
           <div style={{ display: "flex", flexDirection: "column" }}>
             <div style={{ display: "flex", fontSize: cardTitleSize(title, !!cover), fontWeight: 700, letterSpacing: -4, lineHeight: 0.95 }}>{title}</div>
             <div style={{ display: "flex", fontSize: 44, fontWeight: 500, marginTop: 14 }}>{artist}</div>
           </div>
           <div style={{ display: "flex", flexDirection: "column" }}>
-            <div style={{ display: "flex", fontSize: 26, fontWeight: 700 }}>{out ? "Listen free" : when ? `Out ${when}` : "Coming soon"}</div>
+            <div style={{ display: "flex", fontSize: 26, fontWeight: 700 }}>{callToAction}</div>
             {event.phase !== "archived" && (
               <div style={{ display: "flex", fontSize: 22, fontWeight: 500, opacity: 0.72, marginTop: 8 }}>
                 {`Live ${shortDate(event.date)} · ${venueShort(event.venue)}`}

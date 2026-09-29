@@ -9,6 +9,7 @@ import SinglePlayer from "@/components/loop/gathering/SinglePlayer";
 import type { FeaturedSingle } from "@/lib/loop/single";
 import { SINGLE_PATH } from "@/lib/loop/singlePage";
 import { singlePath } from "@/lib/loop/singles";
+import type { PublicChapter } from "@/lib/loop/film/public";
 
 // Seventeen megabytes of stems and a Web Audio graph: only for those who ask.
 const FieldPlayer = dynamic(() => import("@/components/field/FieldPlayer"), { ssr: false });
@@ -30,6 +31,8 @@ export type Rollout = {
   /** Its stem-field pack, if one is uploaded. */
   fieldPack: string | null;
   singles: SingleRow[];
+  /** Its chapter of the flight, once revealed: the thread and the scripture. */
+  chapter?: PublicChapter | null;
 };
 
 /**
@@ -368,6 +371,23 @@ export function TheSingle({
       {/* ── 3 · the rest of it ───────────────────────────────────────── */}
       {rollout && dateLabel === null ? (
         <section className={SECTION}>
+          {rollout.chapter && (
+            <div className="mb-12">
+              <div className="loop-muted text-[11px] font-bold uppercase tracking-[0.2em]">Chapter {rollout.chapter.number}</div>
+              {rollout.chapter.thread && <p className="mt-2 text-lg leading-snug">{rollout.chapter.thread}</p>}
+              {rollout.chapter.cards.map((c) => (
+                <figure key={c.id} className="mt-6 border-t border-ink/15 pt-5">
+                  {c.flip && <p className="text-xl font-bold leading-tight">{c.flip}</p>}
+                  <blockquote className="loop-muted mt-2 text-[15px] leading-snug">{c.verseText}</blockquote>
+                  <figcaption className="loop-muted mt-2 text-[11px] font-bold uppercase tracking-[0.2em]">{c.verseRef}</figcaption>
+                </figure>
+              ))}
+              <Link href="/recoolman" className="mt-6 flex min-h-[44px] items-center justify-between border-y border-ink/15 py-4">
+                <span className="text-base font-bold">Enter the world</span>
+                <span className="loop-muted">→</span>
+              </Link>
+            </div>
+          )}
           <h2 className="loop-display text-3xl font-bold tracking-tight">Three singles, then the album.</h2>
           <p className="loop-muted mt-2 text-sm leading-relaxed">A music video for each.</p>
 
@@ -416,12 +436,12 @@ export function TheSingle({
                   </div>
                 )}
                 <Link
-                  href={`/game/street-runner?song=${rollout.slug}`}
+                  href={`/game/soul-loop?song=${rollout.slug}`}
                   className="flex min-h-[44px] items-center justify-between gap-4 border-t border-ink/15 py-5"
                 >
                   <span>
-                    <span className="block text-base font-bold">Run to it</span>
-                    <span className="loop-muted block text-[13px]">Recoolman, with {single.title} as the soundtrack</span>
+                    <span className="block text-base font-bold">Soul Loop</span>
+                    <span className="loop-muted block text-[13px]">The game, with {single.title} as the soundtrack</span>
                   </span>
                   <span className="loop-muted shrink-0">→</span>
                 </Link>

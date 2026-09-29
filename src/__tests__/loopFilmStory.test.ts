@@ -86,3 +86,60 @@ describe("the KJV search", () => {
     expect(versesByRef("John 1:17")).toEqual([]);
   });
 });
+
+describe("what a guest may see", () => {
+  const { isPublic, worldView } = jest.requireActual("@/lib/loop/film/store") as typeof import("@/lib/loop/film/store");
+  const past = new Date(Date.now() - 60_000).toISOString();
+  const future = new Date(Date.now() + 86_400_000).toISOString();
+  const chapter = (slug: string, status: "draft" | "approved", revealedAt: string | null) =>
+    ({ slug, status, revealedAt }) as unknown as Parameters<typeof isPublic>[0] & { slug: string };
+
+  it("shows a chapter only when approved AND revealed, and not before its moment", () => {
+    expect(isPublic(chapter("welcome", "approved", past))).toBe(true);
+    expect(isPublic(chapter("welcome", "draft", past))).toBe(false);
+    expect(isPublic(chapter("welcome", "approved", null))).toBe(false);
+    expect(isPublic(chapter("welcome", "approved", future))).toBe(false);
+  });
+
+  it("keeps a world entry a silhouette until it is approved and its chapter is out", () => {
+    const entry = (slug: string, status: "draft" | "approved", revealedWith: string | null) =>
+      ({ slug, name: slug, line: "x", revealedWith, sort: 0, status, updatedAt: "" }) as import("@/lib/loop/film/store").WorldEntry;
+    const chapters = [chapter("welcome", "approved", past), chapter("1984", "approved", null)] as unknown as import("@/lib/loop/film/store").Chapter[];
+    const view = worldView(
+      [entry("badge", "approved", "welcome"), entry("shadow", "approved", "1984"), entry("draft", "draft", "welcome"), entry("always", "approved", null)],
+      chapters,
+    );
+    expect(view.map((v) => [v.entry.slug, v.shown])).toEqual([
+      ["badge", true],
+      ["shadow", false],
+      ["draft", false],
+      ["always", true],
+    ]);
+  });
+});
+
+describe("a product that is a pre-order on its own", () => {
+  const { isPreorderProduct, preorderShipsLine } = jest.requireActual("@/config/preorder") as typeof import("@/config/preorder");
+  it("is read from its tags", () => {
+    expect(isPreorderProduct(["drop:loop-soul", "type:vinyl", "preorder", "ships:in December"])).toBe(true);
+    expect(isPreorderProduct(["drop:loop-soul", "brand:baad"])).toBe(false);
+    expect(isPreorderProduct(undefined)).toBe(false);
+    expect(preorderShipsLine(["preorder", "ships:in December"])).toBe("Ships in December.");
+    expect(preorderShipsLine(["preorder"])).toBeNull();
+  });
+});
+
+describe("a clip's caption", () => {
+  const { clipCaption, captionIssues } = jest.requireActual("@/lib/loop/film/caption") as typeof import("@/lib/loop/film/caption");
+  it("is the flip, the reference and one link to its chapter", () => {
+    const c = clipCaption({ flip: "Dust, then breath.", verseRef: "Genesis 2:7", chapterTitle: "Welcome", slug: "welcome", site: "https://odubostudio.com/" });
+    expect(c).toBe("Dust, then breath.\nGenesis 2:7\n\nLoop Soul · Welcome\nhttps://odubostudio.com/loop/welcome");
+    expect(captionIssues(c)).toEqual([]);
+  });
+  it("is refused if it names Him or runs an em dash", () => {
+    const named = clipCaption({ flip: "Christ is risen", verseRef: "Mark 16:6", chapterTitle: "Ghost World", slug: "ghost-world", site: "odubostudio.com" });
+    expect(captionIssues(named).map((i) => i.code)).toContain("names-him");
+    const dashed = clipCaption({ flip: "Dust — breath", verseRef: "Genesis 2:7", chapterTitle: "Welcome", slug: "welcome", site: "odubostudio.com" });
+    expect(captionIssues(dashed).map((i) => i.code)).toContain("em-dash");
+  });
+});

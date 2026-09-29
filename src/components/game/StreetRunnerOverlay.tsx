@@ -1,20 +1,27 @@
 'use client';
 
 // ============================================================================
-// StreetRunnerOverlay — UI overlay for the Recoolman street runner game
+// StreetRunnerOverlay — UI overlay for Soul Loop (the Recoolman runner)
 //
-// Phase state machine: ready → playing → gameOver → submitted
+// Phase state machine: ready → takeoff → playing → gameOver → submitted
+//
+// The take-off is Loop Soul's canon: the album begins with the incarnation and
+// ends Welcome with a take-off, and that take-off is where the game begins.
+// Recoolman rises out of his shadow on the ground and lifts away; then the run.
 // Renders on top of the 3D scene via portal.
 // ============================================================================
 
 import { useState, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { ODUBO_MARK } from '@/lib/brand/marks';
 import StreetRunnerScene from './StreetRunnerScene';
 import type { StreetRunnerSceneHandle } from './StreetRunnerScene';
 import type { StreetRunnerState } from '@/types/game';
 
-type GamePhase = 'ready' | 'playing' | 'gameOver' | 'submitted';
+type GamePhase = 'ready' | 'takeoff' | 'playing' | 'gameOver' | 'submitted';
+
+const TAKEOFF_MS = 1700;
 
 /** A Loop Soul single to run to. The src is already cleared by the audio
  *  gate on the server (released, or an admin previewing). */
@@ -38,11 +45,17 @@ export default function StreetRunnerOverlay({ soundtrack }: { soundtrack?: Runne
   const [avatarGender, setAvatarGender] = useState<'male' | 'female'>('male');
   const sceneRef = useRef<StreetRunnerSceneHandle>(null);
 
+  const reduceMotion = useReducedMotion();
   const handleStart = useCallback(async () => {
+    // The song starts inside the tap (iOS); the take-off plays over it.
     startSong();
+    if (!reduceMotion) {
+      setPhase('takeoff');
+      await new Promise((r) => setTimeout(r, TAKEOFF_MS));
+    }
     setPhase('playing');
     await sceneRef.current?.start();
-  }, [startSong]);
+  }, [startSong, reduceMotion]);
 
   const handleGameOver = useCallback((score: number, catches: number, duration: number) => {
     setFinalScore(score);
@@ -78,6 +91,48 @@ export default function StreetRunnerOverlay({ soundtrack }: { soundtrack?: Runne
         <HUD state={state} />
       )}
 
+      {/* The take-off: he rises out of his shadow and lifts away. */}
+      <AnimatePresence>
+        {phase === 'takeoff' && (
+          <motion.div
+            key="takeoff"
+            initial={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="absolute inset-0 z-30 overflow-hidden"
+            style={{ background: '#d9aa7a' }}
+            aria-label="Take-off"
+          >
+            <motion.span
+              className="absolute left-1/2 block rounded-[50%]"
+              style={{ bottom: '18%', width: 160, height: 22, marginLeft: -80, background: '#9c5f3c' }}
+              initial={{ opacity: 0.9, scaleX: 1 }}
+              animate={{ opacity: [0.9, 0.9, 0.25], scaleX: [1, 1, 0.55] }}
+              transition={{ duration: TAKEOFF_MS / 1000, times: [0, 0.45, 1] }}
+            />
+            <motion.span
+              className="absolute left-1/2 block"
+              style={{
+                bottom: '19%',
+                width: 150,
+                height: 190,
+                marginLeft: -75,
+                background: '#2a0f0a',
+                transformOrigin: '50% 100%',
+                mask: `url(${ODUBO_MARK}) center / contain no-repeat`,
+                WebkitMask: `url(${ODUBO_MARK}) center / contain no-repeat`,
+              }}
+              initial={{ scaleY: 0.05, y: 0, opacity: 0.6 }}
+              animate={{ scaleY: [0.05, 1, 1], y: [0, 0, -900], opacity: [0.6, 1, 1] }}
+              transition={{ duration: TAKEOFF_MS / 1000, times: [0, 0.45, 1], ease: ['easeOut', 'easeIn'] }}
+            />
+            <p className="absolute inset-x-0 top-[12%] text-center text-xs font-bold uppercase tracking-[0.3em]" style={{ color: '#2a0f0a' }}>
+              Soul Loop
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Ready screen */}
       <AnimatePresence>
         {phase === 'ready' && (
@@ -100,10 +155,10 @@ export default function StreetRunnerOverlay({ soundtrack }: { soundtrack?: Runne
                 className="text-5xl md:text-7xl font-bold tracking-wider mb-3"
                 style={{ color: '#ede8df', textShadow: '0 0 30px rgba(196,120,90,0.5)' }}
               >
-                RECOOLMAN
+                SOUL LOOP
               </h1>
               <p className="text-lg md:text-xl mb-6" style={{ color: '#c4785a' }}>
-                {soundtrack ? `Run to ${soundtrack.title}` : 'Bring Light to the City'}
+                {soundtrack ? `Recoolman, to ${soundtrack.title}` : 'Recoolman brings light to the city'}
               </p>
 
               {/* Character selector */}

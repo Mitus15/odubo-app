@@ -8,6 +8,7 @@ export type { SingleRow };
 import GetPassModal from "@/components/loop/gathering/GetPassModal";
 import type { FeaturedSingle } from "@/lib/loop/single";
 import type { PassOffer } from "@/lib/loop/pass/offer";
+import type { PublicChapter } from "@/lib/loop/film/public";
 
 /**
  * A single on its own page (/loop/<slug>). The same three screens the poster
@@ -24,6 +25,7 @@ export function SingleStandalone({
   fieldPack,
   singles,
   closable,
+  chapter = null,
   coverUrl,
   coverCaption,
   dateLabel,
@@ -39,6 +41,8 @@ export function SingleStandalone({
   singles: SingleRow[];
   /** The poster exists to close back to (not once the night is archived). */
   closable: boolean;
+  /** Its chapter of the flight, once revealed. */
+  chapter?: PublicChapter | null;
   coverUrl: string | null;
   coverCaption: string;
   dateLabel: string | null;
@@ -57,8 +61,8 @@ export function SingleStandalone({
   }, [offer, router]);
   const coverContest = useCallback(() => router.push("/loop#cover"), [router]);
   const rollout = useMemo(
-    () => ({ slug, out, playable, releaseDateLabel, fieldPack, singles }),
-    [slug, out, playable, releaseDateLabel, fieldPack, singles],
+    () => ({ slug, out, playable, releaseDateLabel, fieldPack, singles, chapter }),
+    [slug, out, playable, releaseDateLabel, fieldPack, singles, chapter],
   );
 
   return (

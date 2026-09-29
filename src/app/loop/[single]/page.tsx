@@ -13,6 +13,9 @@ import { releaseLabel, singleBySlug, singlePath } from "@/lib/loop/singles";
 import { getSingleStatuses } from "@/lib/loop/singlesStore";
 import { isAdminRequest } from "@/lib/loop/audioAccess";
 import SingleStandalone, { type SingleRow } from "@/components/loop/gathering/SingleStandalone";
+import ChapterView from "@/components/loop/film/ChapterView";
+import { songBySlug } from "@/lib/loop/songs";
+import { chapterClips, publicChapters, publicFilm } from "@/lib/loop/film/public";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -27,8 +30,10 @@ export const runtime = "nodejs";
  * plays, so a teaser post can link here before the song is out. An admin sees
  * a coming single as if it were out, to check it before the day.
  *
- * Any other segment 404s: /loop's own routes (album, press, admin...) are
- * static and win over this one.
+ * The other eleven songs are chapters of the flight (ChapterView): a
+ * silhouette until the chapter is revealed, then its thread, its scripture
+ * cards, its clips and the ways in. Any other segment 404s: /loop's own
+ * routes (album, press, admin...) are static and win over this one.
  */
 async function load(slug: string) {
   const def = singleBySlug(slug);
@@ -38,8 +43,23 @@ async function load(slug: string) {
   return { def, statuses, status, track };
 }
 
+/** The eleven songs that are not singles: a chapter page of the flight. */
+async function chapterMeta(slug: string): Promise<Metadata> {
+  const song = songBySlug(slug);
+  if (!song) return { title: "Loop Soul" };
+  const [chapters, base] = await Promise.all([publicChapters(), getPublicBaseUrl()]);
+  const c = chapters.find((x) => x.slug === slug);
+  const title = `${c?.title ?? song.title} · Loop Soul`;
+  const description = c?.public && c.thread ? c.thread : `Chapter ${song.number} of Loop Soul, an album by Mani Odubo.`;
+  const path = singlePath(slug);
+  const url = base ? `${base}${path}` : path;
+  return { title, description, alternates: { canonical: url }, openGraph: { title, description, url }, twitter: { card: "summary_large_image", title, description } };
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ single: string }> }): Promise<Metadata> {
-  const data = await load((await params).single);
+  const slug = (await params).single;
+  if (!singleBySlug(slug)) return chapterMeta(slug);
+  const data = await load(slug);
   if (!data?.track) return { title: "Loop Soul" };
   const [event, base] = await Promise.all([getCurrentEvent(), getPublicBaseUrl()]);
   const m = singleMeta(
@@ -60,7 +80,16 @@ export async function generateMetadata({ params }: { params: Promise<{ single: s
 }
 
 export default async function SinglePage({ params }: { params: Promise<{ single: string }> }) {
-  const data = await load((await params).single);
+  const slug = (await params).single;
+  if (!singleBySlug(slug)) {
+    // A chapter of the flight that is not a single.
+    if (!songBySlug(slug)) notFound();
+    const [chapters, clips, film] = await Promise.all([publicChapters(), chapterClips(slug), publicFilm()]);
+    const chapter = chapters.find((c) => c.slug === slug)!;
+    const watchAt = film?.markers.find((m) => m.label === slug)?.t ?? null;
+    return <ChapterView chapter={chapter} chapters={chapters} clips={chapter.public ? clips : []} watchAt={watchAt} />;
+  }
+  const data = await load(slug);
   if (!data?.track) notFound();
   const { def, statuses, status, track } = data;
 
@@ -72,6 +101,8 @@ export default async function SinglePage({ params }: { params: Promise<{ single:
     codesHeldBy(event.id, voterId).catch(() => []),
     archived ? Promise.resolve(null) : getPassOffer(event),
   ]);
+
+  const chapter = (await publicChapters()).find((c) => c.slug === def.slug) ?? null;
 
   const singles: SingleRow[] = statuses.map((s) => ({
     slug: s.slug,
@@ -96,6 +127,7 @@ export default async function SinglePage({ params }: { params: Promise<{ single:
       holder={held.length > 0}
       offer={offer}
       closable={!archived}
+      chapter={chapter && chapter.public ? chapter : null}
     />
   );
 }
