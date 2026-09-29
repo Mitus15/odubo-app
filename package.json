@@ -52,7 +52,19 @@
     "film:listen": "cd scripts/loop/film && python3 listen.py",
     "film:seed": "tsx --env-file=.env.local scripts/loop/film/seed.ts",
     "film:playlist": "cd scripts/loop/film && python3 playlist.py",
-    "film:check": "cd scripts/loop/film && python3 check.py"
+    "film:check": "cd scripts/loop/film && python3 check.py",
+    "film:transcribe": "cd scripts/loop/film && python3 transcribe.py",
+    "film:ingest": "cd scripts/loop/film && python3 ingest.py",
+    "film:align": "cd scripts/loop/film && python3 align.py",
+    "film:segment": "cd scripts/loop/film && python3 segment.py",
+    "film:figure": "cd scripts/loop/film && python3 figure.py",
+    "film:pull": "tsx --env-file=.env.local scripts/loop/film/pull.ts",
+    "film:cards": "tsx scripts/loop/film/cards.ts",
+    "film:compose": "cd scripts/loop/film && python3 compose.py",
+    "film:outro": "cd scripts/loop/film && python3 outro.py",
+    "film:cut": "cd scripts/loop/film && python3 cut.py",
+    "film:run": "cd scripts/loop/film && python3 run.py",
+    "film:golden": "cd scripts/loop/film && python3 golden.py"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.858.0",

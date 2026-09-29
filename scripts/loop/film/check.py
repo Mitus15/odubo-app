@@ -19,7 +19,7 @@ It writes a contact sheet of the sampled frames with his outline drawn on.
 import json, subprocess, sys
 from pathlib import Path
 import numpy as np
-from film_common import REPO, SONGS, master, onset_envelope, read_frames, work, run
+from film_common import REPO, master, read_frames, work
 import seg
 
 SAMPLES = 8
@@ -37,55 +37,7 @@ def probe(path):
             "codec": v["codec_name"] if v else None, "audio": a is not None, "duration": float(j["format"]["duration"])}
 
 
-def room_audio(path, seconds, rate=16000):
-    raw = subprocess.run(["ffmpeg", "-v", "error", "-t", str(seconds), "-i", str(path), "-vn", "-ac", "1", "-ar", str(rate),
-                          "-f", "s16le", "-"], capture_output=True, check=True).stdout
-    return np.frombuffer(raw, np.int16).astype(np.float32) / 32768, rate
-
-
-def find_tone(x, rate, hz=1000, frame=0.02):
-    """First run of at least 0.5 s where the 1 kHz band carries most of the energy."""
-    n = int(rate * frame)
-    frames = len(x) // n
-    run_len, start = 0, None
-    for i in range(frames):
-        seg_ = x[i * n:(i + 1) * n] * np.hanning(n)
-        spec = np.abs(np.fft.rfft(seg_)) ** 2
-        f = np.fft.rfftfreq(n, 1 / rate)
-        band = spec[(f > hz - 60) & (f < hz + 60)].sum()
-        share = band / (spec.sum() + 1e-12)
-        if share > 0.5 and spec.sum() > 1e-4:
-            if run_len == 0:
-                start = i * frame
-            run_len += 1
-            if run_len * frame >= 0.5:
-                return start
-        else:
-            run_len = 0
-    return None
-
-
-def lock(room_wav, master_wav, expected, window=4.0):
-    """Where the master sits in the room audio near `expected`, and how sure."""
-    ro, rate = onset_envelope(str(room_wav))
-    mo, rate2 = onset_envelope(str(master_wav))
-    assert abs(rate - rate2) < 1e-6
-    span = int(rate * 20)
-    m = mo[:span]
-    best, best_lag, scores = -1e9, 0, []
-    for lag in range(int((expected - window) * rate), int((expected + window) * rate)):
-        if lag < 0 or lag + len(m) > len(ro):
-            continue
-        r = ro[lag:lag + len(m)]
-        c = float(np.dot(r - r.mean(), m - m.mean()) / (np.linalg.norm(r - r.mean()) * np.linalg.norm(m - m.mean()) + 1e-9))
-        scores.append(c)
-        if c > best:
-            best, best_lag = c, lag
-    if not scores:
-        return None, 0.0, 0.0
-    s = np.array(scores)
-    z = (best - s.mean()) / (s.std() + 1e-9)
-    return best_lag / rate, best, float(z)
+from sync_audio import LOCKED, find_tone, load_mono, lock, onset_envelope as onset_of
 
 
 def main(path: str):
@@ -102,20 +54,19 @@ def main(path: str):
     # Sound: the tone, then Welcome locked against the room.
     if p["audio"]:
         head = min(90.0, p["duration"])
-        x, rate = room_audio(take, head)
+        rate = 16000
+        x = load_mono(take, rate, seconds=head)
         tone = find_tone(x, rate)
         ok(tone is not None, f"tone heard at {tone:.2f}s" if tone is not None else "no tone heard in the first 90 s",
            "start the playlist from the very top, loud enough to hear from the camera")
         if tone is not None:
             plan = json.loads((REPO / "data/loop/film/playlist.json").read_text())
             welcome = plan["songs"][0]
-            room_wav = out / "room.11k.wav"
-            run(["ffmpeg", "-v", "error", "-y", "-t", str(head), "-i", take, "-vn", "-ac", "1", "-ar", "11025", room_wav])
-            mwav = out / "m01.11k.wav"
-            run(["ffmpeg", "-v", "error", "-y", "-i", master(1), "-ac", "1", "-ar", "11025", mwav])
-            at, score, z = lock(room_wav, mwav, tone + welcome["start"])
-            locked = at is not None and z > 6
-            ok(locked, f"Welcome locks at {at:.2f}s (z {z:.1f})" if at is not None else "Welcome not found",
+            room, env_rate = onset_of(load_mono(take, 11025, seconds=head), 11025)
+            piece, _ = onset_of(load_mono(master(1), 11025, seconds=20), 11025)
+            at, score, z = lock(room, piece, env_rate, tone + welcome["start"], window=4.0)
+            locked = at is not None and score >= LOCKED
+            ok(locked, f"Welcome locks at {at:.2f}s (correlation {score:.2f})" if at is not None else "Welcome not found",
                "play it louder, keep the speaker near the camera, or keep other noise down")
 
     # Picture: sampled frames, segmented and posed.

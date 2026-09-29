@@ -1561,3 +1561,149 @@ export function withBleed(list: DisplayList, specLine?: string): DisplayList {
 
   return { w: W, h: H, ops };
 }
+
+/* ── the film: scripture cards and chapter cards ───────────────────────── */
+
+/**
+ * Greedy word wrap against the committed metrics: the longest run of words
+ * that fits `maxWidth`, line after line. A single word wider than the measure
+ * stands alone on its line (the height check that follows refuses it if it
+ * cannot fit at all).
+ */
+export function wrap(
+  text: string,
+  maxWidth: number,
+  opts: { size: number; weight?: FontWeight; track?: number },
+): string[] {
+  const words = text.trim().split(/\s+/).filter(Boolean);
+  const lines: string[] = [];
+  let current = "";
+  for (const word of words) {
+    const tryLine = current ? `${current} ${word}` : word;
+    if (!current || measure(tryLine, opts) <= maxWidth) {
+      current = tryLine;
+    } else {
+      lines.push(current);
+      current = word;
+    }
+  }
+  if (current) lines.push(current);
+  return lines;
+}
+
+export type FilmBand = { x: number; y: number; w: number; h: number };
+
+export type FilmCardSpec = {
+  /** Canvas size: the clip's frame. */
+  w: number;
+  h: number;
+  /** Where the words may go: the part of the frame the camera keeps clear of him. */
+  band: FilmBand;
+  align: "middle" | "start";
+  /** "Genesis 2:7" */
+  verseRef: string;
+  /** The KJV words as set on the card (the sample). */
+  verseText: string;
+  /** The owner's line (how the sample is cut). The headline when present. */
+  flip: string | null;
+  fill?: string;
+};
+
+type Block = { lines: string[]; size: number; weight: FontWeight; track: number; gap: number; opacity: number; lead: number };
+
+/**
+ * A scripture card, laid out transparent over the moving figure.
+ *
+ * The flip is the headline (Jost 700): the line a scroller gets at once. The
+ * verse sits under it, smaller (Jost 500), the sample it was cut from; the
+ * reference is smallest, tracked. With no flip yet, the verse leads.
+ *
+ * Sized by search: the largest headline at which the whole block fits the
+ * band. The engine's rule holds: if it cannot fit at the smallest size, it
+ * refuses rather than overlap.
+ */
+export function layoutFilmCard(spec: FilmCardSpec): LayoutResult {
+  return run(() => {
+    const { band, align } = spec;
+    const fill = spec.fill ?? INK;
+    const blocks = (head: number): Block[] => {
+      const out: Block[] = [];
+      if (spec.flip) {
+        out.push({ lines: wrap(spec.flip, band.w, { size: head, weight: 700 }), size: head, weight: 700, track: 0, gap: 0.55, opacity: 1, lead: 1.08 });
+        const vs = Math.max(20, R(head * 0.44));
+        out.push({ lines: wrap(spec.verseText, band.w, { size: vs, weight: 500 }), size: vs, weight: 500, track: 0, gap: 0.8, opacity: 0.86, lead: 1.3 });
+      } else {
+        out.push({ lines: wrap(spec.verseText, band.w, { size: head, weight: 500 }), size: head, weight: 500, track: 0, gap: 0.55, opacity: 1, lead: 1.2 });
+      }
+      const rs = Math.max(16, R(head * 0.3));
+      out.push({ lines: [spec.verseRef.toUpperCase()], size: rs, weight: 500, track: 0.14, gap: 0, opacity: 0.7, lead: 1 });
+      return out;
+    };
+    const height = (bs: Block[]) =>
+      bs.reduce((sum, b, i) => sum + b.lines.length * b.size * b.lead + (i < bs.length - 1 ? b.size * b.gap : 0), 0);
+    const widest = (bs: Block[]) =>
+      Math.max(...bs.flatMap((b) => b.lines.map((l) => measure(l, { size: b.size, weight: b.weight, track: b.track }))));
+
+    let head = R(Math.min(band.h * 0.24, band.w * 0.12));
+    const min = R(spec.h * 0.018);
+    let bs = blocks(head);
+    while (head > min && (height(bs) > band.h || widest(bs) > band.w)) {
+      head -= 2;
+      bs = blocks(head);
+    }
+    assertFits("the card", height(bs), band.h);
+    assertFits("the card's widest line", widest(bs), band.w);
+
+    const ops: Op[] = [];
+    // Centred vertically in the band, so short cards do not hug its top.
+    let y = band.y + (band.h - height(bs)) / 2;
+    const x = align === "middle" ? band.x + band.w / 2 : band.x;
+    for (const [i, b] of bs.entries()) {
+      for (const l of b.lines) {
+        y += b.size * CAP_HEIGHT + (b.size * b.lead - b.size * CAP_HEIGHT) / 2;
+        ops.push(line(l, { x, y, size: b.size, weight: b.weight, track: b.track, anchor: align, opacity: b.opacity, fill }));
+        y += (b.size * b.lead - b.size * CAP_HEIGHT) / 2;
+      }
+      if (i < bs.length - 1) y += b.size * b.gap;
+    }
+    return { w: spec.w, h: spec.h, ops };
+  });
+}
+
+export type FilmChapterSpec = {
+  w: number;
+  h: number;
+  number: number;
+  title: string;
+  /** The chapter's thread, when approved. */
+  thread: string | null;
+  fill?: string;
+};
+
+/** The film's chapter card: the number, the title, the thread. Centred, transparent. */
+export function layoutFilmChapter(spec: FilmChapterSpec): LayoutResult {
+  return run(() => {
+    const fill = spec.fill ?? INK;
+    const W = spec.w;
+    const H = spec.h;
+    const maxW = W * 0.7;
+    const num = String(spec.number).padStart(2, "0");
+    const titleSize = fitSize(spec.title, maxW, { weight: 700 }, { max: R(H * 0.13), min: R(H * 0.04) });
+    const numSize = R(titleSize * 0.32);
+    const threadSize = R(Math.max(H * 0.024, titleSize * 0.26));
+    const threadLines = spec.thread ? wrap(spec.thread, maxW, { size: threadSize }) : [];
+    const block =
+      numSize * 1.8 + titleSize * 1.05 + (threadLines.length ? threadSize * 0.9 + threadLines.length * threadSize * 1.35 : 0);
+    assertFits("the chapter card", block, H * 0.8);
+    let y = (H - block) / 2 + numSize * CAP_HEIGHT;
+    const ops: Op[] = [line(num, { x: W / 2, y, size: numSize, track: 0.2, opacity: 0.7, fill })];
+    y += numSize * 0.8 + titleSize * CAP_HEIGHT + titleSize * 0.15;
+    ops.push(line(spec.title, { x: W / 2, y, size: titleSize, weight: 700, fill }));
+    y += titleSize * 0.2 + threadSize * 0.9;
+    for (const l of threadLines) {
+      y += threadSize * 1.35;
+      ops.push(line(l, { x: W / 2, y, size: threadSize, opacity: 0.86, fill }));
+    }
+    return { w: W, h: H, ops };
+  });
+}
