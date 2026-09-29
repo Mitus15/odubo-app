@@ -90,16 +90,22 @@ def _env(name: str):
 
 
 def d1(sql: str, params=None):
-    """One statement against the production D1 (the same database the site uses)."""
-    import urllib.request
+    """
+    One statement against the production D1 (the same database the site uses).
+
+    Sent with curl, not Python's urllib: this machine's Python cannot verify
+    TLS certificates (its store fails on Cloudflare and on the model CDNs),
+    while curl uses the system's trust store, which works.
+    """
     url, token = _env("DATABASE_URL"), _env("CLOUDFLARE_D1_API_TOKEN")
     if not url or not token:
         raise SystemExit("D1 is not configured: DATABASE_URL and CLOUDFLARE_D1_API_TOKEN (see .env.local).")
-    req = urllib.request.Request(url.rstrip("/").removesuffix("/query") + "/query", method="POST",
-                                 data=json.dumps({"sql": sql, "params": params or []}).encode(),
-                                 headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"})
-    with urllib.request.urlopen(req, timeout=60) as r:
-        body = json.loads(r.read())
+    endpoint = url.rstrip("/").removesuffix("/query") + "/query"
+    out = subprocess.run(
+        ["curl", "-sS", "--max-time", "60", "-X", "POST", endpoint,
+         "-H", f"Authorization: Bearer {token}", "-H", "Content-Type: application/json", "--data-binary", "@-"],
+        input=json.dumps({"sql": sql, "params": params or []}).encode(), capture_output=True, check=True)
+    body = json.loads(out.stdout)
     if not body.get("success"):
         raise RuntimeError(f"D1: {body.get('errors')}")
     return body["result"][0].get("results", [])

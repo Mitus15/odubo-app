@@ -5,6 +5,7 @@ Hear the words: a first transcription of every song, for Mani to correct.
     npm run film:transcribe -- 9 6           # just Makunahea and News Peak
     npm run film:transcribe -- --no-push     # write the files only
     npm run film:transcribe -- --model=small # a smaller model (turbo is default)
+    npm run film:transcribe -- --force       # redo songs already transcribed
 
 For each song:
   1. The vocals alone. From a stem if one exists (FILM_STEMS/<slug>/vox.*, or
@@ -109,7 +110,10 @@ def vocals_for(song) -> tuple[Path, str]:
     target = out / "htdemucs" / f"m{song['number']:02d}" / "vocals.wav"
     if not target.exists():
         try:
-            run([sys.executable, "-m", "demucs", "--two-stems=vocals", "-n", "htdemucs", "-o", out, master(song["number"])])
+            import torch
+            device = "mps" if torch.backends.mps.is_available() else "cpu"
+            run([sys.executable, "-m", "demucs", "--two-stems=vocals", "-n", "htdemucs", "-d", device, "-o", out,
+                 master(song["number"])])
         except (subprocess.CalledProcessError, FileNotFoundError):
             raise SystemExit("Demucs is needed to separate the vocals: pip install demucs (about 80 MB of model on first use).")
     return target, "separated by Demucs"
@@ -124,7 +128,16 @@ def main(argv):
 
     import whisper  # openai-whisper; imported late so --help costs nothing
     model = None
+    force = "--force" in argv
     for s in songs:
+        done_path = out_dir / f"{s['number']:02d}.json"
+        if done_path.exists() and not force:
+            # Already heard: push the saved draft again (cheap) rather than redo it.
+            print(f"{s['number']:>2} {s['title']:<19} already transcribed (--force to redo)")
+            if push:
+                d1("UPDATE loop_film_chapters SET lyrics_draft = ?1 WHERE slug = ?2 AND lyrics_draft IS NULL",
+                   [done_path.read_text(), s["slug"]])
+            continue
         vox, source = vocals_for(s)
         x = load_mono(vox)
         segs = voiced_segments(rms_db(x, 16000))
