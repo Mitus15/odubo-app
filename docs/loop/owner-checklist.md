@@ -1,8 +1,51 @@
-# Loop Soul — what only you can do
+# Loop Soul: what only you can do
 
-Everything in the app, the emails and the print pipeline is built and live.
-These are the things the app cannot do for you, because they need your Shopify
-login, your dashboards, a terminal, or a phone in your hand. In rough order.
+Everything that can be built is built. These need your hands, your eyes, your
+logins, or your word. In order.
+
+## The film (from 2026-09-29)
+
+The album goes out as a film of the whole album danced in one take, cut into
+clips. The Oct 10 night is called off; its old list is at the bottom.
+
+### 1. Disk
+The Mac has under 10 GB free. A full take needs about 60 GB of work space.
+Get an external SSD (1 to 2 TB) or clear space before the shoot.
+
+### 2. The words
+Open /loop/admin/film. For each song: correct the lyrics once they are
+transcribed (`npm run film:transcribe`, after the disk), write the thread (a
+line or two, where Recoolman is), set the emotion words, pick verses from the
+KJV search, write your flip on each card, approve. Reveal a chapter when its
+clips go out. Nothing shows until you approve it. The world entries (the
+Recoolman page) are drafts for you to rewrite or approve.
+
+### 3. The colours
+Each chapter has a colour. Tap it in admin to choose from the album's wheel,
+the pop colours, or any hex.
+
+### 4. The shoot
+Read `docs/loop/film/SHOOT-SPEC.md`. Play `Loop Soul - play this while you
+dance.m4a` (in your media folder, under `film`) out loud. Film five minutes
+first and run `npm run film:check -- "<the test take>"`. Then the album.
+
+### 5. Distribution
+Sign up to LabelGrid (Solo, $99 a year). Upload from Release Control's
+delivery sheet, the WAV masters and the cover. Send back the Spotify and Apple
+links when they exist.
+
+### 6. The vinyl
+Decide the price and the pressing, then:
+`npm run shopify:loop-vinyl -- --price=<amount> --ships="<when>" --apply`.
+It lands hidden; add its photos and set it Active in Shopify.
+
+### 7. Tell people
+Madison and Scott's, Amen, if not done: the night is off. The Castanet reply
+and the co-host email are unsent drafts; delete or rewrite them.
+
+---
+
+## Archived: the Oct 10 night (called off 2026-09-29)
 
 The night is **Saturday 10 October**, doors 6:30, at Scott's Inn. 250 in the
 room. As of this writing 2 passes are sold (both yours). The live list with
