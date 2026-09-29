@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import Logo from "@/components/loop/brand/Logo";
 import { getCurrentEvent } from "@/lib/loop/hub";
 import { getRunOfShow } from "@/lib/loop/content-store";
@@ -69,6 +70,8 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 export default async function PressPage() {
   const [event, pass, base] = await Promise.all([getCurrentEvent(), getPassSettings(), getPublicBaseUrl()]);
+  // No night, nothing to promote: every caption here names it.
+  if (event.phase === "archived") redirect("/loop/1984");
   const runOfShow = await getRunOfShow(event.id);
 
   const price = priceLabel(pass.price, pass.currency);

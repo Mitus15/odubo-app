@@ -25,7 +25,8 @@ export const runtime = "nodejs";
 export async function generateMetadata(): Promise<Metadata> {
   const [single, event, base] = await Promise.all([getFeaturedSingle(), getCurrentEvent(), getPublicBaseUrl()]);
   if (!single || !isThisSingle(single.title)) return { title: "Loop Soul" };
-  const m = singleMeta(single, { dateLabel: shortDate(event.date), venue: event.venue });
+  // Archived: there is no night to name, only the song.
+  const m = singleMeta(single, event.phase === "archived" ? null : { dateLabel: shortDate(event.date), venue: event.venue });
   // Absolute, from the configured origin: Facebook ignores a relative og:url.
   const url = base ? `${base}${SINGLE_PATH}` : SINGLE_PATH;
   return {
@@ -53,7 +54,7 @@ export default async function SinglePage() {
       single={single}
       coverUrl={cover.url}
       coverCaption={coverCaption(cover)}
-      dateLabel={shortDate(event.date)}
+      dateLabel={event.phase === "archived" ? null : shortDate(event.date)}
       holder={held.length > 0}
       offer={offer}
     />

@@ -56,6 +56,10 @@ describe("the single's page", () => {
     expect(m.title).toBe("1984 · Mani Odubo");
     expect(m.description).toBe("The lead single from Loop Soul, free to hear. The album plays live Sat Oct 10 at Scott's Inn, Kamloops.");
   });
+  it("names no night once the event is archived", () => {
+    const m = singleMeta({ title: "1984", artistName: "Mani Odubo", albumTitle: "Loop Soul" }, null);
+    expect(m.description).toBe("The lead single from Loop Soul, free to hear.");
+  });
 });
 
 describe("press captions", () => {

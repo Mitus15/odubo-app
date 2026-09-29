@@ -1,0 +1,69 @@
+{
+ "data": {
+  "product": {
+   "title": "Loop Soul Pass",
+   "handle": "loop-soul-volume-1-pass",
+   "status": "ACTIVE",
+   "totalInventory": 248,
+   "resourcePublications": {
+    "nodes": [
+     {
+      "isPublished": true,
+      "publication": {
+       "id": "gid://shopify/Publication/159053807829",
+       "name": "Online Store"
+      }
+     },
+     {
+      "isPublished": true,
+      "publication": {
+       "id": "gid://shopify/Publication/159129567445",
+       "name": "Odubo Studio Headless"
+      }
+     },
+     {
+      "isPublished": true,
+      "publication": {
+       "id": "gid://shopify/Publication/172494946517",
+       "name": "Odubo Studio Headless 02"
+      }
+     },
+     {
+      "isPublished": true,
+      "publication": {
+       "id": "gid://shopify/Publication/202620305621",
+       "name": "Meta"
+      }
+     },
+     {
+      "isPublished": true,
+      "publication": {
+       "id": "gid://shopify/Publication/198379307221",
+       "name": "Microsoft Copilot"
+      }
+     }
+    ]
+   },
+   "variants": {
+    "nodes": [
+     {
+      "sku": "LOOP-PASS-VOL1",
+      "price": "5.00",
+      "inventoryQuantity": 248
+     }
+    ]
+   }
+  }
+ },
+ "extensions": {
+  "cost": {
+   "requestedQueryCost": 17,
+   "actualQueryCost": 9,
+   "throttleStatus": {
+    "maximumAvailable": 2000,
+    "currentlyAvailable": 1991,
+    "restoreRate": 100
+   }
+  }
+ }
+}

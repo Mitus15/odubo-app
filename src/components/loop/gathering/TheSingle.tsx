@@ -69,7 +69,8 @@ export function TheSingle({
   coverCaption: string;
   /** Server-formatted in the venue's timezone. Never typed here: this text was
    *  hardcoded through two date changes and had to be hunted down both times. */
-  dateLabel: string;
+  /** The night's date, or null when there is no night to sell. */
+  dateLabel: string | null;
   onClose: () => void;
   onGetPass: () => void;
   onCoverContest: () => void;
@@ -314,7 +315,7 @@ export function TheSingle({
           There are thirteen more.
         </h2>
         <p className="loop-muted mt-2 text-sm leading-relaxed">
-          Performed live, front to back, once, in a courtyard.
+          {dateLabel ? "Performed live, front to back, once, in a courtyard." : "They arrive one at a time."}
         </p>
 
         {holder ? (
@@ -324,11 +325,11 @@ export function TheSingle({
           >
             <span>
               <span className="block text-base font-bold">The rest of it is yours</span>
-              <span className="block text-[13px] opacity-70">Your record · All 14, live, {dateLabel}</span>
+              <span className="block text-[13px] opacity-70">{dateLabel ? `Your record · All 14, live, ${dateLabel}` : "Your record · All 14"}</span>
             </span>
             <span className="opacity-60">→</span>
           </Link>
-        ) : (
+        ) : dateLabel ? (
           <button
             type="button"
             onClick={onGetPass}
@@ -344,11 +345,12 @@ export function TheSingle({
             </span>
             <span className="opacity-60">→</span>
           </button>
-        )}
+        ) : null}
 
         <p className="loop-muted mt-10 text-sm leading-relaxed">
-          This album isn&apos;t streaming anywhere. {dateLabel} is its first
-          exhibition.
+          {dateLabel
+            ? `This album isn't streaming anywhere. ${dateLabel} is its first exhibition.`
+            : "This album isn't streaming anywhere yet."}
         </p>
       </section>
     </motion.div>

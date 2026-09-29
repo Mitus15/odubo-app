@@ -19,10 +19,11 @@ export function isThisSingle(title: string | null | undefined): boolean {
 /** What the link says when it is pasted anywhere. */
 export function singleMeta(
   single: { title: string; artistName: string; albumTitle: string },
-  facts: { dateLabel: string; venue: string },
+  facts: { dateLabel: string; venue: string } | null,
 ): { title: string; description: string } {
+  const live = facts ? ` The album plays live ${facts.dateLabel} at ${facts.venue}.` : "";
   return {
     title: `${single.title} · ${single.artistName}`,
-    description: `The lead single from ${single.albumTitle}, free to hear. The album plays live ${facts.dateLabel} at ${facts.venue}.`,
+    description: `The lead single from ${single.albumTitle}, free to hear.${live}`,
   };
 }

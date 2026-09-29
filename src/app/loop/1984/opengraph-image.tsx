@@ -84,9 +84,11 @@ export default async function OgImage() {
           </div>
           <div style={{ display: "flex", flexDirection: "column" }}>
             <div style={{ display: "flex", fontSize: 26, fontWeight: 700 }}>Listen free</div>
-            <div style={{ display: "flex", fontSize: 22, fontWeight: 500, opacity: 0.72, marginTop: 8 }}>
-              {`Live ${shortDate(event.date)} · ${venueShort(event.venue)}`}
-            </div>
+            {event.phase !== "archived" && (
+              <div style={{ display: "flex", fontSize: 22, fontWeight: 500, opacity: 0.72, marginTop: 8 }}>
+                {`Live ${shortDate(event.date)} · ${venueShort(event.venue)}`}
+              </div>
+            )}
             <div style={{ display: "flex", fontSize: 22, fontWeight: 500, opacity: 0.72, marginTop: 4 }}>{`${host}${SINGLE_PATH}`}</div>
           </div>
         </div>

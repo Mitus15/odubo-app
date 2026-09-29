@@ -24,7 +24,7 @@ export function SingleStandalone({
   single: FeaturedSingle;
   coverUrl: string | null;
   coverCaption: string;
-  dateLabel: string;
+  dateLabel: string | null;
   holder: boolean;
   /** Null once passes are no longer sold (after the night). */
   offer: PassOffer | null;
