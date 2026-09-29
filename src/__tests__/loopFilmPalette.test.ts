@@ -6,6 +6,7 @@ import {
   fromLch,
   hex,
   parseHex,
+  sibling,
   SAND,
   SAND_DEEP,
   SAND_BRIGHT,
@@ -51,6 +52,14 @@ describe("the film palette", () => {
       expect(toLch(p.highlight).L).toBeGreaterThan(toLch(f).L);
       expect(toLch(p.mid).L).toBeLessThan(toLch(f).L);
     }
+  });
+
+  it("gives each chapter a sibling for the downbeat flip, in its own family", () => {
+    const f = defaultField(3);
+    const s = sibling(f);
+    expect(Math.abs(((toLch(s).h - toLch(f).h + 540) % 360) - 180)).toBeGreaterThan(20);
+    expect(Math.abs(toLch(s).L - toLch(f).L)).toBeLessThan(0.02);
+    expect(contrast(INK, s)).toBeGreaterThan(7);
   });
 
   it("reads and writes hex", () => {

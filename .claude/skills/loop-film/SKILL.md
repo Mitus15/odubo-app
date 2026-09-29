@@ -55,7 +55,14 @@ npm run film:cut -- <take> clip <card-id> --audio=tease|full|silent
 npm run film:cut -- <take> song <slug>
 npm run film:cut -- <take> film
 npm run film:compose -- <take> --from=<s> --to=<s> --aspect=9x16 --shadow=lag --lag=22   # just the picture
+npm run film:grid -- <take> --at=<take seconds>    # the Warhol grid: one moment in all 14 colourways
 ```
+
+Effects (add to `film:cut ... clip|song` or `film:compose`): `--effects=freeze`
+(a crawl on every downbeat that catches up within the bar, so the length and
+the sync never change), `--effects=flip` (the field alternates with its
+sibling colour each bar), or both. The bar grid is measured from the master
+(`scripts/loop/film/beats.py`).
 
 ## The story side
 

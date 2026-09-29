@@ -13,7 +13,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { listCards, listChapters } from "../../../src/lib/loop/film/store";
-import { palette, parseHex, SAND } from "../../../src/lib/loop/film/palette";
+import { palette, parseHex, sibling, SAND } from "../../../src/lib/loop/film/palette";
 
 const take = process.argv[2];
 if (!take || take.startsWith("--")) {
@@ -35,6 +35,8 @@ async function main() {
       thread: c.thread,
       status: c.status,
       palette: palette(parseHex(c.field) ?? SAND),
+      // The downbeat flip's other colour: the same family, the hue turned.
+      paletteFlip: palette(sibling(parseHex(c.field) ?? SAND)),
       shadowMode: c.shadowMode,
       shadowLag: c.shadowLag,
       badgeFrom: c.badgeFrom,

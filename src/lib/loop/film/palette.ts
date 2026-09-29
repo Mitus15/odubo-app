@@ -135,6 +135,18 @@ export function defaultField(index: number, count = 14): RGB {
   return fromLch({ L: SAND_LCH.L, C: DEFAULT_CHROMA, h });
 }
 
+/**
+ * A sibling of a field colour: the same lightness and chroma, the hue turned
+ * by `degrees`. The downbeat flip alternates a chapter with its sibling, so the
+ * colour moves with the music without leaving the chapter's family.
+ */
+export const SIBLING_DEGREES = 28;
+
+export function sibling(field: RGB, degrees = SIBLING_DEGREES): RGB {
+  const f = toLch(field);
+  return fromLch({ ...f, h: (f.h + degrees + 360) % 360 });
+}
+
 export function hex(rgb: RGB): string {
   return `#${rgb.map((v) => v.toString(16).padStart(2, "0")).join("")}`;
 }

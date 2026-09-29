@@ -3,6 +3,7 @@ Put it together: the moving poster, frame by frame.
 
     npm run film:compose -- <take> --from=<s> --to=<s> --aspect=9x16 [--outro] [--out=file.mp4]
         [--shadow=sync|lag|none --lag=<frames>]   override the chapter's shadow
+        [--effects=freeze,flip]                  hold on each downbeat; flip to the sibling colour each bar
 
 For every frame, in this order:
   1. the field       the chapter's flat colour, edge to edge (no room, ever)
@@ -24,7 +25,7 @@ import json, sys, time
 from collections import deque
 import numpy as np
 import cv2
-from film_common import WORK
+from film_common import SONGS, WORK
 from take import Reader, Writer, even, load_take, read_pose, take_dir
 from anchor import HeartTrack
 from shadow import Ground, cast
@@ -160,26 +161,64 @@ def main(argv):
     fade_frames = int(FADE_S * fps)
     fly_frames = int(FLY_S * fps)
 
-    for k, (lab, alp) in enumerate(zip(labels, alphas)):
-        f = first - pre + k
-        lm = poses.get(f)
-        heart = track.update(lm, Wf, Hf)
-        alpha = alp.astype(np.float32) / 255
-        g, g_contact = ground.update(lm, Hf, alpha)
-        past.append(alpha)
-        # Where he is, sideways: the middle of his hips, else of his mass.
-        if lm is not None and min(lm[23, 2], lm[24, 2]) > 0.3:
-            x_now = float((lm[23, 0] + lm[24, 0]) / 2 * Wf)
-        else:
-            cols = np.where(alpha.max(0) > 0.5)[0]
-            x_now = float(cols.mean()) if len(cols) else Wf / 2
-        cam_x = x_now if cam_x is None else cam_x + aspect["follow"] * (x_now - cam_x)
-        if k < pre:
-            continue
-        i = k - pre  # frame within the output
+    # Effects that dance with him, on the song's own bar grid.
+    effects = set(filter(None, opts.get("effects", "").split(",")))
+    bars = None
+    if effects & {"freeze", "flip"}:
+        from beats import grid, freeze_map
+        mid = timeline.at(t_from + (t_to - t_from) / 2)
+        number = next(s_["number"] for s_ in SONGS if s_["slug"] == mid["slug"])
+        g_ = grid(number)
+        film_start = next(s_["filmStart"] for s_ in align["songs"] if s_["slug"] == mid["slug"])
+        bars = (film_start + g_["first"], g_["bar"])
+        print(f"  effects {','.join(sorted(effects))} on a {g_['bar']:.3f}s bar", flush=True)
+
+    # The source is read forward only. An output frame asks for a source frame
+    # at or after the last one read: the same one to hold, later ones to catch
+    # up. Everything that follows him (heart, ground, shadow, camera) advances
+    # with the source, never with the output.
+    source = iter(zip(labels, alphas))
+    st = {"k": -1}
+
+    def advance(target: int):
+        while st["k"] < target:
+            lab_, alp_ = next(source)
+            k_ = st["k"] + 1
+            lm_ = poses.get(first - pre + k_)
+            heart_ = track.update(lm_, Wf, Hf)
+            alpha_ = alp_.astype(np.float32) / 255
+            g_s, g_c = ground.update(lm_, Hf, alpha_)
+            past.append(alpha_)
+            if lm_ is not None and min(lm_[23, 2], lm_[24, 2]) > 0.3:
+                x_now = float((lm_[23, 0] + lm_[24, 0]) / 2 * Wf)
+            else:
+                cols = np.where(alpha_.max(0) > 0.5)[0]
+                x_now = float(cols.mean()) if len(cols) else Wf / 2
+            cx = st.get("cam_x")
+            st.update(k=k_, lab=lab_, alpha=alpha_, heart=heart_, g=g_s, g_contact=g_c,
+                      cam_x=x_now if cx is None else cx + aspect["follow"] * (x_now - cx))
+        return st
+
+    if pre > 0:
+        advance(pre - 1)
+
+    for i in range(count):
         t = t_from + i / fps
+        target = pre + i
+        if "freeze" in effects and bars:
+            target = pre + int(round((freeze_map(t, bars[0], bars[1]) - t_from) * fps))
+        try:
+            s_now = advance(max(target, st["k"], 0))
+        except StopIteration:
+            break
+        lab, alpha, heart = s_now["lab"], s_now["alpha"], s_now["heart"]
+        g, g_contact, cam_x = s_now["g"], s_now["g_contact"], s_now["cam_x"]
         ch = timeline.at(t)
-        pal = {key: rgb(v) for key, v in ch["palette"].items()}
+        key = "palette"
+        if "flip" in effects and bars and ch.get("paletteFlip"):
+            if int(np.floor((t - bars[0]) / bars[1])) % 2 == 1:
+                key = "paletteFlip"
+        pal = {k2: rgb(v) for k2, v in ch[key].items()}
         g_src = g if g is not None else Hf * 0.9
         ground_out = aspect["ground"] * Hout
         A = np.float32([[scale, 0, Wout / 2 - scale * cam_x], [0, scale, ground_out - scale * g_src]])
@@ -284,6 +323,8 @@ def main(argv):
             writer.write(np.clip(canvas, 0, 255).astype(np.uint8))
             written += 1
     writer.close()
+    labels.close()
+    alphas.close()
     print(f"{out_path}: {written} frames at {Wout}x{Hout} in {time.time() - t0:.0f}s")
     return out_path
 

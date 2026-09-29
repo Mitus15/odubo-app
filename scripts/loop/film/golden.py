@@ -7,7 +7,8 @@ Proves every stage works together before the real take exists, on the June
 take (1984, take 542 s = master 117 s, lined up by hand because that take was
 danced in headphones). Uses a LOCAL test card: it is never written to D1 and
 never published. Outputs: a 9:16 clip (song audio), the same clip with tease
-audio, the 16:9 song cut and the 16:9 film, each with a contact sheet; then
+audio, the 16:9 song cut, the 16:9 film, the clip again with the freeze and
+flip effects, and the Warhol grid, each video with a contact sheet; then
 check-sync proves the clip's music came from where it claims.
 """
 import json, subprocess, sys
@@ -46,6 +47,8 @@ def main():
     py("cut.py", TAKE, "clip", CARD["id"], "--audio=tease")
     py("cut.py", TAKE, "song", "1984", "--audio=full")
     py("cut.py", TAKE, "film")
+    py("cut.py", TAKE, "clip", CARD["id"], "--audio=full", "--effects=freeze,flip")
+    py("grid.py", TAKE, "--at=547.5")
     clip = d / "out" / f"clip-1984-{CARD['id'][:8]}-full.mp4"
     # The clip starts at take 545 s; 1984 sits at take 425 s, so 120 s into the master.
     subprocess.run(["node", "scripts/loop/check-sync.mjs", f"--file={clip}", f"--reference={master(2)}", "--expect=120"],

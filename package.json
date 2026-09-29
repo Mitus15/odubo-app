@@ -66,7 +66,8 @@
     "film:run": "cd scripts/loop/film && python3 run.py",
     "film:golden": "cd scripts/loop/film && python3 golden.py",
     "shopify:loop-vinyl": "tsx --env-file=.env.local scripts/shopify/loop-soul-vinyl.ts",
-    "film:publish": "tsx --env-file=.env.local scripts/loop/film/publish.ts"
+    "film:publish": "tsx --env-file=.env.local scripts/loop/film/publish.ts",
+    "film:grid": "cd scripts/loop/film && python3 grid.py"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.858.0",

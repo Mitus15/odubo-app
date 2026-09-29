@@ -38,6 +38,20 @@ becoming the Danceman.
   the room without him; where the segmenter is unsure and the pixel is just the
   room, it is the room. Only small holes are filled: a large hole is real air.
 
+## Effects that dance with him
+
+All deterministic, all on the song's own bar grid (`beats.py`: tempo from
+shape.json, the phase and the downbeat from the master's onsets):
+- **freeze**: time warps rather than cuts. Near each downbeat the picture
+  crawls for 0.18 s, then runs a little fast to be back on time by the next
+  bar line, so a clip's length and its sync never change (the living poster's
+  method, `living-poster.ts:865`, rebuilt as a source-frame map).
+- **flip**: the field alternates each bar with its sibling colour (the hue
+  turned 28 degrees, same lightness and chroma, ink still 7:1).
+- **the shadow**: in step, or lagging a beat where The Game pulls.
+- **the Warhol grid** (`film:grid`): one moment in all fourteen colourways,
+  closed by the Danceman and the wordmark. The album post.
+
 ## Where it departs from the plan
 
 | Plan | Built | Why |

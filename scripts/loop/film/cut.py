@@ -1,8 +1,8 @@
 """
 Cut the finished pieces: a clip per card, a cut per song, and the film.
 
-    npm run film:cut -- <take> clip <card-id> [--audio=tease|full|silent]
-    npm run film:cut -- <take> song <slug>    [--audio=full|silent]
+    npm run film:cut -- <take> clip <card-id> [--audio=tease|full|silent] [--effects=freeze,flip]
+    npm run film:cut -- <take> song <slug>    [--audio=full|silent] [--effects=freeze,flip]
     npm run film:cut -- <take> film           [--height=2160]
 
   clip   9:16, for Reels, TikTok and Shorts. The card's moment of the dance,
@@ -95,7 +95,7 @@ def mux(video: Path, pngs, overlays, audio_filter, audio_inputs, dest: Path, dur
          "-c:a", "aac", "-b:a", "256k", "-t", f"{duration:.3f}", str(dest)])
 
 
-def clip(name: str, card_id: str, audio: str):
+def clip(name: str, card_id: str, audio: str, effects: str = ""):
     take, d = load_take(name), take_dir(name)
     story = json.loads((d / "story.json").read_text())
     align = json.loads((d / "align.json").read_text())
@@ -105,7 +105,8 @@ def clip(name: str, card_id: str, audio: str):
     a, b = float(card["filmStart"]), float(card["filmEnd"])
     out_dir = work(name, "out")
     silent_video = out_dir / f"_clip-{card_id}.mp4"
-    compose.main([name, f"--from={a}", f"--to={b}", "--aspect=9x16", "--outro", f"--out={silent_video}"])
+    compose.main([name, f"--from={a}", f"--to={b}", "--aspect=9x16", "--outro", f"--out={silent_video}"]
+                 + ([f"--effects={effects}"] if effects else []))
     fps = take["fps"]
     tail = (len(list((work("cache", "marks") / "morph").glob("*.png"))) + int(compose.HOLD_S * fps)) / fps
     duration = (b - a) + tail
@@ -135,7 +136,7 @@ def clip(name: str, card_id: str, audio: str):
     return dest
 
 
-def song(name: str, slug: str, audio: str, height: int = 1080):
+def song(name: str, slug: str, audio: str, height: int = 1080, effects: str = ""):
     take, d = load_take(name), take_dir(name)
     story = json.loads((d / "story.json").read_text())
     align = json.loads((d / "align.json").read_text())
@@ -144,7 +145,8 @@ def song(name: str, slug: str, audio: str, height: int = 1080):
     a, b = max(al["filmStart"], win["start"]), min(al["filmEnd"], win["end"])
     out_dir = work(name, "out")
     silent_video = out_dir / f"_song-{slug}.mp4"
-    compose.main([name, f"--from={a}", f"--to={b}", "--aspect=16x9", f"--height={height}", f"--out={silent_video}"])
+    compose.main([name, f"--from={a}", f"--to={b}", "--aspect=16x9", f"--height={height}", f"--out={silent_video}"]
+                 + ([f"--effects={effects}"] if effects else []))
     duration = b - a
     pngs, overlays = [], []
     chapter_png = d / "cards" / f"chapter-{slug}.png"
@@ -225,9 +227,9 @@ def main(argv):
     name, kind = argv[0], argv[1]
     opts = dict(a[2:].split("=", 1) for a in argv[2:] if a.startswith("--") and "=" in a)
     if kind == "clip":
-        return clip(name, argv[2], opts.get("audio", "tease"))
+        return clip(name, argv[2], opts.get("audio", "tease"), opts.get("effects", ""))
     if kind == "song":
-        return song(name, argv[2], opts.get("audio", "full"), int(opts.get("height", 1080)))
+        return song(name, argv[2], opts.get("audio", "full"), int(opts.get("height", 1080)), opts.get("effects", ""))
     if kind == "film":
         return film(name, int(opts.get("height", 1080)))
     raise SystemExit("usage: film:cut -- <take> clip <card-id> | song <slug> | film")

@@ -47,3 +47,17 @@ class Align(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class Freeze(unittest.TestCase):
+    def test_holds_at_the_downbeat_and_lands_back_on_time(self):
+        from beats import freeze_map
+        bar = 2.0
+        # Crawling right after the downbeat.
+        self.assertLess(freeze_map(0.1, 0.0, bar) - 0.0, 0.1 * 0.2)
+        # Back in sync at every bar line: the length never changes.
+        for k in range(1, 5):
+            self.assertAlmostEqual(freeze_map(k * bar - 1e-9, 0.0, bar), k * bar, delta=1e-6)
+        # Never goes backwards.
+        ts = [freeze_map(x / 100, 0.0, bar) for x in range(0, 800)]
+        self.assertTrue(all(b >= a for a, b in zip(ts, ts[1:])))

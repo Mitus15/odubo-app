@@ -67,9 +67,13 @@ class Reader:
         return a.reshape(self.h, self.w) if self.ch == 1 else a.reshape(self.h, self.w, 3)
 
     def close(self):
+        """Stop reading. A reader left mid-file (a clip ends, a freeze leaves the
+        tail unread) is ended quietly rather than left to die on a broken pipe."""
         if self.proc.poll() is None:
-            self.proc.stdout.close()
+            self.proc.kill()
             self.proc.wait()
+        if self.proc.stdout and not self.proc.stdout.closed:
+            self.proc.stdout.close()
 
 
 class Writer:
