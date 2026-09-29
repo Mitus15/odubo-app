@@ -21,6 +21,7 @@ import { useAnalyticsSafe } from '@/contexts/AnalyticsContext';
 import type { ClipItem } from '@/types/clips';
 import type { Track, Album } from '@/types/music';
 import { useCookieConsent } from '@/lib/consent';
+import { ODUBO_LOCKUP, ODUBO_LOCKUP_ASPECT } from '@/lib/brand/marks';
 
 // Modal types that can be opened via URL
 export type DefaultModal = 'store' | 'moments' | 'media' | 'links' | null;
@@ -454,9 +455,9 @@ export default function HomePageClient({
                     transition={{ duration: 1, ease: [0.25, 0.46, 0.45, 0.94] }}
                   >
                     <Image
-                      src="/brand-logos/odubo-brand/odubo.svg"
+                      src={ODUBO_LOCKUP}
                       alt="Odubo Studio"
-                      width={180}
+                      width={Math.round(180 * ODUBO_LOCKUP_ASPECT)}
                       height={180}
                       className="mx-auto drop-shadow-[0_4px_30px_rgba(0,0,0,0.6)]"
                       priority

@@ -8,6 +8,7 @@ import { useCartOverlay } from './StoreOrchestrator';
 import type { SortOption } from '@/lib/store/types';
 import { isPreorderActive, getTimeUntilDrop } from '@/config/preorder';
 import { STORE_ACCOUNT_URL } from "@/lib/storeAccount";
+import { ODUBO_MARK } from '@/lib/brand/marks';
 
 // ============================================
 // Filter & Sort UI
@@ -243,9 +244,9 @@ export default function ProductBrowse() {
         {/* Brand logo - centered on all sizes */}
         <div className="absolute left-1/2 -translate-x-1/2">
           <img
-            src="/brand-logos/odubo-brand/odubo.svg"
+            src={ODUBO_MARK}
             alt="Odubo"
-            className="h-10 sm:h-14 lg:h-20 w-auto"
+            className="h-8 lg:h-10 w-auto"
             draggable={false}
           />
         </div>

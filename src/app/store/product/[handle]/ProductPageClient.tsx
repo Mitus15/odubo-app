@@ -8,6 +8,7 @@ import { usePageAnalytics } from '@/hooks/usePageAnalytics';
 import { useAnalyticsSafe } from '@/contexts/AnalyticsContext';
 import { isPreorderActive, PREORDER_CTA, PREORDER_FEEDBACK, PREORDER_SHIP_TEXT } from '@/config/preorder';
 import { formatMoney } from '@/lib/store/money';
+import { ODUBO_MARK } from '@/lib/brand/marks';
 
 // Define the shape of the product data
 interface ShopifyProduct {
@@ -174,7 +175,7 @@ export default function ProductPageClient({ product }: ProductPageClientProps) {
           {/* Breadcrumb / Back */}
           <div className="mb-4 sm:mb-8 flex items-center justify-between">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/brand-logos/odubo-brand/odubo.svg" alt="Odubo" className="h-8 sm:h-10 w-auto opacity-90" />
+            <img src={ODUBO_MARK} alt="Odubo" className="h-8 lg:h-10 w-auto opacity-90" />
             <a href="/store" className="text-xs uppercase tracking-widest text-[#b2a491] hover:text-[#ede8df] transition-colors">
               Back to Shop
             </a>

@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import Image from 'next/image';
+import { ODUBO_MARK, ODUBO_MARK_ASPECT } from '@/lib/brand/marks';
 
 export default function NotFound() {
   return (
@@ -8,9 +9,9 @@ export default function NotFound() {
         {/* odubo studio Logo Mark */}
         <div className="mb-8">
           <Image
-            src="/brand-logos/odubo-brand/odubo.svg"
+            src={ODUBO_MARK}
             alt="odubo studio"
-            width={48}
+            width={Math.round(48 * ODUBO_MARK_ASPECT)}
             height={48}
             className="mx-auto opacity-40"
           />

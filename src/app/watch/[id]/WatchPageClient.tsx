@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useAnalyticsSafe } from '@/contexts/AnalyticsContext';
 import type { SocialLink } from './page';
+import { ODUBO_MARK } from '@/lib/brand/marks';
 
 interface WatchVideo {
   id: number;
@@ -319,7 +320,7 @@ function JoinTheCool({ socialLinks }: { socialLinks: SocialLink[] }) {
               aria-label="Shop"
             >
               <Image
-                src="/brand-logos/odubo-brand/odubo.svg"
+                src={ODUBO_MARK}
                 alt="odubo studio"
                 width={24}
                 height={24}

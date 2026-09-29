@@ -9,6 +9,7 @@ import { useAnalyticsSafe } from '@/contexts/AnalyticsContext';
 import type { Product, ProductVariant } from '@/lib/store/types';
 import { isPreorderActive, PREORDER_CTA, PREORDER_CTA_ANOTHER, PREORDER_FEEDBACK, PREORDER_SHIP_TEXT } from '@/config/preorder';
 import { STORE_ACCOUNT_URL } from "@/lib/storeAccount";
+import { ODUBO_MARK } from '@/lib/brand/marks';
 
 // Helper to extract image filename for comparison
 // Shopify URLs can differ between list and detail views even for same image
@@ -431,9 +432,9 @@ export default function ProductDetailFeed() {
 
         {/* Brand logo */}
         <img
-          src="/brand-logos/odubo-brand/odubo.svg"
+          src={ODUBO_MARK}
           alt="Odubo"
-          className="h-6 w-auto"
+          className="h-8 lg:h-10 w-auto"
           draggable={false}
         />
 

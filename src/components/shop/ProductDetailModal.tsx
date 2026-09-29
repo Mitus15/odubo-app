@@ -8,6 +8,7 @@ import { useOmniShop, type ProductDetail } from '@/contexts/OmniShopContext';
 import { extractColorsFromImage, type ExtractedColors } from '@/lib/colorExtraction';
 import { useAnalyticsSafe } from '@/contexts/AnalyticsContext';
 import { isPreorderActive, PREORDER_CTA, PREORDER_SHIP_TEXT } from '@/config/preorder';
+import { ODUBO_MARK } from '@/lib/brand/marks';
 
 interface ProductDetailModalProps {
   productHandle: string;
@@ -275,15 +276,13 @@ export default function ProductDetailModal({ productHandle }: ProductDetailModal
           )}
         </button>
 
-        {/* Centered logo - inverts based on background */}
+        {/* Centered logo. Oxblood reads on both the light and the dark header,
+            so it is never filtered: invert() turned it pale teal on the light one. */}
         <img
-          src="/brand-logos/odubo-brand/odubo.svg"
+          src={ODUBO_MARK}
           alt="Odubo Brand Logo"
-          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-6 lg:h-12 w-auto transition-all duration-500"
-          style={{
-            marginTop: 'calc(env(safe-area-inset-top, 0px) / 2)',
-            filter: colors?.isLight ? 'invert(0)' : 'invert(1)',
-          }}
+          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-8 lg:h-10 w-auto"
+          style={{ marginTop: 'calc(env(safe-area-inset-top, 0px) / 2)' }}
           draggable={false}
         />
 

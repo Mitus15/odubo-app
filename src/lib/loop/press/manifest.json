@@ -1,9 +1,9 @@
 {
-  "builtAt": "2026-09-23T03:13:50.049Z",
+  "builtAt": "2026-09-29T14:52:35.105Z",
   "zip": {
     "name": "Loop-Soul-Press-Kit.zip",
     "href": "/api/media/audio/warehouse/press/loop-soul-v1/Loop-Soul-Press-Kit.zip",
-    "bytes": 8880889
+    "bytes": 8881563
   },
   "artwork": [
     {
@@ -138,8 +138,8 @@
     },
     {
       "name": "odubo-studio.svg",
-      "href": "/loop/press/logos/odubo-studio.svg?v=6b9f4a2164",
-      "bytes": 6150,
+      "href": "/loop/press/logos/odubo-studio.svg?v=a516c83d7e",
+      "bytes": 7787,
       "w": null,
       "h": null
     },

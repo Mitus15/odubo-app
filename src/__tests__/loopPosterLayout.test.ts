@@ -34,7 +34,7 @@ const QR = qrSrc("https://example.com/loop");
 const deps: LayoutDeps = {
   sizes: {
     [WORDMARK_SRC]: { w: 820, h: 561 },
-    [ODUBO_SRC]: { w: 1313, h: 1198 },
+    [ODUBO_SRC]: { w: 1043, h: 1200 },
     [SCOTTS_SRC]: { w: 1885, h: 849 },
     [QR]: { w: 1024, h: 1024 },
     "/loop/figures/crowd.png": { w: 1486, h: 610 },

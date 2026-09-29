@@ -10,6 +10,7 @@ import { EVENT_CREDITS } from "@/lib/loop/content";
 import CoverContest from "./CoverContest";
 import type { RunOfShowItem } from "@/lib/loop/content";
 import Logo from "@/components/loop/brand/Logo";
+import { ODUBO_LOCKUP, ODUBO_LOCKUP_ASPECT } from "@/lib/brand/marks";
 import ModuleSheet from "@/components/loop/shell/ModuleSheet";
 import RunOfShow from "@/components/loop/gathering/RunOfShow";
 import GetPassModal from "@/components/loop/gathering/GetPassModal";
@@ -341,11 +342,18 @@ export function GatheringPoster({
 
       {/* Footer: Odubo presents · Scott's is the venue partner + Legacy access */}
       <footer className="mt-5 flex flex-col items-center gap-1.5">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/loop/branding/odubo-2026.svg"
-          alt="Odubo, presenter"
-          className="h-10 w-auto"
+        {/* The house lockup, drawn in the playbill's ink through a mask so it
+            needs no second, recoloured file. 64px keeps ODUBO's caps larger
+            than the venue line under it. */}
+        <span
+          role="img"
+          aria-label="Odubo, presenter"
+          className="block h-16 bg-current"
+          style={{
+            aspectRatio: ODUBO_LOCKUP_ASPECT,
+            WebkitMask: `url(${ODUBO_LOCKUP}) center / contain no-repeat`,
+            mask: `url(${ODUBO_LOCKUP}) center / contain no-repeat`,
+          }}
         />
         <div className="text-[9px] font-semibold uppercase tracking-[0.3em] opacity-50">
           Venue partner · Scott&apos;s Inn &amp; Suites

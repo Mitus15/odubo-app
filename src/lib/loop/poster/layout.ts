@@ -9,6 +9,7 @@ import {
   CAP_HEIGHT,
   type FontWeight,
 } from "../brand";
+import { ODUBO_LOCKUP } from "../../brand/marks";
 
 /**
  * The one poster layout engine — pure, synchronous, no I/O, no DOM, no Node.
@@ -108,12 +109,17 @@ export type LayoutDeps = { sizes: Record<string, ImageInfo> };
 /* ── shared sources ─────────────────────────────────────────────────────── */
 
 export const WORDMARK_SRC = "/loop/branding/loop-soul.svg";
-// The 2026 lockup: MadisonSquare Incised logotype over the danceman. The type
-// arrived as live <text> in a font installed on one Mac; it ships outlined, or
-// it would render correctly for its author and as a fallback sans everywhere
-// else. Much wider than the mark it replaces (2.85:1 against 1.10:1), so the
-// credits row is shorter and the sheet gains air below the price.
-export const ODUBO_SRC = "/loop/branding/odubo-2026.svg";
+// The house lockup: ODUBO in Libre Baskerville Bold over the danceman, the
+// studio's standard logo since 2026-09-29 (it replaced the MadisonSquare one,
+// whose type had too much personality of its own beside the figure). It is
+// STACKED, 0.87:1, where MadisonSquare was 2.58:1, so every credits row below
+// sizes it on HEIGHT: sized on the old widths it would stand three times taller
+// and shove the rows it sits in. Most of its height is the danceman, so each
+// height is chosen for the word, which must stay legible at the piece's
+// smallest real viewing size.
+export const ODUBO_SRC = ODUBO_LOCKUP;
+/** The lockup's height in each credits row, in the layout's own units (×S). */
+const ODUBO_H = { poster: 230, living: 230, ticket: 140, banner: 120 } as const;
 // The 2026 mark (EST. 1964 / Scott's / INN & SUITES), supplied by the venue on
 // 2026-09-09. A raster rather than an SVG because that is how it was supplied,
 // which means it cannot be recoloured at load time the way the brand SVGs are —
@@ -429,8 +435,8 @@ export function layoutEventPoster(
     // 3. Credits row pinned to the bottom margin.
     const od = need(deps, ODUBO_SRC);
     const sc = need(deps, SCOTTS_SRC);
-    const odW = R(250 * S);
-    const odH = R(odW * (od.h / od.w));
+    const odH = R(ODUBO_H.poster * S);
+    const odW = R(odH * (od.w / od.h));
     const scW = R(330 * S);
     const scH = R(scW * (sc.h / sc.w));
     const creditRowH = Math.max(odH, scH);
@@ -440,7 +446,8 @@ export function layoutEventPoster(
     // whole block inward and lets the hero band give up the difference.
     const creditBottom = H - pad - (isStory ? R(320 * S) : 0);
     const creditTop = creditBottom - creditRowH;
-    const creditLabelY = creditTop - R(28 * S);
+    // Air under the labels is set for the lockup, whose caps now meet it first.
+    const creditLabelY = creditTop - R(38 * S);
 
     // 4. The air budget. Six inter-row gaps carry the poster's rhythm; their
     // design values were tuned on 8×11. On squatter formats (feed is 4:5) the
@@ -837,11 +844,10 @@ export function layoutLivingPoster(
     /* ── bottom band, built upward from the marks ────────────────────────── */
     const od = need(deps, ODUBO_SRC);
     const sc = need(deps, SCOTTS_SRC);
-    // The 2026 lockup is wide and short (2.85:1) against Scott's stacked
-    // 2.22:1, so matching their WIDTHS would leave the house mark visibly
-    // lighter than the venue's on our own poster. Matched on height instead.
-    const odW = R(370 * S);
-    const odH = R(odW * (od.h / od.w));
+    // Never lighter than the venue's mark on our own poster, which is why the
+    // house is sized on height here as everywhere.
+    const odH = R(ODUBO_H.living * S);
+    const odW = R(odH * (od.w / od.h));
     const scW = R(320 * S);
     const scH = R(scW * (sc.h / sc.w));
     const markRowH = Math.max(odH, scH);
@@ -956,8 +962,8 @@ export function layoutTicket(spec: TicketSpec, deps: LayoutDeps): LayoutResult {
 
     const od = need(deps, ODUBO_SRC);
     const sc = need(deps, SCOTTS_SRC);
-    const odW = R(140 * S);
-    const odH = R(odW * (od.h / od.w));
+    const odH = R(ODUBO_H.ticket * S);
+    const odW = R(odH * (od.w / od.h));
     const scW = R(190 * S);
     const scH = R(scW * (sc.h / sc.w));
     const odColW = Math.max(
@@ -974,7 +980,7 @@ export function layoutTicket(spec: TicketSpec, deps: LayoutDeps): LayoutResult {
     const odCx = creditLeft + odColW / 2;
     const scCx = creditLeft + odColW + creditGap + scColW / 2;
     const creditLabelY = pad + R(22 * S);
-    const creditTop = creditLabelY + R(18 * S);
+    const creditTop = creditLabelY + R(26 * S);
     const creditRowH = Math.max(odH, scH);
     assertFits(
       "the ticket credit block",
@@ -1242,8 +1248,8 @@ export function layoutBanner(spec: BannerSpec, deps: LayoutDeps): LayoutResult {
     const labelSize = R(15 * S);
     const od = need(deps, ODUBO_SRC);
     const sc = need(deps, SCOTTS_SRC);
-    const odW = R(120 * S);
-    const odH = R(odW * (od.h / od.w));
+    const odH = R(ODUBO_H.banner * S);
+    const odW = R(odH * (od.w / od.h));
     const scW = R(165 * S);
     const scH = R(scW * (sc.h / sc.w));
     const odColW = Math.max(odW, measure(CREDIT_PRESENTER, { size: labelSize, track: 0.2 }));
@@ -1253,7 +1259,7 @@ export function layoutBanner(spec: BannerSpec, deps: LayoutDeps): LayoutResult {
     const odCx = creditLeft + odColW / 2;
     const scCx = creditLeft + odColW + gap + scColW / 2;
     const labelY = pad + R(14 * S);
-    const logoTop = labelY + R(16 * S);
+    const logoTop = labelY + R(22 * S);
     const logoRowH = Math.max(odH, scH);
     assertFits("the banner credit block", odColW + gap + scColW, W - pad * 2 - wmW - R(80 * S));
     ops.push(line(CREDIT_PRESENTER, { x: odCx, y: labelY, size: labelSize, track: 0.2, opacity: 0.55 }));

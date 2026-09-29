@@ -7,6 +7,7 @@ import { useOmniShop } from '@/contexts/OmniShopContext';
 import { getAttribution, getSessionId } from '@/lib/attribution';
 import { useAnalyticsSafe } from '@/contexts/AnalyticsContext';
 import { formatMoney, getCountryFromCookie } from '@/lib/store/money';
+import { ODUBO_MARK } from '@/lib/brand/marks';
 
 export default function CartModal() {
   const {
@@ -114,9 +115,9 @@ export default function CartModal() {
         </button>
 
         <img
-          src="/brand-logos/odubo-brand/odubo.svg"
+          src={ODUBO_MARK}
           alt="Odubo Brand Logo"
-          className="h-6 lg:h-12 w-auto"
+          className="h-8 lg:h-10 w-auto"
           draggable={false}
         />
 
