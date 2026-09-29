@@ -1,0 +1,118 @@
+{
+  "albumId": "724666e5-66a8-4229-99ee-d5450076b749",
+  "albumTitle": "Loop Soul",
+  "songs": [
+    {
+      "number": 1,
+      "slug": "welcome",
+      "title": "Welcome",
+      "trackId": "d2141256-6f4c-46a4-ab32-49915a1bc327",
+      "seconds": 74,
+      "interlude": false
+    },
+    {
+      "number": 2,
+      "slug": "1984",
+      "title": "1984",
+      "trackId": "a2f91aad-fc5c-4d52-97ef-12b46b0dc339",
+      "seconds": 294,
+      "interlude": false
+    },
+    {
+      "number": 3,
+      "slug": "hallucinogen",
+      "title": "Hallucinogen",
+      "trackId": "b8954e51-497c-4a6d-bdc3-fb1a4610debd",
+      "seconds": 249,
+      "interlude": false
+    },
+    {
+      "number": 4,
+      "slug": "no-end-theory",
+      "title": "The No End Theory",
+      "trackId": "9044993f-484a-42f7-80ae-aaa92565e174",
+      "seconds": 35,
+      "interlude": true
+    },
+    {
+      "number": 5,
+      "slug": "in-the-court",
+      "title": "In The Court",
+      "trackId": "e2febbca-65ec-41cb-a08c-e30a2ef85e80",
+      "seconds": 226,
+      "interlude": false
+    },
+    {
+      "number": 6,
+      "slug": "newspeak",
+      "title": "News Peak",
+      "trackId": "f6f462a2-23f9-445e-bc8f-e2163dc737c9",
+      "seconds": 334,
+      "interlude": false
+    },
+    {
+      "number": 7,
+      "slug": "every-generation",
+      "title": "Every Generation",
+      "trackId": "5d910974-34a6-4f62-a08f-a8c7c44c83d2",
+      "seconds": 35,
+      "interlude": true
+    },
+    {
+      "number": 8,
+      "slug": "rap",
+      "title": "Rap",
+      "trackId": "c1066377-5cb0-4559-a3fb-80118850a424",
+      "seconds": 219,
+      "interlude": false
+    },
+    {
+      "number": 9,
+      "slug": "makunahea",
+      "title": "Makunahea",
+      "trackId": "76219f77-893c-479d-9a8f-1e5c3a0a828f",
+      "seconds": 168,
+      "interlude": false
+    },
+    {
+      "number": 10,
+      "slug": "the-other-side",
+      "title": "The Other Side",
+      "trackId": "c54386b1-4183-4593-b9d0-4d9f4399d1e7",
+      "seconds": 331,
+      "interlude": false
+    },
+    {
+      "number": 11,
+      "slug": "the-mind-pt-1",
+      "title": "The Mind Pt 1",
+      "trackId": "70b44170-16ae-4d8f-8b04-7c4457856a09",
+      "seconds": 517,
+      "interlude": false
+    },
+    {
+      "number": 12,
+      "slug": "midnight-marauders",
+      "title": "Midnight Marauders",
+      "trackId": "46a416ac-9281-4ddc-9674-83c73c070665",
+      "seconds": 35,
+      "interlude": true
+    },
+    {
+      "number": 13,
+      "slug": "the-mind-pt-2",
+      "title": "The Mind Pt 2",
+      "trackId": "38d3c322-cea4-4308-bcad-1a0334cd8f8e",
+      "seconds": 261,
+      "interlude": false
+    },
+    {
+      "number": 14,
+      "slug": "ghost-world",
+      "title": "Ghost World",
+      "trackId": "c1f0aff6-4f6b-4c0f-bd62-eebaa40bf0dc",
+      "seconds": 287,
+      "interlude": false
+    }
+  ]
+}

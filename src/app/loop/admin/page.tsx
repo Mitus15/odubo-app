@@ -57,6 +57,14 @@ export default async function AdminPage() {
         <span className="block text-sm opacity-80">Posters, tickets and pricing on one page.</span>
       </a>
 
+      <a
+        href="/loop/admin/film"
+        className="mt-3 block rounded-2xl border border-ink/15 bg-ink/5 px-5 py-4"
+      >
+        <span className="block font-bold">The film →</span>
+        <span className="block text-sm opacity-80">Chapters, scripture cards and the world. Nothing shows until you approve it.</span>
+      </a>
+
       {/* The funnel. Without it nothing here says whether the campaign works. */}
       <section className="mt-10">
         <h2 className="text-sm font-bold uppercase tracking-widest opacity-70">Numbers</h2>

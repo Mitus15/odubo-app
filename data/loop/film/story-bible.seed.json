@@ -1,0 +1,27 @@
+{
+  "about": "First-run defaults for the Loop Soul film's story data (migration 168). Loaded by `npm run film:seed`, which never overwrites a row the owner has edited. Every entry starts as a draft: nothing here reaches a guest until the owner approves it at /loop/admin/film. Field colours come from src/lib/loop/film/palette.ts; lag frames and Welcome's take-off come from data/loop/film/shape.json.",
+  "chapters": {
+    "welcome": { "shadow": "sync", "badgeAtLetGo": true },
+    "1984": { "shadow": "lag" },
+    "hallucinogen": { "shadow": "sync" },
+    "no-end-theory": { "shadow": "sync" },
+    "in-the-court": { "shadow": "sync" },
+    "newspeak": { "shadow": "lag" },
+    "every-generation": { "shadow": "sync" },
+    "rap": { "shadow": "sync" },
+    "makunahea": { "shadow": "sync" },
+    "the-other-side": { "shadow": "sync" },
+    "the-mind-pt-1": { "shadow": "lag" },
+    "midnight-marauders": { "shadow": "sync" },
+    "the-mind-pt-2": { "shadow": "sync" },
+    "ghost-world": { "shadow": "sync" }
+  },
+  "world": [
+    { "slug": "recoolman", "name": "Recoolman", "line": "He was Mitus. Then he was given a name.", "revealedWith": "welcome", "sort": 1 },
+    { "slug": "the-badge", "name": "The badge", "line": "It sits on the heart. It is not taken. It is given.", "revealedWith": "welcome", "sort": 2 },
+    { "slug": "the-ground", "name": "The ground", "line": "Everyone here was taken from it.", "revealedWith": "welcome", "sort": 3 },
+    { "slug": "the-flight", "name": "The flight", "line": "It began where Welcome ended.", "revealedWith": "welcome", "sort": 4 },
+    { "slug": "the-shadow", "name": "The shadow", "line": "It keeps his time. Not always.", "revealedWith": "1984", "sort": 5 },
+    { "slug": "ghost-world", "name": "Ghost World", "line": "There is one way out.", "revealedWith": "ghost-world", "sort": 6 }
+  ]
+}

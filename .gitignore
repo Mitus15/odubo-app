@@ -60,3 +60,6 @@ portfolio-files/
 # scripts/shopify/cutout-photos.ts work files
 .cutouts/
 scripts/shopify/.liftsubject
+
+# Python bytecode (the film and reel pipelines)
+__pycache__/

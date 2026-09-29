@@ -11,6 +11,7 @@
  */
 
 import fs from 'fs';
+import { cleanVerse } from './bible-clean';
 import path from 'path';
 
 interface BibleBook {
@@ -63,7 +64,7 @@ export function getVerse(book: string, chapter: number, verse: number): BibleVer
   
   const text = bookData.chapters[chapterIndex][verseIndex];
   return {
-    text: text.replace(/\{|\}/g, ''), // Remove KJV formatting braces
+    text: cleanVerse(text),
     reference: `${bookData.name} ${chapter}:${verse}`,
     error: null
   };
@@ -89,7 +90,7 @@ export function getDailyVerse(): BibleVerse {
       for (let ch = 0; ch < book.chapters.length; ch++) {
         for (let v = 0; v < book.chapters[ch].length; v++) {
           allVerses.push({
-            text: book.chapters[ch][v].replace(/\{|\}/g, ''),
+            text: cleanVerse(book.chapters[ch][v]),
             reference: `${book.name} ${ch + 1}:${v + 1}`
           });
         }

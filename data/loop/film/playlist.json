@@ -1,0 +1,95 @@
+{
+  "tone": {
+    "start": 0.0,
+    "seconds": 1.0,
+    "hz": 1000
+  },
+  "gapSeconds": 3.0,
+  "totalSeconds": 3105.966,
+  "songs": [
+    {
+      "number": 1,
+      "slug": "welcome",
+      "start": 3.0,
+      "end": 77.0
+    },
+    {
+      "number": 2,
+      "slug": "1984",
+      "start": 80.0,
+      "end": 374.0
+    },
+    {
+      "number": 3,
+      "slug": "hallucinogen",
+      "start": 377.0,
+      "end": 625.727
+    },
+    {
+      "number": 4,
+      "slug": "no-end-theory",
+      "start": 628.727,
+      "end": 663.661
+    },
+    {
+      "number": 5,
+      "slug": "in-the-court",
+      "start": 666.661,
+      "end": 893.161
+    },
+    {
+      "number": 6,
+      "slug": "newspeak",
+      "start": 896.161,
+      "end": 1229.761
+    },
+    {
+      "number": 7,
+      "slug": "every-generation",
+      "start": 1232.761,
+      "end": 1267.695
+    },
+    {
+      "number": 8,
+      "slug": "rap",
+      "start": 1270.695,
+      "end": 1489.362
+    },
+    {
+      "number": 9,
+      "slug": "makunahea",
+      "start": 1492.362,
+      "end": 1660.362
+    },
+    {
+      "number": 10,
+      "slug": "the-other-side",
+      "start": 1663.362,
+      "end": 1994.562
+    },
+    {
+      "number": 11,
+      "slug": "the-mind-pt-1",
+      "start": 1997.562,
+      "end": 2514.485
+    },
+    {
+      "number": 12,
+      "slug": "midnight-marauders",
+      "start": 2517.485,
+      "end": 2552.045
+    },
+    {
+      "number": 13,
+      "slug": "the-mind-pt-2",
+      "start": 2555.045,
+      "end": 2816.378
+    },
+    {
+      "number": 14,
+      "slug": "ghost-world",
+      "start": 2819.378,
+      "end": 3105.966
+    }
+  ]
+}

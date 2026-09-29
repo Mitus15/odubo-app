@@ -54,6 +54,15 @@
         "LOOP_FORCE_PHASE=archived npx next dev -p 3116"
       ],
       "port": 3116
+    },
+    {
+      "name": "film-admin",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "LOOP_ADMIN_PASSWORD= LOOP_FORCE_PHASE=archived npx next dev -p 3117"
+      ],
+      "port": 3117
     }
   ]
 }
