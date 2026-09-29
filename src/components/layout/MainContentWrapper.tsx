@@ -29,8 +29,8 @@ export default function MainContentWrapper({
   // Admin/backend pages don't use the sidebar - don't add margin
   // Also homepage and showcase don't use sidebar
   const isAdminPage = isAdminSubdomain || pathname?.startsWith('/admin') || pathname?.startsWith('/command-center') || pathname?.startsWith('/featured/manage');
-  // Loop Soul owns its full surface — no odubo sidebar margin
-  const isFullWidthPage = pathname === '/' || pathname === '/showcase' || pathname?.startsWith('/loop');
+  // Loop Soul owns its full surface — no odubo sidebar margin. So does the flight.
+  const isFullWidthPage = pathname === '/' || pathname === '/showcase' || pathname?.startsWith('/loop') || pathname?.startsWith('/fly');
 
   return (
     <div className={`h-full w-full flex flex-col overflow-hidden ${isAdminPage || isFullWidthPage ? '' : 'lg:ml-20 xl:ml-64'}`}>

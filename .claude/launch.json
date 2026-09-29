@@ -45,6 +45,16 @@
         "npx next dev -p 3115"
       ],
       "port": 3115
+    },
+    {
+      "name": "fly",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "npx next dev -H 0.0.0.0 -p ${PORT:-3126}"
+      ],
+      "port": 3126,
+      "autoPort": true
     }
   ]
 }
