@@ -30,7 +30,7 @@ import { blendAt, clampToDisc, type FieldPack, type Vec2 } from '@/lib/field/ble
 type Phase = 'idle' | 'loading' | 'ready' | 'error';
 
 const MEDIA = '/api/media/audio/';
-const PACK_PREFIX = 'warehouse/field/newspeak';
+const FIELD_ROOT = 'warehouse/field';
 const PROBE = `${MEDIA}warehouse/field/probe.opus`;
 
 /** Can this browser decode Opus? Ask with 187 bytes rather than 17MB. */
@@ -44,7 +44,8 @@ async function pickFormat(ctx: AudioContext): Promise<'opus' | 'm4a'> {
   }
 }
 
-export default function FieldPlayer({ title }: { title: string }) {
+export default function FieldPlayer({ title, pack: packName = 'newspeak' }: { title: string; pack?: string }) {
+  const PACK_PREFIX = `${FIELD_ROOT}/${packName}`;
   const [phase, setPhase] = useState<Phase>('idle');
   const [progress, setProgress] = useState(0);
   const [format, setFormat] = useState<'opus' | 'm4a' | null>(null);
@@ -201,7 +202,7 @@ export default function FieldPlayer({ title }: { title: string }) {
             The field
           </h3>
           <p className="text-[#726d6c] text-xs mt-1">
-            {title} in five parts. Drag to remix it — the centre is the record.
+            {title} in five parts. Drag to remix it. The centre is the record.
           </p>
         </div>
         {phase === 'ready' && (

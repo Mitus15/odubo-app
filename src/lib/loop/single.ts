@@ -46,7 +46,15 @@ function label(seconds: number): string {
 
 export async function getFeaturedSingle(): Promise<FeaturedSingle | null> {
   const wanted = (await getSetting("featured_track")) ?? DEFAULT_TRACK_TITLE;
+  return getTrackAsSingle(wanted);
+}
 
+/**
+ * Any track, shaped as a single, by title or id. Says nothing about whether a
+ * stranger may HEAR it: that is the audio gate's job (audioAccess.ts), and a
+ * coming single's page loads this only for its title, cover and length.
+ */
+export async function getTrackAsSingle(wanted: string): Promise<FeaturedSingle | null> {
   try {
     // Matched on title OR id so the setting can hold either — the owner types a
     // song name, an import writes an id, and both must work.
@@ -71,8 +79,8 @@ export async function getFeaturedSingle(): Promise<FeaturedSingle | null> {
 
     if (!row?.audio_url) {
       console.error(
-        `[single] featured_track "${wanted}" resolves to no playable track. ` +
-          `The flyer promises a single and the page will render none.`,
+        `[single] "${wanted}" resolves to no playable track. ` +
+          `A single's page promises a song and will render none.`,
       );
       return null;
     }

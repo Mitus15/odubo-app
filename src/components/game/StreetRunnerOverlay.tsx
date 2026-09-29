@@ -16,7 +16,20 @@ import type { StreetRunnerState } from '@/types/game';
 
 type GamePhase = 'ready' | 'playing' | 'gameOver' | 'submitted';
 
-export default function StreetRunnerOverlay() {
+/** A Loop Soul single to run to. The src is already cleared by the audio
+ *  gate on the server (released, or an admin previewing). */
+export type RunnerSoundtrack = { title: string; src: string; backHref: string };
+
+export default function StreetRunnerOverlay({ soundtrack }: { soundtrack?: RunnerSoundtrack }) {
+  // play() inside the tap itself: iOS refuses audible playback started after
+  // an await (CLAUDE.md, Mobile Safari Playback).
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const startSong = useCallback(() => {
+    const a = audioRef.current;
+    if (!a) return;
+    a.currentTime = 0;
+    a.play().catch(() => {});
+  }, []);
   const [phase, setPhase] = useState<GamePhase>('ready');
   const [state, setState] = useState<StreetRunnerState | null>(null);
   const [finalScore, setFinalScore] = useState(0);
@@ -26,21 +39,24 @@ export default function StreetRunnerOverlay() {
   const sceneRef = useRef<StreetRunnerSceneHandle>(null);
 
   const handleStart = useCallback(async () => {
+    startSong();
     setPhase('playing');
     await sceneRef.current?.start();
-  }, []);
+  }, [startSong]);
 
   const handleGameOver = useCallback((score: number, catches: number, duration: number) => {
     setFinalScore(score);
     setFinalCatches(catches);
     setFinalDuration(duration);
     setPhase('gameOver');
+    audioRef.current?.pause();
   }, []);
 
   const handlePlayAgain = useCallback(async () => {
+    startSong();
     setPhase('playing');
     await sceneRef.current?.start();
-  }, []);
+  }, [startSong]);
 
   const handleStateChange = useCallback((newState: StreetRunnerState) => {
     setState(newState);
@@ -48,6 +64,7 @@ export default function StreetRunnerOverlay() {
 
   return (
     <div className="fixed inset-0 bg-black">
+      {soundtrack && <audio ref={audioRef} src={soundtrack.src} loop preload="auto" />}
       {/* 3D Scene — always mounted */}
       <StreetRunnerScene
         ref={sceneRef}
@@ -86,7 +103,7 @@ export default function StreetRunnerOverlay() {
                 RECOOLMAN
               </h1>
               <p className="text-lg md:text-xl mb-6" style={{ color: '#c4785a' }}>
-                Bring Light to the City
+                {soundtrack ? `Run to ${soundtrack.title}` : 'Bring Light to the City'}
               </p>
 
               {/* Character selector */}
@@ -130,6 +147,11 @@ export default function StreetRunnerOverlay() {
               <p className="mt-6 text-sm opacity-50" style={{ color: '#ede8df' }}>
                 Swipe or Arrow Keys to move &bull; Swipe Up or Space to jump
               </p>
+              {soundtrack && (
+                <a href={soundtrack.backHref} className="mt-4 inline-block min-h-[44px] py-3 text-sm underline underline-offset-4 opacity-70" style={{ color: '#ede8df' }}>
+                  Back to the song
+                </a>
+              )}
             </motion.div>
           </motion.div>
         )}

@@ -2,11 +2,35 @@
 
 import { memo, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { motion } from "framer-motion";
 import { usePWA } from "@/components/PWAProvider";
 import SinglePlayer from "@/components/loop/gathering/SinglePlayer";
 import type { FeaturedSingle } from "@/lib/loop/single";
 import { SINGLE_PATH } from "@/lib/loop/singlePage";
+import { singlePath } from "@/lib/loop/singles";
+
+// Seventeen megabytes of stems and a Web Audio graph: only for those who ask.
+const FieldPlayer = dynamic(() => import("@/components/field/FieldPlayer"), { ssr: false });
+
+/** One row of the rollout, for the list of singles. */
+export type SingleRow = { slug: string; title: string; number: number; out: boolean; dateLabel: string | null };
+
+/**
+ * A single on its own page, as part of the rollout (Makunahea, 1984, News
+ * Peak). Absent on the poster's overlay, which keeps its old three screens.
+ */
+export type Rollout = {
+  slug: string;
+  /** Anyone may hear it now. */
+  out: boolean;
+  /** This visitor may hear it: out, or an admin previewing. */
+  playable: boolean;
+  releaseDateLabel: string | null;
+  /** Its stem-field pack, if one is uploaded. */
+  fieldPack: string | null;
+  singles: SingleRow[];
+};
 
 /**
  * THE SINGLE — what the flyer's QR promises.
@@ -62,6 +86,7 @@ export function TheSingle({
   onGetPass,
   onCoverContest,
   holder = false,
+  rollout,
 }: {
   single: FeaturedSingle;
   /** Resolved per visitor: theirs, the room's, or the owner's. */
@@ -71,12 +96,16 @@ export function TheSingle({
    *  hardcoded through two date changes and had to be hunted down both times. */
   /** The night's date, or null when there is no night to sell. */
   dateLabel: string | null;
-  onClose: () => void;
+  /** Absent on a page of its own: the page is not an overlay to close. */
+  onClose?: () => void;
   onGetPass: () => void;
   onCoverContest: () => void;
   /** This phone holds a pass: the rest of the record is theirs, not for sale. */
   holder?: boolean;
+  rollout?: Rollout;
 }) {
+  const playable = rollout ? rollout.playable : true;
+  const [fieldOpen, setFieldOpen] = useState(false);
   const [heard, setHeard] = useState(false);
   const [sender, setSender] = useState<string | null>(null);
 
@@ -164,7 +193,7 @@ export function TheSingle({
     // already and the share link must follow it without a deploy. The song's
     // own page, so the link unfurls as the song (/loop?from= still works for
     // links already sent).
-    const url = `${window.location.origin}${SINGLE_PATH}?from=${c}`;
+    const url = `${window.location.origin}${rollout ? singlePath(rollout.slug) : SINGLE_PATH}?from=${c}`;
     const text = `Listen to "${single.title}" by ${single.artistName}`;
     if (navigator.share) {
       try {
@@ -179,7 +208,7 @@ export function TheSingle({
       setCopied(true);
       setTimeout(() => setCopied(false), 2400);
     } catch {}
-  }, [code, name, single.title, single.artistName]);
+  }, [code, name, single.title, single.artistName, rollout]);
 
   const keepIt = useCallback(async () => {
     if (isInstallable) {
@@ -201,14 +230,16 @@ export function TheSingle({
       className="fixed inset-0 z-50 snap-y snap-mandatory overflow-y-scroll overscroll-contain bg-sand text-ink [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
       {/* Outside the scroller so it survives every section. */}
-      <button
-        type="button"
-        onClick={onClose}
-        aria-label="Close"
-        className="fixed right-2 top-2 z-10 flex h-11 w-11 items-center justify-center text-2xl leading-none opacity-50 transition-opacity hover:opacity-100"
-      >
-        ×
-      </button>
+      {onClose && (
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close"
+          className="fixed right-2 top-2 z-10 flex h-11 w-11 items-center justify-center text-2xl leading-none opacity-50 transition-opacity hover:opacity-100"
+        >
+          ×
+        </button>
+      )}
 
       {/* ── 1 · the song ─────────────────────────────────────────────── */}
       <section className={SECTION}>
@@ -217,13 +248,36 @@ export function TheSingle({
             {sender} sent you this
           </div>
         )}
-        <SinglePlayer
-          single={single}
-          coverUrl={coverUrl}
-          onHeard={onHeard}
-          onCoverContest={onCoverContest}
-          coverCaption={coverCaption}
-        />
+        {playable ? (
+          <>
+            {rollout && !rollout.out && (
+              <div className="loop-muted mb-4 text-center text-[11px] font-bold uppercase tracking-[0.2em]">
+                Preview · not out yet
+              </div>
+            )}
+            <SinglePlayer
+              single={single}
+              coverUrl={coverUrl}
+              onHeard={onHeard}
+              onCoverContest={onCoverContest}
+              coverCaption={coverCaption}
+            />
+          </>
+        ) : (
+          <div className="text-center">
+            {coverUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={coverUrl} alt="" className="mx-auto aspect-square w-full max-w-[320px] object-cover" />
+            )}
+            <div className="loop-muted mt-8 text-[11px] font-bold uppercase tracking-[0.2em]">
+              Loop Soul · Single {rollout?.singles.find((r) => r.slug === rollout.slug)?.number ?? ""}
+            </div>
+            <h1 className="loop-display mt-2 text-5xl font-bold tracking-tight">{single.title}</h1>
+            <p className="mt-3 text-base">
+              {rollout?.releaseDateLabel ? `Out ${rollout.releaseDateLabel}` : "Coming soon"}
+            </p>
+          </div>
+        )}
         <div
           aria-hidden="true"
           className="loop-muted mt-8 text-center text-lg leading-none"
@@ -235,10 +289,12 @@ export function TheSingle({
       {/* ── 2 · what you keep ────────────────────────────────────────── */}
       <section className={SECTION}>
         <h2 className="loop-display text-3xl font-bold tracking-tight">
-          {heard ? "Yours to keep." : "It's yours."}
+          {!playable ? "Be early." : heard ? "Yours to keep." : "It's yours."}
         </h2>
         <p className="loop-muted mt-2 text-sm leading-relaxed">
-          No email, no account. Two things you can do with it.
+          {playable
+            ? "No email, no account. Two things you can do with it."
+            : "No email, no account. Keep it close and it's here the day it drops."}
         </p>
 
         <div className="mt-8">
@@ -310,6 +366,73 @@ export function TheSingle({
       </section>
 
       {/* ── 3 · the rest of it ───────────────────────────────────────── */}
+      {rollout && dateLabel === null ? (
+        <section className={SECTION}>
+          <h2 className="loop-display text-3xl font-bold tracking-tight">Three singles, then the album.</h2>
+          <p className="loop-muted mt-2 text-sm leading-relaxed">A music video for each.</p>
+
+          <div className="mt-8">
+            {rollout.singles.map((r) => (
+              <Link
+                key={r.slug}
+                href={singlePath(r.slug)}
+                aria-current={r.slug === rollout.slug ? "page" : undefined}
+                className="flex min-h-[44px] items-baseline justify-between gap-4 border-t border-ink/15 py-4"
+              >
+                <span className="flex items-baseline gap-4">
+                  <span className="loop-muted w-6 text-[13px] tabular-nums">{String(r.number).padStart(2, "0")}</span>
+                  <span className={`text-base ${r.slug === rollout.slug ? "font-bold" : ""}`}>{r.title}</span>
+                </span>
+                <span className="loop-muted shrink-0 text-[13px]">
+                  {r.out ? "Out now" : r.dateLabel ? r.dateLabel : "Soon"}
+                </span>
+              </Link>
+            ))}
+            <div className="border-t border-ink/15" />
+          </div>
+
+          {playable && (
+            <>
+              <div role="heading" aria-level={3} className="loop-muted mt-12 text-[11px] font-bold uppercase tracking-[0.2em]">Ways in</div>
+              <div className="mt-3">
+                {rollout.fieldPack && (
+                  <div className="border-t border-ink/15">
+                    <button
+                      type="button"
+                      onClick={() => setFieldOpen((v) => !v)}
+                      className="flex min-h-[44px] w-full items-center justify-between gap-4 py-5 text-left"
+                    >
+                      <span>
+                        <span className="block text-base font-bold">Take it apart</span>
+                        <span className="loop-muted block text-[13px]">{single.title} in five parts. You mix it.</span>
+                      </span>
+                      <span className="loop-muted shrink-0">{fieldOpen ? "−" : "+"}</span>
+                    </button>
+                    {fieldOpen && (
+                      <div className="pb-6">
+                        <FieldPlayer title={single.title} pack={rollout.fieldPack} />
+                      </div>
+                    )}
+                  </div>
+                )}
+                <Link
+                  href={`/game/street-runner?song=${rollout.slug}`}
+                  className="flex min-h-[44px] items-center justify-between gap-4 border-t border-ink/15 py-5"
+                >
+                  <span>
+                    <span className="block text-base font-bold">Run to it</span>
+                    <span className="loop-muted block text-[13px]">Recoolman, with {single.title} as the soundtrack</span>
+                  </span>
+                  <span className="loop-muted shrink-0">→</span>
+                </Link>
+                <div className="border-t border-ink/15" />
+              </div>
+            </>
+          )}
+
+          <p className="loop-muted mt-10 text-sm leading-relaxed">This album isn&apos;t streaming anywhere yet.</p>
+        </section>
+      ) : (
       <section className={SECTION}>
         <h2 className="loop-display text-3xl font-bold tracking-tight">
           There are thirteen more.
@@ -353,6 +476,7 @@ export function TheSingle({
             : "This album isn't streaming anywhere yet."}
         </p>
       </section>
+      )}
     </motion.div>
   );
 }

@@ -45,6 +45,15 @@
         "npx next dev -p 3115"
       ],
       "port": 3115
+    },
+    {
+      "name": "singles",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "LOOP_FORCE_PHASE=archived npx next dev -p 3116"
+      ],
+      "port": 3116
     }
   ]
 }

@@ -1,20 +1,29 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import TheSingle from "@/components/loop/gathering/TheSingle";
+import TheSingle, { type SingleRow } from "@/components/loop/gathering/TheSingle";
+
+export type { SingleRow };
 import GetPassModal from "@/components/loop/gathering/GetPassModal";
 import type { FeaturedSingle } from "@/lib/loop/single";
 import type { PassOffer } from "@/lib/loop/pass/offer";
 
 /**
- * The single on its own page (/loop/1984). The same three screens the poster
+ * A single on its own page (/loop/<slug>). The same three screens the poster
  * opens as an overlay: the song on the vinyl ring (tap or drag to scrub), what
  * you keep, and the rest of the record. Closing it lands on the poster, and
  * the pass sheet opens right here rather than sending anyone away to buy.
  */
 export function SingleStandalone({
   single,
+  slug,
+  out,
+  playable,
+  releaseDateLabel,
+  fieldPack,
+  singles,
+  closable,
   coverUrl,
   coverCaption,
   dateLabel,
@@ -22,6 +31,14 @@ export function SingleStandalone({
   offer,
 }: {
   single: FeaturedSingle;
+  slug: string;
+  out: boolean;
+  playable: boolean;
+  releaseDateLabel: string | null;
+  fieldPack: string | null;
+  singles: SingleRow[];
+  /** The poster exists to close back to (not once the night is archived). */
+  closable: boolean;
   coverUrl: string | null;
   coverCaption: string;
   dateLabel: string | null;
@@ -39,6 +56,10 @@ export function SingleStandalone({
     else router.push("/loop");
   }, [offer, router]);
   const coverContest = useCallback(() => router.push("/loop#cover"), [router]);
+  const rollout = useMemo(
+    () => ({ slug, out, playable, releaseDateLabel, fieldPack, singles }),
+    [slug, out, playable, releaseDateLabel, fieldPack, singles],
+  );
 
   return (
     <>
@@ -47,10 +68,11 @@ export function SingleStandalone({
         coverUrl={coverUrl}
         coverCaption={coverCaption}
         dateLabel={dateLabel}
-        onClose={close}
+        onClose={closable ? close : undefined}
         onGetPass={getPass}
         onCoverContest={coverContest}
         holder={holder}
+        rollout={rollout}
       />
       {passOpen && offer && (
         <GetPassModal

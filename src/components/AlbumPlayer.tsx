@@ -12,10 +12,11 @@ interface AlbumPlayerProps {
   /** Show the stem-field player for songs that have a pack. Off inside a
    *  guest's record on /loop/album: the field is a studio surface. */
   field?: boolean;
+  /** Songs whose field is OPEN: packed, and released (or an admin is looking).
+   *  Decided on the server, the same rule the media route enforces, so the
+   *  player never offers a field that would 404 on its stems. */
+  fieldSongs?: { title: string; pack: string }[];
 }
-
-/** Songs with a stem pack published under warehouse/field/. */
-const FIELD_SONGS = new Set(['News Peak']);
 
 /**
  * Palette: read from the surface it sits on. Inside `.loop-theme` the tokens
@@ -32,7 +33,8 @@ const PALETTE = {
   '--ap-surface': 'color-mix(in srgb, var(--foreground, #ede8df) 10%, transparent)',
 } as React.CSSProperties;
 
-export default function AlbumPlayer({ album, tracks, field = true }: AlbumPlayerProps) {
+export default function AlbumPlayer({ album, tracks, field = true, fieldSongs = [] }: AlbumPlayerProps) {
+  const openField = fieldSongs.find((f) => tracks.some((t) => t.title === f.title));
   const { state, playTrack, playAlbum, addToQueue, toggleShuffle, playFromQueue } = useMusicPlayer();
   const [isClient, setIsClient] = useState(false);
 
@@ -99,14 +101,10 @@ export default function AlbumPlayer({ album, tracks, field = true }: AlbumPlayer
       {/*
         The field, for the songs that have a stem pack.
 
-        Only News Peak is packed today — it is the test bed, and 1984 is the
-        one that ships. Keyed off the title rather than a flag because there is
-        no column for this yet; when the second song is packed, that is the
-        moment to give it one rather than extend a list.
+        Which songs are packed lives with the singles (lib/loop/singles.ts);
+        whether a field is OPEN is the page's call, on the server.
       */}
-      {isClient && field && tracks.some((t) => FIELD_SONGS.has(t.title)) && (
-        <FieldPlayer title={tracks.find((t) => FIELD_SONGS.has(t.title))!.title} />
-      )}
+      {isClient && field && openField && <FieldPlayer title={openField.title} pack={openField.pack} />}
 
       {/* Controls */}
       <div className="flex items-center gap-2">

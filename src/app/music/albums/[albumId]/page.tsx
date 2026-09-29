@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { queryDatabase } from '@/lib/db';
 import { Album, Track } from '@/types/music';
 import AlbumPlayer from '@/components/AlbumPlayer';
+import { getSingleStatuses } from '@/lib/loop/singlesStore';
 import Image from 'next/image';
 import Link from 'next/link';
 
@@ -69,6 +70,11 @@ export default async function AlbumPage({ params }: AlbumPageProps) {
   }
 
   const { album, tracks } = albumData;
+  // A field opens with its single's release, the same rule the media route
+  // enforces on the stems. Fails closed: no setting read, no field.
+  const fieldSongs = (await getSingleStatuses().catch(() => []))
+    .filter((s) => s.out && s.fieldPack)
+    .map((s) => ({ title: s.title, pack: s.fieldPack as string }));
 
   return (
     <div className="min-h-full bg-gradient-to-br from-[#171616] via-[#302927] to-[#171616]">
@@ -125,7 +131,7 @@ export default async function AlbumPage({ params }: AlbumPageProps) {
           </div>
 
           {/* Player */}
-          <AlbumPlayer album={album} tracks={tracks} />
+          <AlbumPlayer album={album} tracks={tracks} fieldSongs={fieldSongs} />
         </div>
       </div>
     </div>

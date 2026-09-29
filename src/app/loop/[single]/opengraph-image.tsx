@@ -3,22 +3,24 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import sharp from "sharp";
 import { getCurrentEvent } from "@/lib/loop/hub";
-import { getFeaturedSingle } from "@/lib/loop/single";
+import { getTrackAsSingle } from "@/lib/loop/single";
 import { getPublicBaseUrl } from "@/lib/loop/publicUrl";
 import { createStorageService } from "@/lib/storage/StorageService";
 import { shortDate, venueShort } from "@/lib/loop/eventFacts";
-import { SINGLE_PATH } from "@/lib/loop/singlePage";
+import { cardTitleSize } from "@/lib/loop/singlePage";
+import { releaseLabel, singleBySlug, singlePath } from "@/lib/loop/singles";
+import { getSingleStatuses } from "@/lib/loop/singlesStore";
 
 /**
  * The single's share card: the cover on the left, the song on the right. A
- * pasted /loop/1984 reads as the song, not as the event poster.
+ * pasted /loop/<song> reads as the song, not as the event poster.
  *
  * The cover lives in R2 behind a presigned route that 302s; Satori cannot
  * follow that from inside the renderer, so the bytes are fetched here, sized
  * down with sharp (the master is 2048 square and ~2 MB) and embedded. If that
  * fails the card is typographic, never broken.
  */
-export const alt = "1984, the single from Loop Soul by Mani Odubo";
+export const alt = "A single from Loop Soul by Mani Odubo";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 export const runtime = "nodejs";
@@ -43,12 +45,13 @@ async function coverDataUri(coverUrl: string | null): Promise<string | null> {
   }
 }
 
-export default async function OgImage() {
+export default async function OgImage({ params }: { params: Promise<{ single: string }> }) {
+  const def = singleBySlug((await params).single);
   // Both weights must be listed in next.config's outputFileTracingIncludes:
   // Vercel does not bundle a file read at runtime unless told to, and this
   // card 500'd in production (ENOENT on the 500) while rendering locally.
   const [single, event, base, j500, j700] = await Promise.all([
-    getFeaturedSingle(),
+    def ? getTrackAsSingle(def.title) : Promise.resolve(null),
     getCurrentEvent(),
     getPublicBaseUrl(),
     readFile(join(process.cwd(), "public/loop/fonts/Jost-500.ttf")),
@@ -56,7 +59,11 @@ export default async function OgImage() {
   ]);
   const cover = await coverDataUri(single?.coverUrl ?? null);
   const host = (base ?? "https://www.odubostudio.com").replace(/^https?:\/\/(www\.)?/, "");
-  const title = single?.title ?? "1984";
+  const title = single?.title ?? def?.title ?? "Loop Soul";
+  const status = (await getSingleStatuses().catch(() => [])).find((x) => x.slug === def?.slug);
+  const out = status?.out ?? false;
+  const when = releaseLabel(status?.releaseDate ?? null);
+  const path = singlePath(def?.slug ?? "");
   const artist = single?.artistName ?? "Mani Odubo";
 
   return new ImageResponse(
@@ -79,17 +86,17 @@ export default async function OgImage() {
             Loop Soul · The single
           </div>
           <div style={{ display: "flex", flexDirection: "column" }}>
-            <div style={{ display: "flex", fontSize: cover ? 150 : 200, fontWeight: 700, letterSpacing: -4, lineHeight: 0.95 }}>{title}</div>
+            <div style={{ display: "flex", fontSize: cardTitleSize(title, !!cover), fontWeight: 700, letterSpacing: -4, lineHeight: 0.95 }}>{title}</div>
             <div style={{ display: "flex", fontSize: 44, fontWeight: 500, marginTop: 14 }}>{artist}</div>
           </div>
           <div style={{ display: "flex", flexDirection: "column" }}>
-            <div style={{ display: "flex", fontSize: 26, fontWeight: 700 }}>Listen free</div>
+            <div style={{ display: "flex", fontSize: 26, fontWeight: 700 }}>{out ? "Listen free" : when ? `Out ${when}` : "Coming soon"}</div>
             {event.phase !== "archived" && (
               <div style={{ display: "flex", fontSize: 22, fontWeight: 500, opacity: 0.72, marginTop: 8 }}>
                 {`Live ${shortDate(event.date)} · ${venueShort(event.venue)}`}
               </div>
             )}
-            <div style={{ display: "flex", fontSize: 22, fontWeight: 500, opacity: 0.72, marginTop: 4 }}>{`${host}${SINGLE_PATH}`}</div>
+            <div style={{ display: "flex", fontSize: 22, fontWeight: 500, opacity: 0.72, marginTop: 4 }}>{`${host}${path}`}</div>
           </div>
         </div>
       </div>

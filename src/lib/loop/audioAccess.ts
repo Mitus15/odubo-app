@@ -6,6 +6,8 @@ import { getCurrentEvent } from "@/lib/loop/hub";
 import { currentVoterId } from "@/lib/loop/identity/voter";
 import { albumAccessFor, earlySetFor } from "@/lib/loop/album";
 import { getSetting } from "@/lib/loop/loopSetting";
+import { releasedSingleTitles } from "@/lib/loop/singlesStore";
+import { fieldPackOfKey, singleByFieldPack } from "@/lib/loop/singles";
 
 /**
  * Who may actually hear a recording.
@@ -24,7 +26,8 @@ import { getSetting } from "@/lib/loop/loopSetting";
 export type AudioFacts = {
   /** The album is out. A published catalogue is public and should stay that way. */
   albumPublished: boolean;
-  /** The song behind the flyer's QR. Promised publicly, so it stays public. */
+  /** The song behind the flyer's QR, or a single whose release date has come.
+   *  Promised publicly, so it stays public. */
   isFeaturedSingle: boolean;
   /** Owner or team, by a VERIFIED session — never a decoded-but-unchecked token. */
   isAdmin: boolean;
@@ -94,8 +97,9 @@ async function gatherFacts(req: NextRequest | null, track: TrackRow): Promise<Au
     };
   }
 
-  const [featured, loopAdminOk, odubo] = await Promise.all([
+  const [featured, released, loopAdminOk, odubo] = await Promise.all([
     getSetting("featured_track").catch(() => null),
+    releasedSingleTitles().catch(() => new Set<string>()),
     (async () => {
       try {
         const { cookies } = await import("next/headers");
@@ -108,7 +112,8 @@ async function gatherFacts(req: NextRequest | null, track: TrackRow): Promise<Au
   ]);
 
   const wanted = (featured ?? "1984").trim().toLowerCase();
-  const isFeaturedSingle = track.title.trim().toLowerCase() === wanted;
+  const title = track.title.trim().toLowerCase();
+  const isFeaturedSingle = title === wanted || released.has(title);
   const isAdmin = loopAdminOk || isAdminUser(odubo);
 
   if (isFeaturedSingle || isAdmin) {
@@ -144,8 +149,42 @@ export async function mayHearTrackId(req: NextRequest | null, trackId: string): 
   return decideAudioAccess(await gatherFacts(req, track));
 }
 
+/** An owner or team session, verified. */
+export async function isAdminRequest(req: NextRequest | null): Promise<boolean> {
+  const [loopAdminOk, odubo] = await Promise.all([
+    (async () => {
+      try {
+        const { cookies } = await import("next/headers");
+        return await verifyAdminSession((await cookies()).get(ADMIN_COOKIE)?.value);
+      } catch {
+        return false;
+      }
+    })(),
+    req ? verifyUserFromRequest(req).catch(() => null) : Promise.resolve(null),
+  ]);
+  return loopAdminOk || isAdminUser(odubo);
+}
+
+/**
+ * A stem-field pack is the song in five parts: all five together ARE the
+ * song. Found 2026-09-29: News Peak's stems were public while News Peak was
+ * not. A pack now opens with its single's release, or to an admin; a pack no
+ * single claims stays closed. Fails closed.
+ */
+async function mayHearFieldPack(req: NextRequest | null, pack: string): Promise<boolean> {
+  const single = singleByFieldPack(pack);
+  try {
+    if (single && (await releasedSingleTitles()).has(single.title.toLowerCase())) return true;
+    return await isAdminRequest(req);
+  } catch {
+    return false;
+  }
+}
+
 /** null when the key is not a catalogue track — the caller leaves it alone. */
 export async function mayHearMediaKey(req: NextRequest | null, key: string): Promise<boolean | null> {
+  const pack = fieldPackOfKey(key);
+  if (pack) return mayHearFieldPack(req, pack);
   const track = await trackByMediaKey(key);
   if (!track) return null;
   return decideAudioAccess(await gatherFacts(req, track));
