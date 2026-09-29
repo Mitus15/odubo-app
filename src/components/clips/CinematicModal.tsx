@@ -4,6 +4,8 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import type { ClipItem } from '@/types/clips';
+import { useQuickShop } from '@/contexts/QuickShopContext';
+import { useClipShop } from '@/hooks/useClipShop';
 
 interface CinematicModalProps {
   clip: ClipItem | null;
@@ -18,6 +20,13 @@ export default function CinematicModal({ clip, allClips, onClose, onNavigate }: 
   const [showControls, setShowControls] = useState(true);
   const [progress, setProgress] = useState(0);
   const controlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { isOpen: shopOpen } = useQuickShop();
+  const shop = useClipShop();
+  // Read by the key handler; a ref, so opening the shop never re-binds it.
+  const shopOpenRef = useRef(shopOpen);
+  useEffect(() => {
+    shopOpenRef.current = shopOpen;
+  }, [shopOpen]);
 
   const currentIndex = clip ? allClips.findIndex(c => c.id === clip.id) : -1;
   const prevClip = currentIndex > 0 ? allClips[currentIndex - 1] : null;
@@ -26,6 +35,9 @@ export default function CinematicModal({ clip, allClips, onClose, onNavigate }: 
   // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // QuickShop, opened over the player, owns the keyboard until it closes:
+      // Escape closes the shop alone, and arrows never swap the clip behind it.
+      if (shopOpenRef.current) return;
       if (e.key === 'Escape') onClose();
       if (e.key === 'ArrowLeft' && prevClip) onNavigate(prevClip);
       if (e.key === 'ArrowRight' && nextClip) onNavigate(nextClip);
@@ -264,23 +276,29 @@ export default function CinematicModal({ clip, allClips, onClose, onNavigate }: 
                   <div className="flex items-center gap-2 ml-4">
                     <button
                       onClick={toggleMute}
-                      className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-sm border border-white/10 flex items-center justify-center text-white/80 hover:text-white transition-colors"
+                      className="w-11 h-11 rounded-full bg-white/10 backdrop-blur-sm border border-white/10 flex items-center justify-center text-white/80 hover:text-white transition-colors"
                     >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
                       </svg>
                     </button>
 
+                    {/* The shop tap opens QuickShop over the player. It used to
+                        link to /store?product=, which nothing reads. */}
                     {clip.productHandle && (
-                      <a
-                        href={`/store?product=${clip.productHandle}`}
-                        onClick={(e) => e.stopPropagation()}
-                        className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-sm border border-white/10 flex items-center justify-center text-white/80 hover:text-white transition-colors"
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          shop(clip);
+                        }}
+                        aria-label="Shop"
+                        className="w-11 h-11 rounded-full bg-white/10 backdrop-blur-sm border border-white/10 flex items-center justify-center text-white/80 hover:text-white transition-colors"
                       >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
                         </svg>
-                      </a>
+                      </button>
                     )}
                   </div>
                 </div>

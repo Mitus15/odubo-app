@@ -6,6 +6,7 @@ import Image from 'next/image';
 import type { ClipItem, ClipApiRow } from '@/types/clips';
 import { mapClipRows } from '@/lib/clipsMapper';
 import type { SortMode } from '@/components/clips/ClipFeedMenu';
+import { useClipShop } from '@/hooks/useClipShop';
 
 interface DesktopClipsGalleryProps {
   onClipClick: (clip: ClipItem) => void;
@@ -221,6 +222,7 @@ function GalleryClipCard({ clip, index, onClick }: { clip: ClipItem; index: numb
   const [hasLoaded, setHasLoaded] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const shop = useClipShop();
 
   const videoUrl = clip.mp4Url || clip.hlsUrl || null;
 
@@ -338,11 +340,21 @@ function GalleryClipCard({ clip, index, onClick }: { clip: ClipItem; index: numb
                 {clip.viewCount > 999 ? `${(clip.viewCount / 1000).toFixed(1)}k` : clip.viewCount} views
               </span>
             )}
+            {/* The shop tap: opens QuickShop on this clip's product, never the
+                player behind it. A 44px target on a 20px line (negative margin). */}
             {clip.productHandle && (
-              <span className="text-white/40 text-[10px] flex items-center gap-0.5">
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  shop(clip);
+                }}
+                aria-label={`Shop ${clip.title}`}
+                className="-my-3 inline-flex min-h-[44px] min-w-[44px] items-center gap-0.5 text-[10px] text-white/70 transition-colors hover:text-white"
+              >
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
                 Shop
-              </span>
+              </button>
             )}
           </div>
         </div>
