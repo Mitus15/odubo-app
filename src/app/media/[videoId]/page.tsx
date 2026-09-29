@@ -1,4 +1,5 @@
 import { queryDatabase } from '@/lib/db';
+import { publicVideoWhere } from '@/lib/publicVideos';
 import { notFound } from "next/navigation";
 import { Video } from "../types";
 import VideoPlayerClientWrapper from './VideoPlayerClientWrapper';
@@ -10,10 +11,15 @@ interface VideoPageProps {
   params: Promise<{ videoId: string }>;
 }
 
+/**
+ * A video page shows only what the public feed would: a hidden, archived or
+ * not-yet-live video is "not found" here too (publicVideoWhere, the same rule
+ * /api/clips uses), so its URL cannot leak it before it is released.
+ */
 async function getVideo(id: string): Promise<Video | null> {
   try {
     const videos = await queryDatabase(`
-      SELECT * FROM videos WHERE id = ?
+      SELECT * FROM videos v WHERE v.id = ? AND ${publicVideoWhere('v')}
     `, [id]);
     
     const video = videos[0];
@@ -44,11 +50,13 @@ async function getVideo(id: string): Promise<Video | null> {
 
 async function getRelatedVideos(currentVideo: Video): Promise<Video[]> {
   try {
+    // Related videos obey the same rule, or the page would list hidden ones.
     const videos = await queryDatabase(`
-      SELECT * FROM videos 
-      WHERE id != ? 
-      AND (type = ? OR category = ? OR mood = ?)
-      ORDER BY created_at DESC
+      SELECT * FROM videos v
+      WHERE v.id != ?
+      AND (v.type = ? OR v.category = ? OR v.mood = ?)
+      AND ${publicVideoWhere('v')}
+      ORDER BY v.created_at DESC
       LIMIT 6
     `, [currentVideo.id, currentVideo.type, currentVideo.category, currentVideo.mood]);
     
