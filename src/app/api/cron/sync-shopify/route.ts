@@ -10,6 +10,7 @@ import {
   isAdminApiConfigured,
   type ShopifyAdminOrder,
 } from '@/lib/shopify-admin';
+import { writeWithOptionalColumn, type OptionalColumnState } from '@/lib/optionalColumn';
 
 export const runtime = 'edge';
 
@@ -100,6 +101,11 @@ export async function POST(request: NextRequest) {
       sinceDate = syncStatus?.last_updated_at || undefined;
     }
 
+    // commerce_orders.source is migration 169, which may not be applied yet.
+    // Tracked per run: a warm isolate must not remember "missing" past the
+    // moment someone applies it.
+    const sourceColumn: OptionalColumnState = { missing: false };
+
     // Fetch orders from Shopify
     let cursor: string | undefined;
     let totalFetched = 0;
@@ -118,7 +124,7 @@ export async function POST(request: NextRequest) {
       // Process orders
       for (const order of orders) {
         try {
-          const inserted = await upsertOrder(order);
+          const inserted = await upsertOrder(order, sourceColumn);
           if (inserted) totalInserted++;
 
           // Track latest update time
@@ -206,7 +212,7 @@ export async function POST(request: NextRequest) {
 /**
  * Upsert a single order into D1
  */
-async function upsertOrder(order: ShopifyAdminOrder): Promise<boolean> {
+async function upsertOrder(order: ShopifyAdminOrder, sourceColumn: OptionalColumnState): Promise<boolean> {
   const orderId = `order_${order.id.split('/').pop()}`;
   const shopifyId = order.id;
   const orderNumber = extractOrderNumber(order.name);
@@ -234,9 +240,14 @@ async function upsertOrder(order: ShopifyAdminOrder): Promise<boolean> {
   const entryAlbumId = getAttr('_entry_album_id');
   const entryPath = getAttr('_entry_path');
   const sessionId = getAttr('_session');
+  // Which storefront sold it: createCheckout stamps `_source` ('odubo_store',
+  // 'loop_soul_store'), the one way to tell the two businesses' sales apart.
+  const storefront = getAttr('_source');
 
-  // Upsert order with entry content attribution
-  await executeQuery(
+  // Upsert order with entry content attribution. The storefront goes in
+  // `source` (migration 169); until that column exists the order syncs
+  // without it, and the gap is logged once for the run.
+  const writeOrder = (withSource: boolean) => executeQuery(
     `INSERT INTO commerce_orders (
        id, shopify_id, shopify_order_number,
        total_price_cents, subtotal_price_cents, total_tax_cents, total_discounts_cents, currency,
@@ -246,8 +257,8 @@ async function upsertOrder(order: ShopifyAdminOrder): Promise<boolean> {
        utm_source, utm_medium, utm_campaign,
        entry_clip_id, entry_gallery_id, entry_album_id, entry_path, session_id,
        shopify_created_at, shopify_updated_at, processed_at, closed_at, cancelled_at,
-       synced_at, updated_at
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+       synced_at, updated_at${withSource ? ', source' : ''}
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now')${withSource ? ', ?' : ''})
      ON CONFLICT(shopify_id) DO UPDATE SET
        total_price_cents = excluded.total_price_cents,
        subtotal_price_cents = excluded.subtotal_price_cents,
@@ -262,7 +273,8 @@ async function upsertOrder(order: ShopifyAdminOrder): Promise<boolean> {
        entry_gallery_id = COALESCE(excluded.entry_gallery_id, commerce_orders.entry_gallery_id),
        entry_album_id = COALESCE(excluded.entry_album_id, commerce_orders.entry_album_id),
        entry_path = COALESCE(excluded.entry_path, commerce_orders.entry_path),
-       session_id = COALESCE(excluded.session_id, commerce_orders.session_id),
+       session_id = COALESCE(excluded.session_id, commerce_orders.session_id),${withSource ? `
+       source = COALESCE(excluded.source, commerce_orders.source),` : ''}
        synced_at = datetime('now'),
        updated_at = datetime('now')`,
     [
@@ -294,7 +306,13 @@ async function upsertOrder(order: ShopifyAdminOrder): Promise<boolean> {
       order.processedAt,
       order.closedAt,
       order.cancelledAt,
+      ...(withSource ? [storefront] : []),
     ]
+  );
+  await writeWithOptionalColumn('source', sourceColumn, writeOrder, () =>
+    console.warn(
+      '[Sync Shopify] commerce_orders.source does not exist yet: apply database/migrations/169_commerce_orders_source.sql. Orders sync without their storefront until then.'
+    )
   );
 
   // UPSERT line items (idempotent - safe for duplicate syncs)
