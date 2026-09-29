@@ -143,3 +143,20 @@ describe("a clip's caption", () => {
     expect(captionIssues(dashed).map((i) => i.code)).toContain("em-dash");
   });
 });
+
+describe("where to listen", () => {
+  const { toListenLinks } = jest.requireActual("@/lib/loop/listen") as typeof import("@/lib/loop/listen");
+  it("lists only live stores with a real link, Spotify first, once each", () => {
+    const links = toListenLinks([
+      { dsp: "apple_music", external_url: "https://music.apple.com/x", status: "live" },
+      { dsp: "tidal", external_url: "https://tidal.com/x", status: "pending" },
+      { dsp: "spotify", external_url: "https://open.spotify.com/album/x", status: "live" },
+      { dsp: "spotify", external_url: "https://open.spotify.com/album/y", status: "live" },
+      { dsp: "deezer", external_url: "javascript:alert(1)", status: "live" },
+    ]);
+    expect(links.map((l) => l.label)).toEqual(["Spotify", "Apple Music"]);
+  });
+  it("is empty until the album is live somewhere", () => {
+    expect(toListenLinks([])).toEqual([]);
+  });
+});

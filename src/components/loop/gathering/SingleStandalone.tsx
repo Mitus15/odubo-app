@@ -9,6 +9,7 @@ import GetPassModal from "@/components/loop/gathering/GetPassModal";
 import type { FeaturedSingle } from "@/lib/loop/single";
 import type { PassOffer } from "@/lib/loop/pass/offer";
 import type { PublicChapter } from "@/lib/loop/film/public";
+import type { ListenLink } from "@/lib/loop/listen";
 
 /**
  * A single on its own page (/loop/<slug>). The same three screens the poster
@@ -26,6 +27,7 @@ export function SingleStandalone({
   singles,
   closable,
   chapter = null,
+  listenOn = [],
   coverUrl,
   coverCaption,
   dateLabel,
@@ -43,6 +45,8 @@ export function SingleStandalone({
   closable: boolean;
   /** Its chapter of the flight, once revealed. */
   chapter?: PublicChapter | null;
+  /** Where the album streams, once it does. */
+  listenOn?: ListenLink[];
   coverUrl: string | null;
   coverCaption: string;
   dateLabel: string | null;
@@ -61,8 +65,8 @@ export function SingleStandalone({
   }, [offer, router]);
   const coverContest = useCallback(() => router.push("/loop#cover"), [router]);
   const rollout = useMemo(
-    () => ({ slug, out, playable, releaseDateLabel, fieldPack, singles, chapter }),
-    [slug, out, playable, releaseDateLabel, fieldPack, singles, chapter],
+    () => ({ slug, out, playable, releaseDateLabel, fieldPack, singles, chapter, listenOn }),
+    [slug, out, playable, releaseDateLabel, fieldPack, singles, chapter, listenOn],
   );
 
   return (

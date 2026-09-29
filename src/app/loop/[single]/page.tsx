@@ -16,6 +16,8 @@ import SingleStandalone, { type SingleRow } from "@/components/loop/gathering/Si
 import ChapterView from "@/components/loop/film/ChapterView";
 import { songBySlug } from "@/lib/loop/songs";
 import { chapterClips, publicChapters, publicFilm } from "@/lib/loop/film/public";
+import { listenLinks } from "@/lib/loop/listen";
+import { ALBUM_ID } from "@/lib/loop/songs";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -84,10 +86,10 @@ export default async function SinglePage({ params }: { params: Promise<{ single:
   if (!singleBySlug(slug)) {
     // A chapter of the flight that is not a single.
     if (!songBySlug(slug)) notFound();
-    const [chapters, clips, film] = await Promise.all([publicChapters(), chapterClips(slug), publicFilm()]);
+    const [chapters, clips, film, listenOn] = await Promise.all([publicChapters(), chapterClips(slug), publicFilm(), listenLinks(ALBUM_ID)]);
     const chapter = chapters.find((c) => c.slug === slug)!;
     const watchAt = film?.markers.find((m) => m.label === slug)?.t ?? null;
-    return <ChapterView chapter={chapter} chapters={chapters} clips={chapter.public ? clips : []} watchAt={watchAt} />;
+    return <ChapterView chapter={chapter} chapters={chapters} clips={chapter.public ? clips : []} watchAt={watchAt} listenOn={listenOn} />;
   }
   const data = await load(slug);
   if (!data?.track) notFound();
@@ -102,7 +104,10 @@ export default async function SinglePage({ params }: { params: Promise<{ single:
     archived ? Promise.resolve(null) : getPassOffer(event),
   ]);
 
-  const chapter = (await publicChapters()).find((c) => c.slug === def.slug) ?? null;
+  const [chapter, listenOn] = await Promise.all([
+    publicChapters().then((all) => all.find((c) => c.slug === def.slug) ?? null),
+    listenLinks(ALBUM_ID),
+  ]);
 
   const singles: SingleRow[] = statuses.map((s) => ({
     slug: s.slug,
@@ -128,6 +133,7 @@ export default async function SinglePage({ params }: { params: Promise<{ single:
       offer={offer}
       closable={!archived}
       chapter={chapter && chapter.public ? chapter : null}
+      listenOn={listenOn}
     />
   );
 }

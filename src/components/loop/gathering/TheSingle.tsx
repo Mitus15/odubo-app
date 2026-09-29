@@ -10,6 +10,7 @@ import type { FeaturedSingle } from "@/lib/loop/single";
 import { SINGLE_PATH } from "@/lib/loop/singlePage";
 import { singlePath } from "@/lib/loop/singles";
 import type { PublicChapter } from "@/lib/loop/film/public";
+import type { ListenLink } from "@/lib/loop/listen";
 
 // Seventeen megabytes of stems and a Web Audio graph: only for those who ask.
 const FieldPlayer = dynamic(() => import("@/components/field/FieldPlayer"), { ssr: false });
@@ -33,6 +34,8 @@ export type Rollout = {
   singles: SingleRow[];
   /** Its chapter of the flight, once revealed: the thread and the scripture. */
   chapter?: PublicChapter | null;
+  /** Where the album streams, once a distributor has sent it live. */
+  listenOn?: ListenLink[];
 };
 
 /**
@@ -450,7 +453,19 @@ export function TheSingle({
             </>
           )}
 
-          <p className="loop-muted mt-10 text-sm leading-relaxed">This album isn&apos;t streaming anywhere yet.</p>
+          {rollout.listenOn && rollout.listenOn.length > 0 ? (
+            <div className="mt-10">
+              <div className="loop-muted text-[11px] font-bold uppercase tracking-[0.2em]">Listen on</div>
+              {rollout.listenOn.map((l) => (
+                <a key={l.dsp} href={l.url} target="_blank" rel="noopener noreferrer" className="flex min-h-[44px] items-center justify-between border-t border-ink/15 py-3 last:border-b">
+                  <span className="text-base font-bold">{l.label}</span>
+                  <span className="loop-muted">↗</span>
+                </a>
+              ))}
+            </div>
+          ) : (
+            <p className="loop-muted mt-10 text-sm leading-relaxed">This album isn&apos;t streaming anywhere yet.</p>
+          )}
         </section>
       ) : (
       <section className={SECTION}>

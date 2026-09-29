@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { PublicChapter, PublicClip } from "@/lib/loop/film/public";
+import type { ListenLink } from "@/lib/loop/listen";
 import FlightList from "./FlightList";
 
 /**
@@ -14,12 +15,15 @@ export default function ChapterView({
   chapters,
   clips,
   watchAt,
+  listenOn = [],
 }: {
   chapter: PublicChapter;
   chapters: PublicChapter[];
   clips: PublicClip[];
   /** Where this chapter starts in the published film (its marker), if it is out. */
   watchAt: number | null;
+  /** Where the album streams, once it does. */
+  listenOn?: ListenLink[];
 }) {
   return (
     <main className="mx-auto min-h-[100dvh] w-full max-w-md bg-sand px-6 pb-20 pt-16 text-ink">
@@ -78,6 +82,18 @@ export default function ChapterView({
           <span className="loop-muted">→</span>
         </Link>
       </section>
+
+      {listenOn.length > 0 && (
+        <section className="mt-12" aria-label="Listen on">
+          <h2 className="loop-muted text-[11px] font-bold uppercase tracking-[0.25em]">Listen on</h2>
+          {listenOn.map((l) => (
+            <a key={l.dsp} href={l.url} target="_blank" rel="noopener noreferrer" className="flex min-h-[44px] items-center justify-between border-t border-ink/15 py-3 last:border-b">
+              <span className="text-base font-bold">{l.label}</span>
+              <span className="loop-muted">↗</span>
+            </a>
+          ))}
+        </section>
+      )}
 
       <section className="mt-14" aria-label="The flight">
         <h2 className="loop-muted text-[11px] font-bold uppercase tracking-[0.25em]">The flight</h2>
