@@ -28,7 +28,7 @@ drive: `export FILM_WORK=/Volumes/<drive>/film-work`. Check `df -h ~` first.
 
 ```bash
 npm run film:check -- "<the 5 minute test take>"   # fix what it says first
-npm run film:run -- "<the take>" --look=gloss       # everything, resumable
+npm run film:run -- "<the take>"                    # everything, resumable
 ```
 
 `film:run` chains: ingest, align (listens for the playlist's tone, locks each
@@ -70,13 +70,19 @@ install line is in `matte.py`. Without it, the selfie segmenter
 (`--matte=selfie`) is the fallback and needs `--screen=` on the June take.
 
 **The style** (`film:figure --look=`):
-- `poster`: the converter's label map, three hard tones from his brightness.
-- `gloss`: the album cover. An ink body with pools of light, each a ring of
+- `gloss` (the default, approved): the album cover. An ink body with pools of light, each a ring of
   the ground colour around a pale core. Gloss is measured as light on his
   shape (brightness against its neighbourhood), not pale cloth, and a fixed
   share of him is lit (`GLOSS_LIT`). It writes smooth fields (`field.mkv`,
   `tone.mkv`) that compose cuts at the output size, so every edge is a clean
   curve.
+- `poster`: the converter's label map, three hard tones from his brightness.
+
+**The marker** (`--marker=` on compose, cut, grid): `crown`, the default and
+the owner's choice (2026-09-30), is the seal floating over his head, the sign
+a game puts on the character you play. `ground` and `heart` remain for
+comparison only. The seal is `public/brand-logos/odubo-brand/odubo-seal.svg`
+(the closed, indented drawing; rebuild with `scripts/brand/build-odubo-seal.py`).
 
 With `gloss` fields, compose draws `--look=gloss` (default: the cores melt into
 their rings, `--soft=0.08`) or `--look=cover` (every edge hard, the cover

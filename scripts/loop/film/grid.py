@@ -31,8 +31,8 @@ def tile(lab, alpha, lm, pal, size, Wf, Hf, marker="crown"):
     if not len(ys):
         return canvas
     body = ys.max() - ys.min()
-    scale = 0.7 * size / max(1, body)
-    ground = 0.8 * size
+    scale = 0.6 * size / max(1, body)  # headroom for the marker over his head
+    ground = 0.84 * size
     cx = (xs.min() + xs.max()) / 2
     A = np.float32([[scale, 0, size / 2 - scale * cx], [0, scale, ground - scale * ys.max()]])
     a = cv2.warpAffine(alpha, A, (size, size), flags=cv2.INTER_LINEAR)

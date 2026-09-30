@@ -36,7 +36,7 @@ def main():
     py("ingest.py", SOURCE, f"--name={TAKE}", f"--from={START}", f"--to={END}")
     py("align.py", TAKE, "--manual=1984:542@117")
     py("segment.py", TAKE, f"--screen={TV}")
-    py("figure.py", TAKE, "--height=1080", "--look=gloss")
+    py("figure.py", TAKE, "--height=1080")
     subprocess.run(["npx", "tsx", "--env-file=.env.local", "scripts/loop/film/pull.ts", TAKE, "--drafts"], check=True, cwd=REPO)
     story = json.loads((d / "story.json").read_text())
     story["cards"] = [c for c in story["cards"] if c["id"] != CARD["id"]] + [CARD]

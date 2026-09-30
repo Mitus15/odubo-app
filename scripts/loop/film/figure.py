@@ -1,10 +1,11 @@
 """
 Draw him: the person mask and the frame become the Loop Soul figure.
 
-    npm run film:figure -- <take> [--height=2160] [--look=poster|gloss]
+    npm run film:figure -- <take> [--height=2160] [--look=gloss|poster]
 
---look=gloss is the cover's look (GlossStyler, below): it also writes smooth
-fields that compose cuts at the output size. poster is the converter's.
+--look=gloss (the default, approved by the owner 2026-09-29) is the cover's
+look (GlossStyler, below): it also writes smooth fields that compose cuts at
+the output size. poster is the converter's.
 
 A port of the video converter's figure styling (scripts/loop/video-convert.mjs
 918-952) with one change: the tone cuts are smoothed over time, so the
@@ -178,7 +179,7 @@ def wide_blur(x: np.ndarray, sigma: float) -> np.ndarray:
 def main(argv):
     name = argv[0]
     opts = dict(a[2:].split("=", 1) for a in argv[1:] if a.startswith("--") and "=" in a)
-    look = opts.get("look", "poster")
+    look = opts.get("look", "gloss")
     take = load_take(name)
     d = take_dir(name)
     meta = json.loads((d / "mask.json").read_text())

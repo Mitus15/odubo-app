@@ -165,9 +165,9 @@ the game will look. `--marker=` on compose, cut and grid:
   the in-between of seal and Danceman at size; needs its own if chosen.
 - `heart`: the first design, kept for comparison.
 
-The owner has not picked between crown and ground yet. The canon (the badge
-on the heart, a circumcision of the heart) is untouched until he says how it
-reads now.
+**The owner chose the crown (2026-09-30).** `ground` and `heart` stay as
+options for comparison, not for use. The canon (the badge on the heart, a
+circumcision of the heart) is untouched until he says how it reads now.
 
 **The seal was the wrong drawing.** `public/brand-logos/odubo-icon.svg` had a
 point on top: the old seal. The right one is closed, indented top and bottom,

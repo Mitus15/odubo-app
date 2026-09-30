@@ -53,7 +53,7 @@ def main(argv):
     if not (d / "mask.mkv").exists():
         py("segment.py", name)
     if not (d / "labels.mkv").exists():
-        py("figure.py", name, f"--height={height}", f"--look={opts.get('look', 'poster')}")
+        py("figure.py", name, f"--height={height}", f"--look={opts.get('look', 'gloss')}")
     node("pull.ts", name, *(["--drafts"] if "drafts" in flags else []))
     node("cards.ts", name, f"--film-height={height}")
     py("outro.py")
