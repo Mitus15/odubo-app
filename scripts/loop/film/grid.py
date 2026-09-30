@@ -83,7 +83,10 @@ def main(argv):
     sand = chapters[0]["palette"]
     for i, ch in enumerate(chapters):
         r, c = divmod(i, COLS)
-        sheet[r * ts:(r + 1) * ts, c * ts:(c + 1) * ts] = tile(lab, alpha, lm, ch["palette"], ts, Wf, Hf)
+        pal = ch["palette"]
+        if fig.get("look") == "gloss":
+            pal = {**pal, "mid": pal["field"]}  # the cover's ring is the ground's own colour (compose.py)
+        sheet[r * ts:(r + 1) * ts, c * ts:(c + 1) * ts] = tile(lab, alpha, lm, pal, ts, Wf, Hf)
     # The credit squares: the Danceman, and the name.
     r, c = divmod(len(chapters), COLS)
     sq = np.empty((ts, ts, 3), np.float32)

@@ -2,13 +2,17 @@
 Find him in every frame: the person mask and the pose.
 
     npm run film:segment -- <take>
-    npm run film:segment -- <take> --screen=741,91,1345,435   # a dark screen behind him
+    npm run film:segment -- <take> --matte=selfie --screen=741,91,1345,435   # the fallback, a dark screen behind him
 
-MediaPipe's selfie segmenter gives the person; the pose landmarker gives 33
-points (the heart and the feet come from these). The mask is cleaned the way
-docs/loop/campaign/HANDOFF.md 4.1 found works: the largest body kept (with
-any piece of him large enough to be a limb), holes filled, and a median over
-five frames so edges do not shimmer.
+The person comes from Robust Video Matting (matte.py) when it is installed,
+else from MediaPipe's selfie segmenter (--matte=selfie). The pose landmarker
+gives 33 points either way (the heart and the feet come from these).
+
+Both are cleaned to the largest body (with any piece of him large enough to
+be a limb) and small holes filled. The selfie segmenter needs more, the way
+docs/loop/campaign/HANDOFF.md 4.1 found works: the empty room trims where it
+is unsure, a screen rule, and a median over five frames so edges do not
+shimmer. The matte remembers earlier frames itself and needs none of that.
 
 Writes mask.mkv (soft, analysis size) and pose.jsonl into the take's folder.
 """
@@ -19,8 +23,9 @@ import cv2
 from scipy.ndimage import binary_fill_holes
 from take import Reader, Writer, even, load_take, take_dir
 import seg
+import matte as rvm
 
-MEDIAN = 5  # frames
+MEDIAN = 5  # frames, for the selfie segmenter
 
 
 def build_plate(take: dict, W: int, H: int, samples: int = 120) -> np.ndarray:
@@ -115,33 +120,45 @@ def main(argv):
     W, H = even(width), even(width * take["h"] / take["w"])
     start, end = take["window"]["start"], take["window"]["end"]
     fps = take["fps"]
-    plate_path = d / f"plate-{W}.png"
-    if plate_path.exists():
-        plate = cv2.cvtColor(cv2.imread(str(plate_path)), cv2.COLOR_BGR2RGB)
-    else:
-        print("  building the empty room from the whole take", flush=True)
-        plate = build_plate(take, W, H)
-        cv2.imwrite(str(plate_path), cv2.cvtColor(plate, cv2.COLOR_RGB2BGR))
+    matte = opts.get("matte", "rvm" if rvm.available() else "selfie")
+    if matte == "rvm" and "screen" in opts:
+        print("  --screen is for the selfie segmenter; the matte needs no screen rule", flush=True)
+    plate = None
+    if matte == "selfie":
+        plate_path = d / f"plate-{W}.png"
+        if plate_path.exists():
+            plate = cv2.cvtColor(cv2.imread(str(plate_path)), cv2.COLOR_BGR2RGB)
+        else:
+            print("  building the empty room from the whole take", flush=True)
+            plate = build_plate(take, W, H)
+            cv2.imwrite(str(plate_path), cv2.cvtColor(plate, cv2.COLOR_RGB2BGR))
     screen = None
-    if "screen" in opts:
+    if "screen" in opts and matte == "selfie":
         # Given in the take's own pixels (x0,y0,x1,y1), scaled to analysis size.
         x0, y0, x1, y1 = (float(v) for v in opts["screen"].split(","))
         k = W / take["w"]
         screen = (int(x0 * k), int(y0 * k), int(x1 * k), int(y1 * k))
     reader = Reader(take["path"], W, H, start=start, dur=end - start)
     writer = Writer(d / "mask.mkv", W, H, fps)
-    segmenter, poser = seg.segmenter(video=True), seg.poser(video=True)
-    # A centred median: frame n's mask is written once its two later
-    # neighbours exist, from the five frames around it (fewer at the ends).
-    buf: deque = deque(maxlen=MEDIAN)
-    half = MEDIAN // 2
+    poser = seg.poser(video=True)
+    if matte == "rvm":
+        person = rvm.Matte(H)
+        window = 1
+    else:
+        segmenter = seg.segmenter(video=True)
+        person = lambda frame, ts: clean(seg.person(segmenter, frame, ts), frame, plate, screen)  # noqa: E731
+        window = MEDIAN
+    # A centred median: frame n's mask is written once its later neighbours
+    # exist, from the frames around it (fewer at the ends).
+    buf: deque = deque(maxlen=window)
+    half = window // 2
     written = 0
 
     def emit(upto: int):
         nonlocal written
         while written <= upto:
-            window = [m for j, m in buf if abs(j - written) <= half]
-            writer.write((np.median(np.stack(window), 0) * 255).astype(np.uint8))
+            near = [m for j, m in buf if abs(j - written) <= half]
+            writer.write((np.median(np.stack(near), 0) * 255).astype(np.uint8))
             written += 1
 
     t0 = time.time()
@@ -149,7 +166,7 @@ def main(argv):
         i = 0
         for frame in reader:
             ts = int(i * 1000 / fps)
-            buf.append((i, clean(seg.person(segmenter, frame, ts), frame, plate, screen)))
+            buf.append((i, clean(person(frame)) if matte == "rvm" else person(frame, ts)))
             lm = seg.landmarks(poser, frame, ts)
             rec = {"f": i}
             if lm is not None:
@@ -161,9 +178,9 @@ def main(argv):
                 print(f"  {i} frames, {i / (time.time() - t0):.0f} fps", flush=True)
     emit(i - 1)
     writer.close()
-    meta = {"w": W, "h": H, "frames": i, "fps": fps}
+    meta = {"w": W, "h": H, "frames": i, "fps": fps, "matte": matte}
     (d / "mask.json").write_text(json.dumps(meta))
-    print(f"{name}: {i} frames segmented at {W}x{H} in {time.time() - t0:.0f}s")
+    print(f"{name}: {i} frames segmented ({matte}) at {W}x{H} in {time.time() - t0:.0f}s")
 
 
 if __name__ == "__main__":

@@ -4,6 +4,15 @@ Put it together: the moving poster, frame by frame.
     npm run film:compose -- <take> --from=<s> --to=<s> --aspect=9x16 [--outro] [--out=file.mp4]
         [--shadow=sync|lag|none --lag=<frames>]   override the chapter's shadow
         [--effects=freeze,flip]                  hold on each downbeat; flip to the sibling colour each bar
+        [--look=poster|cover|gloss --cuts=0.55,0.75 --soft=0.08]
+            poster  the label map, as the converter drew it
+            cover   (needs figure --look=gloss) the album cover: ink, pools of
+                    light as a ring of the ground colour around a pale core,
+                    cut from smooth fields at the output size so every edge is
+                    a clean curve
+            gloss   the cover, its pale cores melting into their rings (by
+                    --soft): light on lacquer. The outline and the rings stay
+                    hard, so he is still one clean shape
 
 For every frame, in this order:
   1. the field       the chapter's flat colour, edge to edge (no room, ever)
@@ -102,6 +111,18 @@ def keyline(cover: np.ndarray, px: int) -> np.ndarray:
     return cv2.dilate(c, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (k, k))), pad
 
 
+def cut(f: np.ndarray, level: float) -> np.ndarray:
+    """Where a smooth field crosses `level`, as coverage 0..1 with a one pixel
+    ramp: a crisp, anti-aliased edge at whatever scale it is drawn."""
+    gy, gx = np.gradient(f)
+    return np.clip((f - level) / (np.sqrt(gx * gx + gy * gy) + 1e-4) + 0.5, 0, 1)
+
+
+def melt(f: np.ndarray, level: float, soft: float) -> np.ndarray:
+    u = np.clip((f - level + soft) / (2 * soft), 0, 1)
+    return u * u * (3 - 2 * u)
+
+
 def main(argv):
     name = argv[0]
     opts = dict(a[2:].split("=", 1) for a in argv[1:] if a.startswith("--") and "=" in a)
@@ -121,6 +142,11 @@ def main(argv):
     out_path = opts.get("out") or str(d / f"compose-{opts.get('aspect', '9x16')}-{t_from:.1f}-{t_to:.1f}.mp4")
     crf = int(opts.get("crf", 18))
     outro = "outro" in flags
+    look = opts.get("look", "gloss" if fig.get("look") == "gloss" else "poster")
+    if look != "poster" and fig.get("look") != "gloss":
+        raise SystemExit(f"--look={look} needs the fields: run film:figure with --look=gloss first")
+    cuts = tuple(float(v) for v in opts.get("cuts", "0.55,0.75").split(","))
+    soft = float(opts.get("soft", 0.08))
 
     timeline = Timeline(story, align)
     poses = read_pose(d / "pose.jsonl")
@@ -138,6 +164,11 @@ def main(argv):
     pre = min(first, max(max_lag, int(fps * 3)))
     labels = Reader(d / "labels.mkv", Wf, Hf, gray=True, start=(first - pre) / fps, dur=(count + pre) / fps)
     alphas = Reader(d / "alpha.mkv", Wf, Hf, gray=True, start=(first - pre) / fps, dur=(count + pre) / fps)
+    streams = [labels, alphas]
+    if look != "poster":
+        fw, fh = fig["fieldW"], fig["fieldH"]
+        streams += [Reader(d / f"{n}.mkv", fw, fh, gray=True, start=(first - pre) / fps, dur=(count + pre) / fps)
+                    for n in ("field", "tone")]
 
     # One scale per clip, from his median height in it, so he never breathes.
     heights = []
@@ -177,12 +208,12 @@ def main(argv):
     # at or after the last one read: the same one to hold, later ones to catch
     # up. Everything that follows him (heart, ground, shadow, camera) advances
     # with the source, never with the output.
-    source = iter(zip(labels, alphas))
+    source = iter(zip(*streams))
     st = {"k": -1}
 
     def advance(target: int):
         while st["k"] < target:
-            lab_, alp_ = next(source)
+            lab_, alp_, *fields_ = next(source)
             k_ = st["k"] + 1
             lm_ = poses.get(first - pre + k_)
             heart_ = track.update(lm_, Wf, Hf)
@@ -195,7 +226,7 @@ def main(argv):
                 cols = np.where(alpha_.max(0) > 0.5)[0]
                 x_now = float(cols.mean()) if len(cols) else Wf / 2
             cx = st.get("cam_x")
-            st.update(k=k_, lab=lab_, alpha=alpha_, heart=heart_, g=g_s, g_contact=g_c,
+            st.update(k=k_, lab=lab_, alpha=alpha_, fields=fields_, heart=heart_, g=g_s, g_contact=g_c,
                       cam_x=x_now if cx is None else cx + aspect["follow"] * (x_now - cx))
         return st
 
@@ -269,12 +300,28 @@ def main(argv):
                 sh = cast(warped, contact_out - ry0) * SHADOW_OPACITY * fade
                 view += (pal["shadow"] - view) * sh[..., None]
             # 3. him
-            onehot = np.dstack([(lab == 1), (lab == 2), (lab == 3)]).astype(np.float32)
-            hot = cv2.warpAffine(onehot, Ar, (rw, rh), flags=cv2.INTER_LINEAR, borderValue=0)
-            a = cv2.warpAffine(alpha, Ar, (rw, rh), flags=cv2.INTER_LINEAR, borderValue=0) * fade
-            wsum = hot.sum(2, keepdims=True)
-            body_rgb = (hot[..., 0:1] * pal["ink"] + hot[..., 1:2] * pal["mid"] + hot[..., 2:3] * pal["highlight"]) / np.maximum(wsum, 1e-6)
-            body_rgb = np.where(wsum > 1e-6, body_rgb, pal["ink"])
+            if look == "poster":
+                onehot = np.dstack([(lab == 1), (lab == 2), (lab == 3)]).astype(np.float32)
+                hot = cv2.warpAffine(onehot, Ar, (rw, rh), flags=cv2.INTER_LINEAR, borderValue=0)
+                a = cv2.warpAffine(alpha, Ar, (rw, rh), flags=cv2.INTER_LINEAR, borderValue=0) * fade
+                wsum = hot.sum(2, keepdims=True)
+                body_rgb = (hot[..., 0:1] * pal["ink"] + hot[..., 1:2] * pal["mid"] + hot[..., 2:3] * pal["highlight"]) / np.maximum(wsum, 1e-6)
+                body_rgb = np.where(wsum > 1e-6, body_rgb, pal["ink"])
+            else:
+                # Cut the smooth fields here, at the output size: clean curves.
+                # They are stored at the mask's size, so scale them to the figure's first.
+                Af = Ar.copy()
+                Af[:, 0] *= Wf / fw
+                Af[:, 1] *= Hf / fh
+                fld, tn = (cv2.warpAffine(x.astype(np.float32) / 255, Af, (rw, rh), flags=cv2.INTER_CUBIC, borderValue=0)
+                           for x in s_now["fields"])
+                a = cut(fld, 0.5) * fade
+                ring = cut(tn, cuts[0])
+                core = cut(tn, cuts[1]) if look == "cover" else melt(tn, cuts[1], soft)
+                # The ring is the ground's own colour, as on the cover: the
+                # light opens him to the field he stands on.
+                ring, core = ring[..., None], core[..., None]
+                body_rgb = (pal["ink"] * (1 - ring) + pal["field"] * ring) * (1 - core) + pal["highlight"] * core
             view += (body_rgb - view) * a[..., None]
 
         # 4. the badge on his heart (from the moment it lands)
@@ -323,8 +370,8 @@ def main(argv):
             writer.write(np.clip(canvas, 0, 255).astype(np.uint8))
             written += 1
     writer.close()
-    labels.close()
-    alphas.close()
+    for r in streams:
+        r.close()
     print(f"{out_path}: {written} frames at {Wout}x{Hout} in {time.time() - t0:.0f}s")
     return out_path
 

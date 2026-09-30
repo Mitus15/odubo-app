@@ -82,3 +82,40 @@ shape.json, the phase and the downbeat from the master's onsets):
 store, public, caption, kjv, songs), `/loop/admin/film`, `/recoolman`,
 `/loop/<slug>`, `/loop/film`, `/game/soul-loop`, `database/migrations/168_loop_film.sql`,
 `.claude/skills/loop-film/SKILL.md`.
+
+## The gloss look (2026-09-29, later)
+
+The owner asked how far the June take could go toward the iPod ads' clean
+silhouettes with the cover's glossy tri-tone. Tested on the golden 20 s.
+
+**The cutout was the limit, not the style.** The selfie segmenter swelled
+into the dark TV whenever his head or arms crossed it, and lost his feet.
+Robust Video Matting (`matte.py`), a video model for whole bodies with a
+memory of earlier frames, keeps his head, hands and sneakers and needs no
+screen rule. It runs at 20 fps on the M1 Pro. It is GPL-3.0, so it loads from
+the torch hub cache and is never vendored. The selfie segmenter stays as the
+fallback (`--matte=selfie`).
+
+**The style is cut from fields, at the output size.** `figure --look=gloss`
+writes the outline and the light as smooth fields at the mask's size;
+compose cuts them after scaling, with a one pixel anti-aliased edge
+(`cut()`). An edge is a clean curve at any scale, not an upscaled staircase,
+and styling costs the same for a 4K take (33 s for the golden 20 s, down
+from 166 s when the fields were worked at full size).
+
+**What the cover is.** Its ring is the ground's own colour (sand on sand),
+not `SAND_DEEP`: the light opens him to the field he stands on. The pools nest
+by themselves because the core is a higher level of the same smooth field.
+
+Tried and dropped, with reasons:
+
+| Tried | What it did | Instead |
+| --- | --- | --- |
+| tone from raw brightness | light jeans read as lit, the figure opened into outlines | light against its neighbourhood (`GLOSS_SHAPE`): creases and edges of limbs, not pale cloth |
+| his own tone range (percentiles) | how much of him was lit changed with clothes and pose | a fixed share lit (`GLOSS_LIT` 80/93), anchors eased over time |
+| a thin rim (0.3% of height) | pools touched the outline, a double contour | 0.8%: he reads as one shape first |
+| every tone melting (`blend`) | airbrushed, not glossy | only the core melts into its ring (`gloss`); outline and ring stay hard |
+| 0.22% outline smoothing | the segmenter's wobble survived | 0.5% |
+
+Not proven: a 4K take shot to the spec. A pool on his face can read as an
+opening in the head when he faces the camera; watch it on the real take.

@@ -28,7 +28,7 @@ drive: `export FILM_WORK=/Volumes/<drive>/film-work`. Check `df -h ~` first.
 
 ```bash
 npm run film:check -- "<the 5 minute test take>"   # fix what it says first
-npm run film:run -- "<the take>"                    # everything, resumable
+npm run film:run -- "<the take>" --look=gloss       # everything, resumable
 ```
 
 `film:run` chains: ingest, align (listens for the playlist's tone, locks each
@@ -57,6 +57,31 @@ npm run film:cut -- <take> film
 npm run film:compose -- <take> --from=<s> --to=<s> --aspect=9x16 --shadow=lag --lag=22   # just the picture
 npm run film:grid -- <take> --at=<take seconds>    # the Warhol grid: one moment in all 14 colourways
 ```
+
+## The look
+
+Two things decide how clean he looks.
+
+**The cutout** (`film:segment`). Robust Video Matting (`matte.py`) is used when
+it is installed: a video model for whole bodies that remembers earlier frames,
+so the outline holds still, and it keeps his head, hands and feet. It lives in
+the torch hub cache, not the repo (GPL-3.0, a tool we run, never ship); the
+install line is in `matte.py`. Without it, the selfie segmenter
+(`--matte=selfie`) is the fallback and needs `--screen=` on the June take.
+
+**The style** (`film:figure --look=`):
+- `poster`: the converter's label map, three hard tones from his brightness.
+- `gloss`: the album cover. An ink body with pools of light, each a ring of
+  the ground colour around a pale core. Gloss is measured as light on his
+  shape (brightness against its neighbourhood), not pale cloth, and a fixed
+  share of him is lit (`GLOSS_LIT`). It writes smooth fields (`field.mkv`,
+  `tone.mkv`) that compose cuts at the output size, so every edge is a clean
+  curve.
+
+With `gloss` fields, compose draws `--look=gloss` (default: the cores melt into
+their rings, `--soft=0.08`) or `--look=cover` (every edge hard, the cover
+exactly). `--cuts=0.55,0.75` moves the ring and the core. A look is a figure
+choice: delete `labels.mkv` to restyle a take.
 
 Effects (add to `film:cut ... clip|song` or `film:compose`): `--effects=freeze`
 (a crawl on every downbeat that catches up within the bar, so the length and
@@ -87,5 +112,6 @@ npm test -- loopFilm loopPosterWrap loopSingles
   delegate aborts the process (`scripts/loop/film/seg.py`).
 - Python cannot fetch model weights here (its certificate store fails); fetch
   them with curl into `~/.cache/whisper/` or `FILM_MODELS`.
-- The June take has a TV behind him: `--screen=741,91,1345,435` on segment.
-  A take shot to the spec needs no such flag.
+- The June take has a TV behind him: `--screen=741,91,1345,435` on segment,
+  for the selfie segmenter only. The matte does not need it. A take shot to
+  the spec needs no such flag.

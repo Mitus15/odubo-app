@@ -1,7 +1,10 @@
 """
 Draw him: the person mask and the frame become the Loop Soul figure.
 
-    npm run film:figure -- <take> [--height=2160]
+    npm run film:figure -- <take> [--height=2160] [--look=poster|gloss]
+
+--look=gloss is the cover's look (GlossStyler, below): it also writes smooth
+fields that compose cuts at the output size. poster is the converter's.
 
 A port of the video converter's figure styling (scripts/loop/video-convert.mjs
 918-952) with one change: the tone cuts are smoothed over time, so the
@@ -80,9 +83,102 @@ class Styler:
         return labels, (alpha * 255).astype(np.uint8)
 
 
+GLOSS_EDGE = 0.005     # the outline's smoothing (sigma, fraction of the height): the segmenter's wobble becomes curves
+GLOSS_POOL = 0.016     # the light's smoothing: how large the pools of light are
+GLOSS_SHAPE = 0.06     # the scale of his clothes' own brightness, taken away so only light on his shape is left
+GLOSS_RIM = 0.008      # ink kept inside the outline before any light shows
+GLOSS_LIT = (0.80, 0.93)   # the share of him darker than the ring, and than the core: the cover's proportion
+GLOSS_CUTS = (0.55, 0.75)  # where those shares land on the tone scale (compose cuts here by default)
+
+
+class GlossStyler:
+    """
+    The cover's look: an ink body with pools of light, each a ring of the ground
+    colour around a pale core, every edge a smooth curve.
+
+    Writes FIELDS, not decisions. `field` is the outline (0.5 is the edge) and
+    `tone` is the light on his body (0 ink .. 1 brightest), both smooth. They
+    are cut into shapes only at the output size (compose), so an edge is a
+    clean curve at any scale instead of an upscaled staircase. The pools nest
+    by themselves: the core is a higher level of the same smooth field, so it
+    always sits inside its ring, as on the cover.
+
+    Also writes the label map and alpha from the same fields, for every reader
+    that wants decisions (the Warhol grid, the old look).
+
+    The fields are smooth by design, so they are worked and stored at the
+    mask's size (fw x fh) and scaled up only where they are cut: the look
+    costs the same for a 4K take as for a phone clip.
+    """
+
+    def __init__(self, w: int, h: int, fw: int, fh: int):
+        self.w, self.h, self.fw, self.fh = w, h, fw, fh
+        self.edge_s = max(0.8, fh * GLOSS_EDGE)
+        self.pool_s = max(1.5, fh * GLOSS_POOL)
+        self.shape_s = max(4.0, fh * GLOSS_SHAPE)
+        self.rim_px = max(1.0, fh * GLOSS_RIM)
+        self.anchors = None
+
+    def __call__(self, rgb: np.ndarray, mask_small: np.ndarray):
+        m = mask_small.astype(np.float32) / 255
+        field = np.clip(cv2.GaussianBlur(m, (0, 0), self.edge_s), 0, 1)
+        solid = field >= 0.5
+        tone = np.zeros((self.fh, self.fw), np.float32)
+        if solid.sum() < 50:
+            return self.decide(field, tone)
+        small = cv2.resize(rgb, (self.fw, self.fh), interpolation=cv2.INTER_AREA)
+        lum = (small.astype(np.float32) @ np.array([0.2126, 0.7152, 0.0722], np.float32)) / 255
+        # Averages over his body only, so the wall never bleeds in.
+        s = solid.astype(np.float32)
+
+        def over_him(sigma):
+            return wide_blur(lum * s, sigma) / np.maximum(wide_blur(s, sigma), 1e-3)
+
+        # Gloss is light catching his shape, not pale cloth: light jeans are
+        # not a highlight, the crease of a sleeve is. So the light is measured
+        # against its own neighbourhood.
+        light = over_him(self.pool_s) - over_him(self.shape_s)
+        # A fixed share of him is lit, whatever he wears or wherever he turns:
+        # the tone scale is anchored on his own quantiles, eased over time.
+        q = np.percentile(light[solid], [5, 50, GLOSS_LIT[0] * 100, GLOSS_LIT[1] * 100, 99.5])
+        self.anchors = q if self.anchors is None else self.anchors + TONE_EASE * (q - self.anchors)
+        a = np.maximum.accumulate(self.anchors + np.arange(5) * 1e-5)
+        tone = np.interp(light, a, [0.0, 0.3, GLOSS_CUTS[0], GLOSS_CUTS[1], 1.0]).astype(np.float32)
+        # The rim: light fades out just inside the outline, so he reads as one
+        # shape first and the pools sit inside him.
+        dist = cv2.distanceTransform(solid.astype(np.uint8), cv2.DIST_L2, 5)
+        u = np.clip((dist - 0.5 * self.rim_px) / self.rim_px, 0, 1)
+        tone *= u * u * (3 - 2 * u)
+        tone[~solid] = 0
+        return self.decide(field, tone)
+
+    def decide(self, field: np.ndarray, tone: np.ndarray):
+        """The fields, and the label map and alpha cut from them at the figure's size."""
+        up = cv2.resize(field, (self.w, self.h), interpolation=cv2.INTER_CUBIC)
+        t_up = cv2.resize(tone, (self.w, self.h), interpolation=cv2.INTER_CUBIC)
+        labels = np.zeros((self.h, self.w), np.uint8)
+        labels[up >= 0.5] = 1
+        labels[(up >= 0.5) & (t_up > GLOSS_CUTS[0])] = 2
+        labels[(up >= 0.5) & (t_up > GLOSS_CUTS[1])] = 3
+        alpha = np.clip((up - 0.5) * 6 + 0.5, 0, 1)
+        return (labels, (alpha * 255).astype(np.uint8),
+                (np.clip(field, 0, 1) * 255).astype(np.uint8), (np.clip(tone, 0, 1) * 255).astype(np.uint8))
+
+
+def wide_blur(x: np.ndarray, sigma: float) -> np.ndarray:
+    """A wide Gaussian, worked at a quarter or half of the size when sigma allows (it is smooth anyway)."""
+    k = 4 if sigma >= 12 else 2 if sigma >= 6 else 1
+    if k == 1:
+        return cv2.GaussianBlur(x, (0, 0), sigma)
+    h, w = x.shape
+    small = cv2.GaussianBlur(cv2.resize(x, (w // k, h // k), interpolation=cv2.INTER_AREA), (0, 0), sigma / k)
+    return cv2.resize(small, (w, h), interpolation=cv2.INTER_LINEAR)
+
+
 def main(argv):
     name = argv[0]
     opts = dict(a[2:].split("=", 1) for a in argv[1:] if a.startswith("--") and "=" in a)
+    look = opts.get("look", "poster")
     take = load_take(name)
     d = take_dir(name)
     meta = json.loads((d / "mask.json").read_text())
@@ -93,19 +189,32 @@ def main(argv):
     masks = Reader(d / "mask.mkv", meta["w"], meta["h"], gray=True)
     lab_out = Writer(d / "labels.mkv", W, H, take["fps"])
     alpha_out = Writer(d / "alpha.mkv", W, H, take["fps"])
-    style = Styler(W, H)
+    fw, fh = meta["w"], meta["h"]
+    fields = (Writer(d / "field.mkv", fw, fh, take["fps"]), Writer(d / "tone.mkv", fw, fh, take["fps"])) if look == "gloss" else None
+    style = GlossStyler(W, H, fw, fh) if look == "gloss" else Styler(W, H)
     t0, i = time.time(), 0
     for rgb, mask in zip(frames, masks):
-        labels, alpha = style(rgb, mask)
-        lab_out.write(labels)
-        alpha_out.write(alpha)
+        out = style(rgb, mask)
+        lab_out.write(out[0])
+        alpha_out.write(out[1])
+        if fields:
+            fields[0].write(out[2])
+            fields[1].write(out[3])
         i += 1
         if i % 300 == 0:
             print(f"  {i} frames, {i / (time.time() - t0):.0f} fps", flush=True)
     lab_out.close()
     alpha_out.close()
-    (d / "figure.json").write_text(json.dumps({"w": W, "h": H, "frames": i, "fps": take["fps"]}))
-    print(f"{name}: {i} frames styled at {W}x{H} in {time.time() - t0:.0f}s")
+    for f in fields or ():
+        f.close()
+    if not fields:
+        for stale in ("field.mkv", "tone.mkv"):
+            (d / stale).unlink(missing_ok=True)
+    info = {"w": W, "h": H, "frames": i, "fps": take["fps"], "look": look}
+    if fields:
+        info.update(fieldW=fw, fieldH=fh)
+    (d / "figure.json").write_text(json.dumps(info))
+    print(f"{name}: {i} frames styled ({look}) at {W}x{H} in {time.time() - t0:.0f}s")
 
 
 if __name__ == "__main__":
