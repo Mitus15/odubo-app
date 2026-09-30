@@ -14,10 +14,10 @@ import numpy as np
 import cv2
 from film_common import REPO
 from take import Reader, load_take, read_pose, take_dir
-from anchor import heart as heart_of
+from anchor import SIZE as SEED, heart as heart_of
 from shadow import cast
-from outro import build as build_marks
-from compose import keyline, mark, paste, rgb
+from outro import Marks, build as build_marks
+from compose import paste, rgb, seed
 
 WORDMARK = REPO / "public/loop/branding/loop-soul.svg"
 COLS, ROWS = 4, 4
@@ -47,15 +47,12 @@ def tile(lab, alpha, lm, pal, size, Wf, Hf):
         hx, hy, hw, hang, seen, facing = heart_of(lm, Wf, Hf)
         if seen and facing:
             px, py = A[0, 0] * hx + A[0, 2], A[1, 1] * hy + A[1, 2]
-            cover = mark(SEAL, hw * 0.26 * scale, hang)
-            edge, _ = keyline(cover, max(1, int(round(cover.shape[0] * 0.05))))
-            paste(canvas, edge, rgb(pal["ink"]), px, py)
-            paste(canvas, cover, rgb(pal["badge"]), px, py)
+            seed(canvas, MARKS, {k: rgb(v) for k, v in pal.items()}, px, py, hw * SEED * scale, hang, 1.0)
     return canvas
 
 
 def main(argv):
-    global SEAL
+    global MARKS
     name = argv[0]
     opts = dict(a[2:].split("=", 1) for a in argv[1:] if a.startswith("--") and "=" in a)
     take, d = load_take(name), take_dir(name)
@@ -74,7 +71,7 @@ def main(argv):
     alpha = one(d / "alpha.mkv").astype(np.float32) / 255
     lm = read_pose(d / "pose.jsonl").get(k)
     marks = build_marks()
-    SEAL = cv2.imread(str(marks / "seal.png"), cv2.IMREAD_GRAYSCALE).astype(np.float32) / 255
+    MARKS = Marks(marks)
     dancer = cv2.imread(str(marks / "danceman.png"), cv2.IMREAD_GRAYSCALE).astype(np.float32) / 255
 
     ts = size // COLS

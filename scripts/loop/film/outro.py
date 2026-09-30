@@ -8,11 +8,17 @@ Two marks, from their vector files:
                 his heart
   the Danceman  public/brand-logos/odubo-brand/odubo-mark.svg: the house mark
 
-At the end of every clip the badge leaves his heart for the centre of the
-frame and becomes the Danceman: the brand that made this, and the door into
-the world. The morph is built from signed distance fields (each mark as a map
-of distance to its outline, blended, cut at zero), which melts one shape into
-the other without either mark needing matching points or parts.
+The badge is a mustard seed on his heart, "the least of all seeds". At the
+end of every clip it grows, "the greatest", into the Danceman: the brand
+that made this, and the door into the world. The growth is one continuous
+motion (compose.py), and the shape change is built from signed distance
+fields (each mark as a map of distance to its outline, blended, cut at
+zero), which melts one shape into the other without either mark needing
+matching points or parts.
+
+`Marks` keeps both fields in a pyramid of sizes, so a mark of any width is
+cut from a level at most twice its size: sharp at 20 px and at 600 px,
+never aliased, and the ink keyline is the same field pushed outward.
 
 Writes $FILM_WORK/cache/marks/: seal.png, danceman.png, morph/000..044.png
 (grey = coverage), and a manifest so it rebuilds only when a mark changes.
@@ -26,6 +32,7 @@ from film_common import REPO, done, fingerprint, fresh, work
 SEAL = REPO / "public/brand-logos/odubo-icon.svg"
 DANCEMAN = REPO / "public/brand-logos/odubo-brand/odubo-mark.svg"
 SIZE, FILL, FRAMES = 1024, 0.82, 45
+KEYLINE = 0.05  # the ink edge around the seed, as a share of its width (at least a pixel)
 
 
 def raster(svg, size: int) -> np.ndarray:
@@ -63,6 +70,39 @@ def morph_frames(a: np.ndarray, b: np.ndarray, n: int = FRAMES):
         e = ease(i / (n - 1))
         d = (1 - e) * da + e * db
         yield np.clip(0.5 - d, 0, 1)
+
+
+class Marks:
+    """The seal growing into the Danceman, at any size and any stage."""
+
+    def __init__(self, marks_dir=None):
+        d = marks_dir or build()
+        seal = cv2.imread(str(d / "seal.png"), cv2.IMREAD_GRAYSCALE).astype(np.float32) / 255
+        man = cv2.imread(str(d / "danceman.png"), cv2.IMREAD_GRAYSCALE).astype(np.float32) / 255
+        ds, dm = sdf(seal).astype(np.float32), sdf(man).astype(np.float32)
+        self.levels = []
+        size = SIZE
+        while size >= 16:
+            k = SIZE / size
+            if k == 1:
+                self.levels.append((size, ds, dm))
+            else:
+                self.levels.append((size, cv2.resize(ds, (size, size), interpolation=cv2.INTER_AREA) / k,
+                                    cv2.resize(dm, (size, size), interpolation=cv2.INTER_AREA) / k))
+            size //= 2
+
+    def cover(self, width: float, grown: float = 0.0, out_px: float = 0.0):
+        """
+        Coverage (0..1) of the mark `grown` of the way from the seal (0) to
+        the Danceman (1), for drawing `width` px across; `out_px` pushes its
+        outline out by that many of those pixels (the keyline). Returns the
+        coverage and its size (a square).
+        """
+        size, ds, dm = next((lv for lv in reversed(self.levels) if lv[0] >= width), self.levels[0])
+        d = ds if grown <= 0 else dm if grown >= 1 else (1 - grown) * ds + grown * dm
+        if out_px:
+            d = d - out_px * size / max(width, 1e-3)
+        return np.clip(0.5 - d, 0, 1), size
 
 
 def build(force: bool = False):

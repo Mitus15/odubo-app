@@ -2,7 +2,7 @@ import sys, unittest
 from pathlib import Path
 import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from anchor import HeartTrack, heart  # noqa: E402
+from anchor import SIZE, HeartPath, heart  # noqa: E402
 from shadow import Ground, cast  # noqa: E402
 
 W, H = 1000, 1000
@@ -33,26 +33,50 @@ class Heart(unittest.TestCase):
         self.assertAlmostEqual(width, 120, delta=1)
         self.assertAlmostEqual(angle, 0, delta=1)
 
-    def test_hides_when_he_turns_away(self):
-        track = HeartTrack(fade_frames=4)
-        for _ in range(10):
-            track.update(pose(), W, H)
-        self.assertAlmostEqual(track.update(pose(), W, H)[4], 1.0)
-        for _ in range(10):
-            out = track.update(pose(facing=False), W, H)
-        self.assertAlmostEqual(out[4], 0.0)
+    def path(self, frames):
+        return HeartPath({i: lm for i, lm in enumerate(frames)}, 0, len(frames), W, H, 30)
 
-    def test_hides_side_on_and_fades_rather_than_blinks(self):
-        track = HeartTrack(fade_frames=6)
-        for _ in range(30):
-            track.update(pose(shoulder=120), W, H)
-        o = [track.update(pose(shoulder=30), W, H)[4] for _ in range(3)]
-        self.assertTrue(0 < o[0] < 1 and o[0] > o[1] > o[2])
+    def test_the_badge_is_a_seed(self):
+        x, y, size, angle, opacity = self.path([pose(shoulder=120)] * 30).at(15)
+        self.assertAlmostEqual(size, 120 * SIZE, delta=0.5)
+        self.assertLess(size, 20)
+
+    def test_holds_still_through_the_pose_models_tremble(self):
+        rng = np.random.default_rng(1)
+        frames = []
+        for _ in range(90):
+            lm = pose()
+            lm[:, :2] += rng.normal(0, 3, (33, 2)).astype(np.float32) / W
+            frames.append(lm)
+        path = self.path(frames)
+        smooth = [path.at(k)[0] for k in range(10, 80)]
+        raw = [heart(f, W, H)[0] for f in frames[10:80]]
+        self.assertLess(np.std(smooth), 0.4 * np.std(raw))
+
+    def test_keeps_up_with_him_without_lagging(self):
+        frames = [pose(cx=300 + 4 * i) for i in range(90)]
+        path = self.path(frames)
+        for k in (30, 45, 60):
+            self.assertAlmostEqual(path.at(k)[0], heart(frames[k], W, H)[0], delta=0.5)
+
+    def test_hides_when_he_turns_away_and_fades_rather_than_blinks(self):
+        path = self.path([pose()] * 30 + [pose(facing=False)] * 30)
+        o = [path.at(k)[4] for k in range(60)]
+        self.assertAlmostEqual(o[10], 1.0)
+        self.assertAlmostEqual(o[50], 0.0)
+        self.assertTrue(any(0 < v < 1 for v in o[25:35]))
+
+    def test_hides_side_on(self):
+        path = self.path([pose(shoulder=120)] * 60 + [pose(shoulder=30)] * 30)
+        self.assertEqual(path.at(85)[4], 0.0)
+
+    def test_a_one_frame_glitch_is_not_a_disappearance(self):
+        frames = [pose()] * 60
+        frames[30] = pose(vis=0.1)
+        self.assertEqual(self.path(frames).at(30)[4], 1.0)
 
     def test_hides_when_the_shoulders_are_not_seen(self):
-        track = HeartTrack(fade_frames=1)
-        track.update(pose(), W, H)
-        self.assertEqual(track.update(pose(vis=0.1), W, H)[4], 0.0)
+        self.assertEqual(self.path([pose()] * 30 + [pose(vis=0.1)] * 30).at(50)[4], 0.0)
 
 
 class Shadow(unittest.TestCase):

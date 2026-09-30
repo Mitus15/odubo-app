@@ -17,7 +17,10 @@ folder; where the two meet, the canon wins.
    after a wrestle.
 2. **The badge sits on the heart.** A circumcision of the heart (Deuteronomy
    30:6, Romans 2:29). It comes to no one unless God orchestrates it. It is the
-   mantle of the succession.
+   mantle of the succession. **It is a mustard seed** (the owner's word,
+   2026-09-29: smaller, "the kingdom of God is like a mustard seed", Mark
+   4:30-32): the least of all seeds on his heart. At the end of every clip it
+   grows, in one motion, into the Danceman, the greatest.
 3. **The Game is his own shadow on the ground.** Adam was taken from the ground
    (Genesis 2:7). The shadow is his earthly self; The Game pulls through it. In
    the film it is a cast shadow at his feet: in step, or lagging.

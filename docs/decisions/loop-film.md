@@ -119,3 +119,32 @@ Tried and dropped, with reasons:
 
 Not proven: a 4K take shot to the spec. A pool on his face can read as an
 opening in the head when he faces the camera; watch it on the real take.
+
+## The seed, and the growth (2026-09-29, later)
+
+The owner: the badge "should be smaller", and "the kingdom of God is like a
+mustard seed". So the badge is the least of all seeds on his heart, and each
+clip's outro is the parable: it grows into the Danceman, the greatest. He
+also asked for smoother tracking and a smoother final transition.
+
+- **Size.** 0.11 of his shoulder width (was 0.26): about 20 px on the
+  1080x1920 clip, down from 47. Still reads as the quatrefoil.
+- **Tracking.** The take is recorded, so the heart is smoothed both ways in
+  time (`HeartPath`: a centred median for the pose model's glitches, then a
+  Gaussian; size and angle much more than position). Measured on the golden
+  20 s: the old tracker ran 4 frames (133 ms) behind his body and about 10 px
+  off his heart; the new one has no lag and sits within a pixel. Frame to frame
+  shake as drawn: 1.12 px before, 0.47 px now. Side-on is judged against his
+  widest (the 90th percentile over 10 s), so a long turn stays a turn.
+- **Drawing.** The badge is drawn at sub-pixel precision (`stamp`), from a
+  pyramid of signed distance fields (`outro.Marks`), so it glides instead of
+  stepping pixel to pixel, is sharp at 20 px and at 600 px, and its ink keyline
+  is the same field pushed outward.
+- **The growth.** One continuous motion over the last 1.5 s of the dance and
+  the 1.5 s after: position, size, colour and shape each ease in and out, and
+  they overlap. Size grows steadily in proportion (log scale), so it doubles
+  and doubles again instead of inflating at the end. It turns to ink from the
+  edge in (the keyline draws in while the white shrinks away), because a
+  colour fade passes through a dull brown that sinks into some fields. The
+  in-between of seal and Danceman happens while it is still small. He fades
+  over 1 s (was 0.6). Clip lengths are unchanged.

@@ -18,10 +18,12 @@ For every frame, in this order:
   1. the field       the chapter's flat colour, edge to edge (no room, ever)
   2. his shadow      on the ground: in step, lagging (The Game), or none
   3. him             the label map coloured with the chapter's palette
-  4. the badge       the seal on his heart, from the moment it lands
-  5. the outro       (--outro) the badge leaves his heart for the centre,
-                     turning from warm white to ink as he fades, then becomes
-                     the Danceman, and holds
+  4. the badge       the seal on his heart, a mustard seed, from the moment
+                     it lands
+  5. the outro       (--outro) the seed grows into the Danceman, "the
+                     greatest": one continuous motion while he fades, from
+                     his heart to the centre, warm white to ink, seal to
+                     Danceman, then it holds
 
 Because the field is flat, the virtual camera is free: it can pull back past
 the edges of what the phone saw, so every aspect gets the framing it needs
@@ -36,9 +38,9 @@ import numpy as np
 import cv2
 from film_common import SONGS, WORK
 from take import Reader, Writer, even, load_take, read_pose, take_dir
-from anchor import HeartTrack
+from anchor import HeartPath
 from shadow import Ground, cast
-from outro import build as build_marks
+from outro import FRAMES as GROW_FRAMES, KEYLINE, Marks
 
 ASPECTS = {
     # figure height and ground line as fractions of the output height;
@@ -47,10 +49,11 @@ ASPECTS = {
     "16x9": {"w": 16, "h": 9, "figure": 0.6, "ground": 0.82, "follow": 0.04},
     "1x1": {"w": 1, "h": 1, "figure": 0.62, "ground": 0.88, "follow": 0.08},
 }
-FLY_S, FADE_S, HOLD_S = 1.5, 0.6, 1.0
+FLY_S, FADE_S, HOLD_S = 1.5, 1.0, 1.0  # the growth starts FLY_S before the dance ends; he fades over FADE_S
 POP_S = 0.35
 SHADOW_OPACITY = 0.9
 CREDIT_SIZE = 0.30  # the Danceman's height as a fraction of the shorter side
+WHITE_INSET = 0.25  # how far in the white shrinks (share of the width) as the seed turns to ink
 
 
 def rgb(c) -> np.ndarray:
@@ -93,22 +96,65 @@ def paste(canvas: np.ndarray, cover: np.ndarray, colour: np.ndarray, cx: float, 
     canvas[ay0:ay1, ax0:ax1] = region * (1 - a) + colour * a
 
 
-def mark(cover_src: np.ndarray, width: float, angle: float = 0.0) -> np.ndarray:
-    """The mark scaled to `width` px across and turned by `angle` degrees."""
-    s = max(2, int(round(width)))
-    m = cv2.resize(cover_src, (s, s), interpolation=cv2.INTER_AREA)
-    if abs(angle) > 0.5:
-        R = cv2.getRotationMatrix2D((s / 2, s / 2), -angle, 1.0)
-        m = cv2.warpAffine(m, R, (s, s), flags=cv2.INTER_LINEAR, borderValue=0)
-    return m
+def stamp(canvas: np.ndarray, cover: np.ndarray, size: int, colour: np.ndarray, cx: float, cy: float,
+          width: float, angle: float = 0.0, opacity: float = 1.0):
+    """
+    Lay a square mark (coverage `cover`, `size` px across) centred at (cx, cy),
+    `width` px across and turned `angle` degrees, in `colour`. Placed at
+    sub-pixel precision: it glides rather than stepping pixel to pixel.
+    """
+    if width < 0.5 or opacity <= 0.005:
+        return
+    H, W = canvas.shape[:2]
+    half = 0.72 * width + 2  # the turned square's reach
+    x0, y0 = max(0, int(np.floor(cx - half))), max(0, int(np.floor(cy - half)))
+    x1, y1 = min(W, int(np.ceil(cx + half)) + 1), min(H, int(np.ceil(cy + half)) + 1)
+    if x1 <= x0 or y1 <= y0:
+        return
+    k = width / size
+    c, s_ = np.cos(np.radians(angle)) * k, np.sin(np.radians(angle)) * k
+    m = (size - 1) / 2
+    M = np.float32([[c, -s_, cx - x0 - (c - s_) * m], [s_, c, cy - y0 - (s_ + c) * m]])
+    a = cv2.warpAffine(cover, M, (x1 - x0, y1 - y0), flags=cv2.INTER_LINEAR, borderValue=0)[..., None] * opacity
+    region = canvas[y0:y1, x0:x1]
+    canvas[y0:y1, x0:x1] = region + (colour - region) * a
 
 
-def keyline(cover: np.ndarray, px: int) -> np.ndarray:
-    """The mark grown by `px`: an ink edge so a warm white badge reads on any cut."""
-    pad = px + 1
-    c = np.pad(cover, pad)
-    k = 2 * px + 1
-    return cv2.dilate(c, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (k, k))), pad
+def seed(canvas: np.ndarray, marks: Marks, pal: dict, x: float, y: float, width: float, angle: float,
+         opacity: float, grown: float = 0.0, white: float = 1.0):
+    """
+    The badge: warm white on an ink keyline, so it reads on any cut of him.
+
+    `white` under 1 turns it to ink from the edge in: the keyline draws in to
+    the outline while the white shrinks away inside it. The mark keeps a hard
+    edge the whole way; a colour fade would pass through a dull brown that
+    sinks into some fields.
+    """
+    cov, size = marks.cover(width, grown, out_px=max(1.0, KEYLINE * width) * white)
+    stamp(canvas, cov, size, pal["ink"], x, y, width, angle, opacity)
+    if white > 0.001:
+        cov, size = marks.cover(width, grown, out_px=-(1 - white) * WHITE_INSET * width)
+        stamp(canvas, cov, size, pal["badge"], x, y, width, angle, opacity)
+
+
+def grow(canvas: np.ndarray, marks: Marks, pal: dict, u: float, start: tuple):
+    """
+    The seed becomes the Danceman; u runs 0..1 across the whole outro, from
+    the seed on his heart (`start`: x, y, width, angle, opacity) to the credit
+    at the centre. Every part eases in and out and they overlap, so it is one
+    motion, never a move, a stop and a change.
+    """
+    H, W = canvas.shape[:2]
+    hx, hy, hw, hang, hop = start
+    to_centre = ease(u / 0.6)
+    x, y = hx + (W / 2 - hx) * to_centre, hy + (H / 2 - hy) * to_centre
+    # Growth steady in proportion (it doubles, and doubles again), not in
+    # pixels, which would read as a balloon inflating at the end.
+    target = CREDIT_SIZE * min(W, H)
+    width = float(np.exp(np.log(max(hw, 1.0)) + (np.log(target) - np.log(max(hw, 1.0))) * ease(u)))
+    seed(canvas, marks, pal, x, y, width, hang * (1 - ease(u / 0.5)),
+         opacity=hop + (1 - hop) * ease(u / 0.3), grown=ease((u - 0.3) / 0.6),
+         white=1 - ease((u - 0.15) / 0.45))
 
 
 def cut(f: np.ndarray, level: float) -> np.ndarray:
@@ -150,10 +196,7 @@ def main(argv):
 
     timeline = Timeline(story, align)
     poses = read_pose(d / "pose.jsonl")
-    marks = build_marks()
-    seal = cv2.imread(str(marks / "seal.png"), cv2.IMREAD_GRAYSCALE).astype(np.float32) / 255
-    morph = [cv2.imread(str(p), cv2.IMREAD_GRAYSCALE).astype(np.float32) / 255
-             for p in sorted((marks / "morph").glob("*.png"))]
+    marks = Marks()
 
     Wf, Hf = fig["w"], fig["h"]
     first = int(round((t_from - win0) * fps))
@@ -182,15 +225,18 @@ def main(argv):
     scale = aspect["figure"] * Hout / body
 
     writer = Writer(out_path, Wout, Hout, fps, kind="h264", crf=crf)
-    track = HeartTrack()
+    # The heart over the whole stretch (and a second either side), smoothed
+    # both ways in time: the take is recorded, so it never needs to lag.
+    path = HeartPath(poses, first - pre - int(fps), first + count + int(fps), Wf, Hf, fps)
     ground = Ground(fps)
     past = deque(maxlen=max_lag + 1)
     cam_x = None
     t0 = time.time()
     written = 0
-    last_badge = None
     fade_frames = int(FADE_S * fps)
-    fly_frames = int(FLY_S * fps)
+    fly_frames = min(count, int(FLY_S * fps))
+    grow_total = fly_frames + GROW_FRAMES  # the outro: the last of the dance, then the field alone
+    start = None
 
     # Effects that dance with him, on the song's own bar grid.
     effects = set(filter(None, opts.get("effects", "").split(",")))
@@ -216,7 +262,7 @@ def main(argv):
             lab_, alp_, *fields_ = next(source)
             k_ = st["k"] + 1
             lm_ = poses.get(first - pre + k_)
-            heart_ = track.update(lm_, Wf, Hf)
+            heart_ = path.at(first - pre + k_)
             alpha_ = alp_.astype(np.float32) / 255
             g_s, g_c = ground.update(lm_, Hf, alpha_)
             past.append(alpha_)
@@ -260,11 +306,12 @@ def main(argv):
 
         # The end of the clip: he fades, the badge flies.
         fade = 1.0
-        fly = 0.0
+        u = None
         if outro:
             left = count - i
-            fade = min(1.0, left / max(1, fade_frames))
-            fly = ease(1 - left / max(1, fly_frames)) if left <= fly_frames else 0.0
+            fade = ease(left / max(1, fade_frames))
+            if left <= fly_frames:
+                u = (fly_frames - left) / (grow_total - 1)
 
         # Most of the frame is flat field: draw him and his shadow only in the
         # region around them (his box, and the ground below it).
@@ -324,7 +371,7 @@ def main(argv):
                 body_rgb = (pal["ink"] * (1 - ring) + pal["field"] * ring) * (1 - core) + pal["highlight"] * core
             view += (body_rgb - view) * a[..., None]
 
-        # 4. the badge on his heart (from the moment it lands)
+        # 4. the badge: a seed on his heart (from the moment it lands)
         badge_from = ch.get("badgeFrom")
         landed = badge_from is None or ch["chapterTime"] >= badge_from
         if heart is not None and landed:
@@ -332,41 +379,32 @@ def main(argv):
             pop = 1.0
             if badge_from is not None and ch["chapterTime"] < badge_from + POP_S:
                 pop = ease((ch["chapterTime"] - badge_from) / POP_S)
-            px = A[0, 0] * hx + A[0, 2]
-            py = A[1, 1] * hy + A[1, 2]
-            width = hw * scale * pop
-            colour = pal["badge"]
-            opacity = hop
-            if fly > 0:
-                cx, cy = Wout / 2, Hout / 2
-                target = CREDIT_SIZE * min(Wout, Hout)
-                px, py = px + (cx - px) * fly, py + (cy - py) * fly
-                width = width + (target - width) * fly
-                colour = pal["badge"] + (pal["ink"] - pal["badge"]) * fly
-                opacity = hop + (1.0 - hop) * fly
-                hang = hang * (1 - fly)
-            if width >= 3 and opacity > 0.01:
-                cover = mark(seal, width, hang)
-                if fly < 0.5:
-                    edge, pad = keyline(cover, max(1, int(round(width * 0.05))))
-                    paste(canvas, edge, pal["ink"], px, py, opacity * (1 - 2 * fly))
-                paste(canvas, cover, colour, px, py, opacity)
-                last_badge = (px, py, width)
+            here = (A[0, 0] * hx + A[0, 2], A[1, 1] * hy + A[1, 2], hw * scale * pop, hang, hop)
+        else:
+            here = (Wout / 2, Hout / 2, 0.02 * min(Wout, Hout), 0.0, 0.0)  # no heart: it grows from nothing
+        if u is None:
+            if here[4] > 0:
+                seed(canvas, marks, pal, *here)
+        else:
+            # 5. the outro: it leaves the heart as it grows (the heart it
+            #    leaves still moves with him until he is gone)
+            start = here
+            grow(canvas, marks, pal, u, start)
 
         writer.write(np.clip(canvas, 0, 255).astype(np.uint8))
         written += 1
         if written % 150 == 0:
             print(f"  {written}/{count} frames, {written / (time.time() - t0):.1f} fps", flush=True)
 
-    # 5. the credit: the seal becomes the Danceman at the centre, and holds.
+    # 5. the rest of the growth on the field alone, then the Danceman holds.
     if outro:
         ch = timeline.at(t_to - 1 / fps)
         pal = {key: rgb(v) for key, v in ch["palette"].items()}
-        size = CREDIT_SIZE * min(Wout, Hout)
-        for m in morph + [morph[-1]] * int(HOLD_S * fps):
+        start = start or (Wout / 2, Hout / 2, 0.02 * min(Wout, Hout), 0.0, 0.0)
+        for j in range(GROW_FRAMES + int(HOLD_S * fps)):
             canvas = np.empty((Hout, Wout, 3), np.float32)
             canvas[:] = pal["field"]
-            paste(canvas, cv2.resize(m, (int(size), int(size)), interpolation=cv2.INTER_AREA), pal["ink"], Wout / 2, Hout / 2)
+            grow(canvas, marks, pal, min(1.0, (fly_frames + j) / (grow_total - 1)), start)
             writer.write(np.clip(canvas, 0, 255).astype(np.uint8))
             written += 1
     writer.close()
