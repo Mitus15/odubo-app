@@ -83,3 +83,48 @@ only the releases split.
   `scripts/shopify/loop-soul-vinyl.ts` still makes ONE product and has never
   been applied (checked: no `loop-soul-vinyl` in Shopify); it becomes two
   before it is run.
+
+## The split, planned (2026-09-30, not started)
+
+Mapped across the repo before touching anything. The rule that shapes it:
+**keep `724666e5…` as Vol. 1 and MOVE songs 10 to 14 into a new Vol. 2
+album** (`UPDATE tracks SET album_id`, same track ids), never copy them. The
+entitlements, release links, distribution draft, warehouse project, the
+`/music/albums/724666e5…` URL and all three singles already point at the
+current album, and every track id is referenced from the film, the warehouse
+and the delivery sheet.
+
+**Code first, then data.** In this order, or Vol. 2 leaks:
+1. One release switch opens the whole record today (`album_released`,
+   `src/lib/loop/album.ts`); releasing Vol. 1 would open Vol. 2 to pass
+   holders. It becomes one switch per album.
+2. The audio gate (`src/lib/loop/audioAccess.ts`) checks the pass against the
+   default album and computes the early-track rules on a track's own album.
+   With songs moved and renumbered 1 to 5, The Mind Pt 1 would become Vol. 2's
+   "free" track. The gate becomes per album, and the early draw stays a
+   Vol. 1 thing.
+
+**The code** (on the branch, nothing live):
+- `songs.json`/`songs.ts`: a volumes map and a `volume` per song. The film's
+  `number` stays 1 to 14 (the masters, beats, playlist and chapters depend on it).
+- `album.ts`: release, notify, backfill and stats per album; a pass grants
+  both volumes (it was sold as "the whole record"). `numbers.ts` and
+  `guests.ts` stop double counting two rows per pass.
+- `/loop/album` (a URL already in sent emails and behind every claim link)
+  shows both volumes, each opening on its own day. `/loop/<slug>` URLs stay;
+  songs 10 to 14 take Vol. 2's listen links. `/music` lists two albums.
+- Copy: "Three singles, then the album", "isn't streaming anywhere yet", the
+  `/loop` metadata, the film page's "arrives with the album".
+- The tracklist ballot closes (every song is on a record). The night's old
+  "Volume 1" labels (release links, the archived pass's title) are renamed so
+  "Vol. 1" only ever means the record.
+- The vinyl script makes two products; `publish.ts` stamps each clip with its
+  song's album; `grid.py` reads the volumes from `songs.json`.
+
+**The data** (one script, dry run first, applied only with the owner's yes):
+rename the album to Loop Soul Vol. 1; create Loop Soul Vol. 2; move songs 10
+to 14 and number them 1 to 5 there; clear the stale 2026-10-03 dates; a Vol. 2
+distribution draft with songs 10 to 14's delivery rows moved (their ISRCs are
+issued once: moved, never re-created); a Vol. 2 warehouse project with those
+songs' pieces, files and docs moved; Vol. 2 access for the two existing
+passes. Each release will need its own UPC from the distributor.
