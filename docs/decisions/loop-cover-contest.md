@@ -1,5 +1,11 @@
 # The cover contest — the rules
 
+> **Superseded for the cover, 2026-09-30 (owner).** The contest was to pick the
+> vinyl's front at the Oct 10 night, which was called off. The vinyl's cover is
+> now the Warhol grid from the film (`npm run film:grid -- <take> --size=vinyl`);
+> the face stays the streaming cover. See `docs/decisions/loop-film.md`. The
+> rules below are kept as history.
+
 Set by the owner 2026-09-13. **Not built yet.** This is the spec, and a note of
 what in the current code contradicts it.
 

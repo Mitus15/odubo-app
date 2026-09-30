@@ -35,6 +35,12 @@ delivery sheet, the WAV masters and the cover. Send back the Spotify and Apple
 links when they exist.
 
 ### 6. The vinyl
+The cover is the grid: one moment of your dance in all fourteen colours, the
+Danceman and the wordmark. The face stays the streaming cover. Once the real
+take is in, pick the moment (the jump at the end of Welcome is the strong
+one) and it renders at print size: `npm run film:grid -- <take> --at=<second> --size=vinyl`.
+Check the pressing plant's template for bleed before sending.
+
 Decide the price and the pressing, then:
 `npm run shopify:loop-vinyl -- --price=<amount> --ships="<when>" --apply`.
 It lands hidden; add its photos and set it Active in Shopify.

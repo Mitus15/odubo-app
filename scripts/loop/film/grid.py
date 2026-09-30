@@ -1,7 +1,13 @@
 """
 The Warhol grid: one moment of the take, fourteen times, one per chapter.
 
-    npm run film:grid -- <take> --at=<take seconds> [--size=1080] [--marker=crown|ground|heart]
+    npm run film:grid -- <take> --at=<take seconds> [--size=1080|vinyl] [--marker=crown|ground|heart]
+
+THE VINYL'S COVER (owner, 2026-09-30): the grid is the front of the record;
+the face (public/loop/press/cover/) stays the streaming cover, since the
+grid's sixteen squares turn to specks at thumbnail size. --size=vinyl renders
+the 12 inch jacket at print size (12.375 in plus 1/8 in bleed a side, 300
+dpi); check the pressing plant's template before sending.
 
 The album post. The same pose repeated in every chapter's colourway (the
 pop-art repeat the whole look is sampled from), the player's marker on each,
@@ -17,13 +23,14 @@ from take import Reader, load_take, read_pose, take_dir
 from anchor import ANCHORS, SIZES
 from shadow import cast
 from outro import Marks, build as build_marks
-from compose import CROWN_GAP, GROUND_SQUASH, MARKERS, paste, rgb, seed
+from compose import CROWN_GAP, GROUND_SQUASH, MARKERS, paint, paste, rgb, seed
 
 WORDMARK = REPO / "public/loop/branding/loop-soul.svg"
 COLS, ROWS = 4, 4
+VINYL = 3788  # px: a 12.375 in jacket and 1/8 in bleed each side, at 300 dpi
 
 
-def tile(lab, alpha, lm, pal, size, Wf, Hf, marker="crown"):
+def tile(lab, alpha, lm, pal, size, Wf, Hf, marker="crown", fields=None):
     """One square: the figure fitted, grounded, coloured, badged."""
     ys, xs = np.where(alpha > 0.5)
     canvas = np.empty((size, size, 3), np.float32)
@@ -42,11 +49,21 @@ def tile(lab, alpha, lm, pal, size, Wf, Hf, marker="crown"):
     place = ANCHORS[MARKERS[marker]](lm, Wf, Hf) if lm is not None else None
     if place is not None and marker == "ground":
         seed(canvas, MARKS, colours, A[0, 0] * place[0] + A[0, 2], ground, place[2] * SIZES["feet"] * scale, 0.0, 1.0, GROUND_SQUASH)
-    hot = cv2.warpAffine(np.dstack([(lab == 1), (lab == 2), (lab == 3)]).astype(np.float32), A, (size, size))
-    w = hot.sum(2, keepdims=True)
-    body_rgb = (hot[..., 0:1] * rgb(pal["ink"]) + hot[..., 1:2] * rgb(pal["mid"]) + hot[..., 2:3] * rgb(pal["highlight"])) / np.maximum(w, 1e-6)
-    body_rgb = np.where(w > 1e-6, body_rgb, rgb(pal["ink"]))
-    canvas += (body_rgb - canvas) * a[..., None]
+    if fields is not None:
+        # The gloss look, cut at the square's own size (compose.paint): print sharp.
+        fld, tn = fields
+        Af = A.copy()
+        Af[:, 0] *= Wf / fld.shape[1]
+        Af[:, 1] *= Hf / fld.shape[0]
+        fld, tn = (cv2.warpAffine(x.astype(np.float32) / 255, Af, (size, size), flags=cv2.INTER_CUBIC) for x in (fld, tn))
+        body_rgb, cover = paint(fld, tn, colours)
+        canvas += (body_rgb - canvas) * cover[..., None]
+    else:
+        hot = cv2.warpAffine(np.dstack([(lab == 1), (lab == 2), (lab == 3)]).astype(np.float32), A, (size, size))
+        w = hot.sum(2, keepdims=True)
+        body_rgb = (hot[..., 0:1] * rgb(pal["ink"]) + hot[..., 1:2] * rgb(pal["mid"]) + hot[..., 2:3] * rgb(pal["highlight"])) / np.maximum(w, 1e-6)
+        body_rgb = np.where(w > 1e-6, body_rgb, rgb(pal["ink"]))
+        canvas += (body_rgb - canvas) * a[..., None]
     if place is not None and marker != "ground":
         hx, hy, hw, hang, seen, facing = place
         if seen and facing:
@@ -65,7 +82,7 @@ def main(argv):
     take, d = load_take(name), take_dir(name)
     fig = json.loads((d / "figure.json").read_text())
     story = json.loads((d / "story.json").read_text())
-    size = int(opts.get("size", 1080))
+    size = VINYL if opts.get("size") == "vinyl" else int(opts.get("size", 1080))
     t = float(opts.get("at", (take["window"]["start"] + take["window"]["end"]) / 2))
     k = int(round((t - take["window"]["start"]) * take["fps"]))
     Wf, Hf = fig["w"], fig["h"]
@@ -75,6 +92,14 @@ def main(argv):
         r.close()
         return frame
     lab = one(d / "labels.mkv")
+    fields = None
+    if fig.get("look") == "gloss":
+        def field(name_):
+            r = Reader(d / f"{name_}.mkv", fig["fieldW"], fig["fieldH"], gray=True, start=k / take["fps"], dur=0.05)
+            f_ = next(iter(r))
+            r.close()
+            return f_
+        fields = (field("field"), field("tone"))
     alpha = one(d / "alpha.mkv").astype(np.float32) / 255
     lm = read_pose(d / "pose.jsonl").get(k)
     marks = build_marks()
@@ -87,10 +112,8 @@ def main(argv):
     sand = chapters[0]["palette"]
     for i, ch in enumerate(chapters):
         r, c = divmod(i, COLS)
-        pal = ch["palette"]
-        if fig.get("look") == "gloss":
-            pal = {**pal, "mid": pal["field"]}  # the cover's ring is the ground's own colour (compose.py)
-        sheet[r * ts:(r + 1) * ts, c * ts:(c + 1) * ts] = tile(lab, alpha, lm, pal, ts, Wf, Hf, opts.get("marker", "crown"))
+        sheet[r * ts:(r + 1) * ts, c * ts:(c + 1) * ts] = tile(lab, alpha, lm, ch["palette"], ts, Wf, Hf,
+                                                              opts.get("marker", "crown"), fields)
     # The credit squares: the Danceman, and the name.
     r, c = divmod(len(chapters), COLS)
     sq = np.empty((ts, ts, 3), np.float32)

@@ -183,6 +183,19 @@ def melt(f: np.ndarray, level: float, soft: float) -> np.ndarray:
     return u * u * (3 - 2 * u)
 
 
+def paint(fld: np.ndarray, tn: np.ndarray, pal: dict, look: str = "gloss", cuts=(0.55, 0.75), soft: float = 0.08):
+    """
+    Him in the cover's look, cut from the smooth fields (already scaled to the
+    size they are drawn at): (colour, coverage). The ring is the ground's own
+    colour, as on the cover: the light opens him to the field he stands on.
+    One drawing for the clips, the film and the vinyl's grid.
+    """
+    ring = cut(tn, cuts[0])[..., None]
+    core = (cut(tn, cuts[1]) if look == "cover" else melt(tn, cuts[1], soft))[..., None]
+    colour = (pal["ink"] * (1 - ring) + pal["field"] * ring) * (1 - core) + pal["highlight"] * core
+    return colour, cut(fld, 0.5)
+
+
 def main(argv):
     name = argv[0]
     opts = dict(a[2:].split("=", 1) for a in argv[1:] if a.startswith("--") and "=" in a)
@@ -402,13 +415,8 @@ def main(argv):
                 Af[:, 1] *= Hf / fh
                 fld, tn = (cv2.warpAffine(x.astype(np.float32) / 255, Af, (rw, rh), flags=cv2.INTER_CUBIC, borderValue=0)
                            for x in s_now["fields"])
-                a = cut(fld, 0.5) * fade
-                ring = cut(tn, cuts[0])
-                core = cut(tn, cuts[1]) if look == "cover" else melt(tn, cuts[1], soft)
-                # The ring is the ground's own colour, as on the cover: the
-                # light opens him to the field he stands on.
-                ring, core = ring[..., None], core[..., None]
-                body_rgb = (pal["ink"] * (1 - ring) + pal["field"] * ring) * (1 - core) + pal["highlight"] * core
+                body_rgb, a = paint(fld, tn, pal, look, cuts, soft)
+                a = a * fade
             view += (body_rgb - view) * a[..., None]
 
         # 4. (drawn) over him: the crown and the heart; the floor marker if he was not drawn

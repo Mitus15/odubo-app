@@ -181,3 +181,17 @@ deleted; nothing else used it.
 
 The growth now turns the seal into the Danceman early, while it is small
 (u 0.15 to 0.55), so the in-between is brief and it is the Danceman that grows.
+
+## The vinyl's cover is the grid (2026-09-30)
+
+The owner: the grid for the vinyl, the face for streaming. The grid is the
+whole album in one image (fourteen squares, one per song in its colour, closed
+by the Danceman and the wordmark); the face cover reads at thumbnail size on
+Spotify, where the grid's squares turn to specks. This settles what the cover
+contest (`loop-cover-contest.md`) was for, now that the night is off.
+
+`film:grid` draws the gloss look through the same `compose.paint` as the
+clips, cut at each square's own size, and `--size=vinyl` renders 3788 px: a
+12.375 in jacket with 1/8 in bleed each side at 300 dpi (2 s). Waiting on: the
+real take, the owner's pick of the moment, his colours per song, and the
+pressing plant's template.
