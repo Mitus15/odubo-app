@@ -1,10 +1,10 @@
 """
 The Warhol grid: one moment of the take, fourteen times, one per chapter.
 
-    npm run film:grid -- <take> --at=<take seconds> [--size=1080]
+    npm run film:grid -- <take> --at=<take seconds> [--size=1080] [--marker=crown|ground|heart]
 
 The album post. The same pose repeated in every chapter's colourway (the
-pop-art repeat the whole look is sampled from), the badge on his heart in each,
+pop-art repeat the whole look is sampled from), the player's marker on each,
 his shadow under each; the last two squares are the Danceman and the Loop Soul
 wordmark. Colours come from story.json (film:pull), so the grid is the album's
 own wheel, or whatever the owner has chosen per chapter.
@@ -14,16 +14,16 @@ import numpy as np
 import cv2
 from film_common import REPO
 from take import Reader, load_take, read_pose, take_dir
-from anchor import SIZE as SEED, heart as heart_of
+from anchor import ANCHORS, SIZES
 from shadow import cast
 from outro import Marks, build as build_marks
-from compose import paste, rgb, seed
+from compose import CROWN_GAP, GROUND_SQUASH, MARKERS, paste, rgb, seed
 
 WORDMARK = REPO / "public/loop/branding/loop-soul.svg"
 COLS, ROWS = 4, 4
 
 
-def tile(lab, alpha, lm, pal, size, Wf, Hf):
+def tile(lab, alpha, lm, pal, size, Wf, Hf, marker="crown"):
     """One square: the figure fitted, grounded, coloured, badged."""
     ys, xs = np.where(alpha > 0.5)
     canvas = np.empty((size, size, 3), np.float32)
@@ -38,16 +38,23 @@ def tile(lab, alpha, lm, pal, size, Wf, Hf):
     a = cv2.warpAffine(alpha, A, (size, size), flags=cv2.INTER_LINEAR)
     sh = cast(a, ground) * 0.9
     canvas += (rgb(pal["shadow"]) - canvas) * sh[..., None]
+    colours = {k: rgb(v) for k, v in pal.items()}
+    place = ANCHORS[MARKERS[marker]](lm, Wf, Hf) if lm is not None else None
+    if place is not None and marker == "ground":
+        seed(canvas, MARKS, colours, A[0, 0] * place[0] + A[0, 2], ground, place[2] * SIZES["feet"] * scale, 0.0, 1.0, GROUND_SQUASH)
     hot = cv2.warpAffine(np.dstack([(lab == 1), (lab == 2), (lab == 3)]).astype(np.float32), A, (size, size))
     w = hot.sum(2, keepdims=True)
     body_rgb = (hot[..., 0:1] * rgb(pal["ink"]) + hot[..., 1:2] * rgb(pal["mid"]) + hot[..., 2:3] * rgb(pal["highlight"])) / np.maximum(w, 1e-6)
     body_rgb = np.where(w > 1e-6, body_rgb, rgb(pal["ink"]))
     canvas += (body_rgb - canvas) * a[..., None]
-    if lm is not None:
-        hx, hy, hw, hang, seen, facing = heart_of(lm, Wf, Hf)
+    if place is not None and marker != "ground":
+        hx, hy, hw, hang, seen, facing = place
         if seen and facing:
+            width = hw * SIZES[MARKERS[marker]] * scale
             px, py = A[0, 0] * hx + A[0, 2], A[1, 1] * hy + A[1, 2]
-            seed(canvas, MARKS, {k: rgb(v) for k, v in pal.items()}, px, py, hw * SEED * scale, hang, 1.0)
+            if marker == "crown":
+                py -= CROWN_GAP * width + width / 2
+            seed(canvas, MARKS, colours, px, py, width, hang if marker == "heart" else 0.0, 1.0)
     return canvas
 
 
@@ -83,7 +90,7 @@ def main(argv):
         pal = ch["palette"]
         if fig.get("look") == "gloss":
             pal = {**pal, "mid": pal["field"]}  # the cover's ring is the ground's own colour (compose.py)
-        sheet[r * ts:(r + 1) * ts, c * ts:(c + 1) * ts] = tile(lab, alpha, lm, pal, ts, Wf, Hf)
+        sheet[r * ts:(r + 1) * ts, c * ts:(c + 1) * ts] = tile(lab, alpha, lm, pal, ts, Wf, Hf, opts.get("marker", "crown"))
     # The credit squares: the Danceman, and the name.
     r, c = divmod(len(chapters), COLS)
     sq = np.empty((ts, ts, 3), np.float32)

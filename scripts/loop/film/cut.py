@@ -5,9 +5,11 @@ Cut the finished pieces: a clip per card, a cut per song, and the film.
     npm run film:cut -- <take> song <slug>    [--audio=full|silent] [--effects=freeze,flip]
     npm run film:cut -- <take> film           [--height=2160]
 
+    Any of --effects, --marker, --look pass through to film:compose.
+
   clip   9:16, for Reels, TikTok and Shorts. The card's moment of the dance,
-         the scripture card laid over it, then the outro: the badge leaves his
-         heart and becomes the Danceman. One episode; it stands alone.
+         the scripture card laid over it, then the outro: the player's marker
+         grows into the Danceman. One episode; it stands alone.
   song   16:9, the whole chapter: the chapter card, then the dance with each
          of its cards over their moments. No outro.
   film   16:9, the whole take: every chapter, every card, the outro once at
@@ -95,7 +97,7 @@ def mux(video: Path, pngs, overlays, audio_filter, audio_inputs, dest: Path, dur
          "-c:a", "aac", "-b:a", "256k", "-t", f"{duration:.3f}", str(dest)])
 
 
-def clip(name: str, card_id: str, audio: str, effects: str = ""):
+def clip(name: str, card_id: str, audio: str, style: list = ()):
     take, d = load_take(name), take_dir(name)
     story = json.loads((d / "story.json").read_text())
     align = json.loads((d / "align.json").read_text())
@@ -106,7 +108,7 @@ def clip(name: str, card_id: str, audio: str, effects: str = ""):
     out_dir = work(name, "out")
     silent_video = out_dir / f"_clip-{card_id}.mp4"
     compose.main([name, f"--from={a}", f"--to={b}", "--aspect=9x16", "--outro", f"--out={silent_video}"]
-                 + ([f"--effects={effects}"] if effects else []))
+                 + list(style))
     fps = take["fps"]
     tail = (len(list((work("cache", "marks") / "morph").glob("*.png"))) + int(compose.HOLD_S * fps)) / fps
     duration = (b - a) + tail
@@ -136,7 +138,7 @@ def clip(name: str, card_id: str, audio: str, effects: str = ""):
     return dest
 
 
-def song(name: str, slug: str, audio: str, height: int = 1080, effects: str = ""):
+def song(name: str, slug: str, audio: str, height: int = 1080, style: list = ()):
     take, d = load_take(name), take_dir(name)
     story = json.loads((d / "story.json").read_text())
     align = json.loads((d / "align.json").read_text())
@@ -146,7 +148,7 @@ def song(name: str, slug: str, audio: str, height: int = 1080, effects: str = ""
     out_dir = work(name, "out")
     silent_video = out_dir / f"_song-{slug}.mp4"
     compose.main([name, f"--from={a}", f"--to={b}", "--aspect=16x9", f"--height={height}", f"--out={silent_video}"]
-                 + ([f"--effects={effects}"] if effects else []))
+                 + list(style))
     duration = b - a
     pngs, overlays = [], []
     chapter_png = d / "cards" / f"chapter-{slug}.png"
@@ -175,7 +177,7 @@ def song(name: str, slug: str, audio: str, height: int = 1080, effects: str = ""
     return dest
 
 
-def film(name: str, height: int = 1080):
+def film(name: str, height: int = 1080, style: list = ()):
     """The whole take, one render, chapter and scripture cards over it, the masters under it."""
     take, d = load_take(name), take_dir(name)
     story = json.loads((d / "story.json").read_text())
@@ -184,7 +186,8 @@ def film(name: str, height: int = 1080):
     a, b = win["start"], win["end"]
     out_dir = work(name, "out")
     silent_video = out_dir / "_film.mp4"
-    compose.main([name, f"--from={a}", f"--to={b}", "--aspect=16x9", f"--height={height}", "--outro", f"--out={silent_video}"])
+    compose.main([name, f"--from={a}", f"--to={b}", "--aspect=16x9", f"--height={height}", "--outro", f"--out={silent_video}"]
+                 + list(style))
     fps = take["fps"]
     tail = (len(list((work("cache", "marks") / "morph").glob("*.png"))) + int(compose.HOLD_S * fps)) / fps
     duration = (b - a) + tail
@@ -226,12 +229,13 @@ def film(name: str, height: int = 1080):
 def main(argv):
     name, kind = argv[0], argv[1]
     opts = dict(a[2:].split("=", 1) for a in argv[2:] if a.startswith("--") and "=" in a)
+    style = [f"--{k}={opts[k]}" for k in ("effects", "marker", "look") if opts.get(k)]
     if kind == "clip":
-        return clip(name, argv[2], opts.get("audio", "tease"), opts.get("effects", ""))
+        return clip(name, argv[2], opts.get("audio", "tease"), style)
     if kind == "song":
-        return song(name, argv[2], opts.get("audio", "full"), int(opts.get("height", 1080)), opts.get("effects", ""))
+        return song(name, argv[2], opts.get("audio", "full"), int(opts.get("height", 1080)), style)
     if kind == "film":
-        return film(name, int(opts.get("height", 1080)))
+        return film(name, int(opts.get("height", 1080)), style)
     raise SystemExit("usage: film:cut -- <take> clip <card-id> | song <slug> | film")
 
 

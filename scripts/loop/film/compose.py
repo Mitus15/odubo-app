@@ -4,6 +4,7 @@ Put it together: the moving poster, frame by frame.
     npm run film:compose -- <take> --from=<s> --to=<s> --aspect=9x16 [--outro] [--out=file.mp4]
         [--shadow=sync|lag|none --lag=<frames>]   override the chapter's shadow
         [--effects=freeze,flip]                  hold on each downbeat; flip to the sibling colour each bar
+        [--marker=crown|ground|heart]             where the seal, the player's marker, sits (anchor.py)
         [--look=poster|cover|gloss --cuts=0.55,0.75 --soft=0.08]
             poster  the label map, as the converter drew it
             cover   (needs figure --look=gloss) the album cover: ink, pools of
@@ -18,12 +19,14 @@ For every frame, in this order:
   1. the field       the chapter's flat colour, edge to edge (no room, ever)
   2. his shadow      on the ground: in step, lagging (The Game), or none
   3. him             the label map coloured with the chapter's palette
-  4. the badge       the seal on his heart, a mustard seed, from the moment
-                     it lands
+  4. the marker      the seal, the sign a game puts on the character you
+                     play: floating over his head (crown), flat on the floor
+                     under him (ground, drawn before him), or on his chest
+                     (heart). Small, a mustard seed, from the moment it lands
   5. the outro       (--outro) the seed grows into the Danceman, "the
                      greatest": one continuous motion while he fades, from
-                     his heart to the centre, warm white to ink, seal to
-                     Danceman, then it holds
+                     where it sat on him to the centre, warm white to ink,
+                     seal to Danceman, then it holds
 
 Because the field is flat, the virtual camera is free: it can pull back past
 the edges of what the phone saw, so every aspect gets the framing it needs
@@ -38,7 +41,7 @@ import numpy as np
 import cv2
 from film_common import SONGS, WORK
 from take import Reader, Writer, even, load_take, read_pose, take_dir
-from anchor import HeartPath
+from anchor import Path as Track
 from shadow import Ground, cast
 from outro import FRAMES as GROW_FRAMES, KEYLINE, Marks
 
@@ -54,6 +57,11 @@ POP_S = 0.35
 SHADOW_OPACITY = 0.9
 CREDIT_SIZE = 0.30  # the Danceman's height as a fraction of the shorter side
 WHITE_INSET = 0.25  # how far in the white shrinks (share of the width) as the seed turns to ink
+MARKERS = {"crown": "crown", "ground": "feet", "heart": "heart"}  # each marker, and the place on him it follows
+CROWN_GAP = 0.6       # the crown marker's gap over his head, as a share of its width
+BOB = 0.12            # how far it floats up and down once a bar, as a share of its width
+GROUND_SQUASH = 0.3   # the floor at the camera's angle: the shadow's own squash
+GROUND_TURN_BARS = 8  # the floor marker turns once every this many bars
 
 
 def rgb(c) -> np.ndarray:
@@ -97,31 +105,34 @@ def paste(canvas: np.ndarray, cover: np.ndarray, colour: np.ndarray, cx: float, 
 
 
 def stamp(canvas: np.ndarray, cover: np.ndarray, size: int, colour: np.ndarray, cx: float, cy: float,
-          width: float, angle: float = 0.0, opacity: float = 1.0):
+          width: float, angle: float = 0.0, opacity: float = 1.0, squash: float = 1.0):
     """
     Lay a square mark (coverage `cover`, `size` px across) centred at (cx, cy),
-    `width` px across and turned `angle` degrees, in `colour`. Placed at
+    `width` px across and turned `angle` degrees, in `colour`. `squash` under 1
+    lays it flat on the floor: turned first, then foreshortened. Placed at
     sub-pixel precision: it glides rather than stepping pixel to pixel.
     """
     if width < 0.5 or opacity <= 0.005:
         return
     H, W = canvas.shape[:2]
-    half = 0.72 * width + 2  # the turned square's reach
-    x0, y0 = max(0, int(np.floor(cx - half))), max(0, int(np.floor(cy - half)))
-    x1, y1 = min(W, int(np.ceil(cx + half)) + 1), min(H, int(np.ceil(cy + half)) + 1)
+    hx_, hy_ = 0.72 * width + 2, 0.72 * width * squash + 2  # the turned square's reach
+    x0, y0 = max(0, int(np.floor(cx - hx_))), max(0, int(np.floor(cy - hy_)))
+    x1, y1 = min(W, int(np.ceil(cx + hx_)) + 1), min(H, int(np.ceil(cy + hy_)) + 1)
     if x1 <= x0 or y1 <= y0:
         return
     k = width / size
     c, s_ = np.cos(np.radians(angle)) * k, np.sin(np.radians(angle)) * k
     m = (size - 1) / 2
-    M = np.float32([[c, -s_, cx - x0 - (c - s_) * m], [s_, c, cy - y0 - (s_ + c) * m]])
+    lin = np.array([[c, -s_], [squash * s_, squash * c]])
+    tx, ty = np.array([cx - x0, cy - y0]) - lin @ np.array([m, m])
+    M = np.float32([[lin[0, 0], lin[0, 1], tx], [lin[1, 0], lin[1, 1], ty]])
     a = cv2.warpAffine(cover, M, (x1 - x0, y1 - y0), flags=cv2.INTER_LINEAR, borderValue=0)[..., None] * opacity
     region = canvas[y0:y1, x0:x1]
     canvas[y0:y1, x0:x1] = region + (colour - region) * a
 
 
 def seed(canvas: np.ndarray, marks: Marks, pal: dict, x: float, y: float, width: float, angle: float,
-         opacity: float, grown: float = 0.0, white: float = 1.0):
+         opacity: float, squash: float = 1.0, grown: float = 0.0, white: float = 1.0):
     """
     The badge: warm white on an ink keyline, so it reads on any cut of him.
 
@@ -131,21 +142,24 @@ def seed(canvas: np.ndarray, marks: Marks, pal: dict, x: float, y: float, width:
     sinks into some fields.
     """
     cov, size = marks.cover(width, grown, out_px=max(1.0, KEYLINE * width) * white)
-    stamp(canvas, cov, size, pal["ink"], x, y, width, angle, opacity)
+    stamp(canvas, cov, size, pal["ink"], x, y, width, angle, opacity, squash)
     if white > 0.001:
         cov, size = marks.cover(width, grown, out_px=-(1 - white) * WHITE_INSET * width)
-        stamp(canvas, cov, size, pal["badge"], x, y, width, angle, opacity)
+        stamp(canvas, cov, size, pal["badge"], x, y, width, angle, opacity, squash)
 
 
 def grow(canvas: np.ndarray, marks: Marks, pal: dict, u: float, start: tuple):
     """
     The seed becomes the Danceman; u runs 0..1 across the whole outro, from
-    the seed on his heart (`start`: x, y, width, angle, opacity) to the credit
+    the marker on him (`start`: x, y, width, angle, opacity[, squash]) to the credit
     at the centre. Every part eases in and out and they overlap, so it is one
-    motion, never a move, a stop and a change.
+    motion, never a move, a stop and a change. The seal becomes the Danceman
+    early, while it is still small (the in-between of two marks is never
+    pretty), and it is the Danceman that grows.
     """
     H, W = canvas.shape[:2]
-    hx, hy, hw, hang, hop = start
+    hx, hy, hw, hang, hop, *flat = start
+    lie = flat[0] if flat else 1.0
     to_centre = ease(u / 0.6)
     x, y = hx + (W / 2 - hx) * to_centre, hy + (H / 2 - hy) * to_centre
     # Growth steady in proportion (it doubles, and doubles again), not in
@@ -153,8 +167,8 @@ def grow(canvas: np.ndarray, marks: Marks, pal: dict, u: float, start: tuple):
     target = CREDIT_SIZE * min(W, H)
     width = float(np.exp(np.log(max(hw, 1.0)) + (np.log(target) - np.log(max(hw, 1.0))) * ease(u)))
     seed(canvas, marks, pal, x, y, width, hang * (1 - ease(u / 0.5)),
-         opacity=hop + (1 - hop) * ease(u / 0.3), grown=ease((u - 0.3) / 0.6),
-         white=1 - ease((u - 0.15) / 0.45))
+         opacity=hop + (1 - hop) * ease(u / 0.3), squash=lie + (1 - lie) * ease(u / 0.5),
+         grown=ease((u - 0.15) / 0.4), white=1 - ease((u - 0.15) / 0.45))
 
 
 def cut(f: np.ndarray, level: float) -> np.ndarray:
@@ -189,6 +203,9 @@ def main(argv):
     crf = int(opts.get("crf", 18))
     outro = "outro" in flags
     look = opts.get("look", "gloss" if fig.get("look") == "gloss" else "poster")
+    marker = opts.get("marker", "crown")
+    if marker not in MARKERS:
+        raise SystemExit(f"--marker={marker}: one of {', '.join(MARKERS)}")
     if look != "poster" and fig.get("look") != "gloss":
         raise SystemExit(f"--look={look} needs the fields: run film:figure with --look=gloss first")
     cuts = tuple(float(v) for v in opts.get("cuts", "0.55,0.75").split(","))
@@ -225,9 +242,9 @@ def main(argv):
     scale = aspect["figure"] * Hout / body
 
     writer = Writer(out_path, Wout, Hout, fps, kind="h264", crf=crf)
-    # The heart over the whole stretch (and a second either side), smoothed
-    # both ways in time: the take is recorded, so it never needs to lag.
-    path = HeartPath(poses, first - pre - int(fps), first + count + int(fps), Wf, Hf, fps)
+    # The marker's place on him over the whole stretch (and a second either
+    # side), smoothed both ways in time: the take is recorded, so it never lags.
+    track = Track(poses, first - pre - int(fps), first + count + int(fps), Wf, Hf, fps, MARKERS[marker])
     ground = Ground(fps)
     past = deque(maxlen=max_lag + 1)
     cam_x = None
@@ -238,16 +255,15 @@ def main(argv):
     grow_total = fly_frames + GROW_FRAMES  # the outro: the last of the dance, then the field alone
     start = None
 
-    # Effects that dance with him, on the song's own bar grid.
+    # The song's own bar grid: the effects dance on it, and the marker floats
+    # once a bar, rising from each downbeat.
     effects = set(filter(None, opts.get("effects", "").split(",")))
-    bars = None
+    from beats import grid, freeze_map
+    mid = timeline.at(t_from + (t_to - t_from) / 2)
+    g_ = grid(next(s_["number"] for s_ in SONGS if s_["slug"] == mid["slug"]))
+    film_start = next(s_["filmStart"] for s_ in align["songs"] if s_["slug"] == mid["slug"])
+    bars = (film_start + g_["first"], g_["bar"])
     if effects & {"freeze", "flip"}:
-        from beats import grid, freeze_map
-        mid = timeline.at(t_from + (t_to - t_from) / 2)
-        number = next(s_["number"] for s_ in SONGS if s_["slug"] == mid["slug"])
-        g_ = grid(number)
-        film_start = next(s_["filmStart"] for s_ in align["songs"] if s_["slug"] == mid["slug"])
-        bars = (film_start + g_["first"], g_["bar"])
         print(f"  effects {','.join(sorted(effects))} on a {g_['bar']:.3f}s bar", flush=True)
 
     # The source is read forward only. An output frame asks for a source frame
@@ -262,7 +278,7 @@ def main(argv):
             lab_, alp_, *fields_ = next(source)
             k_ = st["k"] + 1
             lm_ = poses.get(first - pre + k_)
-            heart_ = path.at(first - pre + k_)
+            place_ = track.at(first - pre + k_)
             alpha_ = alp_.astype(np.float32) / 255
             g_s, g_c = ground.update(lm_, Hf, alpha_)
             past.append(alpha_)
@@ -272,7 +288,7 @@ def main(argv):
                 cols = np.where(alpha_.max(0) > 0.5)[0]
                 x_now = float(cols.mean()) if len(cols) else Wf / 2
             cx = st.get("cam_x")
-            st.update(k=k_, lab=lab_, alpha=alpha_, fields=fields_, heart=heart_, g=g_s, g_contact=g_c,
+            st.update(k=k_, lab=lab_, alpha=alpha_, fields=fields_, place=place_, g=g_s, g_contact=g_c,
                       cam_x=x_now if cx is None else cx + aspect["follow"] * (x_now - cx))
         return st
 
@@ -282,17 +298,17 @@ def main(argv):
     for i in range(count):
         t = t_from + i / fps
         target = pre + i
-        if "freeze" in effects and bars:
+        if "freeze" in effects:
             target = pre + int(round((freeze_map(t, bars[0], bars[1]) - t_from) * fps))
         try:
             s_now = advance(max(target, st["k"], 0))
         except StopIteration:
             break
-        lab, alpha, heart = s_now["lab"], s_now["alpha"], s_now["heart"]
+        lab, alpha, place = s_now["lab"], s_now["alpha"], s_now["place"]
         g, g_contact, cam_x = s_now["g"], s_now["g_contact"], s_now["cam_x"]
         ch = timeline.at(t)
         key = "palette"
-        if "flip" in effects and bars and ch.get("paletteFlip"):
+        if "flip" in effects and ch.get("paletteFlip"):
             if int(np.floor((t - bars[0]) / bars[1])) % 2 == 1:
                 key = "paletteFlip"
         pal = {k2: rgb(v) for k2, v in ch[key].items()}
@@ -312,6 +328,26 @@ def main(argv):
             fade = ease(left / max(1, fade_frames))
             if left <= fly_frames:
                 u = (fly_frames - left) / (grow_total - 1)
+
+        # 4. the marker, from the moment it lands (placed now, drawn in order)
+        badge_from = ch.get("badgeFrom")
+        landed = badge_from is None or ch["chapterTime"] >= badge_from
+        here = (Wout / 2, Hout / 2, 0.02 * min(Wout, Hout), 0.0, 0.0, 1.0)  # no place yet: it grows from nothing
+        if place is not None and landed:
+            px_, py_, pw_, pang, pop_ = place
+            if badge_from is not None and ch["chapterTime"] < badge_from + POP_S:
+                pw_ *= ease((ch["chapterTime"] - badge_from) / POP_S)
+            width = pw_ * scale
+            x_out, y_out = A[0, 0] * px_ + A[0, 2], A[1, 1] * py_ + A[1, 2]
+            if marker == "crown":
+                float_ = -BOB * width * np.sin(2 * np.pi * (t - bars[0]) / bars[1])  # up is minus
+                here = (x_out, y_out - CROWN_GAP * width - width / 2 + float_, width, 0.0, pop_, 1.0)
+            elif marker == "ground":
+                here = (x_out, contact_out, width, 360.0 * (t - bars[0]) / (GROUND_TURN_BARS * bars[1]), pop_, GROUND_SQUASH)
+            else:
+                here = (x_out, y_out, width, pang, pop_, 1.0)
+        on_floor = marker == "ground" and u is None and here[4] > 0
+        floor_drawn = False
 
         # Most of the frame is flat field: draw him and his shadow only in the
         # region around them (his box, and the ground below it).
@@ -346,6 +382,10 @@ def main(argv):
                 warped = cv2.warpAffine(src_shadow, Ar, (rw, rh), flags=cv2.INTER_LINEAR, borderValue=0)
                 sh = cast(warped, contact_out - ry0) * SHADOW_OPACITY * fade
                 view += (pal["shadow"] - view) * sh[..., None]
+            # the floor marker lies under him
+            if on_floor:
+                seed(canvas, marks, pal, *here)
+                floor_drawn = True
             # 3. him
             if look == "poster":
                 onehot = np.dstack([(lab == 1), (lab == 2), (lab == 3)]).astype(np.float32)
@@ -371,23 +411,13 @@ def main(argv):
                 body_rgb = (pal["ink"] * (1 - ring) + pal["field"] * ring) * (1 - core) + pal["highlight"] * core
             view += (body_rgb - view) * a[..., None]
 
-        # 4. the badge: a seed on his heart (from the moment it lands)
-        badge_from = ch.get("badgeFrom")
-        landed = badge_from is None or ch["chapterTime"] >= badge_from
-        if heart is not None and landed:
-            hx, hy, hw, hang, hop = heart
-            pop = 1.0
-            if badge_from is not None and ch["chapterTime"] < badge_from + POP_S:
-                pop = ease((ch["chapterTime"] - badge_from) / POP_S)
-            here = (A[0, 0] * hx + A[0, 2], A[1, 1] * hy + A[1, 2], hw * scale * pop, hang, hop)
-        else:
-            here = (Wout / 2, Hout / 2, 0.02 * min(Wout, Hout), 0.0, 0.0)  # no heart: it grows from nothing
+        # 4. (drawn) over him: the crown and the heart; the floor marker if he was not drawn
         if u is None:
-            if here[4] > 0:
+            if here[4] > 0 and (not on_floor or not floor_drawn):
                 seed(canvas, marks, pal, *here)
         else:
-            # 5. the outro: it leaves the heart as it grows (the heart it
-            #    leaves still moves with him until he is gone)
+            # 5. the outro: it leaves him as it grows (the place it leaves
+            #    still moves with him until he is gone)
             start = here
             grow(canvas, marks, pal, u, start)
 
@@ -400,7 +430,7 @@ def main(argv):
     if outro:
         ch = timeline.at(t_to - 1 / fps)
         pal = {key: rgb(v) for key, v in ch["palette"].items()}
-        start = start or (Wout / 2, Hout / 2, 0.02 * min(Wout, Hout), 0.0, 0.0)
+        start = start or (Wout / 2, Hout / 2, 0.02 * min(Wout, Hout), 0.0, 0.0, 1.0)
         for j in range(GROW_FRAMES + int(HOLD_S * fps)):
             canvas = np.empty((Hout, Wout, 3), np.float32)
             canvas[:] = pal["field"]

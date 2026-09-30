@@ -27,6 +27,13 @@ class Stamp(unittest.TestCase):
         self.assertAlmostEqual(bx - ax, 0.3, delta=0.05)
         self.assertAlmostEqual(by - ay, 0.0, delta=0.05)
 
+    def test_lies_flat_on_the_floor(self):
+        cov, size = MARKS.cover(200)
+        a = np.zeros((400, 400, 1), np.float32)
+        stamp(a, cov, size, np.float32([1]), 200.0, 200.0, 200, 0.0, 1.0, squash=0.3)
+        ys, xs = np.where(a[..., 0] > 0.5)
+        self.assertAlmostEqual((ys.max() - ys.min()) / (xs.max() - xs.min()), 0.3 * 1176.47 / 1200, delta=0.03)
+
     def test_is_as_wide_as_asked_at_any_size(self):
         for width in (18, 40, 300):
             cov, size = MARKS.cover(width)

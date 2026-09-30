@@ -2,7 +2,7 @@ import sys, unittest
 from pathlib import Path
 import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from anchor import SIZE, HeartPath, heart  # noqa: E402
+from anchor import SIZE, HeartPath, Path as Track, heart  # noqa: E402
 from shadow import Ground, cast  # noqa: E402
 
 W, H = 1000, 1000
@@ -21,6 +21,13 @@ def pose(facing=True, vis=0.9, shoulder=120.0, cx=500.0):
         lm[i, :2] = ((cx + 30) / W, 900 / H)
     for i in (28, 30, 32):
         lm[i, :2] = ((cx - 30) / W, 900 / H)
+    # The head: eyes at y 210, nose below them, ears either side.
+    side = 1 if facing else -1
+    lm[0, :2] = (cx / W, 225 / H)
+    lm[2, :2] = ((cx + side * 15) / W, 210 / H)
+    lm[5, :2] = ((cx - side * 15) / W, 210 / H)
+    lm[7, :2] = ((cx + side * 30) / W, 215 / H)
+    lm[8, :2] = ((cx - side * 30) / W, 215 / H)
     return lm
 
 
@@ -77,6 +84,32 @@ class Heart(unittest.TestCase):
 
     def test_hides_when_the_shoulders_are_not_seen(self):
         self.assertEqual(self.path([pose()] * 30 + [pose(vis=0.1)] * 30).at(50)[4], 0.0)
+
+
+class Marker(unittest.TestCase):
+    def track(self, frames, where):
+        return Track({i: lm for i, lm in enumerate(frames)}, 0, len(frames), W, H, 30, where)
+
+    def test_the_crown_floats_over_his_head(self):
+        x, y, size, angle, opacity = self.track([pose()] * 30, "crown").at(15)
+        self.assertAlmostEqual(x, 500, delta=2)
+        self.assertLess(y, 210)            # above his eyes: the top of his head
+        self.assertGreater(y, 120)
+        self.assertEqual(angle, 0.0)       # upright, whatever his shoulders do
+
+    def test_the_players_marker_stays_when_he_turns_away(self):
+        t = self.track([pose()] * 30 + [pose(facing=False)] * 30, "crown")
+        self.assertAlmostEqual(t.at(50)[4], 1.0)
+
+    def test_the_marker_keeps_its_size_side_on(self):
+        t = self.track([pose(shoulder=120)] * 60 + [pose(shoulder=40)] * 30, "crown")
+        self.assertAlmostEqual(t.at(80)[2], t.at(30)[2], delta=0.5)
+
+    def test_the_floor_marker_lies_under_his_lowest_foot(self):
+        x, y, size, angle, opacity = self.track([pose()] * 30, "feet").at(15)
+        self.assertAlmostEqual(x, 500, delta=2)
+        self.assertAlmostEqual(y, 900, delta=1)
+        self.assertGreater(size, 100)      # a ring about as wide as he stands
 
 
 class Shadow(unittest.TestCase):

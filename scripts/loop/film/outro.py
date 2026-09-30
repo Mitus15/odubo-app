@@ -4,8 +4,8 @@ The badge and the brand credit.
     npm run film:outro        # builds the cache once; compose reads it
 
 Two marks, from their vector files:
-  the seal      public/brand-logos/odubo-icon.svg: the quatrefoil, the badge on
-                his heart
+  the seal      public/brand-logos/odubo-brand/odubo-seal.svg: the quatrefoil,
+                closed, indented top and bottom (scripts/brand/build-odubo-seal.py)
   the Danceman  public/brand-logos/odubo-brand/odubo-mark.svg: the house mark
 
 The badge is a mustard seed on his heart, "the least of all seeds". At the
@@ -29,7 +29,7 @@ import cv2
 from scipy.ndimage import distance_transform_edt
 from film_common import REPO, done, fingerprint, fresh, work
 
-SEAL = REPO / "public/brand-logos/odubo-icon.svg"
+SEAL = REPO / "public/brand-logos/odubo-brand/odubo-seal.svg"
 DANCEMAN = REPO / "public/brand-logos/odubo-brand/odubo-mark.svg"
 SIZE, FILL, FRAMES = 1024, 0.82, 45
 KEYLINE = 0.05  # the ink edge around the seed, as a share of its width (at least a pixel)

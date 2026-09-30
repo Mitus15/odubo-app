@@ -148,3 +148,36 @@ also asked for smoother tracking and a smoother final transition.
   colour fade passes through a dull brown that sinks into some fields. The
   in-between of seal and Danceman happens while it is still small. He fades
   over 1 s (was 0.6). Clip lengths are unchanged.
+
+## The seal is the player's marker, and the right seal (2026-09-29, later)
+
+The owner set the chest badge aside: it did not read as embroidery. Instead,
+"a character-like icon, as if someone was using a controller": the sign a
+game puts on the character you play, tasteful, and the foundation of how
+the game will look. `--marker=` on compose, cut and grid:
+
+- `crown` (default): the seal floating over his head, as the Sims (EA) mark
+  the one being played. 0.2 of his facing shoulder width, rising and settling
+  once a bar from each downbeat. Never hides when he turns away, never
+  shrinks when he turns side-on: the player's marker stays on the player.
+- `ground`: the seal flat on the floor under his stance, as sports games ring
+  the player you hold, turning once every eight bars. Its ending still shows
+  the in-between of seal and Danceman at size; needs its own if chosen.
+- `heart`: the first design, kept for comparison.
+
+The owner has not picked between crown and ground yet. The canon (the badge
+on the heart, a circumcision of the heart) is untouched until he says how it
+reads now.
+
+**The seal was the wrong drawing.** `public/brand-logos/odubo-icon.svg` had a
+point on top: the old seal. The right one is closed, indented top and bottom,
+with the four-pointed star in the middle, and the only file drawing it was
+`odubo-logo.png`. Every vector on the owner's drive had the point too.
+`scripts/brand/build-odubo-seal.py` traces the PNG (averaged with its mirrors:
+the drawing is symmetric to 99.4%, so the seal is now exactly symmetric) into
+`public/brand-logos/odubo-brand/odubo-seal.svg`, 99.4% the same shape as the
+drawing, registered as `ODUBO_SEAL` in `src/lib/brand/marks.ts`. The old SVG is
+deleted; nothing else used it.
+
+The growth now turns the seal into the Danceman early, while it is small
+(u 0.15 to 0.55), so the in-between is brief and it is the Danceman that grows.
