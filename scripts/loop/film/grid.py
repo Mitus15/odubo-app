@@ -2,6 +2,12 @@
 The Warhol grid: one moment of the take, fourteen times, one per chapter.
 
     npm run film:grid -- <take> --at=<take seconds> [--size=1080|vinyl] [--marker=crown|ground|heart]
+    npm run film:grid -- <take> --at=<s> --volume=1|2 [--layout=grid|x|plus] [--size=vinyl]
+
+Loop Soul is two albums on two records (docs/decisions/loop-vinyl.md):
+--volume renders one record's cover, only its songs, on a 3 x 3 grid. Vol. 1's
+nine songs fill it. Vol. 2's five take --layout=x (the corners and the
+centre) or plus (the centre and its four sides); the other squares are sand.
 
 THE VINYL'S COVER (owner, 2026-09-30): the grid is the front of the record;
 the face (public/loop/press/cover/) stays the streaming cover, since the
@@ -28,6 +34,11 @@ from compose import CROWN_GAP, GROUND_SQUASH, MARKERS, paint, paste, rgb, seed
 WORDMARK = REPO / "public/loop/branding/loop-soul.svg"
 COLS, ROWS = 4, 4
 VINYL = 3788  # px: a 12.375 in jacket and 1/8 in bleed each side, at 300 dpi
+VOLUMES = {1: range(1, 10), 2: range(10, 15)}  # the songs on each record, by album number
+LAYOUTS = {  # a record's squares on its 3 x 3 cover, in song order
+    9: {"grid": [(r, c) for r in range(3) for c in range(3)]},
+    5: {"x": [(0, 0), (0, 2), (1, 1), (2, 0), (2, 2)], "plus": [(0, 1), (1, 0), (1, 1), (1, 2), (2, 1)]},
+}
 
 
 def tile(lab, alpha, lm, pal, size, Wf, Hf, marker="crown", fields=None):
@@ -106,14 +117,31 @@ def main(argv):
     MARKS = Marks(marks)
     dancer = cv2.imread(str(marks / "danceman.png"), cv2.IMREAD_GRAYSCALE).astype(np.float32) / 255
 
-    ts = size // COLS
-    sheet = np.zeros((ts * ROWS, ts * COLS, 3), np.float32)
     chapters = sorted(story["chapters"], key=lambda c: c["number"])
     sand = chapters[0]["palette"]
+    marker = opts.get("marker", "crown")
+    if "volume" in opts:
+        vol = int(opts["volume"])
+        songs = [c for c in chapters if c["number"] in VOLUMES[vol]]
+        layouts = LAYOUTS[len(songs)]
+        layout = opts.get("layout", next(iter(layouts)))
+        ts = size // 3
+        sheet = np.empty((ts * 3, ts * 3, 3), np.float32)
+        sheet[:] = rgb(sand["field"])
+        for ch, (r, c) in zip(songs, layouts[layout]):
+            sheet[r * ts:(r + 1) * ts, c * ts:(c + 1) * ts] = tile(lab, alpha, lm, ch["palette"], ts, Wf, Hf, marker, fields)
+        out = d / "out"
+        out.mkdir(exist_ok=True)
+        dest = out / f"cover-vol{vol}-{layout}-{t:.1f}.png"
+        cv2.imwrite(str(dest), cv2.cvtColor(np.clip(sheet, 0, 255).astype(np.uint8), cv2.COLOR_RGB2BGR))
+        print(f"cover: {dest}")
+        return dest
+
+    ts = size // COLS
+    sheet = np.zeros((ts * ROWS, ts * COLS, 3), np.float32)
     for i, ch in enumerate(chapters):
         r, c = divmod(i, COLS)
-        sheet[r * ts:(r + 1) * ts, c * ts:(c + 1) * ts] = tile(lab, alpha, lm, ch["palette"], ts, Wf, Hf,
-                                                              opts.get("marker", "crown"), fields)
+        sheet[r * ts:(r + 1) * ts, c * ts:(c + 1) * ts] = tile(lab, alpha, lm, ch["palette"], ts, Wf, Hf, marker, fields)
     # The credit squares: the Danceman, and the name.
     r, c = divmod(len(chapters), COLS)
     sq = np.empty((ts, ts, 3), np.float32)
