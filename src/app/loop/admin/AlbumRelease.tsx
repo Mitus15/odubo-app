@@ -7,44 +7,56 @@ type TrackRow = { number: number; title: string; seconds: number; free: boolean;
 type EarlyRule = { enabled: boolean; extra: number };
 
 /**
- * Release the record and tell the people who pre-ordered it. Two buttons, in
- * the order they should be pressed, and the numbers that say what happened.
+ * Release an album and tell the people who pre-ordered it. Loop Soul is two
+ * albums that come out separately, so the panel works on one at a time: pick
+ * Vol. 1 or Vol. 2, then two buttons, in the order they should be pressed,
+ * and the numbers that say what happened.
  */
 export function AlbumRelease() {
+  const [volume, setVolume] = useState<1 | 2>(1);
+  const [title, setTitle] = useState("Loop Soul Vol. 1");
   const [released, setReleased] = useState<boolean | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
-  const [early, setEarly] = useState<EarlyRule>({ enabled: true, extra: 2 });
+  /** Only Vol. 1 has the before-release draw; null for Vol. 2. */
+  const [early, setEarly] = useState<EarlyRule | null>({ enabled: true, extra: 2 });
   const [tracks, setTracks] = useState<TrackRow[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch("/api/loop/admin/album", { cache: "no-store" });
+      const res = await fetch(`/api/loop/admin/album?volume=${volume}`, { cache: "no-store" });
       if (!res.ok) return;
-      const data = (await res.json()) as { released: boolean; stats: Stats; early: EarlyRule; tracks: TrackRow[] };
+      const data = (await res.json()) as {
+        title: string;
+        released: boolean;
+        stats: Stats;
+        early: EarlyRule | null;
+        tracks: TrackRow[];
+      };
+      setTitle(data.title);
       setReleased(data.released);
       setStats(data.stats);
-      setEarly(data.early ?? { enabled: true, extra: 2 });
+      setEarly(data.early);
       setTracks(data.tracks ?? []);
     } catch {
       /* leave unknown */
     }
-  }, []);
+  }, [volume]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
   async function act(action: "release" | "unrelease" | "notify" | "backfill") {
-    if (action === "notify" && !window.confirm("Email every address that pre-ordered and has not been told? One email each, once.")) return;
+    if (action === "notify" && !window.confirm(`Email every address that pre-ordered and has not been told ${title} is out? One email each, once.`)) return;
     setBusy(action);
     setNote(null);
     try {
       const res = await fetch("/api/loop/admin/album", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ action }),
+        body: JSON.stringify({ action, volume }),
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string; released?: boolean; stats?: Stats; sent?: number; failed?: number; added?: number };
       if (!res.ok) throw new Error(data.error ?? `${res.status}`);
@@ -66,7 +78,7 @@ export function AlbumRelease() {
       const res = await fetch("/api/loop/admin/album", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ action: "setEarly", ...patch }),
+        body: JSON.stringify({ action: "setEarly", volume, ...patch }),
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string; early?: EarlyRule };
       if (!res.ok) throw new Error(data.error ?? `${res.status}`);
@@ -82,6 +94,24 @@ export function AlbumRelease() {
 
   return (
     <div className="mt-4 grid gap-3">
+      <div className="flex gap-2" role="tablist" aria-label="Which album">
+        {([1, 2] as const).map((v) => (
+          <button
+            key={v}
+            type="button"
+            role="tab"
+            aria-selected={volume === v}
+            onClick={() => setVolume(v)}
+            disabled={busy !== null}
+            className={`min-h-[44px] flex-1 rounded-full text-sm font-bold ${
+              volume === v ? "bg-ink text-sand" : "border border-ink/20"
+            }`}
+          >
+            Vol. {v}
+          </button>
+        ))}
+      </div>
+
       <div className="grid grid-cols-4 gap-2 text-center">
         {(
           [
@@ -106,15 +136,18 @@ export function AlbumRelease() {
           released ? "bg-ink text-sand" : "border border-ink/20 bg-ink/5"
         }`}
       >
-        <span className="block text-sm font-bold">{released ? "The record is OUT" : "The record is not out yet"}</span>
+        <span className="block text-sm font-bold">{released ? `${title} is OUT` : `${title} is not out yet`}</span>
         <span className={`block text-xs ${released ? "opacity-80" : "opacity-70"}`}>
           {released
-            ? "/loop/album plays for everyone who pre-ordered. Tap to close it again."
-            : "/loop/album plays the early tracks below and says the rest is coming. Tap when the whole album is ready to be heard."}
+            ? "/loop/album plays it for everyone who pre-ordered. Tap to close it again."
+            : early
+              ? "/loop/album plays the early tracks below and says the rest is coming. Tap when the whole album is ready to be heard."
+              : "/loop/album shows it as coming. Nothing on it plays for anyone until you tap this."}
         </span>
       </button>
 
-      {/* Before it is out: the single, free, plus a draw per listener. */}
+      {/* Before it is out: the single, free, plus a draw per listener (Vol. 1 only). */}
+      {early && (
       <div className="rounded-2xl border border-ink/15 px-4 py-3">
         <div className="text-[10px] font-bold uppercase tracking-widest opacity-60">
           Before it&apos;s out · what a pass-holder hears
@@ -156,8 +189,9 @@ export function AlbumRelease() {
           ))}
           <span className="text-xs opacity-60">extra each</span>
         </div>
-        {released && <p className="mt-2 text-xs opacity-70">The whole record is out, so this no longer applies.</p>}
+        {released && <p className="mt-2 text-xs opacity-70">{title} is out, so this no longer applies.</p>}
       </div>
+      )}
 
       <div className="flex gap-2">
         <button

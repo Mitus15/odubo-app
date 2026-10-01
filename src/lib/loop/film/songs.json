@@ -1,6 +1,14 @@
 {
-  "albumId": "724666e5-66a8-4229-99ee-d5450076b749",
-  "albumTitle": "Loop Soul",
+  "albums": {
+    "1": {
+      "albumId": "724666e5-66a8-4229-99ee-d5450076b749",
+      "title": "Loop Soul Vol. 1"
+    },
+    "2": {
+      "albumId": "7ece3c12-f03c-4736-b12c-df5251d51b1a",
+      "title": "Loop Soul Vol. 2"
+    }
+  },
   "songs": [
     {
       "number": 1,
@@ -8,7 +16,8 @@
       "title": "Welcome",
       "trackId": "d2141256-6f4c-46a4-ab32-49915a1bc327",
       "seconds": 74,
-      "interlude": false
+      "interlude": false,
+      "volume": 1
     },
     {
       "number": 2,
@@ -16,7 +25,8 @@
       "title": "1984",
       "trackId": "a2f91aad-fc5c-4d52-97ef-12b46b0dc339",
       "seconds": 294,
-      "interlude": false
+      "interlude": false,
+      "volume": 1
     },
     {
       "number": 3,
@@ -24,7 +34,8 @@
       "title": "Hallucinogen",
       "trackId": "b8954e51-497c-4a6d-bdc3-fb1a4610debd",
       "seconds": 249,
-      "interlude": false
+      "interlude": false,
+      "volume": 1
     },
     {
       "number": 4,
@@ -32,7 +43,8 @@
       "title": "The No End Theory",
       "trackId": "9044993f-484a-42f7-80ae-aaa92565e174",
       "seconds": 35,
-      "interlude": true
+      "interlude": true,
+      "volume": 1
     },
     {
       "number": 5,
@@ -40,7 +52,8 @@
       "title": "In The Court",
       "trackId": "e2febbca-65ec-41cb-a08c-e30a2ef85e80",
       "seconds": 226,
-      "interlude": false
+      "interlude": false,
+      "volume": 1
     },
     {
       "number": 6,
@@ -48,7 +61,8 @@
       "title": "News Peak",
       "trackId": "f6f462a2-23f9-445e-bc8f-e2163dc737c9",
       "seconds": 334,
-      "interlude": false
+      "interlude": false,
+      "volume": 1
     },
     {
       "number": 7,
@@ -56,7 +70,8 @@
       "title": "Every Generation",
       "trackId": "5d910974-34a6-4f62-a08f-a8c7c44c83d2",
       "seconds": 35,
-      "interlude": true
+      "interlude": true,
+      "volume": 1
     },
     {
       "number": 8,
@@ -64,7 +79,8 @@
       "title": "Rap",
       "trackId": "c1066377-5cb0-4559-a3fb-80118850a424",
       "seconds": 219,
-      "interlude": false
+      "interlude": false,
+      "volume": 1
     },
     {
       "number": 9,
@@ -72,7 +88,8 @@
       "title": "Makunahea",
       "trackId": "76219f77-893c-479d-9a8f-1e5c3a0a828f",
       "seconds": 168,
-      "interlude": false
+      "interlude": false,
+      "volume": 1
     },
     {
       "number": 10,
@@ -80,7 +97,8 @@
       "title": "The Other Side",
       "trackId": "c54386b1-4183-4593-b9d0-4d9f4399d1e7",
       "seconds": 331,
-      "interlude": false
+      "interlude": false,
+      "volume": 2
     },
     {
       "number": 11,
@@ -88,7 +106,8 @@
       "title": "The Mind Pt 1",
       "trackId": "70b44170-16ae-4d8f-8b04-7c4457856a09",
       "seconds": 517,
-      "interlude": false
+      "interlude": false,
+      "volume": 2
     },
     {
       "number": 12,
@@ -96,7 +115,8 @@
       "title": "Midnight Marauders",
       "trackId": "46a416ac-9281-4ddc-9674-83c73c070665",
       "seconds": 35,
-      "interlude": true
+      "interlude": true,
+      "volume": 2
     },
     {
       "number": 13,
@@ -104,7 +124,8 @@
       "title": "The Mind Pt 2",
       "trackId": "38d3c322-cea4-4308-bcad-1a0334cd8f8e",
       "seconds": 261,
-      "interlude": false
+      "interlude": false,
+      "volume": 2
     },
     {
       "number": 14,
@@ -112,7 +133,8 @@
       "title": "Ghost World",
       "trackId": "c1f0aff6-4f6b-4c0f-bd62-eebaa40bf0dc",
       "seconds": 287,
-      "interlude": false
+      "interlude": false,
+      "volume": 2
     }
   ]
 }

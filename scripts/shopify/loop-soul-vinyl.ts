@@ -1,12 +1,14 @@
 /**
- * Put the Loop Soul vinyl in the store as a pre-order, hidden until the owner
- * shows it.
+ * Put a Loop Soul record in the store as a pre-order, hidden until the owner
+ * shows it. Loop Soul is two albums on two records (Vol. 1 and Vol. 2,
+ * src/lib/loop/vinyl.ts), each its own product with its own price and ship date.
  *
- *   npm run shopify:loop-vinyl                                   # dry run: what it would make
- *   npm run shopify:loop-vinyl -- --price=40 --ships="in December" --apply
+ *   npm run shopify:loop-vinyl                                              # dry run: both records
+ *   npm run shopify:loop-vinyl -- --volume=1 --price=30 --ships="in December" --apply
  *
- * Creates ONE product, `loop-soul-vinyl`, as a DRAFT: nobody sees it until it
- * is set Active in Shopify (with its photos, and its price checked). It is:
+ * Creates ONE product per run, `loop-soul-vol-<n>-vinyl`, as a DRAFT: nobody
+ * sees it until it is set Active in Shopify (with its photos, and its price
+ * checked). It is:
  *   - vendor Odubo Studio, not B.A.A.D: B.A.A.D is the clothing label; the
  *     record is the house's (docs brand architecture);
  *   - tagged `drop:loop-soul` (the Loop store reads the loop-soul collection),
@@ -19,9 +21,11 @@
  * It never guesses a price (--price is required to apply) and never touches a
  * vinyl that already exists: once it is there, it is edited in Shopify.
  */
+import { vinylProduct } from "../../src/lib/loop/vinyl";
+import { albumOfVolume, type Volume } from "../../src/lib/loop/songs";
+
 const APPLY = process.argv.includes("--apply");
 const API_VERSION = "2024-07";
-const HANDLE = "loop-soul-vinyl";
 const COLLECTION_HANDLE = "loop-soul";
 
 const arg = (name: string) => process.argv.find((a) => a.startsWith(`--${name}=`))?.split("=").slice(1).join("=");
@@ -56,18 +60,33 @@ function check(payload: { userErrors?: UserError[] } | null | undefined, what: s
 }
 
 async function main() {
+  const volumeArg = arg("volume");
+  if (!volumeArg) {
+    if (APPLY) throw new Error("--volume=1 or --volume=2: one record per run, each with its own price");
+    for (const v of [1, 2] as const) await one(v);
+    return;
+  }
+  if (volumeArg !== "1" && volumeArg !== "2") throw new Error("--volume is 1 or 2");
+  await one(Number(volumeArg) as Volume);
+}
+
+async function one(volume: Volume) {
   const price = arg("price");
   const ships = (arg("ships") ?? "after the album").trim();
   const tags = ["drop:loop-soul", "type:vinyl", "preorder", `ships:${ships}`];
+  const record = vinylProduct(volume);
+  const HANDLE = record.handle;
+  const sides = record.sides.map((s) => `Side ${s.side}: ${s.titles.join(", ")}.`).join("<br>");
   const product = {
-    title: "Loop Soul, on vinyl",
+    title: record.title,
     handle: HANDLE,
     vendor: "Odubo Studio",
     productType: "Vinyl",
     status: "DRAFT",
     tags,
     descriptionHtml:
-      "<p>Loop Soul by Mani Odubo, pressed to vinyl. A pre-order: yours is made and sent when the pressing is ready.</p>",
+      `<p>${albumOfVolume(volume).title} by Mani Odubo, pressed to vinyl. A pre-order: yours is made and sent when the pressing is ready.</p>` +
+      `<p>${sides}</p>`,
   };
 
   const existing = await admin<{ productByHandle: { id: string; status: string; title: string } | null }>(

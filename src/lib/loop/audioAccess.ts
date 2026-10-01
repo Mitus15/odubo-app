@@ -4,7 +4,7 @@ import { verifyUserFromRequest, isAdminUser } from "@/lib/auth";
 import { ADMIN_COOKIE, verifyAdminSession } from "@/lib/loop/admin-auth";
 import { getCurrentEvent } from "@/lib/loop/hub";
 import { currentVoterId } from "@/lib/loop/identity/voter";
-import { albumAccessFor, earlySetFor } from "@/lib/loop/album";
+import { ALBUM_ID, albumAccessFor, earlySetFor } from "@/lib/loop/album";
 import { getSetting } from "@/lib/loop/loopSetting";
 import { releasedSingleTitles } from "@/lib/loop/singlesStore";
 import { fieldPackOfKey, singleByFieldPack } from "@/lib/loop/singles";
@@ -31,9 +31,9 @@ export type AudioFacts = {
   isFeaturedSingle: boolean;
   /** Owner or team, by a VERIFIED session — never a decoded-but-unchecked token. */
   isAdmin: boolean;
-  /** Holds a pass, or is owed the record by a pre-order. */
+  /** Holds a pass, or is owed this track's album by a pre-order. */
   owed: boolean;
-  /** The owner has flipped the record to released. */
+  /** The owner has flipped this track's album (Vol. 1 or Vol. 2) to released. */
   albumReleased: boolean;
   /** This exact track is in this listener's early draw. */
   inEarlySet: boolean;
@@ -122,16 +122,18 @@ async function gatherFacts(req: NextRequest | null, track: TrackRow): Promise<Au
 
   try {
     const [event, voterId] = await Promise.all([getCurrentEvent(), currentVoterId()]);
-    const access = await albumAccessFor(event.id, voterId);
+    // Per album: releasing Vol. 1 must not open Vol. 2, and only Vol. 1 has an early draw.
+    const albumId = track.album_id ?? ALBUM_ID;
+    const access = await albumAccessFor(event.id, voterId, albumId);
     const owed = access.entitled || access.holder;
     if (!owed) {
       return { albumPublished, isFeaturedSingle, isAdmin, owed: false, albumReleased: access.released, inEarlySet: false };
     }
     // Owed, but before release only their own draw plays. Otherwise a
-    // pass-holder could pull all fourteen through the API while the page
-    // shows them three.
+    // pass-holder could pull the whole album through the API while the page
+    // shows them three. (The draw is off for Vol. 2: albumAccessFor.)
     const { loadAlbum } = await import("@/lib/loop/album");
-    const data = await loadAlbum(track.album_id ?? undefined);
+    const data = access.early.enabled ? await loadAlbum(albumId) : null;
     const inEarlySet =
       !!data &&
       earlySetFor(access.email ?? voterId, data.tracks, featured, access.early).includes(track.track_number);

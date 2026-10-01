@@ -2,12 +2,13 @@
 The Warhol grid: one moment of the take, fourteen times, one per chapter.
 
     npm run film:grid -- <take> --at=<take seconds> [--size=1080|vinyl] [--marker=crown|ground|heart]
-    npm run film:grid -- <take> --at=<s> --volume=1|2 [--layout=grid|x|plus] [--size=vinyl]
+    npm run film:grid -- <take> --at=<s> --volume=1|2 [--layout=grid|plus|x] [--size=vinyl]
 
 Loop Soul is two albums on two records (docs/decisions/loop-vinyl.md):
 --volume renders one record's cover, only its songs, on a 3 x 3 grid. Vol. 1's
-nine songs fill it. Vol. 2's five take --layout=x (the corners and the
-centre) or plus (the centre and its four sides); the other squares are sand.
+nine songs fill it. Vol. 2's five sit as a plus, the centre and its four sides
+(the owner's choice, 2026-09-30); --layout=x (the corners and the centre) is
+the alternative. The other squares are sand.
 
 THE VINYL'S COVER (owner, 2026-09-30): the grid is the front of the record;
 the face (public/loop/press/cover/) stays the streaming cover, since the
@@ -24,7 +25,7 @@ own wheel, or whatever the owner has chosen per chapter.
 import json, subprocess, sys
 import numpy as np
 import cv2
-from film_common import REPO
+from film_common import REPO, SONGS
 from take import Reader, load_take, read_pose, take_dir
 from anchor import ANCHORS, SIZES
 from shadow import cast
@@ -34,10 +35,10 @@ from compose import CROWN_GAP, GROUND_SQUASH, MARKERS, paint, paste, rgb, seed
 WORDMARK = REPO / "public/loop/branding/loop-soul.svg"
 COLS, ROWS = 4, 4
 VINYL = 3788  # px: a 12.375 in jacket and 1/8 in bleed each side, at 300 dpi
-VOLUMES = {1: range(1, 10), 2: range(10, 15)}  # the songs on each record, by album number
+VOLUMES = {v: {s["number"] for s in SONGS if s["volume"] == v} for v in (1, 2)}  # each record's songs (songs.json)
 LAYOUTS = {  # a record's squares on its 3 x 3 cover, in song order
     9: {"grid": [(r, c) for r in range(3) for c in range(3)]},
-    5: {"x": [(0, 0), (0, 2), (1, 1), (2, 0), (2, 2)], "plus": [(0, 1), (1, 0), (1, 1), (1, 2), (2, 1)]},
+    5: {"plus": [(0, 1), (1, 0), (1, 1), (1, 2), (2, 1)], "x": [(0, 0), (0, 2), (1, 1), (2, 0), (2, 2)]},
 }
 
 

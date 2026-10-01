@@ -14,10 +14,9 @@ import { getSingleStatuses } from "@/lib/loop/singlesStore";
 import { isAdminRequest } from "@/lib/loop/audioAccess";
 import SingleStandalone, { type SingleRow } from "@/components/loop/gathering/SingleStandalone";
 import ChapterView from "@/components/loop/film/ChapterView";
-import { songBySlug } from "@/lib/loop/songs";
+import { albumOfSong, songBySlug } from "@/lib/loop/songs";
 import { chapterClips, publicChapters, publicFilm } from "@/lib/loop/film/public";
 import { listenLinks } from "@/lib/loop/listen";
-import { ALBUM_ID } from "@/lib/loop/songs";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -52,7 +51,7 @@ async function chapterMeta(slug: string): Promise<Metadata> {
   const [chapters, base] = await Promise.all([publicChapters(), getPublicBaseUrl()]);
   const c = chapters.find((x) => x.slug === slug);
   const title = `${c?.title ?? song.title} · Loop Soul`;
-  const description = c?.public && c.thread ? c.thread : `Chapter ${song.number} of Loop Soul, an album by Mani Odubo.`;
+  const description = c?.public && c.thread ? c.thread : `Chapter ${song.number} of Loop Soul, from ${albumOfSong(song).title} by Mani Odubo.`;
   const path = singlePath(slug);
   const url = base ? `${base}${path}` : path;
   return { title, description, alternates: { canonical: url }, openGraph: { title, description, url }, twitter: { card: "summary_large_image", title, description } };
@@ -85,8 +84,15 @@ export default async function SinglePage({ params }: { params: Promise<{ single:
   const slug = (await params).single;
   if (!singleBySlug(slug)) {
     // A chapter of the flight that is not a single.
-    if (!songBySlug(slug)) notFound();
-    const [chapters, clips, film, listenOn] = await Promise.all([publicChapters(), chapterClips(slug), publicFilm(), listenLinks(ALBUM_ID)]);
+    const song = songBySlug(slug);
+    if (!song) notFound();
+    // Where to listen is per album: songs 10 to 14 are on Vol. 2.
+    const [chapters, clips, film, listenOn] = await Promise.all([
+      publicChapters(),
+      chapterClips(slug),
+      publicFilm(),
+      listenLinks(albumOfSong(song).albumId),
+    ]);
     const chapter = chapters.find((c) => c.slug === slug)!;
     const watchAt = film?.markers.find((m) => m.label === slug)?.t ?? null;
     return <ChapterView chapter={chapter} chapters={chapters} clips={chapter.public ? clips : []} watchAt={watchAt} listenOn={listenOn} />;
@@ -106,7 +112,7 @@ export default async function SinglePage({ params }: { params: Promise<{ single:
 
   const [chapter, listenOn] = await Promise.all([
     publicChapters().then((all) => all.find((c) => c.slug === def.slug) ?? null),
-    listenLinks(ALBUM_ID),
+    listenLinks(albumOfSong(songBySlug(def.slug) ?? { volume: 1 }).albumId),
   ]);
 
   const singles: SingleRow[] = statuses.map((s) => ({

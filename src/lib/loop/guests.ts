@@ -38,10 +38,13 @@ export async function listGuests(eventId: string): Promise<GuestRow[]> {
   }>(
     `SELECT c.code, c.email, c.order_id, c.created_at,
             (c.redeemed_by IS NOT NULL) AS redeemed, c.admitted_at,
-            m.consented_at, m.source AS consent_source, e.claimed_at
+            m.consented_at, m.source AS consent_source,
+            -- One row per album per pass (Vol. 1 and Vol. 2): the first time
+            -- any of their record was opened, without a guest row per album.
+            (SELECT MIN(e.claimed_at) FROM loop_album_entitlements e
+              WHERE e.email = c.email AND e.order_id = c.order_id) AS claimed_at
        FROM event_codes c
        LEFT JOIN loop_marketing_consent m ON m.email = c.email AND m.withdrawn_at IS NULL
-       LEFT JOIN loop_album_entitlements e ON e.email = c.email AND e.order_id = c.order_id
       WHERE c.event_id = ?1 AND c.order_id IS NOT NULL AND c.order_id NOT LIKE 'sim:%'
       ORDER BY c.created_at DESC`,
     [eventId],

@@ -391,7 +391,7 @@ export function TheSingle({
               </Link>
             </div>
           )}
-          <h2 className="loop-display text-3xl font-bold tracking-tight">Three singles, then the album.</h2>
+          <h2 className="loop-display text-3xl font-bold tracking-tight">Three singles, then two albums.</h2>
           <p className="loop-muted mt-2 text-sm leading-relaxed">A music video for each.</p>
 
           <div className="mt-8">

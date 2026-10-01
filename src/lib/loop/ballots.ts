@@ -4,6 +4,7 @@ import { getSetting, setSetting } from "@/lib/loop/loopSetting";
 import type { EventPhase } from "@/lib/loop/hub";
 import { CREDIT_EXPR, CREDIT_JOIN } from "@/lib/loop/identity";
 import { loopGalleryCode } from "@/lib/loop/wall/server";
+import { ALBUM_ID } from "@/lib/loop/songs";
 
 /**
  * The two member ballots — the tracklist vote and the album-cover vote — on
@@ -37,9 +38,17 @@ export type BallotKind = "tracklist" | "cover";
 
 export const BALLOT_VOTE_LIMIT = 3;
 
-/** The Loop Soul album — the one whose running order is being voted.
- *  Same id `scripts/loop/assert_album_identity.ts` asserts against. */
-export const LOOP_SOUL_ALBUM_ID = "724666e5-66a8-4229-99ee-d5450076b749";
+/** The Loop Soul album the tracklist ballot read from (Vol. 1 since the split). */
+export const LOOP_SOUL_ALBUM_ID = ALBUM_ID;
+
+/**
+ * Both ballots are RETIRED (owner, 2026-09-30; docs/decisions/loop-vinyl.md).
+ * The tracklist vote chose which songs fit a record; Loop Soul is now two
+ * records and every song is on one. The cover vote chose the vinyl's front;
+ * the covers are the film's grids. Neither opens again, whatever the phase or
+ * a stale override says. The votes already cast stay in the table.
+ */
+const RETIRED: ReadonlySet<BallotKind> = new Set<BallotKind>(["tracklist", "cover"]);
 
 /** The synthetic event id a ballot's votes are stored under. `#` cannot
  *  appear in a real event id (`vol-1`), so collision is structural, not
@@ -60,6 +69,7 @@ export async function isBallotOpen(
   kind: BallotKind,
   phase: EventPhase,
 ): Promise<boolean> {
+  if (RETIRED.has(kind)) return false;
   const override = await getSetting(`ballot_${kind}`);
   if (override === "open") return true;
   if (override === "closed") return false;

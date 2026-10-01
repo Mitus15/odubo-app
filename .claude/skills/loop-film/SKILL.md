@@ -57,7 +57,7 @@ npm run film:cut -- <take> film
 npm run film:compose -- <take> --from=<s> --to=<s> --aspect=9x16 --shadow=lag --lag=22   # just the picture
 npm run film:grid -- <take> --at=<take seconds>    # the Warhol grid: one moment in all 14 colourways
 npm run film:grid -- <take> --at=<s> --volume=1 --size=vinyl             # Vol. 1's vinyl cover: its 9 songs, 3 x 3
-npm run film:grid -- <take> --at=<s> --volume=2 --layout=x --size=vinyl  # Vol. 2's: 5 songs as an X (or --layout=plus)
+npm run film:grid -- <take> --at=<s> --volume=2 --size=vinyl             # Vol. 2's: its 5 songs as a plus (the owner's pick)
 ```
 
 ## The look

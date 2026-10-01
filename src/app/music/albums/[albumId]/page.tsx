@@ -5,6 +5,7 @@ import AlbumPlayer from '@/components/AlbumPlayer';
 import { getSingleStatuses } from '@/lib/loop/singlesStore';
 import Image from 'next/image';
 import Link from 'next/link';
+import { ALBUMS, albumById } from '@/lib/loop/songs';
 
 export const runtime = 'edge';
 
@@ -70,6 +71,10 @@ export default async function AlbumPage({ params }: AlbumPageProps) {
   }
 
   const { album, tracks } = albumData;
+  // Loop Soul is two albums: each volume's page leads to the other, once the
+  // other exists (the split is a data step that runs after this code ships).
+  const other = albumById(album.id) ? ALBUMS.find((a) => a.albumId !== album.id) ?? null : null;
+  const sibling = other && (await queryDatabase('SELECT id FROM albums WHERE id = ?', [other.albumId]))?.length ? other : null;
   // A field opens with its single's release, the same rule the media route
   // enforces on the stems. Fails closed: no setting read, no field.
   const fieldSongs = (await getSingleStatuses().catch(() => []))
@@ -132,6 +137,16 @@ export default async function AlbumPage({ params }: AlbumPageProps) {
 
           {/* Player */}
           <AlbumPlayer album={album} tracks={tracks} fieldSongs={fieldSongs} />
+
+          {sibling && (
+            <Link
+              href={`/music/albums/${sibling.albumId}`}
+              className="mt-10 flex min-h-[44px] items-center justify-between border-y border-[#502d26]/30 py-4 text-[#ede8df]"
+            >
+              <span className="text-base font-semibold">{sibling.title}</span>
+              <span className="text-[#726d6c]">→</span>
+            </Link>
+          )}
         </div>
       </div>
     </div>

@@ -77,14 +77,28 @@ only the releases split.
 - The two vinyl covers. `film:grid --volume=1|2` renders them: Vol. 1 is its
   nine songs on a 3 x 3 grid; Vol. 2's five sit on the same grid as an X (the
   corners and the centre) or a plus (the centre and its sides) with sand in
-  the other squares. The plus reads as a cross: a faith choice, the owner's.
+  the other squares. **The owner chose the plus** (2026-09-30), which reads
+  as a cross on the record that holds the crossing, The Mind and Ghost World.
 - The two streaming covers (the face, marked per volume).
 - The price of each record, the pressing plant's quote and template.
   `scripts/shopify/loop-soul-vinyl.ts` still makes ONE product and has never
   been applied (checked: no `loop-soul-vinyl` in Shopify); it becomes two
   before it is run.
 
-## The split, planned (2026-09-30, not started)
+## The split, built in code (2026-09-30); the data waits
+
+Built on the branch and checked (the volume tests, the full suite with the
+two failures that predate this, the type check at its 850 baseline, and the
+pages in a local browser). The data step is `scripts/loop/split-volumes.ts`:
+its dry run plans 32 changes and it refuses to apply until it is told the
+code is live (`--apply --code-is-live`). Order on the day: merge and deploy,
+then run the script, then check `/loop/admin` (both tabs) and `/music`.
+
+Also fixed on the way: `/loop/album` and the draw said "the rest after the
+night"; the record page offered a pass for the called-off night; both ballots
+read as open because the night is archived (both are now retired in code).
+
+## The split, as planned
 
 Mapped across the repo before touching anything. The rule that shapes it:
 **keep `724666e5…` as Vol. 1 and MOVE songs 10 to 14 into a new Vol. 2

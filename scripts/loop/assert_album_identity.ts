@@ -25,17 +25,18 @@
  * Idempotent: re-running changes nothing.
  */
 import { queryDatabase, executeQuery } from "../../src/lib/loop/db";
-
-const ALBUM_ID = "724666e5-66a8-4229-99ee-d5450076b749";
+import { ALBUM_ID } from "../../src/lib/loop/songs";
 const ARTIST = "Mani Odubo";
 
 /** Everything the album owns. `ref_id` is a soft reference by design — release
- *  links point outward at subsystems and never the reverse. */
+ *  links point outward at subsystems and never the reverse. The album is Loop
+ *  Soul Vol. 1 since the split; these are the Oct 10 night's things (the night
+ *  was called off), labelled so "Vol. 1" only ever means the record. */
 const LINKS: { kind: string; ref_id: string; label: string }[] = [
-  { kind: "loop-event", ref_id: "vol-1", label: "Volume 1 — the first play" },
-  { kind: "shopify-product", ref_id: "9530389397717", label: "Loop Soul — Volume 1 Pass" },
-  { kind: "journal-issue", ref_id: "vol-1", label: "The Loop Journal — Volume 1" },
-  { kind: "poster-kit", ref_id: "loop-soul-v1", label: "Volume 1 marketing kit" },
+  { kind: "loop-event", ref_id: "vol-1", label: "The Oct 10 night (called off)" },
+  { kind: "shopify-product", ref_id: "9530389397717", label: "The night's pass (archived)" },
+  { kind: "journal-issue", ref_id: "vol-1", label: "The Loop Journal, the night's issue" },
+  { kind: "poster-kit", ref_id: "loop-soul-v1", label: "The night's marketing kit" },
 ];
 
 const dry = process.argv.includes("--dry");

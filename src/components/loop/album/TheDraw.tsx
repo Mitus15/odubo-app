@@ -125,9 +125,9 @@ export default function TheDraw({
               <p className="mt-6 text-3xl font-extrabold leading-tight">
                 {total} tracks.
                 <br />
-                {dealtTitles.length + 1} are yours tonight.
+                {dealtTitles.length + 1} are yours now.
               </p>
-              <p className="mt-4 text-sm opacity-60">The rest after the night.</p>
+              <p className="mt-4 text-sm opacity-60">The rest the day it&apos;s out.</p>
             </motion.div>
           )}
 

@@ -16,6 +16,7 @@ import { getSetting } from "@/lib/loop/loopSetting";
 import { getPassSettings } from "@/lib/loop/pass/settings";
 import { resolveCover, coverCaption } from "@/lib/loop/cover";
 import { priceLabel as formatPrice } from "@/lib/loop/priceLabel";
+import { ALBUMS } from "@/lib/loop/songs";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -28,8 +29,12 @@ export const metadata = {
 /**
  * /loop/album — the pre-order, delivered.
  *
- * Four states, one rule (`decideAlbumAccess`):
- *   early   owed it, not out yet: the single, plus the ones dealt to this listener
+ * Loop Soul is two albums, Vol. 1 and Vol. 2, released separately; a pass is
+ * owed both. This page is the one URL for both (it is in every pass email and
+ * behind every claim link), and each album sits in its own state, decided by
+ * the same rule (`decideAlbumAccess`):
+ *   early   owed it, not out yet: the single, plus the ones dealt to this
+ *           listener (Vol. 1 only: Vol. 2 has no draw)
  *   wait    owed it, not out yet, nothing early set
  *   listen  owed it, out: the album plays here
  *   prove   this device holds nothing: the link in the pass email binds it, or
@@ -45,82 +50,112 @@ export const metadata = {
  */
 export default async function LoopAlbumPage() {
   const [event, voterId] = await Promise.all([getCurrentEvent(), currentVoterId()]);
-  const access = await albumAccessFor(event.id, voterId);
-  const state = decideAlbumAccess({
-    released: access.released,
-    entitled: access.entitled,
-    holder: access.holder,
-    early: access.early.enabled,
-  });
+  const albums = await Promise.all(
+    ALBUMS.map(async (a) => {
+      const access = await albumAccessFor(event.id, voterId, a.albumId);
+      const state = decideAlbumAccess({
+        released: access.released,
+        entitled: access.entitled,
+        holder: access.holder,
+        early: access.early.enabled,
+      });
+      return { ...a, access, state };
+    }),
+  );
+
+  if (albums.every((a) => a.state === "prove")) return <Prove offerPass={event.phase !== "archived"} />;
 
   // Which cover THIS person sees on their record: theirs, the room's, or the owner's.
-  const cover = state === "listen" || state === "early" ? await resolveCover(event.id, voterId) : null;
+  const opens = albums.some((a) => a.state === "listen" || a.state === "early");
+  const cover = opens ? await resolveCover(event.id, voterId) : null;
+  if (!opens) return <Shell title="It isn't out yet.">You&apos;ll get an email the day it is.</Shell>;
 
-  if (state === "listen") {
-    const data = await loadAlbum();
-    if (access.email) await markClaimed(access.email);
-    if (!data) return <Shell title="Not on the shelf yet.">Try again shortly.</Shell>;
-    return (
-      <Dark>
-        <div className="mx-auto max-w-2xl px-5 pb-24 pt-10">
-          <Cover cover={cover} />
+  const featured = await getSetting("featured_track");
+  let draw: React.ComponentProps<typeof EarlyAlbum> | null = null;
+  const sections: React.ReactNode[] = [];
+
+  for (const a of albums) {
+    if (a.state === "listen") {
+      const data = await loadAlbum(a.albumId);
+      if (a.access.email) await markClaimed(a.access.email, a.albumId);
+      if (!data) continue;
+      sections.push(
+        <section key={a.albumId} className="mt-10 first:mt-0">
           <p className="text-[11px] uppercase tracking-[0.3em] opacity-70">Loop Soul · Yours</p>
           <h1 className="mt-2 text-2xl font-extrabold">{data.album.title}</h1>
           <p className="mt-1 text-sm opacity-70">{data.album.artist_name}.</p>
           <div className="mt-8">
             <AlbumPlayer album={data.album} tracks={data.tracks} field={false} />
           </div>
-          <BackLink />
-        </div>
-      </Dark>
-    );
-  }
-
-  if (state === "early") {
-    const [data, featured] = await Promise.all([loadAlbum(), getSetting("featured_track")]);
-    if (!data) return <Shell title="Not on the shelf yet.">Try again shortly.</Shell>;
-    // Seeded on the address so the pair follows the person, not the phone.
-    const set = new Set(earlySetFor(access.email ?? voterId, data.tracks, featured, access.early));
-    const now = data.tracks.filter((t) => set.has(t.track_number));
-    // What the draw performs: the one everybody gets, the ones drawn for this
-    // person, and the names the draw moves through on its way to them.
-    const free = freeTrackNumber(data.tracks, featured);
-    const freeTitle = data.tracks.find((t) => t.track_number === free)?.title ?? now[0]?.title ?? "";
-    const dealtTitles = now.filter((t) => t.track_number !== free).map((t) => t.title);
-    const poolTitles = dealablePool(data.tracks, free)
-      .map((n) => data.tracks.find((t) => t.track_number === n)?.title)
-      .filter((t): t is string => Boolean(t));
-    if (now.length === 0) return <Shell title="It lands after the night." />;
-    return (
-      <EarlyAlbum
-        albumId={data.album.id}
-        albumTitle={data.album.title}
-        artist={data.album.artist_name}
-        total={data.tracks.length}
-        freeTitle={freeTitle}
-        dealtTitles={dealtTitles}
-        poolTitles={poolTitles}
-      >
-        <Dark>
-          <div className="mx-auto max-w-2xl px-5 pb-24 pt-10">
-            <Cover cover={cover} />
-            <p className="text-[11px] uppercase tracking-[0.3em] opacity-70">Loop Soul · Yours, early</p>
-            <h1 className="mt-2 text-2xl font-extrabold">{data.album.title}</h1>
-            <p className="mt-1 text-sm opacity-70">
-              {now.length} of {data.tracks.length} now. The rest after the night.
-            </p>
-            <div className="mt-8">
-              <AlbumPlayer album={data.album} tracks={now} field={false} />
-            </div>
-            <BackLink />
+        </section>,
+      );
+    } else if (a.state === "early") {
+      const data = await loadAlbum(a.albumId);
+      if (!data) continue;
+      // Seeded on the address so the pair follows the person, not the phone.
+      const set = new Set(earlySetFor(a.access.email ?? voterId, data.tracks, featured, a.access.early));
+      const now = data.tracks.filter((t) => set.has(t.track_number));
+      if (now.length === 0) {
+        sections.push(<Coming key={a.albumId} title={data.album.title} />);
+        continue;
+      }
+      // What the draw performs: the one everybody gets, the ones drawn for this
+      // person, and the names the draw moves through on its way to them.
+      const free = freeTrackNumber(data.tracks, featured);
+      draw = {
+        albumId: data.album.id,
+        albumTitle: data.album.title,
+        artist: data.album.artist_name,
+        total: data.tracks.length,
+        freeTitle: data.tracks.find((t) => t.track_number === free)?.title ?? now[0]?.title ?? "",
+        dealtTitles: now.filter((t) => t.track_number !== free).map((t) => t.title),
+        poolTitles: dealablePool(data.tracks, free)
+          .map((n) => data.tracks.find((t) => t.track_number === n)?.title)
+          .filter((t): t is string => Boolean(t)),
+        children: null,
+      };
+      sections.push(
+        <section key={a.albumId} className="mt-10 first:mt-0">
+          <p className="text-[11px] uppercase tracking-[0.3em] opacity-70">Loop Soul · Yours, early</p>
+          <h1 className="mt-2 text-2xl font-extrabold">{data.album.title}</h1>
+          <p className="mt-1 text-sm opacity-70">
+            {now.length} of {data.tracks.length} now. The rest the day it&apos;s out.
+          </p>
+          <div className="mt-8">
+            <AlbumPlayer album={data.album} tracks={now} field={false} />
           </div>
-        </Dark>
-      </EarlyAlbum>
-    );
+        </section>,
+      );
+    } else if (a.state === "wait") {
+      sections.push(<Coming key={a.albumId} title={a.title} />);
+    }
   }
 
-  if (state === "wait") return <Shell title="It lands after the night." />;
+  const page = (
+    <Dark>
+      <div className="mx-auto max-w-2xl px-5 pb-24 pt-10">
+        <Cover cover={cover} />
+        {sections}
+        <BackLink />
+      </div>
+    </Dark>
+  );
+  return draw ? <EarlyAlbum {...draw}>{page}</EarlyAlbum> : page;
+}
 
+/** An album this person is owed that is not out yet. */
+function Coming({ title }: { title: string }) {
+  return (
+    <section className="mt-10 border-t border-[var(--foreground)]/15 pt-8 first:mt-0 first:border-0 first:pt-0">
+      <p className="text-[11px] uppercase tracking-[0.3em] opacity-70">Loop Soul · Coming</p>
+      <h2 className="mt-2 text-2xl font-extrabold">{title}</h2>
+      <p className="mt-1 text-sm opacity-70">Yours the day it&apos;s out.</p>
+    </section>
+  );
+}
+
+/** This device holds nothing yet. No pass is offered once the night is archived. */
+async function Prove({ offerPass }: { offerPass: boolean }) {
   // No bare checkout link here: the pass sheet on /loop is the only way to
   // buy, because it is the only place that takes the address the ticket goes
   // to. Sale #1 came through a bare link and arrived with no email.
@@ -136,7 +171,7 @@ export default async function LoopAlbumPage() {
         >
           Enter your pass
         </Link>
-        {pass.checkoutUrl && (
+        {offerPass && pass.checkoutUrl && (
           <Link href="/loop" className="text-center text-xs underline underline-offset-4 opacity-80">
             No pass yet? Get a pass{price === "FREE ENTRY" ? "" : ` · ${price}`}
           </Link>

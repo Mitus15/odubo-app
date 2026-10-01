@@ -16,6 +16,12 @@ export const revalidate = 0;
 /**
  * /music — the way in to the record.
  *
+ * Loop Soul is now two albums (Vol. 1 and Vol. 2), each page linking to the
+ * other, so /music still lands on one: whatever is out first (published),
+ * then the latest dated, then the FIRST made among undated drafts, which is
+ * Vol. 1. Never the newest draft, or the menu would open on Vol. 2 before
+ * Vol. 1 is out.
+ *
  * This used to redirect to /media, which is the Moments gallery and has never
  * had any music on it. The album was reachable only by typing its UUID, so in
  * practice it was not reachable at all.
@@ -32,7 +38,8 @@ export const revalidate = 0;
 export default async function MusicPage() {
   const albums = (await queryDatabase(
     `SELECT id FROM albums
-      ORDER BY CASE WHEN release_date IS NULL THEN 1 ELSE 0 END, release_date DESC, created_at DESC
+      ORDER BY CASE WHEN status = 'published' THEN 0 ELSE 1 END,
+               CASE WHEN release_date IS NULL THEN 1 ELSE 0 END, release_date DESC, created_at ASC
       LIMIT 1`,
     []
   )) as Array<{ id: string }> | null;

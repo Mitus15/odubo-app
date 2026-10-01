@@ -3,7 +3,7 @@ import { getCurrentEvent } from "@/lib/loop/hub";
 import { issueForOrder } from "@/lib/loop/event-codes";
 import { deliverPassEmail } from "@/lib/loop/pass/deliver";
 import { getPassCapacity } from "@/lib/loop/pass";
-import { grantAlbumForOrder } from "@/lib/loop/album";
+import { grantRecordForOrder } from "@/lib/loop/album";
 import { claimIntent, refFromNoteAttributes } from "@/lib/loop/passIntent";
 import {
   parseShopifyOrder,
@@ -76,7 +76,7 @@ export async function POST(req: Request) {
     if (isNew) anyNew = true;
     // The pre-order, written down. Idempotent on the unit order id; never
     // throws, so the code and the email above it are never at its mercy.
-    await grantAlbumForOrder(email, unitOrderId, event.id);
+    await grantRecordForOrder(email, unitOrderId, event.id);
   }
 
   // Only email when something was newly issued — a pure retry stays silent.

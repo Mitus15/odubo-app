@@ -29,8 +29,9 @@ export async function loopNumbers(eventId: string): Promise<LoopNumbers> {
         WHERE l.event_id = ?1 AND l.first_opened_at IS NOT NULL AND c.${real}`,
       [eventId],
     ),
+    // A pass holds one row per album (Vol. 1 and Vol. 2): count passes, not rows.
     n(
-      `SELECT COUNT(*) AS n FROM loop_album_entitlements
+      `SELECT COUNT(DISTINCT COALESCE(order_id, id)) AS n FROM loop_album_entitlements
         WHERE event_id = ?1 AND claimed_at IS NOT NULL AND (order_id IS NULL OR order_id NOT LIKE 'sim:%')`,
       [eventId],
     ),

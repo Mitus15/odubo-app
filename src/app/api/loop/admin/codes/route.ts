@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentEvent } from "@/lib/loop/hub";
 import { attachEmail, countRedeemed, generate, listCodes, lookupCode } from "@/lib/loop/event-codes";
-import { grantAlbumForOrder } from "@/lib/loop/album";
+import { grantRecordForOrder } from "@/lib/loop/album";
 import { deliverPassEmail } from "@/lib/loop/pass/deliver";
 import { openIntents } from "@/lib/loop/passIntent";
 
@@ -25,7 +25,7 @@ async function deliver(eventId: string, code: string) {
   const pass = await lookupCode(eventId, code);
   if (!pass) return NextResponse.json({ error: "No such code on this volume." }, { status: 404 });
   if (!pass.email) return NextResponse.json({ error: "That pass has no address yet. Attach one first." }, { status: 400 });
-  if (pass.orderId && !pass.sim) await grantAlbumForOrder(pass.email, pass.orderId, eventId);
+  if (pass.orderId && !pass.sim) await grantRecordForOrder(pass.email, pass.orderId, eventId);
   const res = await deliverPassEmail(eventId, pass.email, [pass.code]);
   return NextResponse.json({ ok: true, delivered: res.ok, email: pass.email, code: pass.code });
 }

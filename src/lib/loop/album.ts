@@ -2,7 +2,7 @@ import { executeQuery, queryDatabase, queryOne } from "@/lib/loop/db";
 import { queryDatabase as appQuery } from "@/lib/db";
 import { isHolder } from "@/lib/loop/event-codes";
 import { attendeeForVoter } from "@/lib/loop/identity";
-import { LOOP_SOUL_ALBUM_ID } from "@/lib/loop/ballots";
+import { ALBUM_ID as VOL_1_ID, ALBUM_IDS } from "@/lib/loop/songs";
 import { getSetting, setSetting } from "@/lib/loop/loopSetting";
 import type { Album, Track } from "@/types/music";
 
@@ -18,10 +18,19 @@ import type { Album, Track } from "@/types/music";
  * an attendee carrying that email, and the entitlement is keyed on the email.
  * A device that redeemed a code is a holder and is let in the same way. There
  * is no third path and no password.
+ *
+ * Loop Soul is two albums (Vol. 1, songs 1 to 9; Vol. 2, songs 10 to 14;
+ * docs/decisions/loop-vinyl.md). A pass was sold as the whole record, so it
+ * is owed both: one entitlement row per album. Each album has its own release
+ * switch, so Vol. 1 can come out while Vol. 2 stays closed.
  */
 
-export const ALBUM_ID = LOOP_SOUL_ALBUM_ID;
+/** Vol. 1, the default everywhere an album is not named. */
+export const ALBUM_ID = VOL_1_ID;
+/** The switch from before the split was the whole record's; it is now Vol. 1's,
+ *  so nothing migrates. Every other album has its own key. */
 const RELEASED_KEY = "album_released";
+export const releasedKey = (albumId: string) => (albumId === ALBUM_ID ? RELEASED_KEY : `${RELEASED_KEY}:${albumId}`);
 
 export function normEmail(raw: string): string {
   return raw.trim().toLowerCase();
@@ -50,6 +59,12 @@ export async function grantAlbumForOrder(
     console.error("[loop:album] entitlement NOT written:", orderId, err);
     return false;
   }
+}
+
+/** A pass is the whole record: one entitlement for each album. Never throws. */
+export async function grantRecordForOrder(email: string | null, orderId: string, eventId: string): Promise<boolean> {
+  const granted = await Promise.all(ALBUM_IDS.map((albumId) => grantAlbumForOrder(email, orderId, eventId, albumId)));
+  return granted.some(Boolean);
 }
 
 /** Every real pass order that has no entitlement yet gets one. Safe to rerun. */
@@ -111,18 +126,18 @@ export async function markNotified(email: string, albumId: string = ALBUM_ID): P
 
 // ── released or not ──────────────────────────────────────────────────────────
 
-/** The owner's switch. Nothing derives this from a date: the record is out when he says so. */
-export async function albumReleased(): Promise<boolean> {
+/** The owner's switch, one per album. Nothing derives this from a date: an album is out when he says so. */
+export async function albumReleased(albumId: string = ALBUM_ID): Promise<boolean> {
   try {
-    const row = await queryOne<{ value: string }>(`SELECT value FROM loop_settings WHERE key = ?1`, [RELEASED_KEY]);
+    const row = await queryOne<{ value: string }>(`SELECT value FROM loop_settings WHERE key = ?1`, [releasedKey(albumId)]);
     return row?.value === "1";
   } catch {
     return false;
   }
 }
 
-export async function setAlbumReleased(released: boolean): Promise<void> {
-  await setSetting(RELEASED_KEY, released ? "1" : "0");
+export async function setAlbumReleased(released: boolean, albumId: string = ALBUM_ID): Promise<void> {
+  await setSetting(releasedKey(albumId), released ? "1" : "0");
 }
 
 // ── early tracks ─────────────────────────────────────────────────────────────
@@ -140,7 +155,18 @@ export async function setAlbumReleased(released: boolean): Promise<void> {
  * first listen with the door-opener and nothing else is a worse gift than a
  * song. And the interludes — Loop Soul has three at thirty-five seconds —
  * because being dealt two of those instead of music would read as a mistake.
+ *
+ * The draw is Vol. 1's: the album with the singles, the one that comes out
+ * first. Vol. 2 plays for nobody before its own release day (its numbering
+ * restarts at 1, so its first song would otherwise read as an intro and its
+ * second as the free track).
  */
+export const EARLY_ALBUM_ID = ALBUM_ID;
+
+/** The before-release rule as it applies to one album: off for any but Vol. 1. */
+export function earlyRuleFor(albumId: string, rule: EarlyRule): EarlyRule {
+  return albumId === EARLY_ALBUM_ID ? rule : { ...rule, enabled: false };
+}
 const EARLY_ENABLED_KEY = "album_early_enabled";
 const EARLY_EXTRA_KEY = "album_early_extra";
 /** Anything shorter than this is an interlude, not one of the two you get. */
@@ -274,15 +300,15 @@ export function decideAlbumAccess(
   return a.early ? "early" : "wait";
 }
 
-export async function albumAccessFor(eventId: string, voterId: string): Promise<AlbumAccess> {
-  const [released, early, attendee, holder] = await Promise.all([
-    albumReleased(),
+export async function albumAccessFor(eventId: string, voterId: string, albumId: string = ALBUM_ID): Promise<AlbumAccess> {
+  const [released, rule, attendee, holder] = await Promise.all([
+    albumReleased(albumId),
     earlyRule(),
     attendeeForVoter(voterId),
     voterId && voterId !== "anonymous" ? isHolder(eventId, voterId) : Promise.resolve(false),
   ]);
   const email = attendee?.email ?? null;
-  return { released, early, entitled: await isEntitled(email), holder, email };
+  return { released, early: earlyRuleFor(albumId, rule), entitled: await isEntitled(email, albumId), holder, email };
 }
 
 // ── the record itself ────────────────────────────────────────────────────────
