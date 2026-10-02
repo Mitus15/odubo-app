@@ -15,6 +15,12 @@
  * Two more turned up the same day, when the guard stopped counting a verifier
  * named only in an audit call: the R2 cleanup, which deletes from the bucket,
  * and a dev script's route.
+ *
+ * Then four jobs that checked CRON_SECRET only when it was set. It is set
+ * only in Production, so on every Preview deployment, which runs on the live
+ * D1, anyone could run the Arsenal sync (videos go live, Instagram posters
+ * get scheduled), the welcome emails, the R2 and gallery cleanup, or the
+ * social sync. They now use requireCronOrAdmin, which fails closed.
  */
 import { NextRequest } from 'next/server';
 import { SignJWT } from 'jose';
@@ -67,6 +73,8 @@ const GATED: Array<[string, string]> = [
   ['DELETE', '/api/announcements'],
   ['POST', '/api/arsenal/link-parent'],
   ['POST', '/api/arsenal/reorder'],
+  ['GET', '/api/arsenal/sync'],
+  ['POST', '/api/arsenal/sync'],
   ['POST', '/api/arsenal/sync-from-stream'],
   ['POST', '/api/arsenal/update'],
   ['POST', '/api/arsenal/woda'],
@@ -86,10 +94,13 @@ const GATED: Array<[string, string]> = [
   ['POST', '/api/connections/connect'],
   ['POST', '/api/connections/disconnect'],
   ['POST', '/api/connections/sync'],
+  ['GET', '/api/cron/cleanup-uploads'],
   ['POST', '/api/cron/compute-cohorts'],
   ['GET', '/api/cron/compute-cohorts'],
   ['POST', '/api/cron/compute-funnels'],
   ['GET', '/api/cron/compute-funnels'],
+  ['GET', '/api/cron/email-sequences'],
+  ['GET', '/api/cron/social-sync'],
   ['GET', '/api/customers/[id]'],
   ['PUT', '/api/customers/[id]'],
   ['GET', '/api/customers/[id]/orders'],
@@ -192,6 +203,56 @@ describe('the admin still gets through', () => {
     const res = await call('POST', '/api/setup-likes', { token: adminToken });
     expect(res.status).toBe(200);
     expect(mockReached).toHaveBeenCalledWith('setup-likes');
+  });
+});
+
+// What a Preview deployment looks like: no CRON_SECRET at all. These jobs used
+// to skip their check entirely in that state.
+describe.each([
+  '/api/arsenal/sync',
+  '/api/cron/cleanup-uploads',
+  '/api/cron/email-sequences',
+  '/api/cron/social-sync',
+])('GET %s with no CRON_SECRET set', (route) => {
+  const cronSecret = process.env.CRON_SECRET;
+  beforeEach(() => {
+    delete process.env.CRON_SECRET;
+  });
+  afterEach(() => {
+    if (cronSecret === undefined) delete process.env.CRON_SECRET;
+    else process.env.CRON_SECRET = cronSecret;
+  });
+
+  it('refuses a caller with no header, an empty bearer or a guessed one', async () => {
+    for (const authorization of [undefined, 'Bearer ', 'Bearer undefined']) {
+      const res = await call('GET', route, authorization ? { headers: { authorization } } : {});
+      expect(res.status).toBe(401);
+    }
+    expect(mockReached).not.toHaveBeenCalled();
+  });
+
+  it('still lets the admin run it on their session', async () => {
+    await call('GET', route, { token: adminToken });
+    expect(mockReached).toHaveBeenCalled();
+  });
+});
+
+describe('GET /api/arsenal/sync with CRON_SECRET set', () => {
+  const cronSecret = process.env.CRON_SECRET;
+  beforeEach(() => {
+    process.env.CRON_SECRET = 'cron-test';
+  });
+  afterEach(() => {
+    if (cronSecret === undefined) delete process.env.CRON_SECRET;
+    else process.env.CRON_SECRET = cronSecret;
+  });
+
+  it('lets the scheduler in with the secret and turns a wrong one away', async () => {
+    expect((await call('GET', '/api/arsenal/sync', { headers: { authorization: 'Bearer guess' } })).status).toBe(401);
+    expect(mockReached).not.toHaveBeenCalled();
+
+    await call('GET', '/api/arsenal/sync', { headers: { authorization: 'Bearer cron-test' } });
+    expect(mockReached).toHaveBeenCalledWith('database', expect.any(String));
   });
 });
 

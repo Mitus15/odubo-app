@@ -20,7 +20,14 @@ import ts from 'typescript';
  * ignores the answer still counts as verifying.
  */
 
-/** Checks of a caller: a session, a signature, a secret, a token. */
+/**
+ * Checks of a caller: a session, a signature, a secret, a token.
+ *
+ * Not `CRON_SECRET`. Four jobs compared against it only when it was set
+ * (`if (secret && header !== ...)`), which is no check at all wherever it is
+ * unset, as on every Preview deployment, and the name alone passed them here
+ * until 2026-10-02. A scheduled job gates with requireCronOrAdmin.
+ */
 const VERIFIERS = new Set([
   'requireAdmin',
   'requireCronOrAdmin',
@@ -49,7 +56,6 @@ const VERIFIERS = new Set([
   'verifyEmailToken',
   'timingSafeEqual',
   'createHmac',
-  'CRON_SECRET',
 ]);
 
 /** The paths middleware.ts verifies before any handler runs. Keep in step with it. */
