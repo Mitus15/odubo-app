@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { queryDatabase, executeQuery } from '@/lib/db';
+import { queryDatabase, executeQuery, lastRowId } from '@/lib/db';
 import { callDeepSeekWithRetry } from '@/lib/deepseek';
 
 export const runtime = 'nodejs';
@@ -122,7 +122,7 @@ export async function POST(request: NextRequest) {
          VALUES (?, ?, ?)`,
         [profile?.id || 1, JSON.stringify(result), (platforms || []).join(',')]
       );
-      generationId = (insertResult as { lastRowId?: number })?.lastRowId || null;
+      generationId = lastRowId(insertResult);
     } catch (e) {
       console.error('[Woda] Failed to store generation:', e);
     }

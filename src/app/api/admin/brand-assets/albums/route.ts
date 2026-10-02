@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromRequest, isAdminUser } from '@/lib/auth';
-import { queryDatabase, executeQuery } from '@/lib/db';
+import { queryDatabase, executeQuery, lastRowId } from '@/lib/db';
 
 export const runtime = 'edge';
 
@@ -100,7 +100,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       album: {
-        id: result.lastRowId,
+        id: lastRowId(result),
         category_id,
         name: name.trim(),
         slug,

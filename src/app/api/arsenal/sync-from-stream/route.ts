@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { queryDatabase, executeQuery } from '@/lib/db';
+import { queryDatabase, executeQuery, changedRows } from '@/lib/db';
 import CloudflareStreamAPI from '@/lib/cloudflareStream';
 
 export const runtime = 'nodejs';
@@ -167,7 +167,7 @@ export async function POST(request: Request) {
         );
 
         // Check if row was actually inserted (changes = 0 means duplicate was ignored)
-        if (result && 'changes' in result && result.changes === 0) {
+        if (changedRows(result) === 0) {
           ignored++;
           console.log(`[Arsenal] Duplicate ignored: ${title} (${video.uid})`);
         } else {

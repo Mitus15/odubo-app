@@ -1,5 +1,5 @@
 import { NextResponse, NextRequest } from 'next/server';
-import { queryDatabase, executeQuery } from '@/lib/db';
+import { queryDatabase, executeQuery, changedRows } from '@/lib/db';
 import { getPost, getAccountFeed, getAccounts, createPost, mapPlatform } from '@/lib/postforme';
 import { getUserFromRequest, isAdminUser } from '@/lib/auth';
 
@@ -372,10 +372,8 @@ async function runSync() {
           [parentId]
         );
 
-        const parentChanged = parentResult && typeof parentResult === 'object' &&
-          'changes' in parentResult && (parentResult as any).changes > 0;
-        const clipsChanged = clipsResult && typeof clipsResult === 'object' &&
-          'changes' in clipsResult ? (clipsResult as any).changes : 0;
+        const parentChanged = changedRows(parentResult) > 0;
+        const clipsChanged = changedRows(clipsResult);
 
         if (parentChanged || clipsChanged > 0) {
           madePublic += (parentChanged ? 1 : 0) + clipsChanged;
