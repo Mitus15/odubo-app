@@ -3,6 +3,20 @@
 import Script from 'next/script';
 import { useEffect, useState } from 'react';
 
+const MEASUREMENT_ID_PATTERN = /^G-[A-Z0-9]+$/;
+
+/**
+ * The GA4 measurement ID from the environment, or null if it is missing or malformed.
+ *
+ * The ID is written into an inline script, so it must be exactly `G-XXXXXXXXXX`.
+ * Production once held it with a trailing newline, which split a string literal
+ * and threw a SyntaxError on every page; GA never loaded.
+ */
+export function getMeasurementId(): string | null {
+  const id = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID?.trim();
+  return id && MEASUREMENT_ID_PATTERN.test(id) ? id : null;
+}
+
 /**
  * Google Analytics 4 Component
  *
@@ -10,7 +24,7 @@ import { useEffect, useState } from 'react';
  * Respects GDPR consent via the existing GDPRConsent component.
  */
 export default function GoogleAnalytics() {
-  const measurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
+  const measurementId = getMeasurementId();
   const [consentGiven, setConsentGiven] = useState(false);
 
   // Check GDPR consent on mount
@@ -95,7 +109,7 @@ export function trackEvent(
  */
 export function trackPageView(url: string) {
   if (typeof window !== 'undefined' && (window as any).gtag) {
-    const measurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
+    const measurementId = getMeasurementId();
     if (measurementId) {
       (window as any).gtag('config', measurementId, {
         page_path: url,
