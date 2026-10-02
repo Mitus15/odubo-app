@@ -94,7 +94,8 @@ export default function DesktopSidebar() {
 
   // Hide on admin/backend pages and admin subdomain (must be after all hooks)
   // Also hide on homepage and showcase - custom designs without sidebar
-  if (isAdminSubdomain || pathname === '/' || pathname === '/showcase' || pathname?.startsWith('/admin') || pathname?.startsWith('/command-center') || pathname?.startsWith('/featured/manage') || pathname?.startsWith('/loop')) {
+  // The flight (/fly) owns the whole screen
+  if (isAdminSubdomain || pathname === '/' || pathname === '/showcase' || pathname?.startsWith('/admin') || pathname?.startsWith('/command-center') || pathname?.startsWith('/featured/manage') || pathname?.startsWith('/loop') || pathname?.startsWith('/fly')) {
     return null;
   }
 

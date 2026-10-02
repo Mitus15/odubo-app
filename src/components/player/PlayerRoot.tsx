@@ -49,6 +49,8 @@ export default function PlayerRoot() {
   // Keyboard shortcuts (space, arrows, M for mute)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // A page that claims a key (the flight steers with the arrows) marks it handled.
+      if (e.defaultPrevented) return;
       const tag = (e.target as HTMLElement)?.tagName;
       const isTyping = tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement)?.isContentEditable;
       if (isTyping) return;
