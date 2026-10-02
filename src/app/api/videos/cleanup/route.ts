@@ -3,7 +3,7 @@ export const runtime = 'edge';
 import { S3Client, ListObjectsV2Command, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { queryDatabase } from '@/lib/db';
 import { writeAuditLog } from '@/lib/audit';
-import { getUserFromRequest } from '@/lib/auth';
+import { requireAdmin } from '@/lib/api/requireAdmin';
 
 // Cloudflare R2 configuration
 const s3Client = new S3Client({
@@ -15,7 +15,14 @@ const s3Client = new S3Client({
   },
 });
 
+// Deletes every object in the bucket that no videos row points at, up to a
+// thousand a call: masters, stems, gallery photos, brand assets. Until
+// 2026-10-02 it checked nothing; it passed the write-route guard only because
+// its audit call named a verifier.
 export async function POST(req: NextRequest) {
+  const gate = await requireAdmin(req);
+  if (gate.error) return gate.error;
+
   try {
     console.log('Starting R2 cleanup process...');
 
@@ -99,7 +106,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    try { await writeAuditLog(req, await getUserFromRequest(req), 'videos.cleanup', 'r2', { orphaned: deleteResults.successful, failed: deleteResults.failed }); } catch {}
+    try { await writeAuditLog(req, gate.user, 'videos.cleanup', 'r2',{ orphaned: deleteResults.successful, failed: deleteResults.failed }); } catch {}
     return NextResponse.json({
       success: true,
       message: 'R2 cleanup completed',
@@ -129,6 +136,9 @@ export async function POST(req: NextRequest) {
 
 // GET endpoint to preview what would be deleted without actually deleting
 export async function GET(req: NextRequest) {
+  const gate = await requireAdmin(req);
+  if (gate.error) return gate.error;
+
   try {
     console.log('Starting R2 cleanup preview...');
 
@@ -183,7 +193,7 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    try { await writeAuditLog(req, await getUserFromRequest(req), 'videos.cleanup.preview', 'r2', { orphaned: orphanedFiles.length, valid: validFiles.length }); } catch {}
+    try { await writeAuditLog(req, gate.user, 'videos.cleanup.preview', 'r2',{ orphaned: orphanedFiles.length, valid: validFiles.length }); } catch {}
     return NextResponse.json({
       preview: true,
       summary: {
