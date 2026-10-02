@@ -167,7 +167,8 @@ better (each had an unused request parameter).
   this whole class of misread. Today that costs four dead fallbacks in the
   permission code and `route-new.ts`.
 - Reads were not swept. The customer leak turned up by chance; a sweep of
-  GET handlers for private data is owed.
+  GET handlers for private data is owed. Swept later the same day:
+  `2026-10-02-read-routes.md`.
 - `POST /api/orders` takes orders from the public checkout and writes
   `customers` and `orders` rows; worth a look at what stops invented ones.
 - The Loop fan routes were left open as fan flows; their own code and pass
