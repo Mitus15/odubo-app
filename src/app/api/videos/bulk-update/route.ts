@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 export const runtime = 'edge';
 import { executeQuery } from '@/lib/db';
+import { requireAdmin } from '@/lib/api/requireAdmin';
 
 export async function PATCH(req: NextRequest) {
+  const gate = await requireAdmin(req);
+  if (gate.error) return gate.error;
+
   try {
     const body = await req.json() as { ids: string[]; status: string };
     

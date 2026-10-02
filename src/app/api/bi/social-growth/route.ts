@@ -1,6 +1,7 @@
 import { queryDatabase, executeQuery } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 import type { SocialSnapshotInput, SocialPlatform } from '@/types/bi';
+import { requireAdmin } from '@/lib/api/requireAdmin';
 
 export const runtime = 'nodejs';
 
@@ -128,6 +129,9 @@ export async function GET(req: NextRequest) {
 
 // POST /api/bi/social-growth - Add social snapshot
 export async function POST(req: NextRequest) {
+  const gate = await requireAdmin(req);
+  if (gate.error) return gate.error;
+
   try {
     const body = (await req.json()) as SocialSnapshotInput;
 

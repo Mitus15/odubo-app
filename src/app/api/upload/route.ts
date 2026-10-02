@@ -3,12 +3,16 @@ export const runtime = 'edge';
 import { uploadFile, uploadFileOrganized, uploadWithKey } from '@/worker/upload';
 import { FileOrganizationOptions, validateFileType, FileType } from '@/lib/fileOrganization';
 import { music, toSlug, sanitizeFilename } from '@/lib/storage/pathGenerators';
+import { requireAdmin } from '@/lib/api/requireAdmin';
 
 // Note: Node-specific modules (ffmpeg-static, os, path, fs, child_process)
 // are not available in the Edge runtime. Transcoding is handled by a
 // separate Node-compatible worker/service. This endpoint only uploads.
 
 export async function POST(req: NextRequest) {
+  const gate = await requireAdmin(req);
+  if (gate.error) return gate.error;
+
   try {
     const formData = await req.formData();
     const file = formData.get('file') as File;

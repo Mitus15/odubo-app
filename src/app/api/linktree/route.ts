@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { queryDatabase } from '@/lib/db';
 import type { LinkTreeItem } from '@/types/linktree';
+import { requireAdmin } from '@/lib/api/requireAdmin';
 
 /**
  * GET /api/linktree
@@ -53,6 +54,9 @@ export async function GET() {
  * Create a new link (admin only)
  */
 export async function POST(request: NextRequest) {
+  const gate = await requireAdmin(request);
+  if (gate.error) return gate.error;
+
   try {
     const body = await request.json() as {
       title?: string;

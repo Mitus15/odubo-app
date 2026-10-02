@@ -1,6 +1,7 @@
 import { queryDatabase, executeQuery } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 import type { ProductCostInput } from '@/types/bi';
+import { requireAdmin } from '@/lib/api/requireAdmin';
 
 export const runtime = 'nodejs';
 
@@ -36,6 +37,9 @@ export async function GET(req: NextRequest) {
 
 // POST /api/bi/product-costs - Add product cost
 export async function POST(req: NextRequest) {
+  const gate = await requireAdmin(req);
+  if (gate.error) return gate.error;
+
   try {
     const body = (await req.json()) as ProductCostInput;
 
@@ -88,6 +92,9 @@ export async function POST(req: NextRequest) {
 
 // PUT /api/bi/product-costs - Update product cost
 export async function PUT(req: NextRequest) {
+  const gate = await requireAdmin(req);
+  if (gate.error) return gate.error;
+
   try {
     const body = await req.json() as { id: string } & Partial<ProductCostInput>;
 
@@ -139,6 +146,9 @@ export async function PUT(req: NextRequest) {
 
 // DELETE /api/bi/product-costs - Delete product cost
 export async function DELETE(req: NextRequest) {
+  const gate = await requireAdmin(req);
+  if (gate.error) return gate.error;
+
   try {
     const url = new URL(req.url);
     const id = url.searchParams.get('id');

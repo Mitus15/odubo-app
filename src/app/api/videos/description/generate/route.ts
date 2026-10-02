@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { callGeminiMultimodal, GeminiPart } from '@/lib/gemini';
 import { callDeepSeekWithRetry } from '@/lib/deepseek';
 import { queryDatabase } from '@/lib/db';
+import { requireAdmin } from '@/lib/api/requireAdmin';
 
 export const runtime = 'nodejs';
 
@@ -31,6 +32,9 @@ async function fetchImageAsBase64(url: string): Promise<string | null> {
 }
 
 export async function POST(request: NextRequest) {
+  const gate = await requireAdmin(request);
+  if (gate.error) return gate.error;
+
   try {
     const body: any = await request.json();
     let { title, category, mood, type, existingDescription, videoId, uid } = body;

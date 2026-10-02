@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAdmin } from '@/lib/api/requireAdmin';
 
 export const runtime = 'nodejs';
 
@@ -6,6 +7,9 @@ type ClipEntry = { id: number; title?: string | null; parentId?: number | null; 
 const counts = new Map<number, ClipEntry>();
 
 export async function POST(req: NextRequest) {
+  const gate = await requireAdmin(req);
+  if (gate.error) return gate.error;
+
   try {
     const body = await req.json().catch(() => ({}));
     const id = Number(body?.id);

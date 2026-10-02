@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { queryDatabase, executeQuery } from '@/lib/db';
+import { requireCronOrAdmin } from '@/lib/api/requireAdmin';
 
 export const runtime = 'edge';
 
@@ -17,6 +18,9 @@ export const runtime = 'edge';
  * Run weekly via cron scheduler.
  */
 export async function POST(request: NextRequest) {
+  const gate = await requireCronOrAdmin(request);
+  if (gate.error) return gate.error;
+
   const startTime = Date.now();
   let cohortsProcessed = 0;
 
