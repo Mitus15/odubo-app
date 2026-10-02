@@ -52,6 +52,7 @@ jest.mock('@/lib/db', () => ({
 let mockUser: { userId: string; is_admin?: boolean } | null = null;
 jest.mock('@/lib/auth', () => ({
   getUserFromRequest: async () => mockUser,
+  verifyUserFromRequest: async () => mockUser,
   isAdminUser: (user: { is_admin?: boolean } | null) => Boolean(user?.is_admin),
 }));
 jest.mock('@/lib/rateLimit', () => ({ rateLimit: async () => ({ allowed: true }) }));
@@ -223,6 +224,7 @@ describe('GET /api/arsenal/sync, going live', () => {
 
 describe('POST /api/arsenal/sync-from-stream', () => {
   beforeEach(() => {
+    mockUser = { userId: 'admin-1', is_admin: true };
     mockDb.exec(`
       DROP TABLE IF EXISTS videos;
       CREATE TABLE videos (
@@ -238,9 +240,7 @@ describe('POST /api/arsenal/sync-from-stream', () => {
     const video = (uid: string) => ({ uid, meta: { name: uid }, readyToStream: true, status: { state: 'ready' } });
     // INSERT OR IGNORE is there for the same video arriving twice in one run.
     mockStreamVideos = [video('sky'), video('news-peak'), video('sky')];
-    const res = await syncFromStream(
-      new Request('http://localhost/api/arsenal/sync-from-stream', { method: 'POST', headers: { authorization: 'Bearer admin' } }),
-    );
+    const res = await syncFromStream(send('POST', '/api/arsenal/sync-from-stream'));
     expect(await res.json()).toMatchObject({ synced: 2, ignored: 1 });
     expect(mockDb.prepare('SELECT uid FROM videos ORDER BY uid').all()).toEqual([{ uid: 'news-peak' }, { uid: 'sky' }]);
   });
