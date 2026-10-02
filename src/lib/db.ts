@@ -77,14 +77,25 @@ export async function executeQuery(sql: string, params: any[] = []) {
 }
 
 /**
- * How many rows a write touched. executeQuery returns D1's whole response
- * ({ result: [{ results, success, meta }], success, errors, messages }), so the
- * count lives at result[0].meta.changes; there is no `changes` at the top.
+ * The statement's meta in what executeQuery returns. That is D1's whole
+ * response ({ result: [{ results, success, meta }], success, errors, messages }),
+ * so nothing about the write (changes, last_row_id) sits at the top.
  */
+function statementMeta(response: unknown): { changes?: unknown; last_row_id?: unknown } | undefined {
+  const envelope = response as { result?: { meta?: { changes?: unknown; last_row_id?: unknown } }[] } | null | undefined;
+  return envelope?.result?.[0]?.meta;
+}
+
+/** How many rows a write touched (result[0].meta.changes). */
 export function changedRows(response: unknown): number {
-  const envelope = response as { result?: { meta?: { changes?: unknown } }[] } | null | undefined;
-  const changes = envelope?.result?.[0]?.meta?.changes;
+  const changes = statementMeta(response)?.changes;
   return typeof changes === 'number' ? changes : 0;
+}
+
+/** The rowid an INSERT wrote, which is the new `id` of an INTEGER PRIMARY KEY table (result[0].meta.last_row_id). */
+export function lastRowId(response: unknown): number | null {
+  const rowId = statementMeta(response)?.last_row_id;
+  return typeof rowId === 'number' ? rowId : null;
 }
 
 export async function queryDatabase(sql: string, params: any[] = []) {
