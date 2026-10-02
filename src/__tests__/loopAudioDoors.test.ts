@@ -313,3 +313,32 @@ describe('GET /api/media/audio/[...key]', () => {
     expect((await media('warehouse/ls/other-side.hls/master.m3u8')).status).toBe(302);
   });
 });
+
+// next.config.ts gave every /api/media response a public s-maxage, which
+// replaced the route's own private header: a CDN could keep an admin's
+// presigned redirect to an unreleased track and hand it to the next stranger.
+describe('no shared cache in front of the media proxy', () => {
+  // The two source forms next.config.ts uses: `:path*` and `(a|b)` groups.
+  const matches = (source: string, path: string) =>
+    new RegExp(`^${source.replace(/\./g, '\\.').replace(/:path\*/g, '.*')}$`).test(path);
+
+  it('reads a rule the way Next does', () => {
+    expect(matches('/api/media/:path*', '/api/media/audio/warehouse/a.m4a')).toBe(true);
+    expect(matches('/:path*.(png|jpg)', '/api/media/audio/warehouse/cover.jpg')).toBe(true);
+    expect(matches('/:path*.(png|jpg)', '/api/media/audio/warehouse/a.m4a')).toBe(false);
+  });
+
+  it('leaves Cache-Control to the routes, whose answer depends on who asks', async () => {
+    const { default: config } = await import('../../next.config');
+    const rules = await config.headers!();
+    for (const path of [
+      `${PROXY}warehouse/ls/news-peak.web.m4a`,
+      `${PROXY}warehouse/ls/news-peak.hls/master.m3u8`,
+      `${PROXY}warehouse/ls/news-peak.hls/seg_0_007.aac`,
+      '/api/media/all',
+    ]) {
+      const set = rules.filter((r) => matches(r.source, path)).flatMap((r) => r.headers.map((h) => h.key.toLowerCase()));
+      expect(set).not.toContain('cache-control');
+    }
+  });
+});
