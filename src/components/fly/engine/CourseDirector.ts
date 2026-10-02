@@ -66,6 +66,18 @@ export class CourseDirector {
     return this.sections.get(k);
   }
 
+  /**
+   * Replace section k with hand-placed stone. For tests (a pillar exactly
+   * here, a hole exactly there); a course never needs it.
+   */
+  inject(k: number, section: Section): void {
+    this.drop(k);
+    this.sections.set(k, { ...section, bottom: Infinity });
+    this.added.push(...section.forms);
+    if (k < this.low) this.low = k;
+    if (k > this.high) this.high = k;
+  }
+
   floor(k: number): Floor | null {
     return this.sections.get(k)?.floor ?? null;
   }
