@@ -23,7 +23,10 @@ function parseJSON<T>(str: string | null | undefined, fallback: T): T {
  * GET /api/social/studio/slots
  * List all posting slots
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const gate = await requireAdmin(request);
+  if (gate.error) return gate.error;
+
   try {
     const rows = await queryDatabase(
       `SELECT id, day_of_week, time, timezone, platforms, is_active, label, created_at

@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { queryDatabase, executeQuery } from '@/lib/db';
+import { requireAdmin } from '@/lib/api/requireAdmin';
 
 export const runtime = 'edge';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const gate = await requireAdmin(req);
+  if (gate.error) return gate.error;
+
   try {
     const results = await queryDatabase('SELECT * FROM orders ORDER BY created_at DESC', []);
     return NextResponse.json({ success: true, orders: results || [] });

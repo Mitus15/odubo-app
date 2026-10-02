@@ -29,7 +29,10 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const gate = await requireAdmin(req);
+  if (gate.error) return gate.error;
+
   const rows = Array.from(counts.values()).sort((a, b) => b.count - a.count || a.id - b.id);
   return NextResponse.json({ rows, total: rows.length });
 }

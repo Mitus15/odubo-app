@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { queryDatabase } from '@/lib/db';
+import { requireAdmin } from '@/lib/api/requireAdmin';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -15,6 +16,9 @@ export const runtime = 'nodejs';
  * - compare: Comma-separated sources to compare (e.g., 'instagram,tiktok')
  */
 export async function GET(req: NextRequest) {
+  const gate = await requireAdmin(req);
+  if (gate.error) return gate.error;
+
   try {
     const { searchParams } = new URL(req.url);
     const weeks = parseInt(searchParams.get('weeks') || '12', 10);

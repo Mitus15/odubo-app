@@ -10,6 +10,9 @@ export const runtime = 'edge';
  * Supports filtering by entity_id and status
  */
 export async function GET(request: NextRequest) {
+  const gate = await requireAdmin(request);
+  if (gate.error) return gate.error;
+
   try {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');

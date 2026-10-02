@@ -20,7 +20,10 @@ interface Entity {
  * GET /api/entities
  * List all entities (brands)
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const gate = await requireAdmin(request);
+  if (gate.error) return gate.error;
+
   try {
     const entities = await queryDatabase(
       `SELECT * FROM entities WHERE is_active = 1 ORDER BY name ASC`,

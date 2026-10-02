@@ -7,6 +7,9 @@ export const runtime = 'nodejs';
 
 // GET /api/bi/product-costs - List product costs
 export async function GET(req: NextRequest) {
+  const gate = await requireAdmin(req);
+  if (gate.error) return gate.error;
+
   try {
     const url = new URL(req.url);
     const productHandle = url.searchParams.get('product_handle');

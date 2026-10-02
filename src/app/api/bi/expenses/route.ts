@@ -7,6 +7,9 @@ export const runtime = 'nodejs';
 
 // GET /api/bi/expenses - List expenses with optional filtering
 export async function GET(req: NextRequest) {
+  const gate = await requireAdmin(req);
+  if (gate.error) return gate.error;
+
   try {
     const url = new URL(req.url);
 

@@ -109,6 +109,9 @@ export async function POST(request: NextRequest) {
  * Get sync status and history
  */
 export async function GET(request: NextRequest) {
+  const gate = await requireAdmin(request);
+  if (gate.error) return gate.error;
+
   try {
     const { searchParams } = new URL(request.url);
     const limit = Math.min(parseInt(searchParams.get('limit') || '10', 10), 50);

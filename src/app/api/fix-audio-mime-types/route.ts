@@ -15,7 +15,10 @@ const r2 = new S3Client({
 
 const bucketName = process.env.CLOUDFLARE_R2_BUCKET_NAME!;
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const gate = await requireAdmin(request);
+  if (gate.error) return gate.error;
+
   return handleRequest();
 }
 

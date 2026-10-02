@@ -336,7 +336,10 @@ export async function POST(request: NextRequest) {
  * GET /api/social/posts/sync
  * Get sync status / last sync time
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const gate = await requireAdmin(request);
+  if (gate.error) return gate.error;
+
   try {
     const result = await queryDatabase(
       `SELECT MAX(last_synced_at) as last_sync FROM social_posts WHERE last_synced_at IS NOT NULL`

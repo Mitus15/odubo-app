@@ -92,6 +92,9 @@ export async function POST(req: NextRequest) {
  * List recent reports or get a specific report by ID
  */
 export async function GET(req: NextRequest) {
+  const gate = await requireAdmin(req);
+  if (gate.error) return gate.error;
+
   try {
     const { searchParams } = new URL(req.url);
     const reportId = searchParams.get('id');
