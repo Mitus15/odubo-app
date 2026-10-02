@@ -122,7 +122,6 @@ export class FallEngine {
   private holdY = 0;
   private cursor: InputCursor | null = null;
   private watches = new Map<number, KissWatch>();
-  private gatesSeen = new Set<number>();
   // Per-step scratch, so the step allocates nothing.
   private nearest = Infinity;
   private hugCloseness = 0;
@@ -146,7 +145,6 @@ export class FallEngine {
     this.holdY = 0;
     this.cursor = pilot === 'replay' && replay ? new InputCursor(replay) : null;
     this.watches.clear();
-    this.gatesSeen.clear();
     this.inputs.clear();
     this.trajectory.clear();
     this.director.reset(course);
@@ -324,8 +322,10 @@ export class FallEngine {
       if (this.holdX !== 0) state.aimX = clampArena(state.aimX + this.holdX * keyStep);
       if (this.holdY !== 0) state.aimY = clampArena(state.aimY + this.holdY * keyStep);
     }
-    state.qx = Math.round(state.aimX * quantum);
-    state.qy = Math.round(state.aimY * quantum);
+    // + 0 turns −0 into 0: an aim a hair left of centre rounds to −0, which
+    // equals 0 but is other bits, in the state and in a saved log.
+    state.qx = Math.round(state.aimX * quantum) + 0;
+    state.qy = Math.round(state.aimY * quantum) + 0;
     this.inputs.record(state.tick, state.qx, state.qy);
   }
 
@@ -341,7 +341,9 @@ export class FallEngine {
     const clearance = distance - FALL.playerRadius;
 
     if (form.role === 'pillar') {
-      if (clearance < FLOW.hugBand) {
+      // A hug is falling alongside it, not dropping onto its top or out of its foot.
+      const along = state.s - form.s;
+      if (clearance < FLOW.hugBand && (along < 0 ? -along : along) <= form.hs) {
         const closeness = 1 - (clearance < 0 ? 0 : clearance) / FLOW.hugBand;
         if (closeness > this.hugCloseness) this.hugCloseness = closeness;
       }
@@ -360,11 +362,10 @@ export class FallEngine {
     if (until > watch.until) watch.until = until;
   }
 
+  /** He only ever falls (speed never drops below the stumble floor), so each gate is crossed once. */
   private checkGate(form: Form): void {
     const state = this.state;
-    if (this.gatesSeen.has(form.id)) return;
     if (state.prevS < form.s && state.s >= form.s) {
-      this.gatesSeen.add(form.id);
       const dx = state.x - form.x;
       const dy = state.y - form.y;
       const inner = form.hx - FALL.playerRadius;

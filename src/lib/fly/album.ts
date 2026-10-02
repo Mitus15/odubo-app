@@ -108,25 +108,25 @@ interface LevelRecipe {
  */
 const RECIPES: Record<string, LevelRecipe> = {
   // Plates and pillars, generous: learning to fall.
-  '1984': { target: 72, medals: [34, 46, 58], mix: { plates: 5, open: 1 }, pillars: 0.45, shards: 0.15, gates: 0.3 },
+  '1984': { target: 72, medals: [33, 51, 59], mix: { plates: 5, open: 1 }, pillars: 0.45, shards: 0.15, gates: 0.3 },
   // The grid arrives.
-  hallucinogen: { target: 70, medals: [34, 38, 45], mix: { plates: 3, grid: 3, open: 1 }, pillars: 0.4, shards: 0.35, gates: 0.25 },
+  hallucinogen: { target: 70, medals: [33, 35, 47], mix: { plates: 3, grid: 3, open: 1 }, pillars: 0.4, shards: 0.35, gates: 0.25 },
   // One way through: walls with a single door, gates to keep you honest.
-  'in-the-court': { target: 72, medals: [34, 40, 48], mix: { oneway: 4, plates: 2, grid: 1, open: 0.6 }, pillars: 0.6, shards: 0.2, gates: 0.6 },
+  'in-the-court': { target: 72, medals: [33, 42, 46], mix: { oneway: 4, plates: 2, grid: 1, open: 0.6 }, pillars: 0.6, shards: 0.2, gates: 0.6 },
   // Lattices: the highest altitude, The Game's strongest pull.
-  newspeak: { target: 68, medals: [34, 38, 45], mix: { grid: 4, plates: 2, oneway: 1, open: 0.6 }, pillars: 0.4, shards: 0.3, gates: 0.35 },
+  newspeak: { target: 68, medals: [33, 44, 54], mix: { grid: 4, plates: 2, oneway: 1, open: 0.6 }, pillars: 0.4, shards: 0.3, gates: 0.35 },
   // Pillar forests.
-  rap: { target: 70, medals: [34, 44, 54], mix: { plates: 3, grid: 1, crack: 1, open: 0.6 }, pillars: 1, shards: 0.3, gates: 0.3 },
+  rap: { target: 70, medals: [33, 36, 43], mix: { plates: 3, grid: 1, crack: 1, open: 0.6 }, pillars: 1, shards: 0.3, gates: 0.3 },
   // Cracks, and open air between them.
-  makunahea: { target: 72, medals: [34, 44, 53], mix: { crack: 4, plates: 2, open: 2 }, pillars: 0.3, shards: 0.2, gates: 0.5 },
+  makunahea: { target: 72, medals: [33, 40, 47], mix: { crack: 4, plates: 2, open: 2 }, pillars: 0.3, shards: 0.2, gates: 0.5 },
   // Still air: sparse, long and quiet.
-  'the-other-side': { target: 85, medals: [34, 40, 50], mix: { plates: 2, oneway: 1, open: 4 }, pillars: 0.45, shards: 0.1, gates: 0.95 },
+  'the-other-side': { target: 85, medals: [32, 34, 36], mix: { plates: 2, oneway: 1, open: 4 }, pillars: 0.45, shards: 0.1, gates: 0.95 },
   // The wrestle: everything, tightest.
-  'the-mind-pt-1': { target: 62, medals: [34, 38, 45], mix: { plates: 2, grid: 2, oneway: 2, crack: 2, open: 0.5 }, pillars: 0.8, shards: 0.6, gates: 0.3, difficulty: 0.08 },
+  'the-mind-pt-1': { target: 62, medals: [33, 41, 47], mix: { plates: 2, grid: 2, oneway: 2, crack: 2, open: 0.5 }, pillars: 0.8, shards: 0.6, gates: 0.3, difficulty: 0.08 },
   // Coming out of the Mind.
-  'the-mind-pt-2': { target: 68, medals: [34, 38, 45], mix: { grid: 3, plates: 2, crack: 1, open: 1 }, pillars: 0.7, shards: 0.4, gates: 0.35 },
+  'the-mind-pt-2': { target: 68, medals: [33, 41, 46], mix: { grid: 3, plates: 2, crack: 1, open: 1 }, pillars: 0.7, shards: 0.4, gates: 0.35 },
   // One way out, narrowing, then the ground.
-  'ghost-world': { target: 72, medals: [34, 40, 47], mix: { oneway: 5, plates: 1, open: 1 }, pillars: 0.35, shards: 0.2, gates: 0.5, difficulty: 0.05 },
+  'ghost-world': { target: 72, medals: [33, 47, 59], mix: { oneway: 3, plates: 2.5, open: 1 }, pillars: 0.35, shards: 0.2, gates: 0.7, difficulty: 0.05 },
 };
 
 const LAG = new Set(['1984', 'newspeak', 'the-mind-pt-1']);

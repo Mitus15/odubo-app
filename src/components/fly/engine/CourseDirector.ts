@@ -71,8 +71,12 @@ export class CourseDirector {
    * here, a hole exactly there); a course never needs it.
    */
   inject(k: number, section: Section): void {
+    // Anything between what is built and k is built first, so there is never a gap.
+    for (let between = this.high + 1; between < k; between++) this.build(between);
     this.drop(k);
-    this.sections.set(k, { ...section, bottom: Infinity });
+    let bottom = this.course.floorS(k + 1);
+    for (const form of section.forms) bottom = Math.max(bottom, form.s + form.hs);
+    this.sections.set(k, { ...section, bottom });
     this.added.push(...section.forms);
     if (k < this.low) this.low = k;
     if (k > this.high) this.high = k;

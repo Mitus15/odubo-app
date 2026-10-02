@@ -73,6 +73,15 @@
       ],
       "port": 3126,
       "autoPort": true
+    },
+    {
+      "name": "fly-fall",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "cd /Users/maniodubo/Documents/Apps/odubo/.claude/worktrees/fly-the-fall && npx next dev -H 0.0.0.0 -p 3127"
+      ],
+      "port": 3127
     }
   ]
 }

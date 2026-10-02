@@ -3,10 +3,8 @@
 import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import type { Region } from '../engine/regions';
-
-/** Where the sun sits: ahead, high and to the left, so the stone is backlit. */
-export const SUN_DIRECTION = new THREE.Vector3(-0.38, 0.5, -0.78).normalize();
+import type { LiveLook } from './look';
+import { useFlyRuntime } from '../runtime';
 
 const vertexShader = /* glsl */ `
   varying vec3 vDirection;
@@ -19,34 +17,39 @@ const vertexShader = /* glsl */ `
 
 const fragmentShader = /* glsl */ `
   uniform vec3 uZenith;
-  uniform vec3 uHorizon;
+  uniform vec3 uField;
   uniform vec3 uNadir;
-  uniform vec3 uSun;
-  uniform vec3 uSunDirection;
+  uniform vec3 uEarth;
+  uniform float uEarthRadius;
   varying vec3 vDirection;
   void main() {
     vec3 d = normalize(vDirection);
     float h = d.y;
+    // Heaven above, the song's air all around, the deep below.
     vec3 color = h > 0.0
-      ? mix(uHorizon, uZenith, pow(clamp(h, 0.0, 1.0), 0.6))
-      : mix(uHorizon, uNadir, pow(clamp(-h, 0.0, 1.0), 0.5));
-    // A band of haze sits on the horizon, where the fog meets the sky.
-    color = mix(color, uHorizon, exp(-abs(h) * 16.0) * 0.7);
-    float sun = max(dot(d, uSunDirection), 0.0);
-    color += uSun * (pow(sun, 420.0) * 0.9 + pow(sun, 12.0) * 0.18);
+      ? mix(uField, uZenith, pow(clamp(h, 0.0, 1.0), 0.55))
+      : mix(uField, uNadir, pow(clamp(-h, 0.0, 1.0), 0.8));
+    // The light he was sent from: straight up.
+    float heaven = max(h, 0.0);
+    color += vec3(1.0, 0.97, 0.9) * (pow(heaven, 260.0) * 1.2 + pow(heaven, 9.0) * 0.22);
+    // The Earth, straight down: small at the start of the album, filling the view at the end.
+    float angle = acos(clamp(-h, -1.0, 1.0));
+    float disc = 1.0 - smoothstep(uEarthRadius * 0.92, uEarthRadius * 1.08, angle);
+    float haze = smoothstep(uEarthRadius * 0.4, uEarthRadius * 1.0, angle) * 0.55;
+    color = mix(color, mix(uEarth, uField, haze), disc);
     gl_FragColor = vec4(color, 1.0);
     #include <colorspace_fragment>
   }
 `;
 
-export function createSkyMaterial(region: Region): THREE.ShaderMaterial {
+export function createSkyMaterial(look: LiveLook, earthRadius = { value: 0.04 }): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
     uniforms: {
-      uZenith: { value: new THREE.Color(region.sky.zenith) },
-      uHorizon: { value: new THREE.Color(region.sky.horizon) },
-      uNadir: { value: new THREE.Color(region.sky.nadir) },
-      uSun: { value: new THREE.Color(region.sky.sun) },
-      uSunDirection: { value: SUN_DIRECTION.clone() },
+      uZenith: { value: look.colors.zenith },
+      uField: { value: look.colors.field },
+      uNadir: { value: look.colors.nadir },
+      uEarth: { value: look.colors.earth },
+      uEarthRadius: earthRadius,
     },
     vertexShader,
     fragmentShader,
@@ -56,14 +59,26 @@ export function createSkyMaterial(region: Region): THREE.ShaderMaterial {
   });
 }
 
+/** The Earth's angular radius (radians) this far through the album, 0..1. */
+export function earthRadiusAt(progress: number): number {
+  const start = THREE.MathUtils.degToRad(2);
+  const end = THREE.MathUtils.degToRad(40);
+  const p = Math.min(1, Math.max(0, progress));
+  return start + (end - start) * p * p;
+}
+
 /** The sky dome. It travels with the camera, so it is always infinitely far. */
-export function Sky({ region }: { region: Region }) {
-  const material = useMemo(() => createSkyMaterial(region), [region]);
-  const geometry = useMemo(() => new THREE.SphereGeometry(1000, 32, 16), []);
+export function Sky() {
+  const runtime = useFlyRuntime();
+  const earthRadius = useMemo(() => ({ value: earthRadiusAt(0) }), []);
+  const material = useMemo(() => createSkyMaterial(runtime.look, earthRadius), [runtime, earthRadius]);
+  const geometry = useMemo(() => new THREE.SphereGeometry(1000, 32, 24), []);
   const dome = useRef<THREE.Mesh>(null);
 
-  useFrame(({ camera }) => {
+  useFrame(({ camera }, delta) => {
     dome.current?.position.copy(camera.position);
+    const target = earthRadiusAt(runtime.albumProgress);
+    earthRadius.value += (target - earthRadius.value) * (1 - Math.exp(-delta * 0.8));
   });
 
   return <mesh ref={dome} geometry={geometry} material={material} renderOrder={-1} frustumCulled={false} />;

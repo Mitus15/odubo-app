@@ -15,6 +15,13 @@ const FlyGame = dynamic(() => import('./FlyGame'), {
   ),
 });
 
-export default function FlyClient() {
-  return <FlyGame />;
+export interface FlyClientProps {
+  /** Signed links to each song, by slug. A song with no link plays silent. */
+  audio: Record<string, string>;
+  /** Each chapter's field colour, by slug; missing ones use the album's defaults. */
+  fields: Record<string, string>;
+}
+
+export default function FlyClient(props: FlyClientProps) {
+  return <FlyGame {...props} />;
 }

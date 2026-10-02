@@ -9,6 +9,8 @@ export const FIRST_FLOOR = 150;
 export const PATH_MARGIN = 3;
 /** Every section composer leaves this much air around the safe path's line (m). */
 export const CORRIDOR = 2.6;
+/** Room left for snapping a step to the grid without breaking the shift bound (m). */
+export const SNAP_ROOM = 0.08;
 
 export interface PathPoint {
   x: number;
@@ -118,20 +120,26 @@ export class Course {
     const rng = this.pathRng;
     const limit = FALL.arena - PATH_MARGIN;
     const intensity = this.intensityAt(k);
-    const length = this.shift * between(rng, 0.2, 1) * (0.55 + 0.45 * intensity);
+    const length = Math.max(0, this.shift - SNAP_ROOM) * between(rng, 0.2, 1) * (0.55 + 0.45 * intensity);
     const angle = 2 * DPI * rng();
     let dx = length * dcos(angle);
     let dy = length * dsin(angle);
     // Bounce off the edges rather than slide along them: the step keeps its length.
     if (from.x + dx > limit || from.x + dx < -limit) dx = -dx;
     if (from.y + dy > limit || from.y + dy < -limit) dy = -dy;
+    // On a 10 cm grid, like every hole edge, so floors never cut into slivers.
     this.path.push({
-      x: clampTo(from.x + dx, limit),
-      y: clampTo(from.y + dy, limit),
+      x: snap(clampTo(from.x + dx, limit)),
+      y: snap(clampTo(from.y + dy, limit)),
     });
   }
 }
 
 function clampTo(v: number, limit: number): number {
   return v < -limit ? -limit : v > limit ? limit : v;
+}
+
+/** The nearest 10 cm. */
+export function snap(v: number): number {
+  return Math.round(v * 10) / 10 + 0;
 }

@@ -1,6 +1,6 @@
 import { FALL, holeSizeFor } from '@/lib/fly/rules';
 import type { PatternName } from '@/lib/fly/album';
-import { CORRIDOR, type Course, type PathPoint } from './course';
+import { CORRIDOR, snap, type Course, type PathPoint } from './course';
 import { dcos, dsin, DPI } from './detmath';
 import { cutFloor, holesOverlap } from './floor';
 import { between, chance, pick, rngFor, type Rng } from './rng';
@@ -116,6 +116,9 @@ class SectionBuilder {
     const s = this.top;
     const hs = Math.min(MAX_FLOOR_HALF, Math.max(FALL.minThickness / 2, thickness / 2));
     const group = this.k * ID_STRIDE;
+    // One floor is one stone: its pieces share a shade, so the cuts never show.
+    const shade = rng();
+    const accent = rng() < 0.1;
     for (const piece of cutFloor(reach, holes)) {
       const form = this.make('block', 'floor', {
         x: (piece.x0 + piece.x1) / 2,
@@ -126,13 +129,23 @@ class SectionBuilder {
         hs,
       });
       form.group = group;
+      form.shade = shade;
+      form.accent = accent;
       this.forms.push(form);
     }
     return { id: this.k, s, hs, holes };
   }
 
+  /**
+   * A hole on the grid: centres on 10 cm, half sizes on 5 cm, so any two hole
+   * edges either line up or stand at least 5 cm apart and a floor never cuts
+   * into slivers. The safe hole's half sizes round up, never below its minimum.
+   */
   private hole(x: number, y: number, hw: number, hh: number, safe: boolean): Hole {
-    return { x, y, hw, hh, size: holeSizeFor(hw * 2, hh * 2), safe };
+    const half = (v: number) => (safe ? Math.ceil(v * 20 - 1e-9) : Math.round(v * 20)) / 20;
+    const w = half(hw);
+    const h = half(hh);
+    return { x: snap(x), y: snap(y), hw: w, hh: h, size: holeSizeFor(w * 2, h * 2), safe };
   }
 
   /** Scatter extra holes off the path: the choices. Never on top of another hole. */
@@ -167,30 +180,39 @@ class SectionBuilder {
 
   /**
    * A lattice: square cells on a pitch, one of them centred on the safe path.
-   * Every cell is a way down, not a risk, so every cell pays as a wide hole;
-   * the lattice's reward is in its bars, for whoever kisses them.
+   * An open cell is a way down, not a risk, so it pays as a wide hole; but some
+   * cells are pinched down to narrow ones, and those pay as narrow holes do.
+   * The bars are there for whoever kisses them.
    */
   private composeGrid(holes: Hole[]): void {
     const { rng, intensity, from } = this;
     const minCell = safeWidth(1);
-    const cell = Math.max(minCell, lerp(6.2, 3.8, intensity) * between(rng, 0.95, 1.1));
-    const bar = between(rng, 0.8, 1.3);
+    // Cells and bars on the 10 cm grid, like every other hole.
+    const cell = Math.ceil(Math.max(minCell, lerp(6.2, 3.8, intensity) * between(rng, 0.95, 1.1)) * 10 - 1e-9) / 10;
+    const bar = snap(between(rng, 0.8, 1.3));
     const pitch = cell + bar;
     const span = FALL.arena + 2;
     const drop = lerp(0.1, 0.35, intensity);
+    const pinch = lerp(0.15, 0.35, intensity);
     const first = (centre: number) => centre - Math.floor((centre + span) / pitch) * pitch;
     const cellHole = (x: number, y: number, safe: boolean): Hole => ({
-      x,
-      y,
+      x: snap(x),
+      y: snap(y),
       hw: cell / 2,
       hh: cell / 2,
       size: 'wide',
       safe,
     });
-    for (let x = first(from.x); x <= span; x += pitch) {
-      for (let y = first(from.y); y <= span; y += pitch) {
+    for (let i = 0, x = first(from.x); x <= span; i++, x = first(from.x) + i * pitch) {
+      for (let j = 0, y = first(from.y); y <= span; j++, y = first(from.y) + j * pitch) {
         const isSafe = Math.abs(x - from.x) < 1e-6 && Math.abs(y - from.y) < 1e-6;
         if (!isSafe && chance(rng, drop)) continue;
+        if (!isSafe && chance(rng, pinch)) {
+          // A pinched cell: the same centre, a narrow way through.
+          const half = between(rng, 1.0, 1.35);
+          holes.push(this.hole(x, y, half, half, false));
+          continue;
+        }
         holes.push(cellHole(x, y, isSafe));
       }
     }

@@ -67,11 +67,14 @@ export class Trajectory {
   readonly ys: number[] = [];
   readonly ss: number[] = [];
 
-  /** Add the sample for the next SAMPLE_EVERY ticks. */
+  /**
+   * Add the sample for the next SAMPLE_EVERY ticks. `+ 0` turns −0 into 0, as
+   * Int16 does, so a trajectory equals its own decoding bit for bit.
+   */
   push(x: number, y: number, s: number): void {
-    this.xs.push(Math.round(x * 100));
-    this.ys.push(Math.round(y * 100));
-    this.ss.push(Math.round(s * 100));
+    this.xs.push(Math.round(x * 100) + 0);
+    this.ys.push(Math.round(y * 100) + 0);
+    this.ss.push(Math.round(s * 100) + 0);
   }
 
   get count(): number {
@@ -96,7 +99,8 @@ export class Trajectory {
       out.s = this.ss[n - 1] / 100;
       return out;
     }
-    const t = position - i;
+    // Before the first sample (a lagging shadow at the start), hold the first.
+    const t = i < 0 ? 0 : position - i;
     const a = i < 0 ? 0 : i;
     out.x = (this.xs[a] + (this.xs[a + 1] - this.xs[a]) * t) / 100;
     out.y = (this.ys[a] + (this.ys[a + 1] - this.ys[a]) * t) / 100;
