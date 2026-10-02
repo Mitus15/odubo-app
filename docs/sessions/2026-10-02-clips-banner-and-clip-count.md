@@ -1,4 +1,4 @@
-# 2026-10-02 · The /clips debug banner, and the clip count the social sync reports
+# 2026-10-02 · The /clips debug banner, and D1 writes read where D1 puts them
 
 Two small fixes found on 2026-09-29. Committed on branch
 `claude/unruffled-goldstine-331edc`, not merged: main waits on the owner.
@@ -44,19 +44,64 @@ store, not the clip's product: `HomePageClient` never passes
 product on purpose, so this only matters for other clips with a
 `shopify_product_handle`.
 
-## Same misread elsewhere (not fixed here)
+## Later the same day: the same misread everywhere, fixed
 
-Other callers of `executeQuery` from `@/lib/db` read its response at the wrong
-depth. Found by reading the code, not by running it:
+Commits a8940d7 (`lastRowId()` beside `changedRows()` in `src/lib/db.ts`) and
+8610ea7 (the routes). Fifteen reads in thirteen routes looked for a write's
+count or new id at the top of D1's response:
 
-- `src/app/api/likes/route.ts:176` and `:235` read `result.meta.*`. `meta` is
-  not at the top, so the like or unlike is written and the route then throws
-  into its 500. Used by `LikeButton` and `TrackActions`.
-- `src/app/api/arsenal/sync/route.ts:375-378`: the go-live phase never adds
-  to `madePublic`.
-- `src/app/api/arsenal/sync-from-stream/route.ts:170`: `ignored` is always 0;
-  a duplicate counts as synced.
-- `src/app/api/tracks/route.ts:100`: a new track comes back without its id.
+- likes (`src/app/api/likes/route.ts`): a saved like answered 500, and so did
+  an unlike. Now 200, or 404 when there was nothing to unlike. Earlier today
+  this read as a fan-facing bug; it is not. The like tables come only from the
+  manual `POST /api/setup-likes`, `TrackActions` is mounted nowhere, and
+  `LikeButton` renders only on /likes, which nothing links to. The feature is
+  dormant; the fix is for when it wakes.
+- brand-assets albums and social folders: the upload screens create one, then
+  file the upload under the id that comes back. It came back undefined: "upload
+  into a new album" stopped at "Please select or create an album", and an
+  upload into a new folder went in with no folder.
+- brand-assets categories and assets, social content, AI studio profiles and
+  examples: created rows came back without their id.
+- Woda (`src/app/api/arsenal/woda/route.ts`): `generationId` was always null,
+  so feedback on a generation had nothing to attach to.
+- moments clip record: `clip_id` came back undefined.
+- tracks: returned `meta.last_row_id`, a rowid even when read right. A track's
+  id is the UUID the route generates; that is what it returns now.
+- arsenal/sync: the go-live phase never added to `madePublic`.
+- arsenal/sync-from-stream: `ignored` was always 0; a duplicate counted as
+  synced.
+
+**How they were found.** Grep found four. Then two sweeps: typing
+`executeQuery`'s result exactly for one tsc run (34 new errors, restored
+after), and a syntax scan of every property read on its result. The scan
+caught three that casts or `'x' in` checks hid from tsc (both arsenal syncs,
+Woda). Left alone on purpose: `src/lib/hub/permissions.ts` and
+`src/app/api/v2/auth/roles/route.ts` read `result.result[0].results` first,
+with a dead `result.results` fallback, so they are right.
+`src/app/api/tracks/route-new.ts` still has the misread, but it is not a route
+and nothing imports it (dead since 2025-08-24).
+
+**Tests.** `src/__tests__/d1Response.test.ts` (was `d1ChangedRows`) covers both
+helpers. `src/__tests__/d1WriteResults.test.ts` runs six of the routes' own SQL
+against `node:sqlite`, with `executeQuery` answering in D1's shape from what
+SQLite reports; all eight tests fail with the six routes put back to HEAD.
+
+**Verified.** `npx tsc --noEmit`: 850 before and after, the same error list.
+`npm test`: 402 pass (390 + 12 new), the same 2 known failures. ESLint: no
+touched file worse; arsenal/sync 6 → 4 (two `as any` gone).
 
 `src/lib/loop/*` uses `@/lib/loop/db`, whose `executeQuery` returns the meta
-itself, so those reads are right.
+itself, so those reads were right all along.
+
+## Found in passing (not fixed)
+
+- `POST /api/arsenal/sync-from-stream` accepts any `Authorization: Bearer …`
+  (a TODO says the token is never verified). Anyone can make it list
+  Cloudflare Stream and write rows into `videos` (archived, not public).
+- `POST /api/setup-likes` runs its CREATE TABLEs with no auth at all.
+- `AlbumModal` (mounted by `AlbumEditClient` and `AlbumActions`) sends each
+  track to `POST /api/tracks` as FormData; the route reads `req.json()`, so
+  that upload should fail every time. It also expects `trackId`, not `id`.
+- `executeQuery` could return D1's response typed exactly; tsc would then flag
+  this whole class of misread. Today that costs four dead fallbacks in the
+  permission code and `route-new.ts`.
