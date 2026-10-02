@@ -80,12 +80,33 @@ sqlite typings, so the test loads it with `require` and a two-method type.
   row with a NULL status reads "archived" in the response while the rule counts
   it live. Display only.
 
+## Later the same day: the two routes with no login check
+
+Found during the sweep above, gated on the same branch.
+
+- `PATCH /api/videos/bulk-update` set `status` on any videos for anyone, for
+  instance archived the whole library. Nothing in the repo calls it. Gated
+  rather than deleted, in case a tool outside the repo uses it.
+  It stays on the edge runtime: the same `requireAdmin` already runs on edge in
+  the command-center routes.
+- `POST /api/videos/description/generate` spent paid AI calls (Gemini, DeepSeek)
+  for anyone, and read any video by id or uid, hidden ones included, with its
+  transcript and lyrics, into the description it handed back. Its one caller is
+  `POST /api/videos/[id]/process`, which nothing calls any more (the admin
+  upload flow now uses `/api/analyze-video-now`). That route forwards the
+  admin's Bearer token, as its other two steps already required.
+
+Both now begin with `requireAdmin`: 401 without a verified session, 403 for a
+signed-in non-admin.
+
+**Verification.** `tsc` 850, no new errors. `npm test` 419 passed (411 + 8 new),
+the same 2 known failures. The 6 refusal tests fail on the old code; the 2 admin
+tests pass on both. Live on `next dev`: anonymous 401 and non-admin 403 on both
+routes; an admin passes the gate and gets each handler's own 400 (an empty `ids`
+list, an empty body), so the check wrote nothing and called no model.
+
 ## Found in passing, not fixed
 
-- `PATCH /api/videos/bulk-update` has no auth check: anyone can set `status` on
-  any video, for instance archive the whole library. Nothing in `src/` calls it.
-- `POST /api/videos/description/generate` has no auth check and calls paid AI
-  APIs (Gemini, DeepSeek).
 - SocialOps sends `PATCH /api/videos/[id]`, which has no PATCH handler, so
   those calls answer 405.
 - `NEXT_PUBLIC_JWT_SECRET` and `ADMIN_NEXT_PUBLIC_JWT_SECRET` are set in Vercel
