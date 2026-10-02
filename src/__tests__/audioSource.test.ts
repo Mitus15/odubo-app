@@ -180,6 +180,10 @@ describe('mediaKeyOfAudioUrl', () => {
     }
   });
 
+  it('reads the path of a URL on another host, where the scripts put its renditions', () => {
+    expect(mediaKeyOfAudioUrl('https://cdn.example.com/music/x/song.m4a?sig=1')).toBe('music/x/song.m4a');
+  });
+
   it('agrees with the door the stream route opens for a dead-host URL', () => {
     const stored = `https://media.odubo.studio/${KEY}?v=2`;
     expect(resolveAudioSource(stored, ORIGIN).url).toBe(`${ORIGIN}/api/media/audio/${mediaKeyOfAudioUrl(stored)}`);
@@ -238,6 +242,11 @@ describe('mediaKeyBelongsTo', () => {
     const dead = 'https://media.odubo.studio/music/albums/x/tracks/01-a.web.m4a';
     expect(mediaKeyBelongsTo('music/albums/x/tracks/01-a.web.m4a', dead)).toBe(true);
     expect(mediaKeyBelongsTo('music/albums/x/tracks/01-a.hls/master.m3u8', dead)).toBe(true);
+  });
+
+  it("knows the HLS the script writes in our bucket for a track on another host", () => {
+    // transcode_audio_to_hls.ts strips the host and writes beside that path.
+    expect(mediaKeyBelongsTo('music/x/song.hls/master.m3u8', 'https://cdn.example.com/music/x/song.m4a')).toBe(true);
   });
 
   it('is exact: a name that starts the same is another song', () => {

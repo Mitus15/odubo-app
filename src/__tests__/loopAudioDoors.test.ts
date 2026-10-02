@@ -224,6 +224,10 @@ describe('GET /api/albums/[id]', () => {
     expect(tracks.find((t) => t.id === 't-news')?.vocal_stem_url).toBe('https://media.odubo.studio/music/ls/stems/news-peak-vocals.m4a');
   });
 
+  it('gives the admin every track on a bearer token alone', async () => {
+    expect(playable((await album('loop-soul', { bearer: adminToken })).tracks)).toEqual(TRACKS.map(([id]) => id));
+  });
+
   it("gives a pass-holder their own draw before release, and nothing more", async () => {
     const early = { enabled: true, extra: 1 };
     mockAccess = { ...NOBODY, entitled: true, email: 'fan@example.com', early };

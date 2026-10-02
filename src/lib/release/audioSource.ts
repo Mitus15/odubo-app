@@ -209,21 +209,26 @@ export function deriveHlsUrl(audioUrl: string | null | undefined): string | null
 /** The proxy's path, on this origin or written out with any other. */
 const PROXY_PATH = /^(?:https?:\/\/[^/]+)?\/api\/media\/audio\/([^?#]+)/;
 
+/** The path of an absolute URL on any host. */
+const URL_PATH = /^https?:\/\/[^/]+\/([^?#]+)/;
+
 /**
  * The R2 key a stored audio_url names, or null when it names nothing the
- * media proxy serves (another host, a delivery pointer, nothing at all).
+ * media proxy serves (a path outside its prefixes, a delivery pointer,
+ * nothing at all).
  *
  * The audio gate (src/lib/loop/audioAccess.ts) needs this to know a key
  * however its track stores it. `/api/media/audio/<key>`, the same path with
  * an origin in front, `https://media.odubo.studio/<key>` and the bare key all
  * reach the same object: the stream route rewrites the dead host to the proxy
  * (resolveAudioSource, above), so a gate that knew only the first form served
- * the others to anyone.
+ * the others to anyone. A URL on any other host gives its path, because that
+ * is where the transcode scripts write its renditions in our bucket.
  */
 export function mediaKeyOfAudioUrl(audioUrl: string | null | undefined): string | null {
   if (!audioUrl || typeof audioUrl !== 'string') return null;
   const value = audioUrl.trim();
-  const key = PROXY_PATH.exec(value)?.[1] ?? keyOnDeadHost(value) ?? value;
+  const key = PROXY_PATH.exec(value)?.[1] ?? keyOnDeadHost(value) ?? URL_PATH.exec(value)?.[1] ?? value;
   return isServableKey(key) ? key : null;
 }
 
