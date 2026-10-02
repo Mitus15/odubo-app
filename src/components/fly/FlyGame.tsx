@@ -365,6 +365,7 @@ export default function FlyGame({ audio: songLinks, fields }: FlyClientProps) {
           best: Math.max(line.depth, previous ?? 0),
           isBest: record.isBest,
           againstBest: previous === null ? null : line.depth - previous,
+          practice: !counts,
         });
         setProgress(loadProgress(storage));
         void songRef.current?.fadeOut(1400);

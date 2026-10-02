@@ -107,9 +107,15 @@ function composeMatrix(form: Form, frame: WorldFrame): THREE.Matrix4 {
     return _matrix.compose(_position, _quaternion.identity(), _scale);
   }
   _euler.set(0, form.yaw, 0);
-  _scale.set(form.hx, form.hs, form.hy);
+  // A floor is drawn as its pieces, each a hair larger than it is, so the joins
+  // between them never show as seams. Only the drawing: collisions use the form.
+  const overlap = form.role === 'floor' ? SEAM_OVERLAP : 0;
+  _scale.set(form.hx + overlap, form.hs, form.hy + overlap);
   return _matrix.compose(_position, _quaternion.setFromEuler(_euler), _scale);
 }
+
+/** How much larger each floor piece is drawn than it is (m). */
+const SEAM_OVERLAP = 0.02;
 
 export function World({ uniforms }: { uniforms: StoneUniforms }) {
   const runtime = useFlyRuntime();

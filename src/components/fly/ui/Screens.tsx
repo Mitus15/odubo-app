@@ -22,6 +22,8 @@ export interface LevelResult {
   isBest: boolean;
   /** How far past (or short of) the previous best (m); null on a first run. */
   againstBest: number | null;
+  /** A tuning run (?t, ?flow): shown, never saved. */
+  practice: boolean;
 }
 
 export interface AlbumLine {
@@ -252,7 +254,9 @@ export function LevelResultScreen({
           {[result.medal ? MEDAL_WORD[result.medal] : null, nextMedal].filter(Boolean).join(' · ')}
         </div>
         <div className="mt-6 border-t pt-3 text-[11px] font-bold uppercase tracking-[0.22em] opacity-70" style={{ borderColor: hairline(tone) }}>
-          {result.isBest
+          {result.practice
+            ? 'Practice · not saved'
+            : result.isBest
             ? result.againstBest === null
               ? 'First fall'
               : `New best · +${format(result.againstBest)}`
