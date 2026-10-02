@@ -1,18 +1,24 @@
 /**
  * @jest-environment node
  *
- * The Stream webhook believes only Cloudflare. POST /api/stream/webhook
- * rewrites a row of videos (status, duration, poster) for whatever uid it is
- * sent. It checked a signature only when an invented cf-webhook-signature
- * header was present, so a request without one went straight through: anyone
- * could un-archive a video or point its poster at any image.
+ * The Stream webhook believes only Cloudflare, and completes without
+ * overruling.
  *
- * Stream signs each notification, keyed with the secret Cloudflare returned
- * when the webhook was registered:
+ * The signature. Stream signs each notification, keyed with the secret
+ * Cloudflare returned when the webhook was registered:
  *   Webhook-Signature: time=<unix seconds>,sig1=<hex HMAC-SHA256 of `${time}.${body}`>
- * A notification signed that way updates its row as before. A missing,
- * forged, tampered or stale one is refused before the database is reached,
- * and production without the secret refuses everything.
+ * A missing, forged, tampered or stale one is refused before the database,
+ * and production without the secret refuses everything. Until 2026-10-02 the
+ * route checked only when an invented header was present.
+ *
+ * What a genuine one does. Cloudflare sends the video object with uid,
+ * readyToStream and duration at the top level, a shape the route did not
+ * read until 2026-10-02, so none of its writes had ever run. For a row still
+ * waiting on Stream it fills the duration, and starts an automatic poster (a
+ * clip's random frame, a parent video's Gemini pick) only over Stream's
+ * default frame on a video no poster was made for. Status and visibility are
+ * never touched. A row written after Stream finished (the Loop film
+ * pipeline) or already complete is left alone.
  *
  * The route's own SQL runs against a real SQLite (D1 is SQLite).
  */
@@ -54,32 +60,49 @@ const mockThumbnails = jest.fn();
 jest.mock('@/lib/thumbnailService', () => ({
   generateClipThumbnail: async (...args: unknown[]) => {
     mockThumbnails('clip', ...args);
-    return { success: true };
+    return { success: true, posterUrl: 'https://r2.example/clip.jpg' };
   },
   generateAIThumbnailCandidates: async (...args: unknown[]) => {
     mockThumbnails('ai', ...args);
-    return { success: true };
+    return { success: true, posterUrl: 'https://r2.example/parent.jpg' };
   },
 }));
 
-const SECRET = 'stream-webhook-test-secret';
-const STREAM_THUMBNAIL = 'https://customer-test.cloudflarestream.com/uploaded-uid/thumbnails/thumbnail.jpg';
-const HIDDEN = {
-  status: 'archived',
-  duration: '200',
-  poster_url: 'https://media.example/hidden.jpg',
-  thumbnail: 'https://media.example/hidden.jpg',
+// after() runs its task once the response is sent; here the test runs it.
+const mockAfter: Array<() => unknown> = [];
+jest.mock('next/server', () => ({
+  ...jest.requireActual('next/server'),
+  after: (task: () => unknown) => {
+    mockAfter.push(task);
+  },
+}));
+const runAfter = async () => {
+  for (const task of mockAfter.splice(0)) await task();
 };
+
+const SECRET = 'stream-webhook-test-secret';
+/** When Stream finished processing, as each notification reports it. */
+const PROCESSED_AT = '2026-10-02T18:05:00.000000Z';
+const defaultPoster = (uid: string) => `https://videodelivery.net/${uid}/thumbnails/thumbnail.jpg`;
 
 const now = () => Math.floor(Date.now() / 1000);
 const sign = (body: string, { secret = SECRET, time = now() } = {}) =>
   `time=${time},sig1=${crypto.createHmac('sha256', secret).update(`${time}.${body}`).digest('hex')}`;
 
-// The shape handlePayload reads: the video under `data`. Cloudflare's own
-// notifications carry these fields at the top level, which the handler does
-// not read yet (docs/sessions/2026-10-02-stream-webhook-signature.md).
-const notification = (uid: string, thumbnail: string) =>
-  JSON.stringify({ data: { uid, readyToStream: true, status: { state: 'ready' }, duration: 42.7, thumbnail } });
+/** A notification in the shape Cloudflare's docs show: the video object itself. */
+const notification = (uid: string, overrides: Record<string, unknown> = {}) =>
+  JSON.stringify({
+    uid,
+    creator: null,
+    thumbnail: `https://customer-test.cloudflarestream.com/${uid}/thumbnails/thumbnail.jpg`,
+    readyToStream: true,
+    status: { state: 'ready', pctComplete: '100.000000', errorReasonCode: '', errorReasonText: '' },
+    meta: { name: `${uid}.mp4` },
+    created: '2026-10-02T18:00:30.000000Z',
+    modified: PROCESSED_AT,
+    duration: 225.4,
+    ...overrides,
+  });
 
 const send = (body: string, headers: Record<string, string> = {}) =>
   POST(
@@ -89,9 +112,16 @@ const send = (body: string, headers: Record<string, string> = {}) =>
       body,
     })
   );
+const sendSigned = (body: string) => send(body, { 'webhook-signature': sign(body) });
 
 const row = (uid: string) =>
-  mockDb.prepare('SELECT status, duration, poster_url, thumbnail FROM videos WHERE uid = ?').get(uid);
+  mockDb
+    .prepare(
+      `SELECT status, is_public, publication_status, duration, duration_seconds, poster_url, thumbnail_status
+       FROM videos WHERE uid = ?`
+    )
+    .get(uid);
+const writes = () => mockReached.mock.calls.map(([sql]) => String(sql)).filter((sql) => !/^\s*SELECT/i.test(sql));
 
 const OLD_ENV = process.env;
 
@@ -99,7 +129,11 @@ beforeEach(() => {
   process.env = { ...OLD_ENV, CLOUDFLARE_STREAM_WEBHOOK_SECRET: SECRET };
   mockReached.mockClear();
   mockThumbnails.mockClear();
-  // A fresh upload waiting on Stream, and a video the owner has hidden.
+  mockAfter.length = 0;
+  // Rows as each writer leaves them. Arsenal writes its row while Stream is
+  // still processing, with no duration and Stream's default frame. The film
+  // pipeline writes after Stream is done (here past its readiness wait, so
+  // without a duration).
   mockDb.exec(`
     DROP TABLE IF EXISTS videos;
     CREATE TABLE videos (
@@ -111,15 +145,29 @@ beforeEach(() => {
       mood TEXT,
       type TEXT,
       status TEXT DEFAULT 'draft' CHECK (status IN ('draft','published','archived')),
+      is_public INTEGER,
+      publication_status TEXT NOT NULL DEFAULT 'archived' CHECK (publication_status IN ('live','archived')),
       duration TEXT,
+      duration_seconds REAL,
       poster_url TEXT,
       thumbnail TEXT,
-      parent_video_id INTEGER
+      thumbnail_status TEXT DEFAULT 'pending',
+      parent_video_id INTEGER,
+      created_at TEXT,
+      updated_at TEXT
     );
-    INSERT INTO videos (id, uid, stream_video_id, title, status)
-      VALUES (1, 'uploaded-uid', 'uploaded-uid', 'Makunahea', 'draft');
-    INSERT INTO videos (id, uid, stream_video_id, title, status, duration, poster_url, thumbnail)
-      VALUES (2, 'hidden-uid', 'hidden-uid', 'Not yet', 'archived', '200', '${HIDDEN.poster_url}', '${HIDDEN.thumbnail}');
+    INSERT INTO videos (id, uid, stream_video_id, title, category, mood, type, status, is_public, publication_status, duration, poster_url, thumbnail, created_at)
+      VALUES (1, 'parent-uid', 'parent-uid', 'Makunahea', 'music-video', 'joy', 'music-video', 'published', 0, 'live', '',
+              '${defaultPoster('parent-uid')}', '${defaultPoster('parent-uid')}', '2026-10-02 18:00:00');
+    INSERT INTO videos (id, uid, stream_video_id, title, type, status, is_public, publication_status, duration, poster_url, thumbnail, parent_video_id, created_at)
+      VALUES (2, 'clip-uid', 'clip-uid', 'Makunahea, clip 1', 'clip', 'published', 0, 'archived', '0',
+              '${defaultPoster('clip-uid')}', '${defaultPoster('clip-uid')}', 1, '2026-10-02 18:01:00');
+    INSERT INTO videos (id, uid, stream_video_id, title, type, status, is_public, publication_status, duration, poster_url, thumbnail, created_at)
+      VALUES (3, 'kept-uid', 'kept-uid', 'Archived, poster chosen', 'music-video', 'archived', 0, 'archived', '',
+              'https://media.example/chosen.jpg', 'https://media.example/chosen.jpg', '2026-10-02 18:00:00');
+    INSERT INTO videos (id, uid, stream_video_id, title, type, status, is_public, publication_status, poster_url, thumbnail, created_at)
+      VALUES (4, 'film-uid', 'film-uid', 'Loop Soul, the film', 'feature', 'published', 0, 'archived',
+              '${defaultPoster('film-uid')}', '${defaultPoster('film-uid')}', '2026-10-02T18:20:00.000Z');
   `);
 });
 
@@ -128,34 +176,9 @@ afterAll(() => {
 });
 
 describe('POST /api/stream/webhook', () => {
-  it("a notification Stream signed updates its video's status, duration and poster", async () => {
-    const body = notification('uploaded-uid', STREAM_THUMBNAIL);
-    const res = await send(body, { 'webhook-signature': sign(body) });
-
-    expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ success: true });
-    expect(row('uploaded-uid')).toEqual({
-      status: 'published',
-      duration: '42',
-      poster_url: STREAM_THUMBNAIL,
-      thumbnail: STREAM_THUMBNAIL,
-    });
-    expect(mockThumbnails).toHaveBeenCalledWith('ai', 'uploaded-uid', 1, expect.objectContaining({ title: 'Makunahea' }));
-    expect(row('hidden-uid')).toEqual(HIDDEN);
-  });
-
-  it('a secret pasted with a trailing newline still verifies', async () => {
-    process.env.CLOUDFLARE_STREAM_WEBHOOK_SECRET = `${SECRET}\n`;
-    const body = notification('uploaded-uid', STREAM_THUMBNAIL);
-    const res = await send(body, { 'webhook-signature': sign(body) });
-
-    expect(res.status).toBe(200);
-    expect(row('uploaded-uid')).toMatchObject({ status: 'published' });
-  });
-
   describe('refuses, before the database, a request with', () => {
-    // What a forger wants: the hidden video live, wearing their poster.
-    const forged = notification('hidden-uid', 'https://example.com/not-ours.jpg');
+    // What a forger could want: a wrong duration, a poster run on our Gemini key.
+    const forged = notification('parent-uid', { duration: 9999 });
 
     it.each<[string, () => Record<string, string>, string]>([
       ['no Webhook-Signature header', () => ({}), 'Missing signature'],
@@ -165,43 +188,141 @@ describe('POST /api/stream/webhook', () => {
         'Missing signature',
       ],
       ['a signature made with another secret', () => ({ 'webhook-signature': sign(forged, { secret: 'not-the-secret' }) }), 'Invalid signature'],
-      [
-        'a genuine signature for another body',
-        () => ({ 'webhook-signature': sign(notification('hidden-uid', STREAM_THUMBNAIL)) }),
-        'Invalid signature',
-      ],
+      ['a genuine signature for another body', () => ({ 'webhook-signature': sign(notification('parent-uid')) }), 'Invalid signature'],
       ['a header that does not parse', () => ({ 'webhook-signature': 'sig1=abc' }), 'Malformed signature'],
       ['a genuine signature ten minutes old', () => ({ 'webhook-signature': sign(forged, { time: now() - 600 }) }), 'Stale signature'],
       ['a genuine signature ten minutes ahead', () => ({ 'webhook-signature': sign(forged, { time: now() + 600 }) }), 'Stale signature'],
     ])('%s', async (_case, headers, error) => {
+      const before = row('parent-uid');
       const res = await send(forged, headers());
 
       expect(res.status).toBe(401);
       expect(await res.json()).toEqual({ error });
       expect(mockReached).not.toHaveBeenCalled();
-      expect(row('hidden-uid')).toEqual(HIDDEN);
+      expect(mockAfter).toHaveLength(0);
+      expect(row('parent-uid')).toEqual(before);
     });
-  });
 
-  describe('without the secret', () => {
-    it('production refuses even a signed notification, before the database', async () => {
+    it('nothing at all in production without the secret, even a signed notification', async () => {
       process.env = { ...process.env, NODE_ENV: 'production' };
       delete process.env.CLOUDFLARE_STREAM_WEBHOOK_SECRET;
-      const body = notification('hidden-uid', 'https://example.com/not-ours.jpg');
-      const res = await send(body, { 'webhook-signature': sign(body) });
+      const before = row('parent-uid');
+      const res = await sendSigned(notification('parent-uid'));
 
       expect(res.status).toBe(500);
       expect(await res.json()).toEqual({ error: 'Webhook verification not configured' });
       expect(mockReached).not.toHaveBeenCalled();
-      expect(row('hidden-uid')).toEqual(HIDDEN);
+      expect(row('parent-uid')).toEqual(before);
     });
+  });
 
-    it('outside production the check is skipped, for local work', async () => {
-      delete process.env.CLOUDFLARE_STREAM_WEBHOOK_SECRET;
-      const res = await send(notification('uploaded-uid', STREAM_THUMBNAIL));
+  it('outside production, without the secret, skips the check for local work', async () => {
+    delete process.env.CLOUDFLARE_STREAM_WEBHOOK_SECRET;
+    const res = await send(notification('parent-uid'));
+
+    expect(res.status).toBe(200);
+    expect(row('parent-uid')).toMatchObject({ duration: '225' });
+  });
+
+  it('a secret pasted with a trailing newline still verifies', async () => {
+    process.env.CLOUDFLARE_STREAM_WEBHOOK_SECRET = `${SECRET}\n`;
+    const res = await sendSigned(notification('parent-uid'));
+
+    expect(res.status).toBe(200);
+    expect(row('parent-uid')).toMatchObject({ duration: '225' });
+  });
+
+  describe('a genuine notification', () => {
+    it("fills a waiting parent video's duration and starts its Gemini poster after the response, nothing else", async () => {
+      const res = await sendSigned(notification('parent-uid'));
 
       expect(res.status).toBe(200);
-      expect(row('uploaded-uid')).toMatchObject({ status: 'published' });
+      expect(await res.json()).toEqual({ success: true, poster: 'generating' });
+      expect(row('parent-uid')).toEqual({
+        status: 'published',
+        is_public: 0,
+        publication_status: 'live',
+        duration: '225',
+        duration_seconds: 225.4,
+        poster_url: defaultPoster('parent-uid'),
+        thumbnail_status: 'generating',
+      });
+      expect(mockThumbnails).not.toHaveBeenCalled();
+
+      await runAfter();
+      expect(mockThumbnails).toHaveBeenCalledTimes(1);
+      expect(mockThumbnails).toHaveBeenCalledWith('ai', 'parent-uid', 1, { title: 'Makunahea', category: 'music-video', mood: 'joy' });
+    });
+
+    it('gives a waiting clip a random frame', async () => {
+      const res = await sendSigned(notification('clip-uid'));
+
+      expect(await res.json()).toEqual({ success: true, poster: 'generating' });
+      await runAfter();
+      expect(mockThumbnails).toHaveBeenCalledWith('clip', 'clip-uid', 225, 2);
+    });
+
+    it("never touches status, visibility or a poster someone chose, and still fills the duration", async () => {
+      const res = await sendSigned(notification('kept-uid'));
+
+      expect(await res.json()).toEqual({ success: true, poster: 'kept' });
+      expect(row('kept-uid')).toEqual({
+        status: 'archived',
+        is_public: 0,
+        publication_status: 'archived',
+        duration: '225',
+        duration_seconds: 225.4,
+        poster_url: 'https://media.example/chosen.jpg',
+        thumbnail_status: 'pending',
+      });
+      expect(mockAfter).toHaveLength(0);
+    });
+
+    it('does not start a poster another run is already making', async () => {
+      mockDb.exec(`UPDATE videos SET thumbnail_status = 'generating' WHERE uid = 'parent-uid'`);
+      const res = await sendSigned(notification('parent-uid'));
+
+      expect(await res.json()).toEqual({ success: true, poster: 'kept' });
+      expect(row('parent-uid')).toMatchObject({ duration: '225', thumbnail_status: 'generating' });
+      expect(mockAfter).toHaveLength(0);
+    });
+
+    it('leaves alone a row written after Stream finished, like the Loop film', async () => {
+      const before = row('film-uid');
+      const res = await sendSigned(notification('film-uid'));
+
+      expect(await res.json()).toEqual({ success: true, skipped: 'written after processing' });
+      expect(row('film-uid')).toEqual(before);
+      expect(writes()).toEqual([]);
+      expect(mockAfter).toHaveLength(0);
+    });
+
+    it('does nothing the second time it hears of the same video', async () => {
+      await sendSigned(notification('parent-uid'));
+      const res = await sendSigned(notification('parent-uid', { duration: 300 }));
+
+      expect(await res.json()).toEqual({ success: true, skipped: 'already complete' });
+      expect(row('parent-uid')).toMatchObject({ duration: '225', duration_seconds: 225.4 });
+      expect(mockAfter).toHaveLength(1);
+    });
+
+    it.each<[string, string, string]>([
+      ['an upload Stream could not process', notification('parent-uid', { readyToStream: false, status: { state: 'error', errorReasonCode: 'ERR_MALFORMED_VIDEO' } }), 'processing failed'],
+      ['a video no row waits for', notification('someone-elses-uid'), 'no row'],
+    ])('about %s writes nothing', async (_case, body, skipped) => {
+      const before = row('parent-uid');
+      const res = await sendSigned(body);
+
+      expect(await res.json()).toEqual({ success: true, skipped });
+      expect(writes()).toEqual([]);
+      expect(row('parent-uid')).toEqual(before);
+    });
+
+    it('also reads the Stream API shape, the video under result', async () => {
+      const res = await sendSigned(JSON.stringify({ result: JSON.parse(notification('parent-uid')) }));
+
+      expect(await res.json()).toEqual({ success: true, poster: 'generating' });
+      expect(row('parent-uid')).toMatchObject({ duration: '225' });
     });
   });
 });
