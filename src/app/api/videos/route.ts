@@ -1,5 +1,7 @@
 import { executeQuery, queryDatabase } from '@/lib/db';
 import { getUserFromRequest, isAdminUser } from '@/lib/auth';
+import { isAdminRequest } from '@/lib/adminRequest';
+import { publicVideoWhere } from '@/lib/publicVideos';
 import { NextRequest, NextResponse } from 'next/server';
 export const runtime = 'nodejs';
 import { deleteFile } from '@/worker/upload';
@@ -34,6 +36,13 @@ export async function GET(req: NextRequest) {
     if (excludeType) {
       whereClauses.push("COALESCE(type, '') != ?");
       params.push(excludeType);
+    }
+
+    // A hidden video (not public, archived, or not live) is listed for an
+    // admin only. Everyone else gets what the public feed shows, whatever
+    // they filter on, so a uid or a status filter cannot fish one out.
+    if (!(await isAdminRequest(req))) {
+      whereClauses.push(publicVideoWhere('v'));
     }
 
     const where = whereClauses.length > 0 ? 'WHERE ' + whereClauses.join(' AND ') : '';
@@ -73,7 +82,7 @@ export async function GET(req: NextRequest) {
         shopify_product_handle,
         created_at,
         COALESCE(updated_at, created_at) as updated_at
-      FROM videos
+      FROM videos v
       ${where}
       ORDER BY created_at DESC
       LIMIT ? OFFSET ?`,

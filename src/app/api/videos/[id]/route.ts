@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { executeQuery, queryDatabase } from '@/lib/db';
 import { z } from 'zod';
 import { getUserFromRequest, isAdminUser } from '@/lib/auth';
+import { isAdminRequest } from '@/lib/adminRequest';
+import { publicVideoWhere } from '@/lib/publicVideos';
 import { deleteFile } from '@/worker/upload';
 import { writeAuditLog } from '@/lib/audit';
 import { normalizeVideoType } from '@/types/videoTypes';
@@ -26,9 +28,15 @@ function safeJsonStringify(value: any): string | null {
   }
 }
 
-export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+/**
+ * One video. A hidden one (not public, archived, or not live) is "not found"
+ * unless an admin asks, as on /media/[videoId], so its id cannot hand out its
+ * playback URL before it is released.
+ */
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
+    const publicOnly = (await isAdminRequest(req)) ? '' : `AND ${publicVideoWhere('v')}`;
     const rows = await queryDatabase(
       `SELECT 
         id,
@@ -51,7 +59,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
         shopify_product_handle,
         created_at,
         COALESCE(updated_at, created_at) as updated_at
-      FROM videos WHERE id = ? LIMIT 1`,
+      FROM videos v WHERE v.id = ? ${publicOnly} LIMIT 1`,
       [parseInt(id, 10)]
     );
     if (!rows.length) {
@@ -68,7 +76,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       }
     }
     
-    try { await writeAuditLog(_req, await getUserFromRequest(_req), 'videos.get', String(id)); } catch {}
+    try { await writeAuditLog(req, await getUserFromRequest(req), 'videos.get', String(id)); } catch {}
     return NextResponse.json({ success: true, video });
   } catch (error) {
     console.error('Error fetching video:', error);
