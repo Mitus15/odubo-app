@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 export const runtime = 'edge';
 import { executeQuery } from '@/lib/db';
+import { requireAdmin } from '@/lib/api/requireAdmin';
 
 export async function PATCH(req: NextRequest) {
+  // Sets the status of any videos it is handed (archiving hides them): admins only.
+  const { error } = await requireAdmin(req);
+  if (error) return error;
+
   try {
     const body = await req.json() as { ids: string[]; status: string };
     
