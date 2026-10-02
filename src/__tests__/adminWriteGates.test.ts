@@ -9,7 +9,12 @@
  * gate, requireAdmin (requireCronOrAdmin for the two jobs).
  *
  * Every one is called here as a stranger and as a signed-in fan. The gate must
- * answer first: no database, no network, no Stream listing, no tables made.
+ * answer first: no database, no network, no Stream listing, no R2, no tables
+ * made.
+ *
+ * Two more turned up the same day, when the guard stopped counting a verifier
+ * named only in an audit call: the R2 cleanup, which deletes from the bucket,
+ * and a dev script's route.
  */
 import { NextRequest } from 'next/server';
 import { SignJWT } from 'jose';
@@ -34,6 +39,15 @@ jest.mock('@/lib/cloudflareStream', () => ({
     listAllVideos = async () => {
       mockReached('stream');
       return [];
+    };
+  },
+}));
+jest.mock('@aws-sdk/client-s3', () => ({
+  ...jest.requireActual('@aws-sdk/client-s3'),
+  S3Client: class {
+    send = async () => {
+      mockReached('r2');
+      throw new Error('reached R2');
     };
   },
 }));
@@ -102,8 +116,10 @@ const GATED: Array<[string, string]> = [
   ['PATCH', '/api/social/studio/slots/[id]'],
   ['DELETE', '/api/social/studio/slots/[id]'],
   ['POST', '/api/social/sync'],
+  ['POST', '/api/test-analyze'],
   ['POST', '/api/upload'],
   ['PATCH', '/api/videos/bulk-update'],
+  ['POST', '/api/videos/cleanup'],
   ['POST', '/api/videos/crop'],
   ['POST', '/api/videos/description/generate'],
   ['POST', '/api/videos/upload-enhanced'],
