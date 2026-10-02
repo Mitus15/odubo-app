@@ -124,8 +124,10 @@ export function FlightCamera() {
       const settle = smooth((u - 0.82) / 0.18);
       camera.position.copy(scratch.orbit).lerp(scratch.follow, settle);
       scratch.look.copy(scratch.player).lerp(scratch.target, settle);
-      // Looking straight up or down needs an up vector off the view axis.
-      if (orbit.elevation < 0) camera.up.set(0, 1, 0).lerp(DOWN_SCREEN_UP, settle).normalize();
+      // Looking up at him, world up is the screen's up; over him, it turns to his
+      // head's direction. Blend between the two, never switch, or the frame rolls.
+      const over = Math.max(settle, smooth((orbit.elevation + 0.4) / 0.8));
+      camera.up.set(0, 1, 0).lerp(DOWN_SCREEN_UP, over).normalize();
       camera.lookAt(scratch.look);
     } else {
       camera.position.copy(scratch.follow);

@@ -19,6 +19,7 @@ async function chapterFields(): Promise<Record<string, string>> {
 }
 
 export default async function FlyPage() {
-  const [audio, fields] = await Promise.all([flyAudioSources().catch(() => ({})), chapterFields()]);
-  return <FlyClient audio={audio} fields={fields} />;
+  const mintedAt = Date.now();
+  const [audio, fields] = await Promise.all([flyAudioSources(mintedAt).catch(() => ({})), chapterFields()]);
+  return <FlyClient audio={audio} fields={fields} mintedAt={mintedAt} />;
 }

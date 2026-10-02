@@ -34,6 +34,10 @@ const DRIFT_SECONDS = 0.05;
 const HOLD_SECONDS = 0.25;
 /** How often a fade steps the volume (ms). */
 const FADE_STEP_MS = 16;
+/** Playing, with data, yet not moving for this long (ms): the song goes on silently. */
+const STUCK_MS = 2500;
+/** Waiting this long for a song's data (ms), the fall goes on without it. */
+const GIVE_UP_MS = 12000;
 
 interface Slot {
   el: HTMLAudioElement;
@@ -65,6 +69,8 @@ interface Fade {
 
 export interface SongAudioOptions {
   onEnded?: () => void;
+  /** The phone paused the song by itself (headphones out, a call). */
+  onInterrupted?: () => void;
   /** Milliseconds. performance.now by default; tests pass their own. */
   now?: () => number;
   /** Makes one audio element. new Audio() by default; tests pass their own. */
@@ -93,6 +99,8 @@ function withRetryMark(url: string): string {
 export class SongAudio {
   /** Called once when the song playing reaches its end, heard or silent. */
   onEnded: (() => void) | null;
+  /** Called when the phone pauses the song by itself, not the game. */
+  onInterrupted: (() => void) | null;
 
   private readonly slots: [Slot, Slot];
   private active: 0 | 1 = 0;
@@ -117,6 +125,11 @@ export class SongAudio {
   private pendingStart: number | null = null;
   /** What clock() last said. */
   private last = 0;
+  /** The element's time when last seen moving, and since when it has not (wall ms). */
+  private stuckAt = -1;
+  private stuckSince = 0;
+  /** Since when the song has kept the fall waiting for data (wall ms), or -1. */
+  private waitingSince = -1;
 
   // The silent clock.
   private silentBase = 0;
@@ -128,6 +141,7 @@ export class SongAudio {
 
   constructor(options: SongAudioOptions = {}) {
     this.onEnded = options.onEnded ?? null;
+    this.onInterrupted = options.onInterrupted ?? null;
     this.now = options.now ?? (() => performance.now());
     const make = options.createElement ?? (() => new Audio());
     this.slots = [this.makeSlot(make()), this.makeSlot(make())];
@@ -393,13 +407,16 @@ export class SongAudio {
     const onEnded = (): void => this.handleEnded(slot);
     const onError = (): void => this.handleError(slot);
     const onMetadata = (): void => this.applySeek(slot);
+    const onPause = (): void => this.handlePause(slot);
     el.addEventListener('ended', onEnded);
     el.addEventListener('error', onError);
     el.addEventListener('loadedmetadata', onMetadata);
+    el.addEventListener('pause', onPause);
     slot.detach = () => {
       el.removeEventListener('ended', onEnded);
       el.removeEventListener('error', onError);
       el.removeEventListener('loadedmetadata', onMetadata);
+      el.removeEventListener('pause', onPause);
     };
     return slot;
   }
@@ -414,6 +431,8 @@ export class SongAudio {
     this.blocked = false;
     this.anchored = false;
     this.pendingStart = null;
+    this.stuckAt = -1;
+    this.waitingSince = -1;
     this.last = from;
     this.silentDone = false;
     this.clearSilentTimer();
@@ -467,12 +486,36 @@ export class SongAudio {
     const raw = Number.isFinite(el.currentTime) ? el.currentTime : 0;
     const flowing = !this.held && !el.paused && !el.ended && !el.seeking && el.readyState >= HAVE_FUTURE_DATA;
     if (!flowing) {
-      // Paused, buffering or over: the fall waits for the song.
+      // Paused, buffering or over: the fall waits for the song (and the stuck watch starts over).
+      this.stuckAt = -1;
       this.anchored = false;
-      return this.pendingStart ?? raw;
+      const at = this.pendingStart ?? raw;
+      // Waiting on data, not on the game: give it a while, then go on in silence
+      // rather than leave the fall frozen on a song that will not come.
+      const waiting = !this.held && !el.ended;
+      if (!waiting) {
+        this.waitingSince = -1;
+      } else if (this.waitingSince < 0) {
+        this.waitingSince = this.now();
+      } else if (this.now() - this.waitingSince > GIVE_UP_MS) {
+        this.waitingSince = -1;
+        this.goSilent(at);
+      }
+      return at;
     }
+    this.waitingSince = -1;
     this.pendingStart = null;
     const wall = this.now();
+    // An element that says it is playing, with data to play, yet never moves
+    // (no audio output to drive it) would freeze the fall for good. After a
+    // while like that, the song goes on in silence from where it stopped.
+    if (raw !== this.stuckAt) {
+      this.stuckAt = raw;
+      this.stuckSince = wall;
+    } else if (wall - this.stuckSince > STUCK_MS) {
+      this.goSilent(raw);
+      return raw;
+    }
     if (this.anchored) {
       const rate = el.playbackRate > 0 ? el.playbackRate : 1;
       const predicted = this.anchorMedia + ((wall - this.anchorWall) / 1000) * rate;
@@ -540,8 +583,10 @@ export class SongAudio {
     // A file can run a little short of the song's listed length (Ghost World's
     // master by 0.4 s). The level IS the listed length, so the clock carries
     // on in silence to it and the song ends there.
+    // Any shortfall at all, even a few milliseconds: a clock left short of the
+    // last tick would leave the level waiting forever.
     const at = Number.isFinite(slot.el.currentTime) ? slot.el.currentTime : this.last;
-    if (slot.seconds !== null && slot.seconds - at > DRIFT_SECONDS) {
+    if (slot.seconds !== null && at < slot.seconds) {
       this.tail = true;
       this.goSilent(Math.max(at, this.last));
       return;
@@ -569,6 +614,18 @@ export class SongAudio {
     }
     slot.failed = true;
     if (isCurrent) this.goSilent(this.last);
+  }
+
+  /**
+   * The phone stopped the song on its own (headphones out, a call, Bluetooth
+   * gone). The game paused nothing, so say so: the fall should show its pause
+   * screen rather than freeze. The game's own pauses and swaps are filtered out
+   * by checking the state when the event arrives, not when it was queued.
+   */
+  private handlePause(slot: Slot): void {
+    if (this.destroyed || slot !== this.current || this.mode !== 'media' || this.held) return;
+    if (!slot.el.paused || slot.el.ended || this.endedFired) return;
+    this.onInterrupted?.();
   }
 
   private fireEnded(): void {

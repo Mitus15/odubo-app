@@ -78,7 +78,9 @@ class SectionBuilder {
 
   private choosePattern(): PatternName {
     const { course, k, rng } = this;
-    if (course.isBreather(k)) return chance(rng, 0.6) ? 'open' : 'plates';
+    // A breather is open air, or an easy plate where the course has plates at all
+    // (a cutscene's sky has none, and must stay open).
+    if (course.isBreather(k)) return chance(rng, 0.6) || !(course.spec.mix.plates > 0) ? 'open' : 'plates';
     if (k === 1) return course.spec.mix.plates > 0 || course.spec.mix.grid > 0 ? 'plates' : pick(rng, course.spec.mix);
     return pick(rng, course.spec.mix);
   }

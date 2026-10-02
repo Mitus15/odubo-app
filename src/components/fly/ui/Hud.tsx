@@ -79,6 +79,13 @@ export function Hud({
         </div>
       ) : null}
 
+      <div
+        ref={(el) => void (hud.stall = el)}
+        className="absolute inset-x-0 top-[58%] text-center text-[11px] font-bold uppercase tracking-[0.34em] opacity-0 transition-opacity duration-300"
+      >
+        Loading the song
+      </div>
+
       {hint ? (
         <div className="absolute inset-x-0 bottom-[max(46px,env(safe-area-inset-bottom))] flex flex-col items-center gap-2 text-[11px] font-bold uppercase tracking-[0.34em] opacity-70">
           <span className="flex items-center gap-3">

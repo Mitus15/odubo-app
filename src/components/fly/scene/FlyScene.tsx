@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useMemo, useRef } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { Environment } from '@react-three/drei';
 import * as THREE from 'three';
@@ -12,7 +12,8 @@ import { FlightCamera } from './FlightCamera';
 import { Ground } from './Ground';
 import { createStoneUniforms } from './materials';
 import { Ghost, Recoolman } from './Recoolman';
-import { createSkyMaterial, Sky } from './Sky';
+import type { Look } from '@/lib/fly/region';
+import { createSkyMaterial, Sky, skyColorsOf } from './Sky';
 import { dropped, World } from './World';
 
 /** Fog density: visibility is roughly 1.7 / density metres. Deep floors sink into the dark. */
@@ -20,6 +21,8 @@ const FOG = 0.0075;
 /** At most this many engine steps per frame; a stalled tab catches up gently. */
 const MAX_STEPS = 30;
 const HISTORY = 512;
+/** How long the fall may wait on its song before saying so (s). */
+const STALL_SECONDS = 0.8;
 
 /** Where he was, step by step, so a lagging shadow can follow a beat behind. */
 class Trail {
@@ -102,8 +105,20 @@ function Stepper({ runtime }: { runtime: FlyRuntime }) {
     const through = Number.isFinite(endTick) ? Math.min(1, state.tick / endTick) : 0;
     runtime.albumProgress = runtime.albumFrom + runtime.albumSpan * through;
 
+    const generation = engine.generation;
     const events = engine.drainEvents();
     if (events.length > 0) runtime.onEvents(events);
+    // An event may have started the next stage (album hand-offs happen here, in
+    // the frame): draw from where the new run begins, not where the last one ended.
+    if (engine.generation !== generation) {
+      const fresh = engine.state;
+      view.s = fresh.s;
+      view.x = fresh.x;
+      view.y = fresh.y;
+      view.tick = fresh.tick;
+      frame.follow(view.s);
+      runtime.albumProgress = runtime.albumFrom;
+    }
   }, -3);
   return null;
 }
@@ -144,6 +159,9 @@ function HudDriver({ runtime }: { runtime: FlyRuntime }) {
       clock: 0,
       frames: 0,
       fpsClock: 0,
+      lastTick: -1,
+      stall: 0,
+      stalled: false,
     }),
     [],
   );
@@ -185,6 +203,16 @@ function HudDriver({ runtime }: { runtime: FlyRuntime }) {
       }
     }
 
+    // The song is the clock: if it stops to load, the fall waits, and says why.
+    const waiting = runtime.mode !== 'attract' && !runtime.paused && !engine.done && state.tick === scratch.lastTick;
+    scratch.stall = waiting ? scratch.stall + delta : 0;
+    scratch.lastTick = state.tick;
+    const stalled = scratch.stall > STALL_SECONDS;
+    if (hud.stall && stalled !== scratch.stalled) {
+      hud.stall.style.opacity = stalled ? '0.75' : '0';
+      scratch.stalled = stalled;
+    }
+
     if (hud.debug) {
       scratch.frames += 1;
       scratch.fpsClock += delta;
@@ -205,9 +233,15 @@ function HudDriver({ runtime }: { runtime: FlyRuntime }) {
 /** Recoolman's chrome reflects this: the sky he is falling through. */
 function Reflections() {
   const runtime = useFlyRuntime();
-  const material = useMemo(() => createSkyMaterial(runtime.look), [runtime]);
+  // Rendered once per sky (a new look is a new key), never every frame.
+  const [look, setLook] = useState<Look>(runtime.look.target);
+  useFrame(() => {
+    if (runtime.look.target !== look) setLook(runtime.look.target);
+  });
+  const material = useMemo(() => createSkyMaterial(skyColorsOf(look)), [look]);
+  useEffect(() => () => material.dispose(), [material]);
   return (
-    <Environment frames={Infinity} resolution={32}>
+    <Environment key={look.field} frames={1} resolution={32}>
       <mesh material={material}>
         <sphereGeometry args={[10, 24, 12]} />
       </mesh>

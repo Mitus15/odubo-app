@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { PerformanceMonitor } from '@react-three/drei';
+import { useRouter } from 'next/navigation';
 import { useMusicPlayer } from '@/contexts/MusicPlayerContext';
 import { ATTRACT_COURSE, LEVELS, levelBySlug, STAGES, type LevelDef, type Stage } from '@/lib/fly/album';
 import { browserStorage, loadGhost, loadProgress, markSeen, recordAlbum, recordLevel, saveAlbumPlace, type Progress } from '@/lib/fly/progress';
@@ -14,6 +15,7 @@ import {
   albumTotal,
   currentStage,
   finishStage,
+  isFullRun,
   nextLevelAfter,
   nextStage,
   resultLine,
@@ -55,6 +57,8 @@ const WORD = 'text-[20px] font-bold uppercase tracking-[0.12em]';
 const CARD_MS = 4200;
 /** How long a level's title shows as it begins (ms). */
 const TITLE_MS = 2400;
+/** Song links last six hours; ask for new ones after five (ms). */
+const LINKS_STALE_MS = 5 * 60 * 60 * 1000;
 
 function createRuntime(): FlyRuntime {
   return {
@@ -81,7 +85,7 @@ function createRuntime(): FlyRuntime {
     shake: 0,
     flyerScreen: { x: 0, y: 0 },
     reducedMotion: false,
-    hud: { depth: null, ghostDelta: null, total: null, progress: null, flow: null, bursts: null, flash: null, debug: null },
+    hud: { depth: null, ghostDelta: null, total: null, progress: null, flow: null, bursts: null, flash: null, debug: null, stall: null },
     onEvents: () => {},
   };
 }
@@ -104,12 +108,13 @@ interface Debug {
   flow: number | null;
 }
 
-export default function FlyGame({ audio: songLinks, fields }: FlyClientProps) {
+export default function FlyGame({ audio: songLinks, fields, mintedAt }: FlyClientProps) {
   const runtimeRef = useRef<FlyRuntime | null>(null);
   if (!runtimeRef.current) runtimeRef.current = createRuntime();
   const runtime = runtimeRef.current;
   const songRef = useRef<SongAudio | null>(null);
   const player = useMusicPlayer();
+  const router = useRouter();
   const playerRef = useRef(player);
   playerRef.current = player;
 
@@ -128,12 +133,20 @@ export default function FlyGame({ audio: songLinks, fields }: FlyClientProps) {
   const [dpr, setDpr] = useState(1.5);
 
   const surface = useRef<HTMLDivElement>(null);
-  const phaseRef = useRef<Phase>(phase);
-  phaseRef.current = phase;
+  const phaseRef = useRef<Phase>('title');
+  // Every change of phase goes through here, so a tap or a key in the same moment sees it at once.
+  const goTo = useCallback((next: Phase) => {
+    phaseRef.current = next;
+    setPhase(next);
+  }, []);
   const modeRef = useRef<Mode>('songs');
   const runRef = useRef<AlbumRun | null>(null);
   const stageRef = useRef<Stage | null>(null);
   const pausedFrom = useRef<Phase>('run');
+  /** A level's line waiting for the next level to begin (a cutscene sits between them). */
+  const heldLine = useRef<AlbumLine | null>(null);
+  /** This album run used a tuning knob (?t, ?flow): it is shown, never saved. */
+  const practiceAlbum = useRef(false);
   const debugRef = useRef(debug);
   debugRef.current = debug;
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -172,6 +185,7 @@ export default function FlyGame({ audio: songLinks, fields }: FlyClientProps) {
     }
     const song = new SongAudio();
     songRef.current = song;
+    if (on) (window as unknown as { flySong?: SongAudio }).flySong = song;
     const pending = timers.current;
     return () => {
       for (const timer of pending) clearTimeout(timer);
@@ -214,7 +228,7 @@ export default function FlyGame({ audio: songLinks, fields }: FlyClientProps) {
         runtime.albumFrom = into ? (into.index - 1) / LEVELS.length : 1;
         runtime.albumSpan = 0;
         setGhostShown(false);
-        setPhase('cutscene');
+        goTo('cutscene');
       } else {
         runtime.engine.load(course, 'player');
         runtime.mode = 'level';
@@ -235,11 +249,18 @@ export default function FlyGame({ audio: songLinks, fields }: FlyClientProps) {
         runtime.debugFlow = debugNow.flow;
         setTitle(stage.title);
         later(TITLE_MS, () => setTitle(null));
+        // The last level's line, held through a cutscene, passes over this one's opening.
+        const held = heldLine.current;
+        if (held) {
+          heldLine.current = null;
+          setPassing(held);
+          later(CARD_MS, () => setPassing(null));
+        }
         if (!(loadProgress(storage).steerHintSeen)) {
           setHint(true);
           later(4500, () => setHint(false));
         }
-        setPhase('run');
+        goTo('run');
       }
 
       // ?t= (tuning): fly ahead on autopilot, then hand over. Never saves a best.
@@ -262,7 +283,7 @@ export default function FlyGame({ audio: songLinks, fields }: FlyClientProps) {
       }
       setMediaSession(stage);
     },
-    [runtime, songLinks, lookOf, later],
+    [runtime, songLinks, lookOf, later, goTo],
   );
 
   const toTitle = useCallback(() => {
@@ -289,8 +310,9 @@ export default function FlyGame({ audio: songLinks, fields }: FlyClientProps) {
     setHint(false);
     setPassing(null);
     setProgress(loadProgress(browserStorage()));
-    setPhase('title');
-  }, [runtime]);
+    goTo('title');
+    if (Date.now() - mintedAt > LINKS_STALE_MS) router.refresh();
+  }, [runtime, goTo, mintedAt, router]);
 
   // ── Starting, from a tap ─────────────────────────────────────────────────
 
@@ -317,6 +339,8 @@ export default function FlyGame({ audio: songLinks, fields }: FlyClientProps) {
       const run = albumStart(from);
       modeRef.current = 'album';
       runRef.current = run;
+      practiceAlbum.current = debugRef.current.startAt > 0 || debugRef.current.flow !== null;
+      heldLine.current = null;
       runtime.albumBase = 0;
       setAlbumResult(null);
       saveAlbumPlace(storage, run);
@@ -330,20 +354,25 @@ export default function FlyGame({ audio: songLinks, fields }: FlyClientProps) {
 
   const showAlbumResult = useCallback((run: AlbumRun) => {
     const storage = browserStorage();
-    const record = recordAlbum(storage, run);
-    if (!albumDone(run)) saveAlbumPlace(storage, run);
+    const practice = practiceAlbum.current;
+    saveAlbumPlace(storage, run);
+    const record = practice ? null : recordAlbum(storage, run);
+    const stored = loadProgress(storage).albumBest?.total ?? 0;
     const lines = run.lines.map((line) => ({ slug: line.slug, title: line.title, depth: line.depth, medal: line.medal }));
     setAlbumResult({
       total: albumTotal(run),
       lines,
-      complete: record.full,
-      best: Math.max(record.total, record.previousBest?.total ?? 0),
-      isBest: record.isBest,
+      finished: albumDone(run),
+      complete: isFullRun(run),
+      best: record ? Math.max(record.total, record.previousBest?.total ?? 0) : stored,
+      isBest: record?.isBest ?? false,
+      practice,
     });
     setProgress(loadProgress(storage));
+    heldLine.current = null;
     void songRef.current?.fadeOut(1500);
-    setPhase('albumResult');
-  }, []);
+    goTo('albumResult');
+  }, [goTo]);
 
   const finishLevel = useCallback(
     (level: LevelDef) => {
@@ -369,7 +398,7 @@ export default function FlyGame({ audio: songLinks, fields }: FlyClientProps) {
         });
         setProgress(loadProgress(storage));
         void songRef.current?.fadeOut(1400);
-        setPhase('levelResult');
+        goTo('levelResult');
         return;
       }
 
@@ -381,12 +410,13 @@ export default function FlyGame({ audio: songLinks, fields }: FlyClientProps) {
         showAlbumResult(run);
         return;
       }
-      setPassing({ slug: line.slug, title: line.title, depth: line.depth, medal: line.medal });
-      later(CARD_MS, () => setPassing(null));
+      const passingLine = { slug: line.slug, title: line.title, depth: line.depth, medal: line.medal };
       const next = currentStage(run);
+      // Over a cutscene the card would sit on the film; it waits for the next level instead.
+      heldLine.current = passingLine;
       if (next) enterStage(next, false);
     },
-    [runtime, enterStage, showAlbumResult, later],
+    [runtime, enterStage, showAlbumResult, goTo],
   );
 
   const finishCutscene = useCallback(
@@ -394,7 +424,9 @@ export default function FlyGame({ audio: songLinks, fields }: FlyClientProps) {
       const run = runRef.current;
       if (!run) return;
       const stage = currentStage(run);
-      if (stage?.kind === 'cutscene' && stage.script === 'welcome') markSeen(browserStorage(), 'welcomeSeen');
+      // A Skip that lands just after the cutscene ended must not skip the level that followed it.
+      if (stage?.kind !== 'cutscene') return;
+      if (stage.script === 'welcome') markSeen(browserStorage(), 'welcomeSeen');
       const next = skipped ? skipCutscene(run) : finishStage(run);
       runRef.current = next;
       saveAlbumPlace(browserStorage(), next);
@@ -412,6 +444,8 @@ export default function FlyGame({ audio: songLinks, fields }: FlyClientProps) {
   // Everything the fall reports, turned into words, light and a buzz.
   useEffect(() => {
     runtime.onEvents = (events: FallEvent[]) => {
+      // The title's fall is scenery: no words, no flashes, no buzz in the hand.
+      if (runtime.mode === 'attract') return;
       const { hud, flyerScreen } = runtime;
       for (const event of events) {
         switch (event.type) {
@@ -458,20 +492,46 @@ export default function FlyGame({ audio: songLinks, fields }: FlyClientProps) {
 
   // ── Pause ────────────────────────────────────────────────────────────────
 
+  const releaseKeys = useCallback(() => {
+    const keys = runtime.keys;
+    keys.left = keys.right = keys.up = keys.down = false;
+  }, [runtime]);
+
   const pause = useCallback(() => {
     const now = phaseRef.current;
     if (now !== 'run' && now !== 'cutscene') return;
+    // A level that has just ended is on its way to its result, not to a pause.
+    if (runtime.engine.done) return;
     pausedFrom.current = now;
     runtime.paused = true;
+    releaseKeys();
     songRef.current?.pause();
-    setPhase('paused');
-  }, [runtime]);
+    goTo('paused');
+  }, [runtime, goTo, releaseKeys]);
 
   const resume = useCallback(() => {
+    // A Play from the lock screen while the page is hidden would run the song on unseen.
+    if (typeof document !== 'undefined' && document.hidden) return;
+    if (phaseRef.current !== 'paused') return;
     runtime.paused = false;
+    releaseKeys();
     songRef.current?.resume();
-    setPhase(pausedFrom.current);
-  }, [runtime]);
+    goTo(pausedFrom.current);
+  }, [runtime, goTo, releaseKeys]);
+
+  // The phone stopping the song by itself, and a song ending before its level does.
+  useEffect(() => {
+    const song = songRef.current;
+    if (!song) return;
+    song.onInterrupted = () => pause();
+    song.onEnded = () => {
+      // The clock has reached the song's end, so the level has too: make sure it knows.
+      const engine = runtime.engine;
+      if (runtime.mode !== 'attract' && !engine.done && Number.isFinite(engine.course.endTick)) {
+        engine.advanceTo(engine.course.endTick);
+      }
+    };
+  }, [runtime, pause]);
 
   const leave = useCallback(() => {
     runtime.paused = false;
@@ -496,13 +556,19 @@ export default function FlyGame({ audio: songLinks, fields }: FlyClientProps) {
   useSlideSteer(surface, runtime, sensitivity, acceleration, onSlide);
 
   // Leaving the tab pauses the fall; nobody loses a song to a notification.
+  // Coming back after hours fetches fresh song links (they last six), between runs.
   useEffect(() => {
     const onVisibility = () => {
-      if (document.hidden) pause();
+      if (document.hidden) {
+        pause();
+        return;
+      }
+      const between = phaseRef.current === 'title' || phaseRef.current === 'songs';
+      if (between && Date.now() - mintedAt > LINKS_STALE_MS) router.refresh();
     };
     document.addEventListener('visibilitychange', onVisibility);
     return () => document.removeEventListener('visibilitychange', onVisibility);
-  }, [pause]);
+  }, [pause, mintedAt, router]);
 
   // Keys, for a desktop. Captured first and marked handled, so the site's
   // music shortcuts (arrows seek, space plays) stay out of the fall.
@@ -528,27 +594,38 @@ export default function FlyGame({ audio: songLinks, fields }: FlyClientProps) {
           keys.down = down;
           break;
         case 'Space':
-        case 'Escape':
+        case 'Escape': {
+          // On a menu, a focused row is the keyboard's own: Space presses it.
+          const now = phaseRef.current;
+          const playing = now === 'run' || now === 'cutscene' || now === 'paused';
+          if (!playing || (event.code === 'Space' && onButton(event) && now === 'paused')) return;
           if (down && !event.repeat) {
-            if (phaseRef.current === 'run' || phaseRef.current === 'cutscene') pause();
-            else if (phaseRef.current === 'paused') resume();
+            if (now === 'paused') resume();
+            else pause();
           }
           break;
+        }
         case 'Enter':
-          if (down && !event.repeat && phaseRef.current === 'title') startAlbum(false);
+          // Enter on a focused row presses that row; on the title with nothing focused, it starts the album.
+          if (phaseRef.current !== 'title' || onButton(event)) return;
+          if (down && !event.repeat) startAlbum(false);
           break;
         default:
           return;
       }
       event.preventDefault();
     };
+    // A key let go in another window would steer on forever.
+    const onBlur = () => releaseKeys();
     window.addEventListener('keydown', onKey, true);
     window.addEventListener('keyup', onKey, true);
+    window.addEventListener('blur', onBlur);
     return () => {
       window.removeEventListener('keydown', onKey, true);
       window.removeEventListener('keyup', onKey, true);
+      window.removeEventListener('blur', onBlur);
     };
-  }, [runtime, pause, resume, startAlbum]);
+  }, [runtime, pause, resume, startAlbum, releaseKeys]);
 
   // The phone's lock screen and headphones: the song's name, and pause.
   useEffect(() => {
@@ -626,11 +703,18 @@ export default function FlyGame({ audio: songLinks, fields }: FlyClientProps) {
           continueFrom={continueLevel}
           onAlbum={() => startAlbum(false)}
           onAlbumFromStart={() => startAlbum(true)}
-          onSongs={() => setPhase('songs')}
+          onSongs={() => goTo('songs')}
         />
       ) : null}
       {phase === 'songs' ? (
-        <SongsScreen tone={tone} levels={LEVELS} bests={bests} onPlay={startSong} onBack={() => setPhase('title')} />
+        <SongsScreen
+          tone={tone}
+          levels={LEVELS}
+          bests={bests}
+          onPlay={startSong}
+          // From the title the fall behind is already the title's; after a level it is not.
+          onBack={() => (runtime.mode === 'attract' ? goTo('title') : toTitle())}
+        />
       ) : null}
       {phase === 'cutscene' ? <CutsceneOverlay tone={tone} onSkip={() => finishCutscene(true)} /> : null}
       {phase === 'paused' ? <PausedScreen tone={tone} onResume={resume} onLeave={leave} /> : null}
@@ -641,15 +725,21 @@ export default function FlyGame({ audio: songLinks, fields }: FlyClientProps) {
           hasNext={nextAfterResult !== null}
           onAgain={() => startSong(levelResult.level)}
           onNext={() => nextAfterResult && startSong(nextAfterResult)}
-          onSongs={() => setPhase('songs')}
+          onSongs={() => goTo('songs')}
           onTitle={toTitle}
         />
       ) : null}
       {phase === 'albumResult' && albumResult ? (
-        <AlbumResultScreen tone={tone} result={albumResult} onAgain={() => startAlbum(true)} onSongs={() => setPhase('songs')} onTitle={toTitle} />
+        <AlbumResultScreen tone={tone} result={albumResult} onAgain={() => startAlbum(true)} onSongs={() => goTo('songs')} onTitle={toTitle} />
       ) : null}
     </div>
   );
+}
+
+/** True when a key lands on a focused button, which the browser should press. */
+function onButton(event: KeyboardEvent): boolean {
+  const target = event.target as Element | null;
+  return Boolean(target?.closest?.('button'));
 }
 
 function setMediaSession(stage: Stage): void {

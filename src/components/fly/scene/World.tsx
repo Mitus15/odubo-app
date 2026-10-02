@@ -6,26 +6,29 @@ import * as THREE from 'three';
 import type { Form, FormKind } from '../engine/types';
 import { useFlyRuntime } from '../runtime';
 import type { WorldFrame } from './frame';
+import { POOL_CAPACITY } from './capacity';
 import { createGateMaterial, createStoneMaterial, type StoneUniforms } from './materials';
 
-const CAPACITY: Record<FormKind, number> = { block: 760, prism: 240, ring: 24 };
-
-/** Forms the pools had no room for since the run began, for ?debug. */
+/** Forms that had to wait for room since the run began, for ?debug. Should stay 0. */
 export const dropped = { count: 0 };
 
 /**
  * One instanced mesh per kind of form, so the whole world is three draw calls.
  * Forms never move once placed; slots are only written when a form arrives,
  * leaves, or the world is re-centred.
+ *
+ * Every form the director holds is solid stone he can hit, so none may go
+ * undrawn: a form with no free slot waits and takes the next one freed.
  */
 class FormPool {
   readonly mesh: THREE.InstancedMesh;
   private free: number[] = [];
   private slots = new Map<number, number>();
   private forms = new Map<number, Form>();
+  private waiting = new Map<number, Form>();
 
   constructor(kind: FormKind, geometry: THREE.BufferGeometry, material: THREE.Material) {
-    const capacity = CAPACITY[kind];
+    const capacity = POOL_CAPACITY[kind];
     this.mesh = new THREE.InstancedMesh(geometry, material, capacity);
     this.mesh.frustumCulled = false;
     this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
@@ -37,12 +40,17 @@ class FormPool {
   }
 
   add(form: Form, frame: WorldFrame): void {
-    if (this.slots.has(form.id)) return;
+    if (this.slots.has(form.id) || this.waiting.has(form.id)) return;
     const slot = this.free.pop();
     if (slot === undefined) {
       dropped.count += 1;
+      this.waiting.set(form.id, form);
       return;
     }
+    this.place(form, slot, frame);
+  }
+
+  private place(form: Form, slot: number, frame: WorldFrame): void {
     this.slots.set(form.id, slot);
     this.forms.set(form.id, form);
     this.mesh.setMatrixAt(slot, composeMatrix(form, frame));
@@ -52,11 +60,19 @@ class FormPool {
     this.touch();
   }
 
-  remove(form: Form): void {
+  remove(form: Form, frame: WorldFrame): void {
+    if (this.waiting.delete(form.id)) return;
     const slot = this.slots.get(form.id);
     if (slot === undefined) return;
     this.slots.delete(form.id);
     this.forms.delete(form.id);
+    // A form waiting for room takes the slot at once; otherwise it is hidden and freed.
+    const next = this.waiting.values().next();
+    if (!next.done) {
+      this.waiting.delete(next.value.id);
+      this.place(next.value, slot, frame);
+      return;
+    }
     this.mesh.setMatrixAt(slot, HIDDEN);
     this.free.push(slot);
     this.touch();
@@ -71,8 +87,9 @@ class FormPool {
     this.touch();
   }
 
-  clear(): void {
-    for (const form of [...this.forms.values()]) this.remove(form);
+  clear(frame: WorldFrame): void {
+    this.waiting.clear();
+    for (const form of [...this.forms.values()]) this.remove(form, frame);
   }
 
   private touch(): void {
@@ -151,7 +168,7 @@ export function World({ uniforms }: { uniforms: StoneUniforms }) {
     if (seen.generation !== engine.generation) {
       seen.generation = engine.generation;
       director.drainChanges();
-      for (const pool of Object.values(pools)) pool.clear();
+      for (const pool of Object.values(pools)) pool.clear(frame);
       dropped.count = 0;
       for (const form of director.forms()) pools[form.kind].add(form, frame);
       seen.version = frame.version;
@@ -159,7 +176,7 @@ export function World({ uniforms }: { uniforms: StoneUniforms }) {
     }
 
     const { added, removed } = director.drainChanges();
-    for (const form of removed) pools[form.kind].remove(form);
+    for (const form of removed) pools[form.kind].remove(form, frame);
     for (const form of added) pools[form.kind].add(form, frame);
 
     if (seen.version !== frame.version) {

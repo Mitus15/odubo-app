@@ -3,6 +3,7 @@
 import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import type { Look } from '@/lib/fly/region';
 import type { LiveLook } from './look';
 import { useFlyRuntime } from '../runtime';
 
@@ -42,13 +43,25 @@ const fragmentShader = /* glsl */ `
   }
 `;
 
-export function createSkyMaterial(look: LiveLook, earthRadius = { value: 0.04 }): THREE.ShaderMaterial {
+type SkyColors = Pick<LiveLook['colors'], 'zenith' | 'field' | 'nadir' | 'earth'>;
+
+/** The sky from a fixed look, for a reflection rendered once per sky. */
+export function skyColorsOf(look: Look): SkyColors {
+  return {
+    zenith: new THREE.Color(look.zenith),
+    field: new THREE.Color(look.field),
+    nadir: new THREE.Color(look.nadir),
+    earth: new THREE.Color(look.earth),
+  };
+}
+
+export function createSkyMaterial(colors: SkyColors, earthRadius = { value: 0.04 }): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
     uniforms: {
-      uZenith: { value: look.colors.zenith },
-      uField: { value: look.colors.field },
-      uNadir: { value: look.colors.nadir },
-      uEarth: { value: look.colors.earth },
+      uZenith: { value: colors.zenith },
+      uField: { value: colors.field },
+      uNadir: { value: colors.nadir },
+      uEarth: { value: colors.earth },
       uEarthRadius: earthRadius,
     },
     vertexShader,
@@ -71,7 +84,7 @@ export function earthRadiusAt(progress: number): number {
 export function Sky() {
   const runtime = useFlyRuntime();
   const earthRadius = useMemo(() => ({ value: earthRadiusAt(0) }), []);
-  const material = useMemo(() => createSkyMaterial(runtime.look, earthRadius), [runtime, earthRadius]);
+  const material = useMemo(() => createSkyMaterial(runtime.look.colors, earthRadius), [runtime, earthRadius]);
   const geometry = useMemo(() => new THREE.SphereGeometry(1000, 32, 24), []);
   const dome = useRef<THREE.Mesh>(null);
 

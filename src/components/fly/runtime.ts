@@ -77,6 +77,8 @@ export interface FlyRuntime {
     bursts: HTMLElement | null;
     flash: HTMLElement | null;
     debug: HTMLElement | null;
+    /** "Loading the song": shown while the song keeps the fall waiting. */
+    stall: HTMLElement | null;
   };
   /** Set by the game: receives every engine event, once. */
   onEvents: (events: FallEvent[]) => void;

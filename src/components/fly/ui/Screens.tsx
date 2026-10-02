@@ -36,10 +36,14 @@ export interface AlbumLine {
 export interface AlbumResult {
   total: number;
   lines: AlbumLine[];
-  /** True when the run covered all ten levels: only then is it an album best. */
+  /** The run reached the ground (Ghost World ended). */
+  finished: boolean;
+  /** It also covered all ten levels: only then is it an album best. */
   complete: boolean;
   best: number;
   isBest: boolean;
+  /** A tuning run (?t, ?flow): shown, never saved. */
+  practice: boolean;
 }
 
 interface Tone {
@@ -103,9 +107,20 @@ function Veil({ children, tone, strength }: { children: ReactNode; tone: Tone; s
       className="absolute inset-0 flex flex-col px-6 pb-[max(22px,env(safe-area-inset-bottom))] pt-[max(24px,env(safe-area-inset-top))]"
       style={{ background: `${tone.field}${Math.round(strength * 255).toString(16).padStart(2, '0')}`, color: tone.ink }}
     >
-      <div className="mx-auto flex h-full w-full max-w-[460px] flex-col justify-between">{children}</div>
+      <div data-fly-scroll className="mx-auto flex h-full min-h-0 w-full max-w-[460px] flex-col justify-between overflow-y-auto" style={{ overscrollBehavior: 'contain', touchAction: 'pan-y' }}>
+        {children}
+      </div>
     </div>
   );
+}
+
+/** The line under an album's total: a best, a continue that reached the ground, or a stop. */
+function albumStatus(result: AlbumResult): string {
+  if (result.practice) return 'Practice · not saved';
+  if (!result.finished) return 'Unfinished';
+  if (result.complete) return result.isBest ? 'New album best' : `Album best ${format(result.best)}`;
+  const from = result.lines[0]?.title;
+  return from ? `From ${from} · not the whole album` : 'Not the whole album';
 }
 
 function medalNote(best: LevelBest | undefined): string | undefined {
@@ -158,7 +173,7 @@ export function TitleScreen({
         >
           <span className="opacity-50">Slide to steer</span>
           {continueFrom ? (
-            <button type="button" onClick={onAlbumFromStart} className="pointer-events-auto -my-3 py-3 opacity-70">
+            <button type="button" onClick={onAlbumFromStart} className="pointer-events-auto -my-3 inline-flex min-h-[44px] items-center opacity-70">
               From the beginning
             </button>
           ) : null}
@@ -185,11 +200,11 @@ export function SongsScreen({
     <Veil tone={tone} strength={0.84}>
       <div className="flex items-center justify-between">
         <Eyebrow>Songs</Eyebrow>
-        <button type="button" onClick={onBack} className="pointer-events-auto -mr-2 px-2 py-2 text-[11px] font-bold uppercase tracking-[0.3em] opacity-70">
+        <button type="button" onClick={onBack} className="pointer-events-auto -mr-2 inline-flex min-h-[44px] items-center px-2 text-[11px] font-bold uppercase tracking-[0.3em] opacity-70">
           Back
         </button>
       </div>
-      <div className="pointer-events-auto -mx-1 mt-4 flex-1 overflow-y-auto px-1" style={{ overscrollBehavior: 'contain', touchAction: 'pan-y' }}>
+      <div data-fly-scroll className="pointer-events-auto -mx-1 mt-4 min-h-0 flex-1 overflow-y-auto px-1" style={{ overscrollBehavior: 'contain', touchAction: 'pan-y' }}>
         {levels.map((level) => (
           <Row
             key={level.slug}
@@ -289,15 +304,13 @@ export function AlbumResultScreen({
   return (
     <Veil tone={tone} strength={0.82}>
       <div className="flex min-h-0 flex-1 flex-col">
-        <Eyebrow>{result.complete ? 'The album' : 'So far'}</Eyebrow>
+        <Eyebrow>{result.finished ? 'The album' : 'So far'}</Eyebrow>
         <div className="mt-1 flex items-baseline gap-2">
           <span className="text-[64px] font-bold leading-none tabular-nums tracking-[-0.01em]">{format(result.total)}</span>
           <span className="text-[15px] font-bold uppercase tracking-[0.2em] opacity-70">m</span>
         </div>
-        <div className="mt-3 text-[12px] font-bold uppercase tracking-[0.26em]">
-          {result.complete ? (result.isBest ? 'New album best' : `Album best ${format(result.best)}`) : 'Unfinished'}
-        </div>
-        <div className="mt-5 min-h-0 flex-1 overflow-y-auto" style={{ overscrollBehavior: 'contain' }}>
+        <div className="mt-3 text-[12px] font-bold uppercase tracking-[0.26em]">{albumStatus(result)}</div>
+        <div data-fly-scroll className="mt-5 min-h-0 flex-1 overflow-y-auto" style={{ overscrollBehavior: 'contain', touchAction: 'pan-y' }}>
           {result.lines.map((line) => (
             <div
               key={line.slug}
@@ -329,7 +342,7 @@ export function CutsceneOverlay({ tone, onSkip }: { tone: Tone; onSkip: () => vo
       <button
         type="button"
         onClick={onSkip}
-        className="pointer-events-auto absolute bottom-[max(18px,env(safe-area-inset-bottom))] right-[max(18px,env(safe-area-inset-right))] flex items-center gap-3 px-2 py-3 text-[11px] font-bold uppercase tracking-[0.34em] opacity-75"
+        className="pointer-events-auto absolute bottom-[max(18px,env(safe-area-inset-bottom))] right-[max(18px,env(safe-area-inset-right))] flex min-h-[44px] items-center gap-3 px-2 text-[11px] font-bold uppercase tracking-[0.34em] opacity-75"
       >
         <span className="h-px w-8 bg-current" />
         Skip
@@ -341,7 +354,7 @@ export function CutsceneOverlay({ tone, onSkip }: { tone: Tone; onSkip: () => vo
 /** Between levels in the album: the last song's line, passing over the next song's first seconds. */
 export function PassingCard({ tone, line }: { tone: Tone; line: AlbumLine }) {
   return (
-    <div className="pointer-events-none absolute inset-x-0 top-[30%] flex flex-col items-center gap-1 text-center" style={{ color: tone.ink }}>
+    <div className="pointer-events-none absolute inset-x-0 top-[40%] flex flex-col items-center gap-1 text-center" style={{ color: tone.ink }}>
       <span className="text-[11px] font-bold uppercase tracking-[0.34em] opacity-70">{line.title}</span>
       <span className="text-[26px] font-bold tabular-nums leading-none">
         {format(line.depth)} m{line.medal ? ` · ${MEDAL_WORD[line.medal]}` : ''}

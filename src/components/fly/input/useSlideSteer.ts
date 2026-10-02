@@ -67,8 +67,12 @@ export function useSlideSteer(
     const up = (event: PointerEvent) => {
       if (event.pointerId === pointer) pointer = null;
     };
-    // In-app browsers scroll or bounce the page unless told not to.
-    const hold = (event: TouchEvent) => event.preventDefault();
+    // In-app browsers scroll or bounce the page unless told not to. A menu's own
+    // list (marked data-fly-scroll) is left to scroll; its pointercancel ends the slide.
+    const hold = (event: TouchEvent) => {
+      if ((event.target as Element | null)?.closest?.('[data-fly-scroll]')) return;
+      event.preventDefault();
+    };
 
     element.addEventListener('pointerdown', down);
     window.addEventListener('pointermove', move);

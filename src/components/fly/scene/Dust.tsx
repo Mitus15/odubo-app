@@ -14,12 +14,14 @@ const vertexShader = /* glsl */ `
   attribute vec3 aSeed;
   attribute float aTail;
   uniform vec3 uCenter;
+  uniform float uOrigin;
   uniform vec3 uBox;
   uniform float uLength;
   varying float vAlpha;
   void main() {
     // Each mote wraps around the moving box, so the air is endless and free.
-    vec3 local = mod(aSeed * uBox - uCenter, uBox) - 0.5 * uBox;
+    // uOrigin ties the lattice to true depth, so re-centring the world never moves the air.
+    vec3 local = mod(aSeed * uBox - uCenter + vec3(0.0, uOrigin, 0.0), uBox) - 0.5 * uBox;
     vec3 world = uCenter + local + vec3(0.0, aTail * uLength, 0.0);
     vec4 view = viewMatrix * vec4(world, 1.0);
     gl_Position = projectionMatrix * view;
@@ -68,6 +70,7 @@ export function Dust() {
     const material = new THREE.ShaderMaterial({
       uniforms: {
         uCenter: { value: new THREE.Vector3() },
+        uOrigin: { value: 0 },
         uBox: { value: BOX.clone() },
         uLength: { value: 2 },
         uColor: { value: runtime.look.colors.dust },
@@ -100,6 +103,7 @@ export function Dust() {
     material.uniforms.uCenter.value.copy(camera.position).addScaledVector(forward, BOX.y * 0.3);
     const speed = runtime.engine.state.speed;
     material.uniforms.uLength.value = speed * 0.06;
+    material.uniforms.uOrigin.value = runtime.frame.originS % BOX.y;
     material.uniforms.uOpacity.value = 0.35 + 0.4 * runtime.engine.state.flow;
   });
 

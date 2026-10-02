@@ -20,6 +20,8 @@ export interface FlyClientProps {
   audio: Record<string, string>;
   /** Each chapter's field colour, by slug; missing ones use the album's defaults. */
   fields: Record<string, string>;
+  /** When the song links were signed (ms). They last six hours. */
+  mintedAt: number;
 }
 
 export default function FlyClient(props: FlyClientProps) {

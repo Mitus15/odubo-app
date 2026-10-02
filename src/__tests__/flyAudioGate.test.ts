@@ -777,3 +777,95 @@ describe('pauseSiteMusic', () => {
     expect(togglePlayPause).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('SongAudio, when the song misbehaves', () => {
+  it('goes on silently when the element says it plays but never moves', () => {
+    const { audio, els, clock } = rig();
+    audio.play('/song', 0, 120);
+    const el = els[0];
+    el.flowing(5);
+    expect(audio.clock()).toBe(5);
+    // Stuck at 5 s with data and no pause: after the watch runs out, the clock moves on.
+    for (let i = 0; i < 30; i++) {
+      clock.t += 100;
+      audio.clock();
+    }
+    expect(audio.audible).toBe(false);
+    clock.t += 1000;
+    expect(audio.clock()).toBeGreaterThan(5.9);
+    audio.destroy();
+  });
+
+  it('never calls a paused or buffering song stuck', () => {
+    const { audio, els, clock } = rig();
+    audio.play('/song', 0, 120);
+    const el = els[0];
+    el.flowing(5);
+    audio.clock();
+    audio.pause();
+    clock.t += 10_000;
+    audio.clock();
+    audio.resume();
+    el.flowing(5);
+    clock.t += 100;
+    audio.clock();
+    expect(audio.audible).toBe(true);
+    el.readyState = 2;
+    clock.t += 10_000;
+    audio.clock();
+    expect(audio.audible).toBe(true);
+    audio.destroy();
+  });
+
+  it('gives up on a song that buffers for good, and the fall goes on in silence', () => {
+    const { audio, els, clock } = rig();
+    audio.play('/song', 40, 120);
+    const el = els[0];
+    el.readyState = 1;
+    el.seeking = true;
+    expect(audio.clock()).toBe(40);
+    clock.t += 6000;
+    expect(audio.clock()).toBe(40);
+    expect(audio.audible).toBe(true);
+    clock.t += 7000;
+    audio.clock();
+    expect(audio.audible).toBe(false);
+    clock.t += 2000;
+    expect(audio.clock()).toBeCloseTo(42, 3);
+    audio.destroy();
+  });
+
+  it('finishes the song in silence when the file ends a few milliseconds short', () => {
+    const onEnded = jest.fn();
+    const { audio, els, clock } = rig(onEnded);
+    audio.play('/song', 0, 30);
+    const el = els[0];
+    el.flowing(29.97);
+    audio.clock();
+    el.ended = true;
+    el.emit('ended');
+    expect(onEnded).not.toHaveBeenCalled();
+    clock.t += 1000;
+    expect(audio.clock()).toBe(30);
+    audio.destroy();
+  });
+
+  it('tells the game when the phone pauses the song, but not when the game does', () => {
+    const onInterrupted = jest.fn();
+    const { audio, els } = rig();
+    audio.onInterrupted = onInterrupted;
+    audio.play('/song', 0, 120);
+    const el = els[0];
+    el.flowing(3);
+    // The game's own pause: held, so not an interruption.
+    audio.pause();
+    el.emit('pause');
+    expect(onInterrupted).not.toHaveBeenCalled();
+    audio.resume();
+    // Headphones out: the element pauses itself.
+    el.paused = true;
+    el.emit('pause');
+    expect(onInterrupted).toHaveBeenCalledTimes(1);
+    audio.destroy();
+  });
+});
