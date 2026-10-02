@@ -55,11 +55,6 @@ export default function ClipsPage() {
     <div className="relative bg-black text-[#ede8df] h-[100dvh] overflow-hidden">
       <FilmGrain opacity={0.03} />
 
-      {/* DEBUG: Big red text top of clips page */}
-      <div className="fixed top-0 left-0 right-0 z-[9999] text-center py-2 bg-red-600 text-white text-2xl font-bold pointer-events-none">
-        CLIPS PAGE DESKTOP TEST - CAN YOU SEE THIS?
-      </div>
-
       <ClipsErrorBoundary>
         {/* MOBILE: Full-screen TikTok feed */}
         <div className="lg:hidden">
