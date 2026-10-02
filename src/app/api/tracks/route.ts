@@ -83,11 +83,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const result = await executeQuery(
+    // A track's id is this UUID, not a rowid, so it is what the caller gets back.
+    const id = globalThis.crypto.randomUUID();
+    await executeQuery(
       `INSERT INTO tracks (id, title, album_id, track_number, audio_url, duration, status, created_at)
        VALUES (?, ?, ?, ?, ?, ?, 'draft', datetime('now'))`,
       [
-        globalThis.crypto.randomUUID(),
+        id,
         title,
         album_id,
         track_number,
@@ -97,7 +99,7 @@ export async function POST(req: NextRequest) {
     );
 
     return NextResponse.json(
-      { success: true, id: result.meta?.last_row_id },
+      { success: true, id },
       { status: 201 }
     );
   } catch (error) {
