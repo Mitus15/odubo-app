@@ -152,6 +152,15 @@ describe('adding a song to an album', () => {
     ]);
   });
 
+  it('keeps the explicit mark the owner set, which the album player shows', async () => {
+    await uploadAlbumTrack(loopSoul, { ...makunahea, explicit_content: true });
+    await uploadAlbumTrack(loopSoul, { ...makunahea, title: 'News Peak', track_number: 5 });
+    expect(mockDb.prepare('SELECT title, explicit_content FROM tracks ORDER BY track_number').all()).toEqual([
+      { title: 'Makunahea', explicit_content: 1 },
+      { title: 'News Peak', explicit_content: 0 },
+    ]);
+  });
+
   it('makes no track when storage refuses the audio, and says why', async () => {
     mockR2Refusal = 'Access Denied';
     await expect(uploadAlbumTrack(loopSoul, makunahea)).rejects.toThrow('Access Denied');
