@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import ffmpeg from 'fluent-ffmpeg';
 import { PassThrough } from 'stream';
+import { requireAdmin } from '@/lib/api/requireAdmin';
 
 export const runtime = 'nodejs';
 
 export async function POST(req: NextRequest) {
+  // ffmpeg fetches and re-encodes whatever URL it is handed: admins only.
+  const { error } = await requireAdmin(req);
+  if (error) return error;
+
   try {
     const { url } = (await req.json()) as { url: string };
 
