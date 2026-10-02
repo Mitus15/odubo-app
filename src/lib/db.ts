@@ -76,6 +76,17 @@ export async function executeQuery(sql: string, params: any[] = []) {
   }
 }
 
+/**
+ * How many rows a write touched. executeQuery returns D1's whole response
+ * ({ result: [{ results, success, meta }], success, errors, messages }), so the
+ * count lives at result[0].meta.changes; there is no `changes` at the top.
+ */
+export function changedRows(response: unknown): number {
+  const envelope = response as { result?: { meta?: { changes?: unknown } }[] } | null | undefined;
+  const changes = envelope?.result?.[0]?.meta?.changes;
+  return typeof changes === 'number' ? changes : 0;
+}
+
 export async function queryDatabase(sql: string, params: any[] = []) {
   try {
   const databaseUrl = process.env.DATABASE_URL;

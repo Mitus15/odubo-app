@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromRequest, isAdminUser } from '@/lib/auth';
 import { getPost, isPostDelivered } from '@/lib/postforme';
-import { queryDatabase, executeQuery } from '@/lib/db';
+import { queryDatabase, executeQuery, changedRows } from '@/lib/db';
 
 export const runtime = 'edge';
 
@@ -166,8 +166,7 @@ export async function GET(request: NextRequest) {
                WHERE parent_video_id = ? AND type = 'clip'`,
               [now, sourceVideoId]
             );
-            // D1 returns { changes } for UPDATE
-            clipsMadePublic = (clipResult as { changes?: number })?.changes || 0;
+            clipsMadePublic = changedRows(clipResult);
             if (clipsMadePublic > 0) {
               console.log(`[Social Status] Made ${clipsMadePublic} clips of video ${sourceVideoId} publicly visible`);
             }
@@ -304,7 +303,7 @@ export async function POST(request: NextRequest) {
                   `UPDATE videos SET is_public = 1, publication_status = 'live', updated_at = ? WHERE parent_video_id = ? AND type = 'clip'`,
                   [now, sourceVideoId]
                 );
-                totalClipsPublished += (clipResult as { changes?: number })?.changes || 0;
+                totalClipsPublished += changedRows(clipResult);
               }
             }
           }
