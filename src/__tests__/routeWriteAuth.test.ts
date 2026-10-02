@@ -47,11 +47,9 @@ const PUBLIC_WRITES: Record<string, string> = {
   'POST /api/webhooks/clerk': 'disabled; answers 200 and does nothing',
 };
 
-// Open, and should not be: each waits on a decision recorded in
-// docs/sessions/2026-10-02-clips-banner-and-clip-count.md.
-const KNOWN_OPEN: Record<string, string> = {
-  'POST /api/stream/webhook': 'skips its signature check when the header is absent; needs the Stream webhook secret',
-};
+// Open, and should not be, each with what it waits on. None now: the last,
+// POST /api/stream/webhook, verifies Stream's signature since 2026-10-02.
+const KNOWN_OPEN: Record<string, string> = {};
 
 const METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 const VERIFIES = /\b(requireAdmin|requireCronOrAdmin|getUserFromRequest|verifyUserFromRequest|isAdminUser|requireAuth|withAdmin|withAuth|isAdminRequest|isRequestFromAdmin|isAdminFromPayload|getAuthContext|getAuthenticatedUser|userHasAnyRole|getUserRoleFromRequest|verifyAdminSession|jwtVerify|verifyShopifyHmac|verifySvix|verifyVoter|lookupPassLink|claimPassOnDevice|findThreadByToken|verifyPassword|verifyEmailToken|timingSafeEqual|createHmac|CRON_SECRET)\b|crypto\.subtle\.verify/;

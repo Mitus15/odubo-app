@@ -1,44 +1,80 @@
 import { NextRequest, NextResponse } from 'next/server';
+import crypto from 'crypto';
 import { executeQuery, queryDatabase } from '@/lib/db';
 import { generateClipThumbnail, generateAIThumbnailCandidates } from '@/lib/thumbnailService';
 
 export const runtime = 'nodejs'; // Changed from 'edge' to support thumbnail generation with sharp/S3
 export const dynamic = 'force-dynamic';
 
+/** How far a signature's time may sit from ours before the request counts as a replay. */
+const SIGNATURE_TOLERANCE_SECONDS = 5 * 60;
+
 export async function POST(req: NextRequest) {
   try {
     const raw = await req.text();
-    const signature = req.headers.get('cf-webhook-signature') || '';
-    const secret = process.env.CLOUDFLARE_STREAM_WEBHOOK_SECRET;
 
-    // Optional signature verification if secret is configured
-    // NOTE: Cloudflare Stream webhooks don't have built-in signature verification
-    // You can add IP allowlisting in Cloudflare dashboard settings for security
-    if (secret && signature) {
-      const encoder = new TextEncoder();
-      const key = await crypto.subtle.importKey('raw', encoder.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-      const sig = await crypto.subtle.sign('HMAC', key, encoder.encode(raw));
-      
-      // Convert to hex without using Buffer (edge runtime compatible)
-      const computed = Array.from(new Uint8Array(sig))
-        .map(b => b.toString(16).padStart(2, '0'))
-        .join('');
-      
-      if (computed !== signature) {
-        console.warn('[Stream Webhook] Invalid signature');
-        return new NextResponse('Invalid signature', { status: 401 });
+    // Verify the Webhook-Signature header.
+    //
+    // This route rewrites rows in videos: status, duration and poster. Left
+    // unverified, anyone could POST a uid and un-archive that video or point
+    // its poster at any image, so production fails closed: no secret, no
+    // processing.
+    //
+    // Stream signs every notification with the secret Cloudflare returned
+    // when the webhook was registered (PUT or GET .../stream/webhook):
+    //   Webhook-Signature: time=<unix seconds>,sig1=<hex HMAC-SHA256 of `${time}.${raw body}`>
+    // https://developers.cloudflare.com/stream/manage-video-library/using-webhooks/
+    //
+    // Trimmed because a pasted secret often carries a trailing newline.
+    const secret = process.env.CLOUDFLARE_STREAM_WEBHOOK_SECRET?.trim();
+    if (!secret) {
+      if (process.env.NODE_ENV === 'production') {
+        console.error('[Stream Webhook] No webhook secret configured, refusing unverified payload');
+        return NextResponse.json({ error: 'Webhook verification not configured' }, { status: 500 });
       }
-      console.log('[Stream Webhook] Signature verified ✓');
-    } else if (!secret && process.env.NODE_ENV === 'production') {
-      console.warn('[Stream Webhook] No webhook secret configured - consider adding IP restrictions in Cloudflare');
+      console.warn('[Stream Webhook] No secret set, skipping verification (development only)');
+    } else {
+      const header = req.headers.get('webhook-signature');
+      if (!header) {
+        console.error('[Stream Webhook] Missing Webhook-Signature header');
+        return NextResponse.json({ error: 'Missing signature' }, { status: 401 });
+      }
+      const problem = signatureProblem(header, raw, secret);
+      if (problem) {
+        console.error(`[Stream Webhook] ${problem}`);
+        return NextResponse.json({ error: problem }, { status: 401 });
+      }
     }
-    
+
     const payload = JSON.parse(raw);
     return await handlePayload(payload);
   } catch (error) {
     console.error('Stream webhook error:', error);
     return NextResponse.json({ error: 'Webhook processing failed' }, { status: 500 });
   }
+}
+
+/**
+ * Why a Webhook-Signature header fails for this body, or null when Stream
+ * signed exactly this body within the tolerance. The signature is checked
+ * before the time, so "Stale signature" only ever describes a genuine one.
+ */
+function signatureProblem(header: string, body: string, secret: string): string | null {
+  const fields = new Map<string, string>();
+  for (const part of header.split(',')) {
+    const [key, ...value] = part.split('=');
+    fields.set(key.trim(), value.join('=').trim());
+  }
+  const time = fields.get('time') ?? '';
+  const sig1 = fields.get('sig1') ?? '';
+  if (!/^\d+$/.test(time) || !/^[0-9a-f]{64}$/i.test(sig1)) return 'Malformed signature';
+
+  // Both sides are 32 bytes (sig1 is 64 hex characters), as timingSafeEqual requires.
+  const expected = crypto.createHmac('sha256', secret).update(`${time}.${body}`, 'utf8').digest();
+  if (!crypto.timingSafeEqual(expected, Buffer.from(sig1, 'hex'))) return 'Invalid signature';
+
+  if (Math.abs(Date.now() / 1000 - Number(time)) > SIGNATURE_TOLERANCE_SECONDS) return 'Stale signature';
+  return null;
 }
 
 async function handlePayload(payload: any): Promise<NextResponse> {
