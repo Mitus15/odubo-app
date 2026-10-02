@@ -8,6 +8,7 @@ import { albumAccessFor, earlySetFor } from "@/lib/loop/album";
 import { getSetting } from "@/lib/loop/loopSetting";
 import { releasedSingleTitles } from "@/lib/loop/singlesStore";
 import { fieldPackOfKey, singleByFieldPack } from "@/lib/loop/singles";
+import { hlsDirOfKey, mediaKeyBelongsTo } from "@/lib/release/audioSource";
 
 /**
  * Who may actually hear a recording.
@@ -67,34 +68,44 @@ async function trackById(id: string): Promise<TrackRow | null> {
 }
 
 /**
- * The track a media key belongs to, or null when the key is not a track at all
- * (a master in the warehouse, a field stem). Those keep their existing
- * behaviour: this function only ever tightens the catalogue.
+ * The tracks a media key belongs to: the one whose recording it is, however
+ * its audio_url names it (the proxy path, the dead public host, the bare key),
+ * or whose HLS renditions it sits among (`song.hls/…` beside `song.web.m4a`).
+ * Usually one. None when the key is not a track at all (a master in the
+ * warehouse, a field stem): those keep their existing behaviour, so this only
+ * ever tightens the catalogue.
+ *
+ * Until 2026-10-02 only a key equal to audio_url counted, so a track's HLS
+ * files and the key of a track still stored on the dead host were served to
+ * anyone.
  */
-async function trackByMediaKey(key: string): Promise<TrackRow | null> {
+async function tracksByMediaKey(key: string): Promise<TrackRow[]> {
+  // Every form an owner's audio_url takes contains this text, so the database
+  // narrows the search and mediaKeyBelongsTo decides it exactly.
+  const hlsDir = hlsDirOfKey(key);
+  const text = hlsDir ? hlsDir.slice(0, -".hls/".length) : key;
   const rows = (await queryDatabase(
-    `SELECT t.id, t.album_id, t.track_number, t.title, a.status AS album_status
+    `SELECT t.id, t.album_id, t.track_number, t.title, t.audio_url, a.status AS album_status
        FROM tracks t LEFT JOIN albums a ON a.id = t.album_id
-      WHERE t.audio_url = ? OR t.audio_url = ? LIMIT 1`,
-    [`/api/media/audio/${key}`, key],
-  )) as TrackRow[];
-  return rows[0] ?? null;
+      WHERE instr(t.audio_url, ?) > 0`,
+    [text],
+  )) as Array<TrackRow & { audio_url: string | null }>;
+  return rows.filter((track) => mediaKeyBelongsTo(key, track.audio_url));
 }
 
-async function gatherFacts(req: NextRequest | null, track: TrackRow): Promise<AudioFacts> {
-  const albumPublished = (track.album_status ?? "").toLowerCase() === "published";
+/**
+ * The facts for tracks of ONE album, in order. Whatever is true of the caller
+ * (an admin, owed the record, their early draw) is the same for every track,
+ * so it is asked once: a whole album costs what a single track does.
+ */
+async function gatherFacts(req: NextRequest | null, tracks: TrackRow[]): Promise<AudioFacts[]> {
+  const albumPublished = (tracks[0]?.album_status ?? "").toLowerCase() === "published";
+  const nothingElse = { isFeaturedSingle: false, isAdmin: false, owed: false, albumReleased: false, inEarlySet: false };
 
   // A published album needs none of the rest, and asking would cost four
   // round trips on the hot path of a public catalogue.
-  if (albumPublished) {
-    return {
-      albumPublished: true,
-      isFeaturedSingle: false,
-      isAdmin: false,
-      owed: false,
-      albumReleased: false,
-      inEarlySet: false,
-    };
+  if (albumPublished || tracks.length === 0) {
+    return tracks.map(() => ({ albumPublished, ...nothingElse }));
   }
 
   const [featured, released, loopAdminOk, odubo] = await Promise.all([
@@ -112,41 +123,74 @@ async function gatherFacts(req: NextRequest | null, track: TrackRow): Promise<Au
   ]);
 
   const wanted = (featured ?? "1984").trim().toLowerCase();
-  const title = track.title.trim().toLowerCase();
-  const isFeaturedSingle = title === wanted || released.has(title);
+  const isFeaturedSingle = (track: TrackRow) => {
+    const title = track.title.trim().toLowerCase();
+    return title === wanted || released.has(title);
+  };
   const isAdmin = loopAdminOk || isAdminUser(odubo);
+  // Nothing owed: enough to open a public single, or anything to an admin,
+  // and the closed answer for everyone else.
+  const settled = (track: TrackRow): AudioFacts => ({
+    ...nothingElse,
+    albumPublished,
+    isFeaturedSingle: isFeaturedSingle(track),
+    isAdmin,
+  });
 
-  if (isFeaturedSingle || isAdmin) {
-    return { albumPublished, isFeaturedSingle, isAdmin, owed: false, albumReleased: false, inEarlySet: false };
-  }
+  if (isAdmin || tracks.every(isFeaturedSingle)) return tracks.map(settled);
 
   try {
     const [event, voterId] = await Promise.all([getCurrentEvent(), currentVoterId()]);
     const access = await albumAccessFor(event.id, voterId);
     const owed = access.entitled || access.holder;
-    if (!owed) {
-      return { albumPublished, isFeaturedSingle, isAdmin, owed: false, albumReleased: access.released, inEarlySet: false };
-    }
     // Owed, but before release only their own draw plays. Otherwise a
     // pass-holder could pull all fourteen through the API while the page
     // shows them three.
-    const { loadAlbum } = await import("@/lib/loop/album");
-    const data = await loadAlbum(track.album_id ?? undefined);
-    const inEarlySet =
-      !!data &&
-      earlySetFor(access.email ?? voterId, data.tracks, featured, access.early).includes(track.track_number);
-    return { albumPublished, isFeaturedSingle, isAdmin, owed, albumReleased: access.released, inEarlySet };
+    let earlySet: number[] = [];
+    if (owed) {
+      const { loadAlbum } = await import("@/lib/loop/album");
+      const data = await loadAlbum(tracks[0].album_id ?? undefined);
+      if (data) earlySet = earlySetFor(access.email ?? voterId, data.tracks, featured, access.early);
+    }
+    return tracks.map((track) =>
+      isFeaturedSingle(track)
+        ? settled(track)
+        : {
+            ...nothingElse,
+            albumPublished,
+            owed,
+            albumReleased: access.released,
+            inEarlySet: earlySet.includes(track.track_number),
+          },
+    );
   } catch {
     // The gate fails CLOSED. An unreleased record is the one thing here worth
     // protecting, and a database wobble must not open it.
-    return { albumPublished, isFeaturedSingle, isAdmin, owed: false, albumReleased: false, inEarlySet: false };
+    return tracks.map(settled);
   }
+}
+
+/**
+ * Which of an album's tracks this caller may hear, by id: the same rule as a
+ * single track, decided for the whole album at once, for the routes that
+ * serve every track of it.
+ */
+export async function audibleTrackIds(req: NextRequest | null, albumId: string): Promise<Set<string>> {
+  const tracks = (await queryDatabase(
+    `SELECT t.id, t.album_id, t.track_number, t.title, a.status AS album_status
+       FROM tracks t LEFT JOIN albums a ON a.id = t.album_id
+      WHERE t.album_id = ?`,
+    [albumId],
+  )) as TrackRow[];
+  const facts = await gatherFacts(req, tracks);
+  return new Set(tracks.filter((_, i) => decideAudioAccess(facts[i])).map((track) => track.id));
 }
 
 export async function mayHearTrackId(req: NextRequest | null, trackId: string): Promise<boolean> {
   const track = await trackById(trackId);
   if (!track) return false;
-  return decideAudioAccess(await gatherFacts(req, track));
+  const [facts] = await gatherFacts(req, [track]);
+  return decideAudioAccess(facts);
 }
 
 /** An owner or team session, verified. */
@@ -185,7 +229,13 @@ async function mayHearFieldPack(req: NextRequest | null, pack: string): Promise<
 export async function mayHearMediaKey(req: NextRequest | null, key: string): Promise<boolean | null> {
   const pack = fieldPackOfKey(key);
   if (pack) return mayHearFieldPack(req, pack);
-  const track = await trackByMediaKey(key);
-  if (!track) return null;
-  return decideAudioAccess(await gatherFacts(req, track));
+  const tracks = await tracksByMediaKey(key);
+  if (tracks.length === 0) return null;
+  // A recording two tracks share (one master on two releases) is as open as
+  // the more open of them: the bytes are the same either way.
+  for (const track of tracks) {
+    const [facts] = await gatherFacts(req, [track]);
+    if (decideAudioAccess(facts)) return true;
+  }
+  return false;
 }

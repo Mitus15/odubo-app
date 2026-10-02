@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/api/requireAdmin';
 export const runtime = 'edge';
 import { queryDatabase, executeQuery } from '@/lib/db';
+import { audibleTrackIds } from '@/lib/loop/audioAccess';
+import { withoutAudio } from '@/lib/release/audioSource';
 
 export async function GET(
   req: NextRequest,
@@ -26,12 +28,23 @@ export async function GET(
       [id]
     );
 
-    const album = { ...albums[0], tracks };
+    // Until the album is published, each track carries the way to play it
+    // only to someone who may hear it, as on /api/tracks/[id]: the admin
+    // previewing a draft, a pass-holder's early draw, a released single.
+    const published = String(albums[0].status ?? '').toLowerCase() === 'published';
+    const audible = published ? null : await audibleTrackIds(req, id);
+    const album = {
+      ...albums[0],
+      tracks: audible ? tracks.map((t) => (audible.has(t.id) ? t : withoutAudio(t))) : tracks,
+    };
     
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       album
     });
+    // Anything but the published catalogue depends on who asked.
+    if (!published) response.headers.set('Cache-Control', 'private, no-store');
+    return response;
   } catch (error) {
     console.error('Error fetching album:', error);
     return NextResponse.json(

@@ -3,38 +3,52 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/api/requireAdmin';
 export const runtime = 'edge';
 import { executeQuery, queryDatabase } from '@/lib/db';
-import { deriveHlsUrl } from '@/lib/release/audioSource';
+import { deriveHlsUrl, withoutAudio } from '@/lib/release/audioSource';
+import { mayHearTrackId } from '@/lib/loop/audioAccess';
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
     
-    const tracks = await queryDatabase(
-      'SELECT * FROM tracks WHERE id = ? LIMIT 1',
+    const tracks = (await queryDatabase(
+      `SELECT t.*, a.status AS album_status
+         FROM tracks t LEFT JOIN albums a ON a.id = t.album_id
+        WHERE t.id = ? LIMIT 1`,
       [id]
-    );
+    )) as Record<string, unknown>[];
     
-    if (!tracks || (tracks as any[]).length === 0) {
+    if (tracks.length === 0) {
       return NextResponse.json(
         { error: 'Track not found' },
         { status: 404 }
       );
     }
     
-    const track = (tracks as any[])[0];
+    const { album_status, ...track } = tracks[0];
 
     // Compute optional HLS manifest URL based on audio_url convention
     // Example: https://media/.../song.web.m4a -> https://media/.../song.hls/master.m3u8
 
-    const hls_url = deriveHlsUrl((track as any).audio_url);
+    const hls_url = deriveHlsUrl(track.audio_url as string | null);
     
-    // Add cache headers for track metadata
+    // Until its album is published, a track carries the way to play it only
+    // to someone who may hear it: the rule the stream route and the media
+    // proxy already hold the bytes to. /api/tracks withholds the same fields
+    // from everyone; this answer is per caller, so the player still gets them.
+    const published = String(album_status ?? '').toLowerCase() === 'published';
+    const audible = published || (await mayHearTrackId(req, id));
+
     const response = NextResponse.json({ 
       success: true, 
-      track: { ...track, hls_url }
+      track: audible ? { ...track, hls_url } : withoutAudio({ ...track, hls_url })
     });
     
-    response.headers.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
+    // The published catalogue is the same for everyone. Anything else depends
+    // on who asked, so no shared cache may keep it.
+    response.headers.set(
+      'Cache-Control',
+      published ? 'public, max-age=300, stale-while-revalidate=600' : 'private, no-store'
+    );
     
     return response;
   } catch (error) {
