@@ -6,9 +6,11 @@ import * as THREE from 'three';
 import { between, createRng } from '../engine/rng';
 import { useFlyRuntime } from '../runtime';
 
-const COUNT = 80;
-/** Clouds live in a band this long, ahead of the camera, and wrap. */
-const SPAN = 820;
+const COUNT = 110;
+/** Bands of cloud lie across the fall this far apart (m). */
+const BAND = 420;
+/** Clouds are recycled through this much depth ahead of him. */
+const SPAN = BAND * 3;
 
 interface Cloud {
   x: number;
@@ -16,7 +18,7 @@ interface Cloud {
   s: number;
   width: number;
   height: number;
-  sea: boolean;
+  band: boolean;
 }
 
 const vertexShader = /* glsl */ `
@@ -35,7 +37,7 @@ const vertexShader = /* glsl */ `
     gl_Position = projectionMatrix * view;
     float depth = -view.z;
     vFog = 1.0 - exp(-uFogDensity * uFogDensity * depth * depth * 0.55);
-    vAlpha = aOpacity * smoothstep(6.0, 34.0, depth); // thin out as he flies through
+    vAlpha = aOpacity * smoothstep(4.0, 30.0, depth); // thin out as he falls through
     vUv = uv;
     vSeed = aSeed;
   }
@@ -70,13 +72,19 @@ const fragmentShader = /* glsl */ `
   }
 `;
 
+function place(cloud: Cloud, rng: () => number, band: number): void {
+  cloud.x = between(rng, -170, 170);
+  cloud.y = between(rng, -170, 170);
+  cloud.s = cloud.band ? band * BAND + between(rng, -14, 14) : band * BAND + between(rng, 0, BAND);
+}
+
 /**
- * A sea of cloud far below the line, and the odd wisp at his height to fly
- * through. Soft, noisy billboards, one draw call.
+ * Bands of cloud across the fall, every few hundred metres, and the odd wisp
+ * between them: you fall through the sky's layers. Soft, noisy billboards in
+ * the look's cloud colour, one draw call.
  */
-export function Clouds() {
+export function Clouds({ fogDensity }: { fogDensity: { value: number } }) {
   const runtime = useFlyRuntime();
-  const { region } = runtime;
 
   const { mesh, clouds } = useMemo(() => {
     const rng = createRng(0xc10d);
@@ -85,26 +93,21 @@ export function Clouds() {
     const seed = new Float32Array(COUNT);
     const list: Cloud[] = [];
     for (let i = 0; i < COUNT; i++) {
-      const sea = i < COUNT * 0.8;
-      const size = sea ? between(rng, 50, 120) : between(rng, 14, 32);
-      list.push({
-        x: sea ? between(rng, -180, 180) : between(rng, -70, 70),
-        y: sea ? -between(rng, 30, 70) : between(rng, -10, 16),
-        s: between(rng, -40, SPAN - 40),
-        width: size * (sea ? 1.7 : 1.3),
-        height: size,
-        sea,
-      });
-      opacity[i] = sea ? between(rng, 0.45, 0.8) : between(rng, 0.18, 0.34);
+      const band = i < COUNT * 0.8;
+      const size = band ? between(rng, 40, 95) : between(rng, 12, 28);
+      const cloud: Cloud = { x: 0, y: 0, s: 0, width: size * (band ? 1.6 : 1.3), height: size, band };
+      place(cloud, rng, 1 + (i % 3));
+      list.push(cloud);
+      opacity[i] = band ? between(rng, 0.5, 0.85) : between(rng, 0.18, 0.34);
       seed[i] = rng();
     }
     geometry.setAttribute('aOpacity', new THREE.InstancedBufferAttribute(opacity, 1));
     geometry.setAttribute('aSeed', new THREE.InstancedBufferAttribute(seed, 1));
     const material = new THREE.ShaderMaterial({
       uniforms: {
-        uColor: { value: new THREE.Color(region.cloud) },
-        uFogColor: { value: new THREE.Color(region.sky.horizon) },
-        uFogDensity: { value: region.fogDensity },
+        uColor: { value: runtime.look.colors.cloud },
+        uFogColor: { value: runtime.look.colors.nadir },
+        uFogDensity: fogDensity,
       },
       vertexShader,
       fragmentShader,
@@ -116,7 +119,7 @@ export function Clouds() {
     instanced.renderOrder = 2;
     instanced.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     return { mesh: instanced, clouds: list };
-  }, [region]);
+  }, [runtime, fogDensity]);
 
   useEffect(
     () => () => {
@@ -127,27 +130,25 @@ export function Clouds() {
     [mesh],
   );
 
-  const scratch = useMemo(
-    () => ({ matrix: new THREE.Matrix4(), rng: createRng(0x5ea), anchored: false }),
-    [],
-  );
+  const scratch = useMemo(() => ({ matrix: new THREE.Matrix4(), rng: createRng(0x5ea), generation: -1 }), []);
 
   useFrame(() => {
-    const { frame, view } = runtime;
+    const { frame, view, engine } = runtime;
     const { matrix, rng } = scratch;
-    // The flight may have started far from where the clouds were laid out.
-    if (!scratch.anchored) {
-      for (const cloud of clouds) cloud.s += view.s;
-      scratch.anchored = true;
+    // A new run starts back at the top: lay the bands out below him again.
+    if (scratch.generation !== engine.generation) {
+      scratch.generation = engine.generation;
+      clouds.forEach((cloud, i) => place(cloud, rng, Math.floor(view.s / BAND) + 1 + (i % 3)));
     }
     for (let i = 0; i < COUNT; i++) {
       const cloud = clouds[i];
-      if (cloud.s < view.s - 40) {
-        cloud.s += SPAN;
-        cloud.x = cloud.sea ? between(rng, -180, 180) : between(rng, -70, 70);
+      if (cloud.s < view.s - 30) {
+        // Its own band, three bands further down (a wisp: the stretch below its band).
+        const band = cloud.band ? Math.round(cloud.s / BAND) : Math.floor(cloud.s / BAND);
+        place(cloud, rng, band + SPAN / BAND);
       }
       matrix.makeScale(cloud.width, cloud.height, 1);
-      matrix.setPosition(cloud.x, frame.y(cloud.y, cloud.s), frame.z(cloud.s));
+      matrix.setPosition(cloud.x, frame.y(cloud.s), frame.z(cloud.y));
       mesh.setMatrixAt(i, matrix);
     }
     mesh.instanceMatrix.needsUpdate = true;

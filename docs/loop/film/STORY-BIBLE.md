@@ -23,6 +23,10 @@ folder; where the two meet, the canon wins.
    the film it is a cast shadow at his feet: in step, or lagging.
 4. **The album is a flight through life.** Welcome is the incarnation; its end
    is the take-off, where the game Soul Loop begins; Ghost World ends it.
+   *2026-10-02, the owner's word for the game:* Welcome sends him down from
+   heaven, and the game is his fall through the sky of the whole album, a layer
+   of sky per song, landing with Ghost World (`docs/game/SOUL-LOOP.md`). The
+   canon's "take-off" wording waits on his approval of the new line in CANON.md.
 5. **He is never named.** Everyone knows who we mean. Not in the film, the
    cards, the flips, the chapters, the captions or the pages. Enforced in code
    (`src/lib/loop/film/naming.ts`): approval refuses it.

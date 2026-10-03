@@ -1,97 +1,111 @@
 'use client';
 
 import { useEffect, useMemo } from 'react';
-import { useFrame, useThree } from '@react-three/fiber';
+import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { createRng } from '../engine/rng';
 import { useFlyRuntime } from '../runtime';
 
-const COUNT = 420;
-/** The box of air the motes fill, around and ahead of the camera (m). */
-const BOX = new THREE.Vector3(36, 22, 90);
+const COUNT = 360;
+/** The box of air the motes fill around the camera (m); tall, because he falls through it. */
+const BOX = new THREE.Vector3(44, 120, 44);
 
 const vertexShader = /* glsl */ `
   attribute vec3 aSeed;
+  attribute float aTail;
   uniform vec3 uCenter;
+  uniform float uOrigin;
   uniform vec3 uBox;
-  uniform float uSize;
-  uniform float uScale;
+  uniform float uLength;
   varying float vAlpha;
   void main() {
     // Each mote wraps around the moving box, so the air is endless and free.
-    vec3 local = mod(aSeed * uBox - uCenter, uBox) - 0.5 * uBox;
-    vec4 view = viewMatrix * vec4(uCenter + local, 1.0);
+    // uOrigin ties the lattice to true depth, so re-centring the world never moves the air.
+    vec3 local = mod(aSeed * uBox - uCenter + vec3(0.0, uOrigin, 0.0), uBox) - 0.5 * uBox;
+    vec3 world = uCenter + local + vec3(0.0, aTail * uLength, 0.0);
+    vec4 view = viewMatrix * vec4(world, 1.0);
     gl_Position = projectionMatrix * view;
     float depth = max(-view.z, 0.01);
-    gl_PointSize = clamp(uSize * uScale / depth, 1.0, 5.0);
-    vAlpha = smoothstep(0.6, 3.0, depth) * (1.0 - smoothstep(uBox.z * 0.3, uBox.z * 0.48, depth));
+    vAlpha = smoothstep(1.0, 5.0, depth) * (1.0 - smoothstep(uBox.y * 0.25, uBox.y * 0.45, depth)) * (1.0 - aTail * 0.85);
   }
 `;
 
 const fragmentShader = /* glsl */ `
   uniform vec3 uColor;
+  uniform float uOpacity;
   varying float vAlpha;
   void main() {
-    float r = length(gl_PointCoord - 0.5) * 2.0;
-    float alpha = (1.0 - smoothstep(0.4, 1.0, r)) * vAlpha * 0.75;
+    float alpha = vAlpha * uOpacity;
     if (alpha < 0.01) discard;
     gl_FragColor = vec4(uColor, alpha);
     #include <colorspace_fragment>
   }
 `;
 
-/** Motes in the air. They are how you feel the speed. */
+/** Streaks in the air, stretching with his speed. They are how you feel the fall. */
 export function Dust() {
   const runtime = useFlyRuntime();
-  const { region } = runtime;
-  const size = useThree((state) => state.size);
-  const dpr = useThree((state) => state.viewport.dpr);
 
-  const points = useMemo(() => {
+  const lines = useMemo(() => {
     const rng = createRng(0xd057);
-    const seeds = new Float32Array(COUNT * 3);
-    for (let i = 0; i < seeds.length; i++) seeds[i] = rng();
+    const seeds = new Float32Array(COUNT * 2 * 3);
+    const tails = new Float32Array(COUNT * 2);
+    for (let i = 0; i < COUNT; i++) {
+      const sx = rng();
+      const sy = rng();
+      const sz = rng();
+      for (let end = 0; end < 2; end++) {
+        const v = i * 2 + end;
+        seeds[v * 3] = sx;
+        seeds[v * 3 + 1] = sy;
+        seeds[v * 3 + 2] = sz;
+        tails[v] = end;
+      }
+    }
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('aSeed', new THREE.BufferAttribute(seeds, 3));
+    geometry.setAttribute('aTail', new THREE.BufferAttribute(tails, 1));
     // Positions are computed on the GPU; this attribute only sets the count.
-    geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(COUNT * 3), 3));
+    geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(COUNT * 2 * 3), 3));
     const material = new THREE.ShaderMaterial({
       uniforms: {
         uCenter: { value: new THREE.Vector3() },
+        uOrigin: { value: 0 },
         uBox: { value: BOX.clone() },
-        uSize: { value: 0.05 },
-        uScale: { value: 400 },
-        uColor: { value: new THREE.Color(region.dust) },
+        uLength: { value: 2 },
+        uColor: { value: runtime.look.colors.dust },
+        uOpacity: { value: 0.55 },
       },
       vertexShader,
       fragmentShader,
       transparent: true,
       depthWrite: false,
     });
-    const mesh = new THREE.Points(geometry, material);
+    const mesh = new THREE.LineSegments(geometry, material);
     mesh.frustumCulled = false;
     mesh.renderOrder = 3;
     return mesh;
-  }, [region]);
+  }, [runtime]);
 
   useEffect(
     () => () => {
-      points.geometry.dispose();
-      (points.material as THREE.Material).dispose();
+      lines.geometry.dispose();
+      (lines.material as THREE.Material).dispose();
     },
-    [points],
+    [lines],
   );
 
   const forward = useMemo(() => new THREE.Vector3(), []);
 
   useFrame(({ camera }) => {
-    const material = points.material as THREE.ShaderMaterial;
-    const perspective = camera as THREE.PerspectiveCamera;
+    const material = lines.material as THREE.ShaderMaterial;
     camera.getWorldDirection(forward);
-    material.uniforms.uCenter.value.copy(camera.position).addScaledVector(forward, BOX.z * 0.4);
-    material.uniforms.uScale.value =
-      (size.height * dpr) / (2 * Math.tan(THREE.MathUtils.degToRad(perspective.fov) / 2));
+    material.uniforms.uCenter.value.copy(camera.position).addScaledVector(forward, BOX.y * 0.3);
+    const speed = runtime.engine.state.speed;
+    material.uniforms.uLength.value = speed * 0.06;
+    material.uniforms.uOrigin.value = runtime.frame.originS % BOX.y;
+    material.uniforms.uOpacity.value = 0.35 + 0.4 * runtime.engine.state.flow;
   });
 
-  return <primitive object={points} />;
+  return <primitive object={lines} />;
 }
