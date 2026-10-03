@@ -3,7 +3,7 @@ from pathlib import Path
 import numpy as np
 import cv2
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from figure import GLOSS_CUTS, GlossStyler  # noqa: E402
+from figure import GLOSS_CUTS, GlossStyler, head_quiet  # noqa: E402
 from compose import cut, melt  # noqa: E402
 
 FW, FH = 640, 360
@@ -53,6 +53,37 @@ class Gloss(unittest.TestCase):
     def test_labels_agree_with_the_fields(self):
         self.assertEqual(self.labels.shape, (FH * 2, FW * 2))
         self.assertTrue((self.labels == 3).any())
+
+
+def pose_for(neck=(320, 80), shoulder=60, hips=(320, 260)):
+    """A standing pose in normalised coordinates: face over the neck, shoulders level."""
+    lm = np.zeros((33, 3), np.float32)
+    pts = {0: (neck[0], neck[1] - 45), 11: (neck[0] + shoulder / 2, neck[1]), 12: (neck[0] - shoulder / 2, neck[1]),
+           23: (hips[0] + 25, hips[1]), 24: (hips[0] - 25, hips[1])}
+    for k, (x, y) in pts.items():
+        lm[k] = (x / FW, y / FH, 0.9)
+    return lm
+
+
+class Head(unittest.TestCase):
+    def test_light_under_his_head_is_kept_ink(self):
+        # A bright print across the top of his back, just under the head: it
+        # read as a hole and he looked headless (the Billie Jean take).
+        rgb, mask = figure_frame(light_at=(320, 95))
+        lit = GlossStyler(FW, FH, FW, FH)(rgb, mask)[3] / 255
+        quiet = GlossStyler(FW, FH, FW, FH)(rgb, mask, pose_for())[3] / 255
+        self.assertGreater(lit[95, 320], GLOSS_CUTS[1])
+        self.assertLess(quiet[95, 320], 0.05)
+
+    def test_light_lower_on_him_still_shows(self):
+        rgb, mask = figure_frame(light_at=(320, 230))
+        quiet = GlossStyler(FW, FH, FW, FH)(rgb, mask, pose_for())[3] / 255
+        self.assertGreater(quiet[230, 320], GLOSS_CUTS[1])
+
+    def test_no_shoulders_no_change(self):
+        lm = pose_for()
+        lm[11, 2] = lm[12, 2] = 0.1
+        self.assertTrue((head_quiet(lm, FW, FH) == 1).all())
 
 
 class Cut(unittest.TestCase):

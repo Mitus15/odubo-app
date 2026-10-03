@@ -39,7 +39,7 @@ import json, sys, time
 from collections import deque
 import numpy as np
 import cv2
-from film_common import SONGS, WORK
+from film_common import WORK
 from take import Reader, Writer, even, load_take, read_pose, take_dir
 from anchor import Path as Track
 from shadow import Ground, cast
@@ -254,6 +254,13 @@ def main(argv):
     body = float(np.median(heights)) * 1.12 if heights else Hf * 0.7  # landmarks miss the crown of the head
     scale = aspect["figure"] * Hout / body
 
+    # The phone's frame edge must never show inside ours: where he reaches out
+    # of what the phone saw, a straight cut runs through him. So whenever the
+    # phone saw wider than the picture, the camera stays inside what it saw,
+    # and a limb that leaves the phone's view leaves ours at the same edge.
+    half = Wout / (2 * scale)
+    cam_range = (half, Wf - half) if Wf >= 2 * half else None
+
     writer = Writer(out_path, Wout, Hout, fps, kind="h264", crf=crf)
     # The marker's place on him over the whole stretch (and a second either
     # side), smoothed both ways in time: the take is recorded, so it never lags.
@@ -271,9 +278,9 @@ def main(argv):
     # The song's own bar grid: the effects dance on it, and the marker floats
     # once a bar, rising from each downbeat.
     effects = set(filter(None, opts.get("effects", "").split(",")))
-    from beats import grid, freeze_map
+    from beats import chapter_grid, freeze_map
     mid = timeline.at(t_from + (t_to - t_from) / 2)
-    g_ = grid(next(s_["number"] for s_ in SONGS if s_["slug"] == mid["slug"]))
+    g_ = chapter_grid(mid)
     film_start = next(s_["filmStart"] for s_ in align["songs"] if s_["slug"] == mid["slug"])
     bars = (film_start + g_["first"], g_["bar"])
     if effects & {"freeze", "flip"}:
@@ -319,6 +326,8 @@ def main(argv):
             break
         lab, alpha, place = s_now["lab"], s_now["alpha"], s_now["place"]
         g, g_contact, cam_x = s_now["g"], s_now["g_contact"], s_now["cam_x"]
+        if cam_range:
+            cam_x = min(max(cam_x, cam_range[0]), cam_range[1])
         ch = timeline.at(t)
         key = "palette"
         if "flip" in effects and ch.get("paletteFlip"):

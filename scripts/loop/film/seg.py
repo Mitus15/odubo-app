@@ -5,6 +5,7 @@ Person mask: the selfie segmenter (its single confidence mask IS the person).
 Pose: PoseLandmarker, 33 landmarks per frame, used for the heart (where the
 badge sits) and the feet (where his shadow meets the ground).
 """
+import cv2
 import numpy as np
 import mediapipe as mp
 from mediapipe.tasks import python as mpt
@@ -66,3 +67,41 @@ def landmarks(pose, rgb: np.ndarray, ts_ms: int | None = None):
         return None
     h, w = rgb.shape[:2]
     return np.array([[p.x * w, p.y * h, p.visibility] for p in res.pose_landmarks[0]], dtype=np.float32)
+
+
+POSE_HEIGHT = 960   # the pose model works at 256 px; more than this only costs memory
+POSE_REBUILD = 500  # frames between fresh landmarkers
+
+
+class Pose:
+    """
+    The pose over a whole take, in order. Returns 33 (x, y, visibility) in the
+    frame's own pixels, or None.
+
+    mediapipe 1.0.1's GPU delegate keeps the Metal copy of every frame it is
+    given until the landmarker is closed: 8 MB a frame at 1080x1920, so a five
+    minute portrait take ran the GPU out of memory at frame 1240 (measured).
+    So frames go in at most POSE_HEIGHT tall, and the landmarker is closed and
+    rebuilt every POSE_REBUILD frames, which frees them.
+    """
+
+    def __init__(self):
+        self.pose, self.used = None, 0
+
+    def __call__(self, rgb: np.ndarray, ts_ms: int):
+        if self.pose is None or self.used >= POSE_REBUILD:
+            self.close()
+            self.pose, self.used = poser(video=True), 0
+        self.used += 1
+        h, w = rgb.shape[:2]
+        k = min(1.0, POSE_HEIGHT / h)
+        small = cv2.resize(rgb, (round(w * k), round(h * k)), interpolation=cv2.INTER_AREA) if k < 1 else rgb
+        lm = landmarks(self.pose, small, ts_ms)
+        if lm is not None:
+            lm[:, :2] /= k
+        return lm
+
+    def close(self):
+        if self.pose is not None:
+            self.pose.close()
+            self.pose = None

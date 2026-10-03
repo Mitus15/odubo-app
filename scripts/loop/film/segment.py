@@ -140,7 +140,7 @@ def main(argv):
         screen = (int(x0 * k), int(y0 * k), int(x1 * k), int(y1 * k))
     reader = Reader(take["path"], W, H, start=start, dur=end - start)
     writer = Writer(d / "mask.mkv", W, H, fps)
-    poser = seg.poser(video=True)
+    poser = seg.Pose()
     if matte == "rvm":
         person = rvm.Matte(H)
         window = 1
@@ -167,7 +167,7 @@ def main(argv):
         for frame in reader:
             ts = int(i * 1000 / fps)
             buf.append((i, clean(person(frame)) if matte == "rvm" else person(frame, ts)))
-            lm = seg.landmarks(poser, frame, ts)
+            lm = poser(frame, ts)
             rec = {"f": i}
             if lm is not None:
                 rec["lm"] = [[round(float(x) / W, 5), round(float(y) / H, 5), round(float(v), 3)] for x, y, v in lm]
@@ -178,6 +178,7 @@ def main(argv):
                 print(f"  {i} frames, {i / (time.time() - t0):.0f} fps", flush=True)
     emit(i - 1)
     writer.close()
+    poser.close()
     meta = {"w": W, "h": H, "frames": i, "fps": fps, "matte": matte}
     (d / "mask.json").write_text(json.dumps(meta))
     print(f"{name}: {i} frames segmented ({matte}) at {W}x{H} in {time.time() - t0:.0f}s")

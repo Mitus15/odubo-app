@@ -195,3 +195,65 @@ clips, cut at each square's own size, and `--size=vinyl` renders 3788 px: a
 12.375 in jacket with 1/8 in bleed each side at 300 dpi (2 s). Waiting on: the
 real take, the owner's pick of the moment, his colours per song, and the
 pressing plant's template.
+
+## A dance to someone else's song: Billie Jean (2026-10-02)
+
+The owner, of the gloss look: "it looks so clean", and asked to redo the
+Billie Jean video for social in it. That take (`IMG_0191.MOV`, July 2026) is his dance to
+Michael Jackson's song, first posted in the old green look, then recoloured
+to sand (`media/social-2026-08/`).
+
+**What it needed that the album does not.**
+- **A song with no master and no chapter in D1.** `film:dance` (`dance.py`)
+  writes the one chapter and the song's place in the take straight into
+  `story.json` and `align.json`, the colourway resolved by `palette.ts`; the
+  chapter carries its own song file and tempo, and `beats.chapter_grid` builds
+  the bar grid from them. No card: a song that is not ours carries no
+  scripture.
+- **A portrait phone take.** `IMG_0191.MOV` is stored 1920x1080 with a -90
+  rotation, and ffmpeg decodes it upright. `ingest.probe` read the stored size,
+  so every stage would have squeezed him; it now reads the rotation.
+- **A five minute take through the pose model.** mediapipe 1.0.1's GPU
+  delegate keeps the Metal copy of every frame until the landmarker closes: 8
+  MB a frame at 1080x1920, out of GPU memory at frame 1240 (measured with
+  `footprint`). `seg.Pose` gives it frames at most 960 tall and rebuilds it
+  every 500 frames. The matte itself was steady at 1.17 GB.
+
+**The sync is his own.** He danced in headphones: the room audio carries no
+music (full-take correlation 0.025, noise 0.009). Two independent measures
+agree: his DaVinci edit is one continuous piece of the take, 15.90 s in
+(silhouette IoU 0.8 to 0.96 against the green render, every second from 5 s
+to 282 s), its audio is the MP3 1.167 s in (correlation 0.9, no drift), so the
+song starts at take 14.733 s; and the accelerations of his wrists, hips and
+ankles line up best with the song's onsets at 14.70 s, the next peaks one beat
+either side. `--at=14.72`.
+
+**The head stays ink.** On this take the white print across the back of his
+shirt opened a pool of light just under his head, and when he faced the
+camera a pool landed on his face: either way he read as headless. The look
+test had warned of exactly this. `figure.head_quiet` keeps his head, neck and
+the top of his back ink, from the pose, easing out over 0.3 shoulder widths;
+light anywhere lower is untouched. The iPod ads never lit a head. Re-run
+`film:figure` on the June take to bring the album's renders in line.
+
+**The camera stays inside what the phone saw.** The owner, of the first
+sample: "for a sec it seemed theres an arbitrary layer on the left". At take
+158.7 s his arm reached past the phone's left edge; the camera, centred on
+him, showed that edge as a straight cut through his arm and leg (he touches an
+edge on 404 of 9,063 frames). Whenever the phone saw wider than the picture
+(9:16 from a portrait take: 1242 px of phone for 1080 of picture), compose
+now keeps the camera inside it, so a limb that leaves the phone's view leaves
+ours at the same edge, as with any camera. He drifts off centre exactly as far
+as he did in the phone. A 16:9 cut of a portrait take cannot be held this way
+and would still show the edge.
+
+**The cuts** (in `$FILM_WORK/billie-jean/out/`): the whole song from its first
+kick (take 15.84 s) to the end of the take; a 60 s Reel (28 bars from take
+147.45 s, the stretch where he moves most, measured per bar from the pose);
+a 30 s cut (14 bars from 155.68 s). Each also silent, for adding the song from
+a platform's own library.
+
+**Downbeats, noted, not fixed.** `beats.grid` takes the loudest of the four
+beats as the downbeat. On Billie Jean that is a snare beat, one beat before
+the first kick. The marker's bob does not care; the freeze effect would land
+on the wrong beat on a song like it.

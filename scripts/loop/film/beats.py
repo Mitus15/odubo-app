@@ -20,8 +20,21 @@ RATE = 11025
 def grid(number: int) -> dict:
     shape = json.loads((REPO / "data/loop/film/shape.json").read_text())
     song = next(s for s in shape["songs"] if s["number"] == number)
-    beat = 60.0 / song["bpm"]
-    env, env_rate = onset_envelope(load_mono(master(number), RATE), RATE)
+    return grid_of(str(master(number)), song["bpm"])
+
+
+def chapter_grid(chapter: dict) -> dict:
+    """A chapter's bar grid: an album song from its master, or a song from
+    outside the album (film:dance) from the file and tempo it carries."""
+    if chapter.get("master"):
+        return grid_of(chapter["master"], chapter["bpm"])
+    return grid(chapter["number"])
+
+
+@lru_cache(maxsize=16)
+def grid_of(path: str, bpm: float) -> dict:
+    beat = 60.0 / bpm
+    env, env_rate = onset_envelope(load_mono(path, RATE), RATE)
     t = np.arange(len(env)) / env_rate
     # Phase: sample the envelope on the beat grid for candidate offsets.
     offsets = np.linspace(0, beat, 48, endpoint=False)

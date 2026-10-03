@@ -31,6 +31,7 @@ import compose
 FADE_CARD = 0.4
 CARD_IN = 0.4
 TEASE_S = 4.0
+FADE_TAIL = 0.8  # the song fades over the growth and this much after it
 
 
 def sheet(video: Path, tiles: int = 8):
@@ -122,7 +123,7 @@ def clip(name: str, card_id: str, audio: str, style: list = ()):
     if audio == "full":
         fade_at = (b - a) - compose.FLY_S
         afilter = (f"[{ai}:a]atrim=start={m_at:.3f}:duration={duration:.3f},asetpts=PTS-STARTPTS,"
-                   f"afade=t=out:st={fade_at:.3f}:d={compose.FLY_S + 0.8:.3f},apad,atrim=0:{duration:.3f}[aout]")
+                   f"afade=t=out:st={fade_at:.3f}:d={compose.FLY_S + FADE_TAIL:.3f},apad,atrim=0:{duration:.3f}[aout]")
     elif audio == "tease":
         at = peak_window(slug, m_at, m_at + (b - a))
         rel = at - m_at

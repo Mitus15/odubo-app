@@ -17,12 +17,19 @@ import seg
 
 def probe(path: Path) -> dict:
     out = subprocess.run(["ffprobe", "-v", "error", "-show_entries",
-                          "stream=codec_type,width,height,r_frame_rate:format=duration", "-of", "json", str(path)],
+                          "stream=codec_type,width,height,r_frame_rate:stream_side_data=rotation:format=duration",
+                          "-of", "json", str(path)],
                          capture_output=True, text=True, check=True).stdout
     j = json.loads(out)
     v = next(s for s in j["streams"] if s["codec_type"] == "video")
     num, den = (v["r_frame_rate"].split("/") + ["1"])[:2]
-    return {"w": int(v["width"]), "h": int(v["height"]), "fps": round(float(num) / float(den or 1), 3),
+    w, h = int(v["width"]), int(v["height"])
+    # A phone stores portrait as landscape plus a rotation, and ffmpeg turns
+    # the frames upright when it decodes them: the take is the upright size.
+    turn = next((int(sd["rotation"]) for sd in v.get("side_data_list", []) if "rotation" in sd), 0)
+    if abs(turn) % 180 == 90:
+        w, h = h, w
+    return {"w": w, "h": h, "fps": round(float(num) / float(den or 1), 3),
             "duration": float(j["format"]["duration"]),
             "audio": any(s["codec_type"] == "audio" for s in j["streams"])}
 

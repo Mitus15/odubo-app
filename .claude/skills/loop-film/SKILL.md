@@ -60,6 +60,20 @@ npm run film:grid -- <take> --at=<s> --volume=1 --size=vinyl             # Vol. 
 npm run film:grid -- <take> --at=<s> --volume=2 --size=vinyl             # Vol. 2's: its 5 songs as a plus (the owner's pick)
 ```
 
+## A dance to a song from outside the album
+
+The Billie Jean take is the first. Ingest, segment and figure as for any take,
+then:
+
+```bash
+npm run film:dance -- <take> setup --song="<audio>" --at=<take s where the song's first sample falls> --bpm=<tempo> --field=#rrggbb --title="..."
+npm run film:dance -- <take> cut --from=<s> --to=<s> --name=reel --audio=full|silent
+```
+
+`--at` comes from listening when the music is in the room audio
+(`sync_audio.lock`); a take danced in headphones needs his own edit or his
+movement against the beat (see the decision record, "Billie Jean").
+
 ## The look
 
 Two things decide how clean he looks.
@@ -117,7 +131,12 @@ npm test -- loopFilm loopPosterWrap loopSingles
 ## Known quirks
 
 - MediaPipe 1.0.1 pose on macOS: GPU delegate with RGBA frames only; the CPU
-  delegate aborts the process (`scripts/loop/film/seg.py`).
+  delegate aborts the process (`scripts/loop/film/seg.py`). The GPU delegate
+  keeps every frame's Metal copy until it closes, so `seg.Pose` shrinks frames
+  and rebuilds it every 500 (a full-size five minute take ran out at frame 1240).
+- A phone stores portrait as landscape plus a rotation; `ingest` reads it.
+- Light on his head reads as a hole: `figure.head_quiet` keeps the head, neck
+  and top of the back ink. Restyle (`film:figure`) any take styled before 2026-10-02.
 - Python cannot fetch model weights here (its certificate store fails); fetch
   them with curl into `~/.cache/whisper/` or `FILM_MODELS`.
 - The June take has a TV behind him: `--screen=741,91,1345,435` on segment,

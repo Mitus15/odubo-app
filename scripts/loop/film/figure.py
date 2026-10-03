@@ -24,7 +24,7 @@ Warhol grid is a lookup at compose time, never a re-render of this stage.
 import json, sys, time
 import numpy as np
 import cv2
-from take import Reader, Writer, even, load_take, take_dir
+from take import Reader, Writer, even, load_take, read_pose, take_dir
 
 DETAIL = 0.55          # the first cut, as a fraction of his tone range
 RIM = 0.004            # the ink rim's width, as a fraction of the height
@@ -90,6 +90,7 @@ GLOSS_SHAPE = 0.06     # the scale of his clothes' own brightness, taken away so
 GLOSS_RIM = 0.008      # ink kept inside the outline before any light shows
 GLOSS_LIT = (0.80, 0.93)   # the share of him darker than the ring, and than the core: the cover's proportion
 GLOSS_CUTS = (0.55, 0.75)  # where those shares land on the tone scale (compose cuts here by default)
+GLOSS_HEAD = (0.45, 0.3)   # the head and neck stay ink: the quiet zone's reach and its soft edge, in shoulder widths
 
 
 class GlossStyler:
@@ -120,7 +121,7 @@ class GlossStyler:
         self.rim_px = max(1.0, fh * GLOSS_RIM)
         self.anchors = None
 
-    def __call__(self, rgb: np.ndarray, mask_small: np.ndarray):
+    def __call__(self, rgb: np.ndarray, mask_small: np.ndarray, lm: np.ndarray | None = None):
         m = mask_small.astype(np.float32) / 255
         field = np.clip(cv2.GaussianBlur(m, (0, 0), self.edge_s), 0, 1)
         solid = field >= 0.5
@@ -150,6 +151,8 @@ class GlossStyler:
         dist = cv2.distanceTransform(solid.astype(np.uint8), cv2.DIST_L2, 5)
         u = np.clip((dist - 0.5 * self.rim_px) / self.rim_px, 0, 1)
         tone *= u * u * (3 - 2 * u)
+        if lm is not None:
+            tone *= head_quiet(lm, self.fw, self.fh)
         tone[~solid] = 0
         return self.decide(field, tone)
 
@@ -164,6 +167,50 @@ class GlossStyler:
         alpha = np.clip((up - 0.5) * 6 + 0.5, 0, 1)
         return (labels, (alpha * 255).astype(np.uint8),
                 (np.clip(field, 0, 1) * 255).astype(np.uint8), (np.clip(tone, 0, 1) * 255).astype(np.uint8))
+
+
+def head_quiet(lm: np.ndarray, w: int, h: int) -> np.ndarray:
+    """
+    1 where the light may show, easing to 0 over his head, his neck and the top
+    of his back: those always stay ink.
+
+    A pool of light just under the head (a pale collar, a print across the back
+    of a shirt, his face turned to the light) reads as an opening, and he looks
+    headless: seen on the Billie Jean take (2026-10-02), where the white print
+    on the back of his shirt opened a hole under his head. In the iPod ads the
+    head is always solid. `lm` is the pose (normalised x, y, visibility).
+    """
+    quiet = np.ones((h, w), np.float32)
+    pts, vis = lm[:, :2] * np.array([w, h], np.float32), lm[:, 2]
+    if min(vis[11], vis[12]) < 0.3:
+        return quiet
+    neck = (pts[11] + pts[12]) / 2
+    scale = float(np.linalg.norm(pts[11] - pts[12]))
+    up = np.array([0.0, -1.0], np.float32)
+    if min(vis[23], vis[24]) >= 0.3:
+        spine = neck - (pts[23] + pts[24]) / 2
+        # Side-on, the shoulders close up; the torso keeps the scale honest.
+        scale = max(scale, 0.5 * float(np.linalg.norm(spine)))
+        up = spine / max(1e-3, float(np.linalg.norm(spine)))
+    face = vis[:11] >= 0.3
+    head = pts[:11][face].mean(0) if face.any() else neck + up * 0.6 * scale
+    down = neck - head
+    down = down / max(1e-3, float(np.linalg.norm(down)))
+    a, b = head - down * 0.5 * scale, neck + down * 0.35 * scale  # over the crown, to the top of the back
+    reach, soft = GLOSS_HEAD[0] * scale, GLOSS_HEAD[1] * scale
+    pad = reach + soft
+    x0, y0 = (np.floor(np.minimum(a, b) - pad)).astype(int).clip(0)
+    x1, y1 = np.ceil(np.maximum(a, b) + pad).astype(int)
+    x1, y1 = min(w, x1 + 1), min(h, y1 + 1)
+    if x1 <= x0 or y1 <= y0:
+        return quiet
+    yy, xx = np.mgrid[y0:y1, x0:x1].astype(np.float32)
+    ab = b - a
+    t = np.clip(((xx - a[0]) * ab[0] + (yy - a[1]) * ab[1]) / max(1e-3, float(ab @ ab)), 0, 1)
+    dist = np.hypot(xx - (a[0] + t * ab[0]), yy - (a[1] + t * ab[1]))
+    u = np.clip((dist - reach) / max(1e-3, soft), 0, 1)
+    quiet[y0:y1, x0:x1] = u * u * (3 - 2 * u)
+    return quiet
 
 
 def wide_blur(x: np.ndarray, sigma: float) -> np.ndarray:
@@ -193,9 +240,10 @@ def main(argv):
     fw, fh = meta["w"], meta["h"]
     fields = (Writer(d / "field.mkv", fw, fh, take["fps"]), Writer(d / "tone.mkv", fw, fh, take["fps"])) if look == "gloss" else None
     style = GlossStyler(W, H, fw, fh) if look == "gloss" else Styler(W, H)
+    poses = read_pose(d / "pose.jsonl") if look == "gloss" else {}
     t0, i = time.time(), 0
     for rgb, mask in zip(frames, masks):
-        out = style(rgb, mask)
+        out = style(rgb, mask, poses.get(i)) if look == "gloss" else style(rgb, mask)
         lab_out.write(out[0])
         alpha_out.write(out[1])
         if fields:
