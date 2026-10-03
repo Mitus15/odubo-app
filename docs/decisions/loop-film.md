@@ -257,3 +257,43 @@ a platform's own library.
 beats as the downbeat. On Billie Jean that is a snare beat, one beat before
 the first kick. The marker's bob does not care; the freeze effect would land
 on the wrong beat on a song like it.
+
+## Four effects that dance with him (2026-10-03)
+
+The owner asked what visual effects we could achieve, and picked four for a
+look book on Billie Jean, built as film options for the Signs of Life film
+too (`--effects=` on compose, cut and dance). Each is read from his body or
+the drums, never random, and stays flat and hard-edged.
+
+- **sidewalk** (`floor.py`): the Billie Jean pavement. A footfall is a foot
+  that was moving and stops near the floor line (both ways in time, so a
+  planted foot is one footfall). It lights the tile under it in the palette's
+  highlight: tiles are anchored to the floor, seen from a camera at his chest,
+  hold a moment and are gone within half a bar; only lit tiles show. The floor
+  is glossy: his outline mirrored at the contact line, a step darker than the
+  field, gone within 22% of his height.
+- **close** (`effects.close_bars`): in each 8-bar phrase, the bar where his
+  feet move most gets a 2.5x close-up of his feet, cut in and out on the
+  downbeats; a phrase where his feet barely move gets none. `--close-bars=`
+  picks by hand. The fields are cut at output size, so it is as sharp as the
+  wide shot.
+- **hits** (`hits.py`): Demucs separates the drums once (cached by song). In
+  Billie Jean's drum stem both bands fire on every hit, so peak picking heard
+  five kicks a second; hits are read on the beat grid instead and told kick or
+  snare by the low/high balance averaged per place in the bar (1.1 on the
+  kick's beats, 0.57 on the snare's): 565 of 574 beats, a clean
+  kick-snare alternation. The field cuts to its sister colour on the snare and
+  back on the kick.
+- **echo** (`effects.motion_gate`): three earlier outlines (4, 8, 12 frames
+  back at full trail) behind him, the lag scaled by how fast his hands and feet
+  move, so they sit hidden under him when he is still. The first try mixed ink
+  into the field and turned brown; they are the palette's mid and shadow now.
+  The gate opens at his 80th percentile of limb speed and is full near his 96th.
+
+**The beat grid, mended on the way.** `beats.pulse` refines the given tempo
+within 0.3 bpm with the phase, and the onset times carry the envelope's own
+delay (35 ms). With the drums separated, the downbeat is the kick's place the
+song's first hit lands on, not the loudest beat (which was a snare on Billie
+Jean). The grid is still a fixed tempo; Billie Jean's drums breathe up to 60 ms
+against it mid-song (the video edit, most likely), so hits are searched 100 ms
+either side of a beat and placed where they actually peak.

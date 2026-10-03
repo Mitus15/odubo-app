@@ -105,6 +105,13 @@ their rings, `--soft=0.08`) or `--look=cover` (every edge hard, the cover
 exactly). `--cuts=0.55,0.75` moves the ring and the core. A look is a figure
 choice: delete `labels.mkv` to restyle a take.
 
+Effects that dance with him (the 2026-10-03 look book; any mix):
+`sidewalk` (tiles light under each step, a glossy floor's reflection),
+`close` (a footwork close-up for the busiest bar of each phrase,
+`--close-bars=<take s>,..` to choose), `hits` (the sister colour on the snare,
+back on the kick; Demucs splits the drums once, `python3 hits.py <song> <bpm>`),
+`echo` (his echoes trail on big moves).
+
 Effects (add to `film:cut ... clip|song` or `film:compose`): `--effects=freeze`
 (a crawl on every downbeat that catches up within the bar, so the length and
 the sync never change), `--effects=flip` (the field alternates with its

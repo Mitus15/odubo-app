@@ -57,3 +57,23 @@ Reasons, measurements and what was tried: `docs/decisions/loop-film.md`,
 - `beats.grid` picks the loudest beat as the downbeat (a snare beat on Billie
   Jean); harmless for the bob, wrong for the freeze on songs like it.
 - Nothing merged: the base branch is still unmerged by the owner's word.
+
+## Later: four effects, a look book (2026-10-03)
+
+The owner asked what visual effects we can achieve and picked all four
+proposed, as film options for the album too. Plan:
+`~/.claude/plans/ok-now-in-terms-floofy-lampson.md`; reasons and numbers in the
+decision record, "Four effects that dance with him".
+
+- `floor.py` (sidewalk: footfalls, lit tiles, reflection), `effects.py` (echo
+  gate, close-up bars, snare state), `hits.py` (Demucs drums, kick and snare on
+  the beat grid), `beats.pulse` (tempo refined, onset delay, kick downbeat)
+- Look book in `film-work/billie-jean/out/dance-lookbook-*-full.mp4`, take
+  155.68 to 172.13 s. Render speed, five at once: 90 s (hits) to 143 s (all)
+  for 568 frames.
+- Struggles: peak picking heard five kicks a second (both bands fire on every
+  hit); the first echoes went brown (ink mixed into rose) and showed on every
+  small move (the gate sat under his median limb speed); a close-up chose a
+  bar in a still phrase; a 116.75 bpm grid drifted 60 ms by mid-song.
+
+Pending: his pick of effects for the Reel and the full cut.

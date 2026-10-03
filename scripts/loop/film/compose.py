@@ -3,7 +3,12 @@ Put it together: the moving poster, frame by frame.
 
     npm run film:compose -- <take> --from=<s> --to=<s> --aspect=9x16 [--outro] [--out=file.mp4]
         [--shadow=sync|lag|none --lag=<frames>]   override the chapter's shadow
-        [--effects=freeze,flip]                  hold on each downbeat; flip to the sibling colour each bar
+        [--effects=freeze,flip,sidewalk,close,hits,echo]
+            freeze    hold on each downbeat          flip  the sibling colour each bar
+            sidewalk  tiles light under each step, and a reflection on a glossy floor (floor.py)
+            close     a footwork close-up for the busiest bar of each phrase [--close-bars=s,s]
+            hits      the sibling colour on the snare, back on the kick (hits.py)
+            echo      on big moves, his echoes trail behind him (effects.py)
         [--marker=crown|ground|heart]             where the seal, the player's marker, sits (anchor.py)
         [--look=poster|cover|gloss --cuts=0.55,0.75 --soft=0.08]
             poster  the label map, as the converter drew it
@@ -44,6 +49,8 @@ from take import Reader, Writer, even, load_take, read_pose, take_dir
 from anchor import Path as Track
 from shadow import Ground, cast
 from outro import FRAMES as GROW_FRAMES, KEYLINE, Marks
+from floor import REFLECT_MIX, Tiles, footfalls, reflect_matrix, reflection_fade
+from effects import CLOSE_GROUND, CLOSE_ZOOM, ECHO_LAGS, ECHO_MIX, close_bars, motion_gate, on_snare
 
 ASPECTS = {
     # figure height and ground line as fractions of the output height;
@@ -266,7 +273,7 @@ def main(argv):
     # side), smoothed both ways in time: the take is recorded, so it never lags.
     track = Track(poses, first - pre - int(fps), first + count + int(fps), Wf, Hf, fps, MARKERS[marker])
     ground = Ground(fps)
-    past = deque(maxlen=max_lag + 1)
+    past = deque(maxlen=max(max_lag, ECHO_LAGS[0]) + 1)
     cam_x = None
     t0 = time.time()
     written = 0
@@ -280,11 +287,31 @@ def main(argv):
     effects = set(filter(None, opts.get("effects", "").split(",")))
     from beats import chapter_grid, freeze_map
     mid = timeline.at(t_from + (t_to - t_from) / 2)
-    g_ = chapter_grid(mid)
+    g_ = chapter_grid(mid, drums=bool(effects & {"hits", "close"}))
     film_start = next(s_["filmStart"] for s_ in align["songs"] if s_["slug"] == mid["slug"])
     bars = (film_start + g_["first"], g_["bar"])
-    if effects & {"freeze", "flip"}:
+    if effects:
         print(f"  effects {','.join(sorted(effects))} on a {g_['bar']:.3f}s bar", flush=True)
+
+    # What the effects need, read over the whole stretch before a frame is drawn.
+    k0 = first - pre
+    tiles = gate = None
+    if "sidewalk" in effects:
+        falls = footfalls(poses, k0, first + count, Wf, Hf, fps)
+        floor_y = float(np.median([f[2] for f in falls])) if falls else Hf * 0.9
+        tiles = Tiles(falls, body, floor_y, fps, bars[1])
+    if "echo" in effects:
+        gate = motion_gate(poses, k0, first + count, Wf, Hf, body, fps)
+    closes = []
+    if "close" in effects:
+        picks = [float(v) for v in opts["close-bars"].split(",")] if opts.get("close-bars") else None
+        closes = close_bars(poses, k0, Wf, Hf, fps, body, bars[0], bars[1], t_from, t_to - FLY_S, win0, picks)
+    kicks = snares = None
+    if "hits" in effects:
+        from beats import song_of
+        from hits import hits_of
+        h_ = hits_of(*song_of(mid))
+        kicks, snares = np.array(h_["kick"]) + film_start, np.array(h_["snare"]) + film_start
 
     # The source is read forward only. An output frame asks for a source frame
     # at or after the last one read: the same one to hold, later ones to catch
@@ -333,14 +360,26 @@ def main(argv):
         if "flip" in effects and ch.get("paletteFlip"):
             if int(np.floor((t - bars[0]) / bars[1])) % 2 == 1:
                 key = "paletteFlip"
+        if kicks is not None and ch.get("paletteFlip") and on_snare(t, kicks, snares):
+            key = "paletteFlip"
         pal = {k2: rgb(v) for k2, v in ch[key].items()}
         g_src = g if g is not None else Hf * 0.9
         ground_out = aspect["ground"] * Hout
-        A = np.float32([[scale, 0, Wout / 2 - scale * cam_x], [0, scale, ground_out - scale * g_src]])
+        sc, focus = scale, cam_x
+        close = next((c for c in closes if c[0] <= t < c[1]), None)
+        if close is not None:
+            # The close-up: his feet, the floor low in the frame. The fields are
+            # cut at this size, so the edges stay as clean as the wide shot's.
+            sc, ground_out = scale * CLOSE_ZOOM, CLOSE_GROUND * Hout
+            h2 = Wout / (2 * sc)
+            focus = min(max(close[2], h2), Wf - h2) if Wf >= 2 * h2 else close[2]
+        A = np.float32([[sc, 0, Wout / 2 - sc * focus], [0, sc, ground_out - sc * g_src]])
         contact_out = A[1, 1] * (g_contact if g_contact is not None else g_src) + A[1, 2]
 
         canvas = np.empty((Hout, Wout, 3), np.float32)
         canvas[:] = pal["field"]
+        if tiles is not None:
+            tiles.draw(canvas, A, A[1, 1] * floor_y + A[1, 2], body * sc, k0 + s_now["k"], pal)
 
         # The end of the clip: he fades, the badge flies.
         fade = 1.0
@@ -359,7 +398,7 @@ def main(argv):
             px_, py_, pw_, pang, pop_ = place
             if badge_from is not None and ch["chapterTime"] < badge_from + POP_S:
                 pw_ *= ease((ch["chapterTime"] - badge_from) / POP_S)
-            width = pw_ * scale
+            width = pw_ * sc
             x_out, y_out = A[0, 0] * px_ + A[0, 2], A[1, 1] * py_ + A[1, 2]
             if marker == "crown":
                 float_ = -BOB * width * np.sin(2 * np.pi * (t - bars[0]) / bars[1])  # up is minus
@@ -379,6 +418,12 @@ def main(argv):
         live = alpha > 0.01
         if src_shadow is not None:
             live = live | (src_shadow > 0.01)
+        trail = gate is not None and gate[s_now["k"]] > 0.02
+        if trail:
+            for back in ECHO_LAGS:
+                lag = int(round(gate[s_now["k"]] * back))
+                if 0 < lag < len(past):
+                    live = live | (past[-1 - lag] > 0.01)
         ys, xs = np.where(live)
         if len(ys):
             pad = 8
@@ -399,11 +444,26 @@ def main(argv):
             Ar[0, 2] -= rx0
             Ar[1, 2] -= ry0
             view = canvas[ry0:ry1, rx0:rx1]
+            # the glossy floor: his reflection, under the shadow
+            if tiles is not None:
+                rel = contact_out - ry0
+                ref = cv2.warpAffine(alpha, reflect_matrix(Ar, rel), (rw, rh), flags=cv2.INTER_LINEAR, borderValue=0)
+                cov = cut(ref, 0.5) * reflection_fade(rh, rel, body * sc)[:, None] * fade
+                view += (pal["field"] + (pal["ink"] - pal["field"]) * REFLECT_MIX - view) * cov[..., None]
             # 2. his shadow
             if src_shadow is not None:
                 warped = cv2.warpAffine(src_shadow, Ar, (rw, rh), flags=cv2.INTER_LINEAR, borderValue=0)
                 sh = cast(warped, contact_out - ry0) * SHADOW_OPACITY * fade
                 view += (pal["shadow"] - view) * sh[..., None]
+            # his echoes, the oldest first: flat shapes in the palette's own darker tones
+            # (ink mixed into the field turns to mud)
+            if trail:
+                for back, mix in zip(ECHO_LAGS, ECHO_MIX):
+                    lag = int(round(gate[s_now["k"]] * back))
+                    if 0 < lag < len(past):
+                        e_ = cv2.warpAffine(past[-1 - lag], Ar, (rw, rh), flags=cv2.INTER_LINEAR, borderValue=0)
+                        cov = cut(e_, 0.5) * fade
+                        view += (pal["mid"] + (pal["shadow"] - pal["mid"]) * mix - view) * cov[..., None]
             # the floor marker lies under him
             if on_floor:
                 seed(canvas, marks, pal, *here)
