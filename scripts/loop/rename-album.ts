@@ -20,8 +20,10 @@
  * announcement drafts, the pass email's sender name, and order history (an
  * order is a record of what was bought, under the name it had).
  *
- * The two records the album is pressed on get names of their own when the
- * owner gives them (scripts/loop/split-volumes.ts on the film branch).
+ * The album is pressed on two records, Loop Soul (songs 1 to 9) and Signs of
+ * Life (songs 10 to 14); until the split (scripts/loop/split-volumes.ts on the
+ * film branch) D1 holds one album with all fourteen, and that is the whole,
+ * Signs of Life. The split names the records.
  *
  * Idempotent: each update only matches the old value, so a re-run changes
  * nothing.

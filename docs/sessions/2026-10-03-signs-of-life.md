@@ -8,7 +8,10 @@ called off the record has its own name. Decision and every detail:
 - Loop Soul stays as a potential event series.
 - Add /signsoflife as the album's address, keep /loop links working.
 - No logo on the album cover, only record label details, small.
-- The two records get their own names (not given yet).
+- The two records: **record 1 (songs 1 to 9) is Loop Soul, record 2 (songs
+  10 to 14) is Signs of Life**, and the whole is Signs of Life. The owner
+  asked my view: right call, with one rule (Signs of Life alone means the
+  whole; the records are named as a pair, in order).
 
 ## Done
 - Every page about the record names it from `src/lib/loop/albumName.ts`:
@@ -24,7 +27,9 @@ called off the record has its own name. Decision and every detail:
   description. Production's /loop/1984 said "from Signs of Life" before any
   deploy.
 - The Game canon and the film's story bible and skill.
-- Guard test `loopAlbumName.test.ts`; route test `loopAlbumAddress.test.ts`.
+- Guard test `loopAlbumName.test.ts` (also holds the record names to
+  `RECORD_NAMES`; proven to fail on the film branch's "Loop Soul Vol. 1" and
+  pass with the right names); route test `loopAlbumAddress.test.ts`.
 - Cover tool `scripts/loop/cover-without-wordmark.py`; two drafts sent.
 
 ## Checks
@@ -44,7 +49,7 @@ called off the record has its own name. Decision and every detail:
   build ignores type errors). Moved to its own module.
 
 ## Next
-- The owner: the label line's words, the two records' names, and whether to
-  deploy.
-- Then: render and upload the cover; name the records on the film branch
-  before `split-volumes.ts` runs; the vinyl grid's wordmark square.
+- The owner: the label line's words, and whether to deploy.
+- Then: render and upload the cover; set the film branch's record titles to
+  Loop Soul and Signs of Life before `split-volumes.ts` runs; the vinyl
+  grid's wordmark square; a cover for record 2.

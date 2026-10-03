@@ -9,16 +9,35 @@ be played at. The night was called off for good on 2026-09-29
 
 | Name | What it is |
 |---|---|
-| **Signs of Life** | The album by Mani Odubo. Fourteen songs, the one-take film, Recoolman's flight, the singles. |
-| **Loop Soul** | The live night. A possible event series. Keeps its name everywhere the night is meant: the pass, the ticket, the door, the store's pass, the legal page, the Wall, the camera filter, the press kit, the journal. |
+| **Signs of Life** | The album by Mani Odubo, the whole work: fourteen songs, the one-take film, Recoolman's flight, the singles, the home-screen app. **And** the name of its second record (songs 10 to 14). |
+| **Loop Soul** | The album's first record (songs 1 to 9, all three singles). **And** the live night, a possible event series, which keeps its name everywhere the night is meant: the pass, the ticket, the door, the store's pass, the legal page, the Wall, the camera filter, the press kit, the journal. |
+
+The record names came the same day, after the rename: "1 side could be loop
+soul and the other could be signs of life", with the first record Loop Soul
+and the whole called Signs of Life.
+
+**Why it reads right.** The flight runs from Welcome (a soul formed from the
+dust) to Ghost World (a ghost world saved). The first record is the life, the
+loop: Loop Soul. The second crosses to the other side and ends in the ghost
+world, where signs of life mean the most, so the whole takes its name from
+where it lands. And everything already out (the 1984 flyers, every shared
+link, the drawn mark) said Loop Soul, which stays true of the record 1984 is
+on.
+
+**The one rule.** "Signs of Life" now names the whole and a part. On its own
+it means the whole (the film, the app, Recoolman's world, a chapter's page).
+Where the records appear together they are named as a pair, in order: Loop
+Soul, then Signs of Life. The risk it guards against: on a streaming service
+the second record stands alone, and a stranger could take its five songs for
+the whole album.
 
 This overrules [loop-soul-is-the-album](loop-soul-is-the-album.md) on the
 name only. Everything else in that doc about the record still stands.
 
 ## Where the name lives
 
-- **Code:** `src/lib/loop/albumName.ts`, `ALBUM_NAME`. One constant, no
-  imports. Every page about the record reads it; none spells the name. Its
+- **Code:** `src/lib/loop/albumName.ts`: `ALBUM_NAME` (the whole) and
+  `RECORD_NAMES` (`{1: "Loop Soul", 2: "Signs of Life"}`). No imports. Every page about the record reads it; none spells the name. Its
   own module on purpose: the film branch restructures `songs.json`, and a
   name kept there would have merged away silently (the build ignores type
   errors, so a page would have printed `undefined`).
@@ -29,8 +48,13 @@ name only. Everything else in that doc about the record still stands.
   "from Signs of Life" comes from `albums.title`, so it went live with the
   data, before any deploy.
 - **The guard:** `src/__tests__/loopAlbumName.test.ts` fails if "Loop Soul"
-  appears outside a comment on any page about the record, or anywhere in
-  `songs.json`.
+  is spelled out (outside a comment) on any page about the work, if the song
+  list's record titles are anything but `RECORD_NAMES`, or if anything else
+  in the song list says Loop Soul. A page naming the first record reads
+  `RECORD_NAMES[1]` or the data, never the literal.
+- **Until the split, D1 holds one album** (all fourteen songs) and it is
+  titled Signs of Life, the whole. So a single says "from Signs of Life"
+  today; after the split its record is Loop Soul and it will say so.
 - **Canon:** the Game canon's section is now "Signs of Life, the album's
   book" (`~/Documents/Apps/Game/game/docs/CANON.md`, not a git repo). Only the
   name changed: the heading, the opening paragraph (with a dated note that it
@@ -79,14 +103,21 @@ size."
 
 ## The two records
 
-The album is pressed and released as two records (songs 1 to 9, songs 10 to
-14; `docs/decisions/loop-vinyl.md` on the film branch). **The owner wants each record to have its own
-name**, not "Vol. 1" and "Vol. 2". The names are not given yet.
+Owner, 2026-10-03: **record 1 is Loop Soul** (songs 1 to 9, Welcome to
+Makunahea), **record 2 is Signs of Life** (songs 10 to 14, The Other Side to
+Ghost World). Two releases on streaming and two pressings, record 2 after
+record 1 (`docs/decisions/loop-vinyl.md` on the film branch).
 
-⚠️ The film branch's `songs.json` calls them "Loop Soul Vol. 1" and "Loop Soul
-Vol. 2", and its `scripts/loop/split-volumes.ts` writes those titles into D1.
-**Do not run the split until the records have their names.** The guard test
-fails on that branch until they do, which is the point.
+⚠️ The film branch's `songs.json` still calls them "Loop Soul Vol. 1" and
+"Loop Soul Vol. 2", and its `scripts/loop/split-volumes.ts` writes those
+titles into D1. **Set them to `Loop Soul` and `Signs of Life` before the split
+runs.** The split then renames the album row that exists (today "Signs of
+Life", the whole) to Loop Soul, creates Signs of Life for songs 10 to 14, and
+does the same to the distribution drafts. The guard test fails on that branch
+until the titles are right, which is the point.
+
+Each record needs its own streaming cover; the face drafted above is record
+1's unless the owner says otherwise. Record 2 has none yet.
 
 ## Merging the film branch after this
 
@@ -94,11 +125,13 @@ fails on that branch until they do, which is the point.
 under it) was written before the rename. A trial merge conflicts in four files:
 
 - `src/lib/loop/film/songs.json` and `src/lib/loop/songs.ts`: take the film
-  branch's structure (the `albums` map). `albumTitle` and `ALBUM_TITLE` are
-  gone on both sides; the album's name is `ALBUM_NAME` now.
+  branch's structure (the `albums` map), with the titles `Loop Soul` and
+  `Signs of Life`. `albumTitle` and `ALBUM_TITLE` are gone on both sides; the
+  whole's name is `ALBUM_NAME` now.
 - `src/app/loop/[single]/page.tsx` and `src/app/loop/album/page.tsx`: take the
-  film branch's logic, then name the album with `ALBUM_NAME` wherever it says
-  "Loop Soul", and keep `sharePath` for the canonical URL.
+  film branch's logic, then replace each "Loop Soul" by what it means: the
+  whole is `ALBUM_NAME`, a record is `albumOfVolume(n).title` (or
+  `RECORD_NAMES[n]`). Keep `sharePath` for the canonical URL.
 
 Then run `npm test -- loopAlbumName` until it passes. It lists every line still
 to change.

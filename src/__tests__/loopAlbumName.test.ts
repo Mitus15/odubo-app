@@ -1,14 +1,16 @@
 import fs from "node:fs";
 import path from "node:path";
-import { ALBUM_NAME } from "@/lib/loop/albumName";
+import { ALBUM_NAME, RECORD_NAMES } from "@/lib/loop/albumName";
 import SONGS_JSON from "@/lib/loop/film/songs.json";
 
 /**
- * The album is Signs of Life (owner, 2026-10-03). Loop Soul is the night, and
- * keeps its name on the night's pages (the pass, the door, the store, legal).
- * Every page about the record names it from ALBUM_NAME, so this fails the day
- * a branch written before the rename merges and puts "Loop Soul" back on one.
- * Comments may still say it: they record history.
+ * The album is Signs of Life, on two records: Loop Soul and Signs of Life
+ * (owner, 2026-10-03; lib/loop/albumName.ts). Loop Soul is also the night,
+ * and keeps its name on the night's pages (the pass, the door, the store,
+ * legal). Every page about the work names it from albumName.ts or from the
+ * data, never as a literal, so this fails the day a branch written before the
+ * rename merges and puts "Loop Soul" back on one by hand. Comments may still
+ * say it: they record history.
  */
 const ROOT = path.join(__dirname, "..", "..");
 const ALBUM_SURFACES = [
@@ -44,7 +46,8 @@ describe("the album's name", () => {
 
   it("is never Loop Soul on a page about the record", () => {
     const found: string[] = [];
-    for (const f of ALBUM_SURFACES.flatMap(files)) {
+    // songs.json names the first record Loop Soul on purpose; the next test holds it.
+    for (const f of ALBUM_SURFACES.flatMap(files).filter((f) => !f.endsWith("songs.json"))) {
       fs.readFileSync(f, "utf8")
         .split("\n")
         .forEach((line, i) => {
@@ -54,7 +57,20 @@ describe("the album's name", () => {
     expect(found).toEqual([]);
   });
 
-  it("is not Loop Soul in the song list either", () => {
-    expect(JSON.stringify(SONGS_JSON)).not.toMatch(/loop ?soul/i);
+  it("is pressed on two records, Loop Soul then Signs of Life", () => {
+    // A page naming the first record reads RECORD_NAMES[1] or the data, never
+    // the literal, so a stale "Loop Soul" meaning the whole cannot hide in it.
+    expect(RECORD_NAMES).toEqual({ 1: "Loop Soul", 2: "Signs of Life" });
+  });
+
+  it("gives the records their names in the song list, and nothing else there says Loop Soul", () => {
+    // The film branch splits the song list into the two records
+    // (`albums: { "1": { title }, "2": { title } }`); main has one album.
+    const { albums, ...rest } = SONGS_JSON as { albums?: Record<string, { title: string }> };
+    if (albums) {
+      const titles = Object.fromEntries(Object.entries(albums).map(([v, a]) => [v, a.title]));
+      expect(titles).toEqual({ "1": RECORD_NAMES[1], "2": RECORD_NAMES[2] });
+    }
+    expect(JSON.stringify(rest)).not.toMatch(/loop ?soul/i);
   });
 });
