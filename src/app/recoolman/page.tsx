@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ODUBO_MARK } from "@/lib/brand/marks";
 import { publicChapters, publicWorld } from "@/lib/loop/film/public";
 import FlightList from "@/components/loop/film/FlightList";
+import { ALBUM_NAME } from "@/lib/loop/albumName";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +27,7 @@ export default async function WorldPage() {
         className="mx-auto block h-16 w-16 bg-ink"
         style={{ mask: `url(${ODUBO_MARK}) center / contain no-repeat`, WebkitMask: `url(${ODUBO_MARK}) center / contain no-repeat` }}
       />
-      <p className="loop-muted mt-8 text-center text-[11px] font-bold uppercase tracking-[0.25em]">Loop Soul</p>
+      <p className="loop-muted mt-8 text-center text-[11px] font-bold uppercase tracking-[0.25em]">{ALBUM_NAME}</p>
       <h1 className="loop-display mt-2 text-center text-4xl font-bold tracking-tight">Recoolman</h1>
 
       <section className="mt-12" aria-label="The world">

@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
 
     // Base query fields (including mp4_url for native playback)
     // Join with parent video to get parent title, and with the film card for
-    // Loop Soul clips (the flip and its verse; approved cards only)
+    // Signs of Life film clips (the flip and its verse; approved cards only)
     const baseFields = `v.id, v.title, v.artist_name, v.description, v.url, v.uid, v.mp4_url, v.duration, v.duration_seconds, v.poster_url, v.thumbnail, v.created_at, v.shopify_product_handle, v.related_projects, v.feed_position, parent.title as parent_title, ${CLIP_FILM_FIELDS}`;
 
     // Engagement fields and scoring

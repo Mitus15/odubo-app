@@ -1,5 +1,5 @@
 """
-Draw him: the person mask and the frame become the Loop Soul figure.
+Draw him: the person mask and the frame become the film's figure.
 
     npm run film:figure -- <take> [--height=2160]
 

@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { publicChapters, publicFilm } from "@/lib/loop/film/public";
+import { ALBUM_NAME } from "@/lib/loop/albumName";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "The film · Loop Soul", description: "Loop Soul, danced in one take." };
+export const metadata = { title: `The film · ${ALBUM_NAME}`, description: `${ALBUM_NAME}, danced in one take.` };
 
 /**
  * /loop/film: the whole album, danced in one take, as one film.
@@ -20,14 +21,14 @@ export default async function FilmPage({ searchParams }: { searchParams: Promise
 
   return (
     <main className="mx-auto min-h-[100dvh] w-full max-w-3xl bg-sand px-6 pb-20 pt-16 text-ink">
-      <p className="loop-muted text-[11px] font-bold uppercase tracking-[0.25em]">Loop Soul</p>
+      <p className="loop-muted text-[11px] font-bold uppercase tracking-[0.25em]">{ALBUM_NAME}</p>
       <h1 className="loop-display mt-2 text-5xl font-bold tracking-tight">The film</h1>
       {film ? (
         <div className="mt-8 aspect-video w-full overflow-hidden bg-ink">
           <iframe
             key={t}
             src={`https://iframe.videodelivery.net/${film.uid}?startTime=${t}s${film.poster ? `&poster=${encodeURIComponent(film.poster)}` : ""}`}
-            title="Loop Soul, the film"
+            title={`${ALBUM_NAME}, the film`}
             allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture"
             allowFullScreen
             className="h-full w-full border-0"

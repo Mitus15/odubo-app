@@ -1,6 +1,7 @@
 import FilmEditor from "./FilmEditor";
+import { ALBUM_NAME } from "@/lib/loop/albumName";
 
-export const metadata = { title: "Loop Soul · The film" };
+export const metadata = { title: `${ALBUM_NAME} · The film` };
 
 /**
  * /loop/admin/film: the story of the one-take film, chapter by chapter.

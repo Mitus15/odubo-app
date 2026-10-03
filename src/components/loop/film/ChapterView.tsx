@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { PublicChapter, PublicClip } from "@/lib/loop/film/public";
 import type { ListenLink } from "@/lib/loop/listen";
+import { ALBUM_NAME } from "@/lib/loop/albumName";
 import FlightList from "./FlightList";
 
 /**
@@ -28,7 +29,7 @@ export default function ChapterView({
   return (
     <main className="mx-auto min-h-[100dvh] w-full max-w-md bg-sand px-6 pb-20 pt-16 text-ink">
       <p className="loop-muted text-[11px] font-bold uppercase tracking-[0.25em]">
-        Loop Soul · Chapter {chapter.number}
+        {ALBUM_NAME} · Chapter {chapter.number}
       </p>
       <h1 className="loop-display mt-2 text-5xl font-bold tracking-tight">{chapter.title}</h1>
       <span className="mt-4 block h-1.5 w-12 rounded-full" style={{ background: chapter.field }} aria-hidden="true" />

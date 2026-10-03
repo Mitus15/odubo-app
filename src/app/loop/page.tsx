@@ -1,6 +1,7 @@
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getCurrentEvent } from "@/lib/loop/hub";
-import { frontSingle, singlePath } from "@/lib/loop/singles";
+import { ALBUM_ADDRESS_HEADER, frontSingle, sharePath, singlePath } from "@/lib/loop/singles";
 import { getSingleStatuses } from "@/lib/loop/singlesStore";
 import HubNav from "@/components/loop/shell/HubNav";
 import GatheringHome from "@/components/loop/states/GatheringHome";
@@ -23,10 +24,12 @@ export default async function Home() {
   // Archived before it happened (2026-09-29: the Oct 10 night was called off,
   // the album rolls out on film instead). Legacy speaks to people who were in
   // the room, and nobody was, so the front door is the newest single that is
-  // out (or, before any is, the next one coming).
+  // out (or, before any is, the next one coming). Reached as /signsoflife,
+  // it stays on the album's address.
   if (event.phase === "archived") {
-    const statuses = await getSingleStatuses().catch(() => null);
-    if (statuses) redirect(singlePath(frontSingle(statuses).slug));
+    const [statuses, h] = await Promise.all([getSingleStatuses().catch(() => null), headers()]);
+    const path = h.get(ALBUM_ADDRESS_HEADER) ? sharePath : singlePath;
+    if (statuses) redirect(path(frontSingle(statuses).slug));
   }
 
   return (

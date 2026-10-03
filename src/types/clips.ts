@@ -21,7 +21,7 @@ export type ClipApiRow = {
   youtube_shorts_url?: string | null;
   tiktok_url?: string | null;
   instagram_reels_url?: string | null;
-  // Loop Soul film (migration 168): the song, the chapter, and the approved card
+  // Signs of Life film (migration 168): the song, the chapter, and the approved card
   track_id?: string | null;
   film_chapter_id?: string | null;
   card_flip?: string | null;
@@ -56,7 +56,7 @@ export type ClipItem = {
   youtubeShortsUrl?: string | null;
   tiktokUrl?: string | null;
   instagramReelsUrl?: string | null;
-  // Loop Soul film (migration 168). A film clip carries no product: its chapter
+  // Signs of Life film (migration 168). A film clip carries no product: its chapter
   // page does the selling, and the card's flip is the words on the clip.
   trackId?: string | null;
   filmChapter?: string | null;        // loop_film_chapters.slug, opens /loop/<slug>

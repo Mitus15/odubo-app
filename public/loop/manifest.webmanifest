@@ -1,7 +1,7 @@
 {
-  "name": "Loop Soul",
-  "short_name": "Loop Soul",
-  "description": "Loop Soul. An album by Mani Odubo, live at Scott's Inn, Kamloops.",
+  "name": "Signs of Life",
+  "short_name": "Signs of Life",
+  "description": "Signs of Life, an album by Mani Odubo.",
   "start_url": "/loop",
   "scope": "/loop",
   "display": "standalone",

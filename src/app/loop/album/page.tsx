@@ -16,12 +16,13 @@ import { getSetting } from "@/lib/loop/loopSetting";
 import { getPassSettings } from "@/lib/loop/pass/settings";
 import { resolveCover, coverCaption } from "@/lib/loop/cover";
 import { priceLabel as formatPrice } from "@/lib/loop/priceLabel";
+import { ALBUM_NAME } from "@/lib/loop/albumName";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export const metadata = {
-  title: "The record · Loop Soul",
+  title: `The record · ${ALBUM_NAME}`,
   robots: { index: false, follow: false },
 };
 
@@ -64,7 +65,7 @@ export default async function LoopAlbumPage() {
       <Dark>
         <div className="mx-auto max-w-2xl px-5 pb-24 pt-10">
           <Cover cover={cover} />
-          <p className="text-[11px] uppercase tracking-[0.3em] opacity-70">Loop Soul · Yours</p>
+          <p className="text-[11px] uppercase tracking-[0.3em] opacity-70">{ALBUM_NAME} · Yours</p>
           <h1 className="mt-2 text-2xl font-extrabold">{data.album.title}</h1>
           <p className="mt-1 text-sm opacity-70">{data.album.artist_name}.</p>
           <div className="mt-8">
@@ -104,7 +105,7 @@ export default async function LoopAlbumPage() {
         <Dark>
           <div className="mx-auto max-w-2xl px-5 pb-24 pt-10">
             <Cover cover={cover} />
-            <p className="text-[11px] uppercase tracking-[0.3em] opacity-70">Loop Soul · Yours, early</p>
+            <p className="text-[11px] uppercase tracking-[0.3em] opacity-70">{ALBUM_NAME} · Yours, early</p>
             <h1 className="mt-2 text-2xl font-extrabold">{data.album.title}</h1>
             <p className="mt-1 text-sm opacity-70">
               {now.length} of {data.tracks.length} now. The rest after the night.
@@ -171,7 +172,7 @@ function Shell({ title, children }: { title: string; children?: React.ReactNode 
   return (
     <Dark>
       <div className="mx-auto max-w-md px-6 pb-24 pt-12">
-        <p className="text-[11px] uppercase tracking-[0.3em] opacity-70">Loop Soul · The record</p>
+        <p className="text-[11px] uppercase tracking-[0.3em] opacity-70">{ALBUM_NAME} · The record</p>
         <h1 className="mt-2 text-2xl font-extrabold leading-tight">{title}</h1>
         {children && <p className="mt-4 text-sm leading-relaxed opacity-85">{children}</p>}
         <BackLink />
@@ -183,7 +184,7 @@ function Shell({ title, children }: { title: string; children?: React.ReactNode 
 function BackLink() {
   return (
     <Link href="/loop" className="mt-10 block text-center text-[11px] font-bold uppercase tracking-[0.3em] opacity-60">
-      ← Back to Loop Soul
+      ← Back to {ALBUM_NAME}
     </Link>
   );
 }

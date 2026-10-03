@@ -1,10 +1,10 @@
 import { FONT_METRICS } from "@/lib/loop/poster/font-metrics";
 
 /**
- * The rules every word of the Loop Soul story obeys before a guest sees it.
+ * The rules every word of the Signs of Life story obeys before a guest sees it.
  *
- * 1. He is never named. Everyone knows who we mean (the canon's Loop Soul
- *    section, Game/game/docs/CANON.md, 2026-09-29). The words of a verse make
+ * 1. He is never named. Everyone knows who we mean (the canon's Signs of
+ *    Life section, Game/game/docs/CANON.md, 2026-09-29). The words of a verse make
  *    Him unmistakable; the name never appears in a card, a flip, a chapter, a
  *    world entry, a caption or a hashtag.
  * 2. No em dash, anywhere, in any voice (the owner's rule).
@@ -42,7 +42,7 @@ export function storyIssues(
 ): StoryIssue[] {
   const issues: StoryIssue[] = [];
   const maxLinks = opts.maxLinks ?? 0;
-  if (namesHim(text)) issues.push({ code: "names-him", detail: "He is never named in Loop Soul." });
+  if (namesHim(text)) issues.push({ code: "names-him", detail: "He is never named in Signs of Life." });
   if (text.includes("—")) issues.push({ code: "em-dash", detail: "No em dashes." });
   const links = linkCount(text);
   if (links > maxLinks) {
