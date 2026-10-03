@@ -70,12 +70,12 @@ def grid_of(path: str, bpm: float, downbeat: float | None = None) -> dict:
     beat, phase = p["beat"], p["phase"]
     bar = 4 * beat
     if downbeat is not None:
-        return {"beat": beat, "bar": bar, "first": downbeat % bar}
+        return {"beat": beat, "bar": bar, "first": downbeat % bar, "one": downbeat}
     env, env_rate = onset_envelope(load_mono(path, RATE), RATE)
     t = np.arange(len(env)) / env_rate + ONSET_DELAY
     down = [float(np.interp(np.arange(phase + k * beat, t[-1], bar), t, env).sum()) for k in range(4)]
     first = phase + int(np.argmax(down)) * beat
-    return {"beat": beat, "bar": bar, "first": first % bar}
+    return {"beat": beat, "bar": bar, "first": first % bar, "one": first % bar}
 
 
 def freeze_map(t_out: float, bar_start: float, bar: float, hold: float = 0.18, eps: float = 0.06) -> float:

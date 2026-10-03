@@ -50,8 +50,12 @@ from anchor import Path as Track
 from shadow import Ground, cast_on_floor
 from edge import cut, melt  # noqa: F401 (melt: the look's soft core, used by paint and the tests)
 from outro import FRAMES as GROW_FRAMES, KEYLINE, Marks
-from floor import GLOSS_LIGHT, HORIZON, REFLECT_MIX, Tiles, footfalls, reflect_matrix, reflection_fade
-from effects import CLOSE_GROUND, CLOSE_ZOOM, ECHO_LAGS, ECHO_MIX, close_bars, motion_gate, on_snare
+from floor import (GLOSS_LIGHT, HORIZON, REFLECT_MIX, SPOT_LIGHT, SQUASH as FLOOR_SQUASH, TILE, Tiles, footfalls,
+                   reflect_matrix, reflection_fade, spotlight)
+from effects import CLOSE_GROUND, CLOSE_ZOOM, ECHO_LAGS, ECHO_MIX, close_bars, close_spans, motion_gate, on_snare
+from show import Show, resolve_palettes
+from hud import Hud
+import props as set_props
 
 ASPECTS = {
     # figure height and ground line as fractions of the output height;
@@ -276,27 +280,40 @@ def main(argv):
     effects = set(filter(None, opts.get("effects", "").split(",")))
     from beats import chapter_grid, freeze_map
     mid = timeline.at(t_from + (t_to - t_from) / 2)
-    g_ = chapter_grid(mid, drums=bool(effects & {"hits", "close"}))
+    g_ = chapter_grid(mid, drums=bool(opts.get("show")) or bool(effects & {"hits", "close"}))
     film_start = next(s_["filmStart"] for s_ in align["songs"] if s_["slug"] == mid["slug"])
     bars = (film_start + g_["first"], g_["bar"])
-    if effects:
-        print(f"  effects {','.join(sorted(effects))} on a {g_['bar']:.3f}s bar", flush=True)
+    # The stage at every moment: a show file's cues, or the flags as a show with none.
+    one = film_start + g_.get("one", g_["first"])
+    show = Show.load(opts["show"], one, g_["bar"]) if opts.get("show") else Show.from_flags(effects, one, g_["bar"])
+    show_pals = {h: {k: {k2: rgb(v) for k2, v in p_.items()} for k, p_ in v.items()}
+                 for h, v in resolve_palettes(show.fields()).items()}
+    if effects or opts.get("show"):
+        print(f"  {'show ' + show.name if opts.get('show') else 'effects ' + ','.join(sorted(effects))}"
+              f" on a {g_['bar']:.3f}s bar", flush=True)
 
     # What the effects need, read over the whole stretch before a frame is drawn.
     k0 = first - pre
-    tiles = gate = None
-    if "sidewalk" in effects:
-        falls = footfalls(poses, k0, first + count, Wf, Hf, fps)
+    tiles = gate = hud = None
+    hud_spec = show.hud or (dict(zip(("level", "title"), opts["hud"].split("|", 1))) if opts.get("hud") else None)
+    falls = footfalls(poses, k0, first + count, Wf, Hf, fps) if show.uses(floor="tiles") or hud_spec else []
+    if show.uses(floor="tiles"):
         floor_y = float(np.median([f[2] for f in falls])) if falls else Hf * 0.9
         tiles = Tiles(falls, body, floor_y, fps, bars[1])
-    if "echo" in effects:
+    if hud_spec:
+        hud = Hud(Wout, Hout, hud_spec.get("level", ""), hud_spec.get("title") or mid.get("title", ""), falls, first)
+    if show.uses(effect="echo"):
         gate = motion_gate(poses, k0, first + count, Wf, Hf, body, fps)
     closes = []
     if "close" in effects:
         picks = [float(v) for v in opts["close-bars"].split(",")] if opts.get("close-bars") else None
         closes = close_bars(poses, k0, Wf, Hf, fps, body, bars[0], bars[1], t_from, t_to - FLY_S, win0, picks)
+    closes += close_spans(poses, k0, Wf, Hf, fps, [(a, b) for a, b, cam in show.camera_spans() if cam == "feet"], win0)
+    # Where the set stands: props are placed from where he stands over the piece.
+    hips = [float((poses[k][23, 0] + poses[k][24, 0]) / 2 * Wf) for k in range(first, first + count) if k in poses]
+    stage_x = float(np.median(hips)) if hips else Wf / 2
     kicks = snares = None
-    if "hits" in effects:
+    if show.uses(effect="hits"):
         from beats import song_of
         from hits import hits_of
         h_ = hits_of(*song_of(mid))
@@ -323,9 +340,10 @@ def main(argv):
             else:
                 cols = np.where(alpha_.max(0) > 0.5)[0]
                 x_now = float(cols.mean()) if len(cols) else Wf / 2
-            cx = st.get("cam_x")
+            cx, sx = st.get("cam_x"), st.get("spot_x")
             st.update(k=k_, lab=lab_, alpha=alpha_, fields=fields_, place=place_, g=g_s, g_contact=g_c,
-                      cam_x=x_now if cx is None else cx + aspect["follow"] * (x_now - cx))
+                      cam_x=x_now if cx is None else cx + aspect["follow"] * (x_now - cx),
+                      spot_x=x_now if sx is None else sx + 0.25 * (x_now - sx))
         return st
 
     if pre > 0:
@@ -333,8 +351,9 @@ def main(argv):
 
     for i in range(count):
         t = t_from + i / fps
+        stage = show.at(t)
         target = pre + i
-        if "freeze" in effects:
+        if "freeze" in stage.effects:
             target = pre + int(round((freeze_map(t, bars[0], bars[1]) - t_from) * fps))
         try:
             s_now = advance(max(target, st["k"], 0))
@@ -345,13 +364,15 @@ def main(argv):
         if cam_range:
             cam_x = min(max(cam_x, cam_range[0]), cam_range[1])
         ch = timeline.at(t)
+        colours = show_pals[stage.field] if stage.field else {k_: {k2: rgb(v) for k2, v in ch[k_].items()}
+                                                                for k_ in ("palette", "paletteFlip") if ch.get(k_)}
         key = "palette"
-        if "flip" in effects and ch.get("paletteFlip"):
+        if "flip" in stage.effects and "paletteFlip" in colours:
             if int(np.floor((t - bars[0]) / bars[1])) % 2 == 1:
                 key = "paletteFlip"
-        if kicks is not None and ch.get("paletteFlip") and on_snare(t, kicks, snares):
+        if kicks is not None and "hits" in stage.effects and "paletteFlip" in colours and on_snare(t, kicks, snares):
             key = "paletteFlip"
-        pal = {k2: rgb(v) for k2, v in ch[key].items()}
+        pal = colours[key]
         g_src = g if g is not None else Hf * 0.9
         ground_out = aspect["ground"] * Hout
         sc, focus = scale, cam_x
@@ -371,8 +392,25 @@ def main(argv):
 
         canvas = np.empty((Hout, Wout, 3), np.float32)
         canvas[:] = pal["field"]
-        if tiles is not None:
+        glossy = tiles is not None and stage.floor == "tiles"
+        if stage.light == "spot":
+            spotlight(canvas, A[0, 0] * s_now["spot_x"] + A[0, 2], contact_out, body * sc, pal)
+        if glossy:
             tiles.draw(canvas, A, A[1, 1] * floor_y + A[1, 2], horizon, k0 + s_now["k"], pal)
+
+        # The set: each prop stands on the floor at its own depth, sized by the
+        # floor's perspective; a lamp lights the floor under it.
+        placed = []
+        for name, px, pz in stage.props:
+            depth = TILE * body * sc * FLOOR_SQUASH
+            foot_y = ground_out - pz * depth
+            kp = (foot_y - horizon) / max(1.0, ground_out - horizon)
+            foot_x = Wout / 2 + (A[0, 0] * (stage_x + px * body) + A[0, 2] - Wout / 2) * kp
+            polys, light_ = set_props.place(name, foot_x, foot_y, body * sc * kp)
+            placed.append((pz, foot_y, polys, set_props.height(polys, foot_y)))
+            if light_:
+                set_props.light_pool(canvas, foot_x + light_["floor_x"] * body * sc * kp, foot_y,
+                                     light_["reach"] * body * sc * kp, pal)
 
         # The end of the clip: he fades, the badge flies.
         fade = 1.0
@@ -390,16 +428,31 @@ def main(argv):
         mode = opts.get("shadow", ch.get("shadowMode", "sync"))
         lag = int(opts.get("lag", ch.get("shadowLag") or 0)) if mode == "lag" else 0
         src_shadow = past[max(0, len(past) - 1 - lag)] if mode != "none" else None
+        # The light decides where shadows fall: a spot from overhead pools them
+        # underfoot; on the glossy floor the key comes low from the side.
+        lit_by = SPOT_LIGHT if stage.light == "spot" else GLOSS_LIGHT if glossy else None
+        light = dict(zip(("squash", "shear"), lit_by)) if lit_by else {}
+        dark = 1 - np.clip(pal["shadow"] / np.maximum(pal["field"], 1), 0, 1)
         if src_shadow is not None:
             rows = int(min(Hout, np.ceil(contact_out) + 1))
             figure = cv2.warpAffine(src_shadow, A, (Wout, rows), flags=cv2.INTER_LINEAR, borderValue=0) if rows > 0 else None
             if figure is not None:
-                light = dict(zip(("squash", "shear"), GLOSS_LIGHT)) if tiles is not None else {}
                 cov, y0 = cast_on_floor(figure, contact_out, horizon, Wout / 2, body * sc, Hout, **light)
                 if len(cov):
-                    dark = 1 - np.clip(pal["shadow"] / np.maximum(pal["field"], 1), 0, 1)
                     strip = canvas[y0:y0 + len(cov)]
                     strip *= 1 - (cov * SHADOW_OPACITY * fade)[..., None] * dark
+        # The props cast theirs in the same light.
+        for _, foot_y, polys, tall_ in placed:
+            rows_p = int(min(Hout, np.ceil(foot_y) + 1))
+            cov_p, (px0, py0) = set_props.coverage(polys, Wout, rows_p)
+            if cov_p.size:
+                fig_p = np.zeros((rows_p, Wout), np.float32)
+                fig_p[py0:py0 + cov_p.shape[0], px0:px0 + cov_p.shape[1]] = cov_p
+                cov, y0 = cast_on_floor(fig_p, foot_y, horizon, Wout / 2, tall_, Hout, **light)
+                if len(cov):
+                    strip = canvas[y0:y0 + len(cov)]
+                    strip *= 1 - (cov * SHADOW_OPACITY)[..., None] * dark
+        set_props.stand(canvas, placed, pal["ink"], behind=True)
 
         # 4. the marker, from the moment it lands (placed now, drawn in order)
         badge_from = ch.get("badgeFrom")
@@ -424,7 +477,7 @@ def main(argv):
         # Most of the frame is flat field: draw him, his echoes and his
         # reflection only in the region around them (his box, and the floor below it).
         live = alpha > 0.01
-        trail = gate is not None and gate[s_now["k"]] > 0.02
+        trail = gate is not None and "echo" in stage.effects and gate[s_now["k"]] > 0.02
         if trail:
             for back in ECHO_LAGS:
                 lag = int(round(gate[s_now["k"]] * back))
@@ -452,7 +505,7 @@ def main(argv):
             view = canvas[ry0:ry1, rx0:rx1]
             # the glossy floor: his reflection darkens whatever it lies on (the
             # field, a lit tile, his shadow), as a dark figure on lacquer does
-            if tiles is not None:
+            if glossy:
                 rel = contact_out - ry0
                 ref = cv2.warpAffine(alpha, reflect_matrix(Ar, rel), (rw, rh), flags=cv2.INTER_LINEAR, borderValue=0)
                 cov = cut(ref, 0.5) * reflection_fade(rh, rel, body * sc)[:, None] * fade
@@ -489,6 +542,12 @@ def main(argv):
                 body_rgb, a = paint(fld, tn, pal, look, cuts, soft)
                 a = a * fade
             view += (body_rgb - view) * a[..., None]
+
+        set_props.stand(canvas, placed, pal["ink"], behind=False)
+
+        # the game's layer, over the stage and under the growing seal; it fades with him
+        if hud is not None:
+            hud.draw(canvas, k0 + s_now["k"], i / max(1, count - 1), pal["ink"], fade)
 
         # 4. (drawn) over him: the crown and the heart; the floor marker if he was not drawn
         if u is None:

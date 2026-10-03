@@ -3,10 +3,20 @@
  *
  *   node scripts/loop/stage-reel.mjs \
  *     --file=reel.mp4 --title="…" --caption="…" --hashtags="#a #b" \
- *     --when=2026-09-14T10:00:00-07:00 [--folder=reels] [--dry]
+ *     --when=2026-09-14T10:00:00-07:00 [--product=infinity-hoodie] [--folder=reels] [--dry]
  *
  * Uploads to Cloudflare Stream, waits for the direct MP4 download to exist,
- * then writes one `social_content` row with status 'draft'.
+ * then writes two rows that share the upload:
+ *
+ *   videos          the piece as a clip for the site's feed, HIDDEN, carrying
+ *                   --product (a Shopify handle, checked before anything is
+ *                   uploaded), so the clip's shop button opens that product
+ *   social_content  the post, status 'draft', pointing at that clip
+ *
+ * The clip goes live in the feed when the post does: the status sync
+ * (/api/admin/social/status) makes a draft's clip public once PostForMe
+ * delivers it. A post made by hand from the phone does not pass through
+ * PostForMe; make its clip public in /admin/videos.
  *
  * It stops at draft ON PURPOSE. Handing a post to PostForMe is what actually
  * publishes it — `scheduled_at` means PostForMe holds the timer and fires with
@@ -43,6 +53,25 @@ const STREAM_BASE = `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT}/st
 const D1_URL = `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT}/d1/database/${D1_ID}/query`;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/** The product a clip will open, checked in Shopify before anything is uploaded: {id, title} or a thrown error. */
+async function productOf(handle) {
+  const store = (process.env.SHOPIFY_STORE_URL ?? "").replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+  const token = process.env.SHOPIFY_ADMIN_ACCESS_TOKEN;
+  if (!store || !token) throw new Error("--product needs SHOPIFY_STORE_URL and SHOPIFY_ADMIN_ACCESS_TOKEN");
+  const res = await fetch(`https://${store}/admin/api/2024-07/graphql.json`, {
+    method: "POST",
+    headers: { "X-Shopify-Access-Token": token, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      query: "query($h: String!) { productByHandle(handle: $h) { id title status } }",
+      variables: { h: handle },
+    }),
+  });
+  const p = (await res.json()).data?.productByHandle;
+  if (!p) throw new Error(`no product with the handle "${handle}" in Shopify`);
+  if (p.status !== "ACTIVE") throw new Error(`"${handle}" is ${p.status}, not for sale`);
+  return p;
+}
 
 async function d1(sql, params = []) {
   const res = await fetch(D1_URL, {
@@ -103,6 +132,8 @@ async function main() {
   const when = args.when ? new Date(String(args.when)).toISOString() : null;
   const folderName = String(args.folder ?? "reels");
   if (!args.file || !args.title) throw new Error("need --file and --title");
+  const handle = args.product ? String(args.product) : null;
+  const product = handle ? await productOf(handle) : null;
 
   const folders = await d1(`SELECT id, name FROM social_folders WHERE slug = ?1 OR name = ?1`, [folderName]);
   const folderId = folders[0]?.id ?? null;
@@ -110,6 +141,7 @@ async function main() {
 
   if (args.dry) {
     console.log(`  DRY RUN — would upload and insert:\n    title: ${title}\n    when:  ${when}`);
+    console.log(`    clip:  hidden in the feed until posted${product ? `, opens ${product.title} (${handle})` : ", no product"}`);
     return;
   }
 
@@ -128,16 +160,28 @@ async function main() {
 
   const duration = (await streamGet(uid))?.duration ?? null;
   const thumb = `https://videodelivery.net/${uid}/thumbnails/thumbnail.jpg`;
+  const now = new Date().toISOString();
+
+  // The clip for the site's feed: hidden until the post goes out.
+  await d1(
+    `INSERT INTO videos (uid, stream_video_id, title, description, url, poster_url, mp4_url, type, is_public,
+                         publication_status, status, shopify_product_handle, shopify_product_id,
+                         duration_seconds, created_at, updated_at)
+     VALUES (?1, ?1, ?2, ?3, ?4, ?5, ?6, 'clip', 0, 'archived', 'published', ?7, ?8, ?9, ?10, ?10)`,
+    [uid, title, caption, `https://iframe.videodelivery.net/${uid}`, thumb, mp4, handle, product?.id ?? null, duration, now],
+  );
+  const clip = await d1(`SELECT id FROM videos WHERE uid = ?1`, [uid]);
 
   await d1(
     `INSERT INTO social_content
-       (folder_id, source_type, upload_uid, thumbnail_url, duration, title,
+       (folder_id, source_type, upload_uid, video_id, thumbnail_url, duration, title,
         caption_instagram, hashtags_instagram, status, scheduled_for)
-     VALUES (?1, 'upload', ?2, ?3, ?4, ?5, ?6, ?7, 'draft', ?8)`,
-    [folderId, uid, thumb, duration, title, caption, hashtags, when],
+     VALUES (?1, 'upload', ?2, ?3, ?4, ?5, ?6, ?7, ?8, 'draft', ?9)`,
+    [folderId, uid, clip[0]?.id ?? null, thumb, duration, title, caption, hashtags, when],
   );
   const row = await d1(`SELECT id FROM social_content WHERE upload_uid = ?1`, [uid]);
-  console.log(`  drafted as social_content #${row[0]?.id}${when ? ` · calendar ${when}` : ""}\n`);
+  console.log(`  drafted as social_content #${row[0]?.id}${when ? ` · calendar ${when}` : ""}`);
+  console.log(`  clip #${clip[0]?.id} waits hidden in the feed${product ? `, opening ${product.title}` : ""}\n`);
 }
 
 main().catch((e) => {

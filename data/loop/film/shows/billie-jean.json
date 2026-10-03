@@ -1,0 +1,10 @@
+{
+  "name": "Billie Jean",
+  "bars": [65, 93],
+  "hud": {"level": "1-1", "title": "Billie Jean"},
+  "stage": {"floor": "tiles", "light": "key", "effects": ["echo"]},
+  "cues": [
+    {"bar": 71, "camera": "feet", "for": 1},
+    {"bar": 83, "camera": "feet", "for": 1}
+  ]
+}

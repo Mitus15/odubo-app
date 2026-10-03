@@ -322,3 +322,50 @@ each foot.
 
 `cut`/`melt` moved to `edge.py`, the one drawing rule both compose and the
 shadow use.
+
+## The virtual stage: show files, props, the HUD (2026-10-03)
+
+The owner wants a virtual stage: perform from anywhere, then light, dress and
+cut it like a concert crossed with an effects edit, for social media rather
+than one night. The pipeline already holds the stage (the performer lifted out
+of any room, the floor, the light, the camera, the effects). What it lacked was
+the show itself.
+
+- **Show files** (`show.py`, `data/loop/film/shows/*.json`): a cue list in bars
+  of the song (bar 1 is the first downbeat, from the kick). A cue sets the
+  colour, the floor (plain or tiles), the light (key or spot), the effects, the
+  camera, the props; it holds until a later cue changes it, like a lighting
+  desk. A camera move lasts its `for` bars and returns wide. The old
+  `--effects=` flags are a show with no cues. Mistyped cues are refused with
+  their bar.
+- **Props** (`props.py`): flat ink shapes on the same floor at their own depth,
+  sized by its perspective, casting shadows in the same light; a lamp lights the
+  floor under it. A street lamp and a microphone stand to start.
+- **The spot** (`floor.spotlight`): overhead; the stage dims a step, a pool
+  follows him, his shadow pools underfoot.
+- **The HUD** (`hud.py`): the seal as player one, world-level numbering (the
+  owner did not want "level 100": a season is a world, 1-1 to 1-17), the song,
+  his real step count from the footfalls, a progress line. Clear of a Reel's
+  top bar and buttons; it fades with him so the Danceman closes alone.
+
+The first show (the street: lamp, spot, tiles, close-ups, echo, hits) was not
+it for Billie Jean. The owner: the tiles alone with the subtle shadow and the
+subtle effects "go a looong way once the HUD is there". `billie-jean.json` is
+that: tiles, echo, two feet close-ups, the HUD. The lamp and the spot stay for
+songs that call for them.
+
+## Every staged piece is also a clip that sells (2026-10-03)
+
+The owner runs the feed from /admin/social on his phone and wants every piece
+featured on the site too, in the clips feed, opening its product: a lean,
+repeatable engine. The site had the parts: a clip (`videos`, type clip) with a
+`shopify_product_handle` gets a shop button that opens QuickShop, and the
+status sync makes a draft's clip public when PostForMe delivers the post. The
+gap: `stage-reel.mjs` wrote only the social draft, so a staged piece never
+reached the feed and carried no product.
+
+It now writes the hidden clip too, with `--product=<handle>` (checked in
+Shopify first: a typo or an archived product is refused before any upload),
+and points the draft at it (`social_content.video_id`). Posted through
+PostForMe, the clip goes live by itself; posted by hand from the phone, make
+it public in /admin/videos.

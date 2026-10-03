@@ -33,6 +33,10 @@ HORIZON = 0.72                   # the camera's eye level, as a share of his hei
 SQUASH = 0.3                     # the floor's foreshortening at his feet (shadow.py's, compose.GROUND_SQUASH)
 REFLECT_DEPTH = 0.22             # the reflection fades out over this share of his height below the floor
 REFLECT_MIX = 0.3                # the reflection: this far from the field toward ink
+SPOT_LIGHT = (0.07, 0.15)         # a spotlight is overhead: his shadow pools under him (squash, shear)
+SPOT_DIM = 0.55                  # outside the spot the stage dims this far toward its shadow colour
+SPOT_LIFT = 0.16                 # inside it the floor lifts this far toward the highlight
+SPOT_REACH = 0.42                # the pool's half width, a share of his height
 GLOSS_LIGHT = (0.16, 1.6)        # on the glossy floor the light is low and from the side (squash, shear for
                                  # shadow.cast_on_floor): his shadow lies along the floor, clear of the
                                  # reflection beneath him, where the usual light laid one over the other
@@ -157,3 +161,27 @@ def reflection_fade(height: int, contact_rel: float, body_out: float) -> np.ndar
     f = (1 - u) ** 2
     f[y < 0] = 0
     return f
+
+
+def spotlight(canvas: np.ndarray, x: float, contact: float, body_out: float, pal: dict):
+    """
+    A spotlight from overhead: the stage dims a step toward its shadow colour,
+    and a soft pool of light on the floor follows him (x, contact: where he
+    meets the floor, in the output frame), foreshortened by the floor.
+    """
+    H, W = canvas.shape[:2]
+    ratio = np.clip(pal["shadow"] / np.maximum(pal["field"], 1), 0, 1)
+    lit = canvas + (pal["highlight"] - canvas) * SPOT_LIFT
+    canvas *= 1 - SPOT_DIM * (1 - ratio)
+    rx = SPOT_REACH * body_out
+    ry = rx * SQUASH * 1.3
+    x0, x1 = int(max(0, x - rx * 1.4)), int(min(W, x + rx * 1.4))
+    y0, y1 = int(max(0, contact - ry * 1.4)), int(min(H, contact + ry * 1.4))
+    if x1 <= x0 or y1 <= y0:
+        return
+    yy, xx = np.mgrid[y0:y1, x0:x1].astype(np.float32)
+    d = np.sqrt(((xx - x) / rx) ** 2 + ((yy - contact) / ry) ** 2)
+    m = np.clip((1.12 - d) / 0.24, 0, 1)
+    m = (m * m * (3 - 2 * m))[..., None]
+    view = canvas[y0:y1, x0:x1]
+    view[:] = view * (1 - m) + lit[y0:y1, x0:x1] * m

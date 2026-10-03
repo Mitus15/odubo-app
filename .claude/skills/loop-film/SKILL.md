@@ -74,6 +74,20 @@ npm run film:dance -- <take> cut --from=<s> --to=<s> --name=reel --audio=full|si
 (`sync_audio.lock`); a take danced in headphones needs his own edit or his
 movement against the beat (see the decision record, "Billie Jean").
 
+## A show: the virtual stage
+
+A performance is a show file (`data/loop/film/shows/<name>.json`, format in
+`scripts/loop/film/show.py`): cues in bars (floor, light, colour, effects,
+camera, props) and the HUD (`"hud": {"level": "1-1", "title": "..."}`).
+
+```bash
+npm run film:dance -- <take> cut --show=data/loop/film/shows/billie-jean.json --name=1-1-reel
+node --env-file=.env.local scripts/loop/stage-reel.mjs --file=<the cut> --title="..." --product=<shopify handle> --dry
+```
+
+Staging writes the social draft and a hidden clip that opens the product; the
+clip goes live when the post does (PostForMe), or by hand in /admin/videos.
+
 ## The look
 
 Two things decide how clean he looks.

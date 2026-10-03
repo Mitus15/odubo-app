@@ -3,6 +3,7 @@ A dance to a song from outside the album: one take, one song, one colour.
 
     npm run film:dance -- <take> setup --song="<audio>" --at=<s> --bpm=<tempo> --field=#rrggbb [--title=".."]
     npm run film:dance -- <take> cut [--from=<s> --to=<s>] [--audio=full|silent] [--name=x] [--marker= --look= ..]
+    npm run film:dance -- <take> cut --show=data/loop/film/shows/<name>.json --name=<name>   # the show's own bars
 
 The album's pieces take their chapters from D1 (film:pull) and their sound
 from the masters. A dance to someone else's song (the Billie Jean take) has
@@ -22,20 +23,13 @@ Run ingest, segment and figure first, as for any take.
 """
 import json, subprocess, sys
 from pathlib import Path
-from film_common import REPO, work
+from film_common import work
 from take import load_take, take_dir
 import compose
 from cut import FADE_TAIL, mux, sheet
+from show import resolve_palettes
 
 SLUG = "dance"
-
-
-def resolve_palette(field: str) -> dict:
-    code = ("import { palette, sibling, parseHex } from './src/lib/loop/film/palette';"
-            f"const f = parseHex({json.dumps(field)}); if (!f) throw new Error('--field must be #rrggbb');"
-            "console.log(JSON.stringify({ palette: palette(f), paletteFlip: palette(sibling(f)) }));")
-    out = subprocess.run(["npx", "tsx", "-e", code], cwd=REPO, capture_output=True, text=True, check=True).stdout
-    return json.loads(out.strip().splitlines()[-1])
 
 
 def duration_of(path: str) -> float:
@@ -53,7 +47,7 @@ def setup(name: str, opts: dict):
     at, bpm = float(opts["at"]), float(opts["bpm"])
     end = at + duration_of(song)
     chapter = {"slug": SLUG, "number": None, "title": opts.get("title", Path(song).stem), "status": "local",
-               **resolve_palette(opts["field"]), "shadowMode": opts.get("shadow", "sync"), "shadowLag": 0,
+               **resolve_palettes([opts["field"]])[opts["field"]], "shadowMode": opts.get("shadow", "sync"), "shadowLag": 0,
                "badgeFrom": None, "filmStart": at, "filmEnd": end, "master": song, "bpm": bpm}
     (d / "story.json").write_text(json.dumps({"local": True, "chapters": [chapter], "cards": []}, indent=2))
     (d / "align.json").write_text(json.dumps(
@@ -68,6 +62,14 @@ def cut(name: str, opts: dict, passthrough: list):
     win = take["window"]
     a = float(opts.get("from", max(ch["filmStart"], win["start"])))
     b = float(opts.get("to", min(ch["filmEnd"], win["end"])))
+    if opts.get("show") and "from" not in opts and "to" not in opts:
+        # A show file says which bars it is: the piece runs from its first bar to its last.
+        from beats import chapter_grid
+        from show import Show
+        g = chapter_grid(ch, drums=True)
+        sh = Show.load(opts["show"], ch["filmStart"] + g["one"], g["bar"])
+        if sh.range:
+            a, b = max(a, sh.time_of(sh.range[0])), min(b, sh.time_of(sh.range[1]))
     audio = opts.get("audio", "full")
     out_dir = work(name, "out")
     label = opts.get("name", f"{a:.0f}-{b:.0f}")

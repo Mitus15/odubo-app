@@ -1,0 +1,5 @@
+{
+  "name": "Billie Jean, the whole song",
+  "hud": {"level": "1-1", "title": "Billie Jean"},
+  "stage": {"floor": "tiles", "light": "key", "effects": ["echo"]}
+}

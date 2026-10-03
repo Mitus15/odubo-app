@@ -1,0 +1,13 @@
+{
+  "name": "Billie Jean, the street",
+  "bars": [65, 93],
+  "stage": {"floor": "plain", "light": "key", "effects": []},
+  "cues": [
+    {"bar": 69, "light": "spot"},
+    {"bar": 73, "floor": "tiles", "light": "key", "props": [{"name": "lamp", "x": -0.36, "z": 1.0}]},
+    {"bar": 77, "camera": "feet", "for": 1},
+    {"bar": 81, "effects": ["echo"]},
+    {"bar": 85, "effects": ["echo", "hits"], "camera": "feet", "for": 1},
+    {"bar": 89, "light": "spot", "effects": []}
+  ]
+}

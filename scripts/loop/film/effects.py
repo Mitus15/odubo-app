@@ -110,3 +110,14 @@ def on_snare(t: float, kicks: np.ndarray, snares: np.ndarray) -> bool:
     if j < 0:
         return False
     return i < 0 or snares[j] > kicks[i]
+
+
+def close_spans(poses: dict, k0: int, w: int, h: int, fps: float, spans, win0: float) -> list:
+    """[(start, end, focus_x)] for spans chosen by a show file (take seconds): framed on his feet over the span."""
+    out = []
+    for start, end in spans:
+        a = max(0, int(round((start - win0) * fps)) - k0)
+        b = max(a + 1, int(round((end - win0) * fps)) - k0)
+        feet = track(poses, k0, k0 + b, ANKLES, w, h)[a:b]
+        out.append((float(start), float(end), float(feet[:, :, 0].mean()) if len(feet) else w / 2))
+    return out
