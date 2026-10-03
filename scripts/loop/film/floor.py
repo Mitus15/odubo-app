@@ -33,6 +33,9 @@ HORIZON = 0.72                   # the camera's eye level, as a share of his hei
 SQUASH = 0.3                     # the floor's foreshortening at his feet (shadow.py's, compose.GROUND_SQUASH)
 REFLECT_DEPTH = 0.22             # the reflection fades out over this share of his height below the floor
 REFLECT_MIX = 0.3                # the reflection: this far from the field toward ink
+GLOSS_LIGHT = (0.16, 1.6)        # on the glossy floor the light is low and from the side (squash, shear for
+                                 # shadow.cast_on_floor): his shadow lies along the floor, clear of the
+                                 # reflection beneath him, where the usual light laid one over the other
 
 
 def footfalls(poses: dict, k0: int, k1: int, w: int, h: int, fps: float) -> list:
@@ -107,10 +110,11 @@ class Tiles:
             out[(col, row)] = max(out.get((col, row), 0.0), (1 - u) ** 2)
         return out
 
-    def draw(self, canvas: np.ndarray, A: np.ndarray, ground_out: float, body_out: float, k: int, pal: dict):
-        """Lay the lit tiles on the floor of `canvas` (float RGB, the output frame)."""
+    def draw(self, canvas: np.ndarray, A: np.ndarray, ground_out: float, horizon: float, k: int, pal: dict):
+        """Lay the lit tiles on the floor of `canvas` (float RGB, the output frame); `horizon` is
+        the vanishing point's height (compose: HORIZON of his height above the floor line)."""
         H, W = canvas.shape[:2]
-        vx, vy = W / 2, ground_out - HORIZON * body_out  # the vanishing point: his chest, the camera's height
+        vx, vy = W / 2, horizon
         side = self.size * A[0, 0]                       # a tile's width on screen, at the floor line
         depth = side * SQUASH                            # and its depth there
 

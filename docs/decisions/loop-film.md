@@ -297,3 +297,28 @@ song's first hit lands on, not the loudest beat (which was a snare on Billie
 Jean). The grid is still a fixed tempo; Billie Jean's drums breathe up to 60 ms
 against it mid-song (the video edit, most likely), so hits are searched 100 ms
 either side of a beat and placed where they actually peak.
+
+## The shadow, on the floor the tiles imply (2026-10-03)
+
+The owner: the shadows "can be much better and match the material and
+lighting of the floor that the tiles imply". Up close, two faults: the shadow
+was a screen-space shear, blurred all over, painted over the floor; and on the
+glossy floor it lay right over the reflection, two dark shapes knotted under
+each foot.
+
+`shadow.cast_on_floor` (compose; `cast` stays for the grid's stills):
+- the same light as ever (a point h up lands 0.28 h toward the camera and to
+  the side), then through the tiles' own perspective (the vanishing point at
+  his chest height, the frame's centre), so it widens as it comes nearer and
+  lies on the same floor as the tiles
+- crisp where it leaves his soles, softening toward its end (2% of his height)
+  and a little fainter there, as a shadow's edge goes with distance
+- it darkens what is on the floor by the field's own shadow ratio instead of
+  painting the shadow colour: a lit tile stays a tile inside it; the
+  reflection now darkens what it lies on the same way
+- on the glossy floor (`sidewalk`) the light is low and from the side
+  (`floor.GLOSS_LIGHT`, squash 0.16, shear 1.6): the shadow lies along the
+  floor, clear of the reflection beneath him
+
+`cut`/`melt` moved to `edge.py`, the one drawing rule both compose and the
+shadow use.

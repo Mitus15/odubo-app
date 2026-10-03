@@ -77,3 +77,16 @@ decision record, "Four effects that dance with him".
   bar in a still phrase; a 116.75 bpm grid drifted 60 ms by mid-song.
 
 Pending: his pick of effects for the Reel and the full cut.
+
+## Later: the shadow, and the series (2026-10-03)
+
+- The shadow now lies on the tiles' perspective floor, crisp at his soles,
+  darkening the floor instead of painting it; on the glossy floor a low side
+  light keeps it clear of the reflection (decision record, "The shadow").
+  Full song, Reel and 30 s re-rendered; finals refreshed in
+  `social-2026-10/billie-jean-gloss/` (with `shadow-before-after.jpg`). The
+  staged draft #7 still holds the earlier Reel.
+- Series numbering: the owner did not want "level 100". Proposed world-level
+  numbering (1-1 .. 1-17 for January to April; the album could be world 2);
+  sketch `hud-sketch-1-1.png`. He will run the feed from /admin/social on his
+  phone; one of his own songs this season, News Peak, maybe with a short film.

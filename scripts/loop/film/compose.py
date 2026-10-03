@@ -47,9 +47,10 @@ import cv2
 from film_common import WORK
 from take import Reader, Writer, even, load_take, read_pose, take_dir
 from anchor import Path as Track
-from shadow import Ground, cast
+from shadow import Ground, cast_on_floor
+from edge import cut, melt  # noqa: F401 (melt: the look's soft core, used by paint and the tests)
 from outro import FRAMES as GROW_FRAMES, KEYLINE, Marks
-from floor import REFLECT_MIX, Tiles, footfalls, reflect_matrix, reflection_fade
+from floor import GLOSS_LIGHT, HORIZON, REFLECT_MIX, Tiles, footfalls, reflect_matrix, reflection_fade
 from effects import CLOSE_GROUND, CLOSE_ZOOM, ECHO_LAGS, ECHO_MIX, close_bars, motion_gate, on_snare
 
 ASPECTS = {
@@ -176,18 +177,6 @@ def grow(canvas: np.ndarray, marks: Marks, pal: dict, u: float, start: tuple):
     seed(canvas, marks, pal, x, y, width, hang * (1 - ease(u / 0.5)),
          opacity=hop + (1 - hop) * ease(u / 0.3), squash=lie + (1 - lie) * ease(u / 0.5),
          grown=ease((u - 0.15) / 0.4), white=1 - ease((u - 0.15) / 0.45))
-
-
-def cut(f: np.ndarray, level: float) -> np.ndarray:
-    """Where a smooth field crosses `level`, as coverage 0..1 with a one pixel
-    ramp: a crisp, anti-aliased edge at whatever scale it is drawn."""
-    gy, gx = np.gradient(f)
-    return np.clip((f - level) / (np.sqrt(gx * gx + gy * gy) + 1e-4) + 0.5, 0, 1)
-
-
-def melt(f: np.ndarray, level: float, soft: float) -> np.ndarray:
-    u = np.clip((f - level + soft) / (2 * soft), 0, 1)
-    return u * u * (3 - 2 * u)
 
 
 def paint(fld: np.ndarray, tn: np.ndarray, pal: dict, look: str = "gloss", cuts=(0.55, 0.75), soft: float = 0.08):
@@ -376,10 +365,14 @@ def main(argv):
         A = np.float32([[sc, 0, Wout / 2 - sc * focus], [0, sc, ground_out - sc * g_src]])
         contact_out = A[1, 1] * (g_contact if g_contact is not None else g_src) + A[1, 2]
 
+        # The floor's perspective: a camera at his chest, its vanishing point at
+        # the frame's centre on the horizon. The tiles and his shadow share it.
+        horizon = ground_out - HORIZON * body * sc
+
         canvas = np.empty((Hout, Wout, 3), np.float32)
         canvas[:] = pal["field"]
         if tiles is not None:
-            tiles.draw(canvas, A, A[1, 1] * floor_y + A[1, 2], body * sc, k0 + s_now["k"], pal)
+            tiles.draw(canvas, A, A[1, 1] * floor_y + A[1, 2], horizon, k0 + s_now["k"], pal)
 
         # The end of the clip: he fades, the badge flies.
         fade = 1.0
@@ -389,6 +382,24 @@ def main(argv):
             fade = ease(left / max(1, fade_frames))
             if left <= fly_frames:
                 u = (fly_frames - left) / (grow_total - 1)
+
+        # 2. his shadow, on the floor the tiles imply: projected through the same
+        # perspective, crisp at his soles and softer as it goes. It darkens what
+        # is on the floor (a lit tile stays a tile inside it) instead of painting
+        # over it.
+        mode = opts.get("shadow", ch.get("shadowMode", "sync"))
+        lag = int(opts.get("lag", ch.get("shadowLag") or 0)) if mode == "lag" else 0
+        src_shadow = past[max(0, len(past) - 1 - lag)] if mode != "none" else None
+        if src_shadow is not None:
+            rows = int(min(Hout, np.ceil(contact_out) + 1))
+            figure = cv2.warpAffine(src_shadow, A, (Wout, rows), flags=cv2.INTER_LINEAR, borderValue=0) if rows > 0 else None
+            if figure is not None:
+                light = dict(zip(("squash", "shear"), GLOSS_LIGHT)) if tiles is not None else {}
+                cov, y0 = cast_on_floor(figure, contact_out, horizon, Wout / 2, body * sc, Hout, **light)
+                if len(cov):
+                    dark = 1 - np.clip(pal["shadow"] / np.maximum(pal["field"], 1), 0, 1)
+                    strip = canvas[y0:y0 + len(cov)]
+                    strip *= 1 - (cov * SHADOW_OPACITY * fade)[..., None] * dark
 
         # 4. the marker, from the moment it lands (placed now, drawn in order)
         badge_from = ch.get("badgeFrom")
@@ -410,14 +421,9 @@ def main(argv):
         on_floor = marker == "ground" and u is None and here[4] > 0
         floor_drawn = False
 
-        # Most of the frame is flat field: draw him and his shadow only in the
-        # region around them (his box, and the ground below it).
-        mode = opts.get("shadow", ch.get("shadowMode", "sync"))
-        lag = int(opts.get("lag", ch.get("shadowLag") or 0)) if mode == "lag" else 0
-        src_shadow = past[max(0, len(past) - 1 - lag)] if mode != "none" else None
+        # Most of the frame is flat field: draw him, his echoes and his
+        # reflection only in the region around them (his box, and the floor below it).
         live = alpha > 0.01
-        if src_shadow is not None:
-            live = live | (src_shadow > 0.01)
         trail = gate is not None and gate[s_now["k"]] > 0.02
         if trail:
             for back in ECHO_LAGS:
@@ -444,17 +450,13 @@ def main(argv):
             Ar[0, 2] -= rx0
             Ar[1, 2] -= ry0
             view = canvas[ry0:ry1, rx0:rx1]
-            # the glossy floor: his reflection, under the shadow
+            # the glossy floor: his reflection darkens whatever it lies on (the
+            # field, a lit tile, his shadow), as a dark figure on lacquer does
             if tiles is not None:
                 rel = contact_out - ry0
                 ref = cv2.warpAffine(alpha, reflect_matrix(Ar, rel), (rw, rh), flags=cv2.INTER_LINEAR, borderValue=0)
                 cov = cut(ref, 0.5) * reflection_fade(rh, rel, body * sc)[:, None] * fade
-                view += (pal["field"] + (pal["ink"] - pal["field"]) * REFLECT_MIX - view) * cov[..., None]
-            # 2. his shadow
-            if src_shadow is not None:
-                warped = cv2.warpAffine(src_shadow, Ar, (rw, rh), flags=cv2.INTER_LINEAR, borderValue=0)
-                sh = cast(warped, contact_out - ry0) * SHADOW_OPACITY * fade
-                view += (pal["shadow"] - view) * sh[..., None]
+                view += (pal["ink"] - view) * (cov * REFLECT_MIX)[..., None]
             # his echoes, the oldest first: flat shapes in the palette's own darker tones
             # (ink mixed into the field turns to mud)
             if trail:
