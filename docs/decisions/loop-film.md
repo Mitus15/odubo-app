@@ -369,3 +369,26 @@ Shopify first: a typo or an archived product is refused before any upload),
 and points the draft at it (`social_content.video_id`). Posted through
 PostForMe, the clip goes live by itself; posted by hand from the phone, make
 it public in /admin/videos.
+
+## The trail cusps on the jump clap (2026-10-03)
+
+The owner, of the 1-1 Reel: "on the jump clap, the trail animation should
+cusp. so trail to the clap and from the clap but not at the clap."
+
+- **Finding the jump clap** (`effects.jump_claps`): his wrists at their
+  closest (under 0.15 of his height) with both hands above his nose, and a
+  snare within 0.12 s (the song's own clap). Arm swings that cross in front
+  pass through "hands together" fast too, so speed alone flagged a dozen
+  moments in one minute; overhead and on a snare leaves the two real ones in
+  Billie Jean (take 126.47 s and 179.90 s). The cusp stays where his hands meet,
+  not on the snare: he lands that clap two frames ahead of the beat, and the
+  cusp is for the eye.
+- **The cusp** (`effects.echo_lags`): near a clap no echo reaches further back
+  than the frames between him and the clap, on both sides. The trail shortens
+  as his hands come together, is gone on the clap, and grows back out of the
+  clap pose, never reaching past it: a V in time. A first version eased the
+  trail shut over 0.15 s before and capped it after, which closed in two frames
+  and opened in twelve.
+
+Staged 2026-10-03: `social_content` #8 "1-1 · Billie Jean", its clip `videos`
+#553 hidden until posted, opening the Infinity Hoodie. #7 archived.

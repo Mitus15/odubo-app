@@ -3,7 +3,7 @@ from pathlib import Path
 import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from floor import Tiles, footfalls  # noqa: E402
-from effects import close_bars, motion_gate, on_snare  # noqa: E402
+from effects import close_bars, echo_lags, jump_claps, motion_gate, on_snare  # noqa: E402
 from hits import on_grid  # noqa: E402
 
 W, H, FPS = 1080, 1920, 30.0
@@ -73,6 +73,39 @@ class Echo(unittest.TestCase):
         g = motion_gate(poses, 0, 90, W, H, 1000, FPS)
         self.assertGreater(g[44], 0.5)
         self.assertLess(g[5], 0.01)
+
+
+def clapping(n: int, at: int, overhead: bool = True) -> dict:
+    """Standing, then the hands swing in and meet at frame `at`, over his head or at his chest."""
+    poses = standing(n)
+    y = 0.15 if overhead else 0.45      # the nose is at 0.5 in standing(): smaller is higher
+    for k in range(n):
+        gap = min(0.3, 0.02 + 0.03 * abs(k - at))
+        poses[k][0, 1] = 0.3             # the nose, above the chest, below a raised hand
+        poses[k][15, :2] = (0.5 - gap / 2, y)
+        poses[k][16, :2] = (0.5 + gap / 2, y)
+    return poses
+
+
+class Claps(unittest.TestCase):
+    def test_a_clap_over_his_head_is_found_where_his_hands_meet(self):
+        claps = jump_claps(clapping(60, 30), 0, 60, W, H, 1000, FPS, 0.0)
+        self.assertEqual(list(claps), [30])
+
+    def test_a_clap_at_his_chest_is_not_a_jump_clap(self):
+        self.assertEqual(len(jump_claps(clapping(60, 30, overhead=False), 0, 60, W, H, 1000, FPS, 0.0)), 0)
+
+    def test_off_the_snare_it_is_not_the_songs_clap(self):
+        poses = clapping(60, 30)
+        self.assertEqual(len(jump_claps(poses, 0, 60, W, H, 1000, FPS, 0.0, snares=np.array([0.4]))), 0)
+        self.assertEqual(list(jump_claps(poses, 0, 60, W, H, 1000, FPS, 0.0, snares=np.array([1.05]))), [30])
+
+    def test_the_trail_cusps_on_the_clap(self):
+        claps = np.array([100])
+        self.assertEqual(echo_lags(1.0, 100, claps, FPS), [0, 0, 0])            # none on the clap
+        self.assertEqual(echo_lags(1.0, 97, claps, FPS), echo_lags(1.0, 103, claps, FPS))  # the same both sides
+        self.assertTrue(all(lag <= 3 for lag in echo_lags(1.0, 103, claps, FPS)))  # never back past the clap
+        self.assertEqual(echo_lags(1.0, 80, claps, FPS), [12, 8, 4])            # far from it, the full trail
 
 
 class Close(unittest.TestCase):

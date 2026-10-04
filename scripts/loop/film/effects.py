@@ -9,6 +9,11 @@ What the effects decide, apart from the drawing (compose draws them).
          on the downbeats.
   hits   on_snare: whether the field is on its sister colour at a moment. It
          cuts to it on the snare and back on the kick (hits.py hears them).
+  claps  jump_claps and echo_lags: the trail cusps on a clap over his head.
+         It shortens as his hands come together, is gone on the clap, and
+         grows back out of the clap, never reaching back past it (the
+         owner, 2026-10-03: "trail to the clap and from the clap but not at
+         the clap").
 
 The sidewalk lives in floor.py. All are read from the pose and the drums,
 never chosen at random: run twice, a cut is the same cut.
@@ -23,6 +28,9 @@ GATE = (0.035, 0.06)            # hand and foot speed, a share of his height per
 GATE_S = 0.1                    # the gate eases over about twice this, in seconds
 LIMBS = (15, 16, 27, 28)        # wrists and ankles
 ANKLES = (27, 28)
+CLAP_NEAR = 0.15                # wrists this close (a share of his height): his hands are together
+CLAP_ABOVE = 0.1                # both hands at least this far above his nose: the clap is over his head
+CLAP_SNAP = 0.12                # seconds: a clap counts only this close to a snare (Billie Jean's clap is on it)
 CLOSE_ZOOM = 2.5                # the close-up, against the clip's scale
 CLOSE_GROUND = 0.75             # where the floor sits in a close-up, a share of the height
 PHRASE = 8                      # bars to a phrase: one close-up in each
@@ -121,3 +129,51 @@ def close_spans(poses: dict, k0: int, w: int, h: int, fps: float, spans, win0: f
         feet = track(poses, k0, k0 + b, ANKLES, w, h)[a:b]
         out.append((float(start), float(end), float(feet[:, :, 0].mean()) if len(feet) else w / 2))
     return out
+
+
+def jump_claps(poses: dict, k0: int, k1: int, w: int, h: int, body: float, fps: float, win0: float,
+               snares=None) -> np.ndarray:
+    """
+    Take frames where he claps over his head: his wrists meet (a local least
+    distance under CLAP_NEAR) with both hands above his nose. With the song's
+    snares (take seconds), only a clap within CLAP_SNAP of a snare counts (the
+    song's own clap), but it stays where his hands meet: the cusp is for the
+    eye, and on Billie Jean he lands the jump clap two frames ahead of the beat.
+    """
+    from scipy.signal import find_peaks
+    pts = track(poses, k0, k1, (15, 16, 0), w, h)
+    dist = np.linalg.norm(pts[:, 0] - pts[:, 1], axis=1) / max(1.0, body)
+    above = (pts[:, 2, 1] - pts[:, :2, 1].max(1)) / max(1.0, body)
+    near, _ = find_peaks(-dist, distance=max(1, int(0.25 * fps)))
+    out = []
+    for i in near:
+        if dist[i] >= CLAP_NEAR or above[i] <= CLAP_ABOVE:
+            continue
+        t = win0 + (k0 + i) / fps
+        if snares is not None and len(snares):
+            if np.abs(snares - t).min() > CLAP_SNAP:
+                continue
+        out.append(k0 + int(i))
+    return np.array(sorted(set(out)), int)
+
+
+def echo_lags(gate: float, k: int, claps: np.ndarray, fps: float) -> list:
+    """
+    How many frames back each echo reaches at take frame k (ECHO_LAGS order),
+    cusping on the claps: near one, no echo reaches further back than the
+    frames between him and the clap. So the trail shortens as his hands come
+    together, is gone on the clap, and grows back out of it, never reaching
+    back past it: a V in time, the same on both sides.
+    """
+    to_clap = None
+    if len(claps):
+        j = int(np.searchsorted(claps, k))
+        near = [abs(int(claps[i]) - k) for i in (j - 1, j) if 0 <= i < len(claps)]
+        to_clap = min(near) if near else None
+    lags = []
+    for back in ECHO_LAGS:
+        lag = int(round(gate * back))
+        if to_clap is not None and to_clap < back:
+            lag = min(lag, to_clap)
+        lags.append(lag)
+    return lags

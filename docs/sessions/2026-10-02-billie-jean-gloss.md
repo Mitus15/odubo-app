@@ -90,3 +90,14 @@ Pending: his pick of effects for the Reel and the full cut.
   numbering (1-1 .. 1-17 for January to April; the album could be world 2);
   sketch `hud-sketch-1-1.png`. He will run the feed from /admin/social on his
   phone; one of his own songs this season, News Peak, maybe with a short film.
+
+## Later: the virtual stage, the HUD, the engine, the cusp (2026-10-03)
+
+- Show files, props, spotlight, HUD (decision record, "The virtual stage").
+  The street show was "not it" for Billie Jean; the owner chose tiles, subtle
+  shadow, subtle effects and the HUD (`data/loop/film/shows/billie-jean.json`).
+- `stage-reel.mjs --product=` writes a hidden clip that opens the product.
+- The trail cusps on the jump clap (decision record).
+- Staged #8 "1-1 · Billie Jean" with clip #553 (Infinity Hoodie); #7 archived.
+  The owner posts; the clip goes live with the post (PostForMe) or by hand in
+  /admin/videos.

@@ -52,7 +52,8 @@ from edge import cut, melt  # noqa: F401 (melt: the look's soft core, used by pa
 from outro import FRAMES as GROW_FRAMES, KEYLINE, Marks
 from floor import (GLOSS_LIGHT, HORIZON, REFLECT_MIX, SPOT_LIGHT, SQUASH as FLOOR_SQUASH, TILE, Tiles, footfalls,
                    reflect_matrix, reflection_fade, spotlight)
-from effects import CLOSE_GROUND, CLOSE_ZOOM, ECHO_LAGS, ECHO_MIX, close_bars, close_spans, motion_gate, on_snare
+from effects import (CLOSE_GROUND, CLOSE_ZOOM, ECHO_LAGS, ECHO_MIX, close_bars, close_spans, echo_lags, jump_claps, motion_gate,
+                     on_snare)
 from show import Show, resolve_palettes
 from hud import Hud
 import props as set_props
@@ -302,8 +303,17 @@ def main(argv):
         tiles = Tiles(falls, body, floor_y, fps, bars[1])
     if hud_spec:
         hud = Hud(Wout, Hout, hud_spec.get("level", ""), hud_spec.get("title") or mid.get("title", ""), falls, first)
+    claps = np.array([], int)
     if show.uses(effect="echo"):
         gate = motion_gate(poses, k0, first + count, Wf, Hf, body, fps)
+        # The trail cusps on a jump clap, placed on the song's snare when the drums can be heard.
+        try:
+            from beats import song_of
+            from hits import hits_of
+            snares_ = np.array(hits_of(*song_of(mid))["snare"]) + film_start
+        except SystemExit:
+            snares_ = None
+        claps = jump_claps(poses, k0, first + count, Wf, Hf, body, fps, win0, snares_)
     closes = []
     if "close" in effects:
         picks = [float(v) for v in opts["close-bars"].split(",")] if opts.get("close-bars") else None
@@ -478,11 +488,10 @@ def main(argv):
         # reflection only in the region around them (his box, and the floor below it).
         live = alpha > 0.01
         trail = gate is not None and "echo" in stage.effects and gate[s_now["k"]] > 0.02
-        if trail:
-            for back in ECHO_LAGS:
-                lag = int(round(gate[s_now["k"]] * back))
-                if 0 < lag < len(past):
-                    live = live | (past[-1 - lag] > 0.01)
+        lags = echo_lags(float(gate[s_now["k"]]), k0 + s_now["k"], claps, fps) if trail else []
+        for lag in lags:
+            if 0 < lag < len(past):
+                live = live | (past[-1 - lag] > 0.01)
         ys, xs = np.where(live)
         if len(ys):
             pad = 8
@@ -513,8 +522,7 @@ def main(argv):
             # his echoes, the oldest first: flat shapes in the palette's own darker tones
             # (ink mixed into the field turns to mud)
             if trail:
-                for back, mix in zip(ECHO_LAGS, ECHO_MIX):
-                    lag = int(round(gate[s_now["k"]] * back))
+                for lag, mix in zip(lags, ECHO_MIX):
                     if 0 < lag < len(past):
                         e_ = cv2.warpAffine(past[-1 - lag], Ar, (rw, rh), flags=cv2.INTER_LINEAR, borderValue=0)
                         cov = cut(e_, 0.5) * fade
