@@ -290,13 +290,30 @@ export function getSessionId(): string {
  * Call this once in the app root.
  */
 export function initAttribution(): Attribution {
-  // Only capture if no existing session attribution
-  const existing = getAttribution();
-  if (existing) {
-    return existing;
+  // Once per visit: a page that was already attributed this session keeps it.
+  try {
+    const session = sessionStorage.getItem(SESSION_KEY);
+    if (session) return JSON.parse(session);
+  } catch {
+    // storage blocked: fall through and capture
   }
 
+  // This visit's own source wins when it has one. Until 2026-10-08 this
+  // checked getAttribution(), which falls back to localStorage, so a returning
+  // visitor tapping a TikTok bio link was recorded with their first-ever
+  // source ("direct") and the post that brought them back never counted.
+  // A visit with no source of its own (typed URL, no referrer) still inherits
+  // the stored one: last non-direct touch.
   const attr = captureAttribution();
+  if (attr.source === 'direct') {
+    const returning = getAttribution();
+    if (returning) {
+      try {
+        sessionStorage.setItem(SESSION_KEY, JSON.stringify(returning));
+      } catch {}
+      return returning;
+    }
+  }
   persistAttribution(attr);
   return attr;
 }

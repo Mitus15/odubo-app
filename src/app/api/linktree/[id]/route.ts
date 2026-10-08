@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { queryDatabase } from '@/lib/db';
+import { requireAdmin } from '@/lib/api/requireAdmin';
 
 /**
- * POST /api/linktree/[id]/click
- * Track a link click for analytics
+ * POST /api/linktree/[id]
+ * Track a link click for analytics (public: it only counts)
  */
 export async function POST(
   request: NextRequest,
@@ -47,6 +48,10 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // Admin only (it was open to anyone until 2026-10-08): a link's URL is
+  // where the /links landing sends every visitor.
+  const { error } = await requireAdmin(request);
+  if (error) return error;
   try {
     const { id } = await params;
     const linkId = parseInt(id, 10);
@@ -110,6 +115,8 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const { error } = await requireAdmin(request);
+  if (error) return error;
   try {
     const { id } = await params;
     const linkId = parseInt(id, 10);

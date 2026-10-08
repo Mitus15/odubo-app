@@ -7,6 +7,7 @@
 
 import { useState, useEffect } from 'react';
 import type { LinkTreeItem, LinkCategory } from '@/types/linktree';
+import FeaturedProductPicker from './FeaturedProductPicker';
 
 const categoryOptions: LinkCategory[] = [
   'streaming',
@@ -158,6 +159,9 @@ export default function LinkTreeAdminPage() {
             {creating ? 'Cancel' : '+ Add Link'}
           </button>
         </div>
+
+        {/* The piece the /links landing puts first */}
+        <FeaturedProductPicker />
 
         {/* Create/Edit Form */}
         {creating && (

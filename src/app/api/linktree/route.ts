@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { queryDatabase } from '@/lib/db';
-import type { LinkTreeItem } from '@/types/linktree';
+import { getActiveLinks } from '@/lib/linktree';
+import { requireAdmin } from '@/lib/api/requireAdmin';
 
 /**
  * GET /api/linktree
@@ -8,37 +9,7 @@ import type { LinkTreeItem } from '@/types/linktree';
  */
 export async function GET() {
   try {
-    const [links, latestYoutube] = await Promise.all([
-      queryDatabase(`
-        SELECT * FROM linktree
-        WHERE is_active = 1
-        ORDER BY
-          is_featured DESC,
-          category ASC,
-          display_order ASC,
-          title ASC
-      `) as Promise<LinkTreeItem[]>,
-      // Fetch the most recently deployed YouTube video URL
-      queryDatabase(`
-        SELECT external_url FROM video_deployments
-        WHERE platform = 'youtube' AND status = 'published' AND external_url IS NOT NULL
-        ORDER BY deployed_at DESC
-        LIMIT 1
-      `) as Promise<{ external_url: string }[]>,
-    ]);
-
-    // Override YouTube link with the latest deployed video URL
-    if (latestYoutube.length > 0 && latestYoutube[0].external_url) {
-      const dynamicUrl = latestYoutube[0].external_url;
-      for (const link of links) {
-        if (link.platform === 'youtube') {
-          link.url = dynamicUrl;
-          break;
-        }
-      }
-    }
-
-    return NextResponse.json({ links });
+    return NextResponse.json({ links: await getActiveLinks() });
   } catch (error) {
     console.error('Error fetching linktree:', error);
     return NextResponse.json(
@@ -53,6 +24,9 @@ export async function GET() {
  * Create a new link (admin only)
  */
 export async function POST(request: NextRequest) {
+  // Admin only: these links are what the /links landing sends every visitor to.
+  const { error } = await requireAdmin(request);
+  if (error) return error;
   try {
     const body = await request.json() as {
       title?: string;

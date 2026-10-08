@@ -112,3 +112,48 @@ consent; the dead second store should be removed in its own change.
 Unchanged from the audit: one real clothing order end to end, Tapstitch
 auto-pay, shipping rates, the two policies, the ToS name, Printify,
 orders #1001/#1002, support@ receiving, one order email.
+
+## Then: the landing (/links), same day
+
+The owner: "upon landing, the user should see a link tree typa thing. This
+should feature a product that's set as featured. then links to other
+platforms and also a home button that brings people to the actual home page
+(clips, words, etc)." Built before the deploy so the two ship together.
+
+- `/links` (`src/app/links/page.tsx`, server-rendered) replaces the old page
+  that only opened `LinkTreeModal`: the Danceman mark, the featured product
+  (cut out, name, price, one drawn shape: Shop, to its product page), one row
+  of platform marks in the page's own colour, `Home →` (to `/`, the clips and
+  the words) and `Shop all`, an email line, Contact · Shipping & returns ·
+  Privacy. No product or store link while the store is unpublished. The share
+  image (og:image) is the featured product's photo.
+- The featured product is one Shopify handle in `site_settings`
+  (`featured_product`, `src/lib/featuredProduct.ts`), chosen in a picker at
+  the top of /admin/linktree (`FeaturedProductPicker.tsx`,
+  `/api/admin/featured-product`, admin only, refuses a handle Shopify does not
+  return). Set to `infinity-hoodie` on 2026-10-08.
+- No entrance animation: framer-motion renders `initial` into the server
+  HTML, so the first version was invisible until scripts ran, a blank page in
+  a slow in-app browser. Checked: no `opacity:0` in the HTML now.
+- `PlatformIcon` moved out of `LinkTreeModal` into its own file with a `mono`
+  option; `getActiveLinks()` moved into `src/lib/linktree.ts` (the API and the
+  page share it).
+- Found and fixed on the way:
+  - the link tree counted clicks at `/api/linktree/<id>/click`, which does not
+    exist (every `click_count` is 0); the handler is `POST /api/linktree/<id>`.
+  - creating, editing and deleting links (`POST /api/linktree`, `PATCH`/
+    `DELETE /api/linktree/<id>`) and listing every link
+    (`/api/admin/linktree/all`) had no admin check: anyone could have pointed
+    the landing's Instagram link anywhere. All gated with `requireAdmin` now
+    (401 verified).
+  - attribution: `initAttribution()` checked `getAttribution()`, which falls
+    back to localStorage, so a returning visitor arriving from a TikTok bio
+    link was recorded with their first-ever source ("direct") and the post
+    that brought them back never counted. Now a visit takes its own source;
+    one with none (typed URL) inherits the stored one. Test
+    `attributionInit.test.ts`; verified in the browser (fresh visit with the
+    TikTok link: source tiktok, landing /links, kept on the product page).
+
+Verified at 375x812: the page as above; Shop goes to the Infinity Hoodie's
+page with S M L XL 2XL. The admin picker was not clicked through (no admin
+sign-in in the preview); its route answers 401 without one.

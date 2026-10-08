@@ -206,6 +206,12 @@ His checklist, most important first:
 
 ## Bio link
 
+**From 2026-10-08: `https://www.odubostudio.com/links?utm_source=instagram&utm_medium=social&utm_campaign=bio`**
+(swap `instagram` for `tiktok` or `youtube`). `/links` is now the landing: the
+featured product (set in /admin/linktree), Shop, the platforms, Home, Shop all.
+The older advice below stands as the fallback.
+
+
 `https://www.odubostudio.com/store/product/infinity-hoodie?utm_source=instagram&utm_medium=social&utm_campaign=bio`
 (swap `instagram` for `tiktok` or `youtube`): the piece in the current video,
 no intro, one tap to the bag. In-app browsers usually send no referrer, so the

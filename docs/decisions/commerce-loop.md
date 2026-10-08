@@ -97,3 +97,25 @@ A migration widening the CHECK is the proper fix for all of them.
 Chrome reports `downlink < 1` on fine connections while its estimate settles.
 Either put "Slow connection detected" over the store for visitors whose
 connection was fine. Only `effectiveType` slow-2g or 2g counts now.
+
+## The landing: /links, the piece first (2026-10-08)
+
+The bio link lands on `/links`, not on `/` (the gate and the verse stay the
+home page's own) and not on a product page (which tells a stranger nothing
+about the rest). The page: the featured product with one drawn shape (Shop),
+the platforms as one row of marks, then the way into the site (Home, Shop
+all). Alternatives: the old link tree (an icon grid in boxes, no product, its
+store tile opening the store over a black page), or a full storefront (too
+much for a first tap).
+
+- The featured product is a setting (`site_settings.featured_product`), not
+  code and not a Shopify tag: it changes with each release, from a picker in
+  the admin the owner already uses for the links. Alternatives: a `linktree`
+  row with a 'product' platform (the live link tree would have shown it as a
+  blank icon before the deploy), a Shopify tag (another admin to visit).
+- Server-rendered with no entrance animation, so the first paint in an
+  in-app browser is the page. The marks are one colour: five platform
+  colours would outshout the piece.
+- It extends the existing link tree (same table, same admin, the shared
+  `PlatformIcon` and `getActiveLinks`); the in-app modal stays for the Share
+  menu.
