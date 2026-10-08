@@ -10,6 +10,8 @@ Put it together: the moving poster, frame by frame.
             hits      the sibling colour on the snare, back on the kick (hits.py)
             echo      on big moves, his echoes trail behind him (effects.py)
         [--marker=crown|ground|heart]             where the seal, the player's marker, sits (anchor.py)
+        [--plate=file.mp4]   also write the phone's own picture through the same camera (raw vs gloss)
+        [--body=<px>]        his height in the take, pinned: a stretch framed exactly as the whole song was
         [--look=poster|cover|gloss --cuts=0.55,0.75 --soft=0.08]
             poster  the label map, as the converter drew it
             cover   (needs figure --look=gloss) the album cover: ink, pools of
@@ -243,6 +245,10 @@ def main(argv):
         fw, fh = fig["fieldW"], fig["fieldH"]
         streams += [Reader(d / f"{n}.mkv", fw, fh, gray=True, start=(first - pre) / fps, dur=(count + pre) / fps)
                     for n in ("field", "tone")]
+    plate = opts.get("plate")
+    if plate:
+        # The phone's picture at the mask's size, read in step with the masks.
+        streams.append(Reader(take["path"], Wf, Hf, start=(first - pre) / fps, dur=(count + pre) / fps))
 
     # One scale per clip, from his median height in it, so he never breathes.
     heights = []
@@ -253,6 +259,8 @@ def main(argv):
             if len(ys):
                 heights.append(ys.max() - ys.min())
     body = float(np.median(heights)) * 1.12 if heights else Hf * 0.7  # landmarks miss the crown of the head
+    if opts.get("body"):
+        body = float(opts["body"])
     scale = aspect["figure"] * Hout / body
 
     # The phone's frame edge must never show inside ours: where he reaches out
@@ -263,6 +271,7 @@ def main(argv):
     cam_range = (half, Wf - half) if Wf >= 2 * half else None
 
     writer = Writer(out_path, Wout, Hout, fps, kind="h264", crf=crf)
+    plate_writer = Writer(plate, Wout, Hout, fps, kind="h264", crf=crf) if plate else None
     # The marker's place on him over the whole stretch (and a second either
     # side), smoothed both ways in time: the take is recorded, so it never lags.
     track = Track(poses, first - pre - int(fps), first + count + int(fps), Wf, Hf, fps, MARKERS[marker])
@@ -339,6 +348,7 @@ def main(argv):
     def advance(target: int):
         while st["k"] < target:
             lab_, alp_, *fields_ = next(source)
+            raw_ = fields_.pop() if plate else None
             k_ = st["k"] + 1
             lm_ = poses.get(first - pre + k_)
             place_ = track.at(first - pre + k_)
@@ -351,7 +361,7 @@ def main(argv):
                 cols = np.where(alpha_.max(0) > 0.5)[0]
                 x_now = float(cols.mean()) if len(cols) else Wf / 2
             cx, sx = st.get("cam_x"), st.get("spot_x")
-            st.update(k=k_, lab=lab_, alpha=alpha_, fields=fields_, place=place_, g=g_s, g_contact=g_c,
+            st.update(k=k_, lab=lab_, alpha=alpha_, fields=fields_, raw=raw_, place=place_, g=g_s, g_contact=g_c,
                       cam_x=x_now if cx is None else cx + aspect["follow"] * (x_now - cx),
                       spot_x=x_now if sx is None else sx + 0.25 * (x_now - sx))
         return st
@@ -568,6 +578,10 @@ def main(argv):
             grow(canvas, marks, pal, u, start)
 
         writer.write(np.clip(canvas, 0, 255).astype(np.uint8))
+        if plate_writer:
+            # the room as the phone saw it, framed by the same camera; past its top edge the wall carries on
+            plate_writer.write(cv2.warpAffine(s_now["raw"], A, (Wout, Hout), flags=cv2.INTER_CUBIC,
+                                              borderMode=cv2.BORDER_REPLICATE))
         written += 1
         if written % 150 == 0:
             print(f"  {written}/{count} frames, {written / (time.time() - t0):.1f} fps", flush=True)
@@ -584,6 +598,8 @@ def main(argv):
             writer.write(np.clip(canvas, 0, 255).astype(np.uint8))
             written += 1
     writer.close()
+    if plate_writer:
+        plate_writer.close()
     for r in streams:
         r.close()
     print(f"{out_path}: {written} frames at {Wout}x{Hout} in {time.time() - t0:.0f}s")

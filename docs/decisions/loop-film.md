@@ -392,3 +392,38 @@ cusp. so trail to the clap and from the clap but not at the clap."
 
 Staged 2026-10-03: `social_content` #8 "1-1 · Billie Jean", its clip `videos`
 #553 hidden until posted, opening the Infinity Hoodie. #7 archived.
+
+## Releasing a level: the song is home, the feed gets moments (2026-10-08)
+
+The owner: the 4:48 performance is the core, but how is it worth something
+to others "instead of forcing them essentially to watch 5 minutes of me
+dancing"? Strangers on a feed give two seconds, then maybe fifteen; people
+already hooked choose the whole thing, like a music video. So the full level
+is the home (YouTube, the site), and the feed gets moments that each stand
+alone and point back without a caption saying so: they are cut from the full
+render, so the HUD's progress line and step count sit where they really are
+in the level. "Your turn" (duets, putting viewers in the gloss) was proposed
+and parked: he goes quiet after the release week, and it needs him there.
+
+- **Moments** are bar-line cuts of the full render with its sound (loops on
+  the music): the open (bars 1-4, the HUD at 000), the feet (70-73, the
+  busiest close-up in the song), the clap (79-82, a close-up, then the jump
+  clap with the trail's cusp).
+- **Raw vs gloss** (`compose --plate`, `split.py`): the phone's own picture
+  through the same camera, cut down the middle of him. The cut follows the
+  middle of his ink, smoothed both ways (a fixed centre line left him wholly
+  on the phone's side whenever the camera clamp held him off centre). The HUD
+  lies across both halves: it belongs to the level, not the picture. The
+  stretch must be rendered with the whole song's `--body`, or its scale
+  differs; registered, it matches the full render to 0.1 grey levels.
+- **The full render starts 1.12 s into the song**, not at the song's first
+  sample (its sound against the master says so). Every bar time for the cuts
+  is the song's grid minus 1.12 s.
+- The raw side shows his face and the polo's logos. That is his call, so that
+  draft waits in review.
+
+Staged 2026-10-08, folder "1-1 · Billie Jean" (#10), every post dated and
+captioned for its platforms, each with a hidden clip opening the Infinity
+Hoodie: #8 the Reel (Mon, IG + TikTok), #9 the whole song (Mon, YouTube),
+#13 the clap (Tue), #12 the feet (Wed), #11 raw vs gloss (Thu, review),
+#10 the open (Fri); clips #555-558.

@@ -88,6 +88,26 @@ node --env-file=.env.local scripts/loop/stage-reel.mjs --file=<the cut> --title=
 Staging writes the social draft and a hidden clip that opens the product; the
 clip goes live when the post does (PostForMe), or by hand in /admin/videos.
 
+### Releasing a level: the whole song is home, the feed gets moments
+
+The full render is the canon (YouTube and the site). The feed gets 8-bar-or-less
+moments cut from that same file, so the HUD's steps and progress bar sit at
+their real point in the level, plus a raw vs gloss split:
+
+```bash
+# a moment: frames of the full render on bar lines, sound and all (ffmpeg trim, see the 2026-10-08 session log)
+# raw vs gloss: the phone's picture through the same camera, pinned to the whole song's scale
+python3 scripts/loop/film/compose.py <take> --from=<s> --to=<s> --show=<the full show> --body=<the full cut's body> \
+    --out=gloss.mp4 --plate=plate.mp4
+python3 scripts/loop/film/split.py plate.mp4 <the full render> --gloss-from=<frame> --out=raw-vs-gloss.mp4
+```
+
+Check the full render's real start (its sound against the master) before
+timing bars: Billie Jean's runs from 1.12 s into the song. A stretch rendered
+without `--body` is framed differently from the whole song and will not line
+up. Stage the week into one /admin/social folder per level, dated, with the
+platforms and the three captions filled, so the owner posts from his phone.
+
 ## The look
 
 Two things decide how clean he looks.
