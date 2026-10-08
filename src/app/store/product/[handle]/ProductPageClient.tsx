@@ -6,6 +6,8 @@ import ScreenLayout from '@/components/ui/ScreenLayout';
 import ScrollContainer from '@/components/ui/ScrollContainer';
 import { usePageAnalytics } from '@/hooks/usePageAnalytics';
 import { useAnalyticsSafe } from '@/contexts/AnalyticsContext';
+import { useStore } from '@/contexts/StoreContext';
+import { MADE_TO_ORDER_LINK, MADE_TO_ORDER_LINK_TEXT, MADE_TO_ORDER_TEXT } from '@/lib/store/madeToOrder';
 import { isPreorderActive, PREORDER_CTA, PREORDER_FEEDBACK, PREORDER_SHIP_TEXT } from '@/config/preorder';
 import { formatMoney } from '@/lib/store/money';
 import { ODUBO_MARK } from '@/lib/brand/marks';
@@ -41,8 +43,10 @@ export default function ProductPageClient({ product }: ProductPageClientProps) {
   const [selectedVariantId, setSelectedVariantId] = useState<string>('');
   const [activeImage, setActiveImage] = useState<string | null>(null);
   const [qty, setQty] = useState<number>(1);
-  const [hasCartItems, setHasCartItems] = useState<boolean>(false);
   const [justAdded, setJustAdded] = useState<boolean>(false);
+  // The one bag (lib/store/bag.ts): the same one the grid, QuickShop and the badge read.
+  const { addToCart: addToBag, cartItemCount } = useStore();
+  const hasCartItems = cartItemCount > 0;
 
   // Page analytics
   usePageAnalytics({ title: `${product?.title} | Odubo Studio` });
@@ -55,20 +59,6 @@ export default function ProductPageClient({ product }: ProductPageClientProps) {
     }
   }, [product?.handle, analytics]);
 
-  // Initialize cart presence from localStorage
-  useEffect(() => {
-    try {
-      const raw = typeof window !== 'undefined' ? localStorage.getItem('cart') : null;
-      if (raw) {
-        const cart = JSON.parse(raw) as Array<any>;
-        setHasCartItems(Array.isArray(cart) && cart.length > 0);
-      } else {
-        setHasCartItems(false);
-      }
-    } catch (e) {
-      setHasCartItems(false);
-    }
-  }, []);
 
   // Initialize default selections when product loads
   useEffect(() => {
@@ -142,19 +132,26 @@ export default function ProductPageClient({ product }: ProductPageClientProps) {
       return;
     }
     try {
-      const cartRaw = localStorage.getItem('cart') || '[]';
-      const cart = JSON.parse(cartRaw) as Array<{ variantId: string; qty: number; title: string; price: number; currency?: string; image?: string }>;
       const v = product?.variants?.find(v => v.id === variantId);
       if (!v) return;
-      const existing = cart.find(c => c.variantId === variantId);
-      if (existing) existing.qty += qty; else cart.push({ variantId: variantId, qty, title: `${product?.title} — ${v.title}`, price: parseFloat(String(v.price)), currency: (v as any).currency, image: v.image?.src || product?.images?.[0]?.src });
-      localStorage.setItem('cart', JSON.stringify(cart));
+      const imageSrc = v.image?.src || product?.images?.[0]?.src;
+      addToBag({
+        variant: {
+          id: v.id,
+          title: v.title,
+          price: parseFloat(String(v.price)),
+          currency: v.currency || '',
+          image: imageSrc ? { url: imageSrc } : null,
+        },
+        productHandle: product?.handle || '',
+        productTitle: product?.title || '',
+        quantity: qty,
+      });
 
       // Track add to cart
       analytics?.trackAddToCart(product?.handle || '', parseFloat(String(v.price)), variantId);
 
       // update UI state
-      setHasCartItems(true);
       setJustAdded(true);
       setTimeout(() => setJustAdded(false), 2000);
     } catch (e) {
@@ -301,11 +298,18 @@ export default function ProductPageClient({ product }: ProductPageClientProps) {
                 )}
               </div>
 
-              {/* Shipping Info */}
+              {/* Made to order, in the policy's own words. The two lines that stood
+                  here ("Free shipping on orders over $150", "Ships from Canada")
+                  were promises nothing backed: the rates are Shopify's and the
+                  clothes are made and shipped by the fulfilment partner. */}
               <div className="mt-12 pt-8 border-t border-[#502d26]/20 text-xs text-[#b2a491] uppercase tracking-widest space-y-2">
                 {isPreorderActive() && <p>{PREORDER_SHIP_TEXT}</p>}
-                <p>Free shipping on orders over $150</p>
-                <p>Ships from Canada</p>
+                <p>
+                  {MADE_TO_ORDER_TEXT}{' '}
+                  <a href={MADE_TO_ORDER_LINK} className="underline underline-offset-4 hover:text-[#ede8df]">
+                    {MADE_TO_ORDER_LINK_TEXT}
+                  </a>
+                </p>
               </div>
             </div>
           </div>

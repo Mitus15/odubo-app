@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { queryDatabase } from '@/lib/db';
+import { requireAdmin } from '@/lib/api/requireAdmin';
 
 export const runtime = 'edge';
 
@@ -14,6 +15,9 @@ export const runtime = 'edge';
  * - period: '7d' | '30d' | '90d' (default: '30d')
  */
 export async function GET(request: NextRequest) {
+  // Revenue: admins only (it answered anyone until 2026-10-08).
+  const { error } = await requireAdmin(request);
+  if (error) return error;
   try {
     const { searchParams } = new URL(request.url);
     const period = searchParams.get('period') || '30d';

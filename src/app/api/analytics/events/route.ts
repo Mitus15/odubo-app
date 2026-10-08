@@ -154,7 +154,11 @@ function mapEventToActivityType(eventType: EventType): string {
     product_view: 'product_view',
     shop_visit: 'shop_visit',
     add_to_cart: 'add_to_cart',
-    checkout_start: 'page_view', // Tracked as page_view for checkout page
+    // fan_activity's CHECK (migration 068) has no 'checkout_start', so it is
+    // stored as a page_view of '/store/checkout' (the path trackCheckoutStart
+    // sends; no page lives there). The funnel counts it by that path
+    // (dashboard/route.ts). Widening the CHECK would let it be its own type.
+    checkout_start: 'page_view',
     // Modal tracking - preserve as modal_open/modal_close for accurate duration/bounce tracking
     modal_open: 'modal_open',
     modal_close: 'modal_close',

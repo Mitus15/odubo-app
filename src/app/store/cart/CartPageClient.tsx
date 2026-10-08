@@ -2,21 +2,27 @@
 import ScreenLayout from '@/components/ui/ScreenLayout';
 import ScrollContainer from '@/components/ui/ScrollContainer';
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { usePageAnalytics } from '@/hooks/usePageAnalytics';
 import { useAnalyticsSafe } from '@/contexts/AnalyticsContext';
-import { createCheckout, type CheckoutAttribution } from '@/lib/store/api';
+import { CHECKOUT_FAILED_MESSAGE, useStore } from '@/contexts/StoreContext';
+import { createCheckoutSession, type CheckoutAttribution } from '@/lib/store/api';
+import { rememberCheckout } from '@/lib/store/bag';
 import { getAttribution as getStoredAttribution, getSessionId } from '@/lib/attribution';
 import { getVisitorId } from '@/lib/visitorId';
 import { isPreorderActive, PREORDER_CHECKOUT_CTA, PREORDER_DISCLAIMER } from '@/config/preorder';
 import { formatMoney, getCountryFromCookie } from '@/lib/store/money';
 
 export default function CartPage() {
-  type CartItem = { variantId: string; qty: number; title: string; price: number; currency?: string; image?: string };
-  const [items, setItems] = useState<CartItem[]>([]);
+  // The one bag (lib/store/bag.ts), through the StoreProvider: the same items
+  // the grid's panel, QuickShop and the badge hold. This page used to keep its
+  // own under another key.
+  const { cart, updateQuantity, removeFromCart } = useStore();
+  const items = cart.items;
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [inventoryError, setInventoryError] = useState<string | null>(null);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [isChecking, setIsChecking] = useState(false);
   const searchParams = useSearchParams();
 
@@ -44,41 +50,27 @@ export default function CartPage() {
     };
   };
 
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem('cart') || '[]';
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) setItems(parsed);
-    } catch {}
-  }, []);
-
-  const subtotal = useMemo(() => items.reduce((sum, it) => sum + (Number(it.price) || 0) * it.qty, 0), [items]);
+  const subtotal = useMemo(() => items.reduce((sum, it) => sum + (Number(it.price) || 0) * it.quantity, 0), [items]);
   // All items in a session share the visitor's currency; fall back to the first
   // item's stored currency, then to the geo default.
   const cartCurrency = useMemo(() => items.find(it => it.currency)?.currency || undefined, [items]);
 
-  const save = (next: CartItem[]) => {
-    setItems(next);
-    try { localStorage.setItem('cart', JSON.stringify(next)); } catch {}
-  };
-
   const inc = (variantId: string) => {
-    save(items.map(i => i.variantId === variantId ? { ...i, qty: i.qty + 1 } : i));
+    const item = items.find(i => i.variantId === variantId);
+    if (item) updateQuantity(variantId, item.quantity + 1);
   };
   const dec = (variantId: string) => {
-    save(items.flatMap(i => {
-      if (i.variantId !== variantId) return i as any;
-      const nextQty = i.qty - 1;
-      return nextQty <= 0 ? [] : [{ ...i, qty: nextQty }];
-    }));
+    const item = items.find(i => i.variantId === variantId);
+    if (item) updateQuantity(variantId, item.quantity - 1);  // 0 removes it
   };
   const remove = (variantId: string) => {
-    save(items.filter(i => i.variantId !== variantId));
+    removeFromCart(variantId);
   };
 
   const handleCheckout = async () => {
     if (items.length === 0) return;
     setInventoryError(null);
+    setCheckoutError(null);
     setIsChecking(true);
 
     try {
@@ -104,37 +96,30 @@ export default function CartPage() {
 
       // Step 2: Track checkout start
       setIsRedirecting(true);
-      analytics?.trackCheckoutStart(subtotal, items.reduce((sum, i) => sum + i.qty, 0));
+      analytics?.trackCheckoutStart(subtotal, cart.itemCount);
 
       // Step 3: Create checkout with attribution via Shopify API
       const checkoutItems = items.map(i => ({
         variantId: i.variantId,
-        quantity: i.qty,
+        quantity: i.quantity,
       }));
 
-      const checkoutUrl = await createCheckout(checkoutItems, getAttribution(), getCountryFromCookie());
+      const session = await createCheckoutSession(checkoutItems, getAttribution(), getCountryFromCookie());
 
-      if (checkoutUrl) {
-        window.location.href = checkoutUrl;
+      if (session) {
+        rememberCheckout(session.cartId);  // so the bag can empty itself after the order
+        window.location.href = session.checkoutUrl;
       } else {
-        // Fallback to cart permalink if createCheckout fails
-        const shopUrl = 'odubostudio.myshopify.com';
-        const variantString = items.map(i => {
-          const id = i.variantId.split('/').pop();
-          return `${id}:${i.qty}`;
-        }).join(',');
-        window.location.href = `https://${shopUrl}/cart/${variantString}`;
+        throw new Error('Failed to create checkout');
       }
     } catch (error) {
+      // In place, with a way to try again. This used to bounce the visitor to a
+      // myshopify.com cart permalink, which drops the attribution and can land
+      // on the shop's password page.
       console.error('Checkout error:', error);
-      // Fallback to cart permalink on any error
-      setIsRedirecting(true);
-      const shopUrl = 'odubostudio.myshopify.com';
-      const variantString = items.map(i => {
-        const id = i.variantId.split('/').pop();
-        return `${id}:${i.qty}`;
-      }).join(',');
-      window.location.href = `https://${shopUrl}/cart/${variantString}`;
+      setIsRedirecting(false);
+      setIsChecking(false);
+      setCheckoutError(CHECKOUT_FAILED_MESSAGE);
     }
   };
 
@@ -169,7 +154,7 @@ export default function CartPage() {
                     <div className="w-24 h-32 bg-[#1c1a19]/20 flex-shrink-0">
                       {it.image ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={it.image} alt={it.title} className="w-full h-full object-contain" />
+                        <img src={it.image.url} alt={it.image.altText || it.title} className="w-full h-full object-contain" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-[#502d26] text-[10px] uppercase">No Image</div>
                       )}
@@ -178,10 +163,10 @@ export default function CartPage() {
                     <div className="flex-1 flex flex-col justify-between">
                       <div>
                         <div className="flex justify-between items-start mb-2">
-                          <h3 className="text-[#ede8df] font-medium text-lg tracking-wide">{it.title.split('—')[0]}</h3>
-                          <p className="text-[#ede8df] font-light tracking-widest">{formatMoney(Number(it.price) * it.qty, it.currency || cartCurrency)}</p>
+                          <h3 className="text-[#ede8df] font-medium text-lg tracking-wide">{it.title}</h3>
+                          <p className="text-[#ede8df] font-light tracking-widest">{formatMoney(Number(it.price) * it.quantity, it.currency || cartCurrency)}</p>
                         </div>
-                        <p className="text-[#b2a491] text-xs uppercase tracking-widest mb-4">{it.title.split('—')[1] || 'Default'}</p>
+                        <p className="text-[#b2a491] text-xs uppercase tracking-widest mb-4">{it.variantTitle && it.variantTitle !== 'Default Title' ? it.variantTitle : 'Default'}</p>
                       </div>
 
                       <div className="flex justify-between items-end">
@@ -192,7 +177,7 @@ export default function CartPage() {
                           >
                             -
                           </button>
-                          <span className="w-8 text-center text-[#ede8df] text-sm">{it.qty}</span>
+                          <span className="w-8 text-center text-[#ede8df] text-sm">{it.quantity}</span>
                           <button 
                             onClick={() => inc(it.variantId)} 
                             className="w-8 h-8 flex items-center justify-center text-[#b2a491] hover:text-[#ede8df] hover:bg-[#502d26]/20 transition-colors"
@@ -233,6 +218,12 @@ export default function CartPage() {
                     </div>
                   )}
 
+                  {checkoutError && (
+                    <div className="mb-4 p-3 border border-[#502d26]/40 bg-[#1c1a19]/60 text-[#ede8df] text-sm leading-relaxed" role="alert">
+                      {checkoutError}
+                    </div>
+                  )}
+
                   {isPreorderActive() && (
                     <div className="mb-4 p-3 border border-[#843c2d]/20 bg-[#843c2d]/5">
                       <p className="text-[11px] text-[#b2a491] leading-relaxed">{PREORDER_DISCLAIMER}</p>
@@ -244,7 +235,7 @@ export default function CartPage() {
                     disabled={isRedirecting || isChecking}
                     className="w-full py-4 bg-[#843c2d] text-[#ede8df] text-sm uppercase tracking-[0.2em] hover:bg-[#a0472f] transition-colors disabled:opacity-50 disabled:cursor-wait"
                   >
-                    {isChecking ? 'Checking...' : isRedirecting ? 'Redirecting...' : (isPreorderActive() ? PREORDER_CHECKOUT_CTA : 'Checkout')}
+                    {isChecking ? 'Checking...' : isRedirecting ? 'Redirecting...' : checkoutError ? 'Try again' : (isPreorderActive() ? PREORDER_CHECKOUT_CTA : 'Checkout')}
                   </button>
                   
                   <p className="mt-4 text-center text-[10px] text-[#502d26] uppercase tracking-widest">

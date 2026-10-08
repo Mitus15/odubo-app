@@ -6,6 +6,7 @@ import { getShopifyProduct } from '@/lib/shopify';
 import { requireStoreAccess } from '@/lib/storeAccess';
 import { generateProductMetadata } from '@/lib/seo';
 import { COUNTRY_COOKIE } from '@/lib/store/money';
+import { sortProductOptions } from '@/lib/store/sizes';
 
 async function getCountry(): Promise<string | undefined> {
   try {
@@ -52,7 +53,7 @@ async function fetchProduct(handle: string, country?: string) {
     seoDescription: p.seoDescription || null,
     vendor: p.vendor,
     images: p.images.map(url => ({ src: url })),
-    options: (p as any).options || [],
+    options: sortProductOptions((p as any).options),
     variants: p.variants.map((v: any) => ({
       id: v.id,
       title: v.title,

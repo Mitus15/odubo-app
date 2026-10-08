@@ -117,37 +117,11 @@ export function OmniShopProvider({ children }: { children: ReactNode }) {
     checkStoreAccess();
   }, []);
 
-  // Load cart from localStorage on mount
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem('cart');
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) setCart(parsed);
-      }
-    } catch {}
-  }, []);
-
-  // Save cart to localStorage on change
-  useEffect(() => {
-    try {
-      localStorage.setItem('cart', JSON.stringify(cart));
-    } catch {}
-  }, [cart]);
-
-  // Cross-tab sync
-  useEffect(() => {
-    const handleStorage = (e: StorageEvent) => {
-      if (e.key === 'cart' && e.newValue) {
-        try {
-          const parsed = JSON.parse(e.newValue);
-          if (Array.isArray(parsed)) setCart(parsed);
-        } catch {}
-      }
-    };
-    window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
-  }, []);
+  // This cart is in memory only. It used to load and save localStorage 'cart',
+  // which was the second bag the site kept (see lib/store/bag.ts): nothing
+  // reaches this store's modals any more, and writing that key back on every
+  // change would have resurrected the old bag after the merge. The bag is
+  // useCart's; this store is due for removal in its own change.
 
   // Modal actions
   const openMaison = useCallback(() => {

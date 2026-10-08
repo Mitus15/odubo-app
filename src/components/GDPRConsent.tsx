@@ -292,7 +292,10 @@ export default function GDPRConsent({ onConsentChange }: GDPRConsentProps) {
   // unchanged: the same Accept All / Necessary Only / Customize, just no longer
   // standing in front of the thing the paper promised.
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 p-3 sm:p-4">
+    // z-[160]: above the store (z-100, its footer z-115, its bag z-121, its
+    // details sheet z-151), which otherwise hid the banner on /store, the door
+    // social traffic comes through. Under the link tree and the music player.
+    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[160] p-3 sm:p-4">
       {/* Explicitly dark rather than a translucent glass surface: this bar
           renders on every page, and the Loop pages are sand — light type on
           glass over sand is unreadable. A solid ground reads on both. */}

@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { ClipItem } from '@/types/clips';
 import { useAudio } from '@/contexts/AudioContext';
+import { useClipShop } from '@/hooks/useClipShop';
 
 interface SingleVideoPlayerProps {
   clips: ClipItem[];
@@ -59,6 +60,7 @@ export default function SingleVideoPlayer({
   const [isUserPaused, setIsUserPaused] = useState(false);
 
   const activeClip = clips[activeIndex];
+  const shop = useClipShop();
   const nextClip = clips[activeIndex + 1];
 
   // Get the video URL (prefer MP4 for simplicity, fallback to HLS)
@@ -522,9 +524,27 @@ export default function SingleVideoPlayer({
         )}
       </AnimatePresence>
 
-      {/* Platform links - show when URLs exist */}
-      {(activeClip.youtubeShortsUrl || activeClip.tiktokUrl || activeClip.instagramReelsUrl) && (
-        <div className="absolute bottom-24 right-4 flex flex-col gap-2 z-20">
+      {/* The side rail: the shop tap, then the platform links. Right thumb
+          zone, above the logo button's bottom-right spot, clear of the title
+          panel and the flip on the left. Until 2026-10-08 only the desktop
+          gallery had a shop button, so a staged clip could not sell on a phone. */}
+      {(activeClip.productHandle || activeClip.youtubeShortsUrl || activeClip.tiktokUrl || activeClip.instagramReelsUrl) && (
+        <div className="absolute bottom-24 right-4 flex flex-col items-center gap-2 z-20">
+          {activeClip.productHandle && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                shop(activeClip);
+              }}
+              aria-label={`Shop ${activeClip.title}`}
+              className="flex h-11 w-11 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm transition-colors hover:bg-black/70 active:scale-95"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+              </svg>
+            </button>
+          )}
           {activeClip.youtubeShortsUrl && (
             <a
               href={activeClip.youtubeShortsUrl}

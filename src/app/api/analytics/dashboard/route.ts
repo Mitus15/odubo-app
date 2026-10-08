@@ -370,6 +370,13 @@ async function getFunnelData(startDate: string) {
       counts[row.activity_type] = row.count || 0;
     }
 
+    const startRows = await queryDatabase(
+      `SELECT COUNT(*) as count FROM fan_activity
+       WHERE activity_type = 'page_view' AND content_id = '/store/checkout' AND date(created_at) >= ?`,
+      [startDate]
+    );
+    const checkoutStarts = startRows && startRows.length > 0 ? Number((startRows[0] as { count: number }).count) || 0 : 0;
+
     // Get revenue and purchase count from webhook-synced Shopify orders (immune to AdBlockers)
     // This is the source of truth for actual purchases, not client-side tracking
     const orderRows = await queryDatabase(
@@ -390,7 +397,10 @@ async function getFunnelData(startDate: string) {
       shopClicks: counts['shop_visit'] || 0,
       productViews: counts['product_view'] || 0,
       addToCarts: counts['add_to_cart'] || 0,
-      checkoutStarts: counts['checkout_start'] || 0,
+      // Stored as page views of '/store/checkout' (events/route.ts: the table's
+      // CHECK has no 'checkout_start'). Counted here by that path; before this
+      // the funnel read 0 forever.
+      checkoutStarts: checkoutStarts,
       purchases: orderData.purchases || 0,
       revenue: orderData.revenue || 0,
     };

@@ -7,6 +7,7 @@ import { useStore } from '@/contexts/StoreContext';
 import { useCartOverlay } from './StoreOrchestrator';
 import { useAnalyticsSafe } from '@/contexts/AnalyticsContext';
 import type { Product, ProductVariant } from '@/lib/store/types';
+import { MADE_TO_ORDER_LINK, MADE_TO_ORDER_LINK_TEXT, MADE_TO_ORDER_TEXT } from '@/lib/store/madeToOrder';
 import { isPreorderActive, PREORDER_CTA, PREORDER_CTA_ANOTHER, PREORDER_FEEDBACK, PREORDER_SHIP_TEXT } from '@/config/preorder';
 import { STORE_ACCOUNT_URL } from "@/lib/storeAccount";
 import { ODUBO_MARK } from '@/lib/brand/marks';
@@ -347,11 +348,13 @@ export default function ProductDetailFeed() {
   const selectedVariant = useMemo(() => {
     if (!currentProduct?.variants || currentProduct.variants.length === 0) return null;
 
+    // No fallback to the first variant: a combination that does not exist is
+    // nothing to add, not somebody else's size.
     return currentProduct.variants.find((v) =>
       Object.entries(selectedOptions).every(
         ([name, value]) => v.selectedOptions?.[name] === value
       )
-    ) || currentProduct.variants[0];
+    ) || null;
   }, [currentProduct?.variants, selectedOptions]);
 
   // Get image for selected variant (use variant image if available, otherwise first product image)
@@ -549,28 +552,59 @@ export default function ProductDetailFeed() {
         }}
       >
         <div className="max-w-4xl mx-auto">
-          <motion.button
-            onClick={handleAddToCart}
-            disabled={!selectedVariant?.available}
-            whileTap={{ scale: 0.98 }}
-            className={`w-full py-4 rounded-xl font-semibold text-base transition-all flex items-center justify-center gap-2 shadow-lg ${
-              !selectedVariant?.available
-                ? 'bg-white/10 text-white/40 cursor-not-allowed'
-                : addedFeedback
-                ? 'bg-[#843c2d] text-white shadow-[#843c2d]/20'
-                : variantInCart
-                ? 'bg-white/20 text-white hover:bg-white/30'
-                : 'bg-white text-black hover:bg-white/90 active:bg-white/80 shadow-white/10'
-            }`}
-          >
-            {!selectedVariant?.available ? (
-              'Sold Out'
-            ) : addedFeedback ? (
-              <>✓ {isPreorderActive() ? PREORDER_FEEDBACK : 'Added to Bag'}</>
-            ) : (
-              <span>{variantInCart ? (isPreorderActive() ? PREORDER_CTA_ANOTHER : 'Add Another') : (isPreorderActive() ? PREORDER_CTA : 'Add to Bag')}</span>
+          {/* Made to order: said where the buyer decides, in the policy's own words */}
+          {selectedVariant?.available && (
+            <p className="mb-3 text-center text-[11px] tracking-wide text-white/50">
+              {MADE_TO_ORDER_TEXT}{' '}
+              <a href={MADE_TO_ORDER_LINK} className="underline underline-offset-2 hover:text-white/80">
+                {MADE_TO_ORDER_LINK_TEXT}
+              </a>
+            </p>
+          )}
+          <div className="flex gap-2">
+            <motion.button
+              onClick={handleAddToCart}
+              disabled={!selectedVariant?.available}
+              whileTap={{ scale: 0.98 }}
+              className={`flex-1 py-4 rounded-xl font-semibold text-base transition-all flex items-center justify-center gap-2 shadow-lg ${
+                !selectedVariant?.available
+                  ? 'bg-white/10 text-white/40 cursor-not-allowed'
+                  : addedFeedback
+                  ? 'bg-[#843c2d] text-white shadow-[#843c2d]/20'
+                  : variantInCart
+                  ? 'bg-white/20 text-white hover:bg-white/30'
+                  : 'bg-white text-black hover:bg-white/90 active:bg-white/80 shadow-white/10'
+              }`}
+            >
+              {!selectedVariant ? (
+                'Unavailable'
+              ) : !selectedVariant.available ? (
+                'Sold Out'
+              ) : addedFeedback ? (
+                <>✓ {isPreorderActive() ? PREORDER_FEEDBACK : 'Added to Bag'}</>
+              ) : (
+                <span>{variantInCart ? (isPreorderActive() ? PREORDER_CTA_ANOTHER : 'Add Another') : (isPreorderActive() ? PREORDER_CTA : 'Add to Bag')}</span>
+              )}
+            </motion.button>
+
+            {/* The way forward once it is in the bag: the bag, and checkout from there.
+                Without this the button only turned into "Add Another" and the
+                shopper had to find the bag icon in the header. */}
+            {variantInCart && (
+              <motion.button
+                onClick={openCart}
+                whileTap={{ scale: 0.98 }}
+                className="flex-1 py-4 rounded-xl font-semibold text-base bg-white text-black hover:bg-white/90 active:bg-white/80 shadow-lg shadow-white/10 flex items-center justify-center gap-2"
+              >
+                View Bag
+                {cartItemCount > 0 && (
+                  <span className="min-w-[20px] h-5 px-1.5 flex items-center justify-center rounded-full bg-black text-white text-[11px] font-bold">
+                    {cartItemCount > 99 ? '99+' : cartItemCount}
+                  </span>
+                )}
+              </motion.button>
             )}
-          </motion.button>
+          </div>
         </div>
       </div>
 

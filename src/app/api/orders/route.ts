@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { queryDatabase, executeQuery } from '@/lib/db';
+import { requireAdmin } from '@/lib/api/requireAdmin';
 
 export const runtime = 'edge';
 
-export async function GET() {
+// Customer records (names, emails, addresses): admins only, both ways. Until
+// 2026-10-08 GET answered anyone, and POST was fed by a demo checkout page
+// (/store/checkout, deleted the same day) that took a stranger's details.
+export async function GET(req: NextRequest) {
+  const { error } = await requireAdmin(req);
+  if (error) return error;
   try {
     const results = await queryDatabase('SELECT * FROM orders ORDER BY created_at DESC', []);
     return NextResponse.json({ success: true, orders: results || [] });
@@ -13,6 +19,8 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const { error } = await requireAdmin(req);
+  if (error) return error;
   try {
     const body = await req.json();
     const { customer, items, total, subtotal } = body as any;

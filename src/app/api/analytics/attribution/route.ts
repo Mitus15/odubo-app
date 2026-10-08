@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { queryDatabase } from '@/lib/db';
+import { requireAdmin } from '@/lib/api/requireAdmin';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -14,6 +15,9 @@ export const runtime = 'nodejs';
  * - type: Content type filter ('clip', 'gallery', 'album', 'source', 'all')
  */
 export async function GET(req: NextRequest) {
+  // Revenue by content: admins only (it answered anyone until 2026-10-08).
+  const { error } = await requireAdmin(req);
+  if (error) return error;
   try {
     const { searchParams } = new URL(req.url);
     const days = parseInt(searchParams.get('days') || '30', 10);

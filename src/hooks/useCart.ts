@@ -2,8 +2,10 @@
 
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import type { CartItem, Cart, ProductVariant, ProductImage } from '@/lib/store/types';
+import { BAG_KEY, forgetCheckout, readBag, rememberedCheckout, writeBag } from '@/lib/store/bag';
+import { cartExists } from '@/lib/store/api';
 
-const CART_STORAGE_KEY = 'odubo_cart';
+const CART_STORAGE_KEY = BAG_KEY;
 const VISITOR_ID_KEY = 'odubo_visitor_id';
 const SYNC_DEBOUNCE_MS = 500;
 
@@ -39,14 +41,24 @@ export function useCart() {
   useEffect(() => {
     const loadCart = async () => {
       try {
-        const stored = localStorage.getItem(CART_STORAGE_KEY);
-        let localItems: CartItem[] = [];
+        // The bag module folds the old 'cart' key in once (lib/store/bag.ts).
+        let localItems: CartItem[] = readBag();
 
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed)) {
-            localItems = parsed;
+        // Back from Shopify's checkout? If the cart made there no longer
+        // exists, an order completed it: the bag is empty now. Only a clear
+        // "no" empties it; "still open" or "could not tell" leave it alone.
+        const checkoutCartId = rememberedCheckout();
+        if (checkoutCartId && localItems.length > 0) {
+          const exists = await cartExists(checkoutCartId);
+          if (exists === false) {
+            localItems = [];
+            writeBag(localItems);
+            forgetCheckout();
+          } else if (exists === true) {
+            // still open: keep the bag, keep the memory for next time
           }
+        } else if (checkoutCartId) {
+          forgetCheckout();
         }
 
         // If local cart is empty and we have visitor ID, try to load from server
@@ -57,7 +69,7 @@ export function useCart() {
               const data = await res.json();
               if (Array.isArray(data.items) && data.items.length > 0) {
                 localItems = data.items;
-                localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(localItems));
+                writeBag(localItems);
               }
             }
           } catch (e) {
@@ -82,11 +94,7 @@ export function useCart() {
     if (!isHydrated) return;
 
     // Save to localStorage immediately
-    try {
-      localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
-    } catch (error) {
-      console.error('Failed to save cart to localStorage:', error);
-    }
+    writeBag(items);
 
     // Debounced sync to server
     if (!visitorId) return;
@@ -163,14 +171,18 @@ export function useCart() {
   // Actions
   // ============================================
 
+  // Only what the bag keeps of a variant is asked for, so QuickShop and the
+  // product page, which carry their own variant shapes, can add through here too.
   const addToCart = useCallback((params: {
-    variant: ProductVariant;
+    variant: Pick<ProductVariant, 'id' | 'title' | 'price' | 'currency' | 'image'>;
     productHandle: string;
     productTitle: string;
     image?: ProductImage | null;
+    quantity?: number;
   }) => {
     const { variant, productHandle, productTitle, image } = params;
-    
+    const quantity = Math.max(1, Math.floor(params.quantity ?? 1));
+
     setItems(prev => {
       const existingIndex = prev.findIndex(item => item.variantId === variant.id);
       
@@ -178,7 +190,7 @@ export function useCart() {
         // Increment quantity
         return prev.map((item, index) =>
           index === existingIndex
-            ? { ...item, quantity: item.quantity + 1 }
+            ? { ...item, quantity: item.quantity + quantity }
             : item
         );
       }
@@ -191,7 +203,7 @@ export function useCart() {
         variantTitle: variant.title,
         price: variant.price,
         currency: variant.currency,
-        quantity: 1,
+        quantity,
         image: variant.image || image || null,
       };
       

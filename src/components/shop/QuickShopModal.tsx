@@ -2,8 +2,11 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { formatMoney, getCountryFromCookie } from '@/lib/store/money';
+import { isSizeOption, sizeRank, sortProductOptions } from '@/lib/store/sizes';
+import { MADE_TO_ORDER_LINK, MADE_TO_ORDER_LINK_TEXT, MADE_TO_ORDER_TEXT } from '@/lib/store/madeToOrder';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuickShop } from '@/contexts/QuickShopContext';
+import { useStore } from '@/contexts/StoreContext';
 import { useAnalyticsSafe } from '@/contexts/AnalyticsContext';
 import Link from 'next/link';
 import { isPreorderActive, PREORDER_CTA, PREORDER_FEEDBACK, PREORDER_SHIP_TEXT } from '@/config/preorder';
@@ -90,7 +93,7 @@ export default function QuickShopModal() {
           title: p.title,
           handle: p.handle,
           images: p.images?.edges?.map((e: any) => e.node.url) || [],
-          options: p.options || [],
+          options: sortProductOptions(p.options),
           variants: p.variants?.edges?.map(({ node: v }: any) => ({
             id: v.id,
             title: v.title,
@@ -111,11 +114,15 @@ export default function QuickShopModal() {
         // Track product view
         analytics?.trackProductView(productHandle);
 
-        // Initialize options to first variant
+        // Each option starts on its first value, except a size, which starts on
+        // M when there is one (the first value was XS, the size most often wrong).
         if (detail.options?.length) {
           const initial: Record<string, string> = {};
           detail.options.forEach((opt) => {
-            initial[opt.name] = opt.values?.[0];
+            const medium = isSizeOption(opt.name, opt.values || [])
+              ? opt.values.find((v) => sizeRank(v) === sizeRank('M'))
+              : undefined;
+            initial[opt.name] = medium ?? opt.values?.[0];
           });
           setSelectedOptions(initial);
         }
@@ -129,7 +136,8 @@ export default function QuickShopModal() {
     fetchProduct();
   }, [productHandle, isOpen, analytics]);
 
-  // Find selected variant
+  // Find selected variant. No fallback to the first variant: a combination
+  // that does not exist is nothing to add, never somebody else's size.
   const selectedVariant = useMemo(() => {
     if (!product?.variants?.length || !product?.options) return null;
     return (
@@ -137,7 +145,18 @@ export default function QuickShopModal() {
         Object.entries(selectedOptions).every(
           ([k, val]) => v.selectedOptions?.[k] === val
         )
-      ) || product.variants[0]
+      ) || null
+    );
+  }, [product, selectedOptions]);
+
+  // Can this value be bought with the other options as they are chosen?
+  // Drives the strike-through on a sold-out size.
+  const valueAvailable = useCallback((optionName: string, value: string) => {
+    if (!product?.variants?.length) return true;
+    return product.variants.some((v) =>
+      v.available !== false &&
+      v.selectedOptions?.[optionName] === value &&
+      Object.entries(selectedOptions).every(([k, val]) => k === optionName || !val || v.selectedOptions?.[k] === val)
     );
   }, [product, selectedOptions]);
 
@@ -145,27 +164,24 @@ export default function QuickShopModal() {
     setSelectedOptions((prev) => ({ ...prev, [name]: value }));
   }, []);
 
+  const { addToCart: addToBag } = useStore();
+
   const addToCart = useCallback(() => {
-    if (!product || !selectedVariant) return;
+    if (!product || !selectedVariant || selectedVariant.available === false) return;
     try {
-      const raw = localStorage.getItem('cart') || '[]';
-      const parsed = JSON.parse(raw);
-      const cart: any[] = Array.isArray(parsed) ? parsed : [];
-      const existing = cart.find((c) => c.variantId === selectedVariant.id);
-      const base = {
-        variantId: selectedVariant.id,
-        qty: 1,
-        title: `${product.title} — ${selectedVariant.title}`,
-        price: selectedVariant.price,
-        currency: (selectedVariant as any).currency,
-        image: selectedVariant.image || product.images[0],
-      };
-      const nextCart = existing
-        ? cart.map((c) =>
-            c.variantId === selectedVariant.id ? { ...c, qty: c.qty + 1 } : c
-          )
-        : [...cart, base];
-      localStorage.setItem('cart', JSON.stringify(nextCart));
+      // The one bag (lib/store/bag.ts), so the badge and every other surface see it at once.
+      const image = selectedVariant.image || product.images[0];
+      addToBag({
+        variant: {
+          id: selectedVariant.id,
+          title: selectedVariant.title,
+          price: selectedVariant.price,
+          currency: selectedVariant.currency,
+          image: image ? { url: image } : null,
+        },
+        productHandle: product.handle,
+        productTitle: product.title,
+      });
 
       // Track add to cart
       analytics?.trackAddToCart(product.handle, selectedVariant.price, selectedVariant.id);
@@ -175,7 +191,7 @@ export default function QuickShopModal() {
     } catch (e) {
       console.error('Add to cart failed', e);
     }
-  }, [product, selectedVariant, analytics]);
+  }, [product, selectedVariant, analytics, addToBag]);
 
   // Close on escape
   useEffect(() => {
@@ -295,8 +311,8 @@ export default function QuickShopModal() {
                     {isPreorderActive() && selectedVariant?.available !== false && (
                       <p className="text-xs text-[#b2a491]">{PREORDER_SHIP_TEXT}</p>
                     )}
-                    {selectedVariant?.available === false && (
-                      <p className="text-xs text-red-200/80">Currently unavailable</p>
+                    {product.variants?.length > 0 && (!selectedVariant || selectedVariant.available === false) && (
+                      <p className="text-xs text-red-200/80">{!selectedVariant ? 'That combination is not made' : 'Sold out in this size'}</p>
                     )}
                   </div>
 
@@ -314,21 +330,31 @@ export default function QuickShopModal() {
                             onClick={() => setOpenOption(open ? null : opt.name)}
                             className="w-full flex items-center justify-between px-3 py-2 text-left text-sm font-semibold text-[#f7f3ec]"
                           >
-                            <span>{opt.name}</span>
+                            {/* The chosen value shows closed too: the size is never invisible */}
+                            <span>
+                              {opt.name}
+                              {selectedOptions[opt.name] && (
+                                <span className="ml-2 font-normal text-[#d7cfc3]">{selectedOptions[opt.name]}</span>
+                              )}
+                            </span>
                             <span className="text-[#d7cfc3] text-xs">{open ? '−' : '+'}</span>
                           </button>
                           {open && (
                             <div className="px-3 pb-2 flex flex-wrap gap-1.5">
                               {opt.values?.map((val) => {
                                 const active = selectedOptions[opt.name] === val;
+                                const soldOut = !valueAvailable(opt.name, val);
                                 return (
                                   <button
                                     key={val}
                                     type="button"
                                     onClick={() => updateOption(opt.name, val)}
+                                    aria-label={soldOut ? `${val}, sold out` : val}
                                     className={`px-2.5 py-1 rounded-lg text-xs transition-all border ${
                                       active
                                         ? 'bg-gradient-to-r from-[#843c2d] via-[#a44e3a] to-[#52241d] text-[#f8f2ea] border-[#c58a70]/60 shadow-[0_10px_28px_rgba(0,0,0,0.35)]'
+                                        : soldOut
+                                        ? 'text-[#e1d6c8]/40 line-through border-white/10 bg-transparent'
                                         : 'text-[#e1d6c8] border-white/15 bg-white/5 hover:bg-white/10'
                                     }`}
                                   >
@@ -358,7 +384,7 @@ export default function QuickShopModal() {
                       >
                         {addFeedback
                           ? (isPreorderActive() ? PREORDER_FEEDBACK : addFeedback)
-                          : (selectedVariant?.available === false ? 'Unavailable' : (isPreorderActive() ? PREORDER_CTA : 'Add to Bag'))}
+                          : (!selectedVariant ? 'Unavailable' : selectedVariant.available === false ? 'Sold out' : (isPreorderActive() ? PREORDER_CTA : 'Add to Bag'))}
                       </button>
 
                       <Link
@@ -368,6 +394,14 @@ export default function QuickShopModal() {
                       >
                         Go to Bag
                       </Link>
+                      {selectedVariant?.available !== false && (
+                        <p className="w-full pt-1 text-center text-[11px] tracking-wide text-[#b2a491]/80">
+                          {MADE_TO_ORDER_TEXT}{' '}
+                          <Link href={MADE_TO_ORDER_LINK} onClick={closeQuickShop} className="underline underline-offset-2 hover:text-[#f8f2ea]">
+                            {MADE_TO_ORDER_LINK_TEXT}
+                          </Link>
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>

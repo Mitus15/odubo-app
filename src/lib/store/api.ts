@@ -13,6 +13,7 @@ import type {
   ProductFilters,
   ShopifyConnection,
 } from './types';
+import { sortProductOptions } from './sizes';
 import { normalizeCountry } from './money';
 import { ODUBO_EXCLUDED_TAGS, excludeTagsClause } from './brands';
 
@@ -433,7 +434,7 @@ export async function fetchProduct(handle: string, country?: string): Promise<Pr
       productType: p.productType || '',
       tags: p.tags || [],
       images,
-      options: p.options || [],
+      options: sortProductOptions(p.options),
       variants,
       available: p.availableForSale,
       createdAt: p.createdAt,
@@ -464,6 +465,19 @@ export async function createCheckout(
   attribution?: CheckoutAttribution,
   country?: string
 ): Promise<string | null> {
+  return (await createCheckoutSession(items, attribution, country))?.checkoutUrl ?? null;
+}
+
+/**
+ * The checkout as Shopify made it: where to send the visitor, and the cart's
+ * id. The id is what lets the bag empty itself after the order (lib/store/bag.ts,
+ * useCart): a cart that an order completed no longer exists.
+ */
+export async function createCheckoutSession(
+  items: { variantId: string; quantity: number }[],
+  attribution?: CheckoutAttribution,
+  country?: string
+): Promise<{ checkoutUrl: string; cartId: string } | null> {
   const { endpoint, accessToken } = getConfig();
 
   const query = `#graphql
@@ -548,9 +562,40 @@ export async function createCheckout(
       return null;
     }
 
-    return json.data?.cartCreate?.cart?.checkoutUrl || null;
+    const cart = json.data?.cartCreate?.cart;
+    return cart?.checkoutUrl && cart?.id ? { checkoutUrl: cart.checkoutUrl, cartId: cart.id } : null;
   } catch (error) {
     console.error('Error creating checkout:', error);
+    return null;
+  }
+}
+
+/**
+ * Does this Shopify cart still exist? `false` once an order has completed it
+ * (Shopify no longer returns it), `true` while it is still open, `null` when
+ * the answer could not be had (offline, a bad response): then nothing is
+ * decided, and the bag is left as it is.
+ */
+export async function cartExists(cartId: string): Promise<boolean | null> {
+  try {
+    const { endpoint, accessToken } = getConfig();
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Shopify-Storefront-Access-Token': accessToken,
+      },
+      body: JSON.stringify({
+        query: `#graphql
+          query CartExists($id: ID!) { cart(id: $id) { id } }`,
+        variables: { id: cartId },
+      }),
+    });
+    if (!response.ok) return null;
+    const json = await response.json() as { data?: { cart?: { id: string } | null }; errors?: unknown };
+    if (!json.data || json.errors) return null;
+    return json.data.cart !== null && json.data.cart !== undefined;
+  } catch {
     return null;
   }
 }

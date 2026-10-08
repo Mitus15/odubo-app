@@ -11,7 +11,8 @@ import {
   type ReactNode,
 } from 'react';
 import { useCart, type UseCartReturn } from '@/hooks/useCart';
-import { fetchProducts, fetchProduct, createCheckout } from '@/lib/store/api';
+import { fetchProducts, fetchProduct, createCheckoutSession } from '@/lib/store/api';
+import { rememberCheckout } from '@/lib/store/bag';
 import { getCountryFromCookie } from '@/lib/store/money';
 import { useAnalyticsSafe, type ModalType } from '@/contexts/AnalyticsContext';
 import { getAttribution, getSessionId } from '@/lib/attribution';
@@ -71,8 +72,12 @@ interface StoreContextValue {
 
   // Checkout
   isCheckingOut: boolean;
+  checkoutError: string | null;
   checkout: () => Promise<void>;
 }
+
+/** What the bag says when Shopify's checkout could not be reached. Kind, and true. */
+export const CHECKOUT_FAILED_MESSAGE = "Checkout didn't open. Your bag is safe; give it another try.";
 
 const StoreContext = createContext<StoreContextValue | null>(null);
 
@@ -114,6 +119,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   // Checkout
   const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
   // Modal timing for analytics
   const storeOpenTimeRef = useRef<number | null>(null);
@@ -295,6 +301,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (cartHook.items.length === 0) return;
 
     setIsCheckingOut(true);
+    setCheckoutError(null);
+    // The funnel's "checkout started": this panel never counted one before.
+    analytics?.trackCheckoutStart(cartHook.subtotal, cartHook.itemCount);
 
     try {
       // Get attribution data for revenue tracking
@@ -302,7 +311,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const sessionId = getSessionId();
       const visitorId = getVisitorId();
 
-      const checkoutUrl = await createCheckout(
+      const session = await createCheckoutSession(
         cartHook.items.map(item => ({
           variantId: item.variantId,
           quantity: item.quantity,
@@ -321,18 +330,20 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         getCountryFromCookie()
       );
 
-      if (checkoutUrl) {
-        window.location.href = checkoutUrl;
+      if (session) {
+        rememberCheckout(session.cartId);  // so the bag can empty itself after the order
+        window.location.href = session.checkoutUrl;
       } else {
         throw new Error('Failed to create checkout');
       }
     } catch (error) {
+      // In place, in the panel, with a way to try again: no alert() box.
       console.error('Checkout error:', error);
-      alert('Failed to create checkout. Please try again.');
+      setCheckoutError(CHECKOUT_FAILED_MESSAGE);
     } finally {
       setIsCheckingOut(false);
     }
-  }, [cartHook.items]);
+  }, [cartHook.items, cartHook.subtotal, cartHook.itemCount, analytics]);
 
   // ============================================
   // Context Value
@@ -381,6 +392,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
     // Checkout
     isCheckingOut,
+    checkoutError,
     checkout,
   }), [
     isStoreAccessible,
@@ -404,6 +416,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     sort,
     cartHook,
     isCheckingOut,
+    checkoutError,
     checkout,
   ]);
 

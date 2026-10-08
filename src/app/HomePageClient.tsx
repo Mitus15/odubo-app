@@ -125,7 +125,7 @@ export default function HomePageClient({
   const currentMuted = homepageMode === 'music' ? musicPlayerState.isMuted : isMuted;
 
   // Modal contexts
-  const { openStore, view: storeView, closeStore, storePublished } = useStore();
+  const { openStore, view: storeView, closeStore, storePublished, isStoreAccessible } = useStore();
   const { openHub, modalStack, closeAll: closeMedia } = useUnifiedMedia();
 
   // Page analytics tracking
@@ -159,15 +159,25 @@ export default function HomePageClient({
     analytics?.trackClipComplete(clipId, watchPercent, watchSeconds, durationSeconds, false);
   }, [analytics]);
 
-  // Auto-open modal based on defaultModal prop
+  // Auto-open modal based on defaultModal prop.
+  //
+  // The store waits for the access check, not a timer: openStore() is a no-op
+  // until /api/store/status has answered, and on a phone that is often slower
+  // than 100 ms, so /store sometimes opened nothing. Once is enough: after the
+  // visitor closes it, it stays closed (the effect below moves them on).
+  const deepLinkOpened = useRef(false);
   useEffect(() => {
-    if (!defaultModal) return;
+    if (defaultModal !== 'store') return;
+    if (!isStoreAccessible || deepLinkOpened.current) return;
+    deepLinkOpened.current = true;
+    openStore();
+  }, [defaultModal, isStoreAccessible, openStore]);
+
+  useEffect(() => {
+    if (!defaultModal || defaultModal === 'store') return;
 
     const timer = setTimeout(() => {
       switch (defaultModal) {
-        case 'store':
-          openStore();
-          break;
         case 'moments':
           // Redirect to moments subdomain instead of opening modal
           // `odubostudio.com` does not contain `odubo.studio`, so a substring
@@ -220,17 +230,25 @@ export default function HomePageClient({
     return () => clearTimeout(timer);
   }, [defaultModal, storePublished, cookieConsent, hasInteracted, storeView, openStore]);
 
-  // Navigate back to / when modal closes (only if opened via URL)
+  // When the modal a URL opened is closed, go on to the clips (only if opened via URL).
+  //
+  // This used to `router.replace('/')`, which remounts the plain homepage: the
+  // gate, the verse, "Enter the Studio". A stranger from social who lands on
+  // /store and closes it was dropped on the intro they had been spared. The
+  // clips are the room behind the store; that is where closing it should lead.
+  // `/` itself keeps its gate and verse exactly as they are.
   useEffect(() => {
     if (!defaultModal) return;
 
-    const storeIsClosed = storeView === 'closed';
-    const mediaIsClosed = modalStack.length === 0;
-    const linksIsClosed = !linkTreeOpen;
-
-    if (storeIsClosed && mediaIsClosed && linksIsClosed) {
-      router.replace('/', { scroll: false });
+    const anythingOpen = storeView !== 'closed' || modalStack.length > 0 || linkTreeOpen;
+    if (anythingOpen) {
+      deepLinkOpened.current = true;
+      return;
     }
+    // Nothing has opened yet (the store waits for its access check): stay.
+    if (!deepLinkOpened.current) return;
+
+    router.replace('/clips', { scroll: false });
   }, [defaultModal, storeView, modalStack.length, linkTreeOpen, router]);
 
   // Ref to hold feed's scrollToNext function

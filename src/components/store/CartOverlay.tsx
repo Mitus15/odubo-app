@@ -56,7 +56,7 @@ function CartItemRow({ item, onUpdateQuantity, onRemove }: CartItemRowProps) {
           <p className="text-white/50 text-xs mt-0.5">{item.variantTitle}</p>
         )}
         <p className="text-white/80 text-sm mt-1">
-          {formatMoney(item.price * item.quantity, (item as any).currency || cart.currency)}
+          {formatMoney(item.price * item.quantity, item.currency)}
         </p>
 
         {/* Quantity controls */}
@@ -112,6 +112,7 @@ export default function CartOverlay({ isOpen, onClose }: CartOverlayProps) {
     clearCart,
     checkout,
     isCheckingOut,
+    checkoutError,
     openStore,
   } = useStore();
 
@@ -211,6 +212,13 @@ export default function CartOverlay({ isOpen, onClose }: CartOverlayProps) {
                   </div>
                 )}
 
+                {/* When Shopify could not be reached: say so here, and try again */}
+                {checkoutError && (
+                  <div className="mb-4 p-3 rounded-xl border border-white/15 bg-white/5" role="alert">
+                    <p className="text-sm text-white/80 leading-relaxed">{checkoutError}</p>
+                  </div>
+                )}
+
                 {/* Checkout button */}
                 <motion.button
                   onClick={handleCheckout}
@@ -230,6 +238,8 @@ export default function CartOverlay({ isOpen, onClose }: CartOverlayProps) {
                       </svg>
                       Redirecting to Checkout...
                     </span>
+                  ) : checkoutError ? (
+                    'Try again'
                   ) : (
                     isPreorderActive() ? PREORDER_CHECKOUT_CTA : 'Checkout'
                   )}

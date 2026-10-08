@@ -33,12 +33,13 @@ export default function OfflineIndicator() {
     // Check connection quality
     const conn = (navigator as any).connection;
     if (conn) {
+      // Only the browser's own verdict counts. This used to also fire on
+      // `saveData` (Data Saver is a setting, not a slow line; many phones have
+      // it on) and on `downlink < 1`, which Chrome reports on fine connections
+      // while its estimate is still settling. Either showed "Slow connection
+      // detected" over the store to visitors whose connection was fine.
       const checkConnection = () => {
-        const isWeak = conn.saveData || 
-          conn.effectiveType === 'slow-2g' || 
-          conn.effectiveType === '2g' ||
-          (conn.downlink && conn.downlink < 1);
-        setIsWeakConnection(isWeak);
+        setIsWeakConnection(conn.effectiveType === 'slow-2g' || conn.effectiveType === '2g');
       };
       
       checkConnection();

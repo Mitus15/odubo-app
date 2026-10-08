@@ -160,19 +160,24 @@ function ProductGridItem({ product, index, onSelect }: ProductGridItemProps) {
             <span className="text-white/80 text-sm font-medium tracking-wide">SOLD OUT</span>
           </div>
         )}
+
+        {/* The price on the photo */}
+        <div className="absolute bottom-2 left-2 flex items-center gap-1.5">
+          <span className={`text-sm font-semibold px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-sm ${isOnSale ? 'text-red-400' : 'text-white'}`}>
+            {formatMoney(product.price, (product as any).currency)}
+          </span>
+          {isOnSale && (
+            <span className="text-white/50 text-xs line-through px-1.5 py-0.5 rounded-full bg-black/40">
+              {formatMoney(product.compareAtPrice!, (product as any).currency)}
+            </span>
+          )}
+        </div>
       </div>
 
-      {/* Price only - no product name in grid */}
-      <div className="absolute bottom-2 left-2 flex items-center gap-1.5">
-        <span className={`text-sm font-semibold px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-sm ${isOnSale ? 'text-red-400' : 'text-white'}`}>
-          {formatMoney(product.price, (product as any).currency)}
-        </span>
-        {isOnSale && (
-          <span className="text-white/50 text-xs line-through px-1.5 py-0.5 rounded-full bg-black/40">
-            {formatMoney(product.compareAtPrice!, (product as any).currency)}
-          </span>
-        )}
-      </div>
+      {/* The name, quietly, under it: a stranger from social can tell what a piece is */}
+      <p className="mt-1.5 px-1 text-[11px] leading-tight tracking-wide text-white/70 line-clamp-1">
+        {product.title}
+      </p>
     </motion.button>
   );
 }
