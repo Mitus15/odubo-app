@@ -144,7 +144,8 @@ effect: `films`, `products` POST (405), `webhooks/clerk`.
 signature only when its `cf-webhook-signature` header is present, so leaving
 the header off skips the check. Cloudflare's docs describe a signed
 `Webhook-Signature` header instead; confirm the scheme and set the secret
-when fixing. Listed as `KNOWN_OPEN` in the guard test.
+when fixing. Listed as `KNOWN_OPEN` in the guard test. Fixed later the same
+day: `2026-10-02-stream-webhook-signature.md`.
 
 **Tests.** `src/__tests__/adminWriteGates.test.ts` calls all 58 gated
 handlers, and the two jobs' GETs, as a stranger and as a signed-in fan
