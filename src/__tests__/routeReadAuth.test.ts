@@ -16,6 +16,7 @@ import { unverifiedHandlers } from '@/lib/api/routeHandlers';
 
 const PUBLIC_READS: Record<string, string> = {
   'GET /api/albums': 'the album catalogue',
+  'GET /api/albums/[id]': "an album and its tracks; an unreleased track's audio URLs only to someone audioAccess.ts lets hear it",
   'GET /api/announcements': 'site announcements, active ones only',
   'GET /api/arsenal/feed-order': 'public, live clips in the order the feed shows them',
   'GET /api/clips': 'the public clips feed',
@@ -33,6 +34,7 @@ const PUBLIC_READS: Record<string, string> = {
   'GET /api/loop/capacity': 'passes left',
   'GET /api/loop/gift': 'how many gifts a code has made; the code is the credential',
   'GET /api/loop/room': 'how many are in the room',
+  'GET /api/media/audio/[...key]': "warehouse/ and music/ files by presigned link; audioAccess.ts decides who may hear a track's recording, in any form, HLS included",
   'GET /api/moments/galleries/[id]/links': 'the products and tracks a gallery links to',
   'GET /api/moments/galleries/public': 'public galleries; private ones are left out',
   'GET /api/moments/join': 'the gallery a code opens; the code is the credential',
@@ -44,6 +46,7 @@ const PUBLIC_READS: Record<string, string> = {
   'GET /api/shopify/webhooks/orders': 'a fixed status line',
   'GET /api/store/cart/sync': "a visitor's cart, by the id their browser made; nothing personal",
   'GET /api/tracks': "the track catalogue; an unreleased album's audio URLs are withheld",
+  'GET /api/tracks/[id]': "a track; an unreleased one's audio URLs only to someone audioAccess.ts lets hear it",
   'GET /api/tracks/[id]/credits': 'public credits',
   'GET /api/tracks/[id]/stream': 'the bytes; audioAccess.ts decides who may hear an unreleased track',
   'GET /api/videos/stream/direct-upload': "a debug echo of the caller's Origin and the public site URL",
@@ -52,14 +55,11 @@ const PUBLIC_READS: Record<string, string> = {
 // Open, and should not be: each serves something private or writes, and waits
 // on a decision recorded in docs/sessions/2026-10-02-read-routes.md.
 const KNOWN_OPEN: Record<string, string> = {
-  'GET /api/albums/[id]': "an unreleased album's track audio_url and stem URLs, which /api/tracks withholds",
   'GET /api/connections/callback': 'stores OAuth tokens on an unsigned state, then redirects to its returnUrl',
   'GET /api/featured-single': 'creates a published featured page for any ?mode=',
   'GET /api/game/scores': "every leaderboard player's email",
   'GET /api/loop/gallery/media/[...key]': 'any galleries/ key, private galleries included',
-  'GET /api/media/audio/[...key]': "an unreleased track's .hls/ files and dead-host keys; audioAccess.ts only knows a key equal to audio_url",
   'GET /api/moments/rsvp': "an RSVP's email, name and phone, to anyone holding one of the three",
-  'GET /api/tracks/[id]': "an unreleased track's audio_url and hls_url, which /api/tracks withholds",
 };
 
 // Fixed on claude/mystifying-hugle-0cde7d, where these ask isAdminRequest.

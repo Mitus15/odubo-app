@@ -95,6 +95,8 @@ tab or a download link, same origin, so the cookie goes too.
    `trackByMediaKey` the `.hls/` sibling and the dead-host form. The stream
    route forwards the listener's cookies to the proxy, so entitled
    listeners keep playing.
+   **Done** on `claude/mystifying-cannon-149bb7`, with a public cache rule
+   in front of the proxy found on the way: `2026-10-02-unreleased-audio-doors.md`.
 2. **`GET /api/game/scores`** (`src/app/api/game/scores/route.ts:15`) sends
    every leaderboard player's email. The leaderboards
    (`src/components/game/Leaderboard.tsx:71`, `LeaderboardTicker.tsx`) show

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export const runtime = 'edge';
 import { executeQuery, queryDatabase } from '@/lib/db';
 import { getUserFromRequest, isAdminUser } from '@/lib/auth';
+import { withoutAudio } from '@/lib/release/audioSource';
 // Use Web Crypto API for Edge compatibility
 
 export async function GET(req: NextRequest) {
@@ -36,16 +37,9 @@ export async function GET(req: NextRequest) {
     // Until an album is published, the public listing carries the track but
     // not the way to play it. The byte routes enforce the real rule; this
     // stops the catalogue from advertising the door.
-    const tracks = rows.map((t) => {
-      const published = String(t.album_status ?? '').toLowerCase() === 'published';
-      const out = { ...t };
-      delete out.album_status;
-      if (!published) {
-        out.audio_url = null;
-        out.preview_url = null;
-      }
-      return out;
-    });
+    const tracks = rows.map(({ album_status, ...t }) =>
+      String(album_status ?? '').toLowerCase() === 'published' ? t : withoutAudio(t)
+    );
     const res = NextResponse.json({ success: true, tracks });
     res.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');
     res.headers.set('CDN-Cache-Control', 'public, max-age=300');
