@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { queryDatabase } from "@/lib/db";
 import { verifyUserFromRequest, isAdminUser } from "@/lib/auth";
 import { ADMIN_COOKIE, verifyAdminSession } from "@/lib/loop/admin-auth";
+import { isAdminRequest } from "@/lib/adminRequest";
 import { getCurrentEvent } from "@/lib/loop/hub";
 import { currentVoterId } from "@/lib/loop/identity/voter";
 import { albumAccessFor, earlySetFor } from "@/lib/loop/album";
@@ -193,21 +194,8 @@ export async function mayHearTrackId(req: NextRequest | null, trackId: string): 
   return decideAudioAccess(facts);
 }
 
-/** An owner or team session, verified. */
-export async function isAdminRequest(req: NextRequest | null): Promise<boolean> {
-  const [loopAdminOk, odubo] = await Promise.all([
-    (async () => {
-      try {
-        const { cookies } = await import("next/headers");
-        return await verifyAdminSession((await cookies()).get(ADMIN_COOKIE)?.value);
-      } catch {
-        return false;
-      }
-    })(),
-    req ? verifyUserFromRequest(req).catch(() => null) : Promise.resolve(null),
-  ]);
-  return loopAdminOk || isAdminUser(odubo);
-}
+/** Defined in @/lib/adminRequest; still exported here for the pages that import it from here. */
+export { isAdminRequest };
 
 /**
  * A stem-field pack is the song in five parts: all five together ARE the

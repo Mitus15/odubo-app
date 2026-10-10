@@ -6,6 +6,7 @@ import { requireAdmin } from '@/lib/api/requireAdmin';
 export const runtime = 'nodejs';
 
 export async function POST(req: NextRequest) {
+  // ffmpeg fetches and re-encodes whatever URL it is handed: admins only.
   const gate = await requireAdmin(req);
   if (gate.error) return gate.error;
 

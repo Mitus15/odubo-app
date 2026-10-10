@@ -32,6 +32,8 @@ async function fetchImageAsBase64(url: string): Promise<string | null> {
 }
 
 export async function POST(request: NextRequest) {
+  // Spends paid AI calls, and reads any video by id (hidden ones too, with
+  // their lyrics) into what it writes back: admins only.
   const gate = await requireAdmin(request);
   if (gate.error) return gate.error;
 

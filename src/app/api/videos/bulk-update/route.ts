@@ -4,6 +4,7 @@ import { executeQuery } from '@/lib/db';
 import { requireAdmin } from '@/lib/api/requireAdmin';
 
 export async function PATCH(req: NextRequest) {
+  // Sets the status of any videos it is handed (archiving hides them): admins only.
   const gate = await requireAdmin(req);
   if (gate.error) return gate.error;
 
