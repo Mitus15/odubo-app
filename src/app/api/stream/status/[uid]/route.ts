@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import CloudflareStreamAPI from '@/lib/cloudflareStream';
+import { requireAdmin } from '@/lib/api/requireAdmin';
 
 export const runtime = 'nodejs';
 
-export async function GET(_req: NextRequest, { params }: { params: { uid: string } }) {
+export async function GET(req: NextRequest, { params }: { params: { uid: string } }) {
+  const gate = await requireAdmin(req);
+  if (gate.error) return gate.error;
+
   try {
     const { uid } = params;
     if (!uid) return NextResponse.json({ error: 'Missing uid' }, { status: 400 });

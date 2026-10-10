@@ -1,11 +1,15 @@
 import { queryDatabase, executeQuery } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 import type { ExpenseInput } from '@/types/bi';
+import { requireAdmin } from '@/lib/api/requireAdmin';
 
 export const runtime = 'nodejs';
 
 // GET /api/bi/expenses - List expenses with optional filtering
 export async function GET(req: NextRequest) {
+  const gate = await requireAdmin(req);
+  if (gate.error) return gate.error;
+
   try {
     const url = new URL(req.url);
 
@@ -79,6 +83,9 @@ export async function GET(req: NextRequest) {
 
 // POST /api/bi/expenses - Create new expense
 export async function POST(req: NextRequest) {
+  const gate = await requireAdmin(req);
+  if (gate.error) return gate.error;
+
   try {
     const body = (await req.json()) as ExpenseInput;
 

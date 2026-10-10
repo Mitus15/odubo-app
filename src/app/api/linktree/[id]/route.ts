@@ -50,8 +50,9 @@ export async function PATCH(
 ) {
   // Admin only (it was open to anyone until 2026-10-08): a link's URL is
   // where the /links landing sends every visitor.
-  const { error } = await requireAdmin(request);
-  if (error) return error;
+  const gate = await requireAdmin(request);
+  if (gate.error) return gate.error;
+
   try {
     const { id } = await params;
     const linkId = parseInt(id, 10);
@@ -115,8 +116,9 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { error } = await requireAdmin(request);
-  if (error) return error;
+  const gate = await requireAdmin(request);
+  if (gate.error) return gate.error;
+
   try {
     const { id } = await params;
     const linkId = parseInt(id, 10);

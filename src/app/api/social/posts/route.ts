@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { queryDatabase, executeQuery } from '@/lib/db';
+import { requireAdmin } from '@/lib/api/requireAdmin';
 
 export const runtime = 'edge';
 
@@ -9,6 +10,9 @@ export const runtime = 'edge';
  * Supports filtering by entity_id and status
  */
 export async function GET(request: NextRequest) {
+  const gate = await requireAdmin(request);
+  if (gate.error) return gate.error;
+
   try {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
@@ -93,6 +97,9 @@ export async function GET(request: NextRequest) {
  * Now supports entity_id and account_ids for multi-entity posting
  */
 export async function POST(request: NextRequest) {
+  const gate = await requireAdmin(request);
+  if (gate.error) return gate.error;
+
   try {
     const body = await request.json();
     const {

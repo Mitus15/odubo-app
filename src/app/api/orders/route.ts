@@ -8,8 +8,9 @@ export const runtime = 'edge';
 // 2026-10-08 GET answered anyone, and POST was fed by a demo checkout page
 // (/store/checkout, deleted the same day) that took a stranger's details.
 export async function GET(req: NextRequest) {
-  const { error } = await requireAdmin(req);
-  if (error) return error;
+  const gate = await requireAdmin(req);
+  if (gate.error) return gate.error;
+
   try {
     const results = await queryDatabase('SELECT * FROM orders ORDER BY created_at DESC', []);
     return NextResponse.json({ success: true, orders: results || [] });

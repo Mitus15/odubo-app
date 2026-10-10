@@ -1,6 +1,7 @@
-import { NextResponse } from 'next/server';
-import { queryDatabase, executeQuery } from '@/lib/db';
+import { NextRequest, NextResponse } from 'next/server';
+import { queryDatabase, executeQuery, changedRows } from '@/lib/db';
 import CloudflareStreamAPI from '@/lib/cloudflareStream';
+import { requireAdmin } from '@/lib/api/requireAdmin';
 
 export const runtime = 'nodejs';
 
@@ -36,20 +37,11 @@ interface StreamVideo {
  * Uses INSERT OR IGNORE to handle duplicates gracefully
  * Requires authentication
  */
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  const gate = await requireAdmin(request);
+  if (gate.error) return gate.error;
+
   try {
-    // Check authentication
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    // TODO: Verify JWT token here when auth is fully implemented
-    // For now, just check that a token is provided
-
     console.log('[Arsenal] Syncing videos from Cloudflare Stream...');
 
     // Initialize Cloudflare Stream API
@@ -167,7 +159,7 @@ export async function POST(request: Request) {
         );
 
         // Check if row was actually inserted (changes = 0 means duplicate was ignored)
-        if (result && 'changes' in result && result.changes === 0) {
+        if (changedRows(result) === 0) {
           ignored++;
           console.log(`[Arsenal] Duplicate ignored: ${title} (${video.uid})`);
         } else {

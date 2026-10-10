@@ -1,7 +1,7 @@
 import { NextResponse, NextRequest } from 'next/server';
-import { queryDatabase, executeQuery } from '@/lib/db';
+import { queryDatabase, executeQuery, changedRows } from '@/lib/db';
 import { getPost, getAccountFeed, getAccounts, createPost, mapPlatform } from '@/lib/postforme';
-import { getUserFromRequest, isAdminUser } from '@/lib/auth';
+import { requireAdmin, requireCronOrAdmin } from '@/lib/api/requireAdmin';
 
 export const runtime = 'nodejs';
 
@@ -372,10 +372,8 @@ async function runSync() {
           [parentId]
         );
 
-        const parentChanged = parentResult && typeof parentResult === 'object' &&
-          'changes' in parentResult && (parentResult as any).changes > 0;
-        const clipsChanged = clipsResult && typeof clipsResult === 'object' &&
-          'changes' in clipsResult ? (clipsResult as any).changes : 0;
+        const parentChanged = changedRows(parentResult) > 0;
+        const clipsChanged = changedRows(clipsResult);
 
         if (parentChanged || clipsChanged > 0) {
           madePublic += (parentChanged ? 1 : 0) + clipsChanged;
@@ -433,17 +431,20 @@ async function runSync() {
 }
 
 /**
- * GET /api/arsenal/sync — Cron-triggered sync (uses CRON_SECRET)
+ * GET /api/arsenal/sync: the scheduler's way in (Bearer $CRON_SECRET), or an
+ * admin's session.
+ *
+ * It used to check the secret only when one was set, and CRON_SECRET exists
+ * only in Production, so on every Preview deployment (which runs on the live
+ * D1) anyone could run the whole sync: flip parent videos and their clips to
+ * live, and schedule Instagram posters through Post for Me. Found 2026-10-02.
+ * requireCronOrAdmin fails closed instead.
  */
 export async function GET(request: NextRequest) {
+  const gate = await requireCronOrAdmin(request);
+  if (gate.error) return gate.error;
+
   try {
-    const authHeader = request.headers.get('authorization');
-    const cronSecret = process.env.CRON_SECRET;
-
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const result = await runSync();
     console.log('[Arsenal Sync Cron]', result);
     return NextResponse.json(result);
@@ -460,12 +461,10 @@ export async function GET(request: NextRequest) {
  * POST /api/arsenal/sync — Admin-triggered sync (uses cookie auth)
  */
 export async function POST(request: NextRequest) {
-  try {
-    const user = await getUserFromRequest(request);
-    if (!isAdminUser(user)) {
-      return NextResponse.json({ error: 'Forbidden: Admins only' }, { status: 403 });
-    }
+  const gate = await requireAdmin(request);
+  if (gate.error) return gate.error;
 
+  try {
     const result = await runSync();
     return NextResponse.json(result);
   } catch (error) {

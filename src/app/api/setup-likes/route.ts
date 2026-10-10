@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 export const runtime = 'edge';
 import { setupLikesSystem } from '@/lib/setupLikes';
+import { requireAdmin } from '@/lib/api/requireAdmin';
 
 export async function POST(req: NextRequest) {
+  const gate = await requireAdmin(req);
+  if (gate.error) return gate.error;
+
   try {
     const result = await setupLikesSystem();
     

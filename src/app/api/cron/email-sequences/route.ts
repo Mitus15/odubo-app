@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireCronOrAdmin } from '@/lib/api/requireAdmin';
 import { queryDatabase, executeQuery } from '@/lib/db';
 import { sendDay3Email, sendDay7Email } from '@/lib/email';
 
@@ -16,17 +17,18 @@ export const runtime = 'edge';
  *     "schedule": "0 10 * * *"
  *   }]
  * }
+ *
+ * The scheduler (Bearer $CRON_SECRET) or an admin's session. This used to
+ * check the secret only when one was set, and CRON_SECRET exists only in
+ * Production, so on every Preview deployment (which runs on the live D1)
+ * anyone could run the job. Found 2026-10-02; requireCronOrAdmin fails
+ * closed instead.
  */
 export async function GET(request: NextRequest) {
+  const gate = await requireCronOrAdmin(request);
+  if (gate.error) return gate.error;
+
   try {
-    // Verify cron authorization
-    const authHeader = request.headers.get('authorization');
-    const cronSecret = process.env.CRON_SECRET;
-
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const results = {
       day3: { sent: 0, failed: 0, skipped: 0 },
       day7: { sent: 0, failed: 0, skipped: 0 },

@@ -16,8 +16,9 @@ export const runtime = 'edge';
  */
 export async function GET(request: NextRequest) {
   // Revenue: admins only (it answered anyone until 2026-10-08).
-  const { error } = await requireAdmin(request);
-  if (error) return error;
+  const gate = await requireAdmin(request);
+  if (gate.error) return gate.error;
+
   try {
     const { searchParams } = new URL(request.url);
     const period = searchParams.get('period') || '30d';

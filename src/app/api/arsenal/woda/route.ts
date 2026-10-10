@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { queryDatabase, executeQuery } from '@/lib/db';
+import { queryDatabase, executeQuery, lastRowId } from '@/lib/db';
 import { callDeepSeekWithRetry } from '@/lib/deepseek';
+import { requireAdmin } from '@/lib/api/requireAdmin';
 
 export const runtime = 'nodejs';
 
@@ -16,16 +17,10 @@ interface WodaRequest {
  * Requires authentication
  */
 export async function POST(request: NextRequest) {
-  try {
-    // Check authentication
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+  const gate = await requireAdmin(request);
+  if (gate.error) return gate.error;
 
+  try {
     const body = (await request.json()) as WodaRequest;
     const { videoId, platforms, contentType } = body;
 
@@ -122,7 +117,7 @@ export async function POST(request: NextRequest) {
          VALUES (?, ?, ?)`,
         [profile?.id || 1, JSON.stringify(result), (platforms || []).join(',')]
       );
-      generationId = (insertResult as { lastRowId?: number })?.lastRowId || null;
+      generationId = lastRowId(insertResult);
     } catch (e) {
       console.error('[Woda] Failed to store generation:', e);
     }

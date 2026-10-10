@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 export const runtime = 'edge';
 import { getUserFromRequest, isAdminUser } from '@/lib/auth';
-import { queryDatabase, executeQuery } from '@/lib/db';
+import { queryDatabase, executeQuery, lastRowId } from '@/lib/db';
 
 // GET: Fetch voice profiles
 export async function GET(req: NextRequest) {
@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      id: result.lastRowId,
+      id: lastRowId(result),
     });
   } catch (e: any) {
     console.error('Error creating AI profile:', e);

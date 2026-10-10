@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { queryDatabase, executeQuery } from '@/lib/db';
+import { requireAdmin } from '@/lib/api/requireAdmin';
 
 export const runtime = 'nodejs';
 
@@ -14,16 +15,10 @@ interface LinkParentRequest {
  * Auto-assigns clip_index and updates total_siblings for all siblings
  */
 export async function POST(request: NextRequest) {
-  try {
-    // Check authentication
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+  const gate = await requireAdmin(request);
+  if (gate.error) return gate.error;
 
+  try {
     const body = (await request.json()) as LinkParentRequest;
     const { clipId, parentId } = body;
 

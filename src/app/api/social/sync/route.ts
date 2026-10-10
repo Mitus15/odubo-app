@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { queryDatabase, executeQuery } from '@/lib/db';
 import * as postforme from '@/lib/postforme';
+import { requireAdmin } from '@/lib/api/requireAdmin';
 
 export const runtime = 'edge';
 
@@ -9,6 +10,9 @@ export const runtime = 'edge';
  * Trigger a full sync of social accounts, posts, and analytics from Post for Me
  */
 export async function POST(request: NextRequest) {
+  const gate = await requireAdmin(request);
+  if (gate.error) return gate.error;
+
   try {
     // Check if Post for Me is configured
     if (!postforme.isConfigured()) {
@@ -105,6 +109,9 @@ export async function POST(request: NextRequest) {
  * Get sync status and history
  */
 export async function GET(request: NextRequest) {
+  const gate = await requireAdmin(request);
+  if (gate.error) return gate.error;
+
   try {
     const { searchParams } = new URL(request.url);
     const limit = Math.min(parseInt(searchParams.get('limit') || '10', 10), 50);

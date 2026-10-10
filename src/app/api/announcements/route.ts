@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { queryDatabase, executeQuery } from '@/lib/db';
+import { requireAdmin } from '@/lib/api/requireAdmin';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -54,6 +55,9 @@ export async function GET() {
  * Create a new announcement
  */
 export async function POST(req: NextRequest) {
+  const gate = await requireAdmin(req);
+  if (gate.error) return gate.error;
+
   try {
     const body = await req.json();
     const { title, message, link_url, link_text, image_url, target, priority, starts_at, ends_at } = body;
@@ -95,6 +99,9 @@ export async function POST(req: NextRequest) {
  * Delete an announcement
  */
 export async function DELETE(req: NextRequest) {
+  const gate = await requireAdmin(req);
+  if (gate.error) return gate.error;
+
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
