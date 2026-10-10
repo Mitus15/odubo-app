@@ -26,6 +26,7 @@ const PUBLIC_READS: Record<string, string> = {
   'GET /api/featured/[slug]': 'a feature page',
   'GET /api/featured/active': 'the live feature page',
   'GET /api/films': 'a fixed placeholder message',
+  'GET /api/game/fly/audio/[slug]': "a song for /fly, only on a link the /fly page signed (lib/fly/audioGate.ts); every song plays in the game by the owner's choice, and loop_settings.fly_all_songs = 'off' puts the album page's gate back",
   'GET /api/health/env': 'the deploy probe, public by design: which env vars are set, never their values',
   'GET /api/homepage-mode': 'clips or music on the homepage',
   'GET /api/likes/count': 'like counts',

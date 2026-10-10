@@ -36,7 +36,6 @@ const PUBLIC_WRITES: Record<string, string> = {
   'POST /api/loop/pass/waitlist': 'Loop pass flow',
   'POST /api/moments/rsvp': 'public RSVP',
   'POST /api/moments/rsvp/unsubscribe': 'public RSVP',
-  'POST /api/orders': 'the store checkout',
   'POST /api/shopify/checkout': 'the store checkout',
   'POST /api/store/cart/sync': "a visitor's cart",
   'POST /api/store/inventory': 'stock check for the cart page',
