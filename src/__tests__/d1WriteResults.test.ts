@@ -129,7 +129,7 @@ describe('POST /api/tracks', () => {
       DROP TABLE IF EXISTS tracks;
       CREATE TABLE tracks (
         id TEXT PRIMARY KEY, title TEXT NOT NULL, album_id TEXT, track_number INTEGER,
-        audio_url TEXT, duration INTEGER, status TEXT, created_at TEXT
+        audio_url TEXT, duration INTEGER, explicit_content BOOLEAN DEFAULT FALSE, status TEXT, created_at TEXT
       );
     `);
   });

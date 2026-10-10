@@ -66,9 +66,10 @@ export async function POST(req: NextRequest) {
       track_number: number;
       audio_url?: string;
       duration?: number;
+      explicit_content?: boolean;
     };
-    
-    const { title, album_id, track_number, audio_url, duration } = body;
+
+    const { title, album_id, track_number, audio_url, duration, explicit_content } = body;
 
     if (!title || !album_id || !track_number) {
       return NextResponse.json(
@@ -80,15 +81,16 @@ export async function POST(req: NextRequest) {
     // A track's id is this UUID, not a rowid, so it is what the caller gets back.
     const id = globalThis.crypto.randomUUID();
     await executeQuery(
-      `INSERT INTO tracks (id, title, album_id, track_number, audio_url, duration, status, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, 'draft', datetime('now'))`,
+      `INSERT INTO tracks (id, title, album_id, track_number, audio_url, duration, explicit_content, status, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'draft', datetime('now'))`,
       [
         id,
         title,
         album_id,
         track_number,
         audio_url || '',
-        duration || 0
+        duration || 0,
+        explicit_content ? 1 : 0
       ]
     );
 
