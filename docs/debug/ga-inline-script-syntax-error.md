@@ -45,14 +45,21 @@ The main checkout's `.env.local` has no GA ID, which is why dev never showed it.
 
 Checked 2026-10-02 with `vercel env pull` (names only):
 
-| Var | Effect |
-| --- | --- |
-| `NEXT_PUBLIC_GA_MEASUREMENT_ID` | this bug |
-| `ADMIN_EMAILS` | harmless: every reader splits and trims |
-| `DEEPSEEK_API_KEY` | harmless: fetch strips trailing whitespace from header values |
+| Var | Effect | Status |
+| --- | --- | --- |
+| `NEXT_PUBLIC_GA_MEASUREMENT_ID` | this bug | cleaned 2026-10-02 |
+| `ADMIN_EMAILS` | harmless: every reader splits and trims | cleaned 2026-10-02 |
+| `DEEPSEEK_API_KEY` | **broken**, see below | waiting on the owner |
 
-Cleaning all three in Vercel is still worth doing.
-These usually come from `echo "value" | vercel env add`; use `printf` instead.
+`DEEPSEEK_API_KEY` in Production is `y` + newline + key + newline: a "y" typed
+at a CLI prompt went into the value. Fetch strips whitespace only at the ends of
+a header, so `Bearer y⏎sk-…` is an invalid header and every DeepSeek call throws
+before it leaves the server (`/api/deepseek`, the Ark coach, `/api/videos/analyze`).
+The key inside it is also dead: DeepSeek answers 401. The Development key answers 200.
+
+These values come from piping into `vercel env add` (`echo` adds the newline, a
+prompt answer can land in front). Use `vercel env update NAME production --yes`
+with the value on stdin from `printf '%s'`, then pull and check.
 
 ## The 502
 
