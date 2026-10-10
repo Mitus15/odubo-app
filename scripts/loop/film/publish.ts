@@ -27,6 +27,7 @@ import { executeQuery, queryDatabase } from "../../../src/lib/loop/db";
 import { setSetting } from "../../../src/lib/loop/loopSetting";
 import { SONGS, ALBUM_ID } from "../../../src/lib/loop/songs";
 import { clipCaption, captionIssues, HASHTAGS } from "../../../src/lib/loop/film/caption";
+import { ALBUM_NAME } from "../../../src/lib/loop/albumName";
 import { getSingleStatuses } from "../../../src/lib/loop/singlesStore";
 import { getPublicBaseUrl } from "../../../src/lib/loop/publicUrl";
 
@@ -137,8 +138,9 @@ async function film(take: string) {
   await executeQuery(
     `INSERT INTO videos (uid, stream_video_id, title, description, url, poster_url, mp4_url, type, is_public,
                          publication_status, status, album_id, duration_seconds, created_at, updated_at)
-     VALUES (?1, ?1, 'Loop Soul, the film', 'Loop Soul, danced in one take.', ?2, ?3, ?4, 'feature', 0, 'archived', 'published', ?5, ?6, ?7, ?7)`,
-    [uid, `https://iframe.videodelivery.net/${uid}`, `https://videodelivery.net/${uid}/thumbnails/thumbnail.jpg`, mp4, ALBUM_ID, duration, now],
+     VALUES (?1, ?1, ?8, ?9, ?2, ?3, ?4, 'feature', 0, 'archived', 'published', ?5, ?6, ?7, ?7)`,
+    [uid, `https://iframe.videodelivery.net/${uid}`, `https://videodelivery.net/${uid}/thumbnails/thumbnail.jpg`, mp4, ALBUM_ID, duration, now,
+     `${ALBUM_NAME}, the film`, `${ALBUM_NAME}, danced in one take.`],
   );
   const row = await queryDatabase<{ id: number }>(`SELECT id FROM videos WHERE uid = ?1`, [uid]);
   for (const m of markers) {

@@ -1,5 +1,5 @@
 """
-Shared ground for the Loop Soul film pipeline (scripts/loop/film/).
+Shared ground for the Signs of Life film pipeline (scripts/loop/film/).
 
 The pipeline turns ONE continuous take of Mani dancing the whole album into the
 film, the per-song cuts and the social clips. Every stage writes into a work

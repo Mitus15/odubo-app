@@ -3,6 +3,7 @@ import StreetRunnerOverlay, { type RunnerSoundtrack } from '@/components/game/St
 import { getTrackAsSingle } from '@/lib/loop/single';
 import { singleBySlug, singlePath } from '@/lib/loop/singles';
 import { getSingleStatuses } from '@/lib/loop/singlesStore';
+import { ALBUM_NAME } from '@/lib/loop/albumName';
 import { isAdminRequest } from '@/lib/loop/audioAccess';
 
 export const dynamic = 'force-dynamic';
@@ -10,7 +11,7 @@ export const runtime = 'nodejs';
 
 export const metadata: Metadata = {
   title: 'Soul Loop | ODUBO',
-  description: 'Recoolman brings light to the city. Loop Soul, played.',
+  description: `Recoolman brings light to the city. ${ALBUM_NAME}, played.`,
 };
 
 /**
@@ -18,7 +19,7 @@ export const metadata: Metadata = {
  * It starts as this runner and grows toward flight and racing
  * (docs/game/SOUL-LOOP.md).
  *
- * ?song=<slug> runs to a Loop Soul single: the way a single is played rather
+ * ?song=<slug> runs to a Signs of Life single: the way a single is played rather
  * than listened to. Only a single that is out (or an admin previewing) gets a
  * soundtrack; anything else runs silent, the game as it always was.
  */

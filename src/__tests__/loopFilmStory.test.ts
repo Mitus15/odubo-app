@@ -133,7 +133,7 @@ describe("a clip's caption", () => {
   const { clipCaption, captionIssues } = jest.requireActual("@/lib/loop/film/caption") as typeof import("@/lib/loop/film/caption");
   it("is the flip, the reference and one link to its chapter", () => {
     const c = clipCaption({ flip: "Dust, then breath.", verseRef: "Genesis 2:7", chapterTitle: "Welcome", slug: "welcome", site: "https://odubostudio.com/" });
-    expect(c).toBe("Dust, then breath.\nGenesis 2:7\n\nLoop Soul · Welcome\nhttps://odubostudio.com/loop/welcome");
+    expect(c).toBe("Dust, then breath.\nGenesis 2:7\n\nSigns of Life · Welcome\nhttps://odubostudio.com/signsoflife/welcome");
     expect(captionIssues(c)).toEqual([]);
   });
   it("is refused if it names Him or runs an em dash", () => {

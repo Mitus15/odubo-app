@@ -10,7 +10,7 @@ the picture by listening (cross-correlation), never by guessing from movement.
 The tone marks the top; the clap in frame marks it for the eye.
 
 Writes:
-  <media>/film/Loop Soul - play this while you dance.m4a   (for the phone)
+  <media>/film/Signs of Life - play this while you dance.m4a   (for the phone)
   data/loop/film/playlist.json                              (where each song sits)
 """
 import json, subprocess
@@ -28,7 +28,7 @@ def duration(path) -> float:
 def main():
     out_dir = MEDIA / "film"
     out_dir.mkdir(parents=True, exist_ok=True)
-    dest = out_dir / "Loop Soul - play this while you dance.m4a"
+    dest = out_dir / "Signs of Life - play this while you dance.m4a"
 
     inputs, filters, labels, songs = [], [], [], []
     t = TONE_S + LEAD_S

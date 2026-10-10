@@ -7,8 +7,9 @@ import { motion } from "framer-motion";
 import { usePWA } from "@/components/PWAProvider";
 import SinglePlayer from "@/components/loop/gathering/SinglePlayer";
 import type { FeaturedSingle } from "@/lib/loop/single";
-import { SINGLE_PATH } from "@/lib/loop/singlePage";
-import { singlePath } from "@/lib/loop/singles";
+import { SINGLE_SLUG } from "@/lib/loop/singlePage";
+import { sharePath, singlePath } from "@/lib/loop/singles";
+import { ALBUM_NAME } from "@/lib/loop/albumName";
 import type { PublicChapter } from "@/lib/loop/film/public";
 import type { ListenLink } from "@/lib/loop/listen";
 
@@ -197,9 +198,10 @@ export function TheSingle({
 
     // Origin, never a hardcoded domain — the printed URL has moved once
     // already and the share link must follow it without a deploy. The song's
-    // own page, so the link unfurls as the song (/loop?from= still works for
-    // links already sent).
-    const url = `${window.location.origin}${rollout ? singlePath(rollout.slug) : SINGLE_PATH}?from=${c}`;
+    // own page on the album's address, so the link unfurls as the song and
+    // says Signs of Life (/loop/<slug> and /loop?from= still work for links
+    // already sent).
+    const url = `${window.location.origin}${sharePath(rollout?.slug ?? SINGLE_SLUG)}?from=${c}`;
     const text = `Listen to "${single.title}" by ${single.artistName}`;
     if (navigator.share) {
       try {
@@ -276,7 +278,7 @@ export function TheSingle({
               <img src={coverUrl} alt="" className="mx-auto aspect-square w-full max-w-[320px] object-cover" />
             )}
             <div className="loop-muted mt-8 text-[11px] font-bold uppercase tracking-[0.2em]">
-              Loop Soul · Single {rollout?.singles.find((r) => r.slug === rollout.slug)?.number ?? ""}
+              {ALBUM_NAME} · Single {rollout?.singles.find((r) => r.slug === rollout.slug)?.number ?? ""}
             </div>
             <h1 className="loop-display mt-2 text-5xl font-bold tracking-tight">{single.title}</h1>
             <p className="mt-3 text-base">
@@ -313,7 +315,7 @@ export function TheSingle({
               >
                 <span>
                   <span className="block text-base font-bold">
-                    Get Loop Soul
+                    Get {ALBUM_NAME}
                   </span>
                   <span className="loop-muted block text-[13px]">
                     On your home screen

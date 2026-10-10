@@ -2,7 +2,7 @@ import { executeQuery, queryDatabase, queryOne, type SqlParam } from "@/lib/loop
 import { storyIssues, type StoryIssue } from "./naming";
 
 /**
- * The Loop Soul film's story data in D1 (migration 168): chapters, scripture
+ * The Signs of Life film's story data in D1 (migration 168): chapters, scripture
  * cards and world entries. The admin page writes here; the site and the film
  * pipeline (via `film:pull`) read.
  *

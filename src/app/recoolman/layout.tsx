@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { Inter, Pinyon_Script } from "next/font/google";
+import { ALBUM_NAME } from "@/lib/loop/albumName";
 
 /**
- * The world of Loop Soul, at the name Recoolman goes by (@recoolman). It wears
- * the Loop Soul theme like /loop does (see src/app/loop/layout.tsx): the same
+ * The world of Signs of Life, at the name Recoolman goes by (@recoolman). It
+ * wears /loop's theme (see src/app/loop/layout.tsx): the same
  * `.loop-theme` wrapper, fonts and sand and ink, without the /loop intro.
  */
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
@@ -11,7 +12,7 @@ const script = Pinyon_Script({ subsets: ["latin"], weight: "400", variable: "--f
 
 export const metadata: Metadata = {
   title: "Recoolman",
-  description: "The world of Loop Soul.",
+  description: `The world of ${ALBUM_NAME}.`,
 };
 
 export default function WorldLayout({ children }: Readonly<{ children: React.ReactNode }>) {

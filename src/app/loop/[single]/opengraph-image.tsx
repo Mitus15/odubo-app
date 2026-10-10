@@ -8,20 +8,21 @@ import { getPublicBaseUrl } from "@/lib/loop/publicUrl";
 import { createStorageService } from "@/lib/storage/StorageService";
 import { shortDate, venueShort } from "@/lib/loop/eventFacts";
 import { cardTitleSize } from "@/lib/loop/singlePage";
-import { releaseLabel, singleBySlug, singlePath } from "@/lib/loop/singles";
+import { releaseLabel, sharePath, singleBySlug } from "@/lib/loop/singles";
 import { songBySlug } from "@/lib/loop/songs";
+import { ALBUM_NAME } from "@/lib/loop/albumName";
 import { getSingleStatuses } from "@/lib/loop/singlesStore";
 
 /**
  * The single's share card: the cover on the left, the song on the right. A
- * pasted /loop/<song> reads as the song, not as the event poster.
+ * pasted /signsoflife/<song> (or /loop/<song>) reads as the song, not as the event poster.
  *
  * The cover lives in R2 behind a presigned route that 302s; Satori cannot
  * follow that from inside the renderer, so the bytes are fetched here, sized
  * down with sharp (the master is 2048 square and ~2 MB) and embedded. If that
  * fails the card is typographic, never broken.
  */
-export const alt = "A single from Loop Soul by Mani Odubo";
+export const alt = `A single from ${ALBUM_NAME} by Mani Odubo`;
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 export const runtime = "nodejs";
@@ -63,13 +64,13 @@ export default async function OgImage({ params }: { params: Promise<{ single: st
   ]);
   const cover = await coverDataUri(single?.coverUrl ?? null);
   const host = (base ?? "https://www.odubostudio.com").replace(/^https?:\/\/(www\.)?/, "");
-  const title = single?.title ?? def?.title ?? "Loop Soul";
+  const title = single?.title ?? def?.title ?? ALBUM_NAME;
   const status = (await getSingleStatuses().catch(() => [])).find((x) => x.slug === def?.slug);
   const out = status?.out ?? false;
   const when = releaseLabel(status?.releaseDate ?? null);
-  const kicker = chapterNumber ? `Loop Soul · Chapter ${chapterNumber}` : "Loop Soul · The single";
+  const kicker = chapterNumber ? `${ALBUM_NAME} · Chapter ${chapterNumber}` : `${ALBUM_NAME} · The single`;
   const callToAction = chapterNumber ? "Enter the flight" : out ? "Listen free" : when ? `Out ${when}` : "Coming soon";
-  const path = singlePath(def?.slug ?? "");
+  const path = sharePath(def?.slug ?? "");
   const artist = single?.artistName ?? "Mani Odubo";
 
   return new ImageResponse(

@@ -21,7 +21,7 @@ export function publicVideoWhere(alias = 'v'): string {
 }
 
 /**
- * The Loop Soul film's columns on a clip query (migration 168), for a query
+ * The Signs of Life film's columns on a clip query (migration 168), for a query
  * that calls the clip `v`. A film clip knows its song, its chapter and the
  * scripture card it was cut from. Only an APPROVED card is joined: a draft's
  * words never reach a guest, so its clip simply shows no flip.

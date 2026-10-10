@@ -1,11 +1,14 @@
-# Loop Soul: the story bible
+# Signs of Life: the story bible
+
+The album was called Loop Soul until 2026-10-03 (owner). Loop Soul is the
+live night, a possible event series; the record is Signs of Life.
 
 Recoolman's flight through the album, chapter by chapter. This is the album's
 book of the Recoolman canon. The canon itself is law and lives in the Game
 folder; where the two meet, the canon wins.
 
 - The canon: `~/Documents/Apps/Game/game/docs/CANON.md` (see its section
-  "Loop Soul, the album's book", recorded 2026-09-29), `WORLD_BIBLE.md`,
+  "Signs of Life, the album's book", recorded 2026-09-29), `WORLD_BIBLE.md`,
   `docs/story/`, `ART_DIRECTION.md`.
 - The living data: D1 `loop_film_chapters`, `loop_film_cards`,
   `loop_film_world` (migration 168), edited at /loop/admin/film. This file is

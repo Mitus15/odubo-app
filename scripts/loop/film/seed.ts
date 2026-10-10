@@ -1,5 +1,5 @@
 /**
- * Load the Loop Soul film's first-run story data into D1.
+ * Load the Signs of Life film's first-run story data into D1.
  *
  *   npm run film:seed            # dry run: prints what it would insert
  *   npm run film:seed -- --apply # inserts; existing rows are left untouched

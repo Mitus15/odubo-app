@@ -5,6 +5,8 @@ import { COUNTRY_COOKIE, normalizeCountry } from '@/lib/store/money';
 import { VOTER_COOKIE, verifyVoter, mintVoter } from '@/lib/loop/anthem-identity';
 import { ADMIN_COOKIE as LOOP_ADMIN_COOKIE, verifyAdminSession as verifyLoopAdminSession } from '@/lib/loop/admin-auth';
 import { verifyUserFromRequest, isAdminUser } from '@/lib/auth';
+import { ALBUM_ADDRESS_HEADER } from '@/lib/loop/singles';
+import { albumRoute } from '@/lib/loop/albumAddress';
 
 /**
  * Subdomain routing
@@ -99,8 +101,10 @@ function handleSubdomainRouting(request: NextRequest): NextResponse | null {
 }
 
 /**
- * Loop Soul surface (/loop, /api/loop) — two jobs, both STRICTLY scoped to
- * loop paths so they can never touch odubo's own /admin or its visitors:
+ * Loop Soul surface (/loop, /api/loop, and /signsoflife, the album's own
+ * address, which serves Signs of Life's pages from /loop without moving them:
+ * see lib/loop/albumAddress.ts) — two jobs, both STRICTLY scoped to loop paths
+ * so they can never touch odubo's own /admin or its visitors:
  *
  *  1. Admin gate — /loop/admin and /api/loop/admin/* require a valid signed
  *     `ls_admin` session (login page/route excepted). Pages redirect to the
@@ -112,7 +116,8 @@ function handleSubdomainRouting(request: NextRequest): NextResponse | null {
  * Returns null for non-loop paths so odubo's flow is untouched.
  */
 async function handleLoopSoul(request: NextRequest): Promise<NextResponse | null> {
-  const { pathname } = request.nextUrl;
+  const album = albumRoute(request.nextUrl.pathname);
+  const pathname = album ?? request.nextUrl.pathname;
   const isLoopPage = pathname === '/loop' || pathname.startsWith('/loop/');
   const isLoopApi = pathname.startsWith('/api/loop/');
   if (!isLoopPage && !isLoopApi) return null;
@@ -134,17 +139,29 @@ async function handleLoopSoul(request: NextRequest): Promise<NextResponse | null
     }
   }
 
+  // The album's address renders /loop's page under its own URL.
+  const requestHeaders = new Headers(request.headers);
+  if (album) requestHeaders.set(ALBUM_ADDRESS_HEADER, '1');
+  else requestHeaders.delete(ALBUM_ADDRESS_HEADER);
+  const serve = () => {
+    const init = { request: { headers: requestHeaders } };
+    if (!album) return NextResponse.next(init);
+    const url = request.nextUrl.clone();
+    url.pathname = album;
+    return NextResponse.rewrite(url, init);
+  };
+
   // 2) Voter identity.
   const existing = request.cookies.get(VOTER_COOKIE)?.value;
   const valid = await verifyVoter(existing);
-  if (valid) return NextResponse.next();
+  if (valid) return serve();
 
   const { token } = await mintVoter();
 
   // Make the new identity visible to the current render…
-  const requestHeaders = new Headers(request.headers);
   request.cookies.set(VOTER_COOKIE, token);
-  const res = NextResponse.next({ request: { headers: requestHeaders } });
+  requestHeaders.set('cookie', request.headers.get('cookie') ?? '');
+  const res = serve();
 
   // …and persist it on the browser. Cookie path stays '/' (a '/loop' path
   // would exclude /api/loop/*), but MINTING is loop-scoped above — a visitor
