@@ -1,20 +1,24 @@
 'use client';
 
-import { useState, useEffect, useCallback, Suspense } from 'react';
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
+import { queueOf } from '@/lib/social/postQueue';
 import dynamic from 'next/dynamic';
 
 // =============================================================================
 // TYPES
 // =============================================================================
 
-export type StudioView = 'home' | 'calendar' | 'create' | 'library' | 'settings';
+export type StudioView = 'post' | 'home' | 'calendar' | 'create' | 'library' | 'settings';
 
 export interface Post {
   id: string;
   status: 'draft' | 'scheduled' | 'publishing' | 'published' | 'failed';
   title?: string;
   caption?: string;
+  caption_by_platform?: Record<string, string>;
   hashtags?: string[];
+  notes?: string;
+  platform_status?: Record<string, unknown>;
   media_type: 'video' | 'image';
   media_url: string;
   thumbnail_url?: string;
@@ -79,6 +83,10 @@ export interface DashboardData {
 // DYNAMIC IMPORTS (Code Splitting)
 // =============================================================================
 
+const PostView = dynamic(() => import('./components/PostView'), {
+  loading: () => <ViewLoading label="Posts" />,
+});
+
 const HomeView = dynamic(() => import('./components/HomeView'), {
   loading: () => <ViewLoading label="Dashboard" />,
 });
@@ -121,6 +129,11 @@ function ViewLoading({ label }: { label: string }) {
 // =============================================================================
 
 const Icons = {
+  post: (
+    <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+    </svg>
+  ),
   home: (
     <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12l8.954-8.955a1.126 1.126 0 011.592 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
@@ -162,6 +175,7 @@ export default function SocialStudioPage() {
   const [syncing, setSyncing] = useState(false);
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const [createForSlot, setCreateForSlot] = useState<{ date: string; time: string } | null>(null);
+  const chosenView = useRef(false);
 
   // Fetch all data
   const fetchData = useCallback(async () => {
@@ -224,6 +238,20 @@ export default function SocialStudioPage() {
     fetchData();
   }, [fetchData]);
 
+  // Open on Post when something is due today and nothing else was chosen: open
+  // the page, post the next thing.
+  useEffect(() => {
+    if (chosenView.current || loading) return;
+    chosenView.current = true;
+    if (queueOf(posts).due.length > 0) setView('post');
+  }, [loading, posts]);
+
+  const go = (next: StudioView) => {
+    chosenView.current = true;
+    setView(next);
+  };
+  const dueCount = queueOf(posts).due.length;
+
   // Handle opening create with pre-filled slot
   const handleCreateForSlot = (date: string, time: string) => {
     setCreateForSlot({ date, time });
@@ -245,6 +273,9 @@ export default function SocialStudioPage() {
   // Render current view
   const renderView = () => {
     switch (view) {
+      case 'post':
+        return <PostView posts={posts} loading={loading} onRefresh={fetchData} onViewPost={handleViewPost} />;
+
       case 'home':
         return (
           <HomeView
@@ -322,10 +353,26 @@ export default function SocialStudioPage() {
       {/* Bottom Navigation - Glass Effect */}
       <nav className="flex-shrink-0 bg-black/80 backdrop-blur-xl border-t border-[#843c2d]/10 safe-area-bottom">
         <div className="flex items-center justify-around h-16">
+          {/* Post: the week's posts in order, posted by hand */}
+          <button
+            onClick={() => go('post')}
+            className={`relative flex flex-col items-center justify-center w-14 h-full transition-all duration-200 ${
+              view === 'post' ? 'text-[#e8a990]' : 'text-[#726d6c] hover:text-[#726d6c]'
+            }`}
+          >
+            <span className={view === 'post' ? 'drop-shadow-[0_0_8px_rgba(212,168,83,0.5)]' : ''}>{Icons.post}</span>
+            <span className="text-[10px] mt-0.5 font-medium tracking-wide">Post</span>
+            {dueCount > 0 && (
+              <span className="absolute top-2 right-2 min-w-[16px] h-4 px-1 rounded-full bg-[#843c2d] text-[9px] font-bold text-white flex items-center justify-center">
+                {dueCount}
+              </span>
+            )}
+          </button>
+
           {/* Home */}
           <button
-            onClick={() => setView('home')}
-            className={`flex flex-col items-center justify-center w-16 h-full transition-all duration-200 ${
+            onClick={() => go('home')}
+            className={`flex flex-col items-center justify-center w-14 h-full transition-all duration-200 ${
               view === 'home' ? 'text-[#e8a990]' : 'text-[#726d6c] hover:text-[#726d6c]'
             }`}
           >
@@ -335,8 +382,8 @@ export default function SocialStudioPage() {
 
           {/* Calendar */}
           <button
-            onClick={() => setView('calendar')}
-            className={`flex flex-col items-center justify-center w-16 h-full transition-all duration-200 ${
+            onClick={() => go('calendar')}
+            className={`flex flex-col items-center justify-center w-14 h-full transition-all duration-200 ${
               view === 'calendar' ? 'text-[#e8a990]' : 'text-[#726d6c] hover:text-[#726d6c]'
             }`}
           >
@@ -346,7 +393,7 @@ export default function SocialStudioPage() {
 
           {/* Create (Center - Gold with glow) */}
           <button
-            onClick={() => setView('create')}
+            onClick={() => go('create')}
             className="flex items-center justify-center w-14 h-14 -mt-5 rounded-full bg-gradient-to-br from-[#843c2d] to-[#6b3323] text-black shadow-[0_0_30px_rgba(212,168,83,0.4)] active:scale-95 transition-all duration-200 hover:shadow-[0_0_40px_rgba(212,168,83,0.5)]"
           >
             {Icons.create}
@@ -354,8 +401,8 @@ export default function SocialStudioPage() {
 
           {/* Library */}
           <button
-            onClick={() => setView('library')}
-            className={`flex flex-col items-center justify-center w-16 h-full transition-all duration-200 ${
+            onClick={() => go('library')}
+            className={`flex flex-col items-center justify-center w-14 h-full transition-all duration-200 ${
               view === 'library' ? 'text-[#e8a990]' : 'text-[#726d6c] hover:text-[#726d6c]'
             }`}
           >
@@ -365,8 +412,8 @@ export default function SocialStudioPage() {
 
           {/* Settings */}
           <button
-            onClick={() => setView('settings')}
-            className={`flex flex-col items-center justify-center w-16 h-full transition-all duration-200 ${
+            onClick={() => go('settings')}
+            className={`flex flex-col items-center justify-center w-14 h-full transition-all duration-200 ${
               view === 'settings' ? 'text-[#e8a990]' : 'text-[#726d6c] hover:text-[#726d6c]'
             }`}
           >

@@ -102,6 +102,7 @@ export async function PATCH(
       'first_comment',
       'scheduled_at',
       'published_at',  // "Mark posted" in the Studio, for a post made by hand from the phone
+      'platform_status',  // the Post view's per-platform ticks: { <platform>: { posted, at } }
       'title',
       'notes',
       'requires_approval',
@@ -112,7 +113,7 @@ export async function PATCH(
     for (const field of allowedFields) {
       if (body[field] !== undefined) {
         updates.push(`${field} = ?`);
-        if (['hashtags', 'mentions'].includes(field)) {
+        if (['hashtags', 'mentions', 'platform_status'].includes(field)) {
           values.push(JSON.stringify(body[field]));
         } else if (['requires_approval', 'is_important'].includes(field)) {
           values.push(body[field] ? 1 : 0);

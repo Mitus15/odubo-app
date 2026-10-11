@@ -52,3 +52,36 @@ tsc 849 (baseline unchanged); the two old jest failures only (`emailTemplates`,
 `videos.get`); no lint errors on changed lines; build passes. The Studio UI
 itself was not clicked through (no admin sign-in in the preview); its data is
 in place and its routes answer 401 to outsiders.
+
+## Then: Post, the Studio's way to post by hand
+
+The owner: "i wanna be able to open my social page and systematically post
+stuff with as little friction as possible (not using postforme though)", and
+"i also wanna be able to preview".
+
+- A **Post** view, first in the Studio's bottom bar with a count of what is
+  due, and the view the Studio opens on when anything is due today
+  (`components/PostView.tsx`, logic in `src/lib/social/postQueue.ts`, tested).
+  Today and overdue first, in time order, then coming up, then undated; the
+  first one opens by itself.
+- Each post: the **preview** at phone proportions (9:16), with an overlay per
+  app (Instagram, TikTok, YouTube view) showing roughly where its header,
+  caption and button rail sit, to check the HUD and the moves stay clear; the
+  note; the caption as it will be pasted (tap to copy).
+- One button per platform, **Share to Instagram / TikTok / YouTube**: it copies
+  that platform's caption and opens the phone's share sheet with the video
+  attached (Web Share API, files), so the app's composer opens with it. A
+  completed share ticks the platform (`platform_status`, now accepted by the
+  update route); "Done" ticks one posted another way; "Undo" unticks. When all
+  are ticked the post is marked published and the next opens. On a desktop
+  (no file sharing) the tap opens the video to save, caption copied.
+- The video is fetched when the post opens (progress bar), because iOS only
+  allows the share in direct answer to a tap. Stream's download link
+  redirects without the cross-origin header, so the browser could not fetch
+  it; `/api/social/media` (admin only, Stream hosts only,
+  `src/lib/social/streamDownload.ts`, tested) resolves it to the signed link,
+  which the browser can.
+- Verified on a throwaway local page with the six real posts at 375x812: the
+  queue, the preview, the Instagram overlay (the HUD sits just under its
+  header), the note, the caption, the share buttons. The share sheet itself
+  only exists on a phone: first real test is his.
