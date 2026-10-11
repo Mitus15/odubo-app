@@ -41,9 +41,13 @@ export function excludeTagsClause(tags: readonly string[] = ODUBO_EXCLUDED_TAGS)
 /** The house the brands belong to. Shown wherever a brand is named. */
 export const PARENT_BRAND = 'Odubo Studio';
 
+/** The house as it reads after a label's name: "B.A.A.D by Odubo" (owner, 2026-10-11). */
+export const LABEL_BYLINE = 'Odubo';
+
 /**
- * How a product's brand reads wherever both names appear: "B.A.A.D by Odubo
- * Studio".
+ * How a product's brand reads wherever both names appear: "B.A.A.D by Odubo".
+ * The owner, 2026-10-11: "the brand is B.A.A.D by Odubo in general to make it
+ * make sense". It was "B.A.A.D by Odubo Studio".
  *
  * Shopify's `vendor` field holds the brand ALONE — shopping feeds want a bare
  * brand token, so "B.A.A.D" is what belongs there. This is the reading version
@@ -56,5 +60,11 @@ export const PARENT_BRAND = 'Odubo Studio';
 export function brandLockup(vendor?: string | null): string {
   const v = (vendor || '').trim();
   if (!v || v === PARENT_BRAND) return PARENT_BRAND;
-  return `${v} by ${PARENT_BRAND}`;
+  return `${v} by ${LABEL_BYLINE}`;
 }
+
+/** The label the clothes are made under, as Shopify's vendor holds it. */
+export const STORE_LABEL = 'B.A.A.D';
+
+/** The store's name wherever it is named for a shopper: "B.A.A.D by Odubo". */
+export const STORE_NAME = brandLockup(STORE_LABEL);

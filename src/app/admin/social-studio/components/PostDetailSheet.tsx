@@ -29,6 +29,7 @@ interface PostDetail {
   published_at?: string;
   created_at: string;
   campaign_id?: string;
+  notes?: string;
   postforme_status?: string;
   last_synced_at?: string;
   error_message?: string;
@@ -198,6 +199,8 @@ export default function PostDetailSheet({
   const [syncing, setSyncing] = useState(false);
   const [refreshingAnalytics, setRefreshingAnalytics] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [marking, setMarking] = useState(false);
 
   // Fetch post details
   const fetchPost = useCallback(async () => {
@@ -274,6 +277,38 @@ export default function PostDetailSheet({
       console.error('[PostDetailSheet] Delete error:', error);
     } finally {
       setDeleting(false);
+    }
+  };
+
+  // The caption and hashtags, ready to paste into the app (posting by hand from the phone)
+  const handleCopyCaption = async () => {
+    if (!post) return;
+    const tags = (post.hashtags || []).map((t) => `#${t.replace(/^#/, '')}`).join(' ');
+    const text = [post.caption || '', tags].filter(Boolean).join('\n\n');
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch (error) {
+      console.error('[PostDetailSheet] Copy error:', error);
+    }
+  };
+
+  // Posted by hand from the phone: say so, so the week's plan shows it done
+  const handleMarkPosted = async () => {
+    setMarking(true);
+    try {
+      await fetch(`/api/social/posts/${postId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'published', published_at: new Date().toISOString() }),
+      });
+      await fetchPost();
+      onRefresh();
+    } catch (error) {
+      console.error('[PostDetailSheet] Mark posted error:', error);
+    } finally {
+      setMarking(false);
     }
   };
 
@@ -384,7 +419,7 @@ export default function PostDetailSheet({
                       {post.status === 'published' && post.published_at
                         ? `Published ${formatDate(post.published_at)}`
                         : post.scheduled_at
-                        ? `Scheduled for ${formatDate(post.scheduled_at)}`
+                        ? `${post.status === 'scheduled' ? 'Scheduled' : 'Planned'} for ${formatDate(post.scheduled_at)}`
                         : 'Not scheduled'}
                     </div>
                     {post.scheduled_at && post.status !== 'published' && (
@@ -425,6 +460,14 @@ export default function PostDetailSheet({
                   )}
                 </div>
               </div>
+
+              {/* Notes: what to know before posting */}
+              {post.notes && (
+                <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20">
+                  <div className="text-[10px] text-amber-300/80 uppercase tracking-widest mb-1.5">Note</div>
+                  <div className="text-sm text-amber-100/90 whitespace-pre-wrap leading-relaxed">{post.notes}</div>
+                </div>
+              )}
 
               {/* Caption */}
               {post.caption && (
@@ -543,8 +586,40 @@ export default function PostDetailSheet({
                 </div>
               )}
 
+              {/* Posting by hand: the file, the words, and a tick when it is out */}
+              <div className="flex gap-3 pt-2">
+                {post.media_type === 'video' && post.media_url && (
+                  <a
+                    href={post.media_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    download
+                    className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl bg-[#0d0c0a] border border-[#302927] text-white text-sm font-medium hover:border-[#e8a990]/35 transition-all duration-300"
+                  >
+                    Download
+                  </a>
+                )}
+                {(post.caption || (post.hashtags && post.hashtags.length > 0)) && (
+                  <button
+                    onClick={handleCopyCaption}
+                    className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl bg-[#0d0c0a] border border-[#302927] text-white text-sm font-medium hover:border-[#e8a990]/35 transition-all duration-300"
+                  >
+                    {copied ? 'Copied' : 'Copy caption'}
+                  </button>
+                )}
+              </div>
+              {post.status !== 'published' && post.status !== 'publishing' && (
+                <button
+                  onClick={handleMarkPosted}
+                  disabled={marking}
+                  className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-300 text-sm font-medium hover:bg-emerald-500/15 transition-all duration-300 disabled:opacity-50"
+                >
+                  {marking ? 'Saving...' : 'Mark posted'}
+                </button>
+              )}
+
               {/* Actions */}
-              <div className="flex gap-3 pt-4">
+              <div className="flex gap-3 pt-2">
                 <button
                   onClick={handleSync}
                   disabled={syncing}
