@@ -15,6 +15,8 @@ export const FEATURED_PRODUCT_KEY = 'featured_product';
 export interface FeaturedProduct {
   handle: string;
   title: string;
+  /** The label, as Shopify names it (the clothes are B.A.A.D's) */
+  vendor: string;
   image: string | null;
   price: number;
   currency: string;
@@ -56,6 +58,7 @@ export async function getFeaturedProduct(country?: string): Promise<FeaturedProd
   return {
     handle: p.handle,
     title: p.title,
+    vendor: p.vendor || '',
     image: p.images?.[0] ?? null,
     price: p.price,
     currency: variants[0]?.currency || 'CAD',

@@ -16,6 +16,15 @@ export const ODUBO_LOCKUP = "/brand-logos/odubo-brand/odubo-lockup.svg";
 /** Width over height of the lockup's viewBox (1043.46 × 1200). */
 export const ODUBO_LOCKUP_ASPECT = 1043.46 / 1200;
 
+/**
+ * The house seal, the quatrefoil: closed, indented top and bottom, the star in
+ * the middle. The film's player marker. Built by scripts/brand/build-odubo-seal.py
+ * from the one correct drawing (odubo-logo.png); the pointed-top version is retired.
+ */
+export const ODUBO_SEAL = "/brand-logos/odubo-brand/odubo-seal.svg";
+/** Width over height of the seal's viewBox (1200 × 1176.47). */
+export const ODUBO_SEAL_ASPECT = 1200 / 1176.47;
+
 /** The danceman alone, for anywhere the lockup would be under ~96px tall. */
 export const ODUBO_MARK = "/brand-logos/odubo-brand/odubo-mark.svg";
 /** Width over height of the mark's viewBox (953.36 × 1200). */

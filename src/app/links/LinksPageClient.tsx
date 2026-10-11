@@ -10,14 +10,17 @@ import { isStoreLink } from '@/lib/linktreeLinks';
 import type { FeaturedProduct } from '@/lib/featuredProduct';
 import type { LinkTreeItem } from '@/types/linktree';
 import { formatMoney } from '@/lib/store/money';
-import { ODUBO_MARK, ODUBO_MARK_ASPECT } from '@/lib/brand/marks';
+import { ODUBO_SEAL, ODUBO_SEAL_ASPECT } from '@/lib/brand/marks';
 
 /**
  * The landing: the piece first, then everywhere else Odubo lives.
  *
- *   the mark          small, the house's signature, not a header
- *   the piece         the featured product, cut out on the dark, its name and
- *                     price, and the page's one drawn shape: Shop
+ *   the seal          small: the quatrefoil, the player's mark over his head in
+ *                     the video, and the seal under the B.A.A.D lettering. The
+ *                     store is the label's, so its seal, not the studio's dancer
+ *   the piece         the featured product, cut out on the dark, the label
+ *                     over its name like a tag, its price, and the page's one
+ *                     drawn shape: Shop
  *   the platforms     one row of marks in the page's own colour
  *   Home · Shop all   the way into the site (clips, the words) and the store
  *   the list          one line for an email
@@ -74,7 +77,7 @@ export default function LinksPageClient({ links, storeOpen, featured }: Props) {
     [email, subscribe],
   );
 
-  const markHeight = featured ? 34 : 72;
+  const sealHeight = featured ? 30 : 60;
 
   return (
     <div
@@ -86,15 +89,15 @@ export default function LinksPageClient({ links, storeOpen, featured }: Props) {
       }}
     >
       <main className="mx-auto flex min-h-full w-full max-w-md flex-col items-center px-6 pb-6 pt-8 text-[#ede8df]">
-        {/* the mark */}
+        {/* the seal */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={ODUBO_MARK}
-          alt="Odubo Studio"
-          width={Math.round(markHeight * ODUBO_MARK_ASPECT)}
-          height={markHeight}
+          src={ODUBO_SEAL}
+          alt="B.A.A.D"
+          width={Math.round(sealHeight * ODUBO_SEAL_ASPECT)}
+          height={sealHeight}
           draggable={false}
-          style={{ height: markHeight, width: 'auto', opacity: 0.85 }}
+          style={{ height: sealHeight, width: 'auto', opacity: 0.9 }}
         />
 
         {/* the piece */}
@@ -119,7 +122,10 @@ export default function LinksPageClient({ links, storeOpen, featured }: Props) {
                 />
               )}
             </Link>
-            <h1 className="mt-3 text-center text-[1.35rem] leading-tight tracking-wide">{featured.title}</h1>
+            {featured.vendor && (
+              <p className="mt-3 text-[0.65rem] uppercase tracking-[0.28em] text-[#b2a491]">{featured.vendor}</p>
+            )}
+            <h1 className={`${featured.vendor ? 'mt-1' : 'mt-3'} text-center text-[1.35rem] leading-tight tracking-wide`}>{featured.title}</h1>
             <p className="mt-1 text-sm tracking-[0.12em] text-[#b2a491]">
               {formatMoney(featured.price, featured.currency)}
             </p>
