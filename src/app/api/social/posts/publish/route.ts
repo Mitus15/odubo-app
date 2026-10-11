@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAdmin } from '@/lib/api/requireAdmin';
 import { queryDatabase, executeQuery } from '@/lib/db';
 import { createPost, CreatePostInput } from '@/lib/postforme';
 
@@ -43,6 +44,8 @@ interface SocialAccount {
  * Publish a post to social platforms via Post for Me API
  */
 export async function POST(request: NextRequest) {
+  const { error: denied } = await requireAdmin(request);
+  if (denied) return denied;
   try {
     const body = await request.json();
     const postId = (body as { post_id?: string }).post_id;

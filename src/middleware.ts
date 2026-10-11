@@ -224,6 +224,39 @@ async function handleCatalogueWrites(request: NextRequest): Promise<NextResponse
 }
 
 /**
+ * Social posting API gate (/api/social/**), fail-closed at the edge.
+ *
+ * The Social Studio's routes shipped with no auth at all (found 2026-10-08,
+ * live): anyone could create a post with their own video and either publish
+ * it straight to the owner's Instagram, TikTok and YouTube
+ * (`/api/social/posts/publish`) or mark it scheduled for the cron to publish,
+ * and read or delete every draft. Every caller is an admin screen (the Social
+ * Studio, the command centre) except the social-sync cron, which calls two of
+ * these routes server to server with `Authorization: Bearer <CRON_SECRET>`;
+ * that header is accepted on those two paths only.
+ */
+const SOCIAL_CRON_PATHS = new Set(['/api/social/posts/process-scheduled', '/api/social/sync']);
+
+async function handleSocialApi(request: NextRequest): Promise<NextResponse | null> {
+  const { pathname } = request.nextUrl;
+  if (!pathname.startsWith('/api/social/') && pathname !== '/api/social') return null;
+
+  const cronSecret = process.env.CRON_SECRET;
+  if (cronSecret && SOCIAL_CRON_PATHS.has(pathname) && request.headers.get('authorization') === `Bearer ${cronSecret}`) {
+    return null;
+  }
+
+  const user = await verifyUserFromRequest(request);
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  if (!isAdminUser(user)) {
+    return NextResponse.json({ error: 'Forbidden: Admins only' }, { status: 403 });
+  }
+  return null;
+}
+
+/**
  * Odubo admin API gate (/api/admin/**), fail-closed at the edge.
  *
  * Handlers under /api/admin were each expected to check auth for themselves
@@ -289,12 +322,13 @@ async function handleAdminApi(request: NextRequest): Promise<NextResponse | null
  * Clerk has been removed in favor of JWT-based auth for admin
  */
 export default async function middleware(request: NextRequest) {
-  // Three edge backstops, all fail-closed, each returning null when the path
-  // is not theirs: the whole /api/admin surface, the command centre, and
-  // catalogue WRITES.
+  // Four edge backstops, all fail-closed, each returning null when the path
+  // is not theirs: the whole /api/admin surface, the command centre, social
+  // posting, and catalogue WRITES.
   const denied =
     (await handleAdminApi(request)) ??
     (await handleCommandCenterApi(request)) ??
+    (await handleSocialApi(request)) ??
     (await handleCatalogueWrites(request));
   if (denied) return denied;
 

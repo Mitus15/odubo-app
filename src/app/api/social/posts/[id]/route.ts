@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAdmin } from '@/lib/api/requireAdmin';
 import { queryDatabase, executeQuery } from '@/lib/db';
 
 export const runtime = 'edge';
@@ -21,6 +22,8 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const { error: denied } = await requireAdmin(request);
+  if (denied) return denied;
   try {
     const { id } = await params;
 
@@ -81,6 +84,8 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const { error: denied } = await requireAdmin(request);
+  if (denied) return denied;
   try {
     const { id } = await params;
     const body = (await request.json()) as Record<string, unknown>;
@@ -96,6 +101,7 @@ export async function PATCH(
       'mentions',
       'first_comment',
       'scheduled_at',
+      'published_at',  // "Mark posted" in the Studio, for a post made by hand from the phone
       'title',
       'notes',
       'requires_approval',
@@ -146,6 +152,8 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const { error: denied } = await requireAdmin(request);
+  if (denied) return denied;
   try {
     const { id } = await params;
 
