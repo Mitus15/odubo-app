@@ -1,10 +1,11 @@
 'use client';
 
-import Image from 'next/image';
+import { ODUBO_SEAL } from '@/lib/brand/marks';
 
 /**
  * A platform's mark for the link tree: Spotify, Apple Music, YouTube,
- * Instagram, TikTok, the store (the Danceman), or a plain link. Shared by the
+ * Instagram, TikTok, the store (the B.A.A.D seal: the store is the label's),
+ * or a plain link. Shared by the
  * in-app link tree (LinkTreeModal, brand colours) and the /links landing
  * (mono: the page's own text colour, so five logos do not shout five colours).
  */
@@ -54,14 +55,11 @@ export default function PlatformIcon({
       );
     case 'shopify':
     case 'odubo':
+      // The quatrefoil under the B.A.A.D lettering, not the studio's dancer:
+      // the clothes are the label's (owner, 2026-10-11).
       return (
-         <Image
-           src="/brand-logos/Danceman_Logo_Red.png"
-           alt="Odubo"
-           width={28}
-           height={28}
-           className={iconClass}
-         />
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={ODUBO_SEAL} alt="B.A.A.D" className={`${iconClass} object-contain`} draggable={false} />
       );
     default:
       return (
