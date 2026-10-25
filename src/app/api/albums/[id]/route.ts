@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { requireAdmin } from '@/lib/api/requireAdmin';
+import { getUserFromRequest, isAdminUser } from '@/lib/auth';
 export const runtime = 'edge';
 import { queryDatabase, executeQuery } from '@/lib/db';
 
@@ -12,8 +13,12 @@ export async function GET(
     const { id } = await params;
     
     const albums = await queryDatabase('SELECT * FROM albums WHERE id = ?', [id]);
-    
-    if (albums.length === 0) {
+
+    // An unreleased album, its titles and its audio addresses, are the owner's
+    // and team's until it is out (2026-10-24: this answered anyone with the
+    // id, which the public /music link carried). To everyone else it is not here.
+    const unreleased = albums.length > 0 && String(albums[0].status ?? '').toLowerCase() !== 'published';
+    if (albums.length === 0 || (unreleased && !isAdminUser(await getUserFromRequest(req)))) {
       return NextResponse.json(
         { error: 'Album not found' },
         { status: 404 }

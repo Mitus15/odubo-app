@@ -5,6 +5,8 @@ export const metadata: Metadata = generateSeoMetadata({
   title: 'Documentation — Case Study',
   description: 'Public architecture and strategy documents for the Odubo Studio platform.',
   path: '/docs',
+  // A case study, sent by link; not part of the artist's site.
+  noIndex: true,
 });
 
 const documents = [

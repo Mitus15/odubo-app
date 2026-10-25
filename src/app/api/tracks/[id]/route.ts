@@ -4,6 +4,7 @@ import { requireAdmin } from '@/lib/api/requireAdmin';
 export const runtime = 'edge';
 import { executeQuery, queryDatabase } from '@/lib/db';
 import { deriveHlsUrl } from '@/lib/release/audioSource';
+import { mayHearTrackId } from '@/lib/loop/audioAccess';
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -23,6 +24,14 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     
     const track = (tracks as any[])[0];
 
+    // A track of an unreleased album is here only for those who may hear it
+    // (the same rule as /stream: the album out, a released single, the owner
+    // and team, or a pass owed the record). Its title and audio address are
+    // the record's story (2026-10-24: this answered anyone with an id).
+    if (!(await mayHearTrackId(req, id))) {
+      return NextResponse.json({ error: 'Track not found' }, { status: 404 });
+    }
+
     // Compute optional HLS manifest URL based on audio_url convention
     // Example: https://media/.../song.web.m4a -> https://media/.../song.hls/master.m3u8
 
@@ -34,7 +43,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       track: { ...track, hls_url }
     });
     
-    response.headers.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
+    // Who asks decides the answer, so no shared cache may hold it.
+    response.headers.set('Cache-Control', 'private, max-age=300');
+    response.headers.set('Vary', 'Cookie, Authorization, Accept-Encoding');
     
     return response;
   } catch (error) {

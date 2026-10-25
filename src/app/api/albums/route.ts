@@ -16,6 +16,14 @@ export async function GET(req: NextRequest) {
     const params: any[] = [];
     const conditions: string[] = [];
 
+    // An unreleased album is listed for the owner and team only: its title and
+    // cover are the record's story, kept back until it is out (2026-10-24:
+    // "Signs of Life" was in this public list while shelved).
+    const admin = isAdminUser(await getUserFromRequest(req));
+    if (!admin) {
+      conditions.push("LOWER(COALESCE(status, '')) = 'published'");
+    }
+
     if (featured === 'true') {
       conditions.push('featured = ?');
       params.push(1);
@@ -39,9 +47,11 @@ export async function GET(req: NextRequest) {
 
     const albums = await queryDatabase(query, params);
     const res = NextResponse.json({ success: true, albums });
-    res.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');
-    res.headers.set('CDN-Cache-Control', 'public, max-age=300');
-    res.headers.set('Vary', 'Accept-Encoding');
+    // The answer depends on who asks, so no shared cache may hold it: a CDN
+    // copy of the owner's list would show drafts to everyone, and a copy of
+    // the public list would hide them from the owner's tools.
+    res.headers.set('Cache-Control', 'private, max-age=60');
+    res.headers.set('Vary', 'Cookie, Authorization, Accept-Encoding');
     return res;
   } catch (error) {
     console.error('Error fetching albums:', error);

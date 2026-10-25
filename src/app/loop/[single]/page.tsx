@@ -18,6 +18,7 @@ import { songBySlug } from "@/lib/loop/songs";
 import { chapterClips, publicChapters, publicFilm } from "@/lib/loop/film/public";
 import { listenLinks } from "@/lib/loop/listen";
 import { ALBUM_ID } from "@/lib/loop/songs";
+import { rolloutPaused } from "@/lib/loop/rollout";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -36,6 +37,10 @@ export const runtime = "nodejs";
  * silhouette until the chapter is revealed, then its thread, its scripture
  * cards, its clips and the ways in. Any other segment 404s: /loop's own
  * routes (album, press, admin...) are static and win over this one.
+ *
+ * While the rollout is paused (lib/loop/rollout.ts), a coming single and an
+ * unrevealed chapter 404 for the public, and the out single shows no list of
+ * what comes next.
  */
 async function load(slug: string) {
   const def = singleBySlug(slug);
@@ -49,8 +54,9 @@ async function load(slug: string) {
 async function chapterMeta(slug: string): Promise<Metadata> {
   const song = songBySlug(slug);
   if (!song) return { title: "Loop Soul" };
-  const [chapters, base] = await Promise.all([publicChapters(), getPublicBaseUrl()]);
+  const [chapters, base, paused] = await Promise.all([publicChapters(), getPublicBaseUrl(), rolloutPaused()]);
   const c = chapters.find((x) => x.slug === slug);
+  if (paused && !c?.public) return { title: "Mani Odubo" };
   const title = `${c?.title ?? song.title} · Loop Soul`;
   const description = c?.public && c.thread ? c.thread : `Chapter ${song.number} of Loop Soul, an album by Mani Odubo.`;
   const path = singlePath(slug);
@@ -63,9 +69,11 @@ export async function generateMetadata({ params }: { params: Promise<{ single: s
   if (!singleBySlug(slug)) return chapterMeta(slug);
   const data = await load(slug);
   if (!data?.track) return { title: "Loop Soul" };
+  const paused = await rolloutPaused();
+  if (!data.status.out && paused) return { title: "Mani Odubo" };
   const [event, base] = await Promise.all([getCurrentEvent(), getPublicBaseUrl()]);
   const m = singleMeta(
-    data.track,
+    paused ? { ...data.track, albumTitle: "" } : data.track,
     event.phase === "archived" ? null : { dateLabel: shortDate(event.date), venue: event.venue },
     { out: data.status.out, dateLabel: releaseLabel(data.status.releaseDate) },
   );
@@ -88,6 +96,7 @@ export default async function SinglePage({ params }: { params: Promise<{ single:
     if (!songBySlug(slug)) notFound();
     const [chapters, clips, film, listenOn] = await Promise.all([publicChapters(), chapterClips(slug), publicFilm(), listenLinks(ALBUM_ID)]);
     const chapter = chapters.find((c) => c.slug === slug)!;
+    if (!chapter.public && (await rolloutPaused()) && !(await isAdminRequest(null))) notFound();
     const watchAt = film?.markers.find((m) => m.label === slug)?.t ?? null;
     return <ChapterView chapter={chapter} chapters={chapters} clips={chapter.public ? clips : []} watchAt={watchAt} listenOn={listenOn} />;
   }
@@ -95,8 +104,9 @@ export default async function SinglePage({ params }: { params: Promise<{ single:
   if (!data?.track) notFound();
   const { def, statuses, status, track } = data;
 
-  const [event, voterId, admin] = await Promise.all([getCurrentEvent(), currentVoterId(), isAdminRequest(null)]);
+  const [event, voterId, admin, paused] = await Promise.all([getCurrentEvent(), currentVoterId(), isAdminRequest(null), rolloutPaused()]);
   const archived = event.phase === "archived";
+  if (paused && !status.out && !admin) notFound();
 
   const [cover, held, offer] = await Promise.all([
     resolveCover(event.id, voterId),
@@ -119,13 +129,13 @@ export default async function SinglePage({ params }: { params: Promise<{ single:
 
   return (
     <SingleStandalone
-      single={track}
+      single={paused && !admin ? { ...track, albumTitle: "" } : track}
       slug={def.slug}
       out={status.out}
       playable={status.out || admin}
       releaseDateLabel={releaseLabel(status.releaseDate)}
       fieldPack={def.fieldPack ?? null}
-      singles={singles}
+      singles={paused && !admin ? [] : singles}
       coverUrl={cover.url}
       coverCaption={coverCaption(cover)}
       dateLabel={archived ? null : shortDate(event.date)}

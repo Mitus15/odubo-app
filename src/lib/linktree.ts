@@ -3,8 +3,11 @@
  *
  * Active links, featured first, then by category and order. The YouTube link
  * points at the latest video deployed through the platform rather than the
- * channel, so the newest piece is one tap away.
+ * channel, so the newest piece is one tap away, but only while that video is
+ * new (FRESH_DAYS). He posts by hand now (2026-10), which records no
+ * deployment, so the "latest" froze on an old Short; past that, the channel.
  */
+const FRESH_DAYS = 14;
 
 import { queryDatabase } from '@/lib/db';
 import type { LinkTreeItem } from '@/types/linktree';
@@ -23,6 +26,7 @@ export async function getActiveLinks(): Promise<LinkTreeItem[]> {
     queryDatabase(`
       SELECT external_url FROM video_deployments
       WHERE platform = 'youtube' AND status = 'published' AND external_url IS NOT NULL
+        AND deployed_at >= datetime('now', '-${FRESH_DAYS} days')
       ORDER BY deployed_at DESC
       LIMIT 1
     `) as Promise<{ external_url: string }[]>,

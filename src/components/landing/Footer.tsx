@@ -3,13 +3,16 @@
 import { useState, useEffect } from 'react';
 import { motion, useInView } from 'framer-motion';
 import { useRef } from 'react';
+import { useEmailCapture } from '@/contexts/EmailCaptureContext';
 import type { LinkTreeItem } from '@/types/linktree';
 
 export default function Footer() {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: '-10%' });
+  const { subscribe, isSubmitting } = useEmailCapture();
   const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [failed, setFailed] = useState(false);
   const [links, setLinks] = useState<LinkTreeItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -28,9 +31,17 @@ export default function Footer() {
       .catch(() => setLoading(false));
   }, []);
 
+  // Until 2026-10-24 this showed ✓ and sent nothing: every desktop email was lost.
+  // It now joins the list the way /links and the Connect sheet do.
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) return;
+    if (!email.trim()) return;
+    setFailed(false);
+    const result = await subscribe(email.trim());
+    if (!result.success) {
+      setFailed(true);
+      return;
+    }
     setSubmitted(true);
     setEmail('');
     setTimeout(() => setSubmitted(false), 3000);
@@ -63,9 +74,11 @@ export default function Footer() {
               />
               <button
                 type="submit"
-                className="px-4 py-2 bg-[#843c2d] text-[#ede8df] text-sm font-medium rounded-lg hover:bg-[#9a4535] transition-colors"
+                disabled={isSubmitting}
+                aria-label={failed ? 'That did not go through. Try again.' : undefined}
+                className="px-4 py-2 bg-[#843c2d] text-[#ede8df] text-sm font-medium rounded-lg hover:bg-[#9a4535] transition-colors disabled:opacity-50"
               >
-                {submitted ? '✓' : 'Join'}
+                {submitted ? '✓' : failed ? 'Retry' : 'Join'}
               </button>
             </form>
           </div>

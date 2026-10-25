@@ -202,7 +202,7 @@ export function SinglePlayer({
           >
             <Image
               src={coverUrl}
-              alt={`${single.albumTitle} cover`}
+              alt={`${single.albumTitle || single.title} cover`}
               fill
               unoptimized
               className="object-cover"
@@ -229,7 +229,7 @@ export function SinglePlayer({
           {single.title}
         </h1>
         <div className="loop-muted mt-2 text-[11px] font-semibold uppercase tracking-[0.18em]">
-          {single.artistName} · from {single.albumTitle}
+          {single.albumTitle ? `${single.artistName} · from ${single.albumTitle}` : single.artistName}
         </div>
       </div>
 

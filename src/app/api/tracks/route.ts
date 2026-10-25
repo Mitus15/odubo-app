@@ -11,9 +11,12 @@ export async function GET(req: NextRequest) {
     
     // SELECT tracks with video count (how many videos are linked to this track)
     // `album_status` rides along so an unreleased track can have its audio
-    // location withheld below. This route is public and CDN-cached, so it must
-    // stay impersonal: it never decides WHO may listen, only that the address
-    // of an unreleased recording is not handed to everybody who asks.
+    // location withheld below. It never decides WHO may listen (the byte
+    // routes do), only that the address of an unreleased recording is not
+    // handed to everybody who asks. Since 2026-10-24 an unreleased album's
+    // tracks are not listed at all except to the owner and team: the 14 titles
+    // of the shelved record were public here, and they are its story.
+    const admin = isAdminUser(await getUserFromRequest(req));
     let query = `
       SELECT 
         t.*,
@@ -24,12 +27,19 @@ export async function GET(req: NextRequest) {
       LEFT JOIN albums a ON a.id = t.album_id
     `;
     const params: any[] = [];
-    
+    const conditions: string[] = [];
+
     if (albumId) {
-      query += ' WHERE t.album_id = ?';
+      conditions.push('t.album_id = ?');
       params.push(albumId);
     }
-    
+    if (!admin) {
+      conditions.push("LOWER(COALESCE(a.status, '')) = 'published'");
+    }
+    if (conditions.length > 0) {
+      query += ' WHERE ' + conditions.join(' AND ');
+    }
+
     query += ' GROUP BY t.id ORDER BY t.track_number ASC';
     
     const rows = (await queryDatabase(query, params)) as Record<string, unknown>[];
@@ -47,9 +57,9 @@ export async function GET(req: NextRequest) {
       return out;
     });
     const res = NextResponse.json({ success: true, tracks });
-    res.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');
-    res.headers.set('CDN-Cache-Control', 'public, max-age=300');
-    res.headers.set('Vary', 'Accept-Encoding');
+    // The answer depends on who asks, so no shared cache may hold it.
+    res.headers.set('Cache-Control', 'private, max-age=60');
+    res.headers.set('Vary', 'Cookie, Authorization, Accept-Encoding');
     return res;
   } catch (error) {
     console.error('Error fetching tracks:', error);

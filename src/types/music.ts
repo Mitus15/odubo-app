@@ -14,6 +14,8 @@ export interface Album {
   explicit_content: boolean;
   featured: boolean;
   description?: string;
+  /** 'published' once it is out; anything else is unreleased (the audio gate and the album page read it). */
+  status?: string;
   created_at?: string;
   updated_at?: string;
   tracks?: Track[];

@@ -136,6 +136,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     title: `${title} — Case Study`,
     description: `Public documentation: ${title}`,
     path: `/docs/${slug}`,
+    noIndex: true,
   });
 }
 

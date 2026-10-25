@@ -400,12 +400,15 @@ export default function HomePageClient({
                       )}
                     </div>
                     
-                    <button
-                      onClick={openStore}
-                      className="pointer-events-auto px-8 py-3 bg-[#843c2d] text-white font-medium rounded-full hover:bg-[#9a4535] transition-colors"
-                    >
-                      Open Shop
-                    </button>
+                    {/* While the store is closed this did nothing when pressed. */}
+                    {isStoreAccessible && (
+                      <button
+                        onClick={openStore}
+                        className="pointer-events-auto px-8 py-3 bg-[#843c2d] text-white font-medium rounded-full hover:bg-[#9a4535] transition-colors"
+                      >
+                        Open Shop
+                      </button>
+                    )}
                   </div>
                 </div>
               )}

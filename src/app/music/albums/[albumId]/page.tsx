@@ -3,6 +3,7 @@ import { queryDatabase } from '@/lib/db';
 import { Album, Track } from '@/types/music';
 import AlbumPlayer from '@/components/AlbumPlayer';
 import { getSingleStatuses } from '@/lib/loop/singlesStore';
+import { viewerIsAdmin } from '@/lib/viewer';
 import Image from 'next/image';
 import Link from 'next/link';
 
@@ -61,9 +62,22 @@ async function getAlbumData(albumId: string): Promise<{ album: Album; tracks: Tr
   }
 }
 
+/**
+ * An album nobody may see yet is not there at all: its title, cover and track
+ * list are the record's story, and the owner keeps that back until it is out
+ * (2026-10-24: Signs of Life was listed in full on /music while shelved). The
+ * owner and team still see it, to hear and check it.
+ */
+async function visible(albumId: string) {
+  const data = await getAlbumData(albumId);
+  if (!data) return null;
+  if ((data.album.status ?? '').toLowerCase() !== 'published' && !(await viewerIsAdmin())) return null;
+  return data;
+}
+
 export default async function AlbumPage({ params }: AlbumPageProps) {
   const { albumId } = await params;
-  const albumData = await getAlbumData(albumId);
+  const albumData = await visible(albumId);
 
   if (!albumData) {
     notFound();
@@ -140,7 +154,7 @@ export default async function AlbumPage({ params }: AlbumPageProps) {
 
 export async function generateMetadata({ params }: AlbumPageProps) {
   const { albumId } = await params;
-  const albumData = await getAlbumData(albumId);
+  const albumData = await visible(albumId);
 
   if (!albumData) {
     return {

@@ -391,6 +391,9 @@ export function TheSingle({
               </Link>
             </div>
           )}
+          {/* The list of what comes next, only while the rollout runs (lib/loop/rollout.ts). */}
+          {rollout.singles.length > 0 && (
+          <>
           <h2 className="loop-display text-3xl font-bold tracking-tight">Three singles, then the album.</h2>
           <p className="loop-muted mt-2 text-sm leading-relaxed">A music video for each.</p>
 
@@ -413,6 +416,8 @@ export function TheSingle({
             ))}
             <div className="border-t border-ink/15" />
           </div>
+          </>
+          )}
 
           {playable && (
             <>

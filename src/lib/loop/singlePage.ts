@@ -23,11 +23,13 @@ export function singleMeta(
   release: { out: boolean; dateLabel: string | null } = { out: true, dateLabel: null },
 ): { title: string; description: string } {
   const live = facts ? ` The album plays live ${facts.dateLabel} at ${facts.venue}.` : "";
+  // No album title while the rollout is paused (lib/loop/rollout.ts): the single, by its artist.
+  const single_ = single.albumTitle ? `A single from ${single.albumTitle}` : `A single by ${single.artistName}`;
   const what = release.out
-    ? `A single from ${single.albumTitle}, free to hear.`
+    ? `${single_}, free to hear.`
     : release.dateLabel
-      ? `A single from ${single.albumTitle}. Out ${release.dateLabel}.`
-      : `A single from ${single.albumTitle}. Coming soon.`;
+      ? `${single_}. Out ${release.dateLabel}.`
+      : `${single_}. Coming soon.`;
   return {
     title: `${single.title} · ${single.artistName}`,
     description: `${what}${live}`,

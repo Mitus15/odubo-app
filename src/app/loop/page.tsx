@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getCurrentEvent } from "@/lib/loop/hub";
 import { frontSingle, singlePath } from "@/lib/loop/singles";
 import { getSingleStatuses } from "@/lib/loop/singlesStore";
+import { rolloutPaused } from "@/lib/loop/rollout";
 import HubNav from "@/components/loop/shell/HubNav";
 import GatheringHome from "@/components/loop/states/GatheringHome";
 import PortalHome from "@/components/loop/states/PortalHome";
@@ -25,6 +26,9 @@ export default async function Home() {
   // the room, and nobody was, so the front door is the newest single that is
   // out (or, before any is, the next one coming).
   if (event.phase === "archived") {
+    // While the rollout is paused the front door promotes no single: the
+    // record's home is /music (album one, the next one locked).
+    if (await rolloutPaused()) redirect("/music");
     const statuses = await getSingleStatuses().catch(() => null);
     if (statuses) redirect(singlePath(frontSingle(statuses).slug));
   }
