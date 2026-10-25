@@ -33,7 +33,7 @@ interface ShopifyStatus {
 export default function StoreSettingsTab() {
   const [settings, setSettings] = useState<StoreSettings>({
     storeName: 'Odubo Store',
-    storeEmail: 'info@odubo.studio',
+    storeEmail: 'info@odubostudio.com',
     currency: 'USD',
     timezone: 'America/New_York',
     weightUnit: 'lb',

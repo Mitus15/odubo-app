@@ -22,7 +22,7 @@ import { SignJWT, jwtVerify } from 'jose';
 
 // Resend integration
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const RESEND_FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'info@odubo.studio';
+const RESEND_FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'info@odubostudio.com';
 const getSecret = () => new TextEncoder().encode(getJwtSecret());
 
 import { Resend } from 'resend';

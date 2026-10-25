@@ -23,7 +23,7 @@ export function getEmailEnv(): EmailEnv {
   const fromEmail =
     process.env.RESEND_FROM_EMAIL ||
     process.env.EMAIL_FROM ||
-    'Odubo Studio <info@odubo.studio>';
+    'Odubo Studio <info@odubostudio.com>';
   return { resendKey, fromEmail };
 }
 
