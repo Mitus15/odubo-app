@@ -6,7 +6,8 @@
 import type { Metadata } from 'next';
 
 // Base URL for the application
-export const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://odubo.studio';
+// odubo.studio lapsed (2026-07) and is not registered: the live site is www.odubostudio.com.
+export const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://www.odubostudio.com';
 
 // Default SEO values
 export const DEFAULT_SEO = {

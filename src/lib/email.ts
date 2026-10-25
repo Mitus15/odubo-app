@@ -198,7 +198,7 @@ function welcomeEmailHTML(data: WelcomeEmailData): string {
     </div>
 
     <p style="margin:24px 0 0;font-size:14px;color:${BRAND.muted};text-align:center;">
-      <a href="${site}" style="color:${BRAND.accent};text-decoration:none;">odubo.studio</a>
+      <a href="${site}" style="color:${BRAND.accent};text-decoration:none;">${site.replace(/^https?:\/\/(www\.)?/, '')}</a>
     </p>
   `;
 

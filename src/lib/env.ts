@@ -11,7 +11,8 @@ export function getSiteUrl(): string {
     process.env.NEXT_PUBLIC_SITE_URL ||
     process.env.NEXT_PUBLIC_APP_URL ||
     process.env.VERCEL_URL ||
-    'https://odubo.studio';
+    // odubo.studio lapsed (2026-07) and is not registered: the live site is www.odubostudio.com.
+    'https://www.odubostudio.com';
   const withProto = site.startsWith('http') ? site : `https://${site}`;
   return withProto.replace(/\/$/, '');
 }
