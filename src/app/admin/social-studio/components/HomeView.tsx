@@ -331,7 +331,6 @@ export default function HomeView({
               onClick={() => onNavigate('create')}
               className="w-full p-8 rounded-2xl bg-black border border-dashed border-[#302927] hover:border-[#e8a990]/35 transition-all text-center group"
             >
-              <div className="text-3xl mb-3 opacity-60 group-hover:opacity-80 transition-opacity">📅</div>
               <p className="text-sm text-[#726d6c]">Nothing scheduled for today</p>
               <p className="text-xs text-[#e8a990] mt-2 tracking-wide">Tap to create a post</p>
             </button>

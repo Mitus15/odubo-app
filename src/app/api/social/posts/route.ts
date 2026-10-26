@@ -15,7 +15,9 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
-    const limit = Math.min(parseInt(searchParams.get('limit') || '50', 10), 100);
+    // The Studio plans weeks ahead and needs every post at once (126 on 2026-10-25); a page of
+    // 50 sorted latest-first left this week's posts out of Today, Upcoming and Post.
+    const limit = Math.min(parseInt(searchParams.get('limit') || '50', 10), 1000);
     const offset = parseInt(searchParams.get('offset') || '0', 10);
 
     let query = `

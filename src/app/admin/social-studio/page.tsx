@@ -182,11 +182,18 @@ export default function SocialStudioPage() {
     setLoading(true);
     try {
       const [postsRes, accountsRes, campaignsRes, slotsRes] = await Promise.all([
-        fetch('/api/social/posts'),
+        fetch('/api/social/posts?limit=1000'),  // every post: the views filter by date themselves
         fetch('/api/social/accounts'),
         fetch('/api/social/studio/campaigns'),
         fetch('/api/social/studio/slots'),
       ]);
+
+      // Not signed in here (or not an admin): the server keeps the posts back, so ask for
+      // the sign-in instead of showing an empty Studio, and come back after it.
+      if (postsRes.status === 401 || postsRes.status === 403) {
+        window.location.href = `/admin/login?next=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+        return;
+      }
 
       if (postsRes.ok) {
         const data = await postsRes.json();

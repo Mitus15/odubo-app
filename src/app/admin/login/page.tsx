@@ -38,8 +38,10 @@ export default function AdminLoginPage() {
         localStorage.setItem('token', data.token);
       }
       
-      // Redirect to admin dashboard
-      router.replace('/admin');
+      // Back where the sign-in was asked for (?next=/social-studio), else the dashboard.
+      // Only a path on this site: never another host.
+      const next = new URLSearchParams(window.location.search).get('next');
+      router.replace(next && next.startsWith('/') && !next.startsWith('//') ? next : '/admin');
     } catch (e: any) {
       setError(e.message || 'Login failed');
     } finally {

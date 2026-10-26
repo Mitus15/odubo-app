@@ -2,12 +2,19 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { usePathname } from "next/navigation";
 
 interface Project { id: string; title: string; icon: string | null; }
 
 type CaptureMode = "task" | "note";
 
 export default function QuickCapture() {
+  // The Social Studio has its own bottom bar and its own +: this button sat on top of More.
+  const inStudio = (usePathname() || "").includes("social-studio");
+  return inStudio ? null : <Capture />;
+}
+
+function Capture() {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<CaptureMode>("task");
   const [projects, setProjects] = useState<Project[]>([]);
