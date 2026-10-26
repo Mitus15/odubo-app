@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { clearSignIn } from '@/lib/signIn';
 
 interface UserProfile {
   id: string;
@@ -148,10 +149,9 @@ export default function AccountTab() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
+    clearSignIn();
     sessionStorage.removeItem('me.cache');
     sessionStorage.removeItem('me.cache.ts');
-    document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
     window.location.href = '/login';
   };
 

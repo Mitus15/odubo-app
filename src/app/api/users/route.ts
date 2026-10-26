@@ -17,6 +17,7 @@ import {
 import { NextRequest, NextResponse } from 'next/server';
 export const runtime = 'nodejs';
 import { getAuthTokenFromRequest, getJwtSecret } from '@/lib/auth';
+import { signInCookieDomain } from '@/lib/signIn';
 import { rateLimit } from '@/lib/rateLimit';
 import { SignJWT, jwtVerify } from 'jose';
 
@@ -548,14 +549,18 @@ export async function POST(req: NextRequest) {
           path: '/',
           maxAge: 60 * 60 * 24 * 7,
         };
-        // Only scope the cookie to a parent domain when explicitly configured.
-        // Set AUTH_COOKIE_DOMAIN=.odubo.studio to share sessions across subdomains
-        // (admin.odubo.studio + odubo.studio). Leave unset (e.g. on *.vercel.app) so the
-        // cookie binds to the current host and login works anywhere.
-        if (process.env.AUTH_COOKIE_DOMAIN) {
-          cookieOptions.domain = process.env.AUTH_COOKIE_DOMAIN;
-        }
+        // On the live domains the cookie belongs to the whole apex, so one sign-in covers
+        // www, admin. and moments. (src/lib/signIn.ts); elsewhere (*.vercel.app, localhost)
+        // it binds to the current host. AUTH_COOKIE_DOMAIN still overrides.
+        const host = req.headers.get('x-forwarded-host') || req.headers.get('host') || req.nextUrl.hostname;
+        const domain = signInCookieDomain(host);
+        if (domain) cookieOptions.domain = domain;
         res.cookies.set('token', token, cookieOptions);
+        if (domain) {
+          // a sign-in from before it was shared sits on this host alone; drop it so the
+          // two never disagree (appended after cookies.set, which rewrites the header)
+          res.headers.append('Set-Cookie', `token=; Path=/; Max-Age=0; SameSite=Lax${cookieOptions.secure ? '; Secure' : ''}`);
+        }
       } catch {}
       
       return res;

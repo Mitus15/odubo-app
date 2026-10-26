@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { clearSignIn } from '@/lib/signIn';
 
 // Helper function to decode JWT payload without verification
 function decodeJWT(token: string): any {
@@ -72,7 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = () => {
-    localStorage.removeItem('token');
+    clearSignIn();
     setUser(null);
     setIsAuthenticated(false);
   };

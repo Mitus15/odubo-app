@@ -15,6 +15,7 @@ import React, {
   ReactNode,
 } from 'react';
 import { useRouter } from 'next/navigation';
+import { clearSignIn } from '@/lib/signIn';
 import type { HubUser, Module, Permission, ResolvedPermissions } from '@/lib/hub/types';
 
 // =============================================================================
@@ -84,7 +85,7 @@ export function HubUserProvider({
       if (!response.ok) {
         if (response.status === 401) {
           // Token expired or invalid
-          localStorage.removeItem('token');
+          clearSignIn();
           setUser(null);
           return;
         }
@@ -120,7 +121,7 @@ export function HubUserProvider({
 
   // Logout
   const logout = useCallback(() => {
-    localStorage.removeItem('token');
+    clearSignIn();
     setUser(null);
     router.push(loginPath);
   }, [router, loginPath]);

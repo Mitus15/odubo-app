@@ -5,6 +5,7 @@ import { COUNTRY_COOKIE, normalizeCountry } from '@/lib/store/money';
 import { VOTER_COOKIE, verifyVoter, mintVoter } from '@/lib/loop/anthem-identity';
 import { ADMIN_COOKIE as LOOP_ADMIN_COOKIE, verifyAdminSession as verifyLoopAdminSession } from '@/lib/loop/admin-auth';
 import { verifyUserFromRequest, isAdminUser } from '@/lib/auth';
+import { liveApex } from '@/lib/signIn';
 
 /**
  * Subdomain routing
@@ -18,12 +19,8 @@ import { verifyUserFromRequest, isAdminUser } from '@/lib/auth';
  * `odubostudio.com` does NOT contain the substring `odubo.studio`, so the old
  * `includes()` check silently reported "not production" on the live domain.
  */
-const PRODUCTION_APEXES = ['odubostudio.com', 'odubo.studio'];
-
-function productionApex(hostname: string): string | null {
-  const host = (hostname.split(':')[0] || '').toLowerCase();
-  return PRODUCTION_APEXES.find((apex) => host === apex || host.endsWith(`.${apex}`)) ?? null;
-}
+// the live apexes, one list with the shared sign-in (src/lib/signIn.ts)
+const productionApex = liveApex;
 function handleSubdomainRouting(request: NextRequest): NextResponse | null {
   const url = request.nextUrl.clone();
   const hostname = request.headers.get('host') || '';

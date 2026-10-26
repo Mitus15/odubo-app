@@ -30,6 +30,7 @@ import GoogleAnalytics from "@/components/analytics/GoogleAnalytics";
 import { QuickShopProvider } from "@/contexts/QuickShopContext";
 import QuickShopModal from "@/components/shop/QuickShopModal";
 import { AnalyticsProvider } from "@/contexts/AnalyticsContext";
+import { SIGN_IN_SYNC } from "@/lib/signIn";
 // import AccessibilityEnhancer from "./components/AccessibilityEnhancer";
 
 const geistSans = Geist({
@@ -70,6 +71,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        {/* The sign-in follows the shared cookie on every address of the site, before anything reads it */}
+        <script dangerouslySetInnerHTML={{ __html: SIGN_IN_SYNC }} />
         {/* Preconnect to video CDN - saves 100-300ms per video load */}
         <link rel="preconnect" href="https://videodelivery.net" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://videodelivery.net" />

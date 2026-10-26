@@ -2,6 +2,7 @@
 
 import { useEffect, useState, ReactNode, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { clearSignIn } from "@/lib/signIn";
 import Link from "next/link";
 import UserProvider, { useUser } from "./UserProvider";
 import TabContent from "./TabContent";
@@ -578,13 +579,11 @@ function AdminFooter() {
   const { user } = useUser();
 
   const handleLogout = () => {
-    // Clear localStorage
-    localStorage.removeItem('token');
+    // The sign-in, here and on every address of the site
+    clearSignIn();
     // Clear sessionStorage cache
     sessionStorage.removeItem('me.cache');
     sessionStorage.removeItem('me.cache.ts');
-    // Clear cookie
-    document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
     // Redirect to login
     window.location.href = '/login';
   };

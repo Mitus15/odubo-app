@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, useCallback } from "react";
 import Link from "next/link";
+import { clearSignIn } from "@/lib/signIn";
 
 // ============================================================================
 // TYPES
@@ -1251,8 +1252,7 @@ export default function SocialOpsContent({ showHeader = true }: SocialOpsContent
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+    clearSignIn();
     setUser(null);
   };
 

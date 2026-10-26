@@ -2,6 +2,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { clearSignIn } from "@/lib/signIn";
 import { useState } from "react";
 
 const adminNavItems = [
@@ -21,9 +22,7 @@ export default function AdminNavigation() {
 
   const [open, setOpen] = useState(false);
   function logout() {
-    try {
-      localStorage.removeItem('token');
-    } catch {}
+    clearSignIn();
     // Best-effort redirect to login
     if (typeof window !== 'undefined') window.location.href = '/login';
   }
