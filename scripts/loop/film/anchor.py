@@ -1,27 +1,40 @@
 """
-Where the badge sits: on his heart.
+Where the seal sits on him, followed through the take.
 
-The canon puts the badge over the heart (a circumcision of the heart). The
-heart is on the LEFT of the chest, his left: facing the camera that is the
-right of the screen. From the pose landmarks:
+The seal is the player's marker: the sign a game puts on the character you
+control (owner, 2026-09-29: "as if someone was using a controller"). Three
+places, one tracker:
 
-  centre    a third of the way down the torso (shoulders to hips), moved a
-            fifth of the way toward his left shoulder
-  size      a fraction of the shoulder width, so it grows and shrinks with him
-  angle     the line of his shoulders
+  crown   floating over his head, as the Sims mark the one being played
+  feet    flat on the floor under him, as sports games ring the player you hold
+  heart   on his chest, a badge on the clothes (the first design; the owner
+          set it aside: it did not read as embroidery)
 
-It hides when the heart is not ours to see: facing away (his left shoulder is
-on the screen's left), turned side-on (shoulders narrower than a third of
-their usual width), or the shoulders not seen. It fades rather than blinks.
+The heart: a third of the way down the torso, a fifth toward his left
+shoulder; it hides when he faces away or turns side-on. The crown and the
+feet never hide for that: the player's marker stays on the player.
+
+Each is small, the mustard seed (compose.py grows it into the Danceman at
+the end of every clip). Sizes are a share of his shoulder width.
 """
-from collections import deque
 import numpy as np
+from scipy.ndimage import gaussian_filter1d, median_filter, minimum_filter1d, percentile_filter, uniform_filter1d
 
 L_SHOULDER, R_SHOULDER, L_HIP, R_HIP = 11, 12, 23, 24
+NOSE, L_EYE, R_EYE, L_EAR, R_EAR = 0, 2, 5, 7, 8
+FEET = slice(27, 33)  # ankles, heels, toes
 DOWN, TOWARD_LEFT = 0.30, 0.22
-SIZE = 0.26           # badge width as a fraction of the shoulder width
+CROWN = 0.55          # the top of his head, above the eyes, as a share of eyes-to-shoulders
+SIZE = 0.11           # badge width as a fraction of the shoulder width: the seed
+SIZES = {"heart": SIZE, "crown": 0.20, "feet": 1.5}  # the marker's width, by place (the floor one rings his stance)
 MIN_VIS = 0.5
-SIDE_ON = 0.35        # shoulder width under this share of its running median
+SIDE_ON = 0.35        # shoulder width under this share of his facing width (the widest, over 10 s)
+# Smoothing, in seconds of the take. Position a little (the tremble of the
+# pose model), size and angle a lot: the seed does not breathe or wobble.
+POS_S, SIZE_S, ANGLE_S = 0.07, 0.5, 0.2
+BLINK_S = 0.2         # a lost heart shorter than this is not a disappearance
+LEAD_S = 0.15         # the crown keeps to the highest his head reaches over this long, so smoothing never sinks it in
+FADE_S = 0.2
 
 
 def heart(lm: np.ndarray, w: int, h: int):
@@ -37,37 +50,146 @@ def heart(lm: np.ndarray, w: int, h: int):
     return float(centre[0]), float(centre[1]), width, angle, seen, facing
 
 
-class HeartTrack:
-    """Smooths the heart over time and decides how visible the badge is (0..1)."""
+def head_x(lm: np.ndarray, w: int) -> float:
+    """The middle of his head across the frame (px): nose, eyes and ears."""
+    return float(lm[[NOSE, L_EYE, R_EYE, L_EAR, R_EAR], 0].mean() * w)
 
-    def __init__(self, fade_frames: int = 6, ema: float = 0.35, median: int = 5):
-        self.hist = deque(maxlen=median)
-        self.widths = deque(maxlen=90)
-        self.ema = ema
-        self.state = None
-        self.opacity = 0.0
-        self.step = 1.0 / max(1, fade_frames)
 
-    def update(self, lm, w: int, h: int):
-        """Returns (x, y, size, angle, opacity) or None before he is first found."""
-        want = 0.0
-        if lm is not None:
-            x, y, width, angle, seen, facing = heart(lm, w, h)
-            self.widths.append(width)
-            usual = float(np.median(self.widths))
-            side_on = width < SIDE_ON * usual
-            self.hist.append((x, y, width, angle))
-            med = np.median(np.array(self.hist), 0)
-            if self.state is None:
-                self.state = med.copy()
-            else:
-                # Angles wrap: ease through the short way round.
-                d = med - self.state
-                d[3] = (d[3] + 180) % 360 - 180
-                self.state = self.state + self.ema * d
-            want = 1.0 if (seen and facing and not side_on) else 0.0
-        self.opacity += np.clip(want - self.opacity, -self.step, self.step)
-        if self.state is None:
+def head_top(alpha: np.ndarray, x: float, half: float, eyes: float, reach: float, scale: float = 1.0) -> float:
+    """
+    The top of his head (px in the take; nan if the matte is not there): in a
+    narrow column at `x` (`half` either side), the matte from his eyes up,
+    without a break. A hand held up over his head with air under it is not his
+    head; one resting on it is, and the marker clears it. If the eyes' row is
+    off the matte (the pose a little out), the nearest row on it within
+    `reach` starts the climb. `alpha` may be read smaller than the take, by `scale`.
+    """
+    a = int(max(0, np.floor((x - half) * scale)))
+    b = int(min(alpha.shape[1], np.ceil((x + half) * scale)))
+    if b <= a:
+        return float("nan")
+    on = (alpha[:, a:b] > 127).any(1)
+    r0 = int(np.clip(round(eyes * scale), 0, len(on) - 1))
+    if not on[r0]:
+        lo, hi = max(0, r0 - int(reach * scale)), min(len(on), r0 + int(reach * scale) + 1)
+        near = np.where(on[lo:hi])[0] + lo
+        if not len(near):
+            return float("nan")
+        r0 = int(near[np.argmin(np.abs(near - r0))])
+    gaps = np.where(~on[:r0 + 1])[0]
+    return float((gaps[-1] + 1 if len(gaps) else 0) / scale)
+
+
+def eyes_and_neck(lm: np.ndarray, w: int, h: int) -> tuple[float, float]:
+    """The height of his eyes, and how far under them his shoulders are (px)."""
+    p = lm[:, :2] * np.array([w, h], np.float32)
+    eyes = (p[L_EYE] + p[R_EYE]) / 2
+    shoulders = (p[L_SHOULDER] + p[R_SHOULDER]) / 2
+    return float(eyes[1]), max(1.0, float(shoulders[1] - eyes[1]))
+
+
+def crown(lm: np.ndarray, w: int, h: int):
+    """Over his head: (x, y of the top of his head, shoulder width, 0, seen, True)."""
+    p = lm[:, :2] * np.array([w, h], np.float32)
+    eyes, neck = eyes_and_neck(lm, w, h)
+    x = float(p[[NOSE, L_EYE, R_EYE, L_EAR, R_EAR], 0].mean())
+    width = float(np.linalg.norm(p[L_SHOULDER] - p[R_SHOULDER]))
+    seen = bool(min(lm[L_SHOULDER, 2], lm[R_SHOULDER, 2]) >= MIN_VIS or lm[[NOSE, L_EYE, R_EYE], 2].mean() >= MIN_VIS)
+    return x, float(eyes - CROWN * neck), width, 0.0, seen, True
+
+
+def feet(lm: np.ndarray, w: int, h: int):
+    """Under him: (x between his feet, y of the lowest foot, shoulder width, 0, seen, True)."""
+    p = lm[:, :2] * np.array([w, h], np.float32)
+    width = float(np.linalg.norm(p[L_SHOULDER] - p[R_SHOULDER]))
+    seen = bool(lm[FEET, 2].mean() >= 0.3 or min(lm[L_HIP, 2], lm[R_HIP, 2]) >= MIN_VIS)
+    return float(p[FEET, 0].mean()), float(p[FEET, 1].max()), width, 0.0, seen, True
+
+
+ANCHORS = {"heart": heart, "crown": crown, "feet": feet}
+
+
+def odd(n: float) -> int:
+    return max(1, int(round(n)) | 1)
+
+
+class Path:
+    """
+    A place on him (heart, crown or feet) over a stretch of the take, smoothed
+    both ways in time.
+
+    The take is recorded, so the smoothing looks ahead as well as back: the
+    seal stays with him without trailing behind when he moves. A centred
+    median throws out the pose model's one-frame glitches, then a Gaussian
+    takes the tremble out. Frames where he is not found are filled from the
+    frames around them, and the seal fades there instead.
+
+    On the heart the size follows his shoulders (a badge turns with him); over
+    his head or under his feet it is his facing width, so a marker does not
+    shrink when he turns.
+    """
+
+    def __init__(self, poses: dict, k0: int, k1: int, w: int, h: int, fps: float, where: str = "heart",
+                 tops: np.ndarray | None = None):
+        anchor = ANCHORS[where]
+        self.k0 = k0
+        n = max(0, k1 - k0)
+        raw = np.full((n, 4), np.nan)
+        head = np.full((n, 2), np.nan)  # the crown's: his eyes' height, and his neck
+        seen = np.zeros(n, bool)
+        for i in range(n):
+            lm = poses.get(k0 + i)
+            if lm is not None:
+                x, y, width, angle, ok, facing = anchor(lm, w, h)
+                raw[i] = (x, y, width, angle)
+                head[i] = eyes_and_neck(lm, w, h)
+                seen[i] = ok and facing
+        have = ~np.isnan(raw[:, 0])
+        self.track = None
+        if not have.any():
+            return
+        idx = np.arange(n)
+        filled = np.column_stack([np.interp(idx, idx[have], raw[have, j]) for j in range(4)])
+        filled[:, 3] = np.degrees(np.unwrap(np.radians(filled[:, 3])))
+        window = odd(10 * fps)
+        if where == "crown":
+            # Leaning toward the camera his head drops in front of his
+            # shoulders and the neck shortens to nothing in the picture (Santé,
+            # 2026-10-12: from 160 px to 7), but his head is no smaller: the
+            # top of it is the usual neck over the eyes, the usual read as the
+            # width's is, near the top of the last and next few seconds.
+            eyes, neck = (np.interp(idx, idx[have], head[have, j]) for j in range(2))
+            filled[:, 1] = eyes - CROWN * percentile_filter(neck, 90, size=window, mode="nearest")
+            if tops is not None:
+                # The matte knows where his head ends (head.py): the marker
+                # only ever rises to clear it, never sinks below the guess.
+                ks = np.clip(np.arange(k0, k1), 0, len(tops) - 1)
+                seen_top = np.where((np.arange(k0, k1) >= 0) & (np.arange(k0, k1) < len(tops)), tops[ks], np.nan)
+                filled[:, 1] = np.fmin(filled[:, 1], seen_top)
+        # Facing us his shoulders are at their widest: the usual width is near
+        # the top of the last and next few seconds, so a long turn stays a turn.
+        usual = percentile_filter(filled[:, 2], 90, size=window, mode="nearest")
+        if where == "heart":
+            seen &= filled[:, 2] >= SIDE_ON * usual
+        else:
+            filled[:, 2] = usual
+        med = median_filter(filled, size=(5, 1), mode="nearest")
+        x = gaussian_filter1d(med[:, 0], POS_S * fps, mode="nearest")
+        top = minimum_filter1d(med[:, 1], odd(LEAD_S * fps), mode="nearest") if where == "crown" else med[:, 1]
+        y = gaussian_filter1d(top, POS_S * fps, mode="nearest")
+        size = gaussian_filter1d(med[:, 2], SIZE_S * fps, mode="nearest") * SIZES[where]
+        angle = gaussian_filter1d(med[:, 3], ANGLE_S * fps, mode="nearest")
+        vis = median_filter(seen.astype(np.float64), size=odd(BLINK_S * fps), mode="nearest")
+        opacity = uniform_filter1d(vis, size=odd(FADE_S * fps), mode="nearest")
+        self.track = np.column_stack([x, y, size, angle, opacity])
+
+    def at(self, k: int):
+        """(x, y, size, angle, opacity) at frame k of the take, or None if he is never found."""
+        if self.track is None:
             return None
-        x, y, width, angle = self.state
-        return float(x), float(y), float(width * SIZE), float(angle), float(self.opacity)
+        x, y, size, angle, opacity = self.track[min(max(k - self.k0, 0), len(self.track) - 1)]
+        return float(x), float(y), float(size), float(angle), float(opacity)
+
+
+def HeartPath(poses: dict, k0: int, k1: int, w: int, h: int, fps: float) -> Path:
+    return Path(poses, k0, k1, w, h, fps, "heart")

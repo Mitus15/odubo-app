@@ -1,0 +1,15 @@
+{
+  "name": "Training: Memories",
+  "hud": {
+    "level": "TRAINING",
+    "title": "Memories",
+    "artist": "David Guetta ft. Kid Cudi",
+    "player": "Mitus Young History",
+    "progress": false
+  },
+  "stage": {
+    "floor": "lacquer",
+    "light": "key",
+    "effects": []
+  }
+}

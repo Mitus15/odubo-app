@@ -1,0 +1,15 @@
+{
+  "name": "Training: Give Life Back to Music",
+  "hud": {
+    "level": "TRAINING",
+    "title": "Give Life Back to Music",
+    "artist": "Daft Punk",
+    "player": "Mitus Young History",
+    "progress": false
+  },
+  "stage": {
+    "floor": "plain",
+    "light": "key",
+    "effects": []
+  }
+}

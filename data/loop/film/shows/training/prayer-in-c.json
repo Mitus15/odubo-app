@@ -1,0 +1,15 @@
+{
+  "name": "Training: Prayer in C",
+  "hud": {
+    "level": "TRAINING",
+    "title": "Prayer in C",
+    "artist": "Lilly Wood & The Prick",
+    "player": "Mitus Young History",
+    "progress": false
+  },
+  "stage": {
+    "floor": "plain",
+    "light": "key",
+    "effects": []
+  }
+}

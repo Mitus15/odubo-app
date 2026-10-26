@@ -1,0 +1,15 @@
+{
+  "name": "Training: Hold the Line",
+  "hud": {
+    "level": "TRAINING",
+    "title": "Hold the Line",
+    "artist": "Toto",
+    "player": "Mitus Young History",
+    "progress": false
+  },
+  "stage": {
+    "floor": "plain",
+    "light": "key",
+    "effects": []
+  }
+}

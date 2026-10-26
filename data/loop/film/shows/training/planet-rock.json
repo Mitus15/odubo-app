@@ -1,0 +1,15 @@
+{
+  "name": "Training: Planet Rock",
+  "hud": {
+    "level": "TRAINING",
+    "title": "Planet Rock",
+    "artist": "Afrika Bambaataa",
+    "player": "Mitus Young History",
+    "progress": false
+  },
+  "stage": {
+    "floor": "plain",
+    "light": "key",
+    "effects": []
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "name": "Training: Raise Da Roof",
+  "hud": {
+    "level": "TRAINING",
+    "title": "Raise Da Roof",
+    "artist": "Jazzman Olofin",
+    "player": "Mitus Young History",
+    "progress": false
+  },
+  "stage": {
+    "floor": "plain",
+    "light": "key",
+    "effects": []
+  }
+}

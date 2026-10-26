@@ -1,0 +1,15 @@
+{
+  "name": "Training: Molowo Noni",
+  "hud": {
+    "level": "TRAINING",
+    "title": "Molowo Noni",
+    "artist": "Samklef",
+    "player": "Mitus Young History",
+    "progress": false
+  },
+  "stage": {
+    "floor": "plain",
+    "light": "key",
+    "effects": []
+  }
+}

@@ -15,14 +15,41 @@ from take import take_dir
 import seg
 
 
+def ratio(r: str) -> float:
+    num, den = (r.split("/") + ["1"])[:2]
+    return float(num) / float(den) if float(den or 0) else 0.0
+
+
+def true_rate(r_frame_rate: str, avg_frame_rate: str) -> float:
+    """
+    The frames a second the camera made. ffprobe's r_frame_rate is usually it,
+    but a phone can write a finer timebase (IMG_0330.MOV: r 120, the frames
+    30), and every stage read 120: each frame four times over, at a quarter of
+    the speed (2026-10-20). The average rate counts the real frames, so it
+    wins when the two disagree, as the whole number it wobbles round (29.96,
+    a phone's variable timing). Otherwise the stated rate stands (29.97 is
+    29.97: rounded, a long take drifts out of sync).
+    """
+    r, avg = ratio(r_frame_rate), ratio(avg_frame_rate)
+    if avg > 0 and r > 1.5 * avg:
+        return float(round(avg)) if abs(avg - round(avg)) < 0.1 else round(avg, 3)
+    return round(r or avg, 3)
+
+
 def probe(path: Path) -> dict:
     out = subprocess.run(["ffprobe", "-v", "error", "-show_entries",
-                          "stream=codec_type,width,height,r_frame_rate:format=duration", "-of", "json", str(path)],
+                          "stream=codec_type,width,height,r_frame_rate,avg_frame_rate:stream_side_data=rotation:format=duration",
+                          "-of", "json", str(path)],
                          capture_output=True, text=True, check=True).stdout
     j = json.loads(out)
     v = next(s for s in j["streams"] if s["codec_type"] == "video")
-    num, den = (v["r_frame_rate"].split("/") + ["1"])[:2]
-    return {"w": int(v["width"]), "h": int(v["height"]), "fps": round(float(num) / float(den or 1), 3),
+    w, h = int(v["width"]), int(v["height"])
+    # A phone stores portrait as landscape plus a rotation, and ffmpeg turns
+    # the frames upright when it decodes them: the take is the upright size.
+    turn = next((int(sd["rotation"]) for sd in v.get("side_data_list", []) if "rotation" in sd), 0)
+    if abs(turn) % 180 == 90:
+        w, h = h, w
+    return {"w": w, "h": h, "fps": true_rate(v["r_frame_rate"], v.get("avg_frame_rate", "0/0")),
             "duration": float(j["format"]["duration"]),
             "audio": any(s["codec_type"] == "audio" for s in j["streams"])}
 

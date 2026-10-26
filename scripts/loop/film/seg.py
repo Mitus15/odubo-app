@@ -1,10 +1,13 @@
 """
-MediaPipe, set up once for the film pipeline: the person mask and the pose.
+MediaPipe, set up once for the film pipeline: the person mask, the pose and his bare skin.
 
 Person mask: the selfie segmenter (its single confidence mask IS the person).
 Pose: PoseLandmarker, 33 landmarks per frame, used for the heart (where the
 badge sits) and the feet (where his shadow meets the ground).
+Skin: the multiclass selfie segmenter's body-skin mask, so the figure can draw
+an arm where it crosses his body (skin.py).
 """
+import cv2
 import numpy as np
 import mediapipe as mp
 from mediapipe.tasks import python as mpt
@@ -13,6 +16,8 @@ from film_common import model
 
 SEGMENTER = "selfie_segmenter.tflite"
 POSE = "pose_landmarker_full.task"
+SKIN = "selfie_multiclass_256x256.tflite"
+SKIN_CLASS = 2  # the multiclass model's categories: background, hair, body skin, face skin, clothes, others
 
 
 def segmenter(video: bool = True):
@@ -23,6 +28,52 @@ def segmenter(video: bool = True):
         output_category_mask=False,
     )
     return vision.ImageSegmenter.create_from_options(opts)
+
+
+def skin_segmenter():
+    """The multiclass selfie model, which tells his bare skin (arms, hands) from his clothes.
+    On the GPU (four-channel frames, as for the pose): 11 ms a crop there, 130 on the CPU."""
+    opts = vision.ImageSegmenterOptions(
+        base_options=mpt.BaseOptions(model_asset_path=str(model(SKIN)), delegate=mpt.BaseOptions.Delegate.GPU),
+        running_mode=vision.RunningMode.IMAGE,
+        output_confidence_masks=True,
+        output_category_mask=False,
+    )
+    return vision.ImageSegmenter.create_from_options(opts)
+
+
+def skin(seg, rgb: np.ndarray) -> np.ndarray:
+    """Confidence that each pixel is bare body skin (not the face), float32 0..1, the frame's size."""
+    c = seg.segment(_rgba(rgb)).confidence_masks[SKIN_CLASS].numpy_view().astype(np.float32)
+    h, w = rgb.shape[:2]
+    return c.reshape(c.shape[:2]) if c.shape[:2] == (h, w) else cv2.resize(c, (w, h), interpolation=cv2.INTER_LINEAR)
+
+
+SKIN_REBUILD = 1000  # crops between fresh skin segmenters
+
+
+class Skin:
+    """
+    Bare skin over a whole take: skin() with the GPU's leak handled. As with
+    the pose (Pose, below), the GPU delegate keeps the Metal copy of every
+    image until the segmenter is closed: 256 KB a crop, so a 5:28 take ran out
+    at frame 8100 (measured, 2026-10-19). Rebuilt every SKIN_REBUILD crops.
+    """
+
+    def __init__(self):
+        self.seg, self.used = None, 0
+
+    def __call__(self, rgb: np.ndarray) -> np.ndarray:
+        if self.seg is None or self.used >= SKIN_REBUILD:
+            self.close()
+            self.seg, self.used = skin_segmenter(), 0
+        self.used += 1
+        return skin(self.seg, rgb)
+
+    def close(self):
+        if self.seg is not None:
+            self.seg.close()
+            self.seg = None
 
 
 def poser(video: bool = True):
@@ -66,3 +117,41 @@ def landmarks(pose, rgb: np.ndarray, ts_ms: int | None = None):
         return None
     h, w = rgb.shape[:2]
     return np.array([[p.x * w, p.y * h, p.visibility] for p in res.pose_landmarks[0]], dtype=np.float32)
+
+
+POSE_HEIGHT = 960   # the pose model works at 256 px; more than this only costs memory
+POSE_REBUILD = 500  # frames between fresh landmarkers
+
+
+class Pose:
+    """
+    The pose over a whole take, in order. Returns 33 (x, y, visibility) in the
+    frame's own pixels, or None.
+
+    mediapipe 1.0.1's GPU delegate keeps the Metal copy of every frame it is
+    given until the landmarker is closed: 8 MB a frame at 1080x1920, so a five
+    minute portrait take ran the GPU out of memory at frame 1240 (measured).
+    So frames go in at most POSE_HEIGHT tall, and the landmarker is closed and
+    rebuilt every POSE_REBUILD frames, which frees them.
+    """
+
+    def __init__(self):
+        self.pose, self.used = None, 0
+
+    def __call__(self, rgb: np.ndarray, ts_ms: int):
+        if self.pose is None or self.used >= POSE_REBUILD:
+            self.close()
+            self.pose, self.used = poser(video=True), 0
+        self.used += 1
+        h, w = rgb.shape[:2]
+        k = min(1.0, POSE_HEIGHT / h)
+        small = cv2.resize(rgb, (round(w * k), round(h * k)), interpolation=cv2.INTER_AREA) if k < 1 else rgb
+        lm = landmarks(self.pose, small, ts_ms)
+        if lm is not None:
+            lm[:, :2] /= k
+        return lm
+
+    def close(self):
+        if self.pose is not None:
+            self.pose.close()
+            self.pose = None

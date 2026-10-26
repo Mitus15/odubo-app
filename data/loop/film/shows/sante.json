@@ -1,0 +1,5 @@
+{
+  "name": "Santé",
+  "hud": {"level": "1-3", "title": "Santé", "artist": "Stromae", "player": "Mitus Young History"},
+  "stage": {"floor": "plain", "light": "key", "effects": []}
+}

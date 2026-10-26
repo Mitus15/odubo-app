@@ -1,0 +1,15 @@
+{
+  "name": "Training: Monkey",
+  "hud": {
+    "level": "TRAINING",
+    "title": "Monkey",
+    "artist": "M.I Abaga",
+    "player": "Mitus Young History",
+    "progress": false
+  },
+  "stage": {
+    "floor": "lacquer",
+    "light": "key",
+    "effects": []
+  }
+}

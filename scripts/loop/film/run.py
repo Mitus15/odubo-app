@@ -4,7 +4,7 @@ A take, end to end.
     npm run film:run -- "<the take>" [--name=<take>] [--drafts] [--height=2160]
 
   ingest -> align (by listening; --push saves each song's range) -> segment
-  -> figure -> pull the story -> cards -> the outro marks -> for every card
+  -> paint -> figure -> pull the story -> cards -> the outro marks -> for every card
   with a moment: its clip (tease audio before the song is out, the song
   after) -> for every song: its 16:9 cut -> the film.
 
@@ -52,8 +52,10 @@ def main(argv):
         py("align.py", name, "--push")
     if not (d / "mask.mkv").exists():
         py("segment.py", name)
+    if not (d / "paint.mkv").exists():
+        py("paint.py", name)
     if not (d / "labels.mkv").exists():
-        py("figure.py", name, f"--height={height}")
+        py("figure.py", name, f"--height={height}", f"--look={opts.get('look', 'gloss')}")
     node("pull.ts", name, *(["--drafts"] if "drafts" in flags else []))
     node("cards.ts", name, f"--film-height={height}")
     py("outro.py")

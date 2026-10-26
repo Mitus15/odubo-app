@@ -1,0 +1,15 @@
+{
+  "name": "Training: On Form",
+  "hud": {
+    "level": "TRAINING",
+    "title": "On Form",
+    "artist": "Burna Boy",
+    "player": "Mitus Young History",
+    "progress": false
+  },
+  "stage": {
+    "floor": "lacquer",
+    "light": "key",
+    "effects": []
+  }
+}

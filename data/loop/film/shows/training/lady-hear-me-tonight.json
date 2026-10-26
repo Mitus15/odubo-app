@@ -1,0 +1,15 @@
+{
+  "name": "Training: Lady (Hear Me Tonight)",
+  "hud": {
+    "level": "TRAINING",
+    "title": "Lady (Hear Me Tonight)",
+    "artist": "Modjo",
+    "player": "Mitus Young History",
+    "progress": false
+  },
+  "stage": {
+    "floor": "plain",
+    "light": "key",
+    "effects": []
+  }
+}

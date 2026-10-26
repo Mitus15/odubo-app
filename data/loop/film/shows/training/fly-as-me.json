@@ -1,0 +1,15 @@
+{
+  "name": "Training: Fly as Me",
+  "hud": {
+    "level": "TRAINING",
+    "title": "Fly as Me",
+    "artist": "Silk Sonic",
+    "player": "Mitus Young History",
+    "progress": false
+  },
+  "stage": {
+    "floor": "plain",
+    "light": "key",
+    "effects": []
+  }
+}

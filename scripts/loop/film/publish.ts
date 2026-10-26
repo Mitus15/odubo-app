@@ -25,7 +25,7 @@ import os from "node:os";
 import path from "node:path";
 import { executeQuery, queryDatabase } from "../../../src/lib/loop/db";
 import { setSetting } from "../../../src/lib/loop/loopSetting";
-import { SONGS, ALBUM_ID } from "../../../src/lib/loop/songs";
+import { SONGS, ALBUM_ID, albumOfSong } from "../../../src/lib/loop/songs";
 import { clipCaption, captionIssues, HASHTAGS } from "../../../src/lib/loop/film/caption";
 import { getSingleStatuses } from "../../../src/lib/loop/singlesStore";
 import { getPublicBaseUrl } from "../../../src/lib/loop/publicUrl";
@@ -108,7 +108,7 @@ async function clips(take: string) {
                            created_at, updated_at)
        VALUES (?1, ?1, ?2, ?3, ?4, ?5, ?6, 'clip', 0, 'archived', 'published', ?7, ?8, ?9, ?10, ?11, ?12, ?12)`,
       [uid, `${chapter?.title ?? card.chapter} · ${card.verseRef}`, caption, `https://iframe.videodelivery.net/${uid}`, poster, mp4,
-       song?.trackId ?? null, ALBUM_ID, card.id, card.chapter, duration, now],
+       song?.trackId ?? null, song ? albumOfSong(song).albumId : ALBUM_ID, card.id, card.chapter, duration, now],
     );
     await executeQuery(`UPDATE loop_film_cards SET video_id = ?1, updated_at = ?2 WHERE id = ?3`, [uid, now, card.id]);
     await executeQuery(
@@ -134,6 +134,7 @@ async function film(take: string) {
   if (!APPLY) return;
   const { uid, mp4, duration } = await upload(file);
   const now = new Date().toISOString();
+  // The film is both albums, danced in one take; it hangs off Vol. 1, the first out.
   await executeQuery(
     `INSERT INTO videos (uid, stream_video_id, title, description, url, poster_url, mp4_url, type, is_public,
                          publication_status, status, album_id, duration_seconds, created_at, updated_at)

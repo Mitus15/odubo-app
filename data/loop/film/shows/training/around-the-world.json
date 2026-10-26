@@ -1,0 +1,15 @@
+{
+  "name": "Training: Around the World",
+  "hud": {
+    "level": "TRAINING",
+    "title": "Around the World",
+    "artist": "Daft Punk",
+    "player": "Mitus Young History",
+    "progress": false
+  },
+  "stage": {
+    "floor": "plain",
+    "light": "key",
+    "effects": []
+  }
+}
