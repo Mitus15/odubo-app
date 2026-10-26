@@ -36,3 +36,23 @@ Checked live with a dummy cookie in the built-in browser: set on www, seen and c
 moments; logged out on moments, the copy on www dropped at the next load; no console errors.
 Not checked: a real sign-in (his password); he signs in once and should stay signed in on all
 three addresses.
+
+## The Oct 10 work, at last (629e4788)
+
+claude/ship-2026-10-10, gathered on Oct 10 to deploy in one go, had never been merged: 160 of its
+files were missing from main, and the live /api/videos handed anyone 69 archived videos with their
+Stream ids. Merged with his OK; 8 conflicts resolved toward what main learned since:
+
+- the social posts routes keep main's requireAdmin (both sides had added it);
+- /api/tracks/[id] keeps Phase 0's rule (an unreleased track is not there for someone who may not
+  hear it) and takes the branch's caching; the album and track door tests now describe Phase 0;
+- the paused rollout still sends /loop to /music, and single pages keep their Phase 0 names;
+- the branch's rename to "Signs of Life" stays out of public view (owner, 2026-10-24): one switch,
+  `NAME_IS_OUT` in src/lib/loop/albumName.ts, false; `PUBLIC_ALBUM_NAME` (Loop Soul) on every public
+  page, the manifest and clip captions; `sharePath` stays on /loop/<slug>. Flip it, update the
+  manifest (its test says so), and the album's name and /signsoflife address come out together.
+
+Checked live: /api/videos 63 public and 0 hidden; admin, social and bulk-update routes 401 without a
+sign-in; every page 200; the 1984 page carries no "Signs of Life"; 1984 plays; the clip feed works.
+The Stream webhook now refuses unsigned calls (500, "not configured") until a webhook and its
+CLOUDFLARE_STREAM_WEBHOOK_SECRET exist; none is set up in Cloudflare, so nothing was relying on it.
