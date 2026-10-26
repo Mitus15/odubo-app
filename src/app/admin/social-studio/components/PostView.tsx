@@ -9,6 +9,7 @@ import {
   captionFor,
   isPlatformDone,
   queueOf,
+  soundCue,
   withPlatformMark,
 } from '@/lib/social/postQueue';
 
@@ -300,11 +301,25 @@ export default function PostView({ posts, loading, onRefresh, onViewPost }: Post
                     ))}
                   </div>
 
-                  {post.notes && (
-                    <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-sm text-amber-100/90 leading-relaxed">
-                      {post.notes}
-                    </div>
-                  )}
+                  {post.notes && (() => {
+                    const cue = soundCue(post.notes);
+                    const rest = cue ? cue.rest.join('\n') : post.notes;
+                    return (
+                      <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-sm text-amber-100/90 leading-relaxed">
+                        {cue && (
+                          <div className="mb-2 pb-2 border-b border-amber-500/20">
+                            <div className="text-[10px] uppercase tracking-widest text-amber-200/70">Start the sound at</div>
+                            <div className="flex items-baseline gap-2">
+                              <span className="text-3xl font-semibold text-amber-100 tabular-nums select-text">{cue.from}</span>
+                              {cue.to && <span className="text-sm text-amber-100/60 tabular-nums">to {cue.to}</span>}
+                            </div>
+                            {cue.extra && <div className="text-xs text-amber-100/70">{cue.extra}</div>}
+                          </div>
+                        )}
+                        {rest && <div className="whitespace-pre-line">{rest}</div>}
+                      </div>
+                    );
+                  })()}
 
                   {/* the caption, as it will be pasted */}
                   <button

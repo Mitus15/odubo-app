@@ -103,6 +103,31 @@ export function queueOf<T extends QueuePost>(posts: T[], now: Date = new Date())
   };
 }
 
+export interface SoundCue {
+  /** Where to start the app's sound, as the picker shows it ("0:17") */
+  from: string;
+  /** Where the piece ends in the song */
+  to?: string;
+  /** Anything after the times on that line, e.g. "(the song starts 4 s into the video)" */
+  extra?: string;
+  /** The note's other lines, in order */
+  rest: string[];
+}
+
+/**
+ * The song cue in a post's note: the "Sound from 0:17 (to 0:59)" line the
+ * training posts carry (scripts/loop/posts), for a video posted with the app's
+ * own sound. The video opens on that second of the song, so starting the sound
+ * there lines it up. Null when the note has no such line.
+ */
+export function soundCue(notes?: string | null): SoundCue | null {
+  const lines = (notes || '').split('\n').map((l) => l.trim()).filter(Boolean);
+  const i = lines.findIndex((l) => /^Sound from \d+:\d{2}/.test(l));
+  if (i < 0) return null;
+  const m = lines[i].match(/^Sound from (\d+:\d{2})(?: \(to (\d+:\d{2})\))?\s*(.*)$/)!;
+  return { from: m[1], to: m[2], extra: m[3] || undefined, rest: lines.filter((_, k) => k !== i) };
+}
+
 /**
  * Where each app draws over a 9:16 video (its header, the caption and name at
  * the bottom, the button rail on the right), as fractions of the frame.

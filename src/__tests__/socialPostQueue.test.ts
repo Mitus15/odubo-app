@@ -1,4 +1,4 @@
-import { allPlatformsDone, captionFor, isPlatformDone, queueOf, withPlatformMark, type QueuePost } from '@/lib/social/postQueue';
+import { allPlatformsDone, captionFor, isPlatformDone, queueOf, soundCue, withPlatformMark, type QueuePost } from '@/lib/social/postQueue';
 
 const post = (id: string, extra: Partial<QueuePost> = {}): QueuePost => ({
   id,
@@ -63,5 +63,32 @@ describe('the posting queue', () => {
     const p = post('clap', { caption: 'Billie Jean, in silhouette.', hashtags: ['billiejean', '#dance'], caption_by_platform: { youtube: '1-1 · Billie Jean' } });
     expect(captionFor(p, 'instagram')).toBe('Billie Jean, in silhouette.\n\n#billiejean #dance');
     expect(captionFor(p, 'youtube')).toBe('1-1 · Billie Jean\n\n#billiejean #dance');
+  });
+});
+
+describe('the sound cue in a note', () => {
+  const note = 'Monkey · M.I Abaga\nSound from 0:17 (to 0:59)\nAdd the song in the app from that time.\nOct 23 · 1023-monkey-reel-a';
+
+  it('takes the start and end out of the note and keeps the other lines in order', () => {
+    expect(soundCue(note)).toEqual({
+      from: '0:17',
+      to: '0:59',
+      extra: undefined,
+      rest: ['Monkey · M.I Abaga', 'Add the song in the app from that time.', 'Oct 23 · 1023-monkey-reel-a'],
+    });
+  });
+
+  it('keeps what follows the times on that line', () => {
+    expect(soundCue('Sound from 0:00 (to 0:57) (the song starts 4 s into the video)')).toMatchObject({
+      from: '0:00',
+      to: '0:57',
+      extra: '(the song starts 4 s into the video)',
+    });
+  });
+
+  it('is null for a note without one, a full video with the song laid in, or none', () => {
+    expect(soundCue('Song laid in: 0:00 to 4:06')).toBeNull();
+    expect(soundCue('')).toBeNull();
+    expect(soundCue(undefined)).toBeNull();
   });
 });
