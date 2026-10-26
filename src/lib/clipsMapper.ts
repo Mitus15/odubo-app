@@ -73,7 +73,7 @@ export function mapClipRow(row: ClipApiRow): ClipItem | null {
     youtubeShortsUrl: row.youtube_shorts_url ?? null,
     tiktokUrl: row.tiktok_url ?? null,
     instagramReelsUrl: row.instagram_reels_url ?? null,
-    // Loop Soul film: the song, the chapter the flip opens, and the card
+    // Signs of Life film: the song, the chapter the flip opens, and the card
     trackId: row.track_id ?? null,
     filmChapter: row.film_chapter_id?.trim() || null,
     card: mapFilmCard(row),

@@ -5,7 +5,7 @@
 //
 // Phase state machine: ready → takeoff → playing → gameOver → submitted
 //
-// The take-off is Loop Soul's canon: the album begins with the incarnation and
+// The take-off is Signs of Life's canon: the album begins with the incarnation and
 // ends Welcome with a take-off, and that take-off is where the game begins.
 // Recoolman rises out of his shadow on the ground and lifts away; then the run.
 // Renders on top of the 3D scene via portal.
@@ -23,7 +23,7 @@ type GamePhase = 'ready' | 'takeoff' | 'playing' | 'gameOver' | 'submitted';
 
 const TAKEOFF_MS = 1700;
 
-/** A Loop Soul single to run to. The src is already cleared by the audio
+/** A Signs of Life single to run to. The src is already cleared by the audio
  *  gate on the server (released, or an admin previewing). */
 export type RunnerSoundtrack = { title: string; src: string; backHref: string };
 

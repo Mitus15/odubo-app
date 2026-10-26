@@ -18,6 +18,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export const runtime = 'nodejs';
 import { getAuthTokenFromRequest, getJwtSecret } from '@/lib/auth';
 import { signInCookieDomain } from '@/lib/signIn';
+import { requireAdmin } from '@/lib/api/requireAdmin';
 import { rateLimit } from '@/lib/rateLimit';
 import { SignJWT, jwtVerify } from 'jose';
 
@@ -812,6 +813,9 @@ export async function DELETE(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
+  const gate = await requireAdmin(req);
+  if (gate.error) return gate.error;
+
   const url = new URL(req.url);
   const action = url.searchParams.get('action');
   

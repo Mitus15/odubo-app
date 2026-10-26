@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { queryDatabase, executeQuery } from '@/lib/db';
 import crypto from 'crypto';
+import { requireAdmin } from '@/lib/api/requireAdmin';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -143,6 +144,9 @@ export async function POST(req: NextRequest) {
  * Get engagement stats for a specific clip (for admin dashboard).
  */
 export async function GET(req: NextRequest) {
+  const gate = await requireAdmin(req);
+  if (gate.error) return gate.error;
+
   try {
     const { searchParams } = new URL(req.url);
     const clipId = searchParams.get('clipId');

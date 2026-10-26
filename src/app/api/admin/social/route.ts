@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromRequest, isAdminUser } from '@/lib/auth';
-import { queryDatabase, executeQuery } from '@/lib/db';
+import { queryDatabase, executeQuery, lastRowId } from '@/lib/db';
 
 export const runtime = 'edge';
 
@@ -155,7 +155,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      id: result.lastRowId,
+      id: lastRowId(result),
       message: 'Content created successfully',
     });
   } catch (error) {

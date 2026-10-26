@@ -1,6 +1,7 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { queryDatabase } from '@/lib/db';
 import { getAvailablePlatforms } from '@/lib/platform-oauth';
+import { requireAdmin } from '@/lib/api/requireAdmin';
 
 export const runtime = 'edge';
 
@@ -10,7 +11,10 @@ export const runtime = 'edge';
  * GET /api/connections
  * Returns list of connected platforms and available platforms to connect
  */
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const gate = await requireAdmin(req);
+  if (gate.error) return gate.error;
+
   try {
     // Get all connections from database
     let connectionResults: any[] = [];

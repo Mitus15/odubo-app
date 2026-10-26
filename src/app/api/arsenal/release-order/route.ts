@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { queryDatabase, executeQuery } from '@/lib/db';
 import { getUserFromRequest, isAdminUser } from '@/lib/auth';
+import { requireAdmin } from '@/lib/api/requireAdmin';
 
 export const runtime = 'nodejs';
 
@@ -12,7 +13,10 @@ export const runtime = 'nodejs';
  * FIXED: Now uses video_deployments table for accurate deployment status
  * instead of legacy youtube_url/tiktok_url columns
  */
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
+  const gate = await requireAdmin(request);
+  if (gate.error) return gate.error;
+
   try {
     // Get parent videos with their clips and deployment status
     // FIXED: Count deployments from video_deployments table

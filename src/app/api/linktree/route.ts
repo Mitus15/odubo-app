@@ -25,8 +25,9 @@ export async function GET() {
  */
 export async function POST(request: NextRequest) {
   // Admin only: these links are what the /links landing sends every visitor to.
-  const { error } = await requireAdmin(request);
-  if (error) return error;
+  const gate = await requireAdmin(request);
+  if (gate.error) return gate.error;
+
   try {
     const body = await request.json() as {
       title?: string;

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireCronOrAdmin } from '@/lib/api/requireAdmin';
 
 export const runtime = 'edge';
 
@@ -6,17 +7,20 @@ export const runtime = 'edge';
  * GET /api/cron/social-sync
  * Scheduled job to sync social media data from Post for Me
  * Triggered by Vercel Cron every hour
+ *
+ * The scheduler (Bearer $CRON_SECRET) or an admin's session. This used to
+ * check the secret only when one was set, and CRON_SECRET exists only in
+ * Production, so on every Preview deployment (which runs on the live D1)
+ * anyone could run the job. Found 2026-10-02; requireCronOrAdmin fails
+ * closed instead.
  */
 export async function GET(request: NextRequest) {
-  try {
-    // Verify cron authorization (Vercel sets this header)
-    const authHeader = request.headers.get('authorization');
-    const cronSecret = process.env.CRON_SECRET;
+  const gate = await requireCronOrAdmin(request);
+  if (gate.error) return gate.error;
 
-    // In production, verify the cron secret
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+  try {
+    // Forwarded to process-scheduled, which checks it again.
+    const cronSecret = process.env.CRON_SECRET;
 
     // Get the base URL from the request
     const url = new URL(request.url);

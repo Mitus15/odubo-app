@@ -1,3 +1,4 @@
+import { NAME_IS_OUT } from "@/lib/loop/albumName";
 /**
  * The singles: the album's way out into the world, one song and one music
  * video at a time (decided 2026-09-29, when the live night was called off).
@@ -62,6 +63,24 @@ export function singleByTitle(title: string | null | undefined): SingleDef | nul
 
 export function singlePath(slug: string): string {
   return `/loop/${slug}`;
+}
+
+/**
+ * The album's own address (owner, 2026-10-03, when Loop Soul went back to
+ * being the night and the record became Signs of Life). The middleware serves
+ * /signsoflife/<slug> from /loop/<slug>, so this is what a link people pass
+ * around says: the share button, the canonical URL, a caption. Navigation
+ * inside the site stays on singlePath, the installed app's scope, and every
+ * /loop link already posted keeps working.
+ */
+export const ALBUM_BASE = "/signsoflife";
+
+/** Set by the middleware when /loop's front door was reached as ALBUM_BASE. */
+export const ALBUM_ADDRESS_HEADER = "x-album-address";
+
+export function sharePath(slug: string): string {
+  // the album's own address only once its name is out (albumName.ts)
+  return NAME_IS_OUT ? `${ALBUM_BASE}/${slug}` : singlePath(slug);
 }
 
 const YMD = /^\d{4}-\d{2}-\d{2}$/;

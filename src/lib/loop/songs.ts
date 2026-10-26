@@ -25,7 +25,6 @@ export type Song = {
 };
 
 export const ALBUM_ID: string = SONGS_JSON.albumId;
-export const ALBUM_TITLE: string = SONGS_JSON.albumTitle;
 export const SONGS: readonly Song[] = SONGS_JSON.songs;
 
 export function songBySlug(slug: string): Song | null {

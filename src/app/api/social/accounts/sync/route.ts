@@ -1,6 +1,7 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { queryDatabase, executeQuery } from '@/lib/db';
 import { getAccounts, mapPlatform } from '@/lib/postforme';
+import { requireAdmin } from '@/lib/api/requireAdmin';
 
 export const runtime = 'edge';
 
@@ -8,7 +9,10 @@ export const runtime = 'edge';
  * POST /api/social/accounts/sync
  * Sync connected accounts from Post for Me API to local database
  */
-export async function POST() {
+export async function POST(request: NextRequest) {
+  const gate = await requireAdmin(request);
+  if (gate.error) return gate.error;
+
   try {
     // Fetch accounts from Post for Me
     const result = await getAccounts();

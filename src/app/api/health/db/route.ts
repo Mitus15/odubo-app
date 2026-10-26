@@ -1,5 +1,6 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { queryDatabase } from '@/lib/db';
+import { requireAdmin } from '@/lib/api/requireAdmin';
 
 // Lightweight DB schema health check for critical extended video columns
 // Returns which expected columns are present/missing without throwing if table absent.
@@ -13,7 +14,10 @@ const EXPECTED_COLUMNS = [
   'publication_status'
 ];
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const gate = await requireAdmin(req);
+  if (gate.error) return gate.error;
+
   try {
     // PRAGMA table_info gives column metadata rows with 'name'
     const info: any = await queryDatabase(`PRAGMA table_info(videos)`);

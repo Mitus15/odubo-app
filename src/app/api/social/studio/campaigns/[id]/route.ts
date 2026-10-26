@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { queryDatabase, executeQuery } from '@/lib/db';
+import { requireAdmin } from '@/lib/api/requireAdmin';
 
 export const runtime = 'edge';
 
@@ -11,6 +12,9 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const gate = await requireAdmin(request);
+  if (gate.error) return gate.error;
+
   try {
     const { id } = await params;
 
@@ -57,6 +61,9 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const gate = await requireAdmin(request);
+  if (gate.error) return gate.error;
+
   try {
     const { id } = await params;
     const body = await request.json();
@@ -115,6 +122,9 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const gate = await requireAdmin(request);
+  if (gate.error) return gate.error;
+
   try {
     const { id } = await params;
 

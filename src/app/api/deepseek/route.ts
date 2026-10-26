@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export const runtime = 'nodejs';
 import { executeQuery, queryDatabase } from '@/lib/db';
 import { callDeepSeekWithRetry, fetchVerseOfTheDay } from '@/lib/deepseek';
+import { requireAdmin } from '@/lib/api/requireAdmin';
 
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
 
@@ -31,6 +32,9 @@ interface RequestBody {
 }
 
 export async function POST(request: NextRequest) {
+  const gate = await requireAdmin(request);
+  if (gate.error) return gate.error;
+
   // One-time diagnostics about key presence (masked)
   if (!hasLoggedKeyDiag) {
     console.info('[DeepSeek] key configured', {

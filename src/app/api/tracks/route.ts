@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export const runtime = 'edge';
 import { executeQuery, queryDatabase } from '@/lib/db';
 import { getUserFromRequest, isAdminUser } from '@/lib/auth';
+import { withoutAudio } from '@/lib/release/audioSource';
 // Use Web Crypto API for Edge compatibility
 
 export async function GET(req: NextRequest) {
@@ -46,16 +47,9 @@ export async function GET(req: NextRequest) {
     // Until an album is published, the public listing carries the track but
     // not the way to play it. The byte routes enforce the real rule; this
     // stops the catalogue from advertising the door.
-    const tracks = rows.map((t) => {
-      const published = String(t.album_status ?? '').toLowerCase() === 'published';
-      const out = { ...t };
-      delete out.album_status;
-      if (!published) {
-        out.audio_url = null;
-        out.preview_url = null;
-      }
-      return out;
-    });
+    const tracks = rows.map(({ album_status, ...t }) =>
+      String(album_status ?? '').toLowerCase() === 'published' ? t : withoutAudio(t)
+    );
     const res = NextResponse.json({ success: true, tracks });
     // The answer depends on who asks, so no shared cache may hold it.
     res.headers.set('Cache-Control', 'private, max-age=60');
@@ -82,9 +76,10 @@ export async function POST(req: NextRequest) {
       track_number: number;
       audio_url?: string;
       duration?: number;
+      explicit_content?: boolean;
     };
-    
-    const { title, album_id, track_number, audio_url, duration } = body;
+
+    const { title, album_id, track_number, audio_url, duration, explicit_content } = body;
 
     if (!title || !album_id || !track_number) {
       return NextResponse.json(
@@ -93,21 +88,24 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const result = await executeQuery(
-      `INSERT INTO tracks (id, title, album_id, track_number, audio_url, duration, status, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, 'draft', datetime('now'))`,
+    // A track's id is this UUID, not a rowid, so it is what the caller gets back.
+    const id = globalThis.crypto.randomUUID();
+    await executeQuery(
+      `INSERT INTO tracks (id, title, album_id, track_number, audio_url, duration, explicit_content, status, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'draft', datetime('now'))`,
       [
-        globalThis.crypto.randomUUID(),
+        id,
         title,
         album_id,
         track_number,
         audio_url || '',
-        duration || 0
+        duration || 0,
+        explicit_content ? 1 : 0
       ]
     );
 
     return NextResponse.json(
-      { success: true, id: result.meta?.last_row_id },
+      { success: true, id },
       { status: 201 }
     );
   } catch (error) {

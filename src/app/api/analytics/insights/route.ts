@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { callDeepSeekWithRetry } from '@/lib/deepseek';
+import { requireAdmin } from '@/lib/api/requireAdmin';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -31,6 +32,9 @@ interface InsightsRequest {
  * Generate AI-powered insights from analytics data using Gemini
  */
 export async function POST(req: NextRequest) {
+  const gate = await requireAdmin(req);
+  if (gate.error) return gate.error;
+
   try {
     const body = await req.json() as InsightsRequest;
     const { period, metrics } = body;

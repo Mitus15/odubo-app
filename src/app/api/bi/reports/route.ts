@@ -1,10 +1,14 @@
 import { queryDatabase } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAdmin } from '@/lib/api/requireAdmin';
 
 export const runtime = 'nodejs';
 
 // GET /api/bi/reports - List generated reports
 export async function GET(req: NextRequest) {
+  const gate = await requireAdmin(req);
+  if (gate.error) return gate.error;
+
   try {
     const url = new URL(req.url);
 

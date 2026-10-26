@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 export const runtime = 'edge';
-import { queryDatabase, executeQuery } from '@/lib/db';
+import { queryDatabase, executeQuery, changedRows, lastRowId } from '@/lib/db';
 import { getUserFromRequest } from '@/lib/auth';
 import { rateLimit } from '@/lib/rateLimit';
 
@@ -173,7 +173,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       message: 'Item liked successfully',
-      like_id: result.meta.last_row_id
+      like_id: lastRowId(result)
     });
   } catch (error) {
     console.error('Error adding like:', error);
@@ -232,7 +232,7 @@ export async function DELETE(req: NextRequest) {
       [authUser.userId, item_id]
     );
 
-    if (result.meta.changes === 0) {
+    if (changedRows(result) === 0) {
       return NextResponse.json(
         { error: 'Like not found' },
         { status: 404 }

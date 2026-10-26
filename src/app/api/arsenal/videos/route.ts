@@ -1,5 +1,6 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { queryDatabase } from '@/lib/db';
+import { requireAdmin } from '@/lib/api/requireAdmin';
 
 export const runtime = 'nodejs';
 
@@ -8,7 +9,10 @@ export const runtime = 'nodejs';
  * Fetch all videos with Arsenal-related fields for the content library
  * Protected by admin-only access
  */
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
+  const gate = await requireAdmin(request);
+  if (gate.error) return gate.error;
+
   try {
     console.log('[Arsenal] Fetching videos...');
     // Fetch ALL videos for Arsenal management (including unpublished)

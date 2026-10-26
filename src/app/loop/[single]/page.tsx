@@ -9,7 +9,7 @@ import { getPassOffer } from "@/lib/loop/pass/offer";
 import { shortDate } from "@/lib/loop/eventFacts";
 import { getPublicBaseUrl } from "@/lib/loop/publicUrl";
 import { singleMeta } from "@/lib/loop/singlePage";
-import { releaseLabel, singleBySlug, singlePath } from "@/lib/loop/singles";
+import { releaseLabel, sharePath, singleBySlug } from "@/lib/loop/singles";
 import { getSingleStatuses } from "@/lib/loop/singlesStore";
 import { isAdminRequest } from "@/lib/loop/audioAccess";
 import SingleStandalone, { type SingleRow } from "@/components/loop/gathering/SingleStandalone";
@@ -19,12 +19,14 @@ import { chapterClips, publicChapters, publicFilm } from "@/lib/loop/film/public
 import { listenLinks } from "@/lib/loop/listen";
 import { ALBUM_ID } from "@/lib/loop/songs";
 import { rolloutPaused } from "@/lib/loop/rollout";
+import { PUBLIC_ALBUM_NAME } from "@/lib/loop/albumName";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 /**
- * /loop/<slug>: a single, on a link of its own. Makunahea, 1984, News Peak
+ * /loop/<slug> (and /signsoflife/<slug>, its address since 2026-10-03): a
+ * single, on a link of its own. Makunahea, 1984, News Peak
  * (lib/loop/singles.ts), each with a music video pointing here.
  *
  * OUT: plays on the first tap, scrubs on the vinyl ring, and opens its ways
@@ -53,13 +55,14 @@ async function load(slug: string) {
 /** The eleven songs that are not singles: a chapter page of the flight. */
 async function chapterMeta(slug: string): Promise<Metadata> {
   const song = songBySlug(slug);
-  if (!song) return { title: "Loop Soul" };
+  if (!song) return { title: "Mani Odubo" };
   const [chapters, base, paused] = await Promise.all([publicChapters(), getPublicBaseUrl(), rolloutPaused()]);
   const c = chapters.find((x) => x.slug === slug);
   if (paused && !c?.public) return { title: "Mani Odubo" };
-  const title = `${c?.title ?? song.title} · Loop Soul`;
-  const description = c?.public && c.thread ? c.thread : `Chapter ${song.number} of Loop Soul, an album by Mani Odubo.`;
-  const path = singlePath(slug);
+  const name = PUBLIC_ALBUM_NAME;
+  const title = `${c?.title ?? song.title} · ${name}`;
+  const description = c?.public && c.thread ? c.thread : `Chapter ${song.number} of ${name}, an album by Mani Odubo.`;
+  const path = sharePath(slug);
   const url = base ? `${base}${path}` : path;
   return { title, description, alternates: { canonical: url }, openGraph: { title, description, url }, twitter: { card: "summary_large_image", title, description } };
 }
@@ -68,7 +71,7 @@ export async function generateMetadata({ params }: { params: Promise<{ single: s
   const slug = (await params).single;
   if (!singleBySlug(slug)) return chapterMeta(slug);
   const data = await load(slug);
-  if (!data?.track) return { title: "Loop Soul" };
+  if (!data?.track) return { title: "Mani Odubo" };
   const paused = await rolloutPaused();
   if (!data.status.out && paused) return { title: "Mani Odubo" };
   const [event, base] = await Promise.all([getCurrentEvent(), getPublicBaseUrl()]);
@@ -78,7 +81,7 @@ export async function generateMetadata({ params }: { params: Promise<{ single: s
     { out: data.status.out, dateLabel: releaseLabel(data.status.releaseDate) },
   );
   // Absolute, from the configured origin: Facebook ignores a relative og:url.
-  const path = singlePath(data.def.slug);
+  const path = sharePath(data.def.slug);
   const url = base ? `${base}${path}` : path;
   return {
     title: m.title,

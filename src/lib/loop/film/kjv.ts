@@ -10,7 +10,7 @@ import { namesHim } from "./naming";
  *   by reference  "Genesis 2:7", "gen 2:5-7", "John 1"
  *   by words      a chapter's emotion words: "dust ground breath living"
  *
- * A verse that names Him is never offered: Loop Soul never names Him, and the
+ * A verse that names Him is never offered: Signs of Life never names Him, and the
  * words of the verses around it make Him unmistakable (naming.ts).
  */
 

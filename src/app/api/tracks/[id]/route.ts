@@ -10,19 +10,21 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   try {
     const { id } = await params;
     
-    const tracks = await queryDatabase(
-      'SELECT * FROM tracks WHERE id = ? LIMIT 1',
+    const tracks = (await queryDatabase(
+      `SELECT t.*, a.status AS album_status
+         FROM tracks t LEFT JOIN albums a ON a.id = t.album_id
+        WHERE t.id = ? LIMIT 1`,
       [id]
-    );
+    )) as Record<string, unknown>[];
     
-    if (!tracks || (tracks as any[]).length === 0) {
+    if (tracks.length === 0) {
       return NextResponse.json(
         { error: 'Track not found' },
         { status: 404 }
       );
     }
     
-    const track = (tracks as any[])[0];
+    const { album_status, ...track } = tracks[0];
 
     // A track of an unreleased album is here only for those who may hear it
     // (the same rule as /stream: the album out, a released single, the owner
@@ -35,17 +37,19 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     // Compute optional HLS manifest URL based on audio_url convention
     // Example: https://media/.../song.web.m4a -> https://media/.../song.hls/master.m3u8
 
-    const hls_url = deriveHlsUrl((track as any).audio_url);
+    const hls_url = deriveHlsUrl(track.audio_url as string | null);
     
-    // Add cache headers for track metadata
-    const response = NextResponse.json({ 
-      success: true, 
-      track: { ...track, hls_url }
-    });
-    
-    // Who asks decides the answer, so no shared cache may hold it.
-    response.headers.set('Cache-Control', 'private, max-age=300');
-    response.headers.set('Vary', 'Cookie, Authorization, Accept-Encoding');
+    // Past the gate above, the caller may hear it, audio fields and all.
+    const published = String(album_status ?? '').toLowerCase() === 'published';
+    const response = NextResponse.json({ success: true, track: { ...track, hls_url } });
+
+    // The published catalogue is the same for everyone. Anything else depends
+    // on who asked, so no shared cache may keep it.
+    response.headers.set(
+      'Cache-Control',
+      published ? 'public, max-age=300, stale-while-revalidate=600' : 'private, no-store'
+    );
+    if (!published) response.headers.set('Vary', 'Cookie, Authorization, Accept-Encoding');
     
     return response;
   } catch (error) {

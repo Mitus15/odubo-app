@@ -16,8 +16,9 @@ export const runtime = 'nodejs';
  */
 export async function GET(req: NextRequest) {
   // Revenue by content: admins only (it answered anyone until 2026-10-08).
-  const { error } = await requireAdmin(req);
-  if (error) return error;
+  const gate = await requireAdmin(req);
+  if (gate.error) return gate.error;
+
   try {
     const { searchParams } = new URL(req.url);
     const days = parseInt(searchParams.get('days') || '30', 10);

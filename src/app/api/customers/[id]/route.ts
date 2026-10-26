@@ -1,5 +1,6 @@
 import { queryDatabase, executeQuery } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAdmin } from '@/lib/api/requireAdmin';
 
 export const runtime = 'nodejs';
 
@@ -8,6 +9,9 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const gate = await requireAdmin(req);
+  if (gate.error) return gate.error;
+
   try {
     const { id } = await params;
 
@@ -68,6 +72,9 @@ export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const gate = await requireAdmin(req);
+  if (gate.error) return gate.error;
+
   try {
     const { id } = await params;
     const body = await req.json();

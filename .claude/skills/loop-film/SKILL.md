@@ -1,9 +1,9 @@
 ---
 name: loop-film
-description: Turn a one-take dance film of the Loop Soul album into the moving-poster film, per-song cuts and social clips (silhouette on a flat colour, ground shadow, the badge on the heart, scripture cards, the Danceman outro). Use when the owner has a new take to convert, wants clips cut or re-cut, wants to check a test take, or asks how the film pipeline works.
+description: Turn a one-take dance film of the album Signs of Life (once called Loop Soul) into the moving-poster film, per-song cuts and social clips (silhouette on a flat colour, ground shadow, the badge on the heart, scripture cards, the Danceman outro). Use when the owner has a new take to convert, wants clips cut or re-cut, wants to check a test take, or asks how the film pipeline works.
 ---
 
-# The Loop Soul film, from a take
+# The Signs of Life film, from a take
 
 Read first: `docs/decisions/loop-film.md` (why it is built this way),
 `docs/loop/film/STORY-BIBLE.md` (the story every piece carries),

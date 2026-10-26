@@ -3,6 +3,7 @@ export const runtime = 'nodejs';
 import path from 'path';
 import fs from 'fs/promises';
 import { queryDatabase } from '@/lib/db';
+import { requireAdmin } from '@/lib/api/requireAdmin';
 
 function getMigrationsDir() {
   // Workspace root
@@ -29,7 +30,10 @@ async function listAppliedMigrations(): Promise<string[]> {
   }
 }
 
-export async function GET(_req: NextRequest) {
+export async function GET(req: NextRequest) {
+  const gate = await requireAdmin(req);
+  if (gate.error) return gate.error;
+
   try {
     const local = await listLocalMigrations();
     const applied = await listAppliedMigrations();

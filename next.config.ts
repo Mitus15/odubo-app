@@ -158,12 +158,11 @@ const nextConfig: NextConfig = {
           { key: 'Cache-Control', value: 'public, s-maxage=60, stale-while-revalidate=300' },
         ],
       },
-      {
-        source: '/api/media/:path*',
-        headers: [
-          { key: 'Cache-Control', value: 'public, s-maxage=60, stale-while-revalidate=300' },
-        ],
-      },
+      // Not /api/media. What it answers depends on who asks: an unreleased
+      // track's presigned redirect to an admin and a 404 to anyone else, the
+      // whole video library to an editor. Its routes set their own
+      // Cache-Control, and a public s-maxage here replaced theirs, so a CDN
+      // could hand one caller's answer to the next.
       {
         source: '/api/videos/upload',
         headers: [

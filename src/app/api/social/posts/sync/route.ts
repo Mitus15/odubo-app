@@ -1,6 +1,7 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { queryDatabase, executeQuery } from '@/lib/db';
 import { getPosts, getAccounts, getAccountFeed, mapPlatform, FeedItem, SocialAccount } from '@/lib/postforme';
+import { requireAdmin } from '@/lib/api/requireAdmin';
 
 export const runtime = 'edge';
 
@@ -44,7 +45,10 @@ function generateFeedPostId(platform: string, platformPostId: string): string {
  * 2. Fetch feeds from /social-account-feeds to get published posts & metrics
  * 3. Import feed posts that weren't created through Post for Me
  */
-export async function POST() {
+export async function POST(request: NextRequest) {
+  const gate = await requireAdmin(request);
+  if (gate.error) return gate.error;
+
   try {
     // Get all accounts from Post for Me
     const accountsResult = await getAccounts();
@@ -332,7 +336,10 @@ export async function POST() {
  * GET /api/social/posts/sync
  * Get sync status / last sync time
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const gate = await requireAdmin(request);
+  if (gate.error) return gate.error;
+
   try {
     const result = await queryDatabase(
       `SELECT MAX(last_synced_at) as last_sync FROM social_posts WHERE last_synced_at IS NOT NULL`

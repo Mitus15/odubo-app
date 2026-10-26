@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { queryDatabase, executeQuery } from '@/lib/db';
 import { platformConfigs, type Platform } from '@/lib/platform-oauth';
+import { requireAdmin } from '@/lib/api/requireAdmin';
 
 export const runtime = 'edge';
 
@@ -13,6 +14,9 @@ export const runtime = 'edge';
  * Removes the platform connection and deletes stored tokens.
  */
 export async function POST(request: NextRequest) {
+  const gate = await requireAdmin(request);
+  if (gate.error) return gate.error;
+
   try {
     const body: { platform?: string } = await request.json();
     const platform = body.platform as Platform;

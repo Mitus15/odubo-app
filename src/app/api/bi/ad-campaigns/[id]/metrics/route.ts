@@ -1,6 +1,7 @@
 import { queryDatabase, executeQuery } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 import type { AdMetricsInput } from '@/types/bi';
+import { requireAdmin } from '@/lib/api/requireAdmin';
 
 export const runtime = 'nodejs';
 
@@ -9,6 +10,9 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const gate = await requireAdmin(req);
+  if (gate.error) return gate.error;
+
   try {
     const { id } = await params;
     const url = new URL(req.url);
@@ -43,6 +47,9 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const gate = await requireAdmin(req);
+  if (gate.error) return gate.error;
+
   try {
     const { id: campaignId } = await params;
     const body = (await req.json()) as Omit<AdMetricsInput, 'campaign_id'>;

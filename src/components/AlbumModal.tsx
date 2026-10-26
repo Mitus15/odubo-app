@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react';
 import Image from 'next/image';
 import { Album, Track, TrackCredit } from '@/types/music';
+import { uploadAlbumTrack } from '@/lib/uploads/albumTrackUpload';
 
 interface AlbumModalProps {
   album: Album;
@@ -263,57 +264,38 @@ export default function AlbumModal({ album, tracks, onClose }: AlbumModalProps) 
     setUploading(true);
     try {
       const results = [];
+      const creditsUnsaved: string[] = [];
       for (const trackUpload of trackUploads) {
+        const label = trackUpload.title.trim() || trackUpload.file.name;
         try {
-          const formData = new FormData();
-          formData.append('title', trackUpload.title);
-          formData.append('album_id', album.id);
-          formData.append('track_number', trackUpload.track_number.toString());
-          formData.append('disc_number', '1');
-          formData.append('duration', trackUpload.duration.toString());
-          formData.append('explicit_content', trackUpload.explicit_content.toString());
-          formData.append('audio_file', trackUpload.file);
-          
-          // Add credits as JSON
-          if (trackUpload.credits.length > 0) {
-            formData.append('credits', JSON.stringify(trackUpload.credits));
-          }
-
-          console.log('Uploading track:', trackUpload.title);
-          const response = await fetch('/api/tracks', {
-            method: 'POST',
-            body: formData
-          });
-
-          const result = await response.json() as { success: boolean; error?: string; trackId?: string };
-          console.log('Track upload response:', result);
-
-          if (!response.ok || !result.success) {
-            throw new Error(result.error || `HTTP ${response.status}: Failed to upload track: ${trackUpload.title}`);
-          }
-          
-          results.push({ track: trackUpload.title, success: true });
+          console.log('Uploading track:', label);
+          const { creditsSaved } = await uploadAlbumTrack(album, trackUpload);
+          if (!creditsSaved) creditsUnsaved.push(label);
+          results.push({ track: label, success: true });
         } catch (trackError) {
-          console.error('Error uploading track:', trackUpload.title, trackError);
-          results.push({ track: trackUpload.title, success: false, error: trackError });
+          console.error('Error uploading track:', label, trackError);
+          results.push({ track: label, success: false, error: trackError });
         }
       }
 
       const successful = results.filter(r => r.success).length;
-      const failed = results.filter(r => !r.success).length;
+      const failed = results.filter(r => !r.success);
+      const failedDetails = failed
+        .map(r => `${r.track}: ${r.error instanceof Error ? r.error.message : 'Unknown error'}`)
+        .join('\n');
+      const creditsNote = creditsUnsaved.length > 0
+        ? `\n\nCredits did not save for ${creditsUnsaved.join(', ')}. Add them with Edit Credits.`
+        : '';
 
       if (successful > 0) {
-        if (failed === 0) {
-          alert(`All ${successful} tracks uploaded successfully!`);
+        if (failed.length === 0) {
+          alert(`All ${successful} tracks uploaded successfully!${creditsNote}`);
         } else {
-          alert(`${successful} tracks uploaded successfully, ${failed} failed. Check console for details.`);
+          alert(`${successful} tracks uploaded successfully, ${failed.length} failed.\n\n${failedDetails}${creditsNote}`);
         }
         window.location.reload();
       } else {
-        alert('All track uploads failed. Please check the console for details.');
-        results.filter(r => !r.success).forEach(r => {
-          console.error(`Failed to upload ${r.track}:`, r.error);
-        });
+        alert(`All track uploads failed.\n\n${failedDetails}`);
       }
     } catch (error) {
       console.error('Error uploading tracks:', error);

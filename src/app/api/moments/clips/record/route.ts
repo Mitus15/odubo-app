@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getUserFromRequest, isAdminUser } from '@/lib/auth';
-import { executeQuery, queryDatabase } from '@/lib/db';
+import { executeQuery, queryDatabase, lastRowId } from '@/lib/db';
 import { rateLimit } from '@/lib/rateLimit';
 
 export async function POST(req: Request) {
@@ -51,7 +51,7 @@ export async function POST(req: Request) {
       [resolvedGalleryId, r2Key, r2Url, thumbnailKey, thumbnailUrl, duration, caption, userName, isAdmin ? 1 : 0]
     );
 
-    const clipId = insertResult.lastInsertRowid;
+    const clipId = lastRowId(insertResult);
 
     return NextResponse.json({
       success: true,

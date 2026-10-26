@@ -5,6 +5,7 @@ import {
   refreshAccessToken,
   type Platform,
 } from '@/lib/platform-oauth';
+import { requireAdmin } from '@/lib/api/requireAdmin';
 
 export const runtime = 'edge';
 
@@ -18,6 +19,9 @@ export const runtime = 'edge';
  * Refreshes tokens if needed before syncing.
  */
 export async function POST(request: NextRequest) {
+  const gate = await requireAdmin(request);
+  if (gate.error) return gate.error;
+
   try {
     const body: { platform?: string } = await request.json();
     const platform = body.platform as Platform;

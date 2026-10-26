@@ -1,3 +1,5 @@
+import { PUBLIC_ALBUM_NAME } from "@/lib/loop/albumName";
+import { sharePath } from "@/lib/loop/singles";
 import { cleanVerse } from "@/lib/bible-clean";
 import { namesHim, storyIssues, linkCount } from "@/lib/loop/film/naming";
 import { SONGS, songBySlug } from "@/lib/loop/songs";
@@ -133,7 +135,8 @@ describe("a clip's caption", () => {
   const { clipCaption, captionIssues } = jest.requireActual("@/lib/loop/film/caption") as typeof import("@/lib/loop/film/caption");
   it("is the flip, the reference and one link to its chapter", () => {
     const c = clipCaption({ flip: "Dust, then breath.", verseRef: "Genesis 2:7", chapterTitle: "Welcome", slug: "welcome", site: "https://odubostudio.com/" });
-    expect(c).toBe("Dust, then breath.\nGenesis 2:7\n\nLoop Soul · Welcome\nhttps://odubostudio.com/loop/welcome");
+    // the album's public name and its share link, which follow NAME_IS_OUT (albumName.ts)
+    expect(c).toBe(`Dust, then breath.\nGenesis 2:7\n\n${PUBLIC_ALBUM_NAME} · Welcome\nhttps://odubostudio.com${sharePath("welcome")}`);
     expect(captionIssues(c)).toEqual([]);
   });
   it("is refused if it names Him or runs an em dash", () => {
