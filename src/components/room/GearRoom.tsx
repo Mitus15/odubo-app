@@ -13,6 +13,18 @@ import { fly, useLanding } from './flight';
 
 /** How long the row rests on a piece before its page is fetched, ready for the tap */
 const PREFETCH_AFTER_MS = 250;
+/**
+ * Pieces either side of the one in front whose photos are fetched, so a swipe
+ * lands on a photo already there. The row asks for them itself: a browser's own
+ * lazy loading never fetched a piece swiped to on an iPhone (only the two
+ * fetched at once ever stood, 2026-10-27).
+ */
+const PHOTOS_AROUND = 2;
+
+/** The piece at `i` and those either side of it */
+function around(i: number): number[] {
+  return Array.from({ length: 2 * PHOTOS_AROUND + 1 }, (_, k) => i - PHOTOS_AROUND + k);
+}
 
 /** A plain click: anything else (a new tab, a new window) is the browser's */
 function plainClick(e: React.MouseEvent) {
@@ -127,6 +139,12 @@ export default function GearRoom({ pieces, start = 0 }: { pieces: GearPiece[]; s
     setView('row');
   }, []);
 
+  // The photos fetched: those around every piece that has stood in front, and never one let go
+  const [asked, setAsked] = useState<ReadonlySet<number>>(() => new Set(around(start)));
+  useEffect(() => {
+    setAsked((had) => (around(front).every((i) => had.has(i)) ? had : new Set([...had, ...around(front)])));
+  }, [front]);
+
   const piece = pieces[front];
   const colour = piece?.room || ROOM_DARK;
   const on = onRoom(colour);
@@ -153,7 +171,7 @@ export default function GearRoom({ pieces, start = 0 }: { pieces: GearPiece[]; s
           className="room-fade flex min-h-[calc(100%-var(--room-top))] flex-col justify-center py-4"
           style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 28px)' }}
         >
-          <Row rowRef={row} pieces={pieces} onOpen={open} />
+          <Row rowRef={row} pieces={pieces} asked={asked} onOpen={open} />
 
           {/* The piece in front, under it on the floor. Its name always has two lines' room, so nothing below it moves */}
           <div className="mt-3 px-5 text-center" aria-live="polite">
@@ -214,7 +232,7 @@ function GearGrid({ pieces, onPick }: { pieces: GearPiece[]; onPick: (i: number)
             <button type="button" onClick={() => onPick(i)} className="group block w-full text-center" aria-label={p.title}>
               <span className="block aspect-square [container-type:size]">
                 <span className="flex h-full items-end justify-center pb-[8%] transition-transform duration-300 group-hover:-translate-y-1 group-active:scale-95">
-                  <Cutout src={sized(p.image!.url, 360)} alt={altOf(p.image?.altText, p.title)} bounds={p.bounds} size="min(80cqw, calc(80cqh * var(--ratio)))" eager={i < 9} />
+                  <Cutout src={sized(p.image!.url, 360)} alt={altOf(p.image?.altText, p.title)} bounds={p.bounds} size="min(80cqw, calc(80cqh * var(--ratio)))" />
                 </span>
               </span>
               <span className="room-eyebrow mt-1 line-clamp-2 block px-1 !text-[10px] !leading-tight !tracking-[0.14em] !opacity-90">{p.title}</span>
@@ -226,14 +244,17 @@ function GearGrid({ pieces, onPick }: { pieces: GearPiece[]; onPick: (i: number)
   );
 }
 
-/** The row on the floor. Memoised: the name and colour above it change as it moves; it does not. */
+/** The row on the floor. Memoised: the name and colour above it change as it moves; it does not (only the photos it asks for grow). */
 const Row = memo(function Row({
   pieces,
   rowRef,
+  asked,
   onOpen,
 }: {
   pieces: GearPiece[];
   rowRef: React.RefObject<HTMLUListElement | null>;
+  /** The pieces whose photos are fetched */
+  asked: ReadonlySet<number>;
   onOpen: (e: React.MouseEvent, i: number) => void;
 }) {
   return (
@@ -248,7 +269,7 @@ const Row = memo(function Row({
           className="flex h-full w-[86vw] shrink-0 snap-center snap-always items-center justify-center [container-type:size] sm:w-[40vw] lg:w-[28vw]"
         >
           <GearLink href={`/store/product/${p.handle}`} onClick={(e) => onOpen(e, i)} className="block">
-            <Piece src={sized(p.image!.url)} alt={altOf(p.image?.altText, p.title)} bounds={p.bounds} eager={i < 2} />
+            <Piece src={asked.has(i) ? sized(p.image!.url) : undefined} alt={altOf(p.image?.altText, p.title)} bounds={p.bounds} />
           </GearLink>
         </li>
       ))}

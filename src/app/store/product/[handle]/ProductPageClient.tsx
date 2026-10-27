@@ -233,7 +233,7 @@ export default function ProductPageClient({ product, room, bounds }: ProductPage
         {/* The piece, on its floor */}
         <div>
           <div ref={floor} className="product-floor flex items-center justify-center [container-type:size]">
-            {shown && <Piece key={shown} src={sized(shown)} alt={product.title} bounds={boundsOf(shown)} eager stands={72} />}
+            {shown && <Piece key={shown} src={sized(shown)} alt={product.title} bounds={boundsOf(shown)} stands={72} />}
           </div>
           {/* Its other photos: small, cut out, no frames */}
           {images.length > 1 && (
@@ -250,7 +250,7 @@ export default function ProductPageClient({ product, room, bounds }: ProductPage
                       className={`flex h-12 w-12 flex-col items-center justify-end gap-1 pb-0.5 transition-opacity ${here ? 'opacity-100' : 'opacity-55 hover:opacity-90'}`}
                     >
                       <span className="flex h-9 w-11 items-end justify-center [container-type:size]">
-                        <Cutout src={sized(img.src, 120)} alt="" bounds={boundsOf(img.src)} size="min(100cqw, calc(100cqh * var(--ratio)))" eager={false} />
+                        <Cutout src={sized(img.src, 120)} alt="" bounds={boundsOf(img.src)} size="min(100cqw, calc(100cqh * var(--ratio)))" />
                       </span>
                       <span className={`h-[2px] w-4 rounded-full bg-current transition-opacity ${here ? 'opacity-100' : 'opacity-0'}`} />
                     </button>

@@ -345,6 +345,28 @@ Jean "the website doesn't need" the echoes.
 - **The levels code is split**: `lib/levels.ts` is what the browser may read; the database, the
   sampler and the still's image library are `lib/levelsServer.ts`.
 
+## On a weak line (2026-10-27, his words)
+
+"The infinity hoodie and the portrait hoodie are the only products whose images load. And the
+videos... still struggle to load well on shotty wifi/network. Takes the magic out of loading the
+page and its design."
+
+- **The gear row fetches its own photos**: the piece in front and two either side of it, of every
+  piece that has stood in front. The browser's lazy loading never fetched the pieces of the sideways
+  row on his iPhone; only the two fetched at once ever stood. No photo on the site is lazy now.
+- **A room keeps half a minute ahead** (`ROOM_BUFFER` in `lib/hlsPlayer.ts`). The clips' buffers
+  (3 s on a phone) were made for a feed swiped through, and froze a room on the first weak patch.
+  Measured with the line held to 1.2 Mbps and 150 ms: 15 to 20 s ahead, 1080p from 21 s.
+- **The room a visitor lands in starts from the page itself** on Apple's player (`early` in
+  `RoomVideo`: a few lines run as the page is read). Before, nothing was asked of Stream until the
+  site's code (about 315 KB compressed) had come and run, and on a weak line he stood still through
+  all of it. The component takes the stream over as it is.
+- **One stream has the line.** In the focused view the performance on screen plays first; the ones
+  beside it fetch their first seconds once it plays sharp, and nothing further away is fetched.
+- **Not done: the code itself.** Every page carries the whole old app's machinery in the root
+  layout (the store, music and media orchestrators, their modals, the desktop sidebar): about
+  315 KB of script before a room is live. Splitting it out is the next real gain on a weak line.
+
 ## Kept from the first build
 
 **A level is a Studio post that is out (`src/lib/levels.ts`).** It must meet all of these:

@@ -49,6 +49,23 @@ Debugging worth keeping:
   own. The share cards have no extension for that reason; the stills set
   `Vercel-CDN-Cache-Control`.
 
+## On a weak line, the same night
+
+He found only two pieces' photos on /gear, and the videos slow on poor wifi. What changed is in
+`docs/decisions/the-title-screen.md` under "On a weak line". Debugging worth keeping:
+
+- **Only the eager photos stood.** The row's first two photos were `loading="eager"`, the rest lazy,
+  and on his iPhone the lazy ones in the sideways row never loaded. Chromium loads them, so the
+  in-app browser cannot show this; the row now asks for its photos itself.
+- **What a phone waits for on the home page** (measured on the preview, compressed): HTML 12 KB,
+  CSS 46 KB (render-blocking), fonts 73 KB, the still 27 KB, script 315 KB before hydration, and
+  hls.js 157 KB more off Apple. Stream's copy: 1080p averages 0.79 Mbps in 4 s pieces (231 KB the
+  first), so the video was never the heavy part; the wait was the order.
+- **Stream's `clientBandwidthHint` caps the manifest to one rendition**, it does not reorder it, so
+  it cannot set where Apple's player starts.
+- **The checks** ran in headless Chrome over CDP with the line throttled (scratchpad `net/slow.cjs`:
+  `home`, `apple` with `navigator.vendor` faked, `focus`, `gear`). Not checked on an iPhone.
+
 ## Where it stands
 
 - **Home and /links:**

@@ -15,7 +15,8 @@ import type { LinkTreeItem } from '@/types/linktree';
  * own back, into the room the visitor stopped in (RoomScreen).
  *
  * Only the performance on screen plays; the ones beside it hold their
- * streams, ready. Each wears the game's HUD, drawn by the site from the
+ * streams, ready, fetched once the one on screen plays sharp, so on a weak
+ * line it never shares the line with them. Each wears the game's HUD, drawn by the site from the
  * Studio's data (RoomHud: the level, the song, the player, the progress), and
  * where to hear it at its foot.
  */
@@ -37,6 +38,8 @@ export default function FocusView({
   const [active, setActive] = useState(start);
   const activeRef = useRef(start);
   activeRef.current = active;
+  /** The last performance to have taken its still's place: the ones beside it fetch their start */
+  const [settled, setSettled] = useState<number | null>(null);
   const colour = levels[active]?.colour || ROOM_DARK;
   const ink = levels[active]?.ink || onRoom(colour);
   useBrowserColour(colour);
@@ -107,7 +110,8 @@ export default function FocusView({
                 startAt={l.posterAt}
                 title={title}
                 active={i === active}
-                near={Math.abs(i - active) <= 1}
+                near={i === active || (Math.abs(i - active) <= 1 && settled !== null && Math.abs(i - settled) <= 1)}
+                onShown={i === active ? () => setSettled(i) : undefined}
                 className="absolute inset-x-0"
                 style={{ top: TOP, bottom: FOOT }}
                 hud={hudOf(l)}

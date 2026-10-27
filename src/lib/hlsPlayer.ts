@@ -16,10 +16,26 @@ async function ensureHls() {
 export type HlsHandle = {
   destroy: () => void;
   isActive: () => boolean;
+  /**
+   * A room's stream, on screen or beside it: on screen it keeps its half
+   * minute ahead; beside it, only its first seconds, so the one on screen has
+   * the line. The browser's own player decides this for itself.
+   */
+  onScreen?: (on: boolean) => void;
 };
 
 // Track active HLS instances to prevent memory leaks
 const activeInstances = new WeakMap<HTMLVideoElement, any>();
+
+/**
+ * A room's copy is one long piece, looped: it keeps half a minute ahead, so a
+ * dip in the line never stops him. The clips' few seconds (getHLSBufferConfig:
+ * 3 on a phone) were made for a feed swiped through, and froze a room on the
+ * first weak patch of wifi (2026-10-27). Half a minute of a copy is ~3 MB.
+ */
+const ROOM_BUFFER = { maxBufferLength: 30, maxMaxBufferLength: 30, maxBufferSize: 60 * 1000 * 1000 };
+/** A room beside the one on screen: one fragment, its start, ready for the swipe */
+const ROOM_BESIDE_S = 4;
 
 export type HlsOptions = {
   /**
@@ -51,10 +67,13 @@ export async function attachHls(video: HTMLVideoElement, src: string, preloadOnl
     video.addEventListener('loadedmetadata', () => { try { if (video.currentTime < startAt) video.currentTime = startAt; } catch {} }, { once: true });
   };
   if ((!opts.sharp || applePlayer) && video.canPlayType('application/vnd.apple.mpegurl')) {
-    seekOnce();
-    video.src = src;
-    // Pre-load for faster start
-    video.load();
+    // Already started from the page itself, before any script (RoomVideo's `early`): taken over as it is
+    if (video.getAttribute('src') !== src) {
+      seekOnce();
+      video.src = src;
+      // Pre-load for faster start
+      video.load();
+    }
     return {
       destroy: () => {
         try {
@@ -90,7 +109,7 @@ export async function attachHls(video: HTMLVideoElement, src: string, preloadOnl
   // Use centralized device and network detection
   const { isMobile } = getDeviceInfo();
   const { isSlowNetwork, downlink } = getNetworkInfo();
-  const bufferConfig = getHLSBufferConfig(preloadOnly);
+  const bufferConfig = opts.sharp && !preloadOnly ? ROOM_BUFFER : getHLSBufferConfig(preloadOnly);
   // The clips cap at the third level on a guessed-slow line. A room's copy is light (its tallest level is
   // ~1 Mbps), so a room is never capped by the guess; its start is held to what the line carries (below)
   const { saveData } = getNetworkInfo();
@@ -244,6 +263,13 @@ export async function attachHls(video: HTMLVideoElement, src: string, preloadOnl
         activeInstances.delete(video);
       } catch {} 
     },
-    isActive: () => activeInstances.has(video)
+    isActive: () => activeInstances.has(video),
+    // read by hls.js as it decides each next fragment, so a change takes hold at once
+    onScreen: opts.sharp
+      ? (on) => {
+          hls.config.maxBufferLength = on ? bufferConfig.maxBufferLength : ROOM_BESIDE_S;
+          hls.config.maxMaxBufferLength = on ? bufferConfig.maxMaxBufferLength : ROOM_BESIDE_S;
+        }
+      : undefined,
   };
 }

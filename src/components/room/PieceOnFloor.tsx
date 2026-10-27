@@ -42,13 +42,18 @@ export function cropOf(bounds: PieceBounds | null) {
   };
 }
 
-/** A photo cropped to what is visible in it, never tighter */
-export function Cutout({ src, alt, bounds, size, eager }: { src: string; alt: string; bounds: PieceBounds | null; size: string; eager: boolean }) {
+/**
+ * A photo cropped to what is visible in it, never tighter. Fetched at once, as
+ * every photo here is: whatever holds it decides when it is drawn (the row
+ * asks for its photos itself), never the browser's lazy loading, which on an
+ * iPhone left the pieces of a sideways row unfetched (2026-10-27).
+ */
+export function Cutout({ src, alt, bounds, size }: { src: string; alt: string; bounds: PieceBounds | null; size: string }) {
   const { ratio, style } = cropOf(bounds);
   return (
     <span className="relative block overflow-hidden" style={{ aspectRatio: ratio, width: size, ['--ratio' as string]: ratio } as CSSProperties}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={src} alt={alt} loading={eager ? 'eager' : 'lazy'} decoding="async" draggable={false} className="absolute max-w-none" style={style} />
+      <img src={src} alt={alt} decoding="async" draggable={false} className="absolute max-w-none" style={style} />
     </span>
   );
 }
@@ -58,29 +63,28 @@ export function Cutout({ src, alt, bounds, size, eager }: { src: string; alt: st
  * share of the container's, `stands` in cqh). All of it, shade and reflection
  * too, fits inside its own height, so nothing below it is ever clipped. A
  * photo the server could not read stands uncropped. It comes in whole, once
- * its photo is there: never a shade on an empty floor.
+ * its photo is there: never a shade on an empty floor. With no photo asked for
+ * yet (a piece far along the row) it waits, unseen, in its place.
  */
 export const Piece = memo(function Piece({
   src,
   alt,
   bounds,
-  eager,
   stands = 66,
 }: {
-  src: string;
+  /** Undefined: not asked for yet */
+  src?: string;
   alt: string;
   bounds: PieceBounds | null;
-  eager: boolean;
   /** The piece's own height, as a share of the container's (cqh) */
   stands?: number;
 }) {
   const { ratio, style } = cropOf(bounds);
-  const loading = eager ? 'eager' : 'lazy';
   const floor = `${(100 / (1 + REFLECTION)).toFixed(3)}%`;
   const photo = useRef<HTMLImageElement>(null);
-  const [ready, setReady] = useState(() => drawn.has(src));
+  const [ready, setReady] = useState(() => !!src && drawn.has(src));
   const show = () => {
-    drawn.add(src);
+    if (src) drawn.add(src);
     setReady(true);
   };
   // A photo already in the cache loads before the page is live, and its load event is missed
@@ -99,13 +103,13 @@ export const Piece = memo(function Piece({
       <span aria-hidden="true" className="floor-shade floor-shade-near" style={{ top: floor }} />
       <span className="relative block w-full overflow-hidden" style={{ aspectRatio: ratio }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img ref={photo} src={src} alt={alt} loading={loading} decoding="async" draggable={false} onLoad={show} className="absolute max-w-none" style={style} />
+        <img ref={photo} src={src} alt={alt} decoding="async" draggable={false} onLoad={show} className="absolute max-w-none" style={style} />
       </span>
       {/* the hem, mirrored in the floor */}
       <span aria-hidden="true" className="floor-reflection relative block w-full overflow-hidden" style={{ aspectRatio: ratio / REFLECTION }}>
         <span className="floor-reflection-image absolute inset-x-0 top-0 block -scale-y-100" style={{ aspectRatio: ratio }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={src} alt="" loading={loading} decoding="async" draggable={false} className="absolute max-w-none" style={style} />
+          <img src={src} alt="" decoding="async" draggable={false} className="absolute max-w-none" style={style} />
         </span>
       </span>
     </span>

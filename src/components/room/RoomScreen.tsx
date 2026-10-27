@@ -176,7 +176,7 @@ export default function RoomScreen({ levels, nextRoom, verse, platforms, storeOp
               className="group absolute inset-x-0 block cursor-pointer"
               style={{ top: TOP, bottom: FLOOR }}
             >
-              <RoomVideo key={level.id} hls={level.hls} poster={level.poster} startAt={level.posterAt} title={title} active={focus === null} near className="absolute inset-0" tapToPause={false} />
+              <RoomVideo key={level.id} hls={level.hls} poster={level.poster} startAt={level.posterAt} title={title} active={focus === null} near early className="absolute inset-0" tapToPause={false} />
               {/* the way in: the dancer is the door to the performances */}
               <span className="absolute bottom-2 right-4 flex h-10 w-10 items-center justify-center rounded-full opacity-70 transition-opacity group-hover:opacity-100">
                 <Symbol name="expand" className="h-5 w-5" />
