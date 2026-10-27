@@ -63,3 +63,4 @@ scripts/shopify/.liftsubject
 
 # Python bytecode (the film and reel pipelines)
 __pycache__/
+public/_dev/

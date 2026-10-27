@@ -2403,3 +2403,41 @@ h6,
     transform: none;
   }
 }
+
+/* ── The Social Studio (/admin/social-studio) ───────────────────────────────
+   Paper and ink, like the playbill and the catalogue page he found easier
+   than the old dark Studio. The song's own colour is the only other colour:
+   every post carries its campaign's. Dark when his phone is dark. */
+.studio {
+  --paper: #f1efeb;
+  --sheet: #ffffff;
+  --ink: #2a0f0a;
+  --muted: #6f6461;
+  --rule: #ddd7d1;
+  --wash: #e7e1da;
+  --ok: #2c7a4b;
+  --warn: #a14d12;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  .studio {
+    --paper: #16110f;
+    --sheet: #201a18;
+    --ink: #f1e8e3;
+    --muted: #a99c96;
+    --rule: #3a312e;
+    --wash: #2c2421;
+    --ok: #7fd3a0;
+    --warn: #f0b27a;
+  }
+}
+.studio h1,
+.studio h2,
+.studio h3 {
+  font-family: inherit;
+}
+.studio .studio-display {
+  font-family: "Jost", var(--font-sans, sans-serif);
+}

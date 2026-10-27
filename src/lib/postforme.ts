@@ -466,6 +466,30 @@ export async function getAccountFeed(
   };
 }
 
+/** What happened to a post on one account: delivered, or refused and why. */
+export interface PostResult {
+  id: string;
+  social_account_id: string;
+  post_id: string;
+  success: boolean;
+  error?: unknown;
+  platform_data?: { id?: string; url?: string };
+}
+
+/**
+ * The results of a post, one per account it was sent to. Empty until Post
+ * for Me has tried (a scheduled post has none before its time).
+ */
+export async function getPostResults(postId: string): Promise<ApiResponse<PostResult[]>> {
+  const response = await apiRequest<PaginatedResponse<PostResult>>(
+    `/social-post-results?post_id=${encodeURIComponent(postId)}`
+  );
+  if (!response.success || !response.data) {
+    return { success: false, error: response.error || 'Failed to fetch post results' };
+  }
+  return { success: true, data: response.data.data };
+}
+
 // =============================================================================
 // Utility Functions
 // =============================================================================
