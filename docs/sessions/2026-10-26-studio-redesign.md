@@ -88,3 +88,39 @@ The dry run against the real feeds matched Billie Jean's live YouTube video
 - The route auth tests pass with the two new routes, which are gated with requireAdmin.
 - `tsc`: 846 errors, all old (the baseline was 850).
 - The dev preview was checked at phone size in light and dark.
+
+## Later the same night: the brand kit, and the Studio on brand
+
+He asked, "can we make it more on brand before deploying and also speaking of which, I need an
+accessible brand kit."
+
+**The Odubo Brand Kit** is at https://claude.ai/artifact/F87QSC3m9j4XVfMQiNrUta (a Design System
+page). It is private until he shares it from its Share menu. It holds:
+
+- **The names:** Mani Odubo, Odubo Studio, B.A.A.D, Loop Soul, Mitus Young History.
+- **The marks:** the lockup, the danceman and the seal as SVG, plus the B.A.A.D wordmark, with
+  the 96px rule.
+- **The colours:** Poster and Vault modes built on the house palette (oxblood, ink, sand).
+- **The type:** Libre Baskerville for the name, Jost 500/700 for artwork, Geist for interface,
+  with the font files included.
+- **The rules:** the playbill rules, the voice rules (captions in the game's voice, no em
+  dashes) and a levels page for the HUD.
+- **Previews:** PrimaryAction, PlaybillRow and LevelHUD.
+
+He then said **"the loop soul dance colors are not part of the brand kit"**, so the 15 song
+colours were taken out of the kit. They stay as the campaigns' own colours in the Studio, as
+data that says which song a post belongs to.
+
+**The Studio now uses the kit's tokens, under the same names:**
+
+- The colour names are ground, raised, text, text-muted, rule, accent, on-accent, ok and warn.
+- **Poster:** a sand-bright ground with ink type and an oxblood button.
+- **Vault:** an ink ground with sand type and a sand button.
+
+Other changes:
+
+- **The top bar:** the danceman (masked in the accent colour) and "Studio" in Libre Baskerville
+  Bold. `layout.tsx` loads that font through next/font, for the Studio only.
+- **The Today tab:** its icon is the seal.
+- **Type:** captions and big numbers are in Jost 700, and the labels are Jost caps eyebrows.
+- **Schedule:** rows lost their coloured edge.

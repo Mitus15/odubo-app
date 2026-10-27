@@ -51,14 +51,14 @@ export default function LibraryView({ posts, campaigns, now, onOpen }: LibraryVi
   return (
     <div className="h-full overflow-y-auto">
       <div className="max-w-3xl mx-auto px-4 pb-28">
-        <nav className="sticky top-0 z-10 bg-[var(--paper)] flex gap-5 pt-3 pb-1 border-b border-[var(--rule)]" aria-label="Show">
+        <nav className="sticky top-0 z-10 bg-[var(--ground)] flex gap-5 pt-3 pb-1 border-b border-[var(--rule)]" aria-label="Show">
           {FILTERS.map((f) => (
             <button
               key={f.key}
               type="button"
               onClick={() => setFilter(f.key)}
               aria-pressed={filter === f.key}
-              className={`min-h-[40px] text-sm ${filter === f.key ? 'text-[var(--ink)] underline underline-offset-[6px] decoration-2' : 'text-[var(--muted)]'}`}
+              className={`min-h-[40px] text-sm ${filter === f.key ? 'text-[var(--text)] underline underline-offset-[6px] decoration-2' : 'text-[var(--text-muted)]'}`}
             >
               {f.label}
             </button>
@@ -72,8 +72,8 @@ export default function LibraryView({ posts, campaigns, now, onOpen }: LibraryVi
             <h2 className="flex items-center gap-2 pb-2 border-b-2" style={{ borderColor: g.colour }}>
               <SongDot colour={g.colour} />
               <span className="studio-display text-xl">{g.name}</span>
-              {g.artist && <span className="text-sm text-[var(--muted)] truncate">{g.artist}</span>}
-              <span className="ml-auto font-mono text-[11px] text-[var(--muted)]">{g.posts.length}</span>
+              {g.artist && <span className="text-sm text-[var(--text-muted)] truncate">{g.artist}</span>}
+              <span className="ml-auto font-mono text-[11px] text-[var(--text-muted)]">{g.posts.length}</span>
             </h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-3 gap-y-5 mt-3">
               {g.posts.map((p) => {
@@ -94,7 +94,7 @@ export default function LibraryView({ posts, campaigns, now, onOpen }: LibraryVi
                     </div>
                     <button type="button" onClick={() => onOpen(p.id)} className="mt-2 w-full text-left">
                       <span className="studio-display block text-[17px] leading-tight">{p.caption || p.title || 'Untitled'}</span>
-                      <span className="block text-xs text-[var(--muted)] mt-0.5">
+                      <span className="block text-xs text-[var(--text-muted)] mt-0.5">
                         {KIND_LABEL[kindOf(p)]}
                         {p.scheduled_at && ` · ${dayLabel(p.scheduled_at, now)}, ${timeLabel(p.scheduled_at)}`}
                       </span>

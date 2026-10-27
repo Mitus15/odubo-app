@@ -207,7 +207,7 @@ export default function TodayView({
   if (loading && posts.length === 0) {
     return (
       <div className="h-full flex items-center justify-center">
-        <div className="w-8 h-8 rounded-full border-2 border-[var(--rule)] border-t-[var(--ink)] animate-spin" />
+        <div className="w-8 h-8 rounded-full border-2 border-[var(--rule)] border-t-[var(--text)] animate-spin" />
       </div>
     );
   }
@@ -216,7 +216,7 @@ export default function TodayView({
     return (
       <div className="h-full overflow-y-auto">
         <div className="max-w-lg mx-auto px-4 pt-10 pb-24">
-          <p className="text-[11px] tracking-[0.2em] uppercase text-[var(--muted)]">{dayLabel(now.toISOString(), now)}</p>
+          <p className="studio-eyebrow">{dayLabel(now.toISOString(), now)}</p>
           <h1 className="studio-display text-3xl mt-2">Nothing to post.</h1>
           <button type="button" onClick={onSchedule} className="mt-6 min-h-[44px] text-sm underline underline-offset-4">
             See the schedule
@@ -227,7 +227,7 @@ export default function TodayView({
   }
 
   const song = songOf(post, campaigns);
-  const colour = song?.colour || 'var(--ink)';
+  const colour = song?.colour || 'var(--text)';
   const kind = kindOf(post);
   const cue = soundCue(post.notes);
   const lines = (cue ? cue.rest : (post.notes || '').split('\n'))
@@ -256,10 +256,10 @@ export default function TodayView({
     <div ref={scroller} className="h-full overflow-y-auto">
       <div className="max-w-lg mx-auto px-4 pt-5 pb-28">
         <header className="flex items-baseline justify-between gap-3">
-          <p className="text-[11px] tracking-[0.2em] uppercase text-[var(--muted)]">
+          <p className="studio-eyebrow">
             {post.scheduled_at ? dayLabel(post.scheduled_at, now) : 'No date'}
           </p>
-          <p className="font-mono text-[11px] tabular-nums text-[var(--muted)]">
+          <p className="font-mono text-[11px] tabular-nums text-[var(--text-muted)]">
             {post.scheduled_at && `${timeLabel(post.scheduled_at)} · `}
             {KIND_LABEL[kind]}
           </p>
@@ -303,7 +303,7 @@ export default function TodayView({
                   type="button"
                   onClick={() => setZone(z)}
                   aria-pressed={zone === z}
-                  className={`min-h-[36px] ${zone === z ? 'text-[var(--ink)] underline underline-offset-4' : 'text-[var(--muted)]'}`}
+                  className={`min-h-[36px] ${zone === z ? 'text-[var(--text)] underline underline-offset-4' : 'text-[var(--text-muted)]'}`}
                 >
                   {z === 'clean' ? 'Clean' : `As on ${SAFE_ZONES[z].label}`}
                 </button>
@@ -315,28 +315,28 @@ export default function TodayView({
         {/* the caption, as it will be pasted: tap to copy */}
         <button type="button" onClick={() => copy(caption)} className="mt-5 w-full text-left group" aria-label="Copy the caption">
           <span className="studio-display block text-[30px] leading-[1.1] select-text whitespace-pre-wrap">{caption || 'No caption'}</span>
-          <span className="block mt-1 text-[11px] tracking-[0.2em] uppercase text-[var(--muted)]">{copied ? 'Copied' : 'Tap to copy'}</span>
+          <span className="studio-eyebrow block mt-1">{copied ? 'Copied' : 'Tap to copy'}</span>
         </button>
         {song && (
           <p className="mt-3 flex items-center gap-2 text-sm">
             <SongDot colour={song.colour} />
-            <span>{song.name}{song.artist && <span className="text-[var(--muted)]"> · {song.artist}</span>}</span>
+            <span>{song.name}{song.artist && <span className="text-[var(--text-muted)]"> · {song.artist}</span>}</span>
           </p>
         )}
 
         {/* where the song starts */}
         {cue && (
           <div className="mt-5 pt-4 border-t border-[var(--rule)]">
-            <p className="text-[11px] tracking-[0.2em] uppercase text-[var(--muted)]">Start the sound at</p>
+            <p className="studio-eyebrow">Start the sound at</p>
             <p className="flex items-baseline gap-3">
               <span className="studio-display text-[64px] leading-none tabular-nums select-text">{cue.from}</span>
-              {cue.to && <span className="font-mono text-sm tabular-nums text-[var(--muted)]">to {cue.to}</span>}
+              {cue.to && <span className="font-mono text-sm tabular-nums text-[var(--text-muted)]">to {cue.to}</span>}
             </p>
-            {cue.extra && <p className="text-xs text-[var(--muted)] mt-1">{cue.extra}</p>}
+            {cue.extra && <p className="text-xs text-[var(--text-muted)] mt-1">{cue.extra}</p>}
           </div>
         )}
         {lines.length > 0 && (
-          <div className="mt-3 text-sm text-[var(--muted)] space-y-0.5">
+          <div className="mt-3 text-sm text-[var(--text-muted)] space-y-0.5">
             {lines.map((l, i) => (
               <p key={i}>{STANDARD_HOW.test(l) ? 'Then the original sound to 0.' : l.replace(/^Song laid in: (\S+ to \S+).*$/, 'The song is in the video, $1.')}</p>
             ))}
@@ -347,7 +347,7 @@ export default function TodayView({
         <div className="mt-6 border-t border-[var(--rule)]">
           {file && !file.file && !file.error && (
             <div className="h-0.5 bg-[var(--rule)]" aria-label="Getting the video ready">
-              <div className="h-full bg-[var(--ink)] transition-[width]" style={{ width: `${Math.round(file.progress * 100)}%` }} />
+              <div className="h-full bg-[var(--text)] transition-[width]" style={{ width: `${Math.round(file.progress * 100)}%` }} />
             </div>
           )}
           {post.platforms.map((p) => {
@@ -360,15 +360,15 @@ export default function TodayView({
                 <div key={p} className="flex items-center gap-3 min-h-[56px] border-b border-[var(--rule)]">
                   <span className="flex-1 text-[15px]">
                     <span className="text-[var(--ok)]">✓</span> {label}
-                    {state.at && <span className="text-[var(--muted)] text-sm"> · {timeLabel(state.at)}</span>}
-                    {state.views !== undefined && <span className="text-[var(--muted)] text-sm"> · {countLabel(state.views)} views</span>}
+                    {state.at && <span className="text-[var(--text-muted)] text-sm"> · {timeLabel(state.at)}</span>}
+                    {state.views !== undefined && <span className="text-[var(--text-muted)] text-sm"> · {countLabel(state.views)} views</span>}
                   </span>
                   {state.url && (
                     <a href={state.url} target="_blank" rel="noopener noreferrer" className="min-h-[44px] flex items-center text-sm underline underline-offset-4">
                       Open
                     </a>
                   )}
-                  <button type="button" onClick={() => tick(post, p, false)} className="min-h-[44px] text-sm text-[var(--muted)]">
+                  <button type="button" onClick={() => tick(post, p, false)} className="min-h-[44px] text-sm text-[var(--text-muted)]">
                     Undo
                   </button>
                 </div>
@@ -378,14 +378,14 @@ export default function TodayView({
               return (
                 <div key={p} className="flex items-center gap-3 min-h-[56px] border-b border-[var(--rule)]">
                   <span className="flex-1 text-[15px]">
-                    <span className="text-[var(--muted)]">◷</span> {label}
-                    <span className="text-[var(--muted)] text-sm">
+                    <span className="text-[var(--text-muted)]">◷</span> {label}
+                    <span className="text-[var(--text-muted)] text-sm">
                       {state.kind === 'scheduled'
                         ? ` · goes out ${state.at ? `${dayLabel(state.at, now)}, ${timeLabel(state.at)}` : 'soon'}`
                         : ' · in your drafts: add the sound, post'}
                     </span>
                   </span>
-                  <button type="button" onClick={() => tick(post, p, true)} className="min-h-[44px] text-sm text-[var(--muted)]">
+                  <button type="button" onClick={() => tick(post, p, true)} className="min-h-[44px] text-sm text-[var(--text-muted)]">
                     It’s out
                   </button>
                 </div>
@@ -400,7 +400,7 @@ export default function TodayView({
                       type="button"
                       disabled={busy === p}
                       onClick={() => setYoutubeSheet(youtubeDetails(post, campaigns))}
-                      className={primary ? 'flex-1 min-h-[52px] rounded-full bg-[var(--ink)] text-[var(--paper)] text-[15px] font-medium active:scale-[0.98] transition-transform disabled:opacity-50' : 'flex-1 min-h-[44px] text-left text-[15px] underline underline-offset-4'}
+                      className={primary ? 'flex-1 min-h-[52px] rounded-full bg-[var(--accent)] text-[var(--on-accent)] text-[15px] font-medium active:scale-[0.98] transition-transform disabled:opacity-50' : 'flex-1 min-h-[44px] text-left text-[15px] underline underline-offset-4'}
                     >
                       {busy === p ? 'Sending…' : `Schedule on ${label}${due ? ` · ${timeLabel(due.toISOString())}` : ''}`}
                     </button>
@@ -409,27 +409,27 @@ export default function TodayView({
                       type="button"
                       onClick={() => share(post, p)}
                       disabled={!ready}
-                      className={primary ? 'flex-1 min-h-[52px] rounded-full bg-[var(--ink)] text-[var(--paper)] text-[15px] font-medium active:scale-[0.98] transition-transform disabled:opacity-50' : 'flex-1 min-h-[44px] text-left text-[15px] underline underline-offset-4 disabled:opacity-50'}
+                      className={primary ? 'flex-1 min-h-[52px] rounded-full bg-[var(--accent)] text-[var(--on-accent)] text-[15px] font-medium active:scale-[0.98] transition-transform disabled:opacity-50' : 'flex-1 min-h-[44px] text-left text-[15px] underline underline-offset-4 disabled:opacity-50'}
                     >
                       {ready ? `Post to ${label}` : 'Getting the video ready…'}
                     </button>
                   )}
-                  <button type="button" onClick={() => tick(post, p, true)} className="min-h-[44px] text-sm text-[var(--muted)]">
+                  <button type="button" onClick={() => tick(post, p, true)} className="min-h-[44px] text-sm text-[var(--text-muted)]">
                     Posted
                   </button>
                 </div>
                 {p === 'tiktok' && !api && (
-                  <button type="button" disabled={busy === p} onClick={() => send(post, p)} className="mt-1 min-h-[40px] text-sm text-[var(--muted)] underline underline-offset-4 disabled:opacity-50">
+                  <button type="button" disabled={busy === p} onClick={() => send(post, p)} className="mt-1 min-h-[40px] text-sm text-[var(--text-muted)] underline underline-offset-4 disabled:opacity-50">
                     {busy === p ? 'Sending to TikTok…' : 'Or send it to your TikTok drafts'}
                   </button>
                 )}
               </div>
             );
           })}
-          {file?.error && <p className="mt-2 text-xs text-[var(--muted)]">{file.error}. Save video still works.</p>}
+          {file?.error && <p className="mt-2 text-xs text-[var(--text-muted)]">{file.error}. Save video still works.</p>}
         </div>
 
-        <div className="flex items-center gap-6 mt-2 text-sm text-[var(--muted)]">
+        <div className="flex items-center gap-6 mt-2 text-sm text-[var(--text-muted)]">
           <a href={post.media_url} target="_blank" rel="noopener noreferrer" className="min-h-[44px] flex items-center">
             Save video
           </a>
@@ -441,10 +441,10 @@ export default function TodayView({
         {/* what comes after */}
         {days.size > 0 && (
           <section className="mt-8">
-            <h2 className="text-[11px] tracking-[0.2em] uppercase text-[var(--muted)]">Next</h2>
+            <h2 className="studio-eyebrow">Next</h2>
             {[...days.entries()].map(([k, list]) => (
               <div key={k} className="mt-3">
-                <p className="text-xs text-[var(--muted)] pb-1 border-b border-[var(--rule)]">{dayLabel(list[0].scheduled_at!, now)}</p>
+                <p className="studio-eyebrow pb-1 border-b border-[var(--text)] !text-[var(--text)]">{dayLabel(list[0].scheduled_at!, now)}</p>
                 {list.map((p) => {
                   const s = songOf(p, campaigns);
                   return (
@@ -454,11 +454,11 @@ export default function TodayView({
                       onClick={() => onOpen(p.id)}
                       className="w-full flex items-center gap-3 py-2 border-b border-[var(--rule)] text-left min-h-[56px]"
                     >
-                      <span className="font-mono text-xs tabular-nums w-[58px] text-[var(--muted)]">{timeLabel(p.scheduled_at!)}</span>
-                      <Thumb src={p.thumbnail_url} colour={s?.colour || 'var(--wash)'} className="w-8" />
+                      <span className="font-mono text-xs tabular-nums w-[58px] text-[var(--text-muted)]">{timeLabel(p.scheduled_at!)}</span>
+                      <Thumb src={p.thumbnail_url} colour={s?.colour || 'var(--raised)'} className="w-8" />
                       <span className="flex-1 min-w-0">
                         <span className="studio-display block text-base truncate">{p.caption || p.title}</span>
-                        <span className="block text-xs text-[var(--muted)] truncate">
+                        <span className="block text-xs text-[var(--text-muted)] truncate">
                           {s?.name}
                           {s && ' · '}
                           {KIND_LABEL[kindOf(p)]}
@@ -478,7 +478,7 @@ export default function TodayView({
 
         {queue.postedToday.length > 0 && (
           <section className="mt-8">
-            <h2 className="text-[11px] tracking-[0.2em] uppercase text-[var(--muted)]">Out today</h2>
+            <h2 className="studio-eyebrow">Out today</h2>
             {queue.postedToday.map((p) => (
               <p key={p.id} className="flex items-center gap-2 py-2 border-b border-[var(--rule)] text-sm">
                 <span className="text-[var(--ok)]">✓</span>
@@ -502,7 +502,7 @@ export default function TodayView({
       )}
 
       {toast && (
-        <div className="fixed left-1/2 -translate-x-1/2 bottom-[calc(76px+env(safe-area-inset-bottom))] z-50 px-4 py-2.5 rounded-full bg-[var(--ink)] text-[var(--paper)] text-sm shadow-lg max-w-[90vw] text-center" role="status">
+        <div className="fixed left-1/2 -translate-x-1/2 bottom-[calc(76px+env(safe-area-inset-bottom))] z-50 px-4 py-2.5 rounded-full bg-[var(--text)] text-[var(--ground)] text-sm shadow-lg max-w-[90vw] text-center" role="status">
           {toast}
         </div>
       )}
@@ -528,34 +528,34 @@ function YouTubeSheet({
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40" role="dialog" aria-modal="true" aria-label="Schedule on YouTube">
-      <div className="studio w-full sm:max-w-md bg-[var(--paper)] px-4 pt-4 pb-[calc(16px+env(safe-area-inset-bottom))]">
+      <div className="studio w-full sm:max-w-md bg-[var(--ground)] px-4 pt-4 pb-[calc(16px+env(safe-area-inset-bottom))]">
         <div className="flex items-center justify-between">
-          <p className="text-[11px] tracking-[0.2em] uppercase text-[var(--muted)]">YouTube · public · {when}</p>
+          <p className="studio-eyebrow">YouTube · public · {when}</p>
           <button type="button" onClick={onClose} aria-label="Close" className="w-11 h-11 -mr-2 flex items-center justify-center text-xl">
             ×
           </button>
         </div>
-        <label className="block mt-2 text-xs text-[var(--muted)]" htmlFor="yt-title">Title</label>
+        <label className="block mt-2 text-xs text-[var(--text-muted)]" htmlFor="yt-title">Title</label>
         <input
           id="yt-title"
           value={details.title || ''}
           maxLength={100}
           onChange={(e) => onChange({ ...details, title: e.target.value })}
-          className="studio-display w-full text-xl bg-transparent border-b border-[var(--rule)] py-2 outline-none focus:border-[var(--ink)]"
+          className="studio-display w-full text-xl bg-transparent border-b border-[var(--rule)] py-2 outline-none focus:border-[var(--text)]"
         />
-        <label className="block mt-4 text-xs text-[var(--muted)]" htmlFor="yt-description">Description</label>
+        <label className="block mt-4 text-xs text-[var(--text-muted)]" htmlFor="yt-description">Description</label>
         <textarea
           id="yt-description"
           value={details.description || ''}
           rows={3}
           onChange={(e) => onChange({ ...details, description: e.target.value })}
-          className="w-full text-[15px] bg-transparent border-b border-[var(--rule)] py-2 outline-none focus:border-[var(--ink)] resize-none"
+          className="w-full text-[15px] bg-transparent border-b border-[var(--rule)] py-2 outline-none focus:border-[var(--text)] resize-none"
         />
         <button
           type="button"
           disabled={busy || !details.title?.trim()}
           onClick={onConfirm}
-          className="mt-5 w-full min-h-[52px] rounded-full bg-[var(--ink)] text-[var(--paper)] text-[15px] font-medium disabled:opacity-50"
+          className="mt-5 w-full min-h-[52px] rounded-full bg-[var(--accent)] text-[var(--on-accent)] text-[15px] font-medium disabled:opacity-50"
         >
           {busy ? 'Sending to YouTube…' : 'Schedule it'}
         </button>

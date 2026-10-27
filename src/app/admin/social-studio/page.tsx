@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect, useCallback, Suspense, type ReactNode } from 'react';
+import { useState, useEffect, useCallback, Suspense, type CSSProperties, type ReactNode } from 'react';
 import dynamic from 'next/dynamic';
 import { allPlatformsDone, queueOf, withPlatformMark, type PlatformMark } from '@/lib/social/postQueue';
+import { ODUBO_MARK, ODUBO_MARK_ASPECT, ODUBO_SEAL } from '@/lib/brand/marks';
 import TodayView, { type SendDetails } from './components/TodayView';
 import ScheduleView from './components/ScheduleView';
 import LibraryView from './components/LibraryView';
@@ -125,7 +126,7 @@ const PostDetailSheet = dynamic(() => import('./components/PostDetailSheet'));
 function ViewLoading() {
   return (
     <div className="h-full flex items-center justify-center">
-      <div className="w-8 h-8 rounded-full border-2 border-[var(--rule,#3a312e)] border-t-[var(--ink,#f1e8e3)] animate-spin" />
+      <div className="w-8 h-8 rounded-full border-2 border-[var(--rule,#6b3a2b)] border-t-[var(--text,#f0d3ad)] animate-spin" />
     </div>
   );
 }
@@ -145,12 +146,8 @@ const TABS: { key: Tab; label: string; icon: ReactNode }[] = [
   {
     key: 'today',
     label: 'Today',
-    icon: (
-      <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.6} aria-hidden>
-        <rect x="7" y="3" width="10" height="18" rx="1.5" />
-        <path d="M11 10.5v3l2.5-1.5z" fill="currentColor" stroke="none" />
-      </svg>
-    ),
+    // the seal, the player marker: you are up
+    icon: <Mark src={ODUBO_SEAL} className="w-6 h-6" colour="currentColor" />,
   },
   {
     key: 'schedule',
@@ -174,6 +171,23 @@ const TABS: { key: Tab; label: string; icon: ReactNode }[] = [
     ),
   },
 ];
+
+/**
+ * A house mark (lib/brand/marks.ts) in any colour: the files are drawn in
+ * oxblood, and the kit says recolour them with a mask, never by editing them.
+ */
+function Mark({ src, className = '', style, colour, label }: { src: string; className?: string; style?: CSSProperties; colour: string; label?: string }) {
+  const mask = `url(${src}) center / contain no-repeat`;
+  return (
+    <span
+      role={label ? 'img' : undefined}
+      aria-label={label}
+      aria-hidden={label ? undefined : true}
+      className={`block flex-shrink-0 ${className}`}
+      style={{ ...style, background: colour, WebkitMask: mask, mask }}
+    />
+  );
+}
 
 function devFixtures(): { on: boolean; now?: Date } {
   if (process.env.NODE_ENV !== 'development' || typeof window === 'undefined') return { on: false };
@@ -426,8 +440,10 @@ export default function SocialStudioPage() {
     <div className="studio fixed inset-0 z-40 flex flex-col">
       {/* the top bar: the name, a new post, the menu */}
       <header className="flex-shrink-0 flex items-center justify-between px-4 pt-[env(safe-area-inset-top)] border-b border-[var(--rule)]">
-        <span className="studio-display text-[13px] tracking-[0.3em] uppercase min-h-[52px] flex items-center">
-          Studio{mounted && fixtures.on && <span className="ml-2 tracking-normal normal-case text-[var(--warn)]">preview</span>}
+        <span className="min-h-[52px] flex items-center gap-2">
+          <Mark src={ODUBO_MARK} className="h-7" style={{ aspectRatio: ODUBO_MARK_ASPECT }} colour="var(--accent)" label="Odubo" />
+          <span className="studio-house text-[17px] tracking-[0.02em]">Studio</span>
+          {mounted && fixtures.on && <span className="text-xs text-[var(--warn)]">preview</span>}
         </span>
         <div className="flex items-center -mr-2">
           <button type="button" onClick={() => go('create')} aria-label="New post" className="w-11 h-11 flex items-center justify-center">
@@ -475,12 +491,12 @@ export default function SocialStudioPage() {
               type="button"
               onClick={() => go(t.key)}
               aria-current={tab === t.key ? 'page' : undefined}
-              className={`relative flex-1 min-h-[56px] flex flex-col items-center justify-center gap-0.5 ${tab === t.key ? 'text-[var(--ink)]' : 'text-[var(--muted)]'}`}
+              className={`relative flex-1 min-h-[56px] flex flex-col items-center justify-center gap-0.5 ${tab === t.key ? 'text-[var(--text)]' : 'text-[var(--text-muted)]'}`}
             >
               {t.icon}
               <span className={`text-[11px] ${tab === t.key ? 'font-semibold' : ''}`}>{t.label}</span>
               {t.key === 'today' && dueCount > 0 && (
-                <span className="absolute top-1.5 left-1/2 ml-2 min-w-[18px] h-[18px] px-1 rounded-full bg-[var(--ink)] text-[var(--paper)] text-[10px] font-semibold flex items-center justify-center">
+                <span className="absolute top-1.5 left-1/2 ml-2 min-w-[18px] h-[18px] px-1 rounded-full bg-[var(--text)] text-[var(--ground)] text-[10px] font-semibold flex items-center justify-center">
                   {dueCount}
                 </span>
               )}
@@ -492,7 +508,7 @@ export default function SocialStudioPage() {
       {/* the menu */}
       {menu && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center" role="dialog" aria-modal="true" aria-label="Menu" onClick={() => setMenu(false)}>
-          <div className="studio w-full sm:max-w-sm bg-[var(--paper)] px-4 pt-2 pb-[calc(12px+env(safe-area-inset-bottom))]" onClick={(e) => e.stopPropagation()}>
+          <div className="studio w-full sm:max-w-sm bg-[var(--ground)] px-4 pt-2 pb-[calc(12px+env(safe-area-inset-bottom))]" onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-end">
               <button type="button" onClick={() => setMenu(false)} aria-label="Close" className="w-11 h-11 -mr-2 flex items-center justify-center text-xl">
                 ×
@@ -500,7 +516,7 @@ export default function SocialStudioPage() {
             </div>
             <button type="button" onClick={checkApps} disabled={check.busy || fixtures.on} className="w-full text-left py-3 border-b border-[var(--rule)] min-h-[56px] disabled:opacity-60">
               <span className="studio-display block text-lg">{check.busy ? 'Checking the apps…' : 'Check the apps now'}</span>
-              <span className="block text-xs text-[var(--muted)] mt-0.5">
+              <span className="block text-xs text-[var(--text-muted)] mt-0.5">
                 {check.error
                   ? check.error
                   : check.apps

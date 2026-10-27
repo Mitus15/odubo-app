@@ -16,7 +16,7 @@ export function Marks({ post, className = '' }: { post: QueuePost; className?: s
       {post.platforms.map((p) => {
         const state = platformState(post, p);
         const tone =
-          state.kind === 'posted' ? 'text-[var(--ok)]' : state.kind === 'failed' ? 'text-[var(--warn)]' : 'text-[var(--muted)]';
+          state.kind === 'posted' ? 'text-[var(--ok)]' : state.kind === 'failed' ? 'text-[var(--warn)]' : 'text-[var(--text-muted)]';
         return (
           <span key={p} className={tone} title={`${PLATFORM_LABEL[p] || p}: ${state.kind}`}>
             {PLATFORM_SHORT[p] || p} {SIGN[state.kind]}

@@ -45,16 +45,16 @@ export default function ScheduleView({ posts, campaigns, now, onOpen }: Schedule
     <div className="h-full overflow-y-auto">
       <div className="max-w-lg mx-auto px-4 pb-28">
         {past.length > 0 && (
-          <button type="button" onClick={() => setEarlier(!earlier)} className="mt-3 min-h-[44px] text-sm text-[var(--muted)] underline underline-offset-4">
+          <button type="button" onClick={() => setEarlier(!earlier)} className="mt-3 min-h-[44px] text-sm text-[var(--text-muted)] underline underline-offset-4">
             {earlier ? 'Hide the days before today' : `The days before today (${past.length})`}
           </button>
         )}
         {shown.length === 0 && <p className="studio-display text-2xl mt-10">Nothing planned.</p>}
         {shown.map(([k, list]) => (
           <section key={k}>
-            <h2 className="sticky top-0 z-10 bg-[var(--paper)] pt-4 pb-1 border-b border-[var(--ink)] flex items-baseline justify-between">
-              <span className="text-[11px] tracking-[0.2em] uppercase">{dayLabel(list[0].scheduled_at!, now)}</span>
-              <span className="font-mono text-[11px] text-[var(--muted)]">{list.length}</span>
+            <h2 className="sticky top-0 z-10 bg-[var(--ground)] pt-4 pb-1 border-b border-[var(--text)] flex items-baseline justify-between">
+              <span className="studio-eyebrow !text-[var(--text)]">{dayLabel(list[0].scheduled_at!, now)}</span>
+              <span className="font-mono text-[11px] text-[var(--text-muted)]">{list.length}</span>
             </h2>
             {list.map((p) => {
               const song = songOf(p, campaigns);
@@ -65,12 +65,11 @@ export default function ScheduleView({ posts, campaigns, now, onOpen }: Schedule
                   onClick={() => onOpen(p.id)}
                   className="w-full flex items-center gap-3 py-2 border-b border-[var(--rule)] text-left min-h-[72px]"
                 >
-                  <span className="font-mono text-xs tabular-nums w-[58px] text-[var(--muted)]">{timeLabel(p.scheduled_at!)}</span>
-                  <span className="w-1 self-stretch flex-shrink-0" style={{ background: song?.colour || 'var(--rule)' }} />
-                  <Thumb src={p.thumbnail_url} colour={song?.colour || 'var(--wash)'} className="w-9" />
+                  <span className="font-mono text-xs tabular-nums w-[58px] text-[var(--text-muted)]">{timeLabel(p.scheduled_at!)}</span>
+                  <Thumb src={p.thumbnail_url} colour={song?.colour || 'var(--raised)'} className="w-9" />
                   <span className="flex-1 min-w-0">
                     <span className="studio-display block text-[17px] leading-tight truncate">{p.caption || p.title || 'Untitled'}</span>
-                    <span className="block text-xs text-[var(--muted)] truncate mt-0.5">
+                    <span className="block text-xs text-[var(--text-muted)] truncate mt-0.5">
                       {song ? `${song.name} · ` : ''}
                       {KIND_LABEL[kindOf(p)]}
                     </span>
