@@ -228,17 +228,6 @@ export default function ProductPageClient({ product }: ProductPageClientProps) {
                 </div>
               )}
 
-              {product?.descriptionHtml ? (
-                <div
-                  className="prose prose-invert prose-sm text-[#b2a491] mb-10 max-w-md font-light leading-relaxed"
-                  dangerouslySetInnerHTML={{ __html: product.descriptionHtml }}
-                />
-              ) : (
-                <div className="prose prose-invert prose-sm text-[#b2a491] mb-10 max-w-md font-light leading-relaxed">
-                  {product?.description || 'No description available.'}
-                </div>
-              )}
-
               {/* Options */}
               {product?.options && product.options.length > 0 && (
                 <div className="space-y-6 mb-10">
@@ -306,6 +295,29 @@ export default function ProductPageClient({ product }: ProductPageClientProps) {
                   </a>
                 )}
               </div>
+
+              {/* The description (the fabric, the care, the size guide) waits behind
+                  one line: the page shows the piece and how to get it, and the
+                  rest is there for whoever asks (owner, 2026-10-26: "ugly and
+                  mechanical looking"). A native <details>, so it opens without
+                  script and reads as a button to a screen reader. */}
+              {(product?.descriptionHtml || product?.description) && (
+                <details className="group mt-10 max-w-md">
+                  <summary className="list-none [&::-webkit-details-marker]:hidden cursor-pointer select-none min-h-[44px] inline-flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-[#b2a491] hover:text-[#ede8df]">
+                    <span className="underline underline-offset-4 group-open:hidden">See details</span>
+                    <span className="underline underline-offset-4 hidden group-open:inline">Hide details</span>
+                    <span aria-hidden className="text-sm leading-none group-open:rotate-45 transition-transform">+</span>
+                  </summary>
+                  {product?.descriptionHtml ? (
+                    <div
+                      className="product-details mt-4"
+                      dangerouslySetInnerHTML={{ __html: product.descriptionHtml }}
+                    />
+                  ) : (
+                    <p className="product-details mt-4">{product?.description}</p>
+                  )}
+                </details>
+              )}
 
               {/* Made to order, in the policy's own words. The two lines that stood
                   here ("Free shipping on orders over $150", "Ships from Canada")
