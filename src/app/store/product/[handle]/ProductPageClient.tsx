@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { labelLockup } from '@/lib/store/brands';
+import { labelCredit, labelLockup } from '@/lib/store/brands';
 import ScreenLayout from '@/components/ui/ScreenLayout';
 import ScrollContainer from '@/components/ui/ScrollContainer';
 import { usePageAnalytics } from '@/hooks/usePageAnalytics';
@@ -315,6 +315,10 @@ export default function ProductPageClient({ product }: ProductPageClientProps) {
                     />
                   ) : (
                     <p className="product-details mt-4">{product?.description}</p>
+                  )}
+                  {/* The credit, where a hang tag's inside would say who made it */}
+                  {labelCredit(product?.vendor) && (
+                    <p className="product-details product-credit mt-5">{labelCredit(product?.vendor)}</p>
                   )}
                 </details>
               )}

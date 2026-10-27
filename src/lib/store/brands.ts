@@ -92,6 +92,20 @@ export function labelLockup(vendor?: string | null): { name: string; signature?:
   return { name: descriptor ? `${v} ${descriptor}` : v, signature: `by ${LABEL_BYLINE}` };
 }
 
+/**
+ * Who designs a label's pieces, for the credits (owner, 2026-10-26): the
+ * house signs ("by Odubo"), the person is credited, where people look for
+ * who made a piece (a product's details, inside a hang tag, About, the press
+ * kit), never in the lockup.
+ */
+const LABEL_DESIGNER: Record<string, string> = { [STORE_LABEL]: 'Mani Odubo' };
+
+/** "Designed by Mani Odubo", or null where the label names no designer (the house's own products). */
+export function labelCredit(vendor?: string | null): string | null {
+  const designer = LABEL_DESIGNER[(vendor || '').trim()];
+  return designer ? `Designed by ${designer}` : null;
+}
+
 /** The label's full name: "B.A.A.D Creative Wear". */
 export const STORE_FULL_NAME = labelLockup(STORE_LABEL).name;
 

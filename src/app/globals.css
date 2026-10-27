@@ -2512,3 +2512,9 @@ h6,
 .product-details tbody th {
   color: #ede8df;
 }
+.product-details.product-credit {
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #ede8df;
+}
