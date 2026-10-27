@@ -148,3 +148,28 @@ On the site:
 - The site's description reads "B.A.A.D Creative Wear".
 - Tests: `src/__tests__/baadNames.test.ts`.
 - The Shopify shop name, which shows at checkout, is his to change in Shopify.
+
+## The Portrait Hoodie (was the Faceless Hoodie)
+
+His words: "the 'faceless hoodie' isnt actually faceless. thats my face on the back which is the same image
+used for the signs of Life cover". Renamed **Portrait Hoodie**, his pick. The name says nothing of the album,
+whose name is still held back.
+
+Applied in Shopify at 2026-10-27 02:5x UTC through `scripts/shopify/loop-soul-drop.ts --apply`:
+- the title;
+- the first line, now "The ∞ small on the chest, the portrait across the back. ...";
+- the SEO title and description, and the photos' alt text.
+
+The script now refreshes a house description's first line from the manifest. It kept the old one before.
+The as-found backup is `docs/shopify/backup-2026-10-27-loop-soul-drop.json`.
+
+**The address:** `src/lib/store/movedProducts.ts` forwards `/store/product/faceless-hoodie` permanently to
+`/store/product/portrait-hoodie`. Until Shopify's handle moves, the new address reads the product at the old
+handle, so the two can change in either order.
+
+**DEPLOY STEP:** once this branch is live, run
+`npx tsx --env-file=.env.local scripts/shopify/loop-soul-drop.ts --apply`. The manifest's handle is already
+`portrait-hoodie`, so this moves Shopify's handle, with Shopify's own redirect.
+
+Also, product pages now end their details with "Designed by Mani Odubo" (`labelCredit()`); the signature
+stays "by Odubo" (his call).

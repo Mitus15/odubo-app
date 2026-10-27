@@ -72,12 +72,15 @@ const MANIFEST: Piece[] = [
     line: "The ∞ across the chest. Oversized pullover, curved panels, hidden side zips, no drawstring — 350 gsm.",
   },
   {
-    from: "sunfaded-edge-fleece-hoodie-1",
-    title: "Faceless Hoodie",
-    handle: "faceless-hoodie",
+    // Was the Faceless Hoodie: the back is his own face, the portrait the
+    // second record's cover uses, not a mask (owner, 2026-10-26).
+    from: "faceless-hoodie",
+    title: "Portrait Hoodie",
+    // Run --apply once the site's forward is live (src/lib/store/movedProducts.ts)
+    handle: "portrait-hoodie",
     productType: "Tops",
     type: "hoodie",
-    line: "The ∞ small on the chest, the mask across the back. Oversized washed fleece, drop shoulder, sunfaded seams. 350 gsm.",
+    line: "The ∞ small on the chest, the portrait across the back. Oversized washed fleece, drop shoulder, sunfaded seams. 350 gsm.",
   },
   {
     from: "mens-vintage-wash-barrel-leg-jeans",
@@ -98,7 +101,7 @@ const MANIFEST: Piece[] = [
  * A handle listed here that no longer exists is fine — the step skips it.
  */
 const RETIRED: { handle: string; why: string }[] = [
-  { handle: "infinity-zip-hoodie", why: "replaced by the Faceless Hoodie (owner, 2026-09-17)" },
+  { handle: "infinity-zip-hoodie", why: "replaced by the Faceless Hoodie, now the Portrait Hoodie (owner, 2026-09-17)" },
   { handle: "sunfaded-edge-fleece-hoodie", why: "the Sept 10 import of the same garment, superseded by the $75 re-import" },
 ];
 
@@ -231,7 +234,8 @@ function isHouseDescription(html: string): boolean {
  * house form with a real table body is left exactly as it is.
  */
 function buildDescription(piece: Piece, current: string, original: string | undefined): string {
-  if (isHouseDescription(current)) return current;
+  // Already in house form: keep it, but its first line follows the manifest's (a renamed piece's line changes)
+  if (isHouseDescription(current)) return current.replace(/^\s*<p>[\s\S]*?<\/p>/, `<p>${piece.line}</p>`);
   const guide = rebuildSizeGuide(current) ?? (original ? rebuildSizeGuide(original) : null);
   if (!guide) throw new Error(`${piece.handle}: no supplier size table to rebuild from (live or backup)`);
   return [
