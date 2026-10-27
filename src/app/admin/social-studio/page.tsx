@@ -1,14 +1,36 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
-import { queueOf } from '@/lib/social/postQueue';
+import { useState, useEffect, useCallback, Suspense, type CSSProperties, type ReactNode } from 'react';
 import dynamic from 'next/dynamic';
+import { allPlatformsDone, queueOf, withPlatformMark, type PlatformMark } from '@/lib/social/postQueue';
+import { ODUBO_MARK, ODUBO_MARK_ASPECT, ODUBO_SEAL } from '@/lib/brand/marks';
+import TodayView, { type SendDetails } from './components/TodayView';
+import ScheduleView from './components/ScheduleView';
+import LibraryView from './components/LibraryView';
+
+/**
+ * The Social Studio: where the week's posts are made, on his phone.
+ *
+ * Three tabs. Today is the front door (the next post, ready to go out),
+ * Schedule is every planned post day by day, Library is every clip song by
+ * song. The rest (a new post, the month, the Post for Me dashboard, settings)
+ * is in the menu, for releases planned here rather than posted by hand.
+ *
+ * Connected to the apps through Post for Me: on opening it reads what is
+ * live on Instagram, TikTok and YouTube and ticks what he posted
+ * (api/social/feeds), and a full song can be scheduled on YouTube, or a clip
+ * sent to his TikTok drafts, from Today (api/social/posts/[id]/send).
+ *
+ * In development, ?fixtures loads public/_dev/studio-fixtures.json instead of
+ * the live posts (git-ignored; nothing is written), and &now=<ISO> sets the
+ * clock, to see a day before it comes.
+ */
 
 // =============================================================================
 // TYPES
 // =============================================================================
 
-export type StudioView = 'post' | 'home' | 'calendar' | 'create' | 'library' | 'settings';
+export type StudioView = 'today' | 'schedule' | 'library' | 'create' | 'calendar' | 'settings' | 'home' | 'post';
 
 export interface Post {
   id: string;
@@ -18,6 +40,7 @@ export interface Post {
   caption_by_platform?: Record<string, string>;
   hashtags?: string[];
   notes?: string;
+  tags?: string[];
   platform_status?: Record<string, unknown>;
   media_type: 'video' | 'image';
   media_url: string;
@@ -79,94 +102,108 @@ export interface DashboardData {
   upcoming: Post[];
 }
 
+type Tab = 'today' | 'schedule' | 'library';
+type Room = 'create' | 'calendar' | 'dashboard' | 'settings';
+
+interface AppsCheck {
+  at?: string;
+  busy?: boolean;
+  apps?: Record<string, { ok: boolean; error?: string }>;
+  error?: string;
+}
+
 // =============================================================================
-// DYNAMIC IMPORTS (Code Splitting)
+// DYNAMIC IMPORTS (Code Splitting): the three tabs load with the page, so a
+// tab opens at once; the back rooms load when one is opened
 // =============================================================================
 
-const PostView = dynamic(() => import('./components/PostView'), {
-  loading: () => <ViewLoading label="Posts" />,
-});
-
-const HomeView = dynamic(() => import('./components/HomeView'), {
-  loading: () => <ViewLoading label="Dashboard" />,
-});
-
-const CalendarView = dynamic(() => import('./components/CalendarView'), {
-  loading: () => <ViewLoading label="Calendar" />,
-});
-
-const CreateFlow = dynamic(() => import('./components/CreateFlow'), {
-  loading: () => <ViewLoading label="Create Post" />,
-});
-
-const LibraryView = dynamic(() => import('./components/LibraryView'), {
-  loading: () => <ViewLoading label="Library" />,
-});
-
-const SettingsView = dynamic(() => import('./components/SettingsView'), {
-  loading: () => <ViewLoading label="Settings" />,
-});
-
+const HomeView = dynamic(() => import('./components/HomeView'), { loading: () => <ViewLoading /> });
+const CalendarView = dynamic(() => import('./components/CalendarView'), { loading: () => <ViewLoading /> });
+const CreateFlow = dynamic(() => import('./components/CreateFlow'), { loading: () => <ViewLoading /> });
+const SettingsView = dynamic(() => import('./components/SettingsView'), { loading: () => <ViewLoading /> });
 const PostDetailSheet = dynamic(() => import('./components/PostDetailSheet'));
 
-// =============================================================================
-// LOADING COMPONENT
-// =============================================================================
-
-function ViewLoading({ label }: { label: string }) {
+function ViewLoading() {
   return (
-    <div className="flex-1 flex items-center justify-center">
-      <div className="text-center">
-        <div className="w-10 h-10 border-2 border-[#e8a990]/25 border-t-[#843c2d] rounded-full animate-spin mx-auto mb-4 shadow-[0_0_20px_rgba(212,168,83,0.15)]" />
-        <p className="text-sm text-[#726d6c] tracking-wide">Loading {label}...</p>
-      </div>
+    <div className="h-full flex items-center justify-center">
+      <div className="w-8 h-8 rounded-full border-2 border-[var(--rule,#6b3a2b)] border-t-[var(--text,#f0d3ad)] animate-spin" />
     </div>
   );
 }
 
-// =============================================================================
-// BOTTOM NAV ICONS
-// =============================================================================
+/** How long a check of the apps holds before opening the Studio checks again */
+const APPS_CHECK_EVERY_MS = 10 * 60 * 1000;
+const APPS_CHECKED_KEY = 'studio:apps-checked';
 
-const Icons = {
-  post: (
-    <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
-    </svg>
-  ),
-  home: (
-    <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12l8.954-8.955a1.126 1.126 0 011.592 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
-    </svg>
-  ),
-  calendar: (
-    <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
-    </svg>
-  ),
-  create: (
-    <svg className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-    </svg>
-  ),
-  library: (
-    <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
-    </svg>
-  ),
-  settings: (
-    <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 12a.75.75 0 11-1.5 0 .75.75 0 011.5 0zM12.75 12a.75.75 0 11-1.5 0 .75.75 0 011.5 0zM18.75 12a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
-    </svg>
-  ),
+const ROOM_TITLE: Record<Room, string> = {
+  create: 'New post',
+  calendar: 'Month',
+  dashboard: 'Post for Me',
+  settings: 'Settings',
 };
+
+const TABS: { key: Tab; label: string; icon: ReactNode }[] = [
+  {
+    key: 'today',
+    label: 'Today',
+    // the seal, the player marker: you are up
+    icon: <Mark src={ODUBO_SEAL} className="w-6 h-6" colour="currentColor" />,
+  },
+  {
+    key: 'schedule',
+    label: 'Schedule',
+    icon: (
+      <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" aria-hidden>
+        <path d="M4 6h3M4 12h3M4 18h3M10 6h10M10 12h10M10 18h10" />
+      </svg>
+    ),
+  },
+  {
+    key: 'library',
+    label: 'Library',
+    icon: (
+      <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.6} aria-hidden>
+        <rect x="4" y="3" width="7" height="11" rx="1" />
+        <rect x="13" y="3" width="7" height="11" rx="1" />
+        <rect x="4" y="16" width="7" height="5" rx="1" />
+        <rect x="13" y="16" width="7" height="5" rx="1" />
+      </svg>
+    ),
+  },
+];
+
+/**
+ * A house mark (lib/brand/marks.ts) in any colour: the files are drawn in
+ * oxblood, and the kit says recolour them with a mask, never by editing them.
+ */
+function Mark({ src, className = '', style, colour, label }: { src: string; className?: string; style?: CSSProperties; colour: string; label?: string }) {
+  const mask = `url(${src}) center / contain no-repeat`;
+  return (
+    <span
+      role={label ? 'img' : undefined}
+      aria-label={label}
+      aria-hidden={label ? undefined : true}
+      className={`block flex-shrink-0 ${className}`}
+      style={{ ...style, background: colour, WebkitMask: mask, mask }}
+    />
+  );
+}
+
+function devFixtures(): { on: boolean; now?: Date } {
+  if (process.env.NODE_ENV !== 'development' || typeof window === 'undefined') return { on: false };
+  const q = new URLSearchParams(window.location.search);
+  const at = q.get('now');
+  return { on: q.has('fixtures'), now: at ? new Date(at) : undefined };
+}
 
 // =============================================================================
 // MAIN COMPONENT
 // =============================================================================
 
 export default function SocialStudioPage() {
-  const [view, setView] = useState<StudioView>('home');
+  const [tab, setTab] = useState<Tab>('today');
+  const [room, setRoom] = useState<Room | null>(null);
+  const [menu, setMenu] = useState(false);
   const [posts, setPosts] = useState<Post[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -175,14 +212,37 @@ export default function SocialStudioPage() {
   const [syncing, setSyncing] = useState(false);
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const [createForSlot, setCreateForSlot] = useState<{ date: string; time: string } | null>(null);
-  const chosenView = useRef(false);
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [fixtures] = useState(devFixtures);
+  const [now, setNow] = useState(() => fixtures.now || new Date());
+  const [check, setCheck] = useState<AppsCheck>({});
+  // The preview label only after the first paint: the server cannot know the query
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
-  // Fetch all data
+  // The clock moves on, so what is due today moves with it
+  useEffect(() => {
+    if (fixtures.now) return;
+    const t = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(t);
+  }, [fixtures.now]);
+
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
+      if (fixtures.on) {
+        const data = (await (await fetch('/_dev/studio-fixtures.json')).json()) as {
+          posts: Post[];
+          campaigns: Campaign[];
+          accounts?: Account[];
+        };
+        setPosts(data.posts);
+        setCampaigns(data.campaigns);
+        setAccounts(data.accounts || []);
+        return;
+      }
       const [postsRes, accountsRes, campaignsRes, slotsRes] = await Promise.all([
-        fetch('/api/social/posts?limit=1000'),  // every post: the views filter by date themselves
+        fetch('/api/social/posts?limit=1000'), // every post: the views filter by date themselves
         fetch('/api/social/accounts'),
         fetch('/api/social/studio/campaigns'),
         fetch('/api/social/studio/slots'),
@@ -194,44 +254,43 @@ export default function SocialStudioPage() {
         window.location.href = `/admin/login?next=${encodeURIComponent(window.location.pathname + window.location.search)}`;
         return;
       }
-
-      if (postsRes.ok) {
-        const data = await postsRes.json();
-        setPosts(data.posts || []);
-      }
-
-      if (accountsRes.ok) {
-        const data = await accountsRes.json();
-        setAccounts(data.accounts || []);
-      }
-
-      if (campaignsRes.ok) {
-        const data = await campaignsRes.json();
-        setCampaigns(data.campaigns || []);
-      }
-
-      if (slotsRes.ok) {
-        const data = await slotsRes.json();
-        setSlots(data.slots || []);
-      }
+      if (postsRes.ok) setPosts(((await postsRes.json()) as { posts?: Post[] }).posts || []);
+      if (accountsRes.ok) setAccounts(((await accountsRes.json()) as { accounts?: Account[] }).accounts || []);
+      if (campaignsRes.ok) setCampaigns(((await campaignsRes.json()) as { campaigns?: Campaign[] }).campaigns || []);
+      if (slotsRes.ok) setSlots(((await slotsRes.json()) as { slots?: PostingSlot[] }).slots || []);
     } catch (err) {
       console.error('[SocialStudio] Failed to fetch data:', err);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [fixtures.on]);
 
-  // Sync all posts from Post for Me
+  // What went out on the apps: read their feeds and tick what he posted
+  const checkApps = useCallback(async () => {
+    if (fixtures.on) return;
+    setCheck((c) => ({ ...c, busy: true }));
+    try {
+      const res = await fetch('/api/social/feeds', { method: 'POST' });
+      const data = (await res.json()) as { checkedAt?: string; apps?: AppsCheck['apps']; updated?: number; error?: string };
+      if (!res.ok) throw new Error(data.error || `The check did not run (${res.status})`);
+      setCheck({ at: data.checkedAt, apps: data.apps });
+      try {
+        localStorage.setItem(APPS_CHECKED_KEY, data.checkedAt || new Date().toISOString());
+      } catch {
+        // storage unavailable: the next open checks again
+      }
+      if (data.updated) await fetchData();
+    } catch (e) {
+      setCheck({ error: (e as Error).message });
+    }
+  }, [fixtures.on, fetchData]);
+
+  // Sync all posts from Post for Me (the dashboard's button)
   const syncAll = useCallback(async () => {
     setSyncing(true);
     try {
-      // Sync accounts first
       await fetch('/api/social/accounts/sync', { method: 'POST' });
-
-      // Trigger full social sync (posts + analytics)
       await fetch('/api/cron/social-sync', { method: 'POST' });
-
-      // Refetch data
       await fetchData();
     } catch (err) {
       console.error('[SocialStudio] Sync failed:', err);
@@ -240,50 +299,122 @@ export default function SocialStudioPage() {
     }
   }, [fetchData]);
 
-  // Initial load
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    fetchData().then(() => {
+      let last = 0;
+      try {
+        last = new Date(localStorage.getItem(APPS_CHECKED_KEY) || 0).getTime();
+      } catch {
+        // storage unavailable: check now
+      }
+      if (Date.now() - last > APPS_CHECK_EVERY_MS) checkApps();
+    });
+  }, [fetchData, checkApps]);
 
-  // Open on Post when something is due today and nothing else was chosen: open
-  // the page, post the next thing.
-  useEffect(() => {
-    if (chosenView.current || loading) return;
-    chosenView.current = true;
-    if (queueOf(posts).due.length > 0) setView('post');
-  }, [loading, posts]);
+  const replace = (next: Post) => setPosts((all) => all.map((p) => (p.id === next.id ? next : p)));
 
-  const go = (next: StudioView) => {
-    chosenView.current = true;
-    setView(next);
+  // A tick by hand (or an Undo): saved on the post, at once on screen
+  const onMark = useCallback(
+    async (post: Post, platform: string, posted: boolean) => {
+      const status = withPlatformMark(post.platform_status, platform, posted, new Date().toISOString());
+      const finished = allPlatformsDone({ platforms: post.platforms, platform_status: status });
+      const next: Post = { ...post, platform_status: status, ...(finished ? { status: 'published', published_at: new Date().toISOString() } : {}) };
+      replace(next);
+      if (fixtures.on) return true;
+      try {
+        const res = await fetch(`/api/social/posts/${post.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(
+            finished ? { platform_status: status, status: 'published', published_at: next.published_at } : { platform_status: status },
+          ),
+        });
+        if (!res.ok) throw new Error(String(res.status));
+        return true;
+      } catch {
+        replace(post);
+        return false;
+      }
+    },
+    [fixtures.on],
+  );
+
+  // A send to the app through Post for Me (a YouTube upload, a TikTok draft)
+  const onSend = useCallback(
+    async (post: Post, platform: string, details?: SendDetails) => {
+      if (fixtures.on) {
+        replace({ ...post, platform_status: { ...post.platform_status, [platform]: { posted: false, sent: platform === 'youtube' ? 'scheduled' : 'draft', for: post.scheduled_at } } });
+        return { ok: true };
+      }
+      try {
+        const res = await fetch(`/api/social/posts/${post.id}/send`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ platform, ...details }),
+        });
+        const data = (await res.json()) as { ok?: boolean; mark?: PlatformMark; error?: string };
+        if (data.mark) replace({ ...post, platform_status: { ...post.platform_status, [platform]: data.mark } });
+        return { ok: res.ok, error: data.error };
+      } catch {
+        return { ok: false, error: 'The Studio could not reach the server. Try again.' };
+      }
+    },
+    [fixtures.on],
+  );
+
+  const open = (id: string | null) => {
+    setOpenId(id);
+    setTab('today');
   };
-  const dueCount = queueOf(posts).due.length;
 
-  // Handle opening create with pre-filled slot
-  const handleCreateForSlot = (date: string, time: string) => {
-    setCreateForSlot({ date, time });
-    setView('create');
+  const go = (view: StudioView) => {
+    setMenu(false);
+    if (view === 'today' || view === 'schedule' || view === 'library') {
+      setRoom(null);
+      setTab(view);
+    } else if (view === 'post' || view === 'home') {
+      setRoom(null);
+      setTab('today');
+    } else {
+      setRoom(view === 'create' ? 'create' : view === 'calendar' ? 'calendar' : 'settings');
+    }
   };
 
-  // Handle create complete
-  const handleCreateComplete = () => {
-    setCreateForSlot(null);
-    setView('home');
-    fetchData();
-  };
+  const dueCount = queueOf(posts, now).due.length;
 
-  // Handle view post detail
-  const handleViewPost = (postId: string) => {
-    setSelectedPostId(postId);
-  };
-
-  // Render current view
-  const renderView = () => {
-    switch (view) {
-      case 'post':
-        return <PostView posts={posts} loading={loading} onRefresh={fetchData} onViewPost={handleViewPost} />;
-
-      case 'home':
+  const renderRoom = (r: Room) => {
+    switch (r) {
+      case 'create':
+        return (
+          <CreateFlow
+            accounts={accounts}
+            campaigns={campaigns}
+            slots={slots}
+            prefillSlot={createForSlot}
+            onComplete={() => {
+              setCreateForSlot(null);
+              setRoom(null);
+              fetchData();
+            }}
+            onCancel={() => {
+              setCreateForSlot(null);
+              setRoom(null);
+            }}
+          />
+        );
+      case 'calendar':
+        return (
+          <CalendarView
+            posts={posts}
+            slots={slots}
+            onViewPost={setSelectedPostId}
+            onCreateForSlot={(date, time) => {
+              setCreateForSlot({ date, time });
+              setRoom('create');
+            }}
+          />
+        );
+      case 'dashboard':
         return (
           <HomeView
             posts={posts}
@@ -292,153 +423,146 @@ export default function SocialStudioPage() {
             loading={loading}
             syncing={syncing}
             onSync={syncAll}
-            onViewPost={handleViewPost}
-            onCreateForSlot={handleCreateForSlot}
-            onNavigate={setView}
-          />
-        );
-
-      case 'calendar':
-        return (
-          <CalendarView
-            posts={posts}
-            slots={slots}
-            onViewPost={handleViewPost}
-            onCreateForSlot={handleCreateForSlot}
-          />
-        );
-
-      case 'create':
-        return (
-          <CreateFlow
-            accounts={accounts}
-            campaigns={campaigns}
-            slots={slots}
-            prefillSlot={createForSlot}
-            onComplete={handleCreateComplete}
-            onCancel={() => {
-              setCreateForSlot(null);
-              setView('home');
+            onViewPost={setSelectedPostId}
+            onCreateForSlot={(date, time) => {
+              setCreateForSlot({ date, time });
+              setRoom('create');
             }}
+            onNavigate={go}
           />
         );
-
-      case 'library':
-        return (
-          <LibraryView
-            posts={posts}
-            campaigns={campaigns}
-            onViewPost={handleViewPost}
-            onRefresh={fetchData}
-          />
-        );
-
       case 'settings':
-        return (
-          <SettingsView
-            accounts={accounts}
-            campaigns={campaigns}
-            slots={slots}
-            onRefresh={fetchData}
-          />
-        );
-
-      default:
-        return null;
+        return <SettingsView accounts={accounts} campaigns={campaigns} slots={slots} onRefresh={fetchData} />;
     }
   };
 
   return (
-    <div className="h-full flex flex-col bg-black">
-      {/* Main Content Area */}
-      <div className="flex-1 overflow-hidden">
-        <Suspense fallback={<ViewLoading label="" />}>
-          {renderView()}
+    <div className="studio fixed inset-0 z-40 flex flex-col">
+      {/* the top bar: the name, a new post, the menu */}
+      <header className="flex-shrink-0 flex items-center justify-between px-4 pt-[env(safe-area-inset-top)] border-b border-[var(--rule)]">
+        <span className="min-h-[52px] flex items-center gap-2">
+          <Mark src={ODUBO_MARK} className="h-7" style={{ aspectRatio: ODUBO_MARK_ASPECT }} colour="var(--accent)" label="Odubo" />
+          <span className="studio-house text-[17px] tracking-[0.02em]">Studio</span>
+          {mounted && fixtures.on && <span className="text-xs text-[var(--warn)]">preview</span>}
+        </span>
+        <div className="flex items-center -mr-2">
+          <button type="button" onClick={() => go('create')} aria-label="New post" className="w-11 h-11 flex items-center justify-center">
+            <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" aria-hidden>
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+          </button>
+          <button type="button" onClick={() => setMenu(true)} aria-label="Menu" className="w-11 h-11 flex items-center justify-center">
+            <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor" aria-hidden>
+              <circle cx="5" cy="12" r="1.6" />
+              <circle cx="12" cy="12" r="1.6" />
+              <circle cx="19" cy="12" r="1.6" />
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      <main className="flex-1 min-h-0">
+        <Suspense fallback={<ViewLoading />}>
+          {tab === 'today' && (
+            <TodayView
+              posts={posts}
+              campaigns={campaigns}
+              loading={loading}
+              now={now}
+              openId={openId}
+              onOpen={setOpenId}
+              onMark={onMark}
+              onSend={onSend}
+              onDetails={setSelectedPostId}
+              onSchedule={() => setTab('schedule')}
+            />
+          )}
+          {tab === 'schedule' && <ScheduleView posts={posts} campaigns={campaigns} now={now} onOpen={open} />}
+          {tab === 'library' && <LibraryView posts={posts} campaigns={campaigns} now={now} onOpen={open} />}
         </Suspense>
-      </div>
+      </main>
 
-      {/* Bottom Navigation - Glass Effect */}
-      <nav className="flex-shrink-0 bg-black/80 backdrop-blur-xl border-t border-[#843c2d]/10 safe-area-bottom">
-        <div className="flex items-center justify-around h-16">
-          {/* Post: the week's posts in order, posted by hand */}
-          <button
-            onClick={() => go('post')}
-            className={`relative flex flex-col items-center justify-center w-14 h-full transition-all duration-200 ${
-              view === 'post' ? 'text-[#e8a990]' : 'text-[#726d6c] hover:text-[#726d6c]'
-            }`}
-          >
-            <span className={view === 'post' ? 'drop-shadow-[0_0_8px_rgba(212,168,83,0.5)]' : ''}>{Icons.post}</span>
-            <span className="text-[10px] mt-0.5 font-medium tracking-wide">Post</span>
-            {dueCount > 0 && (
-              <span className="absolute top-2 right-2 min-w-[16px] h-4 px-1 rounded-full bg-[#843c2d] text-[9px] font-bold text-white flex items-center justify-center">
-                {dueCount}
-              </span>
-            )}
-          </button>
-
-          {/* Home */}
-          <button
-            onClick={() => go('home')}
-            className={`flex flex-col items-center justify-center w-14 h-full transition-all duration-200 ${
-              view === 'home' ? 'text-[#e8a990]' : 'text-[#726d6c] hover:text-[#726d6c]'
-            }`}
-          >
-            <span className={view === 'home' ? 'drop-shadow-[0_0_8px_rgba(212,168,83,0.5)]' : ''}>{Icons.home}</span>
-            <span className="text-[10px] mt-0.5 font-medium tracking-wide">{view === 'home' ? 'Home' : 'Home'}</span>
-          </button>
-
-          {/* Calendar */}
-          <button
-            onClick={() => go('calendar')}
-            className={`flex flex-col items-center justify-center w-14 h-full transition-all duration-200 ${
-              view === 'calendar' ? 'text-[#e8a990]' : 'text-[#726d6c] hover:text-[#726d6c]'
-            }`}
-          >
-            <span className={view === 'calendar' ? 'drop-shadow-[0_0_8px_rgba(212,168,83,0.5)]' : ''}>{Icons.calendar}</span>
-            <span className="text-[10px] mt-0.5 font-medium tracking-wide">Calendar</span>
-          </button>
-
-          {/* Create (Center - Gold with glow) */}
-          <button
-            onClick={() => go('create')}
-            className="flex items-center justify-center w-14 h-14 -mt-5 rounded-full bg-gradient-to-br from-[#843c2d] to-[#6b3323] text-black shadow-[0_0_30px_rgba(212,168,83,0.4)] active:scale-95 transition-all duration-200 hover:shadow-[0_0_40px_rgba(212,168,83,0.5)]"
-          >
-            {Icons.create}
-          </button>
-
-          {/* Library */}
-          <button
-            onClick={() => go('library')}
-            className={`flex flex-col items-center justify-center w-14 h-full transition-all duration-200 ${
-              view === 'library' ? 'text-[#e8a990]' : 'text-[#726d6c] hover:text-[#726d6c]'
-            }`}
-          >
-            <span className={view === 'library' ? 'drop-shadow-[0_0_8px_rgba(212,168,83,0.5)]' : ''}>{Icons.library}</span>
-            <span className="text-[10px] mt-0.5 font-medium tracking-wide">Library</span>
-          </button>
-
-          {/* Settings */}
-          <button
-            onClick={() => go('settings')}
-            className={`flex flex-col items-center justify-center w-14 h-full transition-all duration-200 ${
-              view === 'settings' ? 'text-[#e8a990]' : 'text-[#726d6c] hover:text-[#726d6c]'
-            }`}
-          >
-            <span className={view === 'settings' ? 'drop-shadow-[0_0_8px_rgba(212,168,83,0.5)]' : ''}>{Icons.settings}</span>
-            <span className="text-[10px] mt-0.5 font-medium tracking-wide">More</span>
-          </button>
+      {/* the three tabs */}
+      <nav className="flex-shrink-0 border-t border-[var(--rule)] pb-[env(safe-area-inset-bottom)]" aria-label="Studio">
+        <div className="flex max-w-lg mx-auto">
+          {TABS.map((t) => (
+            <button
+              key={t.key}
+              type="button"
+              onClick={() => go(t.key)}
+              aria-current={tab === t.key ? 'page' : undefined}
+              className={`relative flex-1 min-h-[56px] flex flex-col items-center justify-center gap-0.5 ${tab === t.key ? 'text-[var(--text)]' : 'text-[var(--text-muted)]'}`}
+            >
+              {t.icon}
+              <span className={`text-[11px] ${tab === t.key ? 'font-semibold' : ''}`}>{t.label}</span>
+              {t.key === 'today' && dueCount > 0 && (
+                <span className="absolute top-1.5 left-1/2 ml-2 min-w-[18px] h-[18px] px-1 rounded-full bg-[var(--text)] text-[var(--ground)] text-[10px] font-semibold flex items-center justify-center">
+                  {dueCount}
+                </span>
+              )}
+            </button>
+          ))}
         </div>
       </nav>
 
-      {/* Post Detail Sheet */}
+      {/* the menu */}
+      {menu && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center" role="dialog" aria-modal="true" aria-label="Menu" onClick={() => setMenu(false)}>
+          <div className="studio w-full sm:max-w-sm bg-[var(--ground)] px-4 pt-2 pb-[calc(12px+env(safe-area-inset-bottom))]" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-end">
+              <button type="button" onClick={() => setMenu(false)} aria-label="Close" className="w-11 h-11 -mr-2 flex items-center justify-center text-xl">
+                ×
+              </button>
+            </div>
+            <button type="button" onClick={checkApps} disabled={check.busy || fixtures.on} className="w-full text-left py-3 border-b border-[var(--rule)] min-h-[56px] disabled:opacity-60">
+              <span className="studio-display block text-lg">{check.busy ? 'Checking the apps…' : 'Check the apps now'}</span>
+              <span className="block text-xs text-[var(--text-muted)] mt-0.5">
+                {check.error
+                  ? check.error
+                  : check.apps
+                  ? Object.entries(check.apps)
+                      .map(([p, a]) => `${p[0].toUpperCase()}${p.slice(1)} ${a.ok ? '✓' : `: ${a.error}`}`)
+                      .join(' · ')
+                  : check.at
+                  ? `Checked ${new Date(check.at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`
+                  : 'Ticks what you posted, with its link and views'}
+              </span>
+            </button>
+            {(['create', 'calendar', 'dashboard', 'settings'] as Room[]).map((r) => (
+              <button
+                key={r}
+                type="button"
+                onClick={() => {
+                  setMenu(false);
+                  setRoom(r);
+                }}
+                className="studio-display w-full text-left text-lg py-3 border-b border-[var(--rule)] last:border-0 min-h-[52px]"
+              >
+                {ROOM_TITLE[r]}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* the back rooms: the tools for planned releases, as they were */}
+      {room && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-black text-white">
+          <header className="flex-shrink-0 flex items-center justify-between px-4 pt-[env(safe-area-inset-top)] border-b border-white/10">
+            <span className="text-[13px] tracking-[0.3em] uppercase min-h-[52px] flex items-center">{ROOM_TITLE[room]}</span>
+            <button type="button" onClick={() => setRoom(null)} aria-label="Close" className="w-11 h-11 -mr-2 flex items-center justify-center text-2xl">
+              ×
+            </button>
+          </header>
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <Suspense fallback={<ViewLoading />}>{renderRoom(room)}</Suspense>
+          </div>
+        </div>
+      )}
+
       {selectedPostId && (
         <Suspense fallback={null}>
-          <PostDetailSheet
-            postId={selectedPostId}
-            accounts={accounts}
-            onClose={() => setSelectedPostId(null)}
-            onRefresh={fetchData}
-          />
+          <PostDetailSheet postId={selectedPostId} accounts={accounts} onClose={() => setSelectedPostId(null)} onRefresh={fetchData} />
         </Suspense>
       )}
     </div>

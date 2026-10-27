@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { brandLockup } from '@/lib/store/brands';
+import { labelCredit, labelLockup } from '@/lib/store/brands';
 import ScreenLayout from '@/components/ui/ScreenLayout';
 import ScrollContainer from '@/components/ui/ScrollContainer';
 import { usePageAnalytics } from '@/hooks/usePageAnalytics';
@@ -211,22 +211,20 @@ export default function ProductPageClient({ product }: ProductPageClientProps) {
             {/* Details */}
             <div className="flex flex-col justify-center">
               <h1 className="text-3xl sm:text-4xl font-medium text-[#ede8df] mb-2 tracking-wide drop-shadow-[0_2px_12px_rgba(132,60,45,0.35)]">{product?.title || 'Product'}</h1>
-              <p className="text-[10px] uppercase tracking-[0.22em] text-[#b2a491] mb-4">{brandLockup(product?.vendor)}</p>
+              {/* The full lockup: the label's full name, and the house's signature on its own line */}
+              {(() => {
+                const lockup = labelLockup(product?.vendor);
+                return (
+                  <p className="text-[10px] uppercase tracking-[0.22em] text-[#b2a491] mb-4">
+                    {lockup.name}
+                    {lockup.signature && <span className="block mt-1 text-[9px] tracking-[0.18em] normal-case">{lockup.signature}</span>}
+                  </p>
+                );
+              })()}
               
               {selectedVariant && (
                 <div className="text-xl text-[#b2a491] font-light tracking-widest mb-8">
                   {formatMoney(parseFloat(selectedVariant.price), selectedVariant.currency)}
-                </div>
-              )}
-
-              {product?.descriptionHtml ? (
-                <div
-                  className="prose prose-invert prose-sm text-[#b2a491] mb-10 max-w-md font-light leading-relaxed"
-                  dangerouslySetInnerHTML={{ __html: product.descriptionHtml }}
-                />
-              ) : (
-                <div className="prose prose-invert prose-sm text-[#b2a491] mb-10 max-w-md font-light leading-relaxed">
-                  {product?.description || 'No description available.'}
                 </div>
               )}
 
@@ -297,6 +295,33 @@ export default function ProductPageClient({ product }: ProductPageClientProps) {
                   </a>
                 )}
               </div>
+
+              {/* The description (the fabric, the care, the size guide) waits behind
+                  one line: the page shows the piece and how to get it, and the
+                  rest is there for whoever asks (owner, 2026-10-26: "ugly and
+                  mechanical looking"). A native <details>, so it opens without
+                  script and reads as a button to a screen reader. */}
+              {(product?.descriptionHtml || product?.description) && (
+                <details className="group mt-10 max-w-md">
+                  <summary className="list-none [&::-webkit-details-marker]:hidden cursor-pointer select-none min-h-[44px] inline-flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-[#b2a491] hover:text-[#ede8df]">
+                    <span className="underline underline-offset-4 group-open:hidden">See details</span>
+                    <span className="underline underline-offset-4 hidden group-open:inline">Hide details</span>
+                    <span aria-hidden className="text-sm leading-none group-open:rotate-45 transition-transform">+</span>
+                  </summary>
+                  {product?.descriptionHtml ? (
+                    <div
+                      className="product-details mt-4"
+                      dangerouslySetInnerHTML={{ __html: product.descriptionHtml }}
+                    />
+                  ) : (
+                    <p className="product-details mt-4">{product?.description}</p>
+                  )}
+                  {/* The credit, where a hang tag's inside would say who made it */}
+                  {labelCredit(product?.vendor) && (
+                    <p className="product-details product-credit mt-5">{labelCredit(product?.vendor)}</p>
+                  )}
+                </details>
+              )}
 
               {/* Made to order, in the policy's own words. The two lines that stood
                   here ("Free shipping on orders over $150", "Ships from Canada")

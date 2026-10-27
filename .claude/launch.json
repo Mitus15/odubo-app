@@ -73,6 +73,15 @@
       ],
       "port": 3126,
       "autoPort": true
+    },
+    {
+      "name": "studio",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "npx next dev -p 3127"
+      ],
+      "port": 3127
     }
   ]
 }

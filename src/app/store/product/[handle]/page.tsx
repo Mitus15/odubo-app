@@ -1,4 +1,4 @@
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { Metadata } from 'next';
 import ProductPageClient from './ProductPageClient';
@@ -7,6 +7,7 @@ import { requireStoreAccess } from '@/lib/storeAccess';
 import { generateProductMetadata } from '@/lib/seo';
 import { COUNTRY_COOKIE } from '@/lib/store/money';
 import { sortProductOptions } from '@/lib/store/sizes';
+import { movedFrom, movedTo } from '@/lib/store/movedProducts';
 
 async function getCountry(): Promise<string | undefined> {
   try {
@@ -19,7 +20,11 @@ async function getCountry(): Promise<string | undefined> {
 // Generate SEO metadata for product pages
 export async function generateMetadata({ params }: { params: Promise<{ handle: string }> }): Promise<Metadata> {
   const { handle } = await params;
-  const res = await getShopifyProduct(handle, await getCountry());
+  const country = await getCountry();
+  let res = await getShopifyProduct(handle, country);
+  // A renamed product Shopify has not moved yet: read it at its old address
+  const was = movedFrom(handle);
+  if ((!res.success || !res.product) && was) res = await getShopifyProduct(was, country);
 
   if (!res.success || !res.product) {
     return { title: 'Product Not Found | Odubo Studio' };
@@ -113,7 +118,14 @@ export default async function ProductDetailPage({ params }: { params: { handle: 
     notFound();
   }
 
-  const product = await fetchProduct(handle, await getCountry());
+  // An old address forwards to the product's new one, so a shared link keeps working
+  const moved = movedTo(handle);
+  if (moved) permanentRedirect(`/store/product/${moved}`);
+
+  const country = await getCountry();
+  let product = await fetchProduct(handle, country);
+  const was = movedFrom(handle);
+  if (!product && was) product = await fetchProduct(was, country);
 
   if (!product) {
     notFound();

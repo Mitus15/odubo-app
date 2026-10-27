@@ -10,7 +10,7 @@ import { isStoreLink } from '@/lib/linktreeLinks';
 import type { FeaturedProduct } from '@/lib/featuredProduct';
 import type { LinkTreeItem } from '@/types/linktree';
 import { formatMoney } from '@/lib/store/money';
-import { STORE_NAME } from '@/lib/store/brands';
+import { STORE_BYLINE } from '@/lib/store/brands';
 import { ODUBO_SEAL, ODUBO_SEAL_ASPECT } from '@/lib/brand/marks';
 
 /**
@@ -177,7 +177,7 @@ export default function LinksPageClient({ links, storeOpen, featured }: Props) {
             <>
               <span aria-hidden="true" className="text-[#ede8df]/25">·</span>
               <Link href="/store" onClick={() => analytics?.trackShopVisit()} className="flex min-h-[44px] items-center hover:text-[#ede8df]">
-                Shop {STORE_NAME}
+                Shop {STORE_BYLINE}
               </Link>
             </>
           )}

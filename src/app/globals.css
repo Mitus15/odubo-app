@@ -2403,3 +2403,118 @@ h6,
     transform: none;
   }
 }
+
+/* ── The Social Studio (/admin/social-studio) ───────────────────────────────
+   The Odubo Brand Kit's tokens (claude.ai/artifact/F87QSC3m9j4XVfMQiNrUta),
+   same names: the Poster mode (sand-bright ground, ink type, the oxblood
+   button) and, when his phone is dark, the Vault (ink ground, sand type, a
+   sand button). The only other colour is a post's own, its campaign's, to
+   say which song it is; those are the posts' data, not the house's. */
+.studio {
+  --ground: #f0d3ad;
+  --raised: #f6e3c8;
+  --text: #2a0f0a;
+  --text-muted: #7b4a35;
+  --rule: #c8946a;
+  --accent: #843c2d;
+  --on-accent: #f0d3ad;
+  --ok: #245a33;
+  --warn: #9a3412;
+  background: var(--ground);
+  color: var(--text);
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  .studio {
+    --ground: #2a0f0a;
+    --raised: #3d1a12;
+    --text: #f0d3ad;
+    --text-muted: #c49a74;
+    --rule: #6b3a2b;
+    --accent: #d9aa7a;
+    --on-accent: #2a0f0a;
+    --ok: #8fd3a3;
+    --warn: #f4a36b;
+  }
+}
+.studio h1,
+.studio h2,
+.studio h3 {
+  font-family: inherit;
+}
+/* Jost: billing lines, captions, the big numbers (the kit's billing, hud-number) */
+.studio .studio-display {
+  font-family: "Jost", var(--font-sans, sans-serif);
+  font-weight: 700;
+}
+/* Caps labels over what they name (the kit's eyebrow) */
+.studio .studio-eyebrow {
+  font-family: "Jost", var(--font-sans, sans-serif);
+  font-weight: 500;
+  font-size: 11px;
+  line-height: 1.3;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+/* The house name beside the danceman (the kit's house-small) */
+.studio .studio-house {
+  font-family: var(--font-house), "Libre Baskerville", Georgia, serif;
+  font-weight: 700;
+}
+
+/* ── A product's details (the store's product page, behind "See details") ──
+   Shopify's description HTML, set like the small print of a playbill: short
+   lines in the muted sand, the labels (Care., Size guide) as caps eyebrows,
+   the size table in hairlines that scrolls sideways on a phone rather than
+   breaking every measurement over three lines. */
+.product-details {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #b2a491;
+  font-weight: 300;
+}
+.product-details p {
+  margin: 0 0 10px;
+}
+.product-details strong,
+.product-details h3,
+.product-details thead th {
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #ede8df;
+}
+.product-details strong {
+  margin-right: 6px;
+}
+.product-details h3 {
+  margin: 22px 0 6px;
+  line-height: 1.3;
+}
+.product-details table {
+  display: block;
+  overflow-x: auto;
+  border-collapse: collapse;
+  font-size: 12px;
+  margin: 8px 0 0;
+  font-variant-numeric: tabular-nums;
+}
+.product-details th,
+.product-details td {
+  padding: 8px 14px 8px 0;
+  white-space: nowrap;
+  text-align: left;
+  font-weight: 400;
+  border-bottom: 1px solid rgba(80, 45, 38, 0.6);
+}
+.product-details tbody th {
+  color: #ede8df;
+}
+.product-details.product-credit {
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #ede8df;
+}

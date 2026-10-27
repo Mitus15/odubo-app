@@ -12,6 +12,8 @@ export interface QueuePost {
   id: string;
   status: string;
   title?: string;
+  tags?: string[];
+  campaign_id?: string;
   caption?: string;
   hashtags?: string[];
   caption_by_platform?: Record<string, string>;
@@ -28,6 +30,18 @@ export interface QueuePost {
 export interface PlatformMark {
   posted: boolean;
   at?: string;
+  /** The live post, once the app's feed shows it (api/social/feeds) */
+  url?: string;
+  id?: string;
+  views?: number;
+  likes?: number;
+  comments?: number;
+  /** Sent to the app through Post for Me (api/social/posts/[id]/send): scheduled there, in its drafts, or refused */
+  sent?: 'scheduled' | 'draft' | 'failed';
+  pfm_id?: string;
+  /** When a scheduled send goes out */
+  for?: string;
+  error?: string;
 }
 
 /** Statuses a post can be posted from by hand. */
@@ -43,14 +57,38 @@ export function isPlatformDone(post: Pick<QueuePost, 'platform_status'>, platfor
   return platformMark(post, platform)?.posted === true;
 }
 
-/** The post's platform_status with one platform ticked or unticked. Other keys are kept. */
+/**
+ * The post's platform_status with one platform ticked or unticked. Other keys
+ * are kept, and so is what the platform's mark knew besides (its link, its
+ * views, a send), so an Undo does not forget a scheduled upload.
+ */
 export function withPlatformMark(
   status: Record<string, unknown> | undefined,
   platform: string,
   posted: boolean,
   at: string,
 ): Record<string, unknown> {
-  return { ...(status || {}), [platform]: posted ? { posted: true, at } : { posted: false } };
+  const known: Partial<PlatformMark> = { ...platformMark({ platform_status: status }, platform) };
+  delete known.at;
+  return { ...(status || {}), [platform]: posted ? { ...known, posted: true, at } : { ...known, posted: false } };
+}
+
+/** Where one platform of a post stands. */
+export type PlatformState =
+  | { kind: 'posted'; at?: string; url?: string; views?: number }
+  | { kind: 'scheduled'; at?: string }
+  | { kind: 'drafted' }
+  | { kind: 'failed'; error?: string }
+  | { kind: 'todo' };
+
+export function platformState(post: Pick<QueuePost, 'platform_status'>, platform: string): PlatformState {
+  const m = platformMark(post, platform);
+  if (!m) return { kind: 'todo' };
+  if (m.posted) return { kind: 'posted', at: m.at, url: m.url, views: m.views };
+  if (m.sent === 'scheduled') return { kind: 'scheduled', at: m.for };
+  if (m.sent === 'draft') return { kind: 'drafted' };
+  if (m.sent === 'failed') return { kind: 'failed', error: m.error };
+  return { kind: 'todo' };
 }
 
 export function allPlatformsDone(post: Pick<QueuePost, 'platforms' | 'platform_status'>): boolean {
@@ -146,5 +184,59 @@ export const PLATFORM_LABEL: Record<string, string> = {
   youtube: 'YouTube',
   facebook: 'Facebook',
   threads: 'Threads',
+  twitter: 'X',
+};
+
+/** What a post is, from the tags the posting scripts give it. */
+export type PostKind = 'reels' | 'shorts' | 'full' | 'post';
+
+export const KIND_LABEL: Record<PostKind, string> = { reels: 'Reel', shorts: 'Short', full: 'Full song', post: 'Clip' };
+
+export function kindOf(post: Pick<QueuePost, 'tags' | 'platforms'>): PostKind {
+  const tags = post.tags || [];
+  if (tags.includes('full')) return 'full';
+  if (tags.includes('reels')) return 'reels';
+  if (tags.includes('shorts')) return 'shorts';
+  return 'post';
+}
+
+/**
+ * A YouTube upload with the song laid in goes through the API (it needs no
+ * sound added in the app); everything else with an app's own sound is shared
+ * to the app by hand.
+ */
+export function sendsByApi(post: Pick<QueuePost, 'tags' | 'platforms'>, platform: string): boolean {
+  return platform === 'youtube' && kindOf(post) === 'full';
+}
+
+export interface Song {
+  name: string;
+  artist?: string;
+  colour: string;
+}
+
+/**
+ * The song a post belongs to: its campaign (one per song, in the song's
+ * colour, named "Training · Monkey" or "1-2 · Fils de joie"), and the artist
+ * from the first line of the note ("Monkey · M.I Abaga").
+ */
+export function songOf(
+  post: Pick<QueuePost, 'campaign_id' | 'notes'>,
+  campaigns: { id: string; name: string; color?: string }[],
+): Song | null {
+  const c = campaigns.find((x) => x.id === post.campaign_id);
+  if (!c) return null;
+  const name = c.name.replace(/^(Training|\d+-\d+)\s*·\s*/, '').trim();
+  const first = (post.notes || '').split('\n')[0] || '';
+  const [song, artist] = first.split(' · ');
+  return { name, artist: song?.trim() === name && artist ? artist.trim() : undefined, colour: c.color || '#2a0f0a' };
+}
+
+export const PLATFORM_SHORT: Record<string, string> = {
+  instagram: 'IG',
+  tiktok: 'TT',
+  youtube: 'YT',
+  facebook: 'FB',
+  threads: 'TH',
   twitter: 'X',
 };

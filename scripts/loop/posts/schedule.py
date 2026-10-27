@@ -142,7 +142,7 @@ nav a:focus-visible,nav a:hover{{border-color:var(--ink)}}
 <main>
 <header>
   <h1>Training Ground Schedule</h1>
-  <p>A tentative plan for every finished piece, {first.strftime('%a %b %-d')} to {last.strftime('%a %b %-d')}. You post each one by hand from the Studio's Post view. Song times fill in once you send them.</p>
+  <p>A tentative plan for every finished piece, {first.strftime('%a %b %-d')} to {last.strftime('%a %b %-d')}. You post each one by hand from the Studio's Post view. Every card says where the song starts.</p>
   <div class="stats"><span>{count['reels']} Reels</span><span>{count['shorts']} shorts</span><span>{count['full']} full songs</span><span>{len(rows)} posts</span></div>
 </header>
 <section class="rhythm" aria-label="The rhythm">
