@@ -98,6 +98,24 @@ export function lastRowId(response: unknown): number | null {
   return typeof rowId === 'number' ? rowId : null;
 }
 
+/** A statement that only reads: safe to send again */
+const READS = /^\s*(select|with|pragma)\b/i;
+
+/**
+ * The D1 call, with one more try for a read whose connection dropped
+ * (`fetch failed`: a timeout reaching api.cloudflare.com). A write is never
+ * sent twice: it may have landed.
+ */
+async function d1Fetch(url: string, init: RequestInit, read: boolean): Promise<Response> {
+  try {
+    return await fetch(url, init);
+  } catch (error) {
+    if (!read || !(error instanceof TypeError)) throw error;
+    await new Promise((r) => setTimeout(r, 300));
+    return fetch(url, init);
+  }
+}
+
 export async function queryDatabase(sql: string, params: any[] = []) {
   try {
   const databaseUrl = process.env.DATABASE_URL;
@@ -111,14 +129,14 @@ export async function queryDatabase(sql: string, params: any[] = []) {
       throw new Error('CLOUDFLARE_D1_API_TOKEN environment variable is not set');
     }
     
-    const response = await fetch(`${databaseUrl}/query`, {
+    const response = await d1Fetch(`${databaseUrl}/query`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiToken}`
       },
       body: JSON.stringify({ sql, params }),
-    });
+    }, READS.test(sql));
     
     const contentType = response.headers.get('content-type') || '';
     if (!contentType.toLowerCase().includes('application/json')) {

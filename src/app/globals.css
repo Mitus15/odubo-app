@@ -2463,6 +2463,104 @@ h6,
   font-weight: 700;
 }
 
+/* ── The room (/, /links, /levels, /gear, /music) ─────────────────────────
+   The world he dances in, which the site is set in (lib/room): the page is
+   the level's field colour (--room), so the video's own field runs into it
+   with no edge, and the writing is the dancer's ink (--on-room; sand on a
+   field too dark for ink). The faces are the Brand Kit's: the house face for
+   his name, Jost for the game's type. */
+.room {
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  /* The top (his name) and the floor (the doors, the save), inside the safe area */
+  --room-top: calc(env(safe-area-inset-top) + 56px);
+  --room-floor: calc(env(safe-area-inset-bottom) + 172px);
+  --room-floor-gap: calc(env(safe-area-inset-bottom) + 32px);
+}
+/* A short screen (an in-app browser's bars, a phone on its side): a lower floor, so the level keeps its room */
+@media (max-height: 600px) {
+  .room {
+    --room-top: calc(env(safe-area-inset-top) + 48px);
+    --room-floor: calc(env(safe-area-inset-bottom) + 124px);
+    --room-floor-gap: calc(env(safe-area-inset-bottom) + 14px);
+  }
+}
+.room h1,
+.room h2,
+.room h3 {
+  font-family: inherit;
+}
+.room .room-house {
+  font-family: var(--font-house), "Libre Baskerville", Georgia, serif;
+  font-weight: 700;
+}
+.room .room-display {
+  font-family: "Jost", var(--font-sans, sans-serif);
+  font-weight: 700;
+}
+.room .room-eyebrow {
+  font-family: "Jost", var(--font-sans, sans-serif);
+  font-weight: 500;
+  font-size: 11px;
+  line-height: 1.3;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+/* A level's edges, melting into its room: where a passage's field is not
+   exactly the room's (a close-up, a lit floor), no frame shows */
+.room .room-feather {
+  --feather-x: 6%;
+  --feather-y: 4%;
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 var(--feather-x), #000 calc(100% - var(--feather-x)), transparent),
+    linear-gradient(to bottom, transparent, #000 var(--feather-y), #000 calc(100% - var(--feather-y)), transparent);
+  -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(to right, transparent, #000 var(--feather-x), #000 calc(100% - var(--feather-x)), transparent),
+    linear-gradient(to bottom, transparent, #000 var(--feather-y), #000 calc(100% - var(--feather-y)), transparent);
+  mask-composite: intersect;
+}
+/* With room around it, it can melt further */
+@media (min-width: 768px) {
+  .room .room-feather {
+    --feather-x: 16%;
+    --feather-y: 7%;
+  }
+}
+/* The gear row: a share of the height the browser actually leaves (Safari's
+   bars, an in-app browser's, a phone on its side), never a fixed height */
+.room .gear-row {
+  height: clamp(200px, calc((100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom)) * 0.48), 620px);
+  height: clamp(200px, calc((100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom)) * 0.48), 620px);
+}
+/* What changes in place (a piece's name and price, the view) comes in
+   softly instead of jumping */
+.room .room-fade {
+  animation: room-fade 280ms ease-out both;
+}
+@keyframes room-fade {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .room .room-fade {
+    animation: none;
+  }
+}
+/* A piece's hem mirrored in the lacquer floor, fading to nothing */
+.room .floor-reflection {
+  -webkit-mask-image: linear-gradient(to bottom, rgb(0 0 0 / 0.3), transparent 90%);
+  mask-image: linear-gradient(to bottom, rgb(0 0 0 / 0.3), transparent 90%);
+}
+/* A short reflection, for a flat thing with words under it (a record cover) */
+.room .on-the-floor-short {
+  -webkit-box-reflect: below 2px linear-gradient(transparent 80%, rgb(0 0 0 / 0.24));
+}
+
 /* ── A product's details (the store's product page, behind "See details") ──
    Shopify's description HTML, set like the small print of a playbill: short
    lines in the muted sand, the labels (Care., Size guide) as caps eyebrows,

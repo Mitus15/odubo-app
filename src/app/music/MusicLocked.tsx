@@ -1,119 +1,67 @@
-'use client';
-
-import Link from 'next/link';
-import { useCallback, useState } from 'react';
 import PlatformIcon from '@/components/linktree/PlatformIcon';
-import { useEmailCapture } from '@/contexts/EmailCaptureContext';
+import { RoomShell, SmallPrint, Symbol } from '@/components/room/RoomParts';
+import SaveYourProgress from '@/components/room/SaveYourProgress';
 import { CATCHING_LIGHT } from '@/lib/music/catchingLight';
 
 /**
- * /music while nothing on the site is out: the record that is out lives on
- * the streaming services, and the next one is locked.
+ * /music while nothing on the site is out, set in the room the visitor came
+ * from (?room=, lib/room): the record that is out lives on the streaming
+ * services, and the next one is locked.
  *
- *   Mani Odubo              the artist
- *   Catching Light          its cover, its year and songs, where it streams,
- *                           one row a service, straight to the album
- *   World 2 · Locked        the next record, with no title and no tracks: its
+ *   Catching Light          its cover standing on the floor, its year and
+ *                           songs, the services' marks, straight to the album
+ *   a lock, World 2         the next record, with no title and no tracks: its
  *                           story is kept back until it is out (2026-10-24)
- *   Save your progress      the list, the page's one drawn line
- *
- * The /links landing's look: the same dark, the same type, no cards.
+ *   Save your progress      the list, the room's one drawn shape
  */
-export default function MusicLocked() {
-  const { hasSubscribed, subscribe, isSubmitting } = useEmailCapture();
-  const [email, setEmail] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [joined, setJoined] = useState(false);
-
-  const onJoin = useCallback(
-    async (e: React.FormEvent) => {
-      e.preventDefault();
-      setError(null);
-      if (!email.trim()) return;
-      const result = await subscribe(email.trim());
-      if (result.success) setJoined(true);
-      else setError(result.error || 'That did not go through. Try again.');
-    },
-    [email, subscribe],
-  );
-
+export default function MusicLocked({ colour, on }: { colour: string; on: string }) {
   return (
-    <div
-      className="fixed inset-0 z-[150] overflow-y-auto overscroll-contain"
-      style={{
-        background: 'linear-gradient(160deg, #1a1714 0%, #0d0c0a 55%, #14110f 100%)',
-        paddingTop: 'env(safe-area-inset-top)',
-        paddingBottom: 'env(safe-area-inset-bottom)',
-      }}
-    >
-      <main className="mx-auto flex min-h-full w-full max-w-md flex-col px-6 pb-6 pt-16 text-[#ede8df]">
-        <h1 className="text-[1.6rem] leading-tight tracking-wide">Mani Odubo</h1>
-
-        <section className="mt-10" aria-labelledby="catching-light">
+    <RoomShell colour={colour} on={on}>
+      <main className="mx-auto flex min-h-[calc(100%-env(safe-area-inset-top)-56px)] w-full max-w-md flex-col px-4" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+        <section className="mt-6 flex flex-col items-center" aria-labelledby="catching-light">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={CATCHING_LIGHT.cover}
-            alt={`${CATCHING_LIGHT.title} cover`}
+            alt={`${CATCHING_LIGHT.title}, the album by Mani Odubo (${CATCHING_LIGHT.year})`}
             width={600}
             height={600}
-            className="aspect-square w-full max-w-[18rem]"
+            className="on-the-floor-short aspect-square w-full max-w-[16rem] shadow-[0_18px_30px_-18px_rgb(42_15_10/0.6)]"
           />
-          <h2 id="catching-light" className="mt-5 text-[1.15rem] leading-tight tracking-wide">{CATCHING_LIGHT.title}</h2>
-          <p className="mt-1 text-[0.65rem] uppercase tracking-[0.28em] text-[#b2a491]">
+          <h1 id="catching-light" className="room-display mt-12 text-[24px] leading-tight">
+            {CATCHING_LIGHT.title}
+          </h1>
+          <p className="room-eyebrow mt-1">
             {CATCHING_LIGHT.year} · {CATCHING_LIGHT.songs} songs
           </p>
-          <ul className="mt-3">
+          {/* Where it streams: each service's own mark */}
+          <ul className="mt-5 flex items-center gap-4">
             {CATCHING_LIGHT.listen.map((link) => (
-              <li key={link.platform} className="border-b border-[#ede8df]/10">
+              <li key={link.platform}>
                 <a
                   href={link.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex min-h-[52px] items-center gap-3 text-[0.95rem] tracking-wide hover:text-white"
+                  aria-label={`Listen to ${CATCHING_LIGHT.title} on ${link.label}`}
+                  title={link.label}
+                  className="flex h-14 w-14 items-center justify-center rounded-full transition-[opacity,transform] hover:opacity-70 active:scale-95"
                 >
-                  <PlatformIcon platform={link.platform} mono className="h-5 w-5 text-[#ede8df]/70" />
-                  Listen on {link.label}
+                  <PlatformIcon platform={link.platform} mono className="h-8 w-8" />
                 </a>
               </li>
             ))}
           </ul>
         </section>
 
-        <section className="mt-12" aria-labelledby="world-two">
-          <h2 id="world-two" className="text-[0.65rem] uppercase tracking-[0.28em] text-[#b2a491]">World 2 · Locked</h2>
-          {hasSubscribed || joined ? (
-            <p className="mt-4 text-sm tracking-wide text-[#ede8df]/60">Progress saved. You hear it first.</p>
-          ) : (
-            <form onSubmit={onJoin} className="mt-4 flex items-end gap-3 border-b border-[#ede8df]/25 focus-within:border-[#ede8df]/60">
-              <label htmlFor="music-email" className="sr-only">Email</label>
-              <input
-                id="music-email"
-                type="email"
-                inputMode="email"
-                autoComplete="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Email, to hear it first"
-                className="min-w-0 flex-1 bg-transparent py-2 text-sm text-[#ede8df] outline-none placeholder:text-[#ede8df]/35"
-              />
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="min-h-[44px] text-xs uppercase tracking-[0.2em] text-[#ede8df]/80 transition-colors hover:text-[#ede8df] disabled:opacity-40"
-              >
-                Save your progress
-              </button>
-            </form>
-          )}
-          {error && <p className="mt-2 text-xs text-red-300/70">{error}</p>}
+        <section className="mt-12 flex flex-col items-center gap-3" aria-labelledby="world-two">
+          <Symbol name="lock" className="h-10 w-10" />
+          <h2 id="world-two" className="room-eyebrow">
+            World 2
+          </h2>
+          <SaveYourProgress colour={colour} on={on} className="w-full max-w-sm" />
         </section>
 
-        <footer className="mt-auto flex items-center gap-4 pt-12 text-[0.7rem] uppercase tracking-[0.22em] text-[#ede8df]/50">
-          <Link href="/" className="flex min-h-[44px] items-center hover:text-[#ede8df]">Home</Link>
-          <span aria-hidden="true" className="text-[#ede8df]/25">·</span>
-          <Link href="/links" className="flex min-h-[44px] items-center hover:text-[#ede8df]">Links</Link>
-        </footer>
+        <SmallPrint className="mt-auto pt-10" />
       </main>
-    </div>
+    </RoomShell>
   );
 }

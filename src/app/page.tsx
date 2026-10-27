@@ -1,45 +1,40 @@
 import HomePageClient from '@/app/HomePageClient';
 import Footer from '@/components/landing/Footer';
+import RoomScreen from '@/components/room/RoomScreen';
+import { loadRoom } from '@/components/room/loadRoom';
 import { getVerse, getHomepageMode, getInitialClips } from '@/lib/homepageHelpers';
 import { generateSeoMetadata } from '@/lib/seo';
 import type { Metadata } from 'next';
 
-// SEO Metadata
 export const metadata: Metadata = generateSeoMetadata({
-  title: 'Home',
-  description: 'Music, clips, shop.',
+  description: 'Odubo Studio: the music and dance of Mani Odubo, and B.A.A.D Creative Wear.',
   path: '/',
 });
 
-// Use dynamic rendering with ISR to ensure fresh data
 export const dynamic = 'force-dynamic';
-export const revalidate = 60; // ISR: regenerate every minute
 
 interface PageProps {
   searchParams: Promise<{ clip?: string }>;
 }
 
-// Server component
+/**
+ * The home page is the room (components/room/RoomScreen), the same page as
+ * the bio link's /links. A link to one clip (/?clip=123, from an old
+ * ad or share) still opens the clips feed on that clip.
+ */
 export default async function HomePage({ searchParams }: PageProps) {
   const params = await searchParams;
+  const clipId = params.clip ? parseInt(params.clip, 10) : NaN;
 
-  // Fetch everything in parallel
-  const [verseOfTheDay, homepageMode, initialClips] = await Promise.all([
-    getVerse(),
-    getHomepageMode(),
-    getInitialClips()
-  ]);
+  if (!Number.isFinite(clipId)) return <RoomScreen {...await loadRoom()} />;
 
-  // Parse clip ID for deep linking (e.g., /?clip=123 for ad campaigns)
-  const initialClipId = params.clip ? parseInt(params.clip, 10) : null;
-  const validClipId = initialClipId && Number.isFinite(initialClipId) ? initialClipId : null;
-
+  const [verseOfTheDay, homepageMode, initialClips] = await Promise.all([getVerse(), getHomepageMode(), getInitialClips()]);
   return (
     <div className="pb-16">
       <HomePageClient
         verseOfTheDay={verseOfTheDay}
         homepageMode={homepageMode}
-        initialClipId={validClipId}
+        initialClipId={clipId}
         initialClips={homepageMode === 'clips' ? initialClips : undefined}
       />
       <Footer />

@@ -9,7 +9,8 @@ Put it together: the moving poster, frame by frame.
             close     a footwork close-up for the busiest bar of each phrase [--close-bars=s,s]
             hits      the sibling colour on the snare, back on the kick (hits.py)
             echo      on big moves, his echoes trail behind him (effects.py)
-        [--marker=crown|ground|heart]             where the seal, the player's marker, sits (anchor.py)
+        [--marker=crown|ground|heart|none]        where the seal, the player's marker, sits (anchor.py); none: no seal
+        [--hud=none]         no game layer, whatever the show says (the site's clean copies: him, the floor, the shadow)
         [--plate=file.mp4]   also write the phone's own picture through the same camera (raw vs gloss)
         [--body=<px>]        his height in the take, pinned: a stretch framed exactly as the whole song was
         [--look=poster|cover|gloss --cuts=0.55,0.75 --soft=0.08]
@@ -84,7 +85,7 @@ POP_S = 0.35
 SHADOW_OPACITY = 0.9
 CREDIT_SIZE = 0.30  # the Danceman's height as a fraction of the shorter side
 WHITE_INSET = 0.25  # how far in the white shrinks (share of the width) as the seed turns to ink
-MARKERS = {"crown": "crown", "ground": "feet", "heart": "heart"}  # each marker, and the place on him it follows
+MARKERS = {"crown": "crown", "ground": "feet", "heart": "heart", "none": "crown"}  # each marker, and the place on him it follows (none: followed, never drawn)
 CROWN_GAP = 0.6       # the crown marker's gap over his head, as a share of its width
 BOB = 0.12            # how far it floats up and down once a bar, as a share of its width
 GROUND_SQUASH = 0.3   # the floor at the camera's angle: the shadow's own squash
@@ -386,7 +387,7 @@ def main(argv):
     # What the effects need, read over the whole stretch before a frame is drawn.
     k0 = first - pre
     tiles = gate = hud = None
-    hud_spec = show.hud or (dict(zip(("level", "title"), opts["hud"].split("|", 1))) if opts.get("hud") else None)
+    hud_spec = None if opts.get("hud") == "none" else (show.hud or (dict(zip(("level", "title"), opts["hud"].split("|", 1))) if opts.get("hud") else None))
     falls = footfalls(poses, k0, first + count, Wf, Hf, fps) if show.uses(floor="tiles") or hud_spec else []
     if show.uses(floor="tiles"):
         floor_y = float(np.median([f[2] for f in falls])) if falls else Hf * 0.9
@@ -763,7 +764,7 @@ def main(argv):
 
         # 4. (drawn) over him: the crown and the heart; the floor marker if he was not drawn
         if u is None:
-            if here[4] > 0 and (not on_floor or not floor_drawn):
+            if marker != "none" and here[4] > 0 and (not on_floor or not floor_drawn):
                 seed(canvas, marks, pal, *here)
         else:
             # 5. the outro: it leaves him as it grows (the place it leaves

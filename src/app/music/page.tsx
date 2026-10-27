@@ -5,6 +5,8 @@ import { queryDatabase } from '@/lib/db';
 import { generateSeoMetadata } from '@/lib/seo';
 import { CATCHING_LIGHT } from '@/lib/music/catchingLight';
 import MusicLocked from './MusicLocked';
+import { getLevels } from '@/lib/levels';
+import { roomFor } from '@/lib/room';
 
 export const metadata: Metadata = generateSeoMetadata({
   title: 'Music',
@@ -26,7 +28,7 @@ export const revalidate = 0;
  * 14 tracks, on the public site (2026-10-24). The owner previews a draft from
  * Release Control, whose link opens the album page itself (it lets an admin in).
  */
-export default async function MusicPage() {
+export default async function MusicPage({ searchParams }: { searchParams: Promise<{ room?: string }> }) {
   const albums = (await queryDatabase(
     `SELECT id FROM albums
       WHERE LOWER(COALESCE(status, '')) = 'published'
@@ -37,5 +39,6 @@ export default async function MusicPage() {
 
   const album = albums?.[0];
   if (album) redirect(`/music/albums/${album.id}`);
-  return <MusicLocked />;
+  const room = roomFor(await getLevels(), (await searchParams).room);
+  return <MusicLocked colour={room.colour} on={room.on} />;
 }
