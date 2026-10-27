@@ -45,7 +45,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Odubo Studio",
-  description: "Mani Odubo: the music, the dance, and B.A.A.D creative wear.",
+  description: "Mani Odubo: the music, the dance, and B.A.A.D Creative Wear.",
   manifest: "/site.webmanifest",
   appleWebApp: {
     capable: true,

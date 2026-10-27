@@ -41,21 +41,38 @@ export function excludeTagsClause(tags: readonly string[] = ODUBO_EXCLUDED_TAGS)
 /** The house the brands belong to. Shown wherever a brand is named. */
 export const PARENT_BRAND = 'Odubo Studio';
 
-/** The house as it reads after a label's name: "B.A.A.D by Odubo" (owner, 2026-10-11). */
+/**
+ * The label's names, in three parts (owner, 2026-10-26; the Odubo Brand Kit,
+ * "B.A.A.D's names"): the name, B.A.A.D; what it makes, Creative Wear; who it
+ * comes from, by Odubo ("a natural byproduct of Odubo Studio work"). Which
+ * parts a surface uses depends on the moment:
+ *
+ *   the full lockup  B.A.A.D Creative Wear, "by Odubo" on its own line under
+ *                    it: where a stranger meets the label (a product page)
+ *   the byline       "B.A.A.D by Odubo", one line: where the house is
+ *                    speaking ("Shop B.A.A.D by Odubo" on /links)
+ *   the name         "B.A.A.D": inside its own world (tags, eyebrows)
+ *
+ * Never "Creative Wear" alone, and never all three on one line.
+ *
+ * Shopify's `vendor` field holds the name ALONE: shopping feeds want a bare
+ * brand token, so "B.A.A.D" is what belongs there. These are the reading
+ * versions of the same fact, so every surface states it the same way.
+ */
+
+/** The house as it signs a label: "by Odubo". */
 export const LABEL_BYLINE = 'Odubo';
 
+/** The label the clothes are made under, as Shopify's vendor holds it. */
+export const STORE_LABEL = 'B.A.A.D';
+
+/** What each label makes, after its name: B.A.A.D Creative Wear. */
+const LABEL_DESCRIPTOR: Record<string, string> = { [STORE_LABEL]: 'Creative Wear' };
+
 /**
- * How a product's brand reads wherever both names appear: "B.A.A.D by Odubo".
- * The owner, 2026-10-11: "the brand is B.A.A.D by Odubo in general to make it
- * make sense". It was "B.A.A.D by Odubo Studio".
- *
- * Shopify's `vendor` field holds the brand ALONE — shopping feeds want a bare
- * brand token, so "B.A.A.D" is what belongs there. This is the reading version
- * of the same fact, so the relationship is stated identically on every surface
- * instead of being retyped per component.
- *
- * A product whose vendor already IS the parent — the Loop Soul pass, which
- * Odubo Studio sells directly — says the name once rather than twice.
+ * The byline: "B.A.A.D by Odubo". A product whose vendor already IS the
+ * house (the Loop Soul pass, which Odubo Studio sells directly) says the name
+ * once rather than twice.
  */
 export function brandLockup(vendor?: string | null): string {
   const v = (vendor || '').trim();
@@ -63,8 +80,20 @@ export function brandLockup(vendor?: string | null): string {
   return `${v} by ${LABEL_BYLINE}`;
 }
 
-/** The label the clothes are made under, as Shopify's vendor holds it. */
-export const STORE_LABEL = 'B.A.A.D';
+/**
+ * The full lockup, as two lines: the full name ("B.A.A.D Creative Wear") and
+ * the signature under it ("by Odubo"). The house's own products have no
+ * signature: Odubo Studio is already the house.
+ */
+export function labelLockup(vendor?: string | null): { name: string; signature?: string } {
+  const v = (vendor || '').trim();
+  if (!v || v === PARENT_BRAND) return { name: PARENT_BRAND };
+  const descriptor = LABEL_DESCRIPTOR[v];
+  return { name: descriptor ? `${v} ${descriptor}` : v, signature: `by ${LABEL_BYLINE}` };
+}
 
-/** The store's name wherever it is named for a shopper: "B.A.A.D by Odubo". */
-export const STORE_NAME = brandLockup(STORE_LABEL);
+/** The label's full name: "B.A.A.D Creative Wear". */
+export const STORE_FULL_NAME = labelLockup(STORE_LABEL).name;
+
+/** The store as the house names it, one line: "B.A.A.D by Odubo". */
+export const STORE_BYLINE = brandLockup(STORE_LABEL);

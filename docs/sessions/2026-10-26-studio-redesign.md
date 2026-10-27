@@ -124,3 +124,27 @@ Other changes:
 - **The Today tab:** its icon is the seal.
 - **Type:** captions and big numbers are in Jost 700, and the labels are Jost caps eyebrows.
 - **Schedule:** rows lost their coloured edge.
+
+## B.A.A.D's names (later still)
+
+His words: "the full name of the brand is BAAD Creative Wear. BAAD stands for Bold Authentic Aesthetic
+Dreams/Dreamers", then "BAAD by Odubo is still the idea cause its like a natural byproduct of Odubo Studio
+work. but the full name is with the creative wear." Settled as three parts, used by the moment:
+
+| Form | Where | Set as |
+|---|---|---|
+| The full lockup | where a stranger meets the label | **B.A.A.D Creative Wear**, with "by Odubo" on its own line under it |
+| The byline | where the house speaks | **B.A.A.D by Odubo**, one line |
+| The name | where clothes are already the context | **B.A.A.D** |
+
+Two rules: never "Creative Wear" alone, and never all three parts on one line. The brand kit (version 5)
+has the table.
+
+On the site:
+- `src/lib/store/brands.ts` gained `labelLockup()` (the full lockup) and `STORE_FULL_NAME`;
+  `STORE_NAME` became `STORE_BYLINE`.
+- The product page shows the full lockup.
+- /links keeps "Shop B.A.A.D by Odubo".
+- The site's description reads "B.A.A.D Creative Wear".
+- Tests: `src/__tests__/baadNames.test.ts`.
+- The Shopify shop name, which shows at checkout, is his to change in Shopify.
