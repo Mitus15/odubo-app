@@ -1,12 +1,23 @@
 'use client';
 
-import { memo, useCallback, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { GearLink, RoomShell, Symbol } from './RoomParts';
 import { formatMoney } from '@/lib/store/money';
 import { labelLockup, STORE_LABEL } from '@/lib/store/brands';
 import { onRoom, ROOM_DARK } from '@/lib/room';
 import type { ProductSummary } from '@/lib/store/types';
-import type { PieceBounds, PieceLook } from '@/lib/store/pieceLook';
+import type { PieceLook } from '@/lib/store/pieceLook';
+import { altOf, Cutout, Piece, sized } from './PieceOnFloor';
+import { fly, useLanding } from './flight';
+
+/** How long the row rests on a piece before its page is fetched, ready for the tap */
+const PREFETCH_AFTER_MS = 250;
+
+/** A plain click: anything else (a new tab, a new window) is the browser's */
+function plainClick(e: React.MouseEvent) {
+  return e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey;
+}
 
 type GearPiece = ProductSummary & PieceLook;
 
@@ -35,22 +46,35 @@ type GearPiece = ProductSummary & PieceLook;
  * The row is left alone while a finger moves it: no piece changes size or
  * fades as it goes, nothing in it re-renders. Only the name and the room's
  * colour follow, from the scroll position, once a frame at most.
+ *
+ * A tap on a piece (or See it) flies it into its own page, in the same room
+ * (./flight); the page of the piece in front is fetched while it rests there,
+ * so the flight has nothing to wait for. Coming back, the row opens on it.
  */
-export default function GearRoom({ pieces }: { pieces: GearPiece[] }) {
+export default function GearRoom({ pieces, start = 0 }: { pieces: GearPiece[]; start?: number }) {
   const row = useRef<HTMLUListElement>(null);
-  const [front, setFront] = useState(0);
-  const frontRef = useRef(0);
+  const [front, setFront] = useState(start);
+  const frontRef = useRef(start);
   frontRef.current = front;
   /** One piece at a time, or all of them at once */
   const [view, setView] = useState<'row' | 'grid'>('row');
   const lockup = labelLockup(STORE_LABEL);
 
+  const router = useRouter();
+  const pieceAt = useCallback((i: number) => row.current?.children[i]?.querySelector<HTMLElement>('[data-piece]') ?? null, []);
+
+  // Back from the grid, or from a piece's page: the row opens on the piece in front, instantly, before it is drawn
+  useLayoutEffect(() => {
+    const el = row.current;
+    const slide = el?.firstElementChild as HTMLElement | null;
+    if (el && slide && view === 'row') el.scrollTo({ left: frontRef.current * slide.offsetWidth, behavior: 'instant' as ScrollBehavior });
+  }, [view]);
+  // A piece flying back from its page lands in the row
+  useLanding(() => pieceAt(frontRef.current));
+
   useEffect(() => {
     const el = row.current;
     if (!el || view !== 'row') return;
-    // Back from the grid: the row opens on the piece in front, instantly
-    const slide = el.firstElementChild as HTMLElement | null;
-    if (slide) el.scrollTo({ left: frontRef.current * slide.offsetWidth, behavior: 'instant' as ScrollBehavior });
     let frame = 0;
     const read = () => {
       frame = 0;
@@ -77,6 +101,24 @@ export default function GearRoom({ pieces }: { pieces: GearPiece[] }) {
       el.scrollTo({ left: Math.max(0, Math.min(pieces.length - 1, front + by)) * slide.offsetWidth, behavior: 'smooth' });
     },
     [front, pieces.length],
+  );
+
+  // The page of the piece in front, fetched while the row rests on it
+  const handle = pieces[front]?.handle;
+  useEffect(() => {
+    if (!handle) return;
+    const t = window.setTimeout(() => router.prefetch(`/store/product/${handle}`), PREFETCH_AFTER_MS);
+    return () => window.clearTimeout(t);
+  }, [handle, router]);
+
+  /** Into a piece's page: it flies there */
+  const open = useCallback(
+    (e: React.MouseEvent, i: number) => {
+      if (!plainClick(e) || !pieces[i]) return;
+      e.preventDefault();
+      fly(pieceAt(i), () => router.push(`/store/product/${pieces[i].handle}`));
+    },
+    [pieces, pieceAt, router],
   );
 
   /** From the grid, into a piece's own room */
@@ -111,7 +153,7 @@ export default function GearRoom({ pieces }: { pieces: GearPiece[] }) {
           className="room-fade flex min-h-[calc(100%-var(--room-top))] flex-col justify-center py-4"
           style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 28px)' }}
         >
-          <Row rowRef={row} pieces={pieces} />
+          <Row rowRef={row} pieces={pieces} onOpen={open} />
 
           {/* The piece in front, under it on the floor. Its name always has two lines' room, so nothing below it moves */}
           <div className="mt-3 px-5 text-center" aria-live="polite">
@@ -142,6 +184,7 @@ export default function GearRoom({ pieces }: { pieces: GearPiece[] }) {
             {piece && (
               <GearLink
                 href={`/store/product/${piece.handle}`}
+                onClick={(e) => open(e, front)}
                 className="flex min-h-[52px] w-full max-w-sm items-center justify-center rounded-full text-[15px] font-semibold tracking-wide transition-[transform,background-color,color] duration-500 active:scale-[0.98]"
                 style={{ background: on, color: colour }}
               >
@@ -171,7 +214,7 @@ function GearGrid({ pieces, onPick }: { pieces: GearPiece[]; onPick: (i: number)
             <button type="button" onClick={() => onPick(i)} className="group block w-full text-center" aria-label={p.title}>
               <span className="block aspect-square [container-type:size]">
                 <span className="flex h-full items-end justify-center pb-[8%] transition-transform duration-300 group-hover:-translate-y-1 group-active:scale-95">
-                  <Cutout src={sized(p.image!.url, 360)} alt={p.image?.altText || p.title} bounds={p.bounds} size="min(80cqw, calc(80cqh * var(--ratio)))" eager={i < 9} />
+                  <Cutout src={sized(p.image!.url, 360)} alt={altOf(p.image?.altText, p.title)} bounds={p.bounds} size="min(80cqw, calc(80cqh * var(--ratio)))" eager={i < 9} />
                 </span>
               </span>
               <span className="room-eyebrow mt-1 line-clamp-2 block px-1 !text-[10px] !leading-tight !tracking-[0.14em] !opacity-90">{p.title}</span>
@@ -184,7 +227,15 @@ function GearGrid({ pieces, onPick }: { pieces: GearPiece[]; onPick: (i: number)
 }
 
 /** The row on the floor. Memoised: the name and colour above it change as it moves; it does not. */
-const Row = memo(function Row({ pieces, rowRef }: { pieces: GearPiece[]; rowRef: React.RefObject<HTMLUListElement | null> }) {
+const Row = memo(function Row({
+  pieces,
+  rowRef,
+  onOpen,
+}: {
+  pieces: GearPiece[];
+  rowRef: React.RefObject<HTMLUListElement | null>;
+  onOpen: (e: React.MouseEvent, i: number) => void;
+}) {
   return (
     <ul
       ref={rowRef}
@@ -196,8 +247,8 @@ const Row = memo(function Row({ pieces, rowRef }: { pieces: GearPiece[]; rowRef:
           key={p.id}
           className="flex h-full w-[86vw] shrink-0 snap-center snap-always items-center justify-center [container-type:size] sm:w-[40vw] lg:w-[28vw]"
         >
-          <GearLink href={`/store/product/${p.handle}`} className="block">
-            <Piece src={sized(p.image!.url)} alt={p.image?.altText || p.title} bounds={p.bounds} eager={i < 2} />
+          <GearLink href={`/store/product/${p.handle}`} onClick={(e) => onOpen(e, i)} className="block">
+            <Piece src={sized(p.image!.url)} alt={altOf(p.image?.altText, p.title)} bounds={p.bounds} eager={i < 2} />
           </GearLink>
         </li>
       ))}
@@ -213,66 +264,4 @@ function Arrow({ onClick, disabled, label, left }: { onClick: () => void; disabl
       </svg>
     </button>
   );
-}
-
-/** How much of the piece the floor mirrors, from its hem down */
-const REFLECTION = 0.22;
-
-function cropOf(bounds: PieceBounds | null) {
-  const b = bounds || { top: 0, bottom: 1, left: 0, right: 1, aspect: 1 };
-  const w = b.right - b.left;
-  const h = b.bottom - b.top;
-  return {
-    ratio: (w / h) * b.aspect || 1,
-    style: { width: `${100 / w}%`, left: `${(-b.left / w) * 100}%`, top: `${(-b.top / h) * 100}%` },
-  };
-}
-
-/** A photo cropped to what is visible in it, never tighter (the server read where that is, lib/store/pieceLook) */
-function Cutout({ src, alt, bounds, size, eager }: { src: string; alt: string; bounds: PieceBounds | null; size: string; eager: boolean }) {
-  const { ratio, style } = cropOf(bounds);
-  return (
-    <span className="relative block overflow-hidden" style={{ aspectRatio: ratio, width: size, ['--ratio' as string]: ratio } as React.CSSProperties}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={src} alt={alt} loading={eager ? 'eager' : 'lazy'} decoding="async" draggable={false} className="absolute max-w-none" style={style} />
-    </span>
-  );
-}
-
-/**
- * A piece standing on the floor: its photo cropped to what is visible in it,
- * never tighter, so no edge of it is cut and the floor meets its hem. Under
- * it, the hem mirrored in the lacquer, fading to nothing, and a soft shadow
- * where it stands; all of it inside its own height, so nothing below it is
- * ever clipped. A photo the server could not read stands uncropped.
- */
-const Piece = memo(function Piece({ src, alt, bounds, eager }: { src: string; alt: string; bounds: PieceBounds | null; eager: boolean }) {
-  const { ratio, style } = cropOf(bounds);
-  const loading = eager ? 'eager' : 'lazy';
-  return (
-    <span className="relative flex flex-col" style={{ width: `min(100cqw, ${(66 * ratio).toFixed(2)}cqh)` }}>
-      {/* where it stands */}
-      <span
-        aria-hidden="true"
-        className="absolute left-1/2 h-4 w-[72%] -translate-x-1/2 -translate-y-1/2 rounded-[50%]"
-        style={{ top: `${100 / (1 + REFLECTION)}%`, background: 'radial-gradient(closest-side, rgb(42 15 10 / 0.3), transparent)' }}
-      />
-      <span className="relative block w-full overflow-hidden" style={{ aspectRatio: ratio }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={src} alt={alt} loading={loading} decoding="async" draggable={false} className="absolute max-w-none" style={style} />
-      </span>
-      {/* the hem, mirrored in the floor */}
-      <span aria-hidden="true" className="floor-reflection relative block w-full overflow-hidden" style={{ aspectRatio: ratio / REFLECTION }}>
-        <span className="absolute inset-x-0 top-0 block -scale-y-100" style={{ aspectRatio: ratio }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={src} alt="" loading={loading} decoding="async" draggable={false} className="absolute max-w-none" style={style} />
-        </span>
-      </span>
-    </span>
-  );
-});
-
-/** Shopify's CDN sizes on request: a phone needs nothing like the 2048 original */
-function sized(url: string, width = 720): string {
-  return `${url}${url.includes('?') ? '&' : '?'}width=${width}`;
 }

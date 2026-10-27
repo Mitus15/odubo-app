@@ -5,7 +5,7 @@ import RoomVideo from './RoomVideo';
 import PlatformIcon from '@/components/linktree/PlatformIcon';
 import { Symbol, useBrowserColour } from './RoomParts';
 import { hearIt, hudOf, type Level } from '@/lib/levels';
-import { onRoom } from '@/lib/room';
+import { onRoom, ROOM_DARK } from '@/lib/room';
 import type { LinkTreeItem } from '@/types/linktree';
 
 /**
@@ -37,7 +37,8 @@ export default function FocusView({
   const [active, setActive] = useState(start);
   const activeRef = useRef(start);
   activeRef.current = active;
-  const colour = levels[active]?.colour || '#2a0f0a';
+  const colour = levels[active]?.colour || ROOM_DARK;
+  const ink = levels[active]?.ink || onRoom(colour);
   useBrowserColour(colour);
 
   // Open on the performance that was tapped
@@ -85,8 +86,8 @@ export default function FocusView({
       role="dialog"
       aria-modal="true"
       aria-label="The levels"
-      className="room-fade fixed inset-0 z-[155] transition-colors duration-500"
-      style={{ background: colour, color: onRoom(colour) } as CSSProperties}
+      className="room-fade fixed inset-0 z-[155] transition-[background-color,color,bottom] duration-500"
+      style={{ background: colour, color: ink, bottom: 'var(--consent-h, 0px)' } as CSSProperties}
     >
       <div ref={scroller} className="h-full snap-y snap-mandatory overflow-y-scroll overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {levels.map((l, i) => {
@@ -98,11 +99,12 @@ export default function FocusView({
               data-performance={i}
               aria-label={title}
               className="relative h-full snap-start snap-always"
-              style={{ background: l.colour, color: onRoom(l.colour) }}
+              style={{ background: l.colour, color: l.ink }}
             >
               <RoomVideo
                 hls={l.hls}
                 poster={l.poster}
+                startAt={l.posterAt}
                 title={title}
                 active={i === active}
                 near={Math.abs(i - active) <= 1}

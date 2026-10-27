@@ -21,13 +21,11 @@ import type { LinkTreeItem } from '@/types/linktree';
  */
 export function useBrowserColour(colour: string) {
   useEffect(() => {
-    const meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
-    if (!meta) return;
-    const before = meta.content;
-    meta.content = colour;
-    return () => {
-      meta.content = before;
-    };
+    // Every theme-color the page carries, so no browser reads a stale one
+    const metas = [...document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]')];
+    const before = metas.map((m) => m.content);
+    metas.forEach((m) => (m.content = colour));
+    return () => metas.forEach((m, i) => (m.content = before[i]));
   }, [colour]);
 }
 
@@ -54,11 +52,12 @@ export function RoomShell({
   useBrowserColour(colour);
   return (
     <div
-      className={`room ${houseFont.variable} fixed inset-0 z-[150] transition-colors duration-700 ${scroll ? 'overflow-y-auto overscroll-contain' : 'overflow-hidden'}`}
-      style={{ background: colour, color: on, '--room': colour, '--on-room': on } as CSSProperties}
+      className={`room ${houseFont.variable} fixed inset-0 z-[150] transition-[background-color,color,bottom] duration-700 ${scroll ? 'overflow-y-auto overscroll-contain' : 'overflow-hidden'}`}
+      // Ends above the cookie strip while it is up (GDPRConsent sets --consent-h)
+      style={{ background: colour, color: on, bottom: 'var(--consent-h, 0px)', '--room': colour, '--on-room': on } as CSSProperties}
     >
       <header className="flex items-center justify-between gap-3 px-4" style={{ paddingTop: 'env(safe-area-inset-top)', height: 'var(--room-top)' }}>
-        <Link href="/" className="flex min-h-[44px] items-center">
+        <Link href="/" className="-ml-2.5 flex min-h-[44px] min-w-[44px] items-center justify-center">
           <HouseName />
         </Link>
         {corner}
@@ -68,15 +67,18 @@ export function RoomShell({
   );
 }
 
+/** The danceman's height at the top of every room */
+export const HOUSE_HEIGHT = 30;
+
 /**
  * The site's name at the top of every room: the danceman alone. The site is
  * Odubo Studio and says so to search and to screen readers; Mani is the one
  * dancing in it, not its name (his word, 2026-10-27).
  */
-export function HouseName({ as: Tag = 'span' }: { as?: 'span' | 'h1' }) {
+export function HouseName({ as: Tag = 'span', size }: { as?: 'span' | 'h1'; size?: string }) {
   return (
     <Tag className="flex items-center">
-      <Mark src={ODUBO_MARK} aspect={ODUBO_MARK_ASPECT} height={30} label="Odubo Studio" />
+      <Mark src={ODUBO_MARK} aspect={ODUBO_MARK_ASPECT} height={HOUSE_HEIGHT} size={size} label="Odubo Studio" />
     </Tag>
   );
 }
@@ -113,6 +115,8 @@ const ICONS = {
   music: <><rect x="1.8" y="4.5" width="11.2" height="15" rx="0.6" /><path d="M13 4.57 A7.5 7.5 0 0 1 13 19.43" /><path d="M13 9.7 A2.5 2.5 0 1 1 13 14.3" strokeOpacity="0.6" /><circle cx="14" cy="12" r="0.75" fill="currentColor" stroke="none" /></>,
   /** Gear: a hanger */
   gear: <><path d="M12 8.5V7.6a1.9 1.9 0 1 1 1.9 -1.9" strokeLinecap="round" /><path d="M12 8.5L3.2 15.1a1.2 1.2 0 0 0 .7 2.2h16.2a1.2 1.2 0 0 0 .7 -2.2z" strokeLinejoin="round" /></>,
+  /** The bag */
+  bag: <><path strokeLinejoin="round" d="M5.2 8.5h13.6l-1.1 11.5H6.3z" /><path strokeLinecap="round" d="M9 8.5V7a3 3 0 0 1 6 0v1.5" /></>,
   /** One at a time: a single piece */
   one: <rect x="6.5" y="4" width="11" height="16" rx="0.8" />,
   /** Locked */
@@ -212,7 +216,7 @@ export function SmallPrint({ className = '' }: { className?: string }) {
           Shipping &amp; returns
         </Link>
         <span aria-hidden="true">·</span>
-        <Link href="/legal?tab=privacy" className="flex min-h-[44px] items-center hover:opacity-100">
+        <Link href="/legal?tab=privacy" className="flex min-h-[44px] min-w-[44px] items-center justify-center hover:opacity-100">
           Privacy
         </Link>
       </div>
@@ -222,10 +226,31 @@ export function SmallPrint({ className = '' }: { className?: string }) {
 }
 
 /** A link into the store, counted as a shop visit like every other way in */
-export function GearLink({ href, className, style, children }: { href: string; className?: string; style?: CSSProperties; children: ReactNode }) {
+export function GearLink({
+  href,
+  className,
+  style,
+  children,
+  onClick,
+}: {
+  href: string;
+  className?: string;
+  style?: CSSProperties;
+  children: ReactNode;
+  /** After the visit is counted: may take the navigation over (a piece's flight), by preventing the default */
+  onClick?: (e: React.MouseEvent<HTMLAnchorElement>) => void;
+}) {
   const analytics = useAnalyticsSafe();
   return (
-    <Link href={href} onClick={() => analytics?.trackShopVisit()} className={className} style={style}>
+    <Link
+      href={href}
+      onClick={(e) => {
+        analytics?.trackShopVisit();
+        onClick?.(e);
+      }}
+      className={className}
+      style={style}
+    >
       {children}
     </Link>
   );

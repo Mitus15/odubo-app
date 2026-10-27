@@ -2,14 +2,16 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useRouter } from 'next/navigation';
 import FocusView from './FocusView';
 import RoomVideo from './RoomVideo';
 import SaveYourProgress from './SaveYourProgress';
 import PlatformIcon from '@/components/linktree/PlatformIcon';
-import { HouseName, NextRoom, Outro, Symbol, useBrowserColour } from './RoomParts';
+import { HOUSE_HEIGHT, HouseName, NextRoom, Outro, Symbol, useBrowserColour } from './RoomParts';
 import { hearIt } from '@/lib/levels';
 import { ROOM_DARK, onRoom } from '@/lib/room';
 import { houseFont } from '@/lib/brand/houseFont';
+import { ODUBO_MARK_ASPECT } from '@/lib/brand/marks';
 import type { RoomData } from './loadRoom';
 
 /**
@@ -49,6 +51,8 @@ const FLOOR = 'var(--room-floor)';
 /** The pages: the room, the lock, the outro */
 const LOCK = 1;
 const OUTRO = 2;
+/** How long the room plays before the gear's page is fetched behind it */
+const GEAR_PREFETCH_MS = 1500;
 
 export default function RoomScreen({ levels, nextRoom, verse, platforms, storeOpen, startAt }: RoomData & { startAt?: string }) {
   const page = useRef<HTMLDivElement>(null);
@@ -62,12 +66,19 @@ export default function RoomScreen({ levels, nextRoom, verse, platforms, storeOp
   // The lock's page waits in the next room's colour; with nothing planned, in this room's
   const lockColour = nextRoom || colour;
   const colourAt = useCallback((i: number) => (i < LOCK ? colour : i < OUTRO ? lockColour : ROOM_DARK), [colour, lockColour]);
+  // The writing on each page: in the room, the ink he is drawn in (sampled with the room, lib/sampler)
+  const roomInk = level?.ink || onRoom(colour);
+  const lockInk = nextRoom ? onRoom(nextRoom) : roomInk;
+  const inkAt = useCallback((i: number) => (i < LOCK ? roomInk : i < OUTRO ? lockInk : onRoom(ROOM_DARK)), [roomInk, lockInk]);
   const hear = level ? hearIt(level, platforms) : null;
   useBrowserColour(focus === null ? colour : ROOM_DARK);
   const room = level ? `?room=${level.id}` : '';
   const title = level ? `${level.label}: Mani Odubo dances ${level.song}${level.artist ? ` by ${level.artist}` : ''}` : '';
 
-  // One danceman: the header's flies down into the outro's place as the outro comes up, and back as it goes
+  // One danceman: the header's flies down into the outro's place as the outro comes up, and back as it goes.
+  // He grows by his own size, never by a transform's scale: a scaled layer is a stretched picture of the
+  // small one, and Safari leaves it blurred until something forces a redraw (a pinch). Drawn at each size,
+  // the mark is a drawing at every step of the flight. Only his place moves by transform.
   const headerMark = useRef<HTMLSpanElement>(null);
   const outroMark = useRef<HTMLSpanElement>(null);
   // The top and the floor are each written in the colour of what is under them right now
@@ -77,6 +88,13 @@ export default function RoomScreen({ levels, nextRoom, verse, platforms, storeOp
     const mark = headerMark.current;
     if (!root || !mark) return;
     let frame = 0;
+    /** Where he rests in the header: measured once at rest, again after a resize */
+    let rest: DOMRect | null = null;
+    const settle = () => {
+      mark.style.transform = '';
+      mark.style.removeProperty('--house-h');
+      mark.style.color = '';
+    };
     const draw = () => {
       frame = 0;
       const h = root.clientHeight || 1;
@@ -88,33 +106,48 @@ export default function RoomScreen({ levels, nextRoom, verse, platforms, storeOp
       if (!target) return;
       const p = Math.min(1, Math.max(0, (root.scrollTop - (OUTRO - 1) * h) / h));
       if (p <= 0) {
-        mark.style.transform = '';
-        mark.style.color = '';
+        settle();
+        rest = null;
         return;
       }
+      if (!rest) {
+        settle();
+        rest = mark.getBoundingClientRect();
+      }
       const e = p * p * (3 - 2 * p);
-      mark.style.transform = '';
-      const from = mark.getBoundingClientRect();
       const to = target.getBoundingClientRect();
-      const scale = 1 + (to.height / from.height - 1) * e;
-      const dy = (to.top - from.top) * e;
-      mark.style.transform = `translate(${(to.left - from.left) * e}px, ${dy}px) scale(${scale})`;
+      const height = rest.height + (to.height - rest.height) * e;
+      const dy = (to.top - rest.top) * e;
+      mark.style.setProperty('--house-h', `${height.toFixed(2)}px`);
+      mark.style.transform = `translate3d(${((to.left - rest.left) * e).toFixed(2)}px, ${dy.toFixed(2)}px, 0)`;
       // He takes the colour of the room he is over: the room's writing above the outro's edge, sand once he crosses it
-      const middle = from.top + dy + (from.height * scale) / 2;
-      mark.style.color = onRoom(middle > OUTRO * h - root.scrollTop ? ROOM_DARK : lockColour);
+      const middle = rest.top + dy + height / 2;
+      mark.style.color = middle > OUTRO * h - root.scrollTop ? onRoom(ROOM_DARK) : lockInk;
     };
     const onScroll = () => {
       if (!frame) frame = requestAnimationFrame(draw);
     };
+    const onResize = () => {
+      rest = null;
+      onScroll();
+    };
     root.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', onScroll);
+    window.addEventListener('resize', onResize);
     draw();
     return () => {
       root.removeEventListener('scroll', onScroll);
-      window.removeEventListener('resize', onScroll);
+      window.removeEventListener('resize', onResize);
       cancelAnimationFrame(frame);
     };
-  }, [colour, lockColour]);
+  }, [colour, lockColour, lockInk]);
+
+  // The gear is where a visitor spends: its page is fetched while they watch, so the door opens at once
+  const router = useRouter();
+  useEffect(() => {
+    if (!storeOpen) return;
+    const t = window.setTimeout(() => router.prefetch('/gear'), GEAR_PREFETCH_MS);
+    return () => window.clearTimeout(t);
+  }, [storeOpen, router]);
 
   /** Out of the focused view: the page is set in the room the visitor stopped in, back at its top */
   const comeOut = useCallback((i: number) => {
@@ -123,14 +156,15 @@ export default function RoomScreen({ levels, nextRoom, verse, platforms, storeOp
     page.current?.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
   }, []);
 
-  const topOn = onRoom(colourAt(under.top));
+  const topOn = inkAt(under.top);
   const floorColour = colourAt(under.floor);
-  const floorOn = onRoom(floorColour);
+  const floorOn = inkAt(under.floor);
 
   return (
     <div
-      className={`room ${houseFont.variable} fixed inset-0 z-[150] transition-colors duration-500`}
-      style={{ background: colour, color: onRoom(colour), '--room': colour, '--on-room': onRoom(colour) } as CSSProperties}
+      className={`room ${houseFont.variable} fixed inset-0 z-[150] transition-[background-color,color,bottom] duration-500`}
+      // Ends above the cookie strip while it is up (GDPRConsent sets --consent-h)
+      style={{ background: colour, color: roomInk, bottom: 'var(--consent-h, 0px)', '--room': colour, '--on-room': roomInk } as CSSProperties}
     >
       <div ref={page} className="h-full snap-y snap-mandatory overflow-y-auto overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <section aria-label={title || 'The next level, locked'} className="relative h-full snap-start snap-always transition-colors duration-500" style={{ background: colour }}>
@@ -142,7 +176,7 @@ export default function RoomScreen({ levels, nextRoom, verse, platforms, storeOp
               className="group absolute inset-x-0 block cursor-pointer"
               style={{ top: TOP, bottom: FLOOR }}
             >
-              <RoomVideo key={level.id} hls={level.hls} poster={level.poster} title={title} active={focus === null} near className="absolute inset-0" tapToPause={false} />
+              <RoomVideo key={level.id} hls={level.hls} poster={level.poster} startAt={level.posterAt} title={title} active={focus === null} near className="absolute inset-0" tapToPause={false} />
               {/* the way in: the dancer is the door to the performances */}
               <span className="absolute bottom-2 right-4 flex h-10 w-10 items-center justify-center rounded-full opacity-70 transition-opacity group-hover:opacity-100">
                 <Symbol name="expand" className="h-5 w-5" />
@@ -152,7 +186,7 @@ export default function RoomScreen({ levels, nextRoom, verse, platforms, storeOp
             <NextRoom top={TOP} floor={FLOOR} />
           )}
         </section>
-        <section aria-label="The next level, locked" className="relative h-full snap-start snap-always" style={{ background: lockColour, color: onRoom(lockColour) }}>
+        <section aria-label="The next level, locked" className="relative h-full snap-start snap-always" style={{ background: lockColour, color: lockInk }}>
           <NextRoom top={TOP} floor={FLOOR} />
         </section>
         <section aria-label="Odubo Studio" className="relative h-full snap-start snap-always" style={{ background: ROOM_DARK, color: onRoom(ROOM_DARK) }}>
@@ -165,8 +199,15 @@ export default function RoomScreen({ levels, nextRoom, verse, platforms, storeOp
         className="pointer-events-none fixed inset-x-0 top-0 flex items-center justify-between gap-3 px-4 transition-colors duration-200"
         style={{ paddingTop: 'env(safe-area-inset-top)', height: TOP, color: topOn }}
       >
-        <span ref={headerMark} className="pointer-events-auto origin-top-left transition-colors duration-200 will-change-transform">
-          <HouseName as="h1" />
+        {/* His place in the header keeps its size while he grows out of it, so nothing around him moves */}
+        <span
+          ref={headerMark}
+          className="pointer-events-auto relative block shrink-0 transition-colors duration-200"
+          style={{ height: HOUSE_HEIGHT, width: Math.round(HOUSE_HEIGHT * ODUBO_MARK_ASPECT) }}
+        >
+          <span className="absolute left-0 top-0">
+            <HouseName as="h1" size={`var(--house-h, ${HOUSE_HEIGHT}px)`} />
+          </span>
         </span>
         {hear && under.top === 0 && (
           <a
@@ -189,8 +230,8 @@ export default function RoomScreen({ levels, nextRoom, verse, platforms, storeOp
       {/* The floor */}
       <nav
         aria-label="The world"
-        className="fixed inset-x-0 bottom-0 flex flex-col items-center gap-4 px-4 transition-colors duration-200 [@media(max-height:600px)]:gap-1"
-        style={{ paddingBottom: 'var(--room-floor-gap)', color: floorOn }}
+        className="fixed inset-x-0 flex flex-col items-center gap-4 px-4 transition-[color,bottom] duration-200 [@media(max-height:600px)]:gap-1"
+        style={{ bottom: 'var(--consent-h, 0px)', paddingBottom: 'var(--room-floor-gap)', color: floorOn }}
       >
         <div className="flex w-full max-w-[16rem] items-center justify-between">
           {levels.length > 0 && <Door href={`/levels${room}`} symbol="levels" label="Levels" />}

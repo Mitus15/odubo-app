@@ -3,8 +3,9 @@ import type { Metadata } from 'next';
 import { RoomShell, SmallPrint, Symbol } from '@/components/room/RoomParts';
 import SaveYourProgress from '@/components/room/SaveYourProgress';
 import { generateSeoMetadata } from '@/lib/seo';
-import { getLevels, KIND_LABEL } from '@/lib/levels';
-import { onRoom, roomFor } from '@/lib/room';
+import { KIND_LABEL, stillAt } from '@/lib/levels';
+import { getLevels } from '@/lib/levelsServer';
+import { roomFor } from '@/lib/room';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,7 +15,7 @@ export async function generateMetadata(): Promise<Metadata> {
     title: 'Levels',
     description: 'Odubo Studio: every level Mani Odubo has danced, as it comes out.',
     path: '/levels',
-    ogImage: newest?.poster,
+    ogImage: newest ? '/share/newest' : undefined,
   });
 }
 
@@ -50,10 +51,12 @@ export default async function LevelsPage({ searchParams }: PageProps) {
           {levels.map((level) => (
             <li key={level.id}>
               <Link href={`/levels/${level.id}`} className="group block">
-                <span className="relative block aspect-[9/16] overflow-hidden" style={{ background: level.colour, color: onRoom(level.colour) }}>
+                <span className="relative block aspect-[9/16] overflow-hidden" style={{ background: level.colour, color: level.ink }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={level.poster}
+                    src={stillAt(level.poster, 960)}
+                    srcSet={`${stillAt(level.poster, 640)} 360w, ${stillAt(level.poster, 1280)} 720w`}
+                    sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
                     alt={`${level.label}: Mani Odubo dances ${level.song}${level.artist ? ` by ${level.artist}` : ''}`}
                     loading="lazy"
                     className="absolute inset-0 h-full w-full object-contain transition-transform duration-500 group-hover:scale-[1.04]"

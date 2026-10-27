@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import RoomScreen from '@/components/room/RoomScreen';
 import { loadRoom } from '@/components/room/loadRoom';
 import { generateSeoMetadata } from '@/lib/seo';
-import { getLevel } from '@/lib/levels';
+import { getLevel } from '@/lib/levelsServer';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,7 +18,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     title: `${level.label} · ${level.song}`,
     description: `${level.label}: Mani Odubo dances ${level.song}${level.artist ? ` by ${level.artist}` : ''}.`,
     path: `/levels/${level.id}`,
-    ogImage: level.poster,
+    ogImage: `/share/${level.id}`,
     type: 'video.other',
   });
 }

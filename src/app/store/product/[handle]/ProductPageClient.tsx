@@ -1,16 +1,20 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import Link from 'next/link';
+import { useState, useEffect, useMemo, useRef, type CSSProperties } from 'react';
+import { useRouter } from 'next/navigation';
 import { labelCredit, labelLockup } from '@/lib/store/brands';
-import ScreenLayout from '@/components/ui/ScreenLayout';
-import ScrollContainer from '@/components/ui/ScrollContainer';
 import { usePageAnalytics } from '@/hooks/usePageAnalytics';
 import { useAnalyticsSafe } from '@/contexts/AnalyticsContext';
 import { useStore } from '@/contexts/StoreContext';
 import { MADE_TO_ORDER_LINK, MADE_TO_ORDER_LINK_TEXT, MADE_TO_ORDER_TEXT } from '@/lib/store/madeToOrder';
 import { isPreorderActive, PREORDER_CTA, PREORDER_FEEDBACK, PREORDER_SHIP_TEXT } from '@/config/preorder';
 import { formatMoney } from '@/lib/store/money';
-import { ODUBO_MARK } from '@/lib/brand/marks';
+import { onRoom, ROOM_DARK } from '@/lib/room';
+import type { PieceBounds } from '@/lib/store/pieceLook';
+import { RoomShell, Symbol } from '@/components/room/RoomParts';
+import { Cutout, Piece, sized } from '@/components/room/PieceOnFloor';
+import { fly, useLanding } from '@/components/room/flight';
 
 // Define the shape of the product data
 interface ShopifyProduct {
@@ -22,31 +26,64 @@ interface ShopifyProduct {
   vendor?: string;
   images?: { src: string }[];
   options?: { name: string; values: string[] }[];
-  variants?: { 
-    id: string; 
-    title: string; 
-    price: string; 
+  variants?: {
+    id: string;
+    title: string;
+    price: string;
     currency?: string;
-    available?: boolean; 
+    available?: boolean;
     quantityAvailable?: number;
-    image?: { src: string } | null; 
-    selectedOptions?: Record<string, string> 
+    image?: { src: string } | null;
+    selectedOptions?: Record<string, string>
   }[];
 }
 
 interface ProductPageClientProps {
   product: ShopifyProduct;
+  /** The piece's room, the same colour it stands in on /gear (lib/store/pieceLook); null: the house's dark */
+  room: string | null;
+  /** Each photo's crop to what is visible in it, by its address without the query */
+  bounds: Record<string, PieceBounds | null>;
 }
 
-export default function ProductPageClient({ product }: ProductPageClientProps) {
+/** A line drawn in the room's writing, faint */
+const HAIRLINE = 'color-mix(in srgb, currentColor 35%, transparent)';
+
+/**
+ * A piece's own page, in its room: the colour it has in /gear, the piece
+ * standing on the same floor, and under it its name, the label, the price,
+ * the sizes and the one drawn shape, Add to bag. The hanger at the top goes
+ * back to the gear, opened on this piece; the bag, once something is in it,
+ * stands beside the hanger. The danceman goes home.
+ *
+ * From /gear the piece flies in (components/room/flight), and the hanger
+ * flies it back; the gear's page is fetched while this one is read, so the
+ * way back has nothing to wait for.
+ */
+export default function ProductPageClient({ product, room, bounds }: ProductPageClientProps) {
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
   const [selectedVariantId, setSelectedVariantId] = useState<string>('');
   const [activeImage, setActiveImage] = useState<string | null>(null);
-  const [qty, setQty] = useState<number>(1);
   const [justAdded, setJustAdded] = useState<boolean>(false);
   // The one bag (lib/store/bag.ts): the same one the grid, QuickShop and the badge read.
   const { addToCart: addToBag, cartItemCount } = useStore();
   const hasCartItems = cartItemCount > 0;
+
+  const colour = room || ROOM_DARK;
+  const on = onRoom(colour);
+  const lockup = labelLockup(product?.vendor);
+  const credit = labelCredit(product?.vendor);
+  const bagHref = `/store/cart?room=${colour.slice(1)}`;
+  const gearHref = `/gear?piece=${encodeURIComponent(product.handle)}`;
+  const router = useRouter();
+  const floor = useRef<HTMLDivElement>(null);
+  const standing = () => floor.current?.querySelector<HTMLElement>('[data-piece]') ?? null;
+  useLanding(standing);
+  // The way back, fetched while this page is read
+  useEffect(() => {
+    const t = window.setTimeout(() => router.prefetch(gearHref), 600);
+    return () => window.clearTimeout(t);
+  }, [gearHref, router]);
 
   // Page analytics
   usePageAnalytics({ title: `${product?.title} | Odubo Studio` });
@@ -58,7 +95,6 @@ export default function ProductPageClient({ product }: ProductPageClientProps) {
       analytics?.trackProductView(product.handle);
     }
   }, [product?.handle, analytics]);
-
 
   // Initialize default selections when product loads
   useEffect(() => {
@@ -103,13 +139,6 @@ export default function ProductPageClient({ product }: ProductPageClientProps) {
     }
   }, [selectedVariant]);
 
-  // Set initial image
-  useEffect(() => {
-    if (!activeImage && product?.images?.[0]?.src) {
-      setActiveImage(product.images[0].src);
-    }
-  }, [product, activeImage]);
-
   const handleThumbnailClick = (src: string) => {
     setActiveImage(src);
     // Find if this image belongs to a specific variant
@@ -145,7 +174,7 @@ export default function ProductPageClient({ product }: ProductPageClientProps) {
         },
         productHandle: product?.handle || '',
         productTitle: product?.title || '',
-        quantity: qty,
+        quantity: 1,
       });
 
       // Track add to cart
@@ -159,187 +188,187 @@ export default function ProductPageClient({ product }: ProductPageClientProps) {
     }
   };
 
+  const images = product?.images || [];
+  const shown = activeImage || selectedVariant?.image?.src || images[0]?.src || null;
+  const boundsOf = (src: string) => bounds[src.split('?')[0]] ?? null;
+  const available = !!selectedVariant?.available;
+  const choices = (product?.options || []).filter((o) => o.values.length > 1);
+
+  const corner = (
+    <div className="flex items-center">
+      {hasCartItems && (
+        <Link
+          href={bagHref}
+          aria-label={`Your bag, ${cartItemCount} ${cartItemCount === 1 ? 'piece' : 'pieces'}`}
+          className="relative flex h-11 w-11 items-center justify-center transition-[opacity,transform] hover:opacity-70 active:scale-95"
+        >
+          <Symbol name="bag" className="h-6 w-6" />
+          <span className="absolute right-1 top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1 text-[10px] font-semibold" style={{ background: on, color: colour }}>
+            {cartItemCount}
+          </span>
+        </Link>
+      )}
+      <Link
+        href={gearHref}
+        onClick={(e) => {
+          if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+          e.preventDefault();
+          fly(standing(), () => router.push(gearHref));
+        }}
+        aria-label="Back to the gear"
+        title="The gear"
+        className="flex h-11 w-11 items-center justify-center transition-[opacity,transform] hover:opacity-70 active:scale-95"
+      >
+        <Symbol name="gear" className="h-6 w-6" />
+      </Link>
+    </div>
+  );
+
   return (
-    <ScreenLayout>
-      {/* odubo studio product background with soft lights */}
-      <div className="fixed inset-0 -z-10 bg-gradient-to-br from-[#0b0b0b] via-[#111111] to-[#0b0b0b]" />
-      <div className="pointer-events-none fixed inset-0 -z-10">
-        <div className="absolute -top-20 left-1/2 -translate-x-1/2 h-64 w-[36rem] rounded-[999px] bg-gradient-to-tr from-[#843c2d22] via-transparent to-[#ede8df11] blur-3xl" />
-        <div className="absolute bottom-0 right-0 h-80 w-80 rounded-full bg-gradient-to-tr from-[#b2a49122] via-[#ede8df14] to-transparent blur-3xl" />
-      </div>
-      <ScrollContainer>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-12 pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-[env(safe-area-inset-bottom)]">
-          {/* Breadcrumb / Back */}
-          <div className="mb-4 sm:mb-8 flex items-center justify-between">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={ODUBO_MARK} alt="Odubo" className="h-8 lg:h-10 w-auto opacity-90" />
-            <a href="/store" className="text-xs uppercase tracking-widest text-[#b2a491] hover:text-[#ede8df] transition-colors">
-              Back to Shop
-            </a>
+    <RoomShell colour={colour} on={on} corner={corner}>
+      <main
+        className="room-fade mx-auto w-full max-w-5xl px-5 lg:grid lg:min-h-[calc(100%-var(--room-top))] lg:grid-cols-2 lg:items-center lg:gap-14 lg:px-10"
+        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 32px)' }}
+      >
+        {/* The piece, on its floor */}
+        <div>
+          <div ref={floor} className="product-floor flex items-center justify-center [container-type:size]">
+            {shown && <Piece key={shown} src={sized(shown)} alt={product.title} bounds={boundsOf(shown)} eager stands={72} />}
+          </div>
+          {/* Its other photos: small, cut out, no frames */}
+          {images.length > 1 && (
+            <ul className="mt-1 flex justify-center gap-2" aria-label="Photos of the piece">
+              {images.slice(0, 6).map((img, i) => {
+                const here = shown?.split('?')[0] === img.src.split('?')[0];
+                return (
+                  <li key={img.src}>
+                    <button
+                      type="button"
+                      onClick={() => handleThumbnailClick(img.src)}
+                      aria-label={`Photo ${i + 1}`}
+                      aria-pressed={here}
+                      className={`flex h-12 w-12 flex-col items-center justify-end gap-1 pb-0.5 transition-opacity ${here ? 'opacity-100' : 'opacity-55 hover:opacity-90'}`}
+                    >
+                      <span className="flex h-9 w-11 items-end justify-center [container-type:size]">
+                        <Cutout src={sized(img.src, 120)} alt="" bounds={boundsOf(img.src)} size="min(100cqw, calc(100cqh * var(--ratio)))" eager={false} />
+                      </span>
+                      <span className={`h-[2px] w-4 rounded-full bg-current transition-opacity ${here ? 'opacity-100' : 'opacity-0'}`} />
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+
+        {/* Under it: what it is, and how to get it */}
+        <div className="mt-4 text-center lg:mt-0 lg:text-left">
+          <h1 className="room-display text-[clamp(24px,7vw,40px)] uppercase leading-[0.95] [text-wrap:balance]">{product?.title || 'Product'}</h1>
+          {/* The full lockup: the label's full name, and the house's signature on its own line */}
+          <p className="mt-2 text-[10px] uppercase tracking-[0.22em] opacity-80">
+            {lockup.name}
+            {lockup.signature && <span className="mt-1 block text-[9px] normal-case tracking-[0.18em]">{lockup.signature}</span>}
+          </p>
+          {selectedVariant && <p className="mt-3 text-[17px]">{formatMoney(parseFloat(selectedVariant.price), selectedVariant.currency)}</p>}
+
+          {/* Options: only the ones with a choice in them (a piece in one colour does not ask for it) */}
+          {choices.length > 0 && (
+            <div className="mt-6 space-y-5">
+              {choices.map((opt) => (
+                <fieldset key={opt.name}>
+                  <legend className="room-eyebrow mx-auto mb-2.5 lg:mx-0">{opt.name}</legend>
+                  <div className="flex flex-wrap justify-center gap-1.5 lg:justify-start">
+                    {opt.values.map(val => {
+                      const isSelected = selectedOptions[opt.name] === val;
+                      // Determine availability
+                      const tentative = { ...selectedOptions, [opt.name]: val };
+                      const anyMatch = product?.variants?.some(v => {
+                        const isInStock = (v.available !== false) && (v.quantityAvailable == null || v.quantityAvailable > 0);
+                        if (!isInStock) return false;
+                        const so = v.selectedOptions || {};
+                        return (product?.options || []).every(o => tentative[o.name] ? so[o.name] === tentative[o.name] : true);
+                      });
+                      const disabled = !anyMatch;
+                      return (
+                        <button
+                          key={val}
+                          type="button"
+                          onClick={() => !disabled && setSelectedOptions(prev => ({ ...prev, [opt.name]: val }))}
+                          disabled={disabled}
+                          aria-pressed={isSelected}
+                          className={`min-h-[44px] min-w-[46px] rounded-full border px-3 text-[14px] transition-[background-color,color,border-color,opacity] duration-300 ${disabled ? 'cursor-not-allowed line-through opacity-35' : 'active:scale-95'}`}
+                          style={(isSelected ? { background: on, color: colour, borderColor: on } : { borderColor: HAIRLINE }) as CSSProperties}
+                        >
+                          {val}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </fieldset>
+              ))}
+            </div>
+          )}
+
+          {/* The room's one drawn shape, and the way to the bag once something is in it */}
+          <div className="mx-auto mt-7 flex max-w-sm flex-col gap-3 lg:mx-0">
+            <button
+              type="button"
+              onClick={addToCart}
+              disabled={!available}
+              className="flex min-h-[52px] w-full items-center justify-center rounded-full text-[15px] font-semibold tracking-wide transition-[transform,opacity] duration-300 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
+              style={{ background: on, color: colour }}
+            >
+              {justAdded ? (isPreorderActive() ? PREORDER_FEEDBACK : 'In your bag') : (!available ? 'Sold out' : (isPreorderActive() ? PREORDER_CTA : 'Add to bag'))}
+            </button>
+            {hasCartItems && (
+              <Link
+                href={bagHref}
+                className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full border text-[14px] transition-opacity hover:opacity-80"
+                style={{ borderColor: HAIRLINE }}
+              >
+                <Symbol name="bag" className="h-[18px] w-[18px]" />
+                Go to bag
+              </Link>
+            )}
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20">
-            {/* Media Gallery */}
-            <div className="space-y-3 sm:space-y-4">
-              <div className="h-[60svh] sm:h-auto sm:aspect-[3/4] overflow-hidden flex items-center justify-center rounded-2xl p-[1px] bg-gradient-to-br from-[#ffffff0a] via-[#843c2d33] to-[#ffffff08]">
-                <div className="relative w-full h-full rounded-2xl bg-[#0e0d0d]/60 backdrop-blur-sm flex items-center justify-center">
-                {(() => {
-                  const src = activeImage || selectedVariant?.image?.src || product?.images?.[0]?.src;
-                  if (!src) return <div className="text-[#502d26] text-xs uppercase tracking-widest">No Image</div>;
-                  return <img src={src} alt={product?.title || 'Product'} className="piece piece-still w-full h-full object-contain" />;
-                })()}
-                </div>
-              </div>
-              {/* Thumbnails if multiple images exist */}
-              {product?.images && product.images.length > 1 && (
-                <div className="grid grid-cols-4 gap-3 sm:gap-4 max-w-[92vw] mx-auto pb-[env(safe-area-inset-bottom)]">
-                  {product.images.slice(0, 4).map((img, idx) => (
-                    <button 
-                      key={idx} 
-                      onClick={() => handleThumbnailClick(img.src)}
-                      className={`aspect-square overflow-hidden rounded-xl border transition-all duration-300 ${
-                        activeImage === img.src ? 'border-[#843c2d] opacity-100' : 'border-[#1c1a19] opacity-70 hover:opacity-100'
-                      }`}
-                    >
-                      <img src={img.src} alt="" className="w-full h-full object-cover" />
-                    </button>
-                  ))}
-                </div>
+          {/* The description (the fabric, the care, the size guide) waits behind
+              one line: the page shows the piece and how to get it, and the
+              rest is there for whoever asks (owner, 2026-10-26: "ugly and
+              mechanical looking"). A native <details>, so it opens without
+              script and reads as a button to a screen reader. */}
+          {(product?.descriptionHtml || product?.description) && (
+            <details className="group mx-auto mt-8 max-w-md text-left lg:mx-0">
+              <summary className="room-eyebrow mx-auto flex min-h-[44px] w-fit cursor-pointer select-none list-none items-center gap-2 lg:mx-0 [&::-webkit-details-marker]:hidden">
+                <span className="underline underline-offset-4 group-open:hidden">See details</span>
+                <span className="hidden underline underline-offset-4 group-open:inline">Hide details</span>
+                <span aria-hidden className="text-sm leading-none transition-transform group-open:rotate-45">+</span>
+              </summary>
+              {product?.descriptionHtml ? (
+                <div className="product-details mt-4" dangerouslySetInnerHTML={{ __html: product.descriptionHtml }} />
+              ) : (
+                <p className="product-details mt-4">{product?.description}</p>
               )}
-            </div>
+              {/* The credit, where a hang tag's inside would say who made it */}
+              {credit && <p className="product-details product-credit mt-5">{credit}</p>}
+            </details>
+          )}
 
-            {/* Details */}
-            <div className="flex flex-col justify-center">
-              <h1 className="text-3xl sm:text-4xl font-medium text-[#ede8df] mb-2 tracking-wide drop-shadow-[0_2px_12px_rgba(132,60,45,0.35)]">{product?.title || 'Product'}</h1>
-              {/* The full lockup: the label's full name, and the house's signature on its own line */}
-              {(() => {
-                const lockup = labelLockup(product?.vendor);
-                return (
-                  <p className="text-[10px] uppercase tracking-[0.22em] text-[#b2a491] mb-4">
-                    {lockup.name}
-                    {lockup.signature && <span className="block mt-1 text-[9px] tracking-[0.18em] normal-case">{lockup.signature}</span>}
-                  </p>
-                );
-              })()}
-              
-              {selectedVariant && (
-                <div className="text-xl text-[#b2a491] font-light tracking-widest mb-8">
-                  {formatMoney(parseFloat(selectedVariant.price), selectedVariant.currency)}
-                </div>
-              )}
-
-              {/* Options */}
-              {product?.options && product.options.length > 0 && (
-                <div className="space-y-6 mb-10">
-                  {product.options.map((opt) => (
-                    <div key={opt.name}>
-                      <div className="text-xs uppercase tracking-widest text-[#b2a491] mb-3">{opt.name}</div>
-                      <div className="flex flex-wrap gap-3">
-                        {opt.values.map(val => {
-                          const isSelected = selectedOptions[opt.name] === val;
-                          // Determine availability
-                          const tentative = { ...selectedOptions, [opt.name]: val };
-                          const anyMatch = product?.variants?.some(v => {
-                            const isInStock = (v.available !== false) && (v.quantityAvailable == null || v.quantityAvailable > 0);
-                            if (!isInStock) return false;
-                            const so = v.selectedOptions || {};
-                            return (product?.options || []).every(o => tentative[o.name] ? so[o.name] === tentative[o.name] : true);
-                          });
-                          const disabled = !anyMatch;
-                          
-                          return (
-                            <button
-                              key={val}
-                              onClick={() => !disabled && setSelectedOptions(prev => ({ ...prev, [opt.name]: val }))}
-                              className={`min-w-[3rem] px-4 py-2 text-sm rounded-full transition-all duration-300 border ${
-                                isSelected 
-                                  ? 'border-transparent bg-gradient-to-r from-[#843c2d] to-[#b26a4a] text-[#ede8df] shadow-[0_0_20px_#843c2d55]'
-                                  : disabled 
-                                    ? 'border-[#302927] text-[#302927] cursor-not-allowed decoration-slice line-through' 
-                                    : 'border-[#502d26] text-[#b2a491] hover:border-[#b2a491] hover:text-[#ede8df]'
-                              }`}
-                              disabled={disabled}
-                            >
-                              {val}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Actions */}
-              <div className="flex flex-col gap-4 max-w-xs">
-                <button
-                  onClick={addToCart}
-                  disabled={!selectedVariant?.available}
-                  className={`w-full py-4 text-sm uppercase tracking-[0.2em] rounded-full transition-all duration-300 ${
-                    !selectedVariant?.available 
-                      ? 'bg-[#1c1a19] text-[#502d26] cursor-not-allowed border border-[#302927]'
-                      : justAdded
-                        ? 'bg-[#502d26] text-[#ede8df]'
-                        : 'bg-gradient-to-r from-[#843c2d] to-[#b26a4a] text-[#ede8df] shadow-[0_10px_30px_#843c2d40] hover:shadow-[0_12px_36px_#843c2d55]'
-                  }`}
-                >
-                  {justAdded ? (isPreorderActive() ? PREORDER_FEEDBACK : 'Added to Cart') : (!selectedVariant?.available ? 'Sold Out' : (isPreorderActive() ? PREORDER_CTA : 'Add to Cart'))}
-                </button>
-                
-                {hasCartItems && (
-                  <a
-                    href="/store/cart"
-                    className="w-full py-4 text-center text-sm uppercase tracking-[0.2em] rounded-full border border-[#502d26] text-[#b2a491] hover:text-[#ede8df] hover:border-[#b2a491] transition-all duration-300"
-                  >
-                    View Cart
-                  </a>
-                )}
-              </div>
-
-              {/* The description (the fabric, the care, the size guide) waits behind
-                  one line: the page shows the piece and how to get it, and the
-                  rest is there for whoever asks (owner, 2026-10-26: "ugly and
-                  mechanical looking"). A native <details>, so it opens without
-                  script and reads as a button to a screen reader. */}
-              {(product?.descriptionHtml || product?.description) && (
-                <details className="group mt-10 max-w-md">
-                  <summary className="list-none [&::-webkit-details-marker]:hidden cursor-pointer select-none min-h-[44px] inline-flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-[#b2a491] hover:text-[#ede8df]">
-                    <span className="underline underline-offset-4 group-open:hidden">See details</span>
-                    <span className="underline underline-offset-4 hidden group-open:inline">Hide details</span>
-                    <span aria-hidden className="text-sm leading-none group-open:rotate-45 transition-transform">+</span>
-                  </summary>
-                  {product?.descriptionHtml ? (
-                    <div
-                      className="product-details mt-4"
-                      dangerouslySetInnerHTML={{ __html: product.descriptionHtml }}
-                    />
-                  ) : (
-                    <p className="product-details mt-4">{product?.description}</p>
-                  )}
-                  {/* The credit, where a hang tag's inside would say who made it */}
-                  {labelCredit(product?.vendor) && (
-                    <p className="product-details product-credit mt-5">{labelCredit(product?.vendor)}</p>
-                  )}
-                </details>
-              )}
-
-              {/* Made to order, in the policy's own words. The two lines that stood
-                  here ("Free shipping on orders over $150", "Ships from Canada")
-                  were promises nothing backed: the rates are Shopify's and the
-                  clothes are made and shipped by the fulfilment partner. */}
-              <div className="mt-12 pt-8 border-t border-[#502d26]/20 text-xs text-[#b2a491] uppercase tracking-widest space-y-2">
-                {isPreorderActive() && <p>{PREORDER_SHIP_TEXT}</p>}
-                <p>
-                  {MADE_TO_ORDER_TEXT}{' '}
-                  <a href={MADE_TO_ORDER_LINK} className="underline underline-offset-4 hover:text-[#ede8df]">
-                    {MADE_TO_ORDER_LINK_TEXT}
-                  </a>
-                </p>
-              </div>
-            </div>
+          {/* Made to order, in the policy's own words. The two lines that stood
+              here ("Free shipping on orders over $150", "Ships from Canada")
+              were promises nothing backed: the rates are Shopify's and the
+              clothes are made and shipped by the fulfilment partner. */}
+          <div className="mx-auto mt-8 max-w-md space-y-2 border-t pt-6 text-[10px] uppercase tracking-[0.18em] opacity-80 lg:mx-0" style={{ borderColor: HAIRLINE }}>
+            {isPreorderActive() && <p>{PREORDER_SHIP_TEXT}</p>}
+            <p>
+              {MADE_TO_ORDER_TEXT}{' '}
+              <a href={MADE_TO_ORDER_LINK} className="underline underline-offset-4 hover:opacity-70">
+                {MADE_TO_ORDER_LINK_TEXT}
+              </a>
+            </p>
           </div>
         </div>
-      </ScrollContainer>
-    </ScreenLayout>
+      </main>
+    </RoomShell>
   );
 }

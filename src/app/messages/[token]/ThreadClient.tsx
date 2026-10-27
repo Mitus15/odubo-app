@@ -1,7 +1,13 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
-import Link from 'next/link';
+import { RoomShell } from '@/components/room/RoomParts';
+import { onRoom, ROOM_DARK } from '@/lib/room';
+
+/** A line between things, in the room's writing colour */
+const HAIRLINE = 'color-mix(in srgb, currentColor 35%, transparent)';
+/** What the reply, fixed along the bottom, covers of the conversation */
+const REPLY_CLEARANCE = 'calc(env(safe-area-inset-bottom) + 170px)';
 
 interface Msg {
   id: string;
@@ -93,72 +99,81 @@ export default function ThreadClient({
     }
   };
 
+  const on = onRoom(ROOM_DARK);
+
+  // The conversation, set in the house's dark room: lines, not bubbles. The
+  // studio's words sit to the left, the visitor's to the right, each under a
+  // hairline and a small name; the reply waits along the bottom.
   return (
-    <main className="min-h-screen bg-[#0f0b0b] text-[#ede8df]">
-      <div className="mx-auto max-w-xl px-5 pb-32" style={{ paddingTop: 'calc(28px + env(safe-area-inset-top, 0px))' }}>
-        <header className="border-b border-white/10 pb-4">
-          <Link href="/" className="text-[11px] uppercase tracking-[0.2em] text-[#b2a491] hover:text-[#ede8df]">
-            Odubo Studio
-          </Link>
-          <h1 className="mt-2 text-xl font-serif">{subject}</h1>
-          <p className="mt-1 text-xs text-[#726d6c]">
+    <RoomShell colour={ROOM_DARK} on={on}>
+      <main className="room-fade mx-auto w-full max-w-xl px-5 pt-2" style={{ paddingBottom: REPLY_CLEARANCE }}>
+        <header>
+          <h1 className="room-display text-[clamp(22px,6.5vw,30px)] uppercase leading-[1.05]">{subject}</h1>
+          <p className="mt-2 text-[13px] opacity-70">
             {name ? `${name} · ` : ''}
             {status === 'closed' ? 'Closed. Write again to reopen.' : 'We answer here and by email.'}
           </p>
         </header>
 
-        <section className="py-5 space-y-4">
+        <ol className="mt-8 flex flex-col gap-6">
           {messages.map((m) => {
             const theirs = m.direction === 'out';
+            const at = mounted ? when(m.created_at) : '';
             return (
-              <div key={m.id} className={`flex ${theirs ? 'justify-start' : 'justify-end'}`}>
-                <div className={`max-w-[85%] ${theirs ? 'text-left' : 'text-right'}`}>
-                  <div
-                    className={`inline-block text-left whitespace-pre-wrap text-[15px] leading-relaxed px-4 py-2.5 rounded-2xl ${
-                      theirs ? 'bg-white/[0.06] rounded-bl-md' : 'bg-[#843c2d]/30 rounded-br-md'
-                    }`}
-                  >
-                    {m.body_text}
-                  </div>
-                  <div className="mt-1 text-[10px] text-[#726d6c]">
-                    {theirs ? 'Odubo Studio · ' : ''}
-                    {mounted ? when(m.created_at) : ''}
-                  </div>
-                </div>
-              </div>
+              <li
+                key={m.id}
+                className={`w-[85%] border-t pt-3 ${theirs ? 'mr-auto text-left' : 'ml-auto text-right'}`}
+                style={{ borderColor: HAIRLINE }}
+              >
+                <p className="room-eyebrow">
+                  {theirs ? 'Odubo Studio' : 'You'}
+                  {at ? ` · ${at}` : ''}
+                </p>
+                <p className="mt-2 whitespace-pre-wrap text-[15px] leading-relaxed">{m.body_text}</p>
+              </li>
             );
           })}
-          <div ref={bottom} />
-        </section>
-      </div>
+        </ol>
+        <div ref={bottom} style={{ scrollMarginBottom: REPLY_CLEARANCE }} />
+      </main>
 
+      {/* The reply: no box, a hairline above it, and Send the one drawn shape */}
       <div
-        className="fixed inset-x-0 bottom-0 bg-[#0f0b0b]/95 backdrop-blur border-t border-white/10"
-        style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+        className="fixed inset-x-0 bottom-0"
+        style={{ background: ROOM_DARK, boxShadow: `inset 0 1px 0 ${HAIRLINE}`, paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
-        <div className="mx-auto max-w-xl px-5 py-3">
+        <div className="mx-auto max-w-xl px-5 pb-3 pt-2">
+          <label htmlFor="thread-reply" className="sr-only">
+            Write back
+          </label>
           <textarea
+            id="thread-reply"
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={onKey}
             rows={2}
             placeholder="Write back"
-            className="w-full resize-none bg-transparent text-[15px] leading-relaxed text-[#ede8df] placeholder-[#726d6c] focus:outline-none border-l-2 border-white/15 focus:border-[#843c2d] pl-3 py-1"
+            className="w-full resize-none bg-transparent py-2 text-[16px] leading-relaxed outline-none placeholder:text-[#f0d3ad]/45"
           />
-          {error && <p className="mt-1 text-xs text-red-300">{error}</p>}
-          <div className="mt-2 flex items-center justify-between">
-            <span className="text-[11px] text-[#726d6c]">Replies also reach your email.</span>
+          {error && (
+            <p className="mt-1 text-[13px] text-[#f4a36b]" role="alert">
+              {error}
+            </p>
+          )}
+          <div className="mt-1 flex items-center justify-between gap-4">
+            <span className="room-eyebrow !text-[10px]">Replies also reach your email</span>
             <button
               type="button"
               onClick={() => void send()}
               disabled={busy || !text.trim()}
-              className="min-h-[44px] rounded-full bg-[#843c2d] px-5 text-sm font-medium text-[#ede8df] hover:bg-[#9a4736] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="min-h-[44px] shrink-0 rounded-full px-7 text-[14px] font-semibold tracking-wide transition-[transform,opacity] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
+              style={{ background: on, color: ROOM_DARK }}
             >
               {busy ? 'Sending' : 'Send'}
             </button>
           </div>
         </div>
       </div>
-    </main>
+    </RoomShell>
   );
 }

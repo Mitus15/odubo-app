@@ -93,6 +93,60 @@ one fixed floor (`feet.py`: each foot's planted point) and the camera's path
 is planned for the whole piece (`camera.py`); measure their per-frame motion,
 never judge it from a contact sheet.
 
+## Every dance has two versions: the posts and the web copy
+
+The owner's rule (2026-10-27): every dance he hands over becomes both, as one
+job, without being asked twice.
+
+- **The posts**: the social version, as above. The HUD (the game), the song,
+  the outro, the song's own effects; the Reels, Shorts and the YouTube cut.
+- **The web copy**: him dancing on the page of odubostudio.com. The silhouette
+  is the inspiration behind the Danceman, and the site is him dancing on the
+  screen. The whole dance, HUD off, silent, no outro, no effects, on the
+  `lacquer` floor (his reflection in the floor, fading like the gear's; a
+  contact shadow at his feet), opened and closed like its YouTube cut. The
+  posted video keeps its own look.
+
+```bash
+cd scripts/loop/posts
+python3 site_copies.py                    # dry run: every song, made or to make
+python3 site_copies.py --apply <slug>     # render, tag, upload to Stream, link the song's campaign
+```
+
+A new song needs its take and start in `catalog.SONGS` / `catalog.FULL_SRC` and
+its show in `data/loop/film/shows/training/<slug>.json` (the staging already
+does both, and names the campaign `camp_training_<slug>`).
+
+How it works, and what not to undo:
+- **Rendered from the take, never covered.** A box over the HUD cuts his hand
+  wherever he reaches into a corner. Only compose runs (the matte, field and
+  paint are made): about 1.2x real time on the lacquer floor, one song at a
+  time (several at once are slower, the GPU is the limit).
+- **Its show is the song's own** with `floor: lacquer, effects: []`, written
+  to the catalogue's `site-shows/`; the song's show file stays the posted one.
+- **It opens and closes like its YouTube cut** (`youtube.py` first, so the
+  song's cut points exist in `youtube.json`): from the song's first note, or
+  the first bar after he settles, to the last bar before he walks to the
+  camera, fading in from its field and out to it, so the loop on the page has
+  no seam. The copy shares the posted full video's timeline frame for frame.
+  The cut is taken from the render already made; a copy without a YouTube cut
+  (Billie Jean, cut by its show's bars) keeps the whole render, with the fades.
+- **Tagged BT.709 with the sRGB curve** (`h264_metadata` 1/13/1). Untagged,
+  browsers draw it a touch lighter and bluer than the page. Stream keeps it.
+- **Never name a colour.** The site samples the room (the field) and its
+  writing (his ink) from the copy's first frame (`src/lib/sampler.ts`), so the
+  page and the video are one colour, whatever colour a new dance brings.
+- **The floor names are the code's, not his.** His "lacquer floor" is the
+  code's `lacquer`. The code's `plain` is a cast shadow off to the side, which
+  he does not want on the site. Before changing a look, send him a still of
+  each side by side.
+- A preview (and the dev server) shows every song with a web copy, posted or
+  not, to try it; the live site shows what is out.
+- **A web copy, once made, stays as it is.** When the silhouette or the
+  shadow gets better, the next dances get it; the copies already on the site
+  are never rendered again, so the site shows the look's progression (his
+  word, 2026-10-27).
+
 ## A show: the virtual stage
 
 A performance is a show file (`data/loop/film/shows/<name>.json`, format in

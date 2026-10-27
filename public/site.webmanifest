@@ -1,15 +1,20 @@
 {
-  "name": "B.A.A.D @ Odubo Studio",
-  "short_name": "B.A.A.D",
-  "description": "Bold Authentic Aesthetic Dreams — Art, fashion, and culture",
+  "name": "Odubo Studio",
+  "short_name": "Odubo Studio",
+  "description": "The music and dance of Mani Odubo, and B.A.A.D Creative Wear.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#302927",
-  "theme_color": "#843c2d",
+  "background_color": "#2a0f0a",
+  "theme_color": "#2a0f0a",
   "orientation": "portrait-primary",
   "scope": "/",
   "lang": "en",
-  "categories": ["music", "video", "entertainment", "shopping"],
+  "categories": [
+    "music",
+    "video",
+    "entertainment",
+    "shopping"
+  ],
   "icons": [
     {
       "src": "/favicon-192x192.png",

@@ -60,7 +60,8 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: "cover",
-  themeColor: "#843c2d",
+  // The house ink: a room sets the bar to its own colour once it is drawn (useBrowserColour)
+  themeColor: "#2a0f0a",
 };
 
 export default function RootLayout({

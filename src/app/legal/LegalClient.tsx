@@ -1,8 +1,9 @@
 "use client";
-import { useState, useEffect, ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
-import Link from "next/link";
-import TabSwitcher from "./TabSwitcher";
+import { motion, MotionConfig } from "framer-motion";
+import { RoomShell } from "@/components/room/RoomParts";
+import { onRoom, ROOM_DARK } from "@/lib/room";
 
 interface LegalClientProps {
   privacyContent: ReactNode;
@@ -10,91 +11,142 @@ interface LegalClientProps {
   shippingContent: ReactNode;
 }
 
-export default function LegalClient({ 
-  privacyContent, 
-  termsContent, 
-  shippingContent 
-}: LegalClientProps) {
-  const searchParams = useSearchParams();
-  const [activeTab, setActiveTab] = useState("privacy");
+/** The three policies, in the order of the row; the keys are the ?tab= every room links to */
+const TABS = [
+  { key: "privacy", label: "Privacy", title: "Privacy Policy" },
+  { key: "terms", label: "Terms", title: "Terms of Service" },
+  { key: "shipping", label: "Shipping", title: "Shipping & Returns" },
+] as const;
+type TabKey = (typeof TABS)[number]["key"];
 
+function asTab(value: string | null): TabKey | null {
+  return TABS.find((tab) => tab.key === value)?.key ?? null;
+}
+
+/** A line drawn in the room's writing, faint */
+const HAIRLINE = "color-mix(in srgb, currentColor 35%, transparent)";
+
+/**
+ * /legal, set in the house's dark room, so the small print every room links
+ * to (the outro, the cookie bar, a piece's made-to-order line) is the same
+ * place, not a way out of it. The danceman is the way home. The three
+ * policies sit behind a quiet row of tabs that stays at the top as the text
+ * scrolls; the open one is underlined. The text itself is set like a
+ * playbill's small print (.product-details): a short measure, the labels in
+ * caps.
+ */
+export default function LegalClient({ privacyContent, termsContent, shippingContent }: LegalClientProps) {
+  const searchParams = useSearchParams();
+  // Read the link's tab before the first paint, so a deep link never shows Privacy first
+  const [activeTab, setActiveTab] = useState<TabKey>(() => asTab(searchParams.get("tab")) ?? "privacy");
+  const shownRef = useRef<TabKey>(activeTab);
+  const rowTopRef = useRef<HTMLSpanElement>(null);
+  const panelRef = useRef<HTMLElement>(null);
+  const tabRefs = useRef<Partial<Record<TabKey, HTMLButtonElement | null>>>({});
+
+  // A link to a tab (?tab=), from anywhere, opens it; a link with none, or an unknown one, leaves the open tab as it is
   useEffect(() => {
-    const tab = searchParams.get('tab');
-    if (tab && ['privacy', 'terms', 'shipping'].includes(tab)) {
-      setActiveTab(tab);
-    }
+    const tab = asTab(searchParams.get("tab"));
+    if (tab) setActiveTab(tab);
   }, [searchParams]);
 
-  const renderContent = () => {
-    switch (activeTab) {
-      case "privacy":
-        return (
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-[#ede8df] mb-6">Privacy Policy</h1>
-            <div className="legal-content text-[#c7b8a8] leading-relaxed space-y-4">
-              {privacyContent}
-            </div>
-          </div>
-        );
-      case "terms":
-        return (
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-[#ede8df] mb-6">Terms of Service</h1>
-            <div className="legal-content text-[#c7b8a8] leading-relaxed space-y-4">
-              {termsContent}
-            </div>
-          </div>
-        );
-      case "shipping":
-        return (
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-[#ede8df] mb-6">Shipping & Returns</h1>
-            <div className="legal-content text-[#c7b8a8] leading-relaxed space-y-4">
-              {shippingContent}
-            </div>
-          </div>
-        );
-      default:
-        return null;
+  // A new policy starts at its top (when the row is pinned, the room scrolls back to it) and comes in
+  // with the room's fade. The panel is kept, not remounted: emptying it mid-commit would drop the room
+  // to its very top, so the fade is played on it instead.
+  useLayoutEffect(() => {
+    if (shownRef.current === activeTab) return;
+    shownRef.current = activeTab;
+    const rowTop = rowTopRef.current;
+    const room = rowTop?.closest(".room");
+    if (rowTop && room && room.scrollTop > rowTop.offsetTop) room.scrollTop = rowTop.offsetTop;
+    if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      panelRef.current?.animate(
+        [{ opacity: 0, transform: "translateY(3px)" }, { opacity: 1, transform: "none" }],
+        { duration: 280, easing: "ease-out" },
+      );
     }
+  }, [activeTab]);
+
+  const choose = (tab: TabKey) => {
+    setActiveTab(tab);
+    // The address follows the open tab, so it can be shared, and a link to another tab always lands
+    const params = new URLSearchParams(window.location.search);
+    params.set("tab", tab);
+    window.history.replaceState(null, "", `${window.location.pathname}?${params}${window.location.hash}`);
   };
 
+  // The row is one stop for the keyboard: the arrows move along it
+  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    const at = TABS.findIndex((tab) => tab.key === activeTab);
+    const to =
+      e.key === "ArrowRight" ? (at + 1) % TABS.length
+      : e.key === "ArrowLeft" ? (at - 1 + TABS.length) % TABS.length
+      : e.key === "Home" ? 0
+      : e.key === "End" ? TABS.length - 1
+      : -1;
+    if (to < 0) return;
+    e.preventDefault();
+    choose(TABS[to].key);
+    tabRefs.current[TABS[to].key]?.focus();
+  };
+
+  const content: Record<TabKey, ReactNode> = { privacy: privacyContent, terms: termsContent, shipping: shippingContent };
+  const open = TABS.find((tab) => tab.key === activeTab) ?? TABS[0];
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0b0b0b] via-[#111111] to-[#0b0b0b]">
-      {/* Background effects */}
-      <div className="pointer-events-none fixed inset-0 -z-10">
-        <div className="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-gradient-to-br from-[#843c2d22] via-[#ff8a4a11] to-transparent blur-3xl" />
-        <div className="absolute top-1/3 right-0 h-80 w-80 rounded-full bg-gradient-to-br from-[#b2a49111] via-[#ede8df0a] to-transparent blur-3xl" />
-      </div>
+    <RoomShell colour={ROOM_DARK} on={onRoom(ROOM_DARK)}>
+      <MotionConfig reducedMotion="user">
+        <main
+          className="mx-auto flex min-h-[calc(100%-env(safe-area-inset-top)-56px)] w-full max-w-[34rem] flex-col px-5"
+          style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 40px)" }}
+        >
+          <span ref={rowTopRef} aria-hidden="true" className="block" />
+          <div
+            role="tablist"
+            aria-label="Legal"
+            onKeyDown={onKeyDown}
+            className="sticky z-10 flex items-end gap-7 border-b"
+            style={{ top: "env(safe-area-inset-top)", background: "var(--room)", borderColor: HAIRLINE }}
+          >
+            {TABS.map((tab) => {
+              const selected = tab.key === activeTab;
+              return (
+                <button
+                  key={tab.key}
+                  ref={(el) => {
+                    tabRefs.current[tab.key] = el;
+                  }}
+                  type="button"
+                  role="tab"
+                  id={`legal-tab-${tab.key}`}
+                  aria-selected={selected}
+                  aria-controls="legal-panel"
+                  tabIndex={selected ? 0 : -1}
+                  onClick={() => choose(tab.key)}
+                  className={`room-eyebrow relative flex min-h-[48px] items-center !text-[12px] transition-opacity hover:!opacity-100 ${selected ? "!opacity-100" : "!opacity-55"}`}
+                >
+                  {tab.label}
+                  {selected && (
+                    <motion.span
+                      layoutId="legal-tab-line"
+                      aria-hidden="true"
+                      className="absolute inset-x-0 -bottom-px h-[2px] bg-current"
+                      transition={{ type: "spring", stiffness: 520, damping: 40 }}
+                    />
+                  )}
+                </button>
+              );
+            })}
+          </div>
 
-      <div className="max-w-3xl mx-auto px-6 py-12">
-        {/* Header */}
-        <div className="text-center mb-10">
-          <Link href="/store" className="inline-block mb-6">
-            <span className="text-xs uppercase tracking-[0.3em] text-[#b2a491]/50 hover:text-[#ede8df] transition-colors">
-              ← Back to Shop
-            </span>
-          </Link>
-          <h2 className="text-[10px] uppercase tracking-[0.4em] text-[#843c2d] mb-2">Legal</h2>
-        </div>
+          <section ref={panelRef} id="legal-panel" role="tabpanel" aria-labelledby={`legal-tab-${open.key}`} className="room-fade">
+            <h1 className="room-display mt-9 text-[26px] leading-tight sm:text-[30px]">{open.title}</h1>
+            <div className="product-details mt-5">{content[open.key]}</div>
+          </section>
 
-        {/* Tabs */}
-        <div className="mb-10">
-          <TabSwitcher onTabChange={setActiveTab} activeTab={activeTab} />
-        </div>
-
-        {/* Content Card */}
-        <div className="rounded-3xl border border-[#502d26]/20 bg-[#1a1615]/40 backdrop-blur-sm p-6 sm:p-10">
-          {renderContent()}
-        </div>
-
-        {/* Footer */}
-        <div className="mt-12 text-center">
-          <p className="text-[10px] uppercase tracking-[0.3em] text-[#502d26]/40">
-            © {new Date().getFullYear()} Odubo Studio
-          </p>
-        </div>
-      </div>
-    </div>
+          <p className="room-eyebrow mt-auto pt-16 !text-[10px]">&copy; {new Date().getFullYear()} Odubo Studio</p>
+        </main>
+      </MotionConfig>
+    </RoomShell>
   );
 }

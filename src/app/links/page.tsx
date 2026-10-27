@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import RoomScreen from '@/components/room/RoomScreen';
 import { loadRoom } from '@/components/room/loadRoom';
 import { generateSeoMetadata } from '@/lib/seo';
-import { getLevels } from '@/lib/levels';
+import { getLevels } from '@/lib/levelsServer';
 
 /**
  * /links: where the bio link lands. Someone saw a level on TikTok, Instagram
@@ -17,7 +17,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return generateSeoMetadata({
     description: 'Odubo Studio: the music and dance of Mani Odubo, and B.A.A.D Creative Wear.',
     path: '/links',
-    ogImage: newest?.poster,
+    ogImage: newest ? '/share/newest' : undefined,
   });
 }
 

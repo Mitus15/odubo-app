@@ -14,10 +14,11 @@ export const DEFAULT_SEO = {
   siteName: 'Odubo Studio',
   title: 'Odubo Studio',
   description: 'Experience music, fashion, and art from Odubo. Watch exclusive clips, shop the latest drops, and join the community.',
-  ogImage: '/brand-logos/Danceman_Logo_Red.png',
+  // The house's share card (app/share/[card]): the danceman in the house's dark, at the 1200 x 630 it says it is
+  ogImage: '/share/house',
   twitterHandle: '@odubostudio',
   locale: 'en_US',
-  themeColor: '#843c2d',
+  themeColor: '#2a0f0a',
 };
 
 // Generate full metadata object for a page
@@ -81,9 +82,7 @@ export function generateSeoMetadata({
       creator: DEFAULT_SEO.twitterHandle,
     },
     robots: noIndex ? { index: false, follow: false } : { index: true, follow: true },
-    other: {
-      'theme-color': DEFAULT_SEO.themeColor,
-    },
+    // theme-color comes from the root layout's viewport, once: a second one here read stale in some browsers
   };
 }
 

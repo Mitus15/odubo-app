@@ -1,6 +1,7 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
+import { isRoomRoute } from '@/lib/room';
 import Link from 'next/link';
 import { useStore } from '@/contexts/StoreContext';
 import { useMemo, useEffect, useState } from 'react';
@@ -93,9 +94,9 @@ export default function DesktopSidebar() {
   }, [isCheckingAccess, isStoreAccessible, openStore, cartItemCount]);
 
   // Hide on admin/backend pages and admin subdomain (must be after all hooks)
-  // Also hide on homepage and showcase - custom designs without sidebar
+  // Also hide on the rooms (lib/room) and showcase - custom designs without sidebar
   // The flight (/fly) owns the whole screen
-  if (isAdminSubdomain || pathname === '/' || pathname === '/showcase' || pathname?.startsWith('/admin') || pathname?.startsWith('/command-center') || pathname?.startsWith('/featured/manage') || pathname?.startsWith('/loop') || pathname?.startsWith('/fly')) {
+  if (isAdminSubdomain || isRoomRoute(pathname) || pathname === '/showcase' || pathname?.startsWith('/admin') || pathname?.startsWith('/command-center') || pathname?.startsWith('/featured/manage') || pathname?.startsWith('/loop') || pathname?.startsWith('/fly')) {
     return null;
   }
 

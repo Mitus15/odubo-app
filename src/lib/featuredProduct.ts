@@ -7,6 +7,7 @@
  * Shopify no longer returns, and the landing simply shows no product.
  */
 
+import { revalidateTag } from 'next/cache';
 import { queryDatabase } from '@/lib/db';
 import { getShopifyProduct } from '@/lib/shopify';
 
@@ -23,6 +24,9 @@ export interface FeaturedProduct {
   available: boolean;
 }
 
+/** The cache tag of /gear's kept read (app/gear/page.tsx): a new pick clears it, so it shows at once */
+export const GEAR_TAG = 'gear';
+
 export async function getFeaturedHandle(): Promise<string | null> {
   try {
     const rows = (await queryDatabase(`SELECT value FROM site_settings WHERE key = ?`, [FEATURED_PRODUCT_KEY])) as
@@ -36,6 +40,17 @@ export async function getFeaturedHandle(): Promise<string | null> {
 }
 
 export async function setFeaturedHandle(handle: string | null): Promise<void> {
+  try {
+    await writeFeatured(handle);
+  } finally {
+    // The gear's kept read starts again with the new pick (outside a request, there is nothing to clear)
+    try {
+      revalidateTag(GEAR_TAG);
+    } catch {}
+  }
+}
+
+async function writeFeatured(handle: string | null): Promise<void> {
   if (!handle) {
     await queryDatabase(`DELETE FROM site_settings WHERE key = ?`, [FEATURED_PRODUCT_KEY]);
     return;

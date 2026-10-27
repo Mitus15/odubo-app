@@ -224,6 +224,127 @@ api, wrangler may not be logged in"**
 - **Database reads retry once on a dropped connection** (`d1Fetch` in `db.ts`). Writes are never
   sent twice.
 
+## His notes from his phone (2026-10-27, the preview), and what they changed
+
+His words: "the gear shadows arent blurred enough still looks artificial", "the product page should
+also use the same design at least the color... it feels like going to a completely different
+store when I click the actual product", "the product image is huge", "it says gear now. But when
+you go back to shop, it goes back to this shop... and then when I cancel that, it goes to the
+clips", "the dance man... stays blurry for a second before it sharpens", "the video is blurry when
+the page first loads... have the poster load like the first frame", "the reflection just seem to
+cut off so jarringly", then "i think the product image should animate like the danceman logo when
+its opened... I also want optimization. faster loading if possible", and "sweep the whole public
+facing app".
+
+- **The floor under a piece (`components/room/PieceOnFloor.tsx`, shared by /gear and the piece's
+  page).**
+  - The shade is two ellipses under a Gaussian blur, a wide faint one and a close darker one, in
+    a deeper tone of the room (`color-mix` with black). No drawn edge anywhere.
+  - The reflection is a little out of focus (`blur`) and fades on an ease-out curve over 30% of
+    the piece. A straight fade read as a line where it stopped.
+  - A piece comes in whole once its photo is there: never a shade on an empty floor.
+  - The "jagged edges" he first named were the shadow's crisp line, not the photos (his
+    correction); the cutouts were left as they are.
+- **The piece's page is in its room.** The same colour as in /gear, the same floor, the photo a
+  share of the screen (36% on a phone), the sizes and Add to bag under it. A colour option with
+  only one value is not asked. The hanger at the top goes back to /gear on that piece
+  (`?piece=`); the bag sits beside it once something is in it.
+- **One store.** `/store` sends every old link to `/gear` with its query. The bag
+  (`/store/cart?room=`) is in the room of the piece the visitor came from, else the house's dark.
+- **The piece flies (`components/room/flight.ts`).** A tap on a piece (or See it) flies it into
+  its page with the browser's own view transition, and the hanger flies it back. The page under
+  it cross-fades in the same colour. Safari 18 and Chrome; elsewhere the page simply changes.
+  Both pages ask for the same photo (1080 wide, WebP from Shopify, ~60 KB), so it is already
+  there when the piece lands.
+- **The danceman's flight** grows him by his own size (a CSS variable), never a transform's
+  scale. A scaled layer is a stretched picture that Safari left blurred until a pinch.
+- **The video starts sharp.**
+  - The still is the copy's first frame at full size, so the hand-over has no jump.
+  - Stream makes its stills with the SD formula from an HD copy, so they were darker than the
+    room (Billie Jean #ea85a3 in the still, #f593a6 the room). `/stills/<uid>.jpg`
+    (`lib/stillsServer.ts`) turns them back with one 3x3 step; the still now reads #f28fa1
+    against the video's #f291a2. Kept a year at the edge.
+  - Chrome now plays HLS natively and starts on the 240p rendition. The rooms use hls.js
+    everywhere but Apple's player, start on the level that fills the screen, wait for the
+    manifest before loading, and drop the clips' 1.5 s fragment limit (it dropped the first
+    fragment to 240p). The video takes over from the still only once it plays sharp, or after
+    5 s regardless.
+- **Faster.** The levels are kept two minutes and each piece's look 30 days in Next's data cache;
+  Shopify's product reads are kept a minute; the home fetches /gear behind the room, /gear
+  fetches the page of the piece in front, and a piece's page fetches /gear.
+- **The sweep (one read-only pass over every public route).** Fixed here: the old desktop
+  sidebar hidden under every room (`isRoomRoute`), the sitemap listing the rooms, one robots
+  route, the default browser bar in the house ink, the app installs as Odubo Studio, share cards
+  at 1200 x 630 (`/share/<level>`, `/share/newest`, `/share/house`), dash-free alt text, the
+  sign-in pages' old "Cool Wrld" title, 44 px targets. The cookie bar, contact, the conversation
+  page, the small print and the 404 and error pages were set in the room in the same pass.
+
+## The whole dance, and the room sampled from it (2026-10-27, his words)
+
+"we're not even going to use the reels at all. We'll use the full videos just without the HUD", "I
+want the page to sample the color from those videos... it should look like I'm dancing, not in the
+video on the page, but I'm dancing on the page", "don't just like code a color... like Photoshop, you
+can have a color sampler tool... once the video is uploaded, we do that for the video, we cache it",
+"I make them almost every day... new colours", "6 hours is not going to cut it", and for Billie
+Jean "the website doesn't need" the echoes.
+
+- **A site copy is the whole dance**, rendered again from its take with the HUD off, from the
+  song's own show (`scripts/loop/posts/site_copies.py`).
+  - **Every copy stands on the lacquer floor, with no effects.** His words: "everything should have
+    the lacquer floor, because some of them, the shadow is not right... if we're going to re-render
+    them for the website, then we must make everything look... the same".
+  - The song's show file is left as it is (it is the posted video's); the copy's show is written
+    beside the copies, the song's own with `floor: lacquer, effects: []`.
+  - Billie Jean's echo and tiles stay in its posted video.
+  - No covering: a box over a HUD corner could cut his hand.
+  - The take's matte, field and paint are already made, so only compose runs. The lacquer floor
+    drew at 15.6 fps; its texture and sheen are now kept between frames under a still camera
+    (`plane.py`, bit-identical output, PSNR infinite), 24.8 fps: about 1¼ hours for all 15, each
+    uploaded while the next renders. Three renders at once were slower than one after another
+    (the GPU is the limit). The 6 hours was the whole pipeline, segmentation included.
+- **The colour sampler (`lib/sampler.ts`, `lib/samplerServer.ts`).**
+  - Each video's first frame (the corrected still) is read once: the field from its edges, the
+    figure (the ink he is drawn in) from what stands out in the middle.
+  - Kept 30 days in Next's data cache per uid; a new upload is sampled the first time its room
+    is shown.
+  - The room is the field; the page writes in his own ink where it reads, else ink or sand
+    (`writingOn`). Memories, on a deep blue, writes in sand.
+  - No room colour is written in code; the campaign's colour is only the fallback before a video
+    is sampled.
+  - On screen in Chromium: page #e595a2, video field #e595a2.
+- **The sampler picks its moment.** Three full dances open with him walking back from the phone,
+  a close-up (Memories for 8 s, Planet Rock 4, Give Life Back to Music and Molowo Noni 2). The
+  sampler steps through the first seconds and reads the first frame where he stands in the room:
+  the field all round the sides and top, none of his ink on the bottom edge (the floor is its own
+  tone), and him covering under 18% of the frame (`settled`). That moment is the still, the
+  colour sample and where the video starts (`posterAt`), so the hand-over has no jump. A frame
+  Stream will not give (busy, a dropped connection) is retried, and a look is never kept from a
+  partial read; videos are sampled three at a time (fifteen at once lost most connections).
+- **A copy opens and closes like the YouTube cut.** "I think for all web renders, we need to open
+  and close like the videos too." The whole recording ran from before the song (up to 14 s of him
+  waiting, Monkey) to after the dance (23 s of walking to the camera, Hold the Line). Each copy now
+  runs between its YouTube cut's points (`youtube.json`): the song's first note, or the first bar
+  after he settles, to the last bar before he stops. The copy and the posted full video share a
+  timeline frame for frame (his movement lines up at 0.0 s in all fourteen), so the points carry
+  over; Billie Jean, cut by its show's bars, keeps its own. No render was made again: the cut is
+  taken from the render already made (28 s an encode). Each copy fades in from its field over
+  0.5 s and out to it over its last second, so on the page, where it loops, he appears on the room
+  and leaves it with no seam. The sampler treats the field alone as no one there (`settled` needs
+  him in at least 1% of the frame), so the still and the start fall at 1 s, after the fade in.
+- **The copies are tagged with the sRGB curve.** An untagged curve was drawn as video's own, a
+  touch lighter and bluer than the page; Stream keeps the tag in every rendition.
+- **Made once, kept as made.** "We don't have to re-render... as stuff gets better, it just gets
+  better. And so people would be able to see the progression in the design." Better silhouettes
+  and shadows go into the next dances; the copies on the site stay.
+- **The world is the brand's anchor.** After the Loop Soul album, the pop-art silhouette world
+  becomes a staple of the brand (not the only thing), tied to the Danceman, whose silhouette he
+  inspired. The video game and the album's movie live in this world.
+- **A preview shows every song** with a dance on Stream, posted or not (`SHOWS_UNRELEASED`:
+  everywhere but `VERCEL_ENV=production`), what is out first, then the rest in planned order. The
+  live site still shows only what is out.
+- **The levels code is split**: `lib/levels.ts` is what the browser may read; the database, the
+  sampler and the still's image library are `lib/levelsServer.ts`.
+
 ## Kept from the first build
 
 **A level is a Studio post that is out (`src/lib/levels.ts`).** It must meet all of these:
@@ -243,5 +364,4 @@ play and this site is not. The sound is a link to where the piece is out.
 
 - **The outfit in each level.** It needs a record of which piece he wears where.
 - **The welcome emails** in the game's voice.
-- **The old 15-second popup** still runs on the clips feed, `/store` and `/media`.
-- **The poster image** is Stream's default frame. For Billie Jean that can be a close-up.
+- **The old 15-second popup** still runs on the clips feed, `/?clip=` and `/media` (`/store` goes to `/gear` now).

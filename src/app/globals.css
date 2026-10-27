@@ -2552,9 +2552,81 @@ h6,
   }
 }
 /* A piece's hem mirrored in the lacquer floor, fading to nothing */
+/* The lacquer under a piece (components/room/PieceOnFloor). Its reflection
+   is a little out of focus, the way a gloss floor gives it back, and fades on
+   an ease-out curve: a straight fade reads as a line where it ends. */
 .room .floor-reflection {
-  -webkit-mask-image: linear-gradient(to bottom, rgb(0 0 0 / 0.3), transparent 90%);
-  mask-image: linear-gradient(to bottom, rgb(0 0 0 / 0.3), transparent 90%);
+  --fade: 0.3;
+  -webkit-mask-image: linear-gradient(to bottom,
+      rgb(0 0 0 / calc(var(--fade) * 1)) 0%, rgb(0 0 0 / calc(var(--fade) * 0.8)) 10%,
+      rgb(0 0 0 / calc(var(--fade) * 0.58)) 24%, rgb(0 0 0 / calc(var(--fade) * 0.37)) 40%,
+      rgb(0 0 0 / calc(var(--fade) * 0.2)) 57%, rgb(0 0 0 / calc(var(--fade) * 0.08)) 74%,
+      rgb(0 0 0 / calc(var(--fade) * 0.02)) 88%, transparent 100%);
+  mask-image: linear-gradient(to bottom,
+      rgb(0 0 0 / calc(var(--fade) * 1)) 0%, rgb(0 0 0 / calc(var(--fade) * 0.8)) 10%,
+      rgb(0 0 0 / calc(var(--fade) * 0.58)) 24%, rgb(0 0 0 / calc(var(--fade) * 0.37)) 40%,
+      rgb(0 0 0 / calc(var(--fade) * 0.2)) 57%, rgb(0 0 0 / calc(var(--fade) * 0.08)) 74%,
+      rgb(0 0 0 / calc(var(--fade) * 0.02)) 88%, transparent 100%);
+}
+.room .floor-reflection-image {
+  filter: blur(clamp(1px, 0.6cqw, 3px));
+}
+/* Where a piece stands: light falling round it, no drawn edge anywhere. A
+   wide, faint shade and a close, darker one, each an ellipse under a Gaussian
+   blur, in a deeper tone of the room itself. */
+.room .floor-shade {
+  position: absolute;
+  left: 50%;
+  border-radius: 50%;
+  pointer-events: none;
+  background: color-mix(in srgb, var(--room, #2a0f0a) 30%, #000);
+  transform: translate(-50%, -50%);
+}
+.room .floor-shade-wide {
+  width: 104%;
+  aspect-ratio: 7 / 1;
+  opacity: 0.2;
+  filter: blur(clamp(8px, 4.5cqw, 28px));
+}
+.room .floor-shade-near {
+  width: 76%;
+  aspect-ratio: 16 / 1;
+  opacity: 0.32;
+  filter: blur(clamp(4px, 1.8cqw, 12px));
+}
+/* A piece's own page: the piece on its floor, a share of what the browser
+   leaves of the screen, so its name, sizes and Add to bag follow close under */
+.room .product-floor {
+  height: clamp(220px, calc((100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom)) * 0.36), 560px);
+  height: clamp(220px, calc((100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom)) * 0.36), 560px);
+}
+@media (min-width: 1024px) {
+  .room .product-floor {
+    height: clamp(360px, calc(100dvh - var(--room-top) - 120px), 760px);
+  }
+}
+/* A piece's flight between /gear and its own page (components/room/flight):
+   the piece moves on a long ease-out, as the danceman does; the page under it
+   cross-fades quickly in the same room colour, so only the piece is seen move */
+::view-transition-group(piece) {
+  animation-duration: 560ms;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+::view-transition-old(piece),
+::view-transition-new(piece) {
+  animation-duration: 560ms;
+  height: 100%;
+}
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 260ms;
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
 }
 /* A short reflection, for a flat thing with words under it (a record cover) */
 .room .on-the-floor-short {
@@ -2616,3 +2688,21 @@ h6,
   text-transform: uppercase;
   color: #ede8df;
 }
+
+/* In a room the details take its writing colour, whatever the room */
+.room .product-details {
+  color: inherit;
+  opacity: 0.85;
+}
+.room .product-details strong,
+.room .product-details h3,
+.room .product-details thead th,
+.room .product-details tbody th,
+.room .product-details.product-credit {
+  color: inherit;
+}
+.room .product-details th,
+.room .product-details td {
+  border-bottom-color: color-mix(in srgb, currentColor 25%, transparent);
+}
+

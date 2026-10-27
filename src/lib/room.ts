@@ -4,12 +4,11 @@
  * Every dance piece is shot as a dancer on one flat colour that goes on
  * forever, the field, with a lacquer floor. The colours are the second
  * album's pop-art palette: concept pieces, not the brand's colours, and more
- * come with every piece, so nothing here knows any colour by name. The
- * video's field is exactly the colour its campaign holds (sampled flat edge to
- * edge: #f592a6 against #f593a6), so a page painted in that colour has no
- * edge around the video: the room carries on to the edges of the screen.
- * Writing in the room is the house's ink or sand, whichever reads better on
- * the field it is given.
+ * come with every piece, so nothing here knows any colour by name. The room
+ * is sampled from the video in it (lib/sampler: its field, and the ink he is
+ * drawn in), so a page painted in it has no edge around the video: he dances
+ * on the page, not in a box on it. Writing in the room is the dancer's own
+ * ink where it reads, else the house's ink or sand, whichever reads better.
  */
 import type { Level } from '@/lib/levels';
 
@@ -26,7 +25,7 @@ function luminance(hex: string): number {
   return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
 }
 
-function contrast(a: string, b: string): number {
+export function contrast(a: string, b: string): number {
   const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
   return (hi + 0.05) / (lo + 0.05);
 }
@@ -43,9 +42,34 @@ export function onRoom(colour: string): string {
   return contrast(colour, ROOM_SAND) > ink ? ROOM_SAND : ROOM_INK;
 }
 
+/**
+ * The writing on a sampled room: the ink the dancer is drawn in, where it
+ * reads on the field (4.5 or more, as text needs), so the page's words and
+ * symbols are in his colour; else onRoom's ink or sand.
+ */
+export function writingOn(field: string, figure: string | null | undefined): string {
+  const hexish = /^#[0-9a-f]{6}$/i;
+  if (figure && hexish.test(figure) && hexish.test(field) && contrast(field, figure) >= 4.5) return figure;
+  return onRoom(field);
+}
+
 /** The room a page is set in: the level the visitor came from (?room=), else the newest, else the house's ink */
 export function roomFor(levels: Level[], from?: string | null): { colour: string; on: string; level: Level | null } {
   const level = (from && levels.find((l) => l.id === from)) || levels[0] || null;
   const colour = level?.colour || ROOM_DARK;
-  return { colour, on: onRoom(colour), level };
+  return { colour, on: level?.ink || onRoom(colour), level };
+}
+
+/**
+ * The pages set in the room: they own the whole screen, so the old desktop
+ * sidebar (its Store and Connect open the old modals over a room) is not
+ * drawn under them, nor its margin. A piece's page, the bag and the small
+ * print are rooms too.
+ */
+const ROOM_ROUTES = ['/links', '/levels', '/gear', '/music', '/store/product', '/store/cart', '/legal', '/messages'];
+
+export function isRoomRoute(pathname: string | null | undefined): boolean {
+  if (!pathname) return false;
+  if (pathname === '/') return true;
+  return ROOM_ROUTES.some((r) => pathname === r || pathname.startsWith(`${r}/`));
 }

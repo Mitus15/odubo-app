@@ -145,6 +145,10 @@ class Plane:
         self.zref = FOCAL * max(take_w, take_h) / self.body  # how far from the phone he stands, his heights
         g = torch.Generator().manual_seed(1024)
         self.table = torch.rand(LATTICE * LATTICE, generator=g).to(dev)
+        # The floor under a still camera is the same every frame: its texture and its laid tones are
+        # kept for the last framing (exactly the same numbers, made once instead of every frame)
+        self._floor_key, self._floor_base = None, None
+        self._sheen = {}
 
     # --- where each pixel lies on the floor -------------------------------------------------------------------
 
@@ -254,12 +258,14 @@ class Plane:
         top = int(max(0, np.ceil(float(A[1, 1]) * self.horizon + float(A[1, 2])) + 1))
         if top >= H:
             return
-        D, X, Z, wX, wZ = self.coords(A, top, H, W)
-        tone, seam, _, _ = self.texture(X, Z, wX, wZ, D)
-        field, shade, light = canvas.colour(pal["field"]), canvas.colour(pal["shadow"]), canvas.colour(pal["highlight"])
-        base = field + (light - field) * tone.clamp(min=0) + (shade - field) * (-tone).clamp(min=0)
-        base = base + (shade - base) * (seam * SEAM_TONE)
-        canvas.px[:, top:] = base
+        key = (A.tobytes(), top, H, W, repr(pal["field"]), repr(pal["shadow"]), repr(pal["highlight"]))
+        if key != self._floor_key:
+            D, X, Z, wX, wZ = self.coords(A, top, H, W)
+            tone, seam, _, _ = self.texture(X, Z, wX, wZ, D)
+            field, shade, light = canvas.colour(pal["field"]), canvas.colour(pal["shadow"]), canvas.colour(pal["highlight"])
+            base = field + (light - field) * tone.clamp(min=0) + (shade - field) * (-tone).clamp(min=0)
+            self._floor_key, self._floor_base = key, base + (shade - base) * (seam * SEAM_TONE)
+        canvas.px[:, top:] = self._floor_base
 
     def lay_contact(self, canvas, alpha_out, line: np.ndarray, body: float, pal: dict, fade: float):
         """The contact shadow: alpha_out his (averaged) matte in the output frame (H, W), line the floor line per column."""
@@ -315,8 +321,14 @@ class Plane:
         c = canvas.tensor(line)[None, :]
         rows = torch.arange(y0, H, dtype=torch.float32, device=dev)[:, None]
         cols = torch.arange(W, dtype=torch.float32, device=dev)[None, :].expand(hb, W)
-        D, X, Z, wX, wZ = self.coords(A, y0, H, W)
-        _, _, gloss, ripple = self.texture(X, Z, wX, wZ, D)
+        key = (A.tobytes(), y0, H, W)
+        if key not in self._sheen:
+            if len(self._sheen) > 8:                                # a moving camera: keep only the latest few
+                self._sheen.clear()
+            D, X, Z, wX, wZ = self.coords(A, y0, H, W)
+            _, _, gloss_, ripple_ = self.texture(X, Z, wX, wZ, D)
+            self._sheen[key] = (gloss_, ripple_)
+        gloss, ripple = self._sheen[key]
         below = rows - c                                            # px below the floor line
         src_y = 2 * c - rows + ripple * body
         grid = torch.stack(((2 * cols + 1) / W - 1, (2 * src_y + 1) / H - 1), -1)

@@ -13,6 +13,8 @@
  *            reason: the piece
  */
 
+import { unstable_cache } from 'next/cache';
+
 export interface PieceBounds {
   /** As fractions of the photo */
   top: number;
@@ -136,32 +138,44 @@ export function roomFromPixels(data: Uint8Array | Uint8ClampedArray, width: numb
 
 /** The width the photo is read at: enough for a small seal on a chest to count */
 const SAMPLE = 320;
+/** A photo's look is kept this long in Next's data cache, shared by every server: a new upload has a new address (?v=), so it is read fresh */
+const KEPT_FOR_S = 60 * 60 * 24 * 30;
+
+/** Read once per photo (its address with its version), then kept; a photo that cannot be read is not kept, so it is tried again */
+const readLook = unstable_cache(
+  async (url: string): Promise<PieceLook> => {
+    const { default: sharp } = await import('sharp');
+    const res = await fetch(`${url}${url.includes('?') ? '&' : '?'}width=${SAMPLE}`, { cache: 'no-store' });
+    if (!res.ok) throw new Error(`photo ${res.status}`);
+    const { data, info } = await sharp(Buffer.from(await res.arrayBuffer()))
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+    return {
+      bounds: boundsFromPixels(data, info.width, info.height, info.channels),
+      room: roomFromPixels(data, info.width, info.height, info.channels),
+    };
+  },
+  ['piece-look-v1'],
+  { revalidate: KEPT_FOR_S },
+);
 
 const known = new Map<string, Promise<PieceLook>>();
 
-/** A photo's look, read from a copy 320 wide (Shopify's CDN sizes on request); a new piece gets its room the first time it is shown. Nothing known when it cannot be read: the piece stands uncropped in the house's dark. */
+/**
+ * A photo's look, read from a copy 320 wide (Shopify's CDN sizes on request):
+ * a new piece gets its room the first time it is shown, and every server
+ * after that has it from the cache, so a cold start reads no photos. Nothing
+ * known when it cannot be read: the piece stands uncropped in the house's dark.
+ */
 export function pieceLook(url: string): Promise<PieceLook> {
-  const photo = url.split('?')[0];
-  let found = known.get(photo);
+  let found = known.get(url);
   if (!found) {
-    found = (async () => {
-      try {
-        const { default: sharp } = await import('sharp');
-        const res = await fetch(`${photo}?width=${SAMPLE}`, { next: { revalidate: 86400 } });
-        if (!res.ok) return { bounds: null, room: null };
-        const { data, info } = await sharp(Buffer.from(await res.arrayBuffer()))
-          .ensureAlpha()
-          .raw()
-          .toBuffer({ resolveWithObject: true });
-        return {
-          bounds: boundsFromPixels(data, info.width, info.height, info.channels),
-          room: roomFromPixels(data, info.width, info.height, info.channels),
-        };
-      } catch {
-        return { bounds: null, room: null };
-      }
-    })();
-    known.set(photo, found);
+    found = readLook(url).catch(() => {
+      known.delete(url);
+      return { bounds: null, room: null };
+    });
+    known.set(url, found);
   }
   return found;
 }

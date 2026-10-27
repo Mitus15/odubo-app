@@ -85,8 +85,8 @@ export default function SaveYourProgress({ colour, on, className = '' }: { colou
         role="dialog"
         aria-modal="true"
         aria-labelledby="save-slot-title"
-        className={`fixed inset-x-0 bottom-0 z-[158] mx-auto w-full max-w-md px-3 pb-3 transition-transform duration-500 ease-[cubic-bezier(0.2,0.9,0.25,1.1)] ${open ? 'translate-y-0' : 'translate-y-[115%]'}`}
-        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 12px)' }}
+        className={`fixed inset-x-0 z-[158] mx-auto w-full max-w-md px-3 pb-3 transition-transform duration-500 ease-[cubic-bezier(0.2,0.9,0.25,1.1)] ${open ? 'translate-y-0' : 'translate-y-[115%]'}`}
+        style={{ bottom: 'var(--consent-h, 0px)', paddingBottom: 'calc(env(safe-area-inset-bottom) + 12px)' }}
       >
         <div className="relative px-5 pb-6 pt-5" style={{ background: ROOM_INK, color: ROOM_SAND, boxShadow: `inset 0 0 0 1.5px ${ROOM_SAND}40` }}>
           <button

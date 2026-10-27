@@ -181,6 +181,9 @@ async function shopifyFetch<T>(query: string, variables: Record<string, any> = {
       'X-Shopify-Storefront-Access-Token': accessToken,
     },
     body: JSON.stringify({ query, variables }),
+    // Reads only (products, a product, collections): kept a minute on the server, as getShopifyProduct does,
+    // so /gear does not wait on Shopify for every visitor. The browser ignores it.
+    next: { revalidate: 60 },
   });
   
   if (!response.ok) {

@@ -8,6 +8,7 @@ import { generateProductMetadata } from '@/lib/seo';
 import { COUNTRY_COOKIE } from '@/lib/store/money';
 import { sortProductOptions } from '@/lib/store/sizes';
 import { movedFrom, movedTo } from '@/lib/store/movedProducts';
+import { pieceLook, type PieceBounds } from '@/lib/store/pieceLook';
 
 async function getCountry(): Promise<string | undefined> {
   try {
@@ -74,7 +75,7 @@ async function fetchProduct(handle: string, country?: string) {
 
 // Generate JSON-LD structured data for Google Shopping
 function generateProductJsonLd(product: NonNullable<Awaited<ReturnType<typeof fetchProduct>>>) {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://odubo.studio';
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.odubostudio.com';
   const price = product.variants[0]?.price || '0';
   const currency = product.variants[0]?.currency || 'USD';
   const isAvailable = product.variants.some(v => v.available);
@@ -134,6 +135,12 @@ export default async function ProductDetailPage({ params }: { params: { handle: 
   // Generate JSON-LD for structured data
   const jsonLd = generateProductJsonLd(product);
 
+  // The piece stands in the same room it has in /gear: its colour from the first photo, and every photo's crop
+  const looks = await Promise.all(product.images.map((img) => pieceLook(img.src)));
+  const bounds: Record<string, PieceBounds | null> = {};
+  product.images.forEach((img, i) => (bounds[img.src.split('?')[0]] = looks[i].bounds));
+  const room = looks[0]?.room ?? null;
+
   return (
     <>
       {/* JSON-LD Structured Data for Google Shopping */}
@@ -141,7 +148,7 @@ export default async function ProductDetailPage({ params }: { params: { handle: 
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <ProductPageClient product={product} />
+      <ProductPageClient product={product} room={room} bounds={bounds} />
     </>
   );
 }

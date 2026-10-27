@@ -1,7 +1,7 @@
 /**
  * The levels (lib/levels): which Studio posts reach the site, and what each says.
  */
-import { bySong, creditOf, hearIt, hudOf, levelFrom, PLAYER, sortLevels, type LevelRow } from '@/lib/levels';
+import { bySong, creditOf, hearIt, hudOf, levelFrom, PLAYER, sortLevels, stillAt, type LevelRow } from '@/lib/levels';
 
 jest.mock('@/lib/db', () => ({ queryDatabase: jest.fn() }));
 
@@ -38,6 +38,12 @@ describe('levelFrom', () => {
       outAt: '2026-10-27T17:05:00.000Z',
       links: [{ platform: 'youtube', url: null }],
     });
+  });
+
+  it('stands the site copy\'s first frame, through the site, in the video\'s colour', () => {
+    const level = levelFrom(row(), {}, { camp_fils: SITE })!;
+    expect(level.poster).toBe(`/stills/${SITE}.jpg?h=1920`);
+    expect(stillAt(level.poster, 640)).toBe(`/stills/${SITE}.jpg?h=640`);
   });
 
   it('streams only the song\'s clean, silent site copy: none yet, a still and no stream', () => {

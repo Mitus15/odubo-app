@@ -23,6 +23,32 @@ Every decision, with his words, is in `docs/decisions/the-title-screen.md`.
    - a coded HUD;
    - three pages, with the lock kept for the game.
 
+## His look from the phone, the same day
+
+Preview c89e4c99 on his phone. His notes: the gear shadows and reflection too hard, the piece's page
+a different store (dark, huge photo, "Back to Shop" into the old store, and its close into the
+clips), the danceman and the video blurry at first, then: the piece should fly into its page like
+the danceman, everything faster, and "sweep the whole public facing app".
+
+What changed is in `docs/decisions/the-title-screen.md` under "His notes from his phone".
+Debugging worth keeping:
+
+- **The blurry start was three things.** Chrome now plays HLS natively and opens on 240p; the
+  clips' hls.js settings started low, capped on a "3g" guess, and gave a fragment 1.5 s before
+  dropping to 240p; and hls.js starts loading before a MANIFEST_PARSED listener can set the start
+  level (fix: `autoStartLoad: false`, then `startLoad`).
+- **Stream's stills are darker than the room** (SD formula on an HD copy); `/stills/<uid>.jpg`
+  corrects them with sharp's `recomb`.
+- **The in-app browser pane cannot run view transitions** (every one, even a trivial one, aborts
+  with InvalidStateError) and throttles timers to 1 s, so hls.js's bandwidth reads are wrong
+  there. The flight and the video were checked in a separate headless Chrome driven over CDP
+  (scratchpad scripts `flight.cjs`, `video.cjs`), with the flight slowed 6x to see its path.
+- **lib/levels is read by client code** (RoomScreen, FocusView), so nothing in it may import a
+  server-only library: the still's sharp step lives in `lib/stillsServer.ts`.
+- **next.config gives every `*.png` / `*.jpg` a year's immutable Cache-Control**, over a route's
+  own. The share cards have no extension for that reason; the stills set
+  `Vercel-CDN-Cache-Control`.
+
 ## Where it stands
 
 - **Home and /links:**
@@ -38,7 +64,9 @@ Every decision, with his words, is in `docs/decisions/the-title-screen.md`.
   - all 15 songs are clean and silent, with the seal kept, in BT.709, on Stream, and linked in
     `campaigns.site_video`;
   - migration 170 was run through the D1 API on his go;
-  - made by `scripts/loop/posts/site_copies.py`; the ledger and log are in Work files/catalogue.
+  - made by `scripts/loop/posts/site_copies.py`; the ledger and log are in Work files/catalogue;
+  - each opens and closes like its YouTube cut, fading in from its field and out to it (his word,
+    the same night), cut from the renders already made, no render again.
 - **Film tool:** `compose --hud=none` and `--marker=none`, and the plain stage
   `data/loop/film/shows/site.json`. Its 147 tests pass.
 - **`db.ts`:** reads retry once when a connection drops.

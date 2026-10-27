@@ -1,8 +1,10 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Sign In - Cool Wrld',
-  description: 'Sign in to your Cool Wrld account',
+  title: 'Sign in | Odubo Studio',
+  description: 'Sign in to Odubo Studio.',
+  // An account page is nobody's search result
+  robots: { index: false, follow: false },
 };
 
 export default function AuthLayout({

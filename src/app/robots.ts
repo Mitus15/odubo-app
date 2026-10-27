@@ -7,6 +7,8 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: '*',
         allow: '/',
+        // The back of house (this replaced public/robots.txt, which clashed with this route)
+        disallow: ['/admin/', '/api/'],
       },
     ],
     sitemap: `${base}/sitemap.xml`,

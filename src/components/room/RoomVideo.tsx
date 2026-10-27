@@ -9,11 +9,23 @@ import RoomHud, { type HudSpec } from './RoomHud';
  * the song), contained and unframed, so its field runs into the room's own
  * colour behind it (lib/room) and only the dancer is seen.
  *
- * The still is there at first paint, before any script. Only a room near the
- * one on screen holds a stream, and only the one on screen plays, so a long
- * feed costs one video. A tap pauses or plays; with reduced motion asked for,
- * it waits for the tap.
+ * The still is there at first paint, before any script: the copy's first
+ * frame at full size (lib/levels). The video takes its place only once it
+ * plays sharp, so the visitor never sees a blurry start; on a connection too
+ * slow for that, it takes over anyway after a few seconds. Only a room near
+ * the one on screen holds a stream, and only the one on screen plays, so a
+ * long feed costs one video. A tap pauses or plays; with reduced motion asked
+ * for, it waits for the tap.
  */
+/** How long the still waits for a sharp picture before the video takes over regardless */
+const SHARP_WAIT_MS = 5000;
+
+/** Sharp enough to replace the still: most of the height the frame is drawn at on this screen (a 720p level on a phone) */
+function playsSharp(video: HTMLVideoElement): boolean {
+  if (!video.videoHeight) return false;
+  return video.videoHeight >= Math.min(1080, video.clientHeight * (window.devicePixelRatio || 1) * 0.75);
+}
+
 export default function RoomVideo({
   hls,
   poster,
@@ -24,6 +36,7 @@ export default function RoomVideo({
   style,
   tapToPause = true,
   hud,
+  startAt = 0,
 }: {
   /** Null: there is no site copy yet, so the still alone, and nothing streams */
   hls: string | null;
@@ -40,6 +53,8 @@ export default function RoomVideo({
   tapToPause?: boolean;
   /** The game's layer, drawn by the site over the clean copy (the focused view); none on the main page */
   hud?: HudSpec;
+  /** Seconds in the still is from, where the video starts (the level's posterAt) */
+  startAt?: number;
 }) {
   const ref = useRef<HTMLVideoElement>(null);
   const userPaused = useRef(false);
@@ -64,7 +79,7 @@ export default function RoomVideo({
     if (!video || !near || !hls) return;
     let handle: HlsHandle | null = null;
     let gone = false;
-    attachHls(video, hls).then((h) => {
+    attachHls(video, hls, false, { sharp: true, startAt }).then((h) => {
       if (gone) return h?.destroy();
       handle = h;
       if (activeRef.current && !userPaused.current) video.play().catch(() => {});
@@ -72,9 +87,12 @@ export default function RoomVideo({
     return () => {
       gone = true;
       handle?.destroy();
+      window.clearTimeout(waited.current);
+      waited.current = undefined;
       setShown(false);
       setPlaying(false);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hls, near]);
 
   // Playing, while on screen
@@ -84,6 +102,18 @@ export default function RoomVideo({
     if (active && !userPaused.current) video.play().catch(() => {});
     if (!active) video.pause();
   }, [active, near, hls]);
+
+  // The still gives way once the picture is sharp, or after a while regardless
+  const waited = useRef<number | undefined>(undefined);
+  const reveal = useCallback((video: HTMLVideoElement) => {
+    if (playsSharp(video)) {
+      window.clearTimeout(waited.current);
+      setShown(true);
+    } else if (waited.current === undefined) {
+      waited.current = window.setTimeout(() => setShown(true), SHARP_WAIT_MS);
+    }
+  }, []);
+  useEffect(() => () => window.clearTimeout(waited.current), []);
 
   const toggle = useCallback(() => {
     const video = ref.current;
@@ -111,9 +141,12 @@ export default function RoomVideo({
           loop
           preload="metadata"
           aria-label={title}
-          onPlaying={() => {
+          onPlaying={(e) => {
             setPlaying(true);
-            setShown(true);
+            reveal(e.currentTarget);
+          }}
+          onResize={(e) => {
+            if (!e.currentTarget.paused) reveal(e.currentTarget);
           }}
           onPause={() => setPlaying(false)}
           onTimeUpdate={hud?.progress ? (e) => setProgress(e.currentTarget.duration ? e.currentTarget.currentTime / e.currentTarget.duration : 0) : undefined}

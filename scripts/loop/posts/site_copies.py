@@ -1,56 +1,68 @@
 """
-The site's own copy of every song's dance: clean and silent, for the rooms on odubostudio.com.
+The site's own copy of every song's dance: the whole dance, clean and silent, for the rooms on odubostudio.com.
 
     python3 site_copies.py                    # dry run: what each song's copy would be (touches nothing)
-    python3 site_copies.py --apply            # make, upload, and link each song (skips what the ledger has)
+    python3 site_copies.py --apply            # render, upload and link each song (skips what the ledger has)
     python3 site_copies.py --apply monkey     # only these songs (slugs)
-    python3 site_copies.py --check            # every frame of every Reel against the HUD strip (writes nothing)
     python3 site_copies.py --link --apply     # only write the ledger's copies to the songs' campaigns
 
 The apps' posts keep the song (in-app sounds, the YouTube cuts with it laid in). The site never
 carries it: its copy is him, his floor, his shadow, and the B.A.A.D seal over his head (the badge
 stays, his word 2026-10-27). No HUD (the site draws its own, from the Studio's data), no song.
 
-A room on the site is a loop of the dance, not the whole song (the whole song with its music is
-the YouTube post), so a copy is the song's Reel: 30 s to a minute of the best of it.
+A copy is the WHOLE dance, not a Reel (his word, 2026-10-27: "we're not even going to use the reels
+at all"), rendered again from the take with the HUD off (compose --hud=none) from the song's own
+show, so nothing has to be covered: a box over the HUD could cut his hand wherever he reaches into a
+corner. Every copy stands on the lacquer floor (a floor made as a floor: its texture, his reflection
+and his contact shadow, plane.py), the same in all fifteen rooms (his pick, 2026-10-27), and carries
+no effects: Billie Jean's echo and tiles stay in its posted video, "the website doesn't need" them.
+The song's show file is left as it is; the copy's show is written beside the copies (site-shows/).
 
-  every song but Billie Jean   its silent Reel, the HUD strip covered in the field's own colour
-                               (the field is flat: the box is invisible), the sound dropped.
-                               Minutes, not hours. Every frame is checked first: where he, or the
-                               seal over his head, comes within REACH of the strip, a box would cut
-                               him (the HUD is drawn in his ink, so where they meet nothing tells
-                               them apart), and that song is left for a clean render instead.
-  Billie Jean                  its Reel's stretch rendered clean (compose --hud=none, the plain
-                               lacquer stage shows/site.json): its close-ups light the field, so no
-                               box could hide its HUD. About 8 minutes on the GPU.
+A copy opens and closes like the YouTube cut (youtube.py, his word 2026-10-27): it opens where the cut
+opens (the song's first note, or the first bar after he settles) and closes on its last bar, before
+he walks to the camera. Its timeline is the posted full video's, frame for frame (his movement in
+both lines up at 0.0 s), so the cut's in and out points (youtube.json) are the copy's. Billie Jean,
+cut by its show's bars, already opens and closes on them. Every copy fades in from its field and out
+to it, so on the page, where it loops, he appears on the room and leaves it.
 
-Each copy goes to Cloudflare Stream as "site · <song>" and the song's campaign `site_video` gets
-its uid (migration 170), which the site reads (src/lib/levels.ts). A ledger (site-copies.json beside
-the catalogue's data) records each step, so a run picks up where the last one stopped.
+It is quick: the take's matte, field and paint are already made (segment, skin, figure), so only
+compose runs, faster than real time on the GPU (37 fps, 2026-10-27): a 5-minute song in about 6.
+Rendering the next song runs while the last one is encoded and uploaded.
+
+Each copy goes to Cloudflare Stream as "site · <song>" and the song's campaign `site_video` gets its
+uid (migration 170), which the site reads (src/lib/levelsServer.ts). The site samples its room
+colour from the copy itself, so nothing here names a colour. A ledger (site-copies.json beside the
+catalogue's data) records each step, so a run picks up where the last one stopped; a song's earlier
+uploads are kept aside in its `replaced`.
 """
-import json, subprocess, sys
+import json, subprocess, sys, threading
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-import numpy as np
-
 import catalog
+import youtube
 from stage import Cloud, env
 
-FILM = Path(__file__).resolve().parents[1] / "film"
-sys.path.insert(0, str(FILM))
-from split import hud_rows  # noqa: E402  the HUD's own geometry: how far down it reaches
-
-SHOW = Path(__file__).resolve().parents[3] / "data/loop/film/shows/site.json"
-REELS = catalog.POSTS / "reels"
+ROOT = Path(__file__).resolve().parents[3]
+FILM = ROOT / "scripts/loop/film"
+SHOWS = ROOT / "data/loop/film/shows"
+BASE = SHOWS / "site.json"  # Billie Jean's stage on the site: its own show is its tiles and echo
+#: Every room's floor, and its effects: none
+FLOOR = "lacquer"
+SITE_SHOWS = catalog.DATA / "site-shows"
 OUT = catalog.DATA / "site-copies"
 LEDGER = catalog.DATA / "site-copies.json"
 SCHEDULE = json.loads((catalog.DATA / "schedule.json").read_text()) if (catalog.DATA / "schedule.json").exists() else []
 
 TITLES = {"billie-jean": "Billie Jean", **{s: v[0] for s, v in catalog.SONGS.items()}}
-REACH = 100  # px under the strip, at 1080x1920, that must stay clear: his head, and the seal floating over it
-INK = 120    # how far from the field (summed over r, g, b) a pixel must be to be something
-# Billie Jean's Reel ("Ready Player 1") opens 2:12 into the song; the song starts 14.72 s into the take
-BILLIE_JEAN = {"take": "billie-jean", "from": 14.72 + 132, "to": 14.72 + 192}
+#: What a copy is now; a ledger entry made as anything else (a Reel, another floor) is made again
+CUT = "full"
+#: Where a copy opens and closes: the YouTube cut's points
+SPAN = "youtube"
+CUTS = json.loads((youtube.OUT / "youtube.json").read_text())
+EASE_IN, PICTURE_OUT = 0.5, youtube.PICTURE_OUT  # seconds it fades in from its field, and out to it
+#: Songs encoded and uploaded at once, once their renders are made
+SHIPPING_AT_ONCE = 2
 
 
 def campaign_id(slug: str) -> str:
@@ -67,167 +79,142 @@ def order() -> list:
     return seen + [s for s in TITLES if s not in seen]
 
 
-def reels_of(slug: str) -> list:
-    """The song's silent Reels, A first: the first that stays clear of the HUD is the copy."""
-    found = sorted(REELS.glob(f"*-{slug}-reel-?-silent.mp4"))
-    if not found:
-        raise SystemExit(f"{slug}: no silent Reel in {REELS}")
-    return found
+def source(slug: str) -> tuple:
+    """(take, the song's own show, the song's slug in a take that holds two songs, or None)."""
+    if slug == "billie-jean":
+        return "billie-jean", BASE, None
+    _, _, key, training = catalog.FULL_SRC[slug]
+    if training:
+        return key, SHOWS / "training" / f"{slug}.json", None
+    return "img-0327", SHOWS / f"{slug}.json", slug  # the two Stromae levels share one take
 
 
-def reel_of(slug: str) -> Path:
-    return reels_of(slug)[0]
+def span(slug: str):
+    """(open, close) in the copy's seconds: its YouTube cut's, or None for the whole render (Billie Jean)."""
+    name = next((k for k in CUTS if k.split("-", 1)[1].removesuffix("-full").split("-level-")[0] == slug), None)
+    return (CUTS[name]["video_from"], CUTS[name]["video_to"]) if name else None
 
 
-def frames(path: Path, w: int, h: int, fps: int):
-    """Every frame (at fps), as rows of RGB, read straight from ffmpeg."""
-    p = subprocess.Popen(["ffmpeg", "-v", "error", "-i", str(path), "-vf", f"fps={fps}", "-f", "rawvideo", "-pix_fmt", "rgb24", "-"],
-                         stdout=subprocess.PIPE)
-    size = w * h * 3
-    while True:
-        b = p.stdout.read(size)
-        if len(b) < size:
-            break
-        yield np.frombuffer(b, np.uint8).reshape(h, w, 3).astype(np.int16)
-    p.wait()
-
-
-def probe(path: Path) -> tuple:
-    w, h = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v", "-show_entries", "stream=width,height", "-of", "csv=p=0",
-                           str(path)], capture_output=True, text=True, check=True).stdout.strip().split(",")
-    return int(w), int(h)
-
-
-def clear_of_hud(path: Path) -> dict:
-    """The field's colour, and whether he (or the seal) ever comes near the HUD strip: every frame."""
-    w, h = probe(path)
-    strip = hud_rows(w, h)
-    reach = int(REACH * min(w, h) / 1080)
-    field, near, count = None, 0, 0
-    for f in frames(path, w, h, 30):
-        if field is None:
-            field = np.median(f[strip + reach: strip + reach + 20, :20].reshape(-1, 3), 0)
-        zone = f[strip: strip + reach]
-        if (np.abs(zone - field).sum(2) > INK).any():
-            near += 1
-        count += 1
-    return {"field": "#%02x%02x%02x" % tuple(int(v) for v in field), "strip": strip, "frames": count, "near": near}
+def site_show(slug: str) -> Path:
+    """The song's show on the site's stage: its own, on the lacquer floor, with no effects."""
+    _, show, _ = source(slug)
+    spec = json.loads(show.read_text())
+    spec["stage"] = {**spec.get("stage", {}), "floor": FLOOR, "effects": []}
+    SITE_SHOWS.mkdir(parents=True, exist_ok=True)
+    out = SITE_SHOWS / f"{slug}.json"
+    out.write_text(json.dumps(spec, indent=2))
+    return out
 
 
 # The renders are written untagged with the SD colour formula (BT.601); a browser plays an untagged
 # video with the HD one (BT.709), so the field came out lighter than the room around it (#f491a5
-# played as #fd9da5, 2026-10-27). A copy is converted to BT.709 and says so, and matches its room.
-COLOUR = "bt709"
+# played as #fd9da5, 2026-10-27). A copy is converted to BT.709 and says so.
+# Its tone curve has to be said too: these are graphics made in the web's own colour (sRGB), and a
+# copy that names no curve is drawn with video's (BT.709), a touch lighter and bluer than the room's
+# CSS pink on screen (#e79eaf against #e998a7 in Chromium; tagged sRGB, #e695a4). The ffmpeg colour
+# flags did not reach the stream's header, so the header is written directly (h264_metadata):
+# primaries BT.709, transfer sRGB (13), matrix BT.709. Stream keeps it in every rendition.
+COLOUR = "srgb"
+TAGS = "h264_metadata=colour_primaries=1:transfer_characteristics=13:matrix_coefficients=1"
 
 
-def finish(src: Path, dest: Path, field: str | None = None, strip: int = 0):
-    """The site's copy: in BT.709 and tagged, the sound gone; with field and strip, the HUD strip covered in the field's colour."""
+def finish(src: Path, dest: Path, slug: str):
+    """The site's copy: opened and closed like its YouTube cut, in BT.709, tagged with the sRGB curve, the sound gone."""
+    a, b = span(slug) or (0.0, catalog.length(src))
+    field = youtube.floor_colour(src, max(0.0, b - 2))  # read as the render is coded (BT.601), faded before it is converted
+    vf = [f"trim=start={a:.3f}:end={b:.3f}", "setpts=PTS-STARTPTS",
+          f"fade=t=in:st=0:d={EASE_IN}:color={field}", f"fade=t=out:st={b - a - PICTURE_OUT:.3f}:d={PICTURE_OUT}:color={field}",
+          "scale=in_color_matrix=bt601:out_color_matrix=bt709:in_range=tv:out_range=tv", "format=yuv420p"]
     dest.parent.mkdir(parents=True, exist_ok=True)
-    vf = ([f"drawbox=x=0:y=0:w=iw:h={strip}:color=0x{field[1:]}@1:t=fill"] if field and strip else []) + [
-        "scale=in_color_matrix=bt601:out_color_matrix=bt709:in_range=tv:out_range=tv", "format=yuv420p"]
-    subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(src), "-vf", ",".join(vf), "-an",
+    subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(src), "-an", "-vf", ",".join(vf),
                     "-c:v", "libx264", "-preset", "veryfast", "-crf", "18",
-                    "-colorspace", "bt709", "-color_primaries", "bt709", "-color_trc", "bt709", "-color_range", "tv",
-                    "-movflags", "+faststart", str(dest)], check=True)
+                    "-colorspace", "bt709", "-color_primaries", "bt709", "-color_trc", "iec61966-2-1", "-color_range", "tv",
+                    "-bsf:v", TAGS, "-movflags", "+faststart", str(dest)], check=True)
 
 
-def render_clean(take: str, a: float, b: float, name: str, slug: str | None = None) -> Path:
-    """A stretch of a take rendered clean: no HUD, the plain lacquer stage, silent, no outro (kept: never rendered twice)."""
+def render(slug: str) -> Path:
+    """The whole dance, rendered clean: no HUD, silent, no outro (kept: never rendered twice)."""
+    take, _, shared = source(slug)
+    show = site_show(slug)
+    name = f"site-{FLOOR}-{slug}"
     out = catalog.WORK / take / "out" / f"dance-{name}-silent.mp4"
     if out.exists():
         return out
-    subprocess.run(["python3", "dance.py", take, "cut", f"--show={SHOW}", "--outro=no", "--audio=silent", "--hud=none",
-                    f"--from={a:.3f}", f"--to={b:.3f}", f"--name={name}", *([f"--slug={slug}"] if slug else [])],
-                   cwd=FILM, check=True)
-    return catalog.WORK / take / "out" / f"dance-{name}-silent.mp4"
+    subprocess.run(["python3", "dance.py", take, "cut", f"--show={show}", "--outro=no", "--audio=silent", "--hud=none",
+                    f"--name={name}", *([f"--slug={shared}"] if shared else [])],
+                   cwd=FILM, check=True, stdout=subprocess.DEVNULL)
+    return out
 
 
-def reel_in_take(slug: str, reel: Path) -> tuple:
-    """(take, from, to, slug for a shared take): where a Reel's stretch sits in its take, from the catalogue."""
-    pieces = json.loads((catalog.POSTS / "catalog.json").read_text())
-    entry = next(p for p in pieces if p["file"] == reel.name.replace("-silent", ""))
-    _, t0, key, training = catalog.FULL_SRC[slug]
-    take = key if training else "img-0327"  # the two Stromae levels share one take; their key is the grid's
-    a = t0 + entry["in_full"]
-    return take, a, a + entry["seconds"], None if training else slug
-
-
-def make(slug: str, have: dict) -> dict:
-    if slug == "billie-jean":
-        raw = render_clean(BILLIE_JEAN["take"], BILLIE_JEAN["from"], BILLIE_JEAN["to"], "site-billie-jean")
-        dest = OUT / "site-billie-jean.mp4"
-        finish(raw, dest)
-        return {**have, "file": str(dest), "colour": COLOUR, "how": "its Reel's stretch, rendered clean"}
-    tried = []
-    for src in reels_of(slug):
-        check = clear_of_hud(src)
-        if not check["near"]:
-            dest = OUT / f"site-{slug}.mp4"
-            finish(src, dest, check["field"], check["strip"])
-            return {**have, "file": str(dest), "colour": COLOUR, "reel": src.name, "check": check, "how": f"{src.name}, HUD covered"}
-        tried.append((check["near"], src))
-    # Every Reel comes near the HUD somewhere: the one that does least, rendered clean
-    reel = min(tried, key=lambda t: t[0])[1]
-    take, a, b, shared = reel_in_take(slug, reel)
-    raw = render_clean(take, a, b, f"site-{slug}", shared)
-    dest = OUT / f"site-{slug}.mp4"
-    finish(raw, dest)
-    return {**have, "file": str(dest), "colour": COLOUR, "reel": reel.name, "how": f"{reel.name}'s stretch, rendered clean"}
+def current(have: dict) -> bool:
+    """Whether a ledger entry was made as a copy is made now."""
+    return (have.get("cut"), have.get("floor"), have.get("colour"), have.get("span")) == (CUT, FLOOR, COLOUR, SPAN)
 
 
 def main(argv):
-    apply, link_only, check_only = "--apply" in argv, "--link" in argv, "--check" in argv
+    apply, link_only = "--apply" in argv, "--link" in argv
     only = [a for a in argv if not a.startswith("--")]
     songs = [s for s in order() if not only or s in only]
     ledger = json.loads(LEDGER.read_text()) if LEDGER.exists() else {}
-    cloud = Cloud(env()) if apply else None
+    lock = threading.Lock()
 
     def save(slug, have):
-        ledger[slug] = have
-        LEDGER.write_text(json.dumps(ledger, indent=2))
+        with lock:
+            ledger[slug] = have
+            LEDGER.write_text(json.dumps(ledger, indent=2))
 
-    for slug in songs:
-        have = ledger.get(slug, {})
+    def say(line):
+        with lock:
+            print(line, flush=True)
+
+    if not apply:
+        for slug in songs:
+            have = ledger.get(slug, {})
+            done = current(have) and have.get("linked")
+            take, show, _ = source(slug)
+            say(f"{slug:26} {'done' if done else 'to make'}  ({take}, {show.relative_to(SHOWS)})")
+        return
+
+    cloud = Cloud(env())
+
+    def ship(slug, have):
+        """Encode, upload, link: the half that runs while the next song renders."""
         title = TITLES[slug]
-        if check_only:  # every frame of every Reel, against the HUD strip: nothing is written
-            if slug != "billie-jean":
-                for reel in reels_of(slug):
-                    c = clear_of_hud(reel)
-                    verdict = "clear" if not c["near"] else f"near in {c['near']} of {c['frames']} frames"
-                    print(f"{slug:26} {reel.name[-18:]:18} {verdict}", flush=True)
-                    if not c["near"]:
-                        break
-            continue
-        if not apply:
-            src = "a clean render of its Reel stretch" if slug == "billie-jean" else reel_of(slug).name
-            print(f"{slug:26} {have.get('how') or 'to make'}  ({src})")
-            continue
-        if have.get("uid") and have.get("colour") != COLOUR and not link_only:
-            # made before the colour fix: made again (its old upload is kept aside in the ledger)
-            have = {"replaced": [*have.get("replaced", []), have["uid"]]}
-        if not link_only:
-            if not have.get("file") or not Path(have["file"]).exists() or have.get("colour") != COLOUR:
-                print(f"\n{title}: making", flush=True)
-                have = make(slug, have)
+        try:
+            if not link_only and not have.get("uid"):
+                dest = OUT / f"site-{slug}.mp4"
+                finish(Path(have["raw"]), dest, slug)
+                have = {**have, "file": str(dest)}
                 save(slug, have)
-                print(f"{title}: {have['how']}", flush=True)
-                if not have.get("file"):
-                    continue
-            if not have.get("uid"):
-                print(f"{title}: uploading", flush=True)
-                uid = cloud.upload(Path(have["file"]), f"site · {title}")
+                say(f"{title}: uploading")
+                uid = cloud.upload(dest, f"site · {title}")
                 cloud.finish(uid, title)
-                have["uid"] = uid
+                have = {**have, "uid": uid}
                 save(slug, have)
-        if have.get("uid") and not have.get("linked"):
-            try:
+            if have.get("uid") and not have.get("linked"):
                 cloud.sql("UPDATE campaigns SET site_video = ? WHERE id = ?", [have["uid"], campaign_id(slug)])
-            except SystemExit as no:  # before migration 170 there is no column to write: keep making the rest
-                print(f"{title}: not linked yet ({no}); run migration 170, then --link --apply", flush=True)
-                continue
-            have["linked"] = True
-            save(slug, have)
-            print(f"{title}: linked ({have['uid']})", flush=True)
+                have = {**have, "linked": True}
+                save(slug, have)
+                say(f"{title}: linked ({have['uid']})")
+        except (Exception, SystemExit) as failed:  # one song failing leaves the rest to go on; a rerun picks it up
+            say(f"{title}: FAILED ({failed})")
+
+    # songs ship behind the next one's render; once the renders are made, a couple at a time
+    with ThreadPoolExecutor(SHIPPING_AT_ONCE) as shipping:
+        for slug in songs:
+            have = ledger.get(slug, {})
+            if not link_only and not current(have):
+                # made before as a Reel, on another floor, before the colour fix or uncut: made again (a render already
+                # made is kept), its old upload kept aside
+                have = {"replaced": [*have.get("replaced", []), *([have["uid"]] if have.get("uid") else [])],
+                        "cut": CUT, "floor": FLOOR, "colour": COLOUR, "span": SPAN,
+                        "how": f"the whole dance, rendered clean on the {FLOOR} floor, opened and closed like its YouTube cut"}
+                save(slug, have)
+            if not link_only and not have.get("raw"):
+                say(f"{TITLES[slug]}: rendering")
+                have = {**have, "raw": str(render(slug))}
+                save(slug, have)
+            shipping.submit(ship, slug, have)
 
 
 if __name__ == "__main__":

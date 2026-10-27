@@ -1,7 +1,7 @@
 /**
  * The room (lib/room): the colour a page is set in, and the writing on it.
  */
-import { onRoom, roomFor, ROOM_DARK, ROOM_INK, ROOM_SAND } from '@/lib/room';
+import { isRoomRoute, onRoom, roomFor, ROOM_DARK, ROOM_INK, ROOM_SAND } from '@/lib/room';
 import type { Level } from '@/lib/levels';
 
 const level = (id: string, colour: string) => ({ id, colour }) as Level;
@@ -36,5 +36,16 @@ describe('roomFor', () => {
   });
   it('is the house ink before anything is out', () => {
     expect(roomFor([])).toEqual({ colour: ROOM_DARK, on: ROOM_SAND, level: null });
+  });
+});
+
+describe('isRoomRoute', () => {
+  it('knows the pages set in the room, so the old sidebar stays out from under them', () => {
+    for (const path of ['/', '/links', '/levels', '/levels/p1', '/gear', '/music', '/store/product/infinity-hoodie', '/store/cart', '/legal', '/messages/abc'])
+      expect(isRoomRoute(path)).toBe(true);
+  });
+
+  it('leaves the rest alone, and a name that only starts like a room', () => {
+    for (const path of ['/clips', '/media', '/admin', '/store', '/gearbox', '/legalese', null, undefined]) expect(isRoomRoute(path)).toBe(false);
   });
 });

@@ -9,6 +9,8 @@ import type { Metadata } from 'next';
 export const metadata: Metadata = generateSeoMetadata({
   description: 'Odubo Studio: the music and dance of Mani Odubo, and B.A.A.D Creative Wear.',
   path: '/',
+  // The newest level's card (app/share/[card]); with none out, it shows the house's
+  ogImage: '/share/newest',
 });
 
 export const dynamic = 'force-dynamic';

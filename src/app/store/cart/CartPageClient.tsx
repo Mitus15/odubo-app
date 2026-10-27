@@ -1,7 +1,7 @@
 "use client";
-import ScreenLayout from '@/components/ui/ScreenLayout';
-import ScrollContainer from '@/components/ui/ScrollContainer';
 import Link from 'next/link';
+import { RoomShell, Symbol } from '@/components/room/RoomParts';
+import { onRoom, ROOM_DARK } from '@/lib/room';
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { usePageAnalytics } from '@/hooks/usePageAnalytics';
@@ -14,7 +14,10 @@ import { getVisitorId } from '@/lib/visitorId';
 import { isPreorderActive, PREORDER_CHECKOUT_CTA, PREORDER_DISCLAIMER } from '@/config/preorder';
 import { formatMoney, getCountryFromCookie } from '@/lib/store/money';
 
-export default function CartPage() {
+/** A line drawn in the room's writing, faint */
+const HAIRLINE = 'color-mix(in srgb, currentColor 35%, transparent)';
+
+export default function CartPage({ room }: { room: string | null }) {
   // The one bag (lib/store/bag.ts), through the StoreProvider: the same items
   // the grid's panel, QuickShop and the badge hold. This page used to keep its
   // own under another key.
@@ -123,133 +126,116 @@ export default function CartPage() {
     }
   };
 
+  const colour = room || ROOM_DARK;
+  const on = onRoom(colour);
+
   return (
-    <ScreenLayout>
-      <div className="fixed inset-0 -z-10 bg-[#0c0a09]" />
-      <ScrollContainer>
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="flex items-center justify-between mb-12">
-            <h1 className="text-3xl font-medium text-[#ede8df] tracking-wide">Your Cart</h1>
-            <Link href="/store" className="text-xs uppercase tracking-widest text-[#b2a491] hover:text-[#ede8df] transition-colors">
-              Continue Shopping
+    <RoomShell
+      colour={colour}
+      on={on}
+      corner={
+        <Link href="/gear" aria-label="Back to the gear" title="The gear" className="flex h-11 w-11 items-center justify-center transition-[opacity,transform] hover:opacity-70 active:scale-95">
+          <Symbol name="gear" className="h-6 w-6" />
+        </Link>
+      }
+    >
+      <main className="room-fade mx-auto w-full max-w-4xl px-5 pt-2 lg:px-10" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 40px)' }}>
+        <h1 className="room-display flex items-center justify-center gap-2.5 text-[clamp(24px,7vw,36px)] uppercase leading-none lg:justify-start">
+          <Symbol name="bag" className="h-[0.9em] w-[0.9em]" />
+          Your bag
+        </h1>
+
+        {items.length === 0 ? (
+          <div className="mt-16 flex flex-col items-center text-center">
+            <p className="room-eyebrow">Nothing in it yet</p>
+            <Link
+              href="/gear"
+              className="mt-6 flex min-h-[52px] w-full max-w-xs items-center justify-center rounded-full text-[15px] font-semibold tracking-wide active:scale-[0.98]"
+              style={{ background: on, color: colour }}
+            >
+              See the gear
             </Link>
           </div>
-
-          {items.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 border border-[#502d26]/20 rounded-sm bg-[#1c1a19]/20">
-              <p className="text-[#b2a491] uppercase tracking-widest text-sm mb-6">Your cart is empty</p>
-              <Link 
-                href="/store" 
-                className="px-8 py-3 bg-[#302927] text-[#ede8df] text-xs uppercase tracking-widest hover:bg-[#502d26] transition-colors"
-              >
-                Browse Store
-              </Link>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-              {/* Cart Items */}
-              <div className="lg:col-span-2 space-y-8">
-                {items.map((it) => (
-                  <div key={it.variantId} className="flex gap-6 py-6 border-b border-[#502d26]/20 first:pt-0">
-                    <div className="w-24 h-32 bg-[#1c1a19]/20 flex-shrink-0">
-                      {it.image ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={it.image.url} alt={it.image.altText || it.title} className="w-full h-full object-contain" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-[#502d26] text-[10px] uppercase">No Image</div>
-                      )}
-                    </div>
-                    
-                    <div className="flex-1 flex flex-col justify-between">
-                      <div>
-                        <div className="flex justify-between items-start mb-2">
-                          <h3 className="text-[#ede8df] font-medium text-lg tracking-wide">{it.title}</h3>
-                          <p className="text-[#ede8df] font-light tracking-widest">{formatMoney(Number(it.price) * it.quantity, it.currency || cartCurrency)}</p>
-                        </div>
-                        <p className="text-[#b2a491] text-xs uppercase tracking-widest mb-4">{it.variantTitle && it.variantTitle !== 'Default Title' ? it.variantTitle : 'Default'}</p>
+        ) : (
+          <div className="mt-8 grid grid-cols-1 gap-10 lg:grid-cols-3 lg:gap-14">
+            {/* What is in it */}
+            <ul className="lg:col-span-2">
+              {items.map((it) => (
+                <li key={it.variantId} className="flex gap-5 border-b py-5 first:pt-0" style={{ borderColor: HAIRLINE }}>
+                  <div className="flex h-28 w-24 shrink-0 items-center justify-center">
+                    {it.image ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={it.image.url} alt={it.image.altText || it.title} className="h-full w-full object-contain" />
+                    ) : (
+                      <Symbol name="gear" className="h-8 w-8 opacity-40" />
+                    )}
+                  </div>
+                  <div className="flex min-w-0 flex-1 flex-col justify-between">
+                    <div>
+                      <div className="flex items-start justify-between gap-3">
+                        <h2 className="room-display text-[17px] uppercase leading-tight">{it.title}</h2>
+                        <p className="shrink-0 text-[15px]">{formatMoney(Number(it.price) * it.quantity, it.currency || cartCurrency)}</p>
                       </div>
-
-                      <div className="flex justify-between items-end">
-                        <div className="flex items-center border border-[#502d26]/40">
-                          <button 
-                            onClick={() => dec(it.variantId)} 
-                            className="w-8 h-8 flex items-center justify-center text-[#b2a491] hover:text-[#ede8df] hover:bg-[#502d26]/20 transition-colors"
-                          >
-                            -
-                          </button>
-                          <span className="w-8 text-center text-[#ede8df] text-sm">{it.quantity}</span>
-                          <button 
-                            onClick={() => inc(it.variantId)} 
-                            className="w-8 h-8 flex items-center justify-center text-[#b2a491] hover:text-[#ede8df] hover:bg-[#502d26]/20 transition-colors"
-                          >
-                            +
-                          </button>
-                        </div>
-                        <button 
-                          onClick={() => remove(it.variantId)} 
-                          className="text-[10px] uppercase tracking-widest text-[#502d26] hover:text-red-400 transition-colors"
-                        >
-                          Remove
+                      {it.variantTitle && it.variantTitle !== 'Default Title' && <p className="room-eyebrow mt-1">{it.variantTitle}</p>}
+                    </div>
+                    <div className="mt-3 flex items-center justify-between">
+                      <div className="flex items-center rounded-full border" style={{ borderColor: HAIRLINE }}>
+                        <button type="button" onClick={() => dec(it.variantId)} aria-label={`One less ${it.title}`} className="flex h-11 w-11 items-center justify-center text-[18px] hover:opacity-70">
+                          &minus;
+                        </button>
+                        <span className="w-6 text-center text-[14px] tabular-nums" aria-label={`${it.quantity} in the bag`}>{it.quantity}</span>
+                        <button type="button" onClick={() => inc(it.variantId)} aria-label={`One more ${it.title}`} className="flex h-11 w-11 items-center justify-center text-[18px] hover:opacity-70">
+                          +
                         </button>
                       </div>
+                      <button type="button" onClick={() => remove(it.variantId)} className="room-eyebrow min-h-[44px] px-1 underline underline-offset-4 hover:opacity-70">
+                        Remove
+                      </button>
                     </div>
                   </div>
-                ))}
-              </div>
+                </li>
+              ))}
+            </ul>
 
-              {/* Summary */}
-              <div className="lg:col-span-1">
-                <div className="bg-[#1c1a19]/40 p-8 border border-[#502d26]/20 sticky top-24">
-                  <h2 className="text-[#ede8df] text-sm uppercase tracking-widest mb-6 pb-4 border-b border-[#502d26]/20">Order Summary</h2>
-                  
-                  <div className="flex justify-between items-center mb-4">
-                    <span className="text-[#b2a491] text-sm">Subtotal</span>
-                    <span className="text-[#ede8df] tracking-widest">{formatMoney(subtotal, cartCurrency)}</span>
-                  </div>
-                  
-                  <div className="flex justify-between items-center mb-8">
-                    <span className="text-[#b2a491] text-sm">Shipping</span>
-                    <span className="text-[#b2a491] text-[10px] uppercase tracking-widest text-right leading-tight">Calculated at<br/>checkout</span>
-                  </div>
-
-                  {inventoryError && (
-                    <div className="mb-4 p-3 rounded border border-red-500/30 bg-red-500/10 text-red-300 text-sm">
-                      {inventoryError}
-                    </div>
-                  )}
-
-                  {checkoutError && (
-                    <div className="mb-4 p-3 border border-[#502d26]/40 bg-[#1c1a19]/60 text-[#ede8df] text-sm leading-relaxed" role="alert">
-                      {checkoutError}
-                    </div>
-                  )}
-
-                  {isPreorderActive() && (
-                    <div className="mb-4 p-3 border border-[#843c2d]/20 bg-[#843c2d]/5">
-                      <p className="text-[11px] text-[#b2a491] leading-relaxed">{PREORDER_DISCLAIMER}</p>
-                    </div>
-                  )}
-
-                  <button
-                    onClick={handleCheckout}
-                    disabled={isRedirecting || isChecking}
-                    className="w-full py-4 bg-[#843c2d] text-[#ede8df] text-sm uppercase tracking-[0.2em] hover:bg-[#a0472f] transition-colors disabled:opacity-50 disabled:cursor-wait"
-                  >
-                    {isChecking ? 'Checking...' : isRedirecting ? 'Redirecting...' : checkoutError ? 'Try again' : (isPreorderActive() ? PREORDER_CHECKOUT_CTA : 'Checkout')}
-                  </button>
-                  
-                  <p className="mt-4 text-center text-[10px] text-[#502d26] uppercase tracking-widest">
-                    Secure checkout via Shopify
-                  </p>
+            {/* What it comes to, and the way out to Shopify's checkout */}
+            <div className="lg:col-span-1">
+              <div className="lg:sticky lg:top-6">
+                <div className="flex items-center justify-between text-[15px]">
+                  <span className="room-eyebrow">Subtotal</span>
+                  <span>{formatMoney(subtotal, cartCurrency)}</span>
                 </div>
+                <div className="mt-3 flex items-center justify-between">
+                  <span className="room-eyebrow">Shipping</span>
+                  <span className="room-eyebrow">At checkout</span>
+                </div>
+
+                {inventoryError && (
+                  <p className="mt-5 border-l-2 pl-3 text-[14px]" style={{ borderColor: on }} role="alert">
+                    {inventoryError}
+                  </p>
+                )}
+                {checkoutError && (
+                  <p className="mt-5 border-l-2 pl-3 text-[14px] leading-relaxed" style={{ borderColor: on }} role="alert">
+                    {checkoutError}
+                  </p>
+                )}
+                {isPreorderActive() && <p className="mt-5 text-[12px] leading-relaxed opacity-80">{PREORDER_DISCLAIMER}</p>}
+
+                <button
+                  type="button"
+                  onClick={handleCheckout}
+                  disabled={isRedirecting || isChecking}
+                  className="mt-7 flex min-h-[52px] w-full items-center justify-center rounded-full text-[15px] font-semibold tracking-wide transition-[transform,opacity] active:scale-[0.98] disabled:cursor-wait disabled:opacity-60"
+                  style={{ background: on, color: colour }}
+                >
+                  {isChecking ? 'Checking' : isRedirecting ? 'On the way' : checkoutError ? 'Try again' : (isPreorderActive() ? PREORDER_CHECKOUT_CTA : 'Checkout')}
+                </button>
+                <p className="room-eyebrow mt-4 text-center !text-[10px] opacity-70">Secure checkout by Shopify</p>
               </div>
             </div>
-          )}
-        </div>
-      </ScrollContainer>
-    </ScreenLayout>
+          </div>
+        )}
+      </main>
+    </RoomShell>
   );
 }
-
-
-

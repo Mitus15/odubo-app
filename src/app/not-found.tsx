@@ -1,40 +1,31 @@
 import Link from 'next/link';
-import Image from 'next/image';
-import { ODUBO_MARK, ODUBO_MARK_ASPECT } from '@/lib/brand/marks';
+import { RoomShell, Symbol } from '@/components/room/RoomParts';
+import { onRoom, ROOM_DARK } from '@/lib/room';
 
+/**
+ * A door that opens onto nothing (a typo, a level that is not out, an album
+ * that is not there), set in the house's dark room: the lock in the middle,
+ * one line, and the room's one drawn shape back home.
+ */
 export default function NotFound() {
+  const on = onRoom(ROOM_DARK);
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#302927] via-[#171616] to-[#302927] px-4">
-      <div className="max-w-md w-full text-center">
-        {/* odubo studio Logo Mark */}
-        <div className="mb-8">
-          <Image
-            src={ODUBO_MARK}
-            alt="odubo studio"
-            width={Math.round(48 * ODUBO_MARK_ASPECT)}
-            height={48}
-            className="mx-auto opacity-40"
-          />
-        </div>
-
-        {/* Title */}
-        <h1 className="text-2xl font-serif font-medium text-[#ede8df] mb-3">
-          This page doesn&rsquo;t exist.
-        </h1>
-
-        {/* Description */}
-        <p className="text-[#b2a491] mb-8">
-          The page you&rsquo;re looking for may have moved or no longer exists.
-        </p>
-
-        {/* Single CTA — master button handles the rest */}
+    <RoomShell colour={ROOM_DARK} on={on}>
+      <main
+        className="flex min-h-[calc(100%-env(safe-area-inset-top)-56px)] flex-col items-center justify-center px-6 text-center"
+        // as much under it as the danceman's header above, so the lock sits in the middle of the screen
+        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + var(--room-top))' }}
+      >
+        <Symbol name="lock" className="h-20 w-20" />
+        <h1 className="room-display mt-8 text-[22px] leading-tight">Nothing behind this door.</h1>
         <Link
           href="/"
-          className="inline-block px-6 py-3 rounded-xl bg-[#843c2d] text-[#ede8df] font-medium hover:bg-[#6d3224] transition-colors"
+          className="mt-10 flex min-h-[52px] w-full max-w-xs items-center justify-center rounded-full text-[15px] font-semibold tracking-wide transition-transform active:scale-[0.98]"
+          style={{ background: on, color: ROOM_DARK }}
         >
-          Enter the Studio
+          Back to the room
         </Link>
-      </div>
-    </div>
+      </main>
+    </RoomShell>
   );
 }

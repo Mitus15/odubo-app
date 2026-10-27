@@ -5,12 +5,12 @@ import { queryDatabase } from '@/lib/db';
 import { generateSeoMetadata } from '@/lib/seo';
 import { CATCHING_LIGHT } from '@/lib/music/catchingLight';
 import MusicLocked from './MusicLocked';
-import { getLevels } from '@/lib/levels';
+import { getLevels } from '@/lib/levelsServer';
 import { roomFor } from '@/lib/room';
 
 export const metadata: Metadata = generateSeoMetadata({
   title: 'Music',
-  description: `Mani Odubo: ${CATCHING_LIGHT.title}, and what comes next.`,
+  description: `Odubo Studio: ${CATCHING_LIGHT.title}, the album by Mani Odubo.`,
   path: '/music',
   ogImage: CATCHING_LIGHT.cover,
 });

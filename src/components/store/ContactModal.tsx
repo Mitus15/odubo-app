@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, FormEvent, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, FormEvent, useEffect, useId, useLayoutEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
+import { ROOM_INK, ROOM_SAND } from '@/lib/room';
 
 type InquiryType = 'order' | 'refund' | 'shipping' | 'general';
 
@@ -24,6 +25,28 @@ interface ContactModalProps {
   onClose: () => void;
 }
 
+/** What it is about, in a word each (api/contact files it under the topic) */
+const inquiryLabels: Record<InquiryType, string> = {
+  order: 'Order',
+  refund: 'Returns',
+  shipping: 'Shipping',
+  general: 'Other',
+};
+
+const FIELD =
+  'min-h-[48px] w-full border-b border-[#f0d3ad]/40 bg-transparent text-[16px] outline-none placeholder:text-[#f0d3ad]/45 focus:border-[#f0d3ad]';
+
+/**
+ * Write to the studio: a sheet of the house's ink rising from the floor, the
+ * same slot as Save your progress. Name, email, what it is about, the
+ * message, and Send, the one drawn shape; api/contact opens the conversation
+ * and answers with its private link. Closed with its X, never by dragging.
+ *
+ * The sheet is always in the page, out of sight and inert, and put on the
+ * page's body (out of the room, the store and the link tree, z-200), so the
+ * tap that opens it can put the keyboard up on the name: a phone only raises
+ * it for a field focused inside the tap itself.
+ */
 export default function ContactModal({ isOpen, onClose }: ContactModalProps) {
   const [formData, setFormData] = useState<FormData>({
     name: '',
@@ -37,6 +60,14 @@ export default function ContactModal({ isOpen, onClose }: ContactModalProps) {
   const [threadUrl, setThreadUrl] = useState<string | null>(null);
   // One id per open of the form: a double tap on Send is one message, not two.
   const [submissionId, setSubmissionId] = useState(() => newSubmissionId());
+  const [host, setHost] = useState<HTMLElement | null>(null);
+  const nameField = useRef<HTMLInputElement>(null);
+  const closer = useRef<HTMLButtonElement>(null);
+  const conversation = useRef<HTMLAnchorElement>(null);
+  // More than one of these can be in the page at once (a room's small print, the store's), each out of sight
+  const id = useId();
+
+  useEffect(() => setHost(document.body), []);
 
   // Reset form when modal closes
   useEffect(() => {
@@ -70,6 +101,24 @@ export default function ContactModal({ isOpen, onClose }: ContactModalProps) {
     }
   }, [isOpen, onClose]);
 
+  // Opening: the name takes the focus inside the opening tap (a layout effect
+  // runs in the tap's own turn). Closing: the keyboard goes down and the focus
+  // goes back where it was.
+  useLayoutEffect(() => {
+    if (!isOpen || !host) return;
+    const back = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    nameField.current?.focus({ preventScroll: true });
+    return () => {
+      if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+      back?.focus({ preventScroll: true });
+    };
+  }, [isOpen, host]);
+
+  // Sent: the form is gone, so the focus goes on to the way into the conversation (and the keyboard down)
+  useEffect(() => {
+    if (status === 'success') (conversation.current ?? closer.current)?.focus({ preventScroll: true });
+  }, [status]);
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setStatus('loading');
@@ -96,217 +145,161 @@ export default function ContactModal({ isOpen, onClose }: ContactModalProps) {
     }
   };
 
-  const inquiryLabels: Record<InquiryType, string> = {
-    order: 'Order Status',
-    refund: 'Returns',
-    shipping: 'Shipping',
-    general: 'General',
-  };
+  if (!host) return null;
 
-  return (
-    <AnimatePresence>
-      {isOpen && (
-        <div className="fixed inset-0 z-[100]" role="dialog" aria-modal="true" aria-label="Contact Us">
-          {/* Backdrop */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="absolute inset-0 bg-black/80 backdrop-blur-xl"
+  return createPortal(
+    <div className="room contents">
+      {/* The room dims behind the sheet; a tap on it closes */}
+      <div
+        aria-hidden="true"
+        onClick={onClose}
+        className={`fixed inset-0 z-[210] bg-[#2a0f0a]/30 transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
+      />
+      <div
+        inert={!isOpen}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={`${id}-title`}
+        className={`fixed inset-x-0 bottom-0 z-[211] mx-auto w-full max-w-md px-3 transition-transform duration-500 ease-[cubic-bezier(0.2,0.9,0.25,1.1)] ${isOpen ? 'translate-y-0' : 'translate-y-[115%]'}`}
+        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 12px)' }}
+      >
+        <div
+          className="relative max-h-[calc(100dvh-env(safe-area-inset-top)-24px)] overflow-y-auto overscroll-contain px-5 pb-6 pt-5"
+          style={{ background: ROOM_INK, color: ROOM_SAND, boxShadow: `inset 0 0 0 1.5px ${ROOM_SAND}40` }}
+        >
+          <button
+            ref={closer}
+            type="button"
             onClick={onClose}
-          />
-
-          {/* Modal content */}
-          <motion.div
-            initial={{ opacity: 0, y: 40, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 40, scale: 0.95 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 35 }}
-            className="absolute inset-0 flex items-center justify-center overflow-y-auto"
-            style={{
-              paddingTop: 'calc(40px + env(safe-area-inset-top, 0px))',
-              paddingBottom: 'calc(40px + env(safe-area-inset-bottom, 0px))',
-              paddingLeft: 'max(1rem, env(safe-area-inset-left, 16px))',
-              paddingRight: 'max(1rem, env(safe-area-inset-right, 16px))',
-            }}
+            aria-label="Close"
+            className="absolute right-2 top-2 flex h-11 w-11 items-center justify-center opacity-80 hover:opacity-100"
           >
-            <div className="w-full max-w-lg" onClick={(e) => e.stopPropagation()}>
-              <div className="relative rounded-2xl sm:rounded-3xl glass-surface border border-white/10 bg-[#0f0b0b]/95 shadow-[0_30px_120px_rgba(0,0,0,0.45)] overflow-hidden">
-                {/* Close button — inside card, top right */}
-                <button
-                  aria-label="Close"
-                  onClick={onClose}
-                  className="absolute top-4 right-4 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-white/5 text-[#ede8df]/50 hover:text-[#ede8df] hover:bg-white/10 transition-all"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+              <path strokeLinecap="round" d="M6 6l12 12M18 6L6 18" />
+            </svg>
+          </button>
+
+          <p id={`${id}-title`} className="room-display text-[13px] uppercase tracking-[0.24em]">
+            {status === 'success' ? 'Sent' : 'Write to the studio'}
+          </p>
+
+          {status === 'success' ? (
+            <div role="status">
+              <p className="mt-3 text-[15px]">The studio writes back within a day or two.</p>
+              {threadUrl && (
+                <a ref={conversation} href={threadUrl} className="mt-2 inline-flex min-h-[44px] items-center gap-1.5 text-[15px] underline decoration-[#f0d3ad]/50 underline-offset-4 hover:decoration-[#f0d3ad]">
+                  Open your conversation
+                  <svg className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth={2.2} viewBox="0 0 24 24" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M7 17L17 7M9 7h8v8" />
                   </svg>
-                </button>
-
-                <div className="p-5 sm:p-6 text-[#ede8df]">
-                  {/* Header */}
-                  <div className="text-center mb-6">
-                    <h2 className="text-xl sm:text-2xl font-serif font-medium mb-2">Contact Us</h2>
-                    <p className="text-sm text-[#b2a491]">
-                      You will hear back within a day or two.
-                    </p>
-                  </div>
-
-                  {/* Success Message */}
-                  {status === 'success' ? (
-                    <div className="text-center py-8">
-                      <div className="w-14 h-14 rounded-full bg-green-500/20 flex items-center justify-center mx-auto mb-4">
-                        <svg className="w-7 h-7 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                      </div>
-                      <h3 className="text-lg font-medium text-[#ede8df] mb-2">We have it.</h3>
-                      <p className="text-sm text-[#b2a491] mb-2">
-                        You will hear back within a day or two, here and by email.
-                      </p>
-                      {threadUrl && (
-                        <a
-                          href={threadUrl}
-                          className="inline-block mb-6 text-sm text-[#d9aa7a] hover:text-[#ede8df] underline underline-offset-4 decoration-[#843c2d] min-h-[44px] leading-[44px]"
-                        >
-                          Open your conversation
-                        </a>
-                      )}
-                      <br />
-                      <button
-                        onClick={onClose}
-                        className="px-6 py-2.5 rounded-xl bg-white/10 text-[#ede8df] hover:bg-white/15 transition-colors text-sm"
-                      >
-                        Close
-                      </button>
-                    </div>
-                  ) : (
-                    /* Contact Form */
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                      {/* Name & Email Row */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                          <label htmlFor="modal-name" className="block text-xs font-medium text-[#b2a491] mb-1.5">
-                            Name
-                          </label>
-                          <input
-                            type="text"
-                            id="modal-name"
-                            required
-                            value={formData.name}
-                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                            className="w-full px-3 py-2.5 rounded-lg bg-white/5 border border-white/10 text-[#ede8df] placeholder-[#726d6c] text-sm focus:outline-none focus:ring-2 focus:ring-[#843c2d]/50 focus:border-[#843c2d]/50 transition-colors"
-                            placeholder="Your name"
-                          />
-                        </div>
-                        <div>
-                          <label htmlFor="modal-email" className="block text-xs font-medium text-[#b2a491] mb-1.5">
-                            Email
-                          </label>
-                          <input
-                            type="email"
-                            id="modal-email"
-                            required
-                            value={formData.email}
-                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                            className="w-full px-3 py-2.5 rounded-lg bg-white/5 border border-white/10 text-[#ede8df] placeholder-[#726d6c] text-sm focus:outline-none focus:ring-2 focus:ring-[#843c2d]/50 focus:border-[#843c2d]/50 transition-colors"
-                            placeholder="you@example.com"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Order Number (optional) */}
-                      <div>
-                        <label htmlFor="modal-order" className="block text-xs font-medium text-[#b2a491] mb-1.5">
-                          Order Number <span className="text-[#726d6c]">(optional)</span>
-                        </label>
-                        <input
-                          type="text"
-                          id="modal-order"
-                          value={formData.orderNumber}
-                          onChange={(e) => setFormData({ ...formData, orderNumber: e.target.value })}
-                          className="w-full px-3 py-2.5 rounded-lg bg-white/5 border border-white/10 text-[#ede8df] placeholder-[#726d6c] text-sm focus:outline-none focus:ring-2 focus:ring-[#843c2d]/50 focus:border-[#843c2d]/50 transition-colors"
-                          placeholder="#1234"
-                        />
-                      </div>
-
-                      {/* Inquiry Type */}
-                      <div>
-                        <label className="block text-xs font-medium text-[#b2a491] mb-1.5">
-                          What can we help with?
-                        </label>
-                        <div className="flex flex-wrap gap-2">
-                          {(Object.keys(inquiryLabels) as InquiryType[]).map((type) => (
-                            <button
-                              key={type}
-                              type="button"
-                              onClick={() => setFormData({ ...formData, inquiryType: type })}
-                              className={`px-3 py-1.5 rounded-lg text-xs transition-all ${
-                                formData.inquiryType === type
-                                  ? 'bg-[#843c2d]/30 border-[#843c2d]/50 text-[#ede8df]'
-                                  : 'bg-white/5 border-white/10 text-[#b2a491] hover:bg-white/10'
-                              } border`}
-                            >
-                              {inquiryLabels[type]}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Message */}
-                      <div>
-                        <label htmlFor="modal-message" className="block text-xs font-medium text-[#b2a491] mb-1.5">
-                          Message
-                        </label>
-                        <textarea
-                          id="modal-message"
-                          required
-                          rows={4}
-                          value={formData.message}
-                          onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                          className="w-full px-3 py-2.5 rounded-lg bg-white/5 border border-white/10 text-[#ede8df] placeholder-[#726d6c] text-sm focus:outline-none focus:ring-2 focus:ring-[#843c2d]/50 focus:border-[#843c2d]/50 transition-colors resize-none"
-                          placeholder="Tell us how we can help..."
-                        />
-                      </div>
-
-                      {/* Error Message */}
-                      {status === 'error' && (
-                        <div className="px-3 py-2.5 rounded-lg bg-red-500/10 border border-red-500/30 text-red-300 text-xs">
-                          {errorMessage}
-                        </div>
-                      )}
-
-                      {/* Submit Button */}
-                      <button
-                        type="submit"
-                        disabled={status === 'loading'}
-                        className="w-full py-3 rounded-xl bg-gradient-to-r from-[#843c2d] to-[#6d3224] text-[#ede8df] font-medium hover:opacity-90 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg text-sm"
-                      >
-                        {status === 'loading' ? (
-                          <span className="flex items-center justify-center gap-2">
-                            <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                            </svg>
-                            Sending...
-                          </span>
-                        ) : (
-                          'Send Message'
-                        )}
-                      </button>
-
-                      <p className="text-center text-[10px] text-[#726d6c] pt-2">
-                        You get a private link to the conversation, no account needed.
-                      </p>
-                    </form>
-                  )}
-                </div>
-              </div>
+                </a>
+              )}
             </div>
-          </motion.div>
+          ) : (
+            <form onSubmit={handleSubmit} className="mt-3 flex flex-col gap-2">
+              <label htmlFor={`${id}-name`} className="sr-only">
+                Name
+              </label>
+              <input
+                ref={nameField}
+                type="text"
+                id={`${id}-name`}
+                required
+                autoComplete="name"
+                enterKeyHint="next"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className={FIELD}
+                placeholder="Your name"
+              />
+              <label htmlFor={`${id}-email`} className="sr-only">
+                Email
+              </label>
+              <input
+                type="email"
+                id={`${id}-email`}
+                required
+                inputMode="email"
+                autoComplete="email"
+                enterKeyHint="next"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                className={FIELD}
+                placeholder="Your email"
+              />
+
+              {/* What it is about: a word each, the chosen one underlined */}
+              <div role="group" aria-label="What it is about" className="mt-1 flex flex-wrap gap-x-5">
+                {(Object.keys(inquiryLabels) as InquiryType[]).map((type) => {
+                  const chosen = formData.inquiryType === type;
+                  return (
+                    <button
+                      key={type}
+                      type="button"
+                      aria-pressed={chosen}
+                      onClick={() => setFormData({ ...formData, inquiryType: type })}
+                      className={`min-h-[44px] text-[14px] underline-offset-[6px] transition-opacity ${chosen ? 'underline decoration-[1.5px]' : 'opacity-55 hover:opacity-85'}`}
+                    >
+                      {inquiryLabels[type]}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <label htmlFor={`${id}-order`} className="sr-only">
+                Order number, if there is one
+              </label>
+              <input
+                type="text"
+                id={`${id}-order`}
+                enterKeyHint="next"
+                value={formData.orderNumber}
+                onChange={(e) => setFormData({ ...formData, orderNumber: e.target.value })}
+                className={FIELD}
+                placeholder="Order number, if any"
+              />
+              <label htmlFor={`${id}-message`} className="sr-only">
+                Message
+              </label>
+              <textarea
+                id={`${id}-message`}
+                required
+                rows={4}
+                value={formData.message}
+                onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                className={`${FIELD} resize-none py-3 leading-relaxed`}
+                placeholder="Your message"
+              />
+
+              {status === 'error' && (
+                <p className="text-[13px] text-[#f4a36b]" role="alert">
+                  {sayError(errorMessage)}
+                </p>
+              )}
+
+              <button
+                type="submit"
+                disabled={status === 'loading'}
+                className="mt-3 flex min-h-[52px] items-center justify-center rounded-full text-[15px] font-semibold tracking-wide transition-transform active:scale-[0.98] disabled:opacity-60"
+                style={{ background: ROOM_SAND, color: ROOM_INK }}
+              >
+                {status === 'loading' ? 'Sending…' : 'Send'}
+              </button>
+              <p className="room-eyebrow mt-1 text-center !text-[10px] opacity-70">No account needed</p>
+            </form>
+          )}
         </div>
-      )}
-    </AnimatePresence>
+      </div>
+    </div>,
+    host,
   );
+}
+
+/** api/contact's refusals, in the room's voice */
+function sayError(error: string): string {
+  if (/required/i.test(error)) return 'A name, an email and a message, please.';
+  if (/valid email/i.test(error)) return 'That email does not look right.';
+  if (/too many/i.test(error)) return 'Too many tries. Give it a minute.';
+  if (/too long/i.test(error)) return 'That is too long. Keep it under 10,000 characters.';
+  return 'That did not go through. Try again.';
 }

@@ -21,7 +21,19 @@ export type HlsHandle = {
 // Track active HLS instances to prevent memory leaks
 const activeInstances = new WeakMap<HTMLVideoElement, any>();
 
-export async function attachHls(video: HTMLVideoElement, src: string, preloadOnly: boolean = false): Promise<HlsHandle | null> {
+export type HlsOptions = {
+  /**
+   * The rooms: start at the level that fills the player instead of the
+   * lowest, since a sharp still covers the wait (components/room/RoomVideo).
+   * The bitrate logic takes over after the first fragment, and the clips'
+   * remembered quality is left alone.
+   */
+  sharp?: boolean;
+  /** Seconds in to start from (the room's still is that moment: lib/sampler), the first time it plays; it loops from the top after */
+  startAt?: number;
+};
+
+export async function attachHls(video: HTMLVideoElement, src: string, preloadOnly: boolean = false, opts: HlsOptions = {}): Promise<HlsHandle | null> {
   // Cleanup any existing instance on this video element
   const existing = activeInstances.get(video);
   if (existing) {
@@ -29,8 +41,17 @@ export async function attachHls(video: HTMLVideoElement, src: string, preloadOnl
     activeInstances.delete(video);
   }
 
-  // Native HLS (Safari/iOS) - most reliable for autoplay
-  if (video.canPlayType('application/vnd.apple.mpegurl')) {
+  // Native HLS (Safari/iOS) - most reliable for autoplay. Chrome plays HLS natively now too, but starts on
+  // the lowest rendition (240p on a room's copy, 2026-10-27), so where sharpness is asked for, only Apple's
+  // player (which starts on the first, tallest, rendition) is used natively; elsewhere hls.js picks the start.
+  const applePlayer = typeof navigator !== 'undefined' && /apple/i.test(navigator.vendor || '');
+  const startAt = opts.startAt && opts.startAt > 0 ? opts.startAt : 0;
+  const seekOnce = () => {
+    if (!startAt) return;
+    video.addEventListener('loadedmetadata', () => { try { if (video.currentTime < startAt) video.currentTime = startAt; } catch {} }, { once: true });
+  };
+  if ((!opts.sharp || applePlayer) && video.canPlayType('application/vnd.apple.mpegurl')) {
+    seekOnce();
     video.src = src;
     // Pre-load for faster start
     video.load();
@@ -47,6 +68,16 @@ export async function attachHls(video: HTMLVideoElement, src: string, preloadOnl
   }
 
   const Hls = await ensureHls();
+  if ((!Hls || !Hls.isSupported?.()) && video.canPlayType('application/vnd.apple.mpegurl')) {
+    // No MediaSource for hls.js: the browser's own player after all
+    seekOnce();
+    video.src = src;
+    video.load();
+    return {
+      destroy: () => { try { video.pause(); video.removeAttribute('src'); video.load(); } catch {} },
+      isActive: () => !!video.src
+    };
+  }
   if (!Hls || !Hls.isSupported?.()) {
     // Fallback: set src directly (may work for MP4 or if browser supports HLS)
     video.src = src;
@@ -60,7 +91,10 @@ export async function attachHls(video: HTMLVideoElement, src: string, preloadOnl
   const { isMobile } = getDeviceInfo();
   const { isSlowNetwork, downlink } = getNetworkInfo();
   const bufferConfig = getHLSBufferConfig(preloadOnly);
-  const autoCap = isSlowNetwork || downlink < 3 ? 2 : -1;
+  // The clips cap at the third level on a guessed-slow line. A room's copy is light (its tallest level is
+  // ~1 Mbps), so a room is never capped by the guess; its start is held to what the line carries (below)
+  const { saveData } = getNetworkInfo();
+  const autoCap = opts.sharp ? (saveData ? 1 : -1) : isSlowNetwork || downlink < 3 ? 2 : -1;
   
   // TikTok's Secret: Get cached quality preference for warm start
   // Enhanced with connection-aware initial quality
@@ -96,6 +130,8 @@ export async function attachHls(video: HTMLVideoElement, src: string, preloadOnl
     // TikTok Strategy: Start at lowest quality for INSTANT playback
     lowLatencyMode: true,
     startLevel: getCachedQuality(), // Start low, upgrade fast
+    // A room waits for the manifest to pick its own start (below), then loads
+    autoStartLoad: !opts.sharp,
 
     // AGGRESSIVE quality upgrade (TikTok-style)
     abrEwmaFastLive: 1.0, // Upgrade quality faster (was 2.0)
@@ -124,23 +160,45 @@ export async function attachHls(video: HTMLVideoElement, src: string, preloadOnl
     levelLoadingMaxRetry: 3,
     fragLoadingMaxRetry: 4,
 
-    // Reduce latency by loading small fragments quickly
-    fragLoadPolicy: {
-      default: {
-        maxTimeToFirstByteMs: isSlowNetwork ? 1500 : 1000,
-        maxLoadDurationMs: isSlowNetwork ? 2000 : 1500,
-      },
-    } as any,
+    // Reduce latency by loading small fragments quickly. Not in a room: there a sharp first fragment is
+    // worth its wait (the still covers it), and a 1.5 s limit dropped it to 240p (2026-10-27)
+    ...(opts.sharp
+      ? {}
+      : {
+          fragLoadPolicy: {
+            default: {
+              maxTimeToFirstByteMs: isSlowNetwork ? 1500 : 1000,
+              maxLoadDurationMs: isSlowNetwork ? 2000 : 1500,
+            },
+          } as any,
+        }),
   });
   
   // Track this instance
   activeInstances.set(video, hls);
-  
+
+  if (opts.sharp) {
+    hls.once((Hls as any).Events.MANIFEST_PARSED, (_event: any, data: any) => {
+      const levels: { height: number; bitrate?: number }[] = data?.levels || [];
+      if (!levels.length) return hls.startLoad(startAt || -1);
+      // The smallest level at least as tall as the player on this screen, else the tallest (levels run low to high)
+      const need = (video.clientHeight || 960) * (window.devicePixelRatio || 1);
+      let pick = levels.findIndex((l) => l.height >= need);
+      if (pick < 0) pick = levels.length - 1;
+      // ...within what the line is thought to carry, when the browser says (Mbps, a rough guess, with room to spare)
+      const carries = downlink > 0 ? downlink * 1e6 * 0.8 : Infinity;
+      while (pick > 0 && (levels[pick].bitrate || 0) > carries) pick--;
+      if (autoCap >= 0) pick = Math.min(pick, autoCap);
+      try { hls.startLevel = pick; } catch {}
+      hls.startLoad(startAt || -1);
+    });
+  }
+
   hls.loadSource(src);
   hls.attachMedia(video);
   
   // Cache quality preference for warm-start on next video
-  if (!preloadOnly) {
+  if (!preloadOnly && !opts.sharp) {
     hls.on((Hls as any).Events.LEVEL_SWITCHED, (_event: any, data: any) => {
       try {
         localStorage.setItem('clips:preferred-quality', JSON.stringify({
@@ -173,7 +231,7 @@ export async function attachHls(video: HTMLVideoElement, src: string, preloadOnl
       
       // On buffer stalls or fragment load issues, temporarily cap to lowest level
       const detail = data?.details || '';
-      if (detail === 'bufferStalledError' || detail === 'fragLoadError' || detail === 'fragLoadTimeout') {
+      if (!opts.sharp && (detail === 'bufferStalledError' || detail === 'fragLoadError' || detail === 'fragLoadTimeout')) {
         try { (hls as any).currentLevel = 0; } catch {}
       }
     } catch {}
