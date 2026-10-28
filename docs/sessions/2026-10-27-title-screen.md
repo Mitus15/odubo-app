@@ -148,6 +148,15 @@ pull from. What changed is in the decision doc under "Live". Worth keeping:
   song.
 - **He has not posted since Billie Jean**, so the 87 drafts move again, one day on, when posting
   starts (2026-10-28).
+- **The site is odubostudio.com.** odubo.studio is not registered and never used (his word, loudly).
+  CLAUDE.md still named it as the production URL, and I watched the wrong address for a few minutes;
+  CLAUDE.md now says odubostudio.com.
+- **Checked live on www.odubostudio.com** (deploy odubo-studio-7kslvrzm3, 23:12 PT):
+  - home, /levels, /gear, /links, /music, a piece, the bag, /legal, /clips and /media answer 200;
+  - /levels and the sitemap list one level, Billie Jean (`/levels/0f39e142`);
+  - its manifest lists only 1080x1920 and 720x1280, and its still loads (27 KB);
+  - at phone size, he dances in the rose room with the YouTube mark in the corner;
+  - admin.odubostudio.com/social-studio answers 200; the old deploy still stands behind Vercel's login.
 
 ## Where it stands
 

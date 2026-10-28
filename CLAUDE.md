@@ -144,7 +144,7 @@ database/
 
 **Auto-Deploy Pipeline:**
 - **GitHub → Vercel**: Pushing to `main` branch automatically deploys to production
-- **Production URL**: https://odubo.studio
+- **Production URL**: https://odubostudio.com (odubo.studio is not registered and is never used)
 - **Preview Deployments**: PRs get preview URLs automatically
 
 **To Deploy:**
@@ -178,7 +178,7 @@ Core functionality works without JS where possible. HLS falls back to native vid
 
 **6. Subdomain Routing**
 Middleware (`/src/middleware.ts`) handles subdomain-based routing:
-- `admin.odubo.studio` → Admin dashboard
+- `admin.odubostudio.com` → Admin dashboard
 - Main domain → Public-facing site
 Subdomain detection works in both production and local development.
 

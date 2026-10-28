@@ -485,7 +485,7 @@ The room went to main as one merge: this branch with the rooms' own layout (`cla
   - One file from it: `git show archive/site-before-the-room:<path>`.
   - Bring a file back: `git checkout archive/site-before-the-room -- <path>`.
 - **On Vercel:** the last deploy before the room, `odubo-studio-b4qn8u58y` (dpl_5Vr9DqF6). It keeps
-  its own address, and Vercel's instant rollback can put it back on odubo.studio in seconds.
+  its own address, and Vercel's instant rollback can put it back on odubostudio.com in seconds.
 
 **Only what he has posted is on the site.** On the live site, a level is a piece ticked posted in
 the Studio. Previews and the dev server show every song, so a new room can be tried before it is
