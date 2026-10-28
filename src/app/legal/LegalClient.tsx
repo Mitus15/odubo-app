@@ -58,7 +58,9 @@ export default function LegalClient({ privacyContent, termsContent, shippingCont
     shownRef.current = activeTab;
     const rowTop = rowTopRef.current;
     const room = rowTop?.closest(".room");
-    if (rowTop && room && room.scrollTop > rowTop.offsetTop) room.scrollTop = rowTop.offsetTop;
+    // Pinned is where the row docks under the room's top, which stays (RoomShell)
+    const pinned = rowTop ? rowTop.offsetTop - (room?.querySelector("header")?.offsetHeight ?? 0) : 0;
+    if (rowTop && room && room.scrollTop > pinned) room.scrollTop = pinned;
     if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       panelRef.current?.animate(
         [{ opacity: 0, transform: "translateY(3px)" }, { opacity: 1, transform: "none" }],
@@ -106,7 +108,7 @@ export default function LegalClient({ privacyContent, termsContent, shippingCont
             aria-label="Legal"
             onKeyDown={onKeyDown}
             className="sticky z-10 flex items-end gap-7 border-b"
-            style={{ top: "env(safe-area-inset-top)", background: "var(--room)", borderColor: HAIRLINE }}
+            style={{ top: "var(--room-top)", background: "var(--room)", borderColor: HAIRLINE }}
           >
             {TABS.map((tab) => {
               const selected = tab.key === activeTab;

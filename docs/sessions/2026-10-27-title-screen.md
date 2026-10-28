@@ -85,6 +85,25 @@ decision doc under "The blurry minute". Debugging worth keeping:
 - The middleware's matcher skips any path with a dot, so `/streams/<uid>.m3u8` runs no middleware,
   like `/stills/<uid>.jpg`.
 
+### The top stays
+
+He asked for the header to stay on a piece's page. What changed is in the decision doc under "The
+top stays". Debugging worth keeping:
+
+- **The top lived inside the room's scrolling field**, so `sticky top-0` on it is the whole fix; the
+  room (`fixed inset-0`, `overflow-y-auto`) is the scroll container it sticks to.
+- **Its colour must move with the room's.** /gear changes the room's colour piece by piece over
+  700 ms; the top carries the same `transition-[background-color] duration-700`, so the two never
+  part mid-change.
+- **Two things had pinned themselves to the very top** and would have slid under it: the legal tabs
+  (`top: env(safe-area-inset-top)`, now `var(--room-top)`), and the bag's summary (`lg:top-6`). The
+  legal page's scroll back on a tab change now stops where the tabs dock.
+- **The in-app browser pane skips frames**: a screenshot right after a scroll or a click often shows
+  the page before it. Read the numbers with javascript_tool, or scroll once more, before trusting a
+  picture.
+- The lean layout session (moving the room pages into a `(room)` route group) touches the same
+  files; its edit to `RoomParts.tsx` is in the import line and the small print, not the shell.
+
 ## Where it stands
 
 - **Home and /links:**
