@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
         caption, caption_by_platform, hashtags, mentions, first_comment,
         scheduled_at, published_at, timezone,
         platforms, platform_status, platform_post_ids, platform_errors,
-        title, requires_approval, is_important, notes, tags,
+        title, requires_approval, is_important, notes, tags, campaign_id,
         error_message, retry_count, last_retry_at,
         created_at, updated_at
       FROM social_posts
