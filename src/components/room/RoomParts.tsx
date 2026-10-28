@@ -38,6 +38,11 @@ export function useBrowserColour(colour: string) {
  * writing in its writing colour. It covers the site's own chrome (the
  * layout's sidebar and player, z-150) and sits under the cookie banner
  * (z-160), which must stay answerable.
+ *
+ * The top stays where it is while the page scrolls (his word, 2026-10-27: a
+ * piece's page lost its way home, its bag and its hanger halfway down). It
+ * is the room's own colour, changing with the room, so it shows no bar; what
+ * passes under it melts into the field rather than meeting an edge.
  */
 export function RoomShell({
   colour,
@@ -54,17 +59,30 @@ export function RoomShell({
   scroll?: boolean;
 }) {
   useBrowserColour(colour);
+  // Something has gone under the top: the edge between them melts
+  const [under, setUnder] = useState(false);
   return (
     <div
       className={`room ${houseFont.variable} fixed inset-0 z-[150] transition-[background-color,color,bottom] duration-700 ${scroll ? 'overflow-y-auto overscroll-contain' : 'overflow-hidden'}`}
-      // Ends above the cookie strip while it is up (GDPRConsent sets --consent-h)
-      style={{ background: colour, color: on, bottom: 'var(--consent-h, 0px)', '--room': colour, '--on-room': on } as CSSProperties}
+      onScroll={scroll ? (e) => setUnder(e.currentTarget.scrollTop > 0) : undefined}
+      // Ends above the cookie strip while it is up (GDPRConsent sets --consent-h). What the keyboard
+      // or a link brings into view stops below the top, not under it
+      style={{ background: colour, color: on, bottom: 'var(--consent-h, 0px)', scrollPaddingTop: 'var(--room-top)', '--room': colour, '--on-room': on } as CSSProperties}
     >
-      <header className="flex items-center justify-between gap-3 px-4" style={{ paddingTop: 'env(safe-area-inset-top)', height: 'var(--room-top)' }}>
+      {/* Its colour changes with the room's on the same timing, so the two never part */}
+      <header
+        className="sticky top-0 z-20 flex items-center justify-between gap-3 px-4 transition-[background-color] duration-700"
+        style={{ paddingTop: 'env(safe-area-inset-top)', height: 'var(--room-top)', background: colour }}
+      >
         <Link href="/" className="-ml-2.5 flex min-h-[44px] min-w-[44px] items-center justify-center">
           <HouseName />
         </Link>
         {corner}
+        <span
+          aria-hidden
+          className={`pointer-events-none absolute inset-x-0 top-full h-6 transition-opacity duration-300 ${under ? 'opacity-100' : 'opacity-0'}`}
+          style={{ backgroundImage: `linear-gradient(${colour}, transparent)` }}
+        />
       </header>
       {children}
     </div>

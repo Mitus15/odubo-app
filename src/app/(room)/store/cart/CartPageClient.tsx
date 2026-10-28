@@ -199,7 +199,7 @@ export default function CartPage({ room }: { room: string | null }) {
 
             {/* What it comes to, and the way out to Shopify's checkout */}
             <div className="lg:col-span-1">
-              <div className="lg:sticky lg:top-6">
+              <div className="lg:sticky lg:top-[calc(var(--room-top)+24px)]">
                 <div className="flex items-center justify-between text-[15px]">
                   <span className="room-eyebrow">Subtotal</span>
                   <span>{formatMoney(subtotal, cartCurrency)}</span>

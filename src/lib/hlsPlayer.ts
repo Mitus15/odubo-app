@@ -171,7 +171,7 @@ export async function attachHls(video: HTMLVideoElement, src: string, preloadOnl
     autoLevelCapping: autoCap,
 
     // Faster timeouts for snappy experience. A room gets hls.js's own: its still covers the wait, and the
-    // clips' 3 s gave up on a manifest that was slow to come over a weak line, four tries and nothing (2026-10-28)
+    // clips' 3 s gave up on a manifest that was slow to come over a weak line, four tries and nothing (2026-10-27)
     manifestLoadingTimeOut: opts.sharp ? 10000 : 3000,
     levelLoadingTimeOut: opts.sharp ? 10000 : 3000,
     fragLoadingTimeOut: opts.sharp ? 20000 : 4000,

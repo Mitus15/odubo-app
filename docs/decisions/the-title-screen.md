@@ -386,12 +386,27 @@ needs to be optimized. The lower quality also takes away from the magic for thos
 - The manifest is kept a day at the edge and an hour in the browser; a copy never changes under its
   uid.
 
+## The top stays (the same night, his words)
+
+"can we make the header persistent on the product page?" A piece's page is taller than a phone, and
+its top (the danceman home, the bag, the hanger back to the gear) scrolled away with it.
+
+- **The top is the room's shell's (`RoomShell`), so it stays on every room page that scrolls**: a
+  piece's page, the bag, the gear's grid, the levels, the legal pages and a message thread. A top
+  that stayed on one room and left on the next would read as broken.
+- **It shows no bar.** It is the room's own colour, and changes with the room on the same timing.
+  Once something passes under it, a soft edge melts it into the field instead of cutting it.
+- **What pinned itself to the very top now docks under it**: the legal tabs, and the bag's summary
+  on a wide screen. A new policy still starts right under the tabs.
+- What a keyboard or a link brings into view stops below the top, not under it.
+- The home room, a level and the focus view do not scroll, so nothing changes there.
+
 ## A room's own layout (2026-10-27)
 
-The next gain on a weak line, named above: the code a room waits for. The root layout gave every
-page the whole old app (the clips, store, music and media machinery, their modals, the music
-player, the desktop sidebar, the service worker), so a room stood still until 266 to 299 KB of
-script had come and run.
+The next gain on a weak line, named under "On a weak line": the code a room waits for. The root
+layout gave every page the whole old app (the clips, store, music and media machinery, their modals,
+the music player, the desktop sidebar, the service worker), so a room stood still until 266 to 299
+KB of script had come and run.
 
 - **The rooms have their own route group, `app/(room)`:** home, `/links`, `/levels`,
   `/levels/[id]`, `/gear`, `/music`, a piece's page, the bag, the small print and the conversation
