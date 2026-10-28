@@ -4,7 +4,7 @@ A tentative posting schedule for everything in Posts/Ready to post, and the page
     python3 schedule.py [--start=2026-10-26] [--out=<dir>]   # writes schedule.json, and <dir>/index.html + thumbs/
 
 The rhythm (his to change): every day a Reel (Instagram, TikTok) at 12:00 and a short (YouTube
-Shorts) at 18:00; Tuesdays and Fridays a full song (YouTube) at 10:00, Pacific time. Each stream
+Shorts) at 18:00; Tuesdays and Fridays a full song (YouTube) at 10:00, on his clock (Vancouver, stage.py ZONE). Each stream
 runs in the order the sessions were filmed, so the feed shows the training getting better, and
 never puts the same song on two days running. He posts every one by hand (the Studio's Post view).
 """

@@ -29,7 +29,7 @@ LEDGER = catalog.DATA / "staged.json"
 WORK = Path.home() / "Documents/Apps/odubo/projects/Loop Soul Dance/Work files"
 PLATFORMS = {"reels": ["instagram", "tiktok"], "shorts": ["tiktok", "youtube"], "full": ["youtube"]}
 LEVELS = {"fils-de-joie": "1-2", "sante": "1-3"}
-ZONE = "America/Los_Angeles"  # his phone's
+ZONE = "America/Vancouver"  # his clock: BC stays on UTC-7 from Nov 2026, where Los Angeles falls back
 SCHEDULE = {x["piece"]: x for x in json.loads((catalog.DATA / "schedule.json").read_text())} \
     if (catalog.DATA / "schedule.json").exists() else {}
 APP = {"Instagram": "instagram", "TikTok": "tiktok", "YouTube Shorts": "youtube", "YouTube": "youtube"}

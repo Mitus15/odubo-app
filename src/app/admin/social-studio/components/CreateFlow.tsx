@@ -168,7 +168,7 @@ function getNextSlot(slots: PostingSlot[]): { date: string; time: string; timezo
   if (activeSlots.length === 0) return null;
 
   // Get the timezone from slots (assume all slots use same timezone)
-  const slotTimezone = activeSlots[0]?.timezone || 'America/Los_Angeles';
+  const slotTimezone = activeSlots[0]?.timezone || 'America/Vancouver';
 
   // Get current time in the slot's timezone (comparable date)
   const nowParts = getZonedParts(new Date(), slotTimezone);

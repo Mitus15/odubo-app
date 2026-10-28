@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
       `CREATE TABLE IF NOT EXISTS social_studio_settings (
         id INTEGER PRIMARY KEY DEFAULT 1,
         slots_per_day INTEGER DEFAULT 2,
-        default_timezone TEXT DEFAULT 'America/Los_Angeles',
+        default_timezone TEXT DEFAULT 'America/Vancouver',
         auto_hashtag_limit INTEGER DEFAULT 7,
         require_approval INTEGER DEFAULT 0,
         updated_at TEXT DEFAULT (datetime('now'))
@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
       // Create default settings
       await executeQuery(
         `INSERT INTO social_studio_settings (id, slots_per_day, default_timezone, auto_hashtag_limit, require_approval)
-         VALUES (1, 2, 'America/Los_Angeles', 7, 0)`,
+         VALUES (1, 2, 'America/Vancouver', 7, 0)`,
         []
       );
       settings = await queryDatabase(

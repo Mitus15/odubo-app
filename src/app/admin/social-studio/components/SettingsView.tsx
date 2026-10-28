@@ -479,6 +479,7 @@ export default function SettingsView({
                   disabled={savingSettings}
                   className="w-full px-4 py-3 rounded-xl bg-[#0d0c0a] border border-[#302927] text-white text-sm focus:border-[#843c2d]/40 focus:outline-none transition-colors"
                 >
+                  <option value="America/Vancouver">Vancouver (BC)</option>
                   <option value="America/Los_Angeles">Pacific Time (PT)</option>
                   <option value="America/Denver">Mountain Time (MT)</option>
                   <option value="America/Chicago">Central Time (CT)</option>

@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { time, day_of_week = null, platforms = ['instagram', 'tiktok'], is_active = true, label = null, timezone = 'America/Los_Angeles' } = body;
+    const { time, day_of_week = null, platforms = ['instagram', 'tiktok'], is_active = true, label = null, timezone = 'America/Vancouver' } = body;
 
     if (!time) {
       return NextResponse.json({ error: 'Time is required' }, { status: 400 });

@@ -173,7 +173,7 @@ export async function POST(request: NextRequest) {
         JSON.stringify(mentions || []),
         first_comment || null,
         scheduled_at || null,
-        timezone || 'America/Los_Angeles',
+        timezone || 'America/Vancouver',
         JSON.stringify(platforms || []),
         title || null,
         requires_approval ? 1 : 0,
