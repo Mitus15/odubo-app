@@ -146,8 +146,14 @@ pull from. What changed is in the decision doc under "Live". Worth keeping:
 - **Nothing had to change for "only Billie Jean".** `levelsServer` reads only pieces ticked posted
   when `VERCEL_ENV` is production, and only Billie Jean's two pieces were ticked. Previews show every
   song.
-- **He has not posted since Billie Jean**, so the 87 drafts move again, one day on, when posting
-  starts (2026-10-28).
+- **He has not posted since Billie Jean**, so on his word the drafts moved one day on that night:
+  - all 92 unposted drafts in `social_posts`, the 87 staged pieces and the 5 Billie Jean drafts,
+    with each moved one day later at the same Pacific clock time (Nov 1's change kept noon at noon);
+  - each update was guarded on its old date, so a second run moves nothing;
+  - `schedule.json` moved with them (the old one is `schedule-before-2026-10-27-shift.json`), and all
+    87 entries match the database again;
+  - the full songs now fall on Wednesdays and Saturdays, not Tuesdays and Fridays;
+  - the first day is Wed Oct 28: Level 1-2 at 10:00, the Fils de joie Reel at 12:00, its short at 18:00.
 - **The site is odubostudio.com.** odubo.studio is not registered and never used (his word, loudly).
   CLAUDE.md still named it as the production URL, and I watched the wrong address for a few minutes;
   CLAUDE.md now says odubostudio.com.
