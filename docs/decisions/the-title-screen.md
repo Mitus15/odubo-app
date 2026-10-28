@@ -447,14 +447,17 @@ at 375 x 812, as a first visit (cache and service worker bypassed):
 
 | Page | Script before hydration (KB) | Live on the weak line |
 |---|---|---|
-| `/` | 298.9 to 130.0 | 4.3 s to 2.6 s |
-| `/links` | 276.9 to 130.0 | 4.2 s to 2.7 s |
-| `/levels` | 265.8 to 121.5 | 5.7 s to 3.3 s |
-| `/levels/[id]` | 276.6 to 130.0 | 4.1 s to 2.7 s |
-| `/gear` | 270.9 to 123.1 | 4.8 s to 3.3 s |
-| a piece | 270.5 to 131.1 | 4.3 s to 3.0 s |
-| `/music` | 268.6 to 121.7 | 4.5 s to 3.1 s |
-| the bag | 268.0 to 129.1 | 3.9 s to 2.5 s |
+| `/` | 298.9 to 130.1 | 4.3 s to 2.6 s |
+| `/links` | 276.9 to 130.1 | 4.2 s to 2.6 s |
+| `/levels` | 265.8 to 121.7 | 5.7 s to 2.9 s |
+| `/levels/[id]` | 276.6 to 130.2 | 4.1 s to 2.6 s |
+| `/gear` | 270.9 to 123.3 | 4.8 s to 2.7 s |
+| a piece | 270.5 to 131.3 | 4.3 s to 3.0 s |
+| `/music` | 268.6 to 121.9 | 4.5 s to 3.1 s |
+| the bag | 268.0 to 129.3 | 3.9 s to 2.5 s |
+
+The after numbers are with the room's top kept on scroll ("The top stays", above), which adds
+0.2 KB.
 
 - **Fonts:** 125.2 KB to 82.5 KB on every room (Geist, and Jost's two weights).
 - **CSS:** 44.5 KB, unchanged (`globals.css`, on every page).
