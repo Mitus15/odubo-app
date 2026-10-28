@@ -134,6 +134,21 @@ and after numbers are in the decision doc under "A room's own layout". Debugging
 - **The bag check:** the piece's page must be given a moment after its flight before Add to bag is
   pressed; pressed at once, the click lands during the view transition.
 
+### Live
+
+His word: "we're good to merge, and this new design is it", with the old design kept to go back to or
+pull from. What changed is in the decision doc under "Live". Worth keeping:
+
+- **The lean layout branch carried everything**, so main moved by fast-forward to it: this branch
+  through 9b119098, then the rooms' own layout. Main had not moved since 3940571a.
+- **The old design is the tag `archive/site-before-the-room`** (the repository's habit is
+  `archive/…` tags, not branches) **and the Vercel deploy `odubo-studio-b4qn8u58y`**.
+- **Nothing had to change for "only Billie Jean".** `levelsServer` reads only pieces ticked posted
+  when `VERCEL_ENV` is production, and only Billie Jean's two pieces were ticked. Previews show every
+  song.
+- **He has not posted since Billie Jean**, so the 87 drafts move again, one day on, when posting
+  starts (2026-10-28).
+
 ## Where it stands
 
 - **Home and /links:**

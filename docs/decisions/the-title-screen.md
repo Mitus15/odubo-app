@@ -473,6 +473,25 @@ The after numbers are with the room's top kept on scroll ("The top stays", above
 - **Bigger, and apart from the code:** Jost is served as TTF (54 KB for the two weights). As WOFF2
   it would be about half; the share cards and tickets read the TTFs, so they would stay.
 
+## Live (2026-10-27, his words)
+
+> "we're good to merge, and this new design is it."
+
+The room went to main as one merge: this branch with the rooms' own layout (`claude/upbeat-cannon-fd3b01`).
+
+**The old design is kept**, so he "can always go back to it for, or even pull from it":
+- **In the repository:** the tag `archive/site-before-the-room` (main at 3940571a, the last commit
+  before the room). It holds the store-first home, the gate, the old clips feed and the media hub.
+  - One file from it: `git show archive/site-before-the-room:<path>`.
+  - Bring a file back: `git checkout archive/site-before-the-room -- <path>`.
+- **On Vercel:** the last deploy before the room, `odubo-studio-b4qn8u58y` (dpl_5Vr9DqF6). It keeps
+  its own address, and Vercel's instant rollback can put it back on odubo.studio in seconds.
+
+**Only what he has posted is on the site.** On the live site, a level is a piece ticked posted in
+the Studio. Previews and the dev server show every song, so a new room can be tried before it is
+out. At the merge only Billie Jean was out: Instagram on Oct 13 and the full song on YouTube on
+Oct 26. Each piece he ticks posted, on any app, opens its room on the site within two minutes.
+
 ## Kept from the first build
 
 **A level is a Studio post that is out (`src/lib/levels.ts`).** It must meet all of these:
