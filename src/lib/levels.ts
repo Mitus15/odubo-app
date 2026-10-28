@@ -20,6 +20,7 @@
  * where the piece is out.
  */
 import { isStreamUid, stillUrl } from '@/lib/stills';
+import { streamUrl } from '@/lib/streams';
 import { onRoom } from '@/lib/room';
 import { KIND_LABEL, kindOf, platformMark, type PostKind } from '@/lib/social/postQueue';
 
@@ -164,8 +165,9 @@ function pieceKind(tags: string[], platforms: string[]): PostKind {
  */
 function siteCopy(uid: string | undefined, still: string): { hls: string | null; poster: string; posterAt: number } {
   if (!isStreamUid(uid)) return { hls: null, poster: still, posterAt: 0 };
-  // The still comes through the site, its colour corrected to the video's (lib/stills); the sampler may move it (levelsServer)
-  return { hls: `https://videodelivery.net/${uid}/manifest/video.m3u8`, poster: stillUrl(uid), posterAt: 0 };
+  // Both come through the site: the manifest with only its sharp renditions (lib/streams), the still with its
+  // colour corrected to the video's (lib/stills); the sampler may move the still (levelsServer)
+  return { hls: streamUrl(uid), poster: stillUrl(uid), posterAt: 0 };
 }
 
 /** A copy's still at another height (a small tile needs nothing like the full frame); any other still as it is */

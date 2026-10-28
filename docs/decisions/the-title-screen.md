@@ -367,6 +367,24 @@ page and its design."
   layout (the store, music and media orchestrators, their modals, the desktop sidebar): about
   315 KB of script before a room is live. Splitting it out is the next real gain on a weak line.
 
+### The blurry minute (the same night, his words)
+
+"The video loaded into the world sometimes is blurry for a minute before clearing up. That still
+needs to be optimized. The lower quality also takes away from the magic for those few seconds."
+
+- **A room's manifest holds only its sharp renditions.** Stream's manifest offers five, down to
+  240p, and both players took the low ones on a weak start: Apple's measures the first segment,
+  drops to 240p or 480p and climbs back a step at a time (the minute of blur); hls.js started where
+  the browser's guess of the line put it. The site now serves each copy's manifest itself
+  (`/streams/<uid>.m3u8`, `lib/streams.ts`), with the renditions under 720 lines taken out, and
+  points every room at it. Neither player can go below 720p, and Apple's starts on the 1080p, which
+  is listed first.
+- **The trade:** on a line under about half a megabit the picture holds instead of blurring. A
+  copy's 720p averages about 0.45 Mbps and its 1080p about 0.8 to 0.9, so that is a line the site
+  does not expect; his word is that the blur costs more than a pause.
+- The manifest is kept a day at the edge and an hour in the browser; a copy never changes under its
+  uid.
+
 ## Kept from the first build
 
 **A level is a Studio post that is out (`src/lib/levels.ts`).** It must meet all of these:

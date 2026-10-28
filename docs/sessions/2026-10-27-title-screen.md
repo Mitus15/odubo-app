@@ -66,6 +66,25 @@ He found only two pieces' photos on /gear, and the videos slow on poor wifi. Wha
 - **The checks** ran in headless Chrome over CDP with the line throttled (scratchpad `net/slow.cjs`:
   `home`, `apple` with `navigator.vendor` faked, `focus`, `gear`). Not checked on an iPhone.
 
+### The blurry minute
+
+He then found the video "sometimes blurry for a minute before clearing up". What changed is in the
+decision doc under "The blurry minute". Debugging worth keeping:
+
+- **Stream's manifest lists five renditions, 1080p first, down to 240p.** Apple's player starts on
+  the first, measures that one segment (231 KB over a weak line reads slow), drops to the bottom and
+  climbs back one step at a time; hls.js picked its start from `navigator.connection.downlink`,
+  which Chrome reports low on weak wifi. The copies are light (1080p averages 0.8 to 0.9 Mbps), so
+  the low renditions were never needed; the site's own manifest leaves them out.
+- **Stream's `clientBandwidthHint` could not do this**: it caps the manifest to one rendition.
+- **The clips' 3 s manifest timeout gave up on a room.** With the manifest slow to come (the dev
+  server compiling, but a cold edge over a weak line would do it), hls.js asked four times at 3 s
+  each and then stopped for good. A room now gets hls.js's own 10 s / 10 s / 20 s.
+- **Two places read the uid out of the hls address** (`levelsServer`, the share card); both now go
+  through `streamUid`, which reads the site's address and Stream's.
+- The middleware's matcher skips any path with a dot, so `/streams/<uid>.m3u8` runs no middleware,
+  like `/stills/<uid>.jpg`.
+
 ## Where it stands
 
 - **Home and /links:**

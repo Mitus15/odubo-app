@@ -3,6 +3,7 @@ import { queryDatabase } from '@/lib/db';
 import { bySong, creditOf, LEVEL_CAMPAIGN, levelFrom, type Level, type LevelRow } from '@/lib/levels';
 import { writingOn } from '@/lib/room';
 import { stillUrl } from '@/lib/stills';
+import { streamUid } from '@/lib/streams';
 import { videoLook } from '@/lib/samplerServer';
 
 /**
@@ -62,7 +63,7 @@ async function readLevels(unreleased: boolean): Promise<Level[]> {
     levels,
     SAMPLED_AT_ONCE,
     async (level) => {
-      const uid = /videodelivery\.net\/([a-f0-9]{32})\//.exec(level.hls || '')?.[1];
+      const uid = streamUid(level.hls);
       const look = uid ? await videoLook(uid) : null;
       if (!look || !uid) return level;
       // The room, its writing, and the still and start at the moment he first stands in it

@@ -34,7 +34,7 @@ describe('levelFrom', () => {
       artist: 'Stromae',
       kind: 'full',
       colour: '#e2492f',
-      hls: `https://videodelivery.net/${SITE}/manifest/video.m3u8`,
+      hls: `/streams/${SITE}.m3u8`,
       outAt: '2026-10-27T17:05:00.000Z',
       links: [{ platform: 'youtube', url: null }],
     });

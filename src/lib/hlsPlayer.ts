@@ -42,7 +42,8 @@ export type HlsOptions = {
    * The rooms: start at the level that fills the player instead of the
    * lowest, since a sharp still covers the wait (components/room/RoomVideo).
    * The bitrate logic takes over after the first fragment, and the clips'
-   * remembered quality is left alone.
+   * remembered quality is left alone. A room's manifest holds only its sharp
+   * levels (lib/streams), so the lowest it can fall to is 720p.
    */
   sharp?: boolean;
   /** Seconds in to start from (the room's still is that moment: lib/sampler), the first time it plays; it loops from the top after */
@@ -169,10 +170,11 @@ export async function attachHls(video: HTMLVideoElement, src: string, preloadOnl
     capLevelToPlayerSize: true,
     autoLevelCapping: autoCap,
 
-    // Faster timeouts for snappy experience
-    manifestLoadingTimeOut: 3000,
-    levelLoadingTimeOut: 3000,
-    fragLoadingTimeOut: 4000,
+    // Faster timeouts for snappy experience. A room gets hls.js's own: its still covers the wait, and the
+    // clips' 3 s gave up on a manifest that was slow to come over a weak line, four tries and nothing (2026-10-28)
+    manifestLoadingTimeOut: opts.sharp ? 10000 : 3000,
+    levelLoadingTimeOut: opts.sharp ? 10000 : 3000,
+    fragLoadingTimeOut: opts.sharp ? 20000 : 4000,
 
     // More aggressive retry for reliability
     manifestLoadingMaxRetry: 3,

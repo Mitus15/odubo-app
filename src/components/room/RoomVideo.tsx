@@ -10,9 +10,11 @@ import RoomHud, { type HudSpec } from './RoomHud';
  * colour behind it (lib/room) and only the dancer is seen.
  *
  * The still is there at first paint, before any script: the copy's first
- * frame at full size (lib/levels). The video takes its place only once it
- * plays sharp, so the visitor never sees a blurry start; on a connection too
- * slow for that, it takes over anyway after a few seconds. Only a room near
+ * frame at full size (lib/levels). The video takes its place once it plays
+ * sharp. Its manifest comes from the site with only the sharp renditions in
+ * it (lib/streams), so neither player can start it blurry or drop it there on
+ * a weak patch: on a line too weak for 720p it holds rather than blurs; the
+ * wait below is for a browser that plays something else first. Only a room near
  * the one on screen holds a stream, and only the one on screen plays, so a
  * long feed costs one video; the one on screen keeps half a minute ahead, the
  * ones beside it only their start (lib/hlsPlayer). A tap pauses or plays;

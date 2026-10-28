@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { getLevels } from '@/lib/levelsServer';
 import { onRoom, ROOM_DARK } from '@/lib/room';
 import { correctedStill } from '@/lib/stillsServer';
+import { streamUid } from '@/lib/streams';
 
 /**
  * The share cards: what a pasted link to the site looks like in Messages,
@@ -77,7 +78,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ card: s
   const levels = await getLevels();
   const level = name === 'newest' ? levels[0] : levels.find((l) => l.id === name || l.pieceIds.includes(name));
   if (!level) return house();
-  const uid = /videodelivery\.net\/([a-f0-9]{32})\//.exec(level.hls || '')?.[1];
+  const uid = streamUid(level.hls);
   const card = uid ? await stillOf(uid) : null;
   return new ImageResponse(
     (
