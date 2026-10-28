@@ -95,8 +95,8 @@ export default function DesktopSidebar() {
 
   // Hide on admin/backend pages and admin subdomain (must be after all hooks)
   // Also hide on the rooms (lib/room) and showcase - custom designs without sidebar
-  // The flight (/fly) owns the whole screen
-  if (isAdminSubdomain || isRoomRoute(pathname) || pathname === '/showcase' || pathname?.startsWith('/admin') || pathname?.startsWith('/command-center') || pathname?.startsWith('/featured/manage') || pathname?.startsWith('/loop') || pathname?.startsWith('/fly')) {
+  // The flight (/fly) owns the whole screen, and so does the old home feed (/clips/123, an old /?clip= link)
+  if (isAdminSubdomain || isRoomRoute(pathname) || pathname?.startsWith('/clips/') || pathname === '/showcase' || pathname?.startsWith('/admin') || pathname?.startsWith('/command-center') || pathname?.startsWith('/featured/manage') || pathname?.startsWith('/loop') || pathname?.startsWith('/fly')) {
     return null;
   }
 

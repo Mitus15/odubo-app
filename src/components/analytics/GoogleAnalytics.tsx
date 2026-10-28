@@ -2,20 +2,10 @@
 
 import Script from 'next/script';
 import { useEffect, useState } from 'react';
+import { getMeasurementId } from '@/lib/gtag';
 
-const MEASUREMENT_ID_PATTERN = /^G-[A-Z0-9]+$/;
-
-/**
- * The GA4 measurement ID from the environment, or null if it is missing or malformed.
- *
- * The ID is written into an inline script, so it must be exactly `G-XXXXXXXXXX`.
- * Production once held it with a trailing newline, which split a string literal
- * and threw a SyntaxError on every page; GA never loaded.
- */
-export function getMeasurementId(): string | null {
-  const id = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID?.trim();
-  return id && MEASUREMENT_ID_PATTERN.test(id) ? id : null;
-}
+// The helpers that report to GA4 live in lib/gtag; kept here for what imported them from this file
+export { getMeasurementId, trackEvent, trackPageView, ecommerce } from '@/lib/gtag';
 
 /**
  * Google Analytics 4 Component
@@ -89,70 +79,3 @@ export default function GoogleAnalytics() {
     </>
   );
 }
-
-/**
- * Track custom events in GA4
- * Usage: trackEvent('purchase', { value: 100, currency: 'USD' })
- */
-export function trackEvent(
-  eventName: string,
-  eventParams?: Record<string, string | number | boolean>
-) {
-  if (typeof window !== 'undefined' && (window as any).gtag) {
-    (window as any).gtag('event', eventName, eventParams);
-  }
-}
-
-/**
- * Track page views (for SPA navigation)
- * Usage: trackPageView('/store/product/hoodie')
- */
-export function trackPageView(url: string) {
-  if (typeof window !== 'undefined' && (window as any).gtag) {
-    const measurementId = getMeasurementId();
-    if (measurementId) {
-      (window as any).gtag('config', measurementId, {
-        page_path: url,
-      });
-    }
-  }
-}
-
-/**
- * Track e-commerce events
- */
-export const ecommerce = {
-  viewItem: (item: { id: string; name: string; price: number }) => {
-    trackEvent('view_item', {
-      currency: 'USD',
-      value: item.price,
-      items: JSON.stringify([{ item_id: item.id, item_name: item.name, price: item.price }]),
-    });
-  },
-
-  addToCart: (item: { id: string; name: string; price: number; quantity: number }) => {
-    trackEvent('add_to_cart', {
-      currency: 'USD',
-      value: item.price * item.quantity,
-      items: JSON.stringify([{
-        item_id: item.id,
-        item_name: item.name,
-        price: item.price,
-        quantity: item.quantity,
-      }]),
-    });
-  },
-
-  beginCheckout: (value: number, itemCount: number) => {
-    trackEvent('begin_checkout', {
-      currency: 'USD',
-      value,
-      items_count: itemCount,
-    });
-  },
-
-  // Track email signup as conversion
-  signUp: (method: string = 'email') => {
-    trackEvent('sign_up', { method });
-  },
-};

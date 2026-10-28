@@ -85,6 +85,36 @@ decision doc under "The blurry minute". Debugging worth keeping:
 - The middleware's matcher skips any path with a dot, so `/streams/<uid>.m3u8` runs no middleware,
   like `/stills/<uid>.jpg`.
 
+### A room's own layout
+
+The rooms now stand in `app/(room)` without the old app; the old app is
+`components/layout/AppShell`, given by `SiteFrame` to every other page. What changed and the before
+and after numbers are in the decision doc under "A room's own layout". Debugging worth keeping:
+
+- **The old service worker fooled the first measure.** After `/` registered it, every later page
+  came from its cache: the decoded size equalled the encoded one, and a page hydrated at once on
+  the weak line. The measures bypass it now (`Network.setBypassServiceWorker`).
+- **Timing alone miscounts "before hydration".**
+  - React asks for a lazy chunk while it renders, before the commit a probe can see, though
+    hydration does not wait for it.
+  - The room asks for hls.js in the same frame it hydrates.
+  - What a page waits for is the scripts its HTML names, so that is what is counted.
+- **Next's webpack copies a small shared module into every entry that uses it** (a shared chunk
+  must reach 20 KB). `RoomParts` sat three times on one load: in the root error page, the 404 and
+  the room's own chunk.
+  - Putting `next/dynamic` in `RoomParts` spread Next's loader (about 2.3 KB) into all three.
+    React's own `lazy`, drawn after mount, carries nothing.
+  - Webpack could be told otherwise (`splitChunks`), but a webpack hook in `next.config` makes
+    `next dev --turbopack` warn on every start, so it was left.
+- **A page's imports are its code even when not drawn.** The home carried the old clips feed
+  (22 KB) for `/?clip=` links it never drew; those links go to `/clips/123` now.
+- **`next/font` preloads every face a layout imports,** used or not (the `HL` hints in the
+  payload), so rooms fetched Geist Mono and the house face for nothing.
+- **The 404 for an unknown address still gets the AppShell:** its segment is Next's own
+  `/_not-found`, not the room group. A `notFound()` inside a room does not.
+- **The bag check:** the piece's page must be given a moment after its flight before Add to bag is
+  pressed; pressed at once, the click lands during the view transition.
+
 ## Where it stands
 
 - **Home and /links:**
@@ -115,6 +145,20 @@ Each copy's colour was read from the browser's own decode (within 3 to 5 levels 
 **Tests:** `npm test` passes, except the 2 failures that were already there. tsc stands at 845
 errors (the baseline is 850).
 
+**The rooms' own layout**, on a production build in headless Chrome over CDP at 375×812 (scratchpad
+scripts `measure/bytes.cjs` for the numbers, `measure/check.cjs` for the rooms):
+- home and a level play sharp (1280 lines) with no old-app code on the page;
+- Apple's player starts from the site's manifest, and hls.js never comes;
+- the focused view opens playing and closes with its X;
+- the gear row's 15 photos all stand after a swipe;
+- a piece goes into the bag (its count, Go to bag, the bag page);
+- Back to the gear and the browser's back both hold;
+- `/?clip=1` lands on `/clips/1` with its utm tag;
+- `/clips` and `/media` stand in the AppShell, and `/legal` and the 404 in the room;
+- the dev server (Turbopack) serves every room and old page.
+
+`npm test` still has only the 2 old failures, and tsc stays at 845.
+
 **Not checked:** a phone, and the live site.
 
 ## Next
@@ -128,3 +172,7 @@ errors (the baseline is 850).
   - what lives on the lock page ("the game, once its time").
 - **To clear up:** two unused Stream uploads from before the colour fix (in the ledger's
   `replaced`).
+- **Lighter still, if wanted:**
+  - Jost as WOFF2 next to its TTFs (about 27 KB less on every room);
+  - analytics' visitor and campaign code after the room is live;
+  - the focused view fetched once the room plays sharp.

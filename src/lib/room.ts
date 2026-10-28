@@ -64,7 +64,8 @@ export function roomFor(levels: Level[], from?: string | null): { colour: string
  * The pages set in the room: they own the whole screen, so the old desktop
  * sidebar (its Store and Connect open the old modals over a room) is not
  * drawn under them, nor its margin. A piece's page, the bag and the small
- * print are rooms too.
+ * print are rooms too. The same pages live in app/(room), which keeps the old
+ * app's machinery (components/layout/AppShell) off them altogether.
  */
 const ROOM_ROUTES = ['/links', '/levels', '/gear', '/music', '/store/product', '/store/cart', '/legal', '/messages'];
 

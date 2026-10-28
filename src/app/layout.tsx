@@ -3,35 +3,13 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 // Validate environment on startup
 import "@/lib/validateEnv";
-import MusicPlayerLayout from "./components/MusicPlayerLayout";
-// AppHeader removed - navigation via expandable logo menu on clips
-import { AudioProvider } from "@/contexts/AudioContext";
-import { MusicPlayerProvider } from "@/contexts/MusicPlayerContext";
-import { OmniShopProvider } from "@/contexts/OmniShopContext";
-import { StoreProvider } from "@/contexts/StoreContext";
-import StoreOrchestrator from "@/components/store/StoreOrchestrator";
-import OmniShopOrchestrator from "@/components/shop/OmniShopOrchestrator";
-import { UnifiedMediaProvider } from "@/contexts/UnifiedMediaContext";
-import OmniMediaOrchestrator from "@/components/media/OmniMediaOrchestrator";
-// Auth modal removed - customers redirected to Shopify, see src/lib/storeAccount.ts
-import MediaPriorityBridge from "@/components/player/MediaPriorityBridge";
-import DesktopSidebar from "@/components/layout/DesktopSidebar";
-import MainContentWrapper from "@/components/layout/MainContentWrapper";
-// import { AuthProvider } from "@/contexts/AuthContext";
-// import ClientCapabilities } from "./components/ClientCapabilities";
-import GDPRConsent from "../components/GDPRConsent";
-import ServiceWorkerRegistration from "../components/ServiceWorkerRegistration";
-import OfflineIndicator from "../components/OfflineIndicator";
-import { PWAProvider } from "../components/PWAProvider";
-// PWAInstallBanner removed - unnecessary friction
+// The clips, store, music and media machinery lives in components/layout/AppShell,
+// which SiteFrame fetches only for pages outside the rooms (app/(room)); the cookie bar is there too
+import SiteFrame from "@/components/layout/SiteFrame";
 import { EmailCaptureProvider } from "@/contexts/EmailCaptureContext";
-// Email capture lives inside the Connect page (LinkTreeModal)
 import GoogleAnalytics from "@/components/analytics/GoogleAnalytics";
-import { QuickShopProvider } from "@/contexts/QuickShopContext";
-import QuickShopModal from "@/components/shop/QuickShopModal";
 import { AnalyticsProvider } from "@/contexts/AnalyticsContext";
 import { SIGN_IN_SYNC } from "@/lib/signIn";
-// import AccessibilityEnhancer from "./components/AccessibilityEnhancer";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -41,6 +19,8 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  // Fetched by the pages that set something in it, not preloaded on every page (no room uses it)
+  preload: false,
 });
 
 export const metadata: Metadata = {
@@ -64,6 +44,10 @@ export const viewport: Viewport = {
   themeColor: "#2a0f0a",
 };
 
+/**
+ * What every page needs, the rooms included: the faces, the styles, analytics,
+ * the email capture (the rooms' Save your progress) and the cookie bar.
+ */
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -89,52 +73,11 @@ export default function RootLayout({
       >
         {/* Google Analytics 4 - respects GDPR consent */}
         <GoogleAnalytics />
-        {/* <AuthProvider> */}
-          <PWAProvider>
-            <AnalyticsProvider>
-            <AudioProvider>
-              <MusicPlayerProvider>
-                {/* Media priority bridge - connects AudioContext and MusicPlayerContext */}
-                <MediaPriorityBridge />
-                <OmniShopProvider>
-                  <StoreProvider>
-                    <QuickShopProvider>
-                    <UnifiedMediaProvider>
-                      {/* <ClientCapabilities /> */}
-                      <ServiceWorkerRegistration />
-                      <OfflineIndicator />
-
-                      {/* Email capture provider - wraps sidebar + children for context access */}
-                      <EmailCaptureProvider>
-                      {/* Desktop sidebar - persistent navigation on lg+ */}
-                      <DesktopSidebar />
-                      {/* Main content wrapper - conditionally applies sidebar margin */}
-                      <MainContentWrapper>
-                        {/* Main content - full height, accounts for mini-bar dynamically */}
-                        <main className="flex-1 min-h-0 safe-area-top safe-area-bottom minibar-aware overflow-y-auto">
-                          {children}
-                        </main>
-                        {/* Music player - renders modal via VinylMiniPlayer */}
-                        <MusicPlayerLayout />
-                        <GDPRConsent />
-                      </MainContentWrapper>
-                      {/* Modal orchestrators - rendered at root level */}
-                      <StoreOrchestrator />
-                      <OmniShopOrchestrator />
-                      <OmniMediaOrchestrator />
-                      {/* Email capture moved to Connect page */}
-                      </EmailCaptureProvider>
-                      {/* Quick shop modal for clip-to-purchase */}
-                      <QuickShopModal />
-                    </UnifiedMediaProvider>
-                    </QuickShopProvider>
-                  </StoreProvider>
-                </OmniShopProvider>
-              </MusicPlayerProvider>
-            </AudioProvider>
-            </AnalyticsProvider>
-          </PWAProvider>
-        {/* </AuthProvider> */}
+        <AnalyticsProvider>
+          <EmailCaptureProvider>
+            <SiteFrame>{children}</SiteFrame>
+          </EmailCaptureProvider>
+        </AnalyticsProvider>
       </body>
     </html>
   );

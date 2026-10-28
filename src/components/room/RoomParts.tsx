@@ -1,13 +1,17 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import PlatformIcon from '@/components/linktree/PlatformIcon';
-import ContactModal from '@/components/store/ContactModal';
 import { useAnalyticsSafe } from '@/contexts/AnalyticsContext';
 import { houseFont } from '@/lib/brand/houseFont';
 import { ODUBO_MARK, ODUBO_MARK_ASPECT } from '@/lib/brand/marks';
 import type { LinkTreeItem } from '@/types/linktree';
+
+// The contact sheet waits in the page out of sight until Contact is tapped, so
+// it comes just after the room is live rather than before it (React's own lazy:
+// next/dynamic would put its loader in every page that draws a room)
+const ContactModal = lazy(() => import('@/components/store/ContactModal'));
 
 /**
  * The room's shared parts (lib/room): the room itself for a page set in it,
@@ -205,6 +209,9 @@ export function PlatformMarks({ links, className = '' }: { links: LinkTreeItem[]
 
 export function SmallPrint({ className = '' }: { className?: string }) {
   const [contactOpen, setContactOpen] = useState(false);
+  // The sheet joins the page once the room is live
+  const [live, setLive] = useState(false);
+  useEffect(() => setLive(true), []);
   return (
     <footer className={`flex flex-col items-center gap-1 text-[12px] ${className}`}>
       <div className="flex items-center gap-3 opacity-75">
@@ -212,15 +219,20 @@ export function SmallPrint({ className = '' }: { className?: string }) {
           Contact
         </button>
         <span aria-hidden="true">·</span>
-        <Link href="/legal?tab=shipping" className="flex min-h-[44px] items-center hover:opacity-100">
+        {/* Not prefetched: the small print would bring its page's code over the room's line the moment it shows */}
+        <Link href="/legal?tab=shipping" prefetch={false} className="flex min-h-[44px] items-center hover:opacity-100">
           Shipping &amp; returns
         </Link>
         <span aria-hidden="true">·</span>
-        <Link href="/legal?tab=privacy" className="flex min-h-[44px] min-w-[44px] items-center justify-center hover:opacity-100">
+        <Link href="/legal?tab=privacy" prefetch={false} className="flex min-h-[44px] min-w-[44px] items-center justify-center hover:opacity-100">
           Privacy
         </Link>
       </div>
-      <ContactModal isOpen={contactOpen} onClose={() => setContactOpen(false)} />
+      {live && (
+        <Suspense fallback={null}>
+          <ContactModal isOpen={contactOpen} onClose={() => setContactOpen(false)} />
+        </Suspense>
+      )}
     </footer>
   );
 }

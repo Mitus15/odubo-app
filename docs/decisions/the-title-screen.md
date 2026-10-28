@@ -366,6 +366,7 @@ page and its design."
 - **Not done: the code itself.** Every page carries the whole old app's machinery in the root
   layout (the store, music and media orchestrators, their modals, the desktop sidebar): about
   315 KB of script before a room is live. Splitting it out is the next real gain on a weak line.
+  (Done the same night: "A room's own layout", below.)
 
 ### The blurry minute (the same night, his words)
 
@@ -385,6 +386,75 @@ needs to be optimized. The lower quality also takes away from the magic for thos
 - The manifest is kept a day at the edge and an hour in the browser; a copy never changes under its
   uid.
 
+## A room's own layout (2026-10-27)
+
+The next gain on a weak line, named above: the code a room waits for. The root layout gave every
+page the whole old app (the clips, store, music and media machinery, their modals, the music
+player, the desktop sidebar, the service worker), so a room stood still until 266 to 299 KB of
+script had come and run.
+
+- **The rooms have their own route group, `app/(room)`:** home, `/links`, `/levels`,
+  `/levels/[id]`, `/gear`, `/music`, a piece's page, the bag, the small print and the conversation
+  page (the pages `isRoomRoute` names). Its layout holds only the page, since every room draws
+  itself edge to edge.
+- **The root layout holds only what every page needs:** the faces, the styles, analytics, the email
+  capture (Save your progress) and the cookie bar.
+- **The old app is `components/layout/AppShell`:** the same providers, orchestrators, modals,
+  player, sidebar and service worker the root layout held. `SiteFrame` gives it to every page
+  outside the rooms, and a room never asks for it. Next preloads it while those pages are rendered,
+  so they come as before.
+  - The old pages stayed where they were, so the branches waiting to be merged still apply.
+- **The bag** (`StoreContext`) is given to a piece's page and the bag only
+  (`app/(room)/store/layout.tsx`).
+- **An old link to one clip** (`/?clip=123`) now goes to `/clips/123`, the same feed opened on that
+  clip, with the rest of the link (a campaign's utm tags) carried along. The feed belongs to the old
+  app, so it lives outside the rooms.
+- **Two parts come just after the room is live, not before it:**
+  - the contact sheet (it is still in the page before the tap, so the phone's keyboard rises on it);
+  - the cookie bar (it shows only once it has read the visitor's earlier choice).
+- **Two faces are no longer preloaded:** Geist Mono and the house face (Libre Baskerville). No room
+  sets anything in either, since the danceman mark names the site. A page that uses them still
+  fetches them.
+- **The small print does not prefetch `/legal`.** On `/music` it brought 45 KB of the legal page's
+  code (its animation library) over the room's line as soon as it showed.
+- **The GA helpers moved to `lib/gtag.ts`.** The email capture under every room's Save your
+  progress no longer carries next/script and the GA component with it.
+- **The service worker is the old app's** and no longer registers from a room.
+  - On a first visit it fetched `/`, `/clips`, `/media` and `/store` whole, and asked for more on
+    any "3g" or "4g" line, all while the room's video wanted the line.
+  - A visitor who already has it keeps it.
+
+**Measured** on a production build (`next build`, `next start`, gzip) in headless Chrome over CDP
+at 375 x 812, as a first visit (cache and service worker bypassed):
+- **Script** is what the page's HTML names, which the page waits for before it hydrates.
+- **hls.js** (153 KB) is apart: it is fetched only off Apple's player, as before.
+- **The weak line** is 1.2 Mbps with 150 ms from the first byte; each time is one run.
+
+| Page | Script before hydration (KB) | Live on the weak line |
+|---|---|---|
+| `/` | 298.9 to 130.0 | 4.3 s to 2.6 s |
+| `/links` | 276.9 to 130.0 | 4.2 s to 2.7 s |
+| `/levels` | 265.8 to 121.5 | 5.7 s to 3.3 s |
+| `/levels/[id]` | 276.6 to 130.0 | 4.1 s to 2.7 s |
+| `/gear` | 270.9 to 123.1 | 4.8 s to 3.3 s |
+| a piece | 270.5 to 131.1 | 4.3 s to 3.0 s |
+| `/music` | 268.6 to 121.7 | 4.5 s to 3.1 s |
+| the bag | 268.0 to 129.1 | 3.9 s to 2.5 s |
+
+- **Fonts:** 125.2 KB to 82.5 KB on every room (Geist, and Jost's two weights).
+- **CSS:** 44.5 KB, unchanged (`globals.css`, on every page).
+- **Against the aim of about 120 KB:** `/levels`, `/music` and `/gear` are at it. Home, `/links`, a
+  level, a piece and the bag are 129 to 131 KB.
+  - About 106 KB of every page is React and Next themselves, with Next's link and navigation code.
+  - The rest is the room's own: the feed with its player and the focused view (8.4 KB), the room's
+    parts and the platform marks (5.0), analytics (3.9) and Save your progress (3.3).
+- **Further, if wanted** (a few KB each):
+  - analytics' visitor and campaign code, after the room is live;
+  - the focused view, fetched once the room plays sharp;
+  - the platform marks, drawn from the brand files.
+- **Bigger, and apart from the code:** Jost is served as TTF (54 KB for the two weights). As WOFF2
+  it would be about half; the share cards and tickets read the TTFs, so they would stay.
+
 ## Kept from the first build
 
 **A level is a Studio post that is out (`src/lib/levels.ts`).** It must meet all of these:
@@ -398,7 +468,8 @@ colour and a lock, with no song and no date.
 **Every level plays silent.** The full songs carry the song itself, which the apps are licensed to
 play and this site is not. The sound is a link to where the piece is out.
 
-**Old clip links still work.** `/?clip=123` still opens the clips feed on that clip.
+**Old clip links still work.** `/?clip=123` still opens the clips feed on that clip (at
+`/clips/123` since the rooms got their own layout).
 
 ## Not done yet
 

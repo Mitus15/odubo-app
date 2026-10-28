@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
-import { ecommerce } from '@/components/analytics/GoogleAnalytics';
+import { ecommerce } from '@/lib/gtag';
 import { linkVisitorToFan } from '@/lib/visitorId';
 
 interface EmailCaptureContextValue {
