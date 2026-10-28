@@ -124,7 +124,11 @@ class Cloud:
 
 
 def note(e: dict) -> str:
-    lines = [f"{e['song']} · {e['artist']}" + (f" ({e['version']})" if e.get("version") else ""), catalog.where(e)]
+    # The first line is the credit as the public sees it (YouTube description, the site); the version is a note to him
+    lines = [f"{e['song']} · {e['artist']}"]
+    if e.get("version"):
+        lines.append(e["version"][0].upper() + e["version"][1:])
+    lines.append(catalog.where(e))
     if e["kind"] != "full":
         lines.append("Add the song in the app from that time, then turn the original sound down to 0: the video opens on "
                      "that second of the song, so it lines up as it is.")
