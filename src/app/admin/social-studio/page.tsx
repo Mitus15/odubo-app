@@ -1,11 +1,13 @@
 'use client';
 
-import { useState, useEffect, useCallback, Suspense, type CSSProperties, type ReactNode } from 'react';
+import { useState, useEffect, useCallback, Suspense, type ReactNode } from 'react';
+import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { allPlatformsDone, queueOf, withPlatformMark, type PlatformMark } from '@/lib/social/postQueue';
 import { ODUBO_MARK, ODUBO_MARK_ASPECT, ODUBO_SEAL } from '@/lib/brand/marks';
 import TodayView, { type SendDetails } from './components/TodayView';
 import ScheduleView from './components/ScheduleView';
+import { Mark } from './components/parts';
 import LibraryView from './components/LibraryView';
 
 /**
@@ -172,23 +174,6 @@ const TABS: { key: Tab; label: string; icon: ReactNode }[] = [
   },
 ];
 
-/**
- * A house mark (lib/brand/marks.ts) in any colour: the files are drawn in
- * oxblood, and the kit says recolour them with a mask, never by editing them.
- */
-function Mark({ src, className = '', style, colour, label }: { src: string; className?: string; style?: CSSProperties; colour: string; label?: string }) {
-  const mask = `url(${src}) center / contain no-repeat`;
-  return (
-    <span
-      role={label ? 'img' : undefined}
-      aria-label={label}
-      aria-hidden={label ? undefined : true}
-      className={`block flex-shrink-0 ${className}`}
-      style={{ ...style, background: colour, WebkitMask: mask, mask }}
-    />
-  );
-}
-
 function devFixtures(): { on: boolean; now?: Date } {
   if (process.env.NODE_ENV !== 'development' || typeof window === 'undefined') return { on: false };
   const q = new URLSearchParams(window.location.search);
@@ -219,6 +204,12 @@ export default function SocialStudioPage() {
   // The preview label only after the first paint: the server cannot know the query
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
+
+  // A post asked for by the link (the admin home's Post: ?post=<id>) opens first
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get('post');
+    if (id) setOpenId(id);
+  }, []);
 
   // The clock moves on, so what is due today moves with it
   useEffect(() => {
@@ -441,7 +432,10 @@ export default function SocialStudioPage() {
       {/* the top bar: the name, a new post, the menu */}
       <header className="flex-shrink-0 flex items-center justify-between px-4 pt-[env(safe-area-inset-top)] border-b border-[var(--rule)]">
         <span className="min-h-[52px] flex items-center gap-2">
-          <Mark src={ODUBO_MARK} className="h-7" style={{ aspectRatio: ODUBO_MARK_ASPECT }} colour="var(--accent)" label="Odubo" />
+          {/* the danceman goes home, as on every admin page */}
+          <Link href="/admin" aria-label="Home" className="min-h-[44px] min-w-[44px] -ml-2 pl-2 flex items-center">
+            <Mark src={ODUBO_MARK} className="h-7" style={{ aspectRatio: ODUBO_MARK_ASPECT }} colour="var(--accent)" />
+          </Link>
           <span className="studio-house text-[17px] tracking-[0.02em]">Studio</span>
           {mounted && fixtures.on && <span className="text-xs text-[var(--warn)]">preview</span>}
         </span>

@@ -1,10 +1,12 @@
 'use client';
 
+import type { CSSProperties } from 'react';
 import { PLATFORM_LABEL, PLATFORM_SHORT, platformState, type QueuePost } from '@/lib/social/postQueue';
 
 /**
  * The small pieces every Studio view shares: a post's marks per app, its
- * thumbnail edged in the song's colour, and how a time reads.
+ * thumbnail edged in the song's colour, and how a time reads. The admin home
+ * (app/admin/AdminHome) uses them too.
  */
 
 const SIGN = { posted: '✓', scheduled: '◷', drafted: '◷', failed: '!', todo: '○' } as const;
@@ -27,13 +29,13 @@ export function Marks({ post, className = '' }: { post: QueuePost; className?: s
   );
 }
 
-/** A 9:16 thumbnail on the song's colour, so a missing image still says which song. */
-export function Thumb({ src, colour, className = '' }: { src?: string; colour: string; className?: string }) {
+/** A 9:16 thumbnail on the song's colour, so a missing image still says which song. Eager when it is always on screen. */
+export function Thumb({ src, colour, className = '', eager = false }: { src?: string; colour: string; className?: string; eager?: boolean }) {
   return (
     <span className={`block aspect-[9/16] overflow-hidden flex-shrink-0 ${className}`} style={{ background: colour }}>
       {src && (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={src} alt="" loading="lazy" className="w-full h-full object-cover" />
+        <img src={src} alt="" loading={eager ? 'eager' : 'lazy'} className="w-full h-full object-cover" />
       )}
     </span>
   );
@@ -68,4 +70,21 @@ export function countLabel(n?: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
   if (n >= 1000) return `${(n / 1000).toFixed(1).replace(/\.0$/, '')}k`;
   return String(n);
+}
+
+/**
+ * A house mark (lib/brand/marks.ts) in any colour: the files are drawn in
+ * oxblood, and the kit says recolour them with a mask, never by editing them.
+ */
+export function Mark({ src, className = '', style, colour, label }: { src: string; className?: string; style?: CSSProperties; colour: string; label?: string }) {
+  const mask = `url(${src}) center / contain no-repeat`;
+  return (
+    <span
+      role={label ? 'img' : undefined}
+      aria-label={label}
+      aria-hidden={label ? undefined : true}
+      className={`block flex-shrink-0 ${className}`}
+      style={{ ...style, background: colour, WebkitMask: mask, mask }}
+    />
+  );
 }

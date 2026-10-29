@@ -10,8 +10,10 @@ type CaptureMode = "task" | "note";
 
 export default function QuickCapture() {
   // The Social Studio has its own bottom bar and its own +: this button sat on top of More.
-  const inStudio = (usePathname() || "").includes("social-studio");
-  return inStudio ? null : <Capture />;
+  // The home (/admin, or / on admin.<apex>) keeps one drawn shape, Post: the Ark is in its menu.
+  const path = usePathname() || "";
+  const hidden = path.includes("social-studio") || path === "/admin" || path === "/";
+  return hidden ? null : <Capture />;
 }
 
 function Capture() {

@@ -6,12 +6,12 @@ import { useRouter } from 'next/navigation';
 /**
  * Client-side admin guard for the Release routes.
  *
- * Lifted from the check in src/app/admin/page.tsx (L309-345). Pages under
- * /admin are a single client route that guards itself; a full route like
- * /admin/ark or /admin/release sits outside that and must do its own.
+ * Lifted from the check the old admin shell (src/app/admin/page.tsx, before
+ * 2026-10-28) made. The admin home asks api/admin/home and goes to the sign-in
+ * on a 401; a full route like /admin/ark or /admin/release must guard itself.
  *
  * This only decides what to render — it decodes the token without verifying
- * it, exactly as the admin shell does, and cannot be trusted for anything.
+ * it, exactly as the old shell did, and cannot be trusted for anything.
  * Every /api/admin/release route verifies the signature server-side via
  * requireAdmin(). This is chrome, not security.
  */

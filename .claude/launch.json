@@ -82,6 +82,16 @@
         "npx next dev -p 3127"
       ],
       "port": 3127
+    },
+    {
+      "name": "admin-home",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "npx next dev -p ${PORT:-3131}"
+      ],
+      "port": 3131,
+      "autoPort": true
     }
   ]
 }
