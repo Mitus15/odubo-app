@@ -86,7 +86,12 @@ export default function TodayView({
 
   const queue = useMemo(() => queueOf(posts, now), [posts, now]);
   const ordered = useMemo(() => [...queue.due, ...queue.later, ...queue.unplanned], [queue]);
-  const post = ordered.find((p) => p.id === openId) || ordered.find((p) => !allPlatformsDone(p)) || null;
+  // One opened from the Schedule, the Library or Out today may be out already: it opens all the same, to Undo a tick
+  const post =
+    ordered.find((p) => p.id === openId) ||
+    posts.find((p) => p.id === openId && p.media_url) ||
+    ordered.find((p) => !allPlatformsDone(p)) ||
+    null;
 
   const flash = useCallback((text: string) => {
     setToast(text);
@@ -104,7 +109,7 @@ export default function TodayView({
   // Once per post: a failed fetch stays failed (Save video still works)
   // rather than trying again on every render.
   useEffect(() => {
-    if (!post || post.media_type !== 'video' || files[post.id] || fetching.current.has(post.id)) return;
+    if (!post || post.media_type !== 'video' || allPlatformsDone(post) || files[post.id] || fetching.current.has(post.id)) return;
     if (post.platforms.every((p) => sendsByApi(post, p))) return; // nothing to share by hand
     fetching.current.add(post.id);
     (async () => {
@@ -480,11 +485,16 @@ export default function TodayView({
           <section className="mt-8">
             <h2 className="studio-eyebrow">Out today</h2>
             {queue.postedToday.map((p) => (
-              <p key={p.id} className="flex items-center gap-2 py-2 border-b border-[var(--rule)] text-sm">
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => onOpen(p.id)}
+                className="w-full flex items-center gap-2 py-2 border-b border-[var(--rule)] text-sm text-left min-h-[44px]"
+              >
                 <span className="text-[var(--ok)]">✓</span>
                 <span className="flex-1 truncate">{p.caption || p.title}</span>
                 <Marks post={p} />
-              </p>
+              </button>
             ))}
           </section>
         )}
