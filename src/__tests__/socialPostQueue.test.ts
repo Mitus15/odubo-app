@@ -1,4 +1,4 @@
-import { allPlatformsDone, captionFor, isPlatformDone, queueOf, soundCue, withPlatformMark, type QueuePost } from '@/lib/social/postQueue';
+import { allPlatformsDone, captionFor, isPlatformDone, markPatch, queueOf, soundCue, withPlatformMark, type QueuePost } from '@/lib/social/postQueue';
 
 const post = (id: string, extra: Partial<QueuePost> = {}): QueuePost => ({
   id,
@@ -52,6 +52,26 @@ describe('the posting queue', () => {
     expect(allPlatformsDone(p)).toBe(true);
     p = { ...p, platform_status: withPlatformMark(p.platform_status, 'tiktok', false, at(12)) };
     expect(allPlatformsDone(p)).toBe(false);
+  });
+
+  it('puts a post back in the queue when its last tick is undone', () => {
+    // A YouTube Short ticked by the share sheet, then left as a draft on YouTube (Oct 28)
+    const short = post('short', { platforms: ['youtube'], scheduled_at: at(11, 18) });
+    const ticked = markPatch(short, 'youtube', true, at(11, 23));
+    expect(ticked).toMatchObject({ status: 'published', published_at: at(11, 23) });
+    const out = { ...short, platform_status: ticked.platform_status, status: 'published', published_at: at(11, 23) };
+    expect(queueOf([out], now).due).toEqual([]);
+
+    const undone = markPatch(out, 'youtube', false, at(12));
+    expect(undone).toEqual({ platform_status: { youtube: { posted: false } }, status: 'draft', published_at: null });
+    const back = { ...out, platform_status: undone.platform_status, status: 'draft', published_at: undefined };
+    expect(queueOf([back], now).due.map((p) => p.id)).toEqual(['short']);
+  });
+
+  it('leaves the status alone on a tick that does not finish the post', () => {
+    expect(markPatch(post('reel'), 'instagram', true, at(12))).toEqual({
+      platform_status: { instagram: { posted: true, at: at(12) } },
+    });
   });
 
   it('keeps whatever else platform_status held (PostForMe statuses)', () => {

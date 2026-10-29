@@ -73,6 +73,29 @@ export function withPlatformMark(
   return { ...(status || {}), [platform]: posted ? { ...known, posted: true, at } : { ...known, posted: false } };
 }
 
+export interface MarkPatch {
+  platform_status: Record<string, unknown>;
+  status?: 'published' | 'draft';
+  published_at?: string | null;
+}
+
+/**
+ * What one tick or Undo writes on the post. The last platform ticked makes it
+ * published; an Undo on a published post makes it a draft again, back in his
+ * queue (the status alone keeps a post out of it, whatever its ticks say).
+ */
+export function markPatch(
+  post: Pick<QueuePost, 'status' | 'platforms' | 'platform_status'>,
+  platform: string,
+  posted: boolean,
+  at: string,
+): MarkPatch {
+  const platform_status = withPlatformMark(post.platform_status, platform, posted, at);
+  if (allPlatformsDone({ platforms: post.platforms, platform_status })) return { platform_status, status: 'published', published_at: at };
+  if (post.status === 'published') return { platform_status, status: 'draft', published_at: null };
+  return { platform_status };
+}
+
 /** Where one platform of a post stands. */
 export type PlatformState =
   | { kind: 'posted'; at?: string; url?: string; views?: number }

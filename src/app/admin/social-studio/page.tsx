@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, Suspense, type ReactNode } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import { allPlatformsDone, queueOf, withPlatformMark, type PlatformMark } from '@/lib/social/postQueue';
+import { markPatch, queueOf, type PlatformMark } from '@/lib/social/postQueue';
 import { ODUBO_MARK, ODUBO_MARK_ASPECT, ODUBO_SEAL } from '@/lib/brand/marks';
 import TodayView, { type SendDetails } from './components/TodayView';
 import ScheduleView from './components/ScheduleView';
@@ -307,18 +307,19 @@ export default function SocialStudioPage() {
   // A tick by hand (or an Undo): saved on the post, at once on screen
   const onMark = useCallback(
     async (post: Post, platform: string, posted: boolean) => {
-      const status = withPlatformMark(post.platform_status, platform, posted, new Date().toISOString());
-      const finished = allPlatformsDone({ platforms: post.platforms, platform_status: status });
-      const next: Post = { ...post, platform_status: status, ...(finished ? { status: 'published', published_at: new Date().toISOString() } : {}) };
+      const patch = markPatch(post, platform, posted, new Date().toISOString());
+      const next: Post = {
+        ...post,
+        platform_status: patch.platform_status,
+        ...(patch.status ? { status: patch.status, published_at: patch.published_at ?? undefined } : {}),
+      };
       replace(next);
       if (fixtures.on) return true;
       try {
         const res = await fetch(`/api/social/posts/${post.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(
-            finished ? { platform_status: status, status: 'published', published_at: next.published_at } : { platform_status: status },
-          ),
+          body: JSON.stringify(patch),
         });
         if (!res.ok) throw new Error(String(res.status));
         return true;
